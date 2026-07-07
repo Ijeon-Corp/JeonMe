@@ -113,6 +113,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR (dan Docker image reference pada umumnya) HANYA menerima nama
+      # repository huruf kecil, sedangkan ${{ github.repository }} mengembalikan
+      # case asli repo (mis. "Ijeon-Corp/JeonMe") -- tanpa langkah ini, push image
+      # akan gagal "invalid reference format".
+      - name: Nama repository huruf kecil (wajib untuk GHCR)
+        id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       # Tag :latest hanya dipublikasikan dari main -- dipakai sebagai fallback
       # oleh docker-compose.staging.yml (${IMAGE_TAG:-latest}) sebelum .env di
       # VPS pernah diisi tag sungguhan oleh deploy-staging.yml. Lihat temuan
@@ -134,8 +142,8 @@ jobs:
           file: docker/api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
-            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/api:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -146,7 +154,7 @@ jobs:
           file: docker/web/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
-            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/web:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
