@@ -22,6 +22,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Sebelumnya tidak ada service Redis sama sekali di sini walau
+      # health_test.go butuh koneksi Redis sungguhan -- REDIS_URL menunjuk
+      # ke localhost:6379 yang tidak pernah ada yang dengarkan, jadi test
+      # selalu gagal "connection refused".
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +57,7 @@ jobs:
       - name: Apply migrations to test database
         working-directory: apps/api
         env:
-          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
+          DATABASE_URL: postgres://jeonme:jeonme@127.0.0.1:5432/jeonme_test?sslmode=disable
         # Memakai subcommand migrate bawaan binary (internal/migrate), bukan
         # CLI golang-migrate terpisah -- lihat temuan kritis C3 di audit CI/CD:
         # sebelumnya go test berjalan melawan skema kosong tanpa migrasi apa pun.
@@ -55,8 +67,8 @@ jobs:
         working-directory: apps/api
         env:
           APP_ENV: test
-          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgres://jeonme:jeonme@127.0.0.1:5432/jeonme_test?sslmode=disable
+          REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET: ci-test-secret
         run: go test ./... -v
 
