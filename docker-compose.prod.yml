@@ -27,7 +27,11 @@ services:
     image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
     restart: unless-stopped
     env_file: .env
-    depends_on: [db, redis]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
 
@@ -46,6 +50,14 @@ services:
     restart: unless-stopped
     volumes: ["pgdata:/var/lib/postgresql/data"]
     env_file: .env
+    # Tanpa ini, `docker compose run --rm api migrate ...` bisa mulai sebelum
+    # Postgres benar-benar siap menerima koneksi ("Started" != "ready") --
+    # ketahuan dari log Deploy Production run pertama: "connection refused".
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jeonme}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
