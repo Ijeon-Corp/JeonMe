@@ -23,8 +23,8 @@ func main() {
 	// deploy (sebelum menyalakan versi baru), lihat .github/workflows/*.yml.
 	// Contoh: ./api migrate up | ./api migrate down | ./api migrate status
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
-		cfg := config.Load()
-		if err := migrate.Run(os.Args[2:], cfg.DatabaseURL, "migrations"); err != nil {
+		databaseURL := config.LoadDatabaseURL()
+		if err := migrate.Run(os.Args[2:], databaseURL, "migrations"); err != nil {
 			log.Fatalf("migrate: %v", err)
 		}
 		return

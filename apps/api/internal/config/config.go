@@ -46,6 +46,18 @@ func Load() *Config {
 	return cfg
 }
 
+// LoadDatabaseURL dipakai subcommand `migrate` -- migrasi hanya butuh
+// DATABASE_URL, bukan seluruh konfigurasi aplikasi (JWT_SECRET, dst).
+// Memakai Load() penuh di sana sebelumnya membuat migrasi gagal di CI
+// karena JWT_SECRET sengaja tidak diset di step yang cuma menjalankan
+// migrasi (lihat ci.yml).
+func LoadDatabaseURL() string {
+	if err := godotenv.Load(); err != nil {
+		log.Println("info: file .env tidak ditemukan, menggunakan environment variable sistem")
+	}
+	return mustGetEnv("DATABASE_URL")
+}
+
 func getEnv(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v
