@@ -1,8 +1,10 @@
 # Panduan CI/CD Jeonme
-### GitHub Actions + Docker + VPS
-Versi 1.0 — 3 Juli 2026
+### GitHub Actions + Docker + VPS Shared (Apache)
+Versi 2.0 — 8 Juli 2026 (rilis pertama `v0.1.0` sudah live di production)
 
-Dokumen ini adalah panduan praktis untuk tim Jeonme dalam menyiapkan dan menjalankan pipeline CI/CD. Stack: Next.js (frontend) + Golang/Gin (backend) + PostgreSQL + Redis, dideploy ke VPS Debian menggunakan Docker. Contoh workflow di dokumen ini identik dengan file yang sudah ada di `.github/workflows/` pada boilerplate — dokumen ini menjelaskan *kenapa* tiap bagian ada.
+Dokumen ini adalah panduan lengkap pipeline CI/CD Jeonme — bagaimana cara kerjanya, bagaimana infrastruktur nyata disusun, dan katalog bug yang ditemukan (dan diperbaiki) selama rollout pertama. Semua contoh di dokumen ini **identik** dengan file yang sungguhan ada di `.github/workflows/` dan `docker-compose*.yml` — bukan contoh generik.
+
+> **Perubahan besar dari v1.0**: v1.0 mengasumsikan VPS terdedikasi dengan Nginx + Certbot berjalan **di dalam** Docker Compose. Rencana itu berubah total begitu diketahui VPS yang tersedia adalah **server shared** yang sudah menjalankan puluhan situs klien lain lewat Apache. Lihat Bagian 2 untuk arsitektur yang benar-benar dipakai.
 
 ---
 
@@ -14,29 +16,70 @@ Dokumen ini adalah panduan praktis untuk tim Jeonme dalam menyiapkan dan menjala
 - **Tidak pernah** deploy langsung dari laptop developer ke production — semua lewat pipeline agar konsisten dan bisa diaudit.
 - Docker image dibangun sekali di CI, image yang sama dipakai di staging maupun production (bukan build ulang di server) — menjamin apa yang diuji adalah apa yang dijalankan.
 
-## 2. Struktur Branch & Environment
+## 2. Arsitektur Infrastruktur Nyata
 
-| Branch | Deploy Otomatis Ke | Catatan |
+Jeonme di-deploy ke **satu VPS shared** (`103.147.33.34`, Debian 12) yang sudah menjalankan puluhan situs klien lain (blog, ERP, HRIS, dsb.) lewat **Apache** sebagai reverse proxy tunggal untuk semua domain di server itu. Karena itu arsitektur deploy Jeonme sengaja **berbeda** dari asumsi awal TDD/CICD-GUIDE v1.0 (yang membayangkan VPS terdedikasi dengan Nginx+Certbot sendiri di dalam Docker):
+
+- **Tidak ada Nginx/Certbot di dalam `docker-compose.staging.yml`/`.prod.yml`** — port 80/443 host sudah dipakai Apache untuk domain lain, tidak boleh direbut container lain.
+- Container `web` dan `api` di-bind **hanya ke `127.0.0.1`** pada port unik per environment (tidak pernah diekspos ke publik langsung).
+- **Apache** (sudah terpasang & dikonfigurasi untuk semua situs lain di server ini) yang mem-proxy domain publik ke port-port tersebut, dan **Certbot** (sudah terpasang, dipakai `certbot.timer` sistem yang jalan 2x sehari untuk semua sertifikat termasuk milik Jeonme) yang menerbitkan & memperpanjang TLS.
+- **Staging dan production dipisah lewat direktori**, bukan lewat VPS terpisah: `/opt/jeonme-staging` dan `/opt/jeonme-production`, masing-masing dengan `.env` dan `docker-compose*.yml` sendiri.
+
+```
+Internet
+   │
+   ▼
+Cloudflare (proxied DNS untuk jeonme.com & staging.jeonme.com)
+   │
+   ▼
+Apache :80/:443 di 103.147.33.34 (juga melayani puluhan domain lain)
+   │
+   ├── jeonme.com, www.jeonme.com ────────┐
+   │     /api/  → 127.0.0.1:28080         │  (docker-compose.prod.yml,
+   │     /      → 127.0.0.1:23000         │   /opt/jeonme-production)
+   │                                       │
+   └── staging.jeonme.com ─────────────────┤
+         /api/  → 127.0.0.1:28180          │  (docker-compose.staging.yml,
+         /      → 127.0.0.1:23100          │   /opt/jeonme-staging)
+```
+
+### 2.1 Tabel Referensi Infrastruktur
+
+| Item | Production | Staging |
 |---|---|---|
-| `feature/*` | Tidak ada (hanya CI test) | Branch kerja harian developer |
-| `develop` | (opsional) preview/staging ringan | Integrasi fitur sebelum ke `main` |
-| `main` | **staging** (otomatis) | Selalu mencerminkan kondisi siap-QA |
-| Tag `v*.*.*` | **production** (manual approval) | Rilis resmi |
+| Domain | `jeonme.com`, `www.jeonme.com` | `staging.jeonme.com` |
+| Direktori di VPS | `/opt/jeonme-production` | `/opt/jeonme-staging` |
+| File compose | `docker-compose.prod.yml` | `docker-compose.staging.yml` |
+| Port web (127.0.0.1) | `23000` | `23100` |
+| Port api (127.0.0.1) | `28080` | `28180` |
+| Vhost Apache | `/etc/apache2/sites-available/jeonme.com.conf` | `/etc/apache2/sites-available/staging.jeonme.com.conf` |
+| Sertifikat TLS | `/etc/letsencrypt/live/jeonme.com/` | `/etc/letsencrypt/live/staging.jeonme.com/` |
+| Trigger deploy | Tag `v*.*.*` + approval | Otomatis setelah CI sukses di `main` |
 
-## 3. Struktur Repository (contoh monorepo)
+- **VPS**: `103.147.33.34`, SSH port `61512` (bukan port default 22 — **wajib** diisi lewat secret `*_SSH_PORT`, lihat Bagian 9).
+- **User deploy**: `deploy` (anggota grup `docker`, **tanpa** akses `sudo`) — dipilih daripada root persis karena server ini shared dengan banyak klien lain; kalau SSH key CI ini bocor, dampaknya terbatas ke container Jeonme, bukan seluruh server.
+- **Renewal TLS**: sudah ditangani `certbot.timer` sistem yang sudah berjalan (cek 2x sehari, otomatis mencakup sertifikat baru begitu diterbitkan) — **tidak perlu** cron tambahan khusus Jeonme.
+
+## 3. Struktur Repository
 
 ```
 jeonme/
 ├── apps/
-│   ├── web/              # Next.js (frontend + dashboard)
-│   └── api/               # Golang / Gin (backend)
+│   ├── web/              # Next.js 16 (frontend + dashboard)
+│   └── api/               # Golang 1.25 / Gin (backend)
 ├── docker/
 │   ├── web/Dockerfile
 │   ├── api/Dockerfile
-│   └── nginx/nginx.conf
-├── docker-compose.yml           # untuk local dev
+│   └── nginx/              # TIDAK dipakai di deployment shared-VPS saat ini --
+│                            # disimpan sebagai referensi kalau nanti pindah ke
+│                            # VPS terdedikasi (lihat Bagian 2 & 10).
+├── docker-compose.yml           # local dev
 ├── docker-compose.staging.yml
 ├── docker-compose.prod.yml
+├── scripts/
+│   ├── provision-vps.sh
+│   ├── issue-certbot-cert.sh
+│   └── rollback.sh
 └── .github/workflows/
     ├── ci.yml
     ├── deploy-staging.yml
@@ -45,9 +88,8 @@ jeonme/
 
 ## 4. Dockerfile — Backend Golang (multi-stage, image ramping)
 
-Sudah tersedia di boilerplate pada `docker/api/Dockerfile`:
-
 ```dockerfile
+# docker/api/Dockerfile
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache git
@@ -68,9 +110,11 @@ EXPOSE 8080
 ENTRYPOINT ["./api"]
 ```
 
-Binary Go dikompilasi statis (`CGO_ENABLED=0`) sehingga image akhir bisa memakai base `alpine` yang sangat kecil (~15-20MB) tanpa runtime tambahan seperti PHP-FPM.
+> **Penting**: `ENTRYPOINT` sudah `./api`. Setiap kali memanggil `docker compose run --rm api <command>`, `<command>` adalah argumen yang ditambahkan **setelah** entrypoint — jangan tulis `./api migrate up` (akan jadi `./api ./api migrate up`, dua kali), cukup `migrate up`. Ini persis bug nyata yang ditemukan di rollout pertama, lihat Bagian 11.
 
-## 5. Dockerfile — Contoh Frontend Next.js
+Binary Go dikompilasi statis (`CGO_ENABLED=0`) sehingga image akhir bisa memakai base `alpine` yang sangat kecil (~15-20MB).
+
+## 5. Dockerfile — Frontend Next.js
 
 ```dockerfile
 # docker/web/Dockerfile
@@ -95,11 +139,11 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 ```
 
-> Catatan: `output: 'standalone'` perlu diaktifkan di `next.config.js` agar image runner sekecil mungkin.
+> `output: 'standalone'` wajib aktif di `next.config.js` agar image runner sekecil mungkin (sudah aktif).
 
 ## 6. Workflow CI — Test & Build (`.github/workflows/ci.yml`)
 
-Jalan di setiap push dan pull request. Tidak melakukan deploy apa pun. File ini persis sama dengan yang ada di boilerplate — termasuk perbaikan hasil audit CI/CD (lihat komentar inline `Temuan ... (audit CI/CD)` untuk konteks tiap perubahan): migrasi diterapkan ke database test *sebelum* `go test` (menutup celah kritis C3 di mana gate ini sebelumnya lolos tanpa menguji apa pun karena skema kosong), `npm ci` menggantikan `npm install` (temuan sedang M1), tag `:latest` dipublikasikan dari `main` sebagai fallback registry (temuan tinggi H1), dan pemindaian kerentanan non-blocking (`govulncheck`, `npm audit` — temuan sedang M3).
+Jalan di setiap push dan pull request ke `main`/`develop`. Tidak melakukan deploy apa pun.
 
 ```yaml
 name: CI
@@ -126,6 +170,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Sebelumnya tidak ada service Redis sama sekali di sini walau
+      # health_test.go butuh koneksi Redis sungguhan -- REDIS_URL menunjuk
+      # ke localhost:6379 yang tidak pernah ada yang dengarkan, jadi test
+      # selalu gagal "connection refused".
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -149,23 +205,18 @@ jobs:
       - name: Apply migrations to test database
         working-directory: apps/api
         env:
-          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
-        # Memakai subcommand migrate bawaan binary (internal/migrate), bukan
-        # CLI golang-migrate terpisah -- lihat temuan kritis C3 di audit CI/CD:
-        # sebelumnya go test berjalan melawan skema kosong tanpa migrasi apa pun.
+          DATABASE_URL: postgres://jeonme:jeonme@127.0.0.1:5432/jeonme_test?sslmode=disable
         run: ./bin/api migrate up
 
       - name: Run tests
         working-directory: apps/api
         env:
           APP_ENV: test
-          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgres://jeonme:jeonme@127.0.0.1:5432/jeonme_test?sslmode=disable
+          REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET: ci-test-secret
         run: go test ./... -v
 
-      # Non-blocking untuk sekarang (temuan sedang M3 di audit CI/CD) -- jadikan
-      # blocking setelah tim terbiasa dengan noise-nya dan backlog awal beres.
       - name: Vulnerability scan (govulncheck)
         working-directory: apps/api
         continue-on-error: true
@@ -195,7 +246,6 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
-      # Non-blocking untuk sekarang (temuan sedang M3 di audit CI/CD).
       - name: Audit dependency vulnerabilities
         working-directory: apps/web
         continue-on-error: true
@@ -217,11 +267,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Tag :latest hanya dipublikasikan dari main -- dipakai sebagai fallback
-      # oleh docker-compose.staging.yml (${IMAGE_TAG:-latest}) sebelum .env di
-      # VPS pernah diisi tag sungguhan oleh deploy-staging.yml. Lihat temuan
-      # tinggi H1 di audit CI/CD: sebelumnya tidak ada tag fallback yang benar-
-      # benar ada di registry, jadi deploy pertama kali akan gagal pull.
+      # GHCR HANYA menerima nama repository huruf kecil, sedangkan
+      # ${{ github.repository }} mengembalikan case asli repo
+      # (mis. "Ijeon-Corp/JeonMe") -- tanpa langkah ini, push image gagal
+      # "invalid reference format".
+      - name: Nama repository huruf kecil (wajib untuk GHCR)
+        id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Tentukan tag image tambahan
         id: extra_tag
         run: |
@@ -238,8 +291,8 @@ jobs:
           file: docker/api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
-            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/api:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -250,15 +303,15 @@ jobs:
           file: docker/web/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
-            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/web:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 ```
 
 ## 7. Workflow Deploy — Staging (`.github/workflows/deploy-staging.yml`)
 
-Jalan otomatis setelah `ci.yml` sukses di branch `main`. Login ke GHCR dari VPS, terapkan migrasi, baru `docker compose pull && up -d` (lihat komentar `Temuan ... (audit CI/CD)` inline untuk konteks tiap langkah).
+Trigger: `workflow_run` setelah `CI` sukses di `main`.
 
 ```yaml
 name: Deploy Staging
@@ -275,29 +328,26 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      # Temuan kritis C2 (audit CI/CD): tanpa login eksplisit di VPS,
-      # `docker compose pull` akan gagal 401/denied terhadap GHCR privat.
       - name: Login GHCR di VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
           script: |
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-      # Sebelumnya staging tidak pernah menjalankan migrasi sama sekali --
-      # skema bisa diam-diam ketinggalan dari kode yang di-deploy. Sekarang
-      # konsisten dengan deploy-production.yml: migrasi dulu, baru deploy.
       - name: Jalankan migrasi database (staging)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
           script: |
             set -e
-            cd /opt/jeonme
+            cd /opt/jeonme-staging
             export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull api
@@ -309,16 +359,16 @@ jobs:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
           script: |
             set -e
-            cd /opt/jeonme
+            cd /opt/jeonme-staging
             export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
             docker image prune -f
 
-      # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali sleep+curl.
       - name: Health check
         run: |
           curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health || exit 1
@@ -326,9 +376,7 @@ jobs:
 
 ## 8. Workflow Deploy — Production (`.github/workflows/deploy-production.yml`)
 
-Dipicu manual atau saat tag rilis dibuat. Pakai GitHub **Environment** dengan *required reviewers* agar ada gerbang approval sebelum menyentuh production.
-
-Migrasi sekarang benar-benar dieksekusi lewat subcommand `migrate` bawaan image API (`internal/migrate`, lihat Bagian 6) — sebelumnya langkah ini hanya berisi `echo` placeholder (temuan kritis **C1**) dan tidak pernah benar-benar mengubah skema database production.
+Trigger: push tag `v*.*.*` atau manual (`workflow_dispatch`). Environment `production` punya **required reviewers** — deploy tertahan menunggu approval manual sebelum langkah apa pun jalan.
 
 ```yaml
 name: Deploy Production
@@ -343,34 +391,26 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # atur "required reviewers" di Settings > Environments
     steps:
-      # Temuan kritis C2 (audit CI/CD): GHCR mewarisi visibility repo (default
-      # private) -- tanpa login eksplisit di sisi VPS, `docker compose pull`
-      # akan gagal 401/denied. Gunakan token read-only khusus VPS (scope
-      # read:packages saja), bukan PAT developer pribadi.
       - name: Login GHCR di VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT }}
           script: |
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-      # Temuan kritis C1 (audit CI/CD): sebelumnya langkah ini hanya berisi
-      # `echo` placeholder dan TIDAK menjalankan migrasi apa pun. Sekarang
-      # memakai subcommand `migrate` bawaan image API yang baru saja di-pull
-      # (image sudah membawa folder migrations yang persis cocok dengan versi
-      # ini, lihat docker/api/Dockerfile) -- dijalankan lewat `compose run`
-      # sekali pakai, terhubung ke network compose yang sama dengan db/redis.
       - name: Jalankan migrasi database (production)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT }}
           script: |
             set -e
-            cd /opt/jeonme
+            cd /opt/jeonme-production
             export IMAGE_TAG=${{ github.sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull api
@@ -382,129 +422,183 @@ jobs:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT }}
           script: |
             set -e
-            cd /opt/jeonme
+            cd /opt/jeonme-production
             export IMAGE_TAG=${{ github.sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
 
-      # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali
-      # sleep+curl -- container butuh waktu bervariasi untuk siap tergantung
-      # kondisi koneksi DB/Redis saat cold start.
       - name: Health check
         run: |
           curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://jeonme.com/api/health || exit 1
 ```
 
-**Wajib** siapkan endpoint `/api/health` di backend (cek koneksi DB + Redis) agar step terakhir benar-benar memverifikasi deploy berhasil, bukan cuma "container jalan".
+**Wajib**: endpoint `/api/health` mengecek koneksi DB + Redis sungguhan (bukan cuma "container jalan") — lihat `internal/handlers/health.go`.
 
-## 9. Secrets yang Perlu Disiapkan di GitHub
+## 9. Secrets & GitHub Environments
 
-Buka **Settings → Secrets and variables → Actions**, atau lebih baik di level **Environment** (staging/production terpisah):
+Repo → **Settings → Environments** → buat `staging` dan `production`, isi secrets berikut di masing-masing:
 
-| Secret | Isi |
-|---|---|
-| `STAGING_HOST` / `PROD_HOST` | IP atau hostname VPS |
-| `STAGING_SSH_USER` / `PROD_SSH_USER` | User deploy khusus (bukan root) |
-| `STAGING_SSH_KEY` / `PROD_SSH_KEY` | Private key SSH (buat key khusus deploy, jangan pakai key pribadi) |
-| `GITHUB_TOKEN` | Otomatis tersedia, dipakai push ke GHCR dari GitHub Actions runner |
-| `GHCR_USERNAME` | Username GitHub yang akan login ke GHCR **dari VPS** (temuan kritis C2) — bisa akun yang sama dengan pemilik PAT di bawah |
-| `GHCR_PAT` | Personal Access Token dengan scope `read:packages` **saja** — dipakai VPS untuk `docker login ghcr.io` sebelum `pull`. Jangan pakai token dengan scope lebih luas dari yang perlu, dan simpan sebagai secret Environment (staging/production bisa pakai token yang sama atau terpisah) |
+| Secret | Isi | Nilai (deployment saat ini) |
+|---|---|---|
+| `STAGING_HOST` / `PROD_HOST` | IP VPS | `103.147.33.34` (sama untuk keduanya — 1 VPS shared) |
+| `STAGING_SSH_USER` / `PROD_SSH_USER` | User deploy | `deploy` |
+| `STAGING_SSH_PORT` / `PROD_SSH_PORT` | Port SSH | `61512` (**bukan** 22 — VPS ini pakai port non-default) |
+| `STAGING_SSH_KEY` / `PROD_SSH_KEY` | Private key SSH khusus CI | Sama untuk keduanya, terpasang di `/home/deploy/.ssh/authorized_keys` |
+| `GHCR_USERNAME` | Username GitHub pemilik PAT | — |
+| `GHCR_PAT` | Personal Access Token scope `read:packages` **saja** | — |
+| `GITHUB_TOKEN` | Otomatis tersedia | dipakai `build-images` push ke GHCR |
 
-**Praktik keamanan**: buat user `deploy` di VPS dengan akses terbatas (bisa `docker`, tidak bisa `sudo` penuh), dan buat SSH key khusus untuk CI yang bisa dicabut sewaktu-waktu tanpa mengganggu akses developer. `GHCR_PAT` juga sebaiknya dibuat sebagai token khusus (bukan PAT pribadi developer) agar bisa dicabut terpisah.
+**Praktik keamanan yang dipakai**: user `deploy` di VPS anggota grup `docker`, **tanpa** akses `sudo` — dipilih secara sadar karena VPS ini shared dengan puluhan klien lain (lihat Bagian 2). SSH key khusus CI (bukan key pribadi developer) supaya bisa dicabut sewaktu-waktu tanpa mengganggu akses siapa pun.
 
-Selain secrets di atas, siapkan juga **variabel** `.env` di VPS itu sendiri (bukan di GitHub) — lihat `.env.example`, terutama `GHCR_REPO` (harus persis `owner/repo`, lihat Bagian 10) yang sebelumnya adalah placeholder `OWNER` yang mudah terlewat diganti (temuan tinggi H2).
+Selain secrets GitHub, siapkan juga **variabel `.env`** langsung di tiap direktori VPS (`/opt/jeonme-production/.env`, `/opt/jeonme-staging/.env`) — lihat `.env.example`. Yang penting: `GHCR_REPO` harus **huruf kecil** (`ijeon-corp/jeonme`), `WEB_HOST_PORT`/`API_HOST_PORT` sesuai Bagian 2.1, dan `IMAGE_TAG=latest` harus ada persis seperti itu di baris awal supaya `sed` di workflow bisa menimpanya.
 
-## 10. Contoh `docker-compose.prod.yml` (VPS)
-
-`GHCR_REPO` menggantikan placeholder `OWNER` yang sebelumnya tidak pernah diganti (temuan tinggi H2) — isi di `.env` VPS dengan `owner/repo` GitHub sungguhan, persis seperti yang dipakai `ci.yml` lewat `${{ github.repository }}`. Konfigurasi Nginx juga sudah dipisah per environment: `docker/nginx/conf.d/production/` (dipakai di sini, sudah termasuk server block 443 + TLS — lihat isi filenya untuk instruksi setup Certbot awal) vs `docker/nginx/conf.d/staging/` (HTTP saja, asumsi TLS diterminasi Cloudflare di depan — lihat Technical Design Document §7.1).
+## 10. `docker-compose.prod.yml` — Referensi Lengkap
 
 ```yaml
+# VPS ini adalah server SHARED yang sudah menjalankan banyak proyek lain di
+# balik Apache (reverse proxy + TLS per-domain via certbot --apache di level
+# sistem, bukan di dalam Docker). Karena itu stack ini SENGAJA tidak punya
+# service nginx/certbot sendiri.
 services:
   web:
     image: ghcr.io/${GHCR_REPO}/web:${IMAGE_TAG}
     restart: unless-stopped
     env_file: .env
     depends_on: [api]
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
 
   api:
     image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
     restart: unless-stopped
     env_file: .env
-    depends_on: [db, redis]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
 
-  # worker:
-  #   image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
-  #   restart: unless-stopped
-  #   command: ["./api", "worker"]
-  #   env_file: .env
-  #   depends_on: [db, redis]
-  #   TODO: main.go belum punya subcommand "worker" -- tambahkan job queue
-  #   (mis. library "asynq" berbasis Redis) untuk proses async (kirim email,
-  #   notifikasi WA, dsb.) sebelum mengaktifkan service ini.
+  # worker: (belum aktif -- lihat Bagian 12, temuan L4)
 
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     restart: unless-stopped
     volumes: ["pgdata:/var/lib/postgresql/data"]
     env_file: .env
+    # Tanpa healthcheck ini, `docker compose run --rm api migrate ...` bisa
+    # mulai sebelum Postgres benar-benar siap menerima koneksi -- lihat
+    # Bagian 11, bug #6.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jeonme}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
 
-  nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    ports: ["80:80", "443:443"]
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/nginx/conf.d/production:/etc/nginx/conf.d:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
-    depends_on: [web, api]
-
-  # Sekali pakai untuk penerbitan sertifikat awal, rutin (cron di VPS) untuk
-  # renewal -- lihat instruksi lengkap di docker/nginx/conf.d/production/jeonme.conf.
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    entrypoint: "true"
-
 volumes:
   pgdata:
 ```
 
-## 11. Zero/Minim-Downtime saat Deploy
+`docker-compose.staging.yml` identik strukturnya, hanya beda nama volume (`pgdata_staging`) dan `IMAGE_TAG` punya fallback `:-latest` (staging boleh fallback ke tag `latest` sebelum deploy pertama; production tidak — harus selalu diisi tag eksplisit oleh workflow).
 
-Untuk MVP dengan 1 VPS, downtime beberapa detik saat `docker compose up -d` biasanya dapat diterima (Docker akan restart container dengan image baru). Jika ingin benar-benar zero-downtime di fase lanjutan:
+### 10.1 Apache Vhost (contoh production, `jeonme.com.conf`)
 
-- Jalankan 2 instance `api`/`web` di belakang Nginx dengan strategi rolling restart (matikan satu, update, nyalakan, baru lanjut ke instance kedua).
-- Atau pindah ke orchestrator yang mendukung rolling update secara native (mis. Docker Swarm mode atau, jika skala sudah besar, Kubernetes) — **bukan prioritas untuk MVP**, cukup dicatat sebagai opsi masa depan.
+```apache
+<VirtualHost *:80>
+    ServerName jeonme.com
+    ServerAlias www.jeonme.com
 
-## 12. Checklist Sebelum Rilis Production Pertama Kali
+    Alias /.well-known/acme-challenge/ /var/www/certbot/.well-known/acme-challenge/
+    <Directory /var/www/certbot/.well-known/acme-challenge/>
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
 
-- [ ] `.env` production sudah pakai kredensial live PSP (bukan sandbox), sudah di-.gitignore, tidak pernah masuk repo.
-- [ ] `GHCR_REPO` di `.env` VPS staging & production sudah diisi `owner/repo` sungguhan (bukan placeholder) — lihat Bagian 9/10.
-- [ ] Secret `GHCR_USERNAME` + `GHCR_PAT` (scope `read:packages` saja) sudah dibuat dan `docker login ghcr.io` dari VPS sudah diuji manual sekali sebelum mengandalkan pipeline.
-- [ ] Endpoint webhook PSP sudah diarahkan ke domain production dan signature verification aktif.
-- [ ] Perintah migrasi (`./api migrate up`, lihat Bagian 6-8) sudah teruji berjalan aman berkali-kali (idempoten) di staging — dijalankan otomatis oleh pipeline, bukan manual.
-- [ ] Backup otomatis database (mis. `pg_dump` terjadwal cron + upload ke object storage) sudah berjalan sebelum trafik nyata masuk.
-- [ ] Sertifikat Certbot awal sudah diterbitkan (lihat instruksi di `docker/nginx/conf.d/production/jeonme.conf`) dan server block 443 aktif; cron renewal sudah terjadwal di VPS.
-- [ ] Health check endpoint (`/api/health`) sudah dipasang dan dites gagal→sukses.
-- [ ] GitHub Environment "production" sudah diberi *required reviewers* (minimal 1 approval sebelum deploy jalan).
-- [ ] Smoke test transaksi dengan uang sungguhan (nominal kecil) sudah dilakukan sebelum go-live publik.
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^/?(.*)$ https://%{SERVER_NAME}/$1 [R=301,L]
+</VirtualHost>
 
-## 13. Alur Kerja Sehari-hari Tim
+<VirtualHost *:443>
+    ServerName jeonme.com
+    ServerAlias www.jeonme.com
 
-1. Developer membuat branch dari `develop`/`main`: `feature/nama-fitur`.
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/jeonme.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/jeonme.com/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyRequests Off
+    RequestHeader set X-Forwarded-Proto "https"
+    ProxyPass        /.well-known/acme-challenge/ !
+
+    ProxyPass        /api/  http://127.0.0.1:28080/api/
+    ProxyPassReverse /api/  http://127.0.0.1:28080/api/
+    ProxyPass        /  http://127.0.0.1:23000/
+    ProxyPassReverse /  http://127.0.0.1:23000/
+
+    ErrorLog  ${APACHE_LOG_DIR}/jeonme.com_error.log
+    CustomLog ${APACHE_LOG_DIR}/jeonme.com_access.log combined
+</VirtualHost>
+```
+
+Vhost staging (`staging.jeonme.com.conf`) sama persis, ganti domain dan port ke `23100`/`28180`.
+
+## 11. Katalog Bug Rollout Pertama (8 Juli 2026)
+
+Enam bug nyata ditemukan lewat proses coba-jalan-sungguhan (bukan review kode saja) saat pertama kali menyalakan pipeline ini. Dicatat di sini supaya tidak terulang dan sebagai referensi debugging kalau muncul gejala serupa.
+
+| # | Gejala | Penyebab | Perbaikan |
+|---|---|---|---|
+| 1 | `build-images` gagal "invalid reference format" | GHCR menolak nama repo berhuruf besar (`Ijeon-Corp/JeonMe`), `${{ github.repository }}` mengembalikan case asli | Tambah step lowercase (`${GITHUB_REPOSITORY,,}`) sebelum dipakai sebagai tag image |
+| 2 | Semua step SSH gagal connect | VPS pakai port SSH `61512`, `appleboy/ssh-action` default ke port 22 | Tambah parameter `port:` di tiap step, dibaca dari secret `*_SSH_PORT` |
+| 3 | `ci/test-backend` gagal di step migrasi: `JWT_SECRET belum diset` | `config.Load()` mewajibkan seluruh env termasuk `JWT_SECRET` walau dipanggil dari subcommand `migrate` yang cuma butuh `DATABASE_URL` | Tambah `config.LoadDatabaseURL()` yang scoped khusus migrate |
+| 4 | `ci/test-backend` gagal: `dial tcp [::1]:6379: connect: connection refused` | Job `test-backend` tidak pernah punya service Redis, cuma Postgres | Tambah service `redis:7-alpine` ke job; sekalian ganti `localhost`→`127.0.0.1` di semua connection string |
+| 5 | Deploy Staging "sukses" tapi container `api`/`web` tidak pernah nyala, log menunjukkan API server malah start penuh saat migrasi | `docker compose run --rm api ./api migrate up` — image sudah `ENTRYPOINT ["./api"]`, jadi command efektifnya `./api ./api migrate up`; `os.Args[1]` jadi `"./api"`, bukan `"migrate"` | Ganti command jadi `migrate up` saja (tanpa `./api` di depan) |
+| 6 | Deploy Production gagal migrasi: `dial tcp ...5432: connect: connection refused` | `api` `depends_on: [db, redis]` tanpa kondisi — compose cuma menunggu container db "Started", bukan Postgres benar-benar siap menerima koneksi (race condition) | Tambah `healthcheck: pg_isready` ke `db`, ubah `depends_on` jadi `condition: service_healthy` |
+
+Semua 6 bug di atas sudah diperbaiki di kode saat ini (commit `edae5a8` s.d. `f6c6010`) dan diverifikasi manual langsung di VPS sebelum dan sesudah fix.
+
+## 12. Yang Belum Dikerjakan (Prioritas Rendah)
+
+- **L2**: Rollback belum otomatis lewat `workflow_dispatch` input — mitigasi sementara: `scripts/rollback.sh` (manual via SSH).
+- **L3**: Linting Go masih minim (`go vet` saja, belum `golangci-lint`).
+- **L4**: Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — dijadwalkan Sprint 2 di rencana sprint.
+- **Backup otomatis database production** (`pg_dump` terjadwal + upload object storage) belum disetup.
+
+## 13. Zero/Minim-Downtime saat Deploy
+
+Untuk MVP dengan 1 VPS, downtime beberapa detik saat `docker compose up -d` biasanya dapat diterima. Jika ingin benar-benar zero-downtime di fase lanjutan: jalankan 2 instance `api`/`web` di belakang Apache dengan rolling restart, atau pindah ke orchestrator (Docker Swarm/Kubernetes) — bukan prioritas MVP.
+
+## 14. Checklist Sebelum Rilis Production Berikutnya
+
+- [x] `GHCR_REPO` di `.env` VPS staging & production sudah diisi `ijeon-corp/jeonme` (huruf kecil).
+- [x] Secret `GHCR_USERNAME` + `GHCR_PAT` sudah dibuat dan `docker login` teruji.
+- [x] Secret `*_SSH_PORT` sudah diisi `61512`.
+- [x] Perintah migrasi teruji idempoten, dijalankan otomatis oleh pipeline.
+- [x] Sertifikat TLS terbit untuk `jeonme.com`, `www.jeonme.com`, `staging.jeonme.com`; renewal tercakup `certbot.timer` sistem.
+- [x] Health check endpoint teruji gagal→sukses (real rollout, bukan simulasi).
+- [x] GitHub Environment "production" sudah diberi *required reviewers*.
+- [ ] `.env` production sudah pakai kredensial live PSP (Xendit) — **belum**, masih kosong (fitur checkout belum dikerjakan, lihat rencana sprint).
+- [ ] Backup otomatis database production — **belum**.
+- [ ] Smoke test transaksi dengan uang sungguhan — **belum relevan** sampai fitur checkout ada.
+
+## 15. Alur Kerja Sehari-hari Tim
+
+1. Developer membuat branch dari `main`: `feature/nama-fitur`.
 2. Push → CI (`ci.yml`) jalan otomatis, developer memastikan hijau sebelum minta review.
-3. PR di-review minimal 1 orang → merge ke `main` (squash merge disarankan agar histori bersih).
-4. Merge ke `main` men-trigger `deploy-staging.yml` otomatis → tim QA/kreator test di staging.
-5. Jika staging OK, buat tag rilis (`git tag v1.2.0 && git push origin v1.2.0`) → `deploy-production.yml` jalan, menunggu approval reviewer → deploy ke jeonme.com.
-6. Pantau health check + log setelah deploy; siapkan rencana rollback (redeploy tag/image sebelumnya) jika ada masalah.
+3. PR di-review minimal 1 orang → merge ke `main` (squash merge disarankan).
+4. Merge ke `main` men-trigger `deploy-staging.yml` otomatis → cek `staging.jeonme.com`.
+5. Jika staging OK, buat tag rilis (`git tag v1.2.0 && git push origin v1.2.0`) → `deploy-production.yml` jalan, menunggu approval reviewer → deploy ke `jeonme.com`.
+6. Pantau health check + log setelah deploy. Kalau ada masalah: `scripts/rollback.sh docker-compose.prod.yml <sha-sebelumnya>` di VPS (lihat SETUP-GUIDE.md Bagian 10).

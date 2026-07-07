@@ -103,18 +103,21 @@ Ditandai `TODO` di kode, ringkasannya:
 | Background job/queue (worker) | Belum ada, service `worker` di `docker-compose.prod.yml` masih dikomentari | — |
 | Cache Redis untuk halaman publik | Kerangka disiapkan (komentar di `page.go`), belum diisi | NF-01, NF-02 |
 | Rate limiting API | Belum ada | NF-05 |
-| CI/CD | Sudah diaudit & 13 dari 14 temuan diperbaiki (migrasi otomatis, login GHCR di VPS, TLS Nginx, dll) — lihat `CICD-GUIDE.md` dan catatan "Audit CI/CD" di bawah | — |
+| CI/CD | **Live di production** (`v0.1.0`, 8 Juli 2026) — push ke `main` otomatis deploy ke staging, tag rilis otomatis deploy ke production (dengan approval) — lihat `CICD-GUIDE.md` | — |
 
-## Audit CI/CD (3 Juli 2026)
+## Status Deployment (8 Juli 2026)
 
-Ketiga workflow (`ci.yml`, `deploy-staging.yml`, `deploy-production.yml`) sudah diaudit dan sebagian besar temuan sudah diperbaiki langsung di kode:
+Pipeline CI/CD sudah live dan terbukti jalan end-to-end, bukan cuma teori:
 
-- **Kritis** — migrasi production sebelumnya cuma `echo` placeholder (sekarang jalan sungguhan lewat subcommand `./api migrate up`); tidak ada `docker login ghcr.io` di VPS (sekarang ditambahkan di kedua workflow deploy); CI tidak menerapkan migrasi sebelum test dan belum ada test sama sekali (sekarang ada langkah migrasi + test pertama di `internal/handlers/health_test.go`).
-- **Tinggi** — tag `:latest` sekarang dipublikasikan dari `main` sebagai fallback registry; placeholder `OWNER` di compose files diganti variabel `${GHCR_REPO}` (isi di `.env` VPS); Nginx production sekarang punya server block 443 lengkap dengan TLS (lihat `docker/nginx/conf.d/production/jeonme.conf` untuk instruksi setup Certbot awal).
-- **Sedang** — `npm ci` menggantikan `npm install`, health check deploy sekarang retry berjeda (bukan `sleep 10` sekali), pemindaian kerentanan non-blocking (`govulncheck`, `npm audit`) ditambahkan ke CI, `go.sum` sudah digenerate & di-commit.
-- **Belum dikerjakan** (prioritas rendah, tidak memblokir) — dokumentasi rollback via `workflow_dispatch` input dan `golangci-lint` belum ditambahkan.
+- **Production**: https://jeonme.com — rilis pertama `v0.1.0`
+- **Staging**: https://staging.jeonme.com — auto-deploy dari `main`
+- Keduanya dites langsung: `/api/health` mengembalikan `{"status":"ok","checks":{"database":"up","redis":"up"}}`
 
-Sebelum deploy pertama kali: siapkan secret `GHCR_USERNAME` + `GHCR_PAT` (scope `read:packages`), dan isi `GHCR_REPO=<owner>/<repo>` di `.env` VPS staging/production (lihat `.env.example`). Panduan langkah demi langkah lengkap ada di `SETUP-GUIDE.md`.
+Ketiga workflow (`ci.yml`, `deploy-staging.yml`, `deploy-production.yml`) sudah lewat audit awal (13/14 temuan diperbaiki) **dan** rollout nyata pertama, yang menemukan **6 bug tambahan** yang tidak ketahuan lewat review kode saja (lowercase GHCR, SSH port non-default, dependency env var yang salah, service Redis hilang di CI, duplikasi entrypoint Docker, race condition healthcheck database). Katalog lengkap tiap bug — gejala, penyebab, perbaikan — ada di `CICD-GUIDE.md` Bagian 11.
+
+Arsitektur deploy juga berubah dari rencana awal: bukan VPS terdedikasi dengan Nginx+Certbot di dalam Docker, tapi VPS **shared** (sudah menjalankan proyek lain) dengan Apache sebagai reverse proxy sistem — lihat `CICD-GUIDE.md` Bagian 2 untuk detail lengkap.
+
+Panduan setup & referensi kondisi deployment saat ini ada di `SETUP-GUIDE.md`.
 
 ## Keamanan — jangan lewatkan sebelum production
 
