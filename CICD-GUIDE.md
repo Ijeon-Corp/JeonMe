@@ -301,7 +301,7 @@ jobs:
             export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull api
-            docker compose -f docker-compose.staging.yml run --rm api ./api migrate up
+            docker compose -f docker-compose.staging.yml run --rm api migrate up
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -374,7 +374,7 @@ jobs:
             export IMAGE_TAG=${{ github.sha }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull api
-            docker compose -f docker-compose.prod.yml run --rm api ./api migrate up
+            docker compose -f docker-compose.prod.yml run --rm api migrate up
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
