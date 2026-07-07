@@ -1,0 +1,12 @@
+# Repo ini diedit di Windows tapi di-deploy ke Linux (VPS) -- paksa LF untuk
+# semua file teks supaya shell script (scripts/*.sh) dan workflow tidak
+# rusak kena CRLF, apa pun pengaturan core.autocrlf lokal developer.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
+*.zip binary

@@ -1,0 +1,21 @@
+# Node / Next.js
+node_modules/
+.next/
+apps/web/.env
+apps/web/.env.local
+
+# Go
+apps/api/bin/
+apps/api/.env
+
+# Root env (kredensial VPS/PSP)
+.env
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Backup zip lokal (bukan bagian dari source, jangan ikut ke repo)
+jeonme.zip

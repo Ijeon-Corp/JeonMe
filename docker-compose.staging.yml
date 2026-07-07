@@ -1,0 +1,41 @@
+# VPS ini adalah server SHARED yang sudah menjalankan banyak proyek lain di
+# balik Apache (reverse proxy + TLS per-domain via certbot --apache di level
+# sistem, bukan di dalam Docker). Karena itu stack ini SENGAJA tidak punya
+# service nginx/certbot sendiri -- port 80/443 host sudah dipakai Apache
+# untuk domain lain dan tidak boleh direbut. web/api di-bind HANYA ke
+# 127.0.0.1 (tidak pernah expose ke publik langsung), lalu Apache di level
+# sistem yang mem-proxy domain staging.jeonme.com ke port-port ini.
+services:
+  web:
+    # GHCR_REPO harus persis "owner/repo" GitHub, sama seperti yang dipakai
+    # ci.yml lewat ${{ github.repository }} -- diset di .env, BUKAN
+    # dihardcode di sini (temuan tinggi H2 di audit CI/CD: placeholder
+    # "OWNER" sebelumnya tidak pernah diganti dan tidak pernah cocok dengan
+    # path yang benar-benar di-push CI).
+    image: ghcr.io/${GHCR_REPO}/web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+
+  api:
+    image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [db, redis]
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes: ["pgdata_staging:/var/lib/postgresql/data"]
+    env_file: .env
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  pgdata_staging:

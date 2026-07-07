@@ -1,0 +1,61 @@
+name: Deploy Staging
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      # Temuan kritis C2 (audit CI/CD): tanpa login eksplisit di VPS,
+      # `docker compose pull` akan gagal 401/denied terhadap GHCR privat.
+      - name: Login GHCR di VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      # Sebelumnya staging tidak pernah menjalankan migrasi sama sekali --
+      # skema bisa diam-diam ketinggalan dari kode yang di-deploy. Sekarang
+      # konsisten dengan deploy-production.yml: migrasi dulu, baru deploy.
+      - name: Jalankan migrasi database (staging)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/jeonme-staging
+            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            docker compose -f docker-compose.staging.yml pull api
+            docker compose -f docker-compose.staging.yml run --rm api ./api migrate up
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/jeonme-staging
+            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            docker compose -f docker-compose.staging.yml pull
+            docker compose -f docker-compose.staging.yml up -d --remove-orphans
+            docker image prune -f
+
+      # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali sleep+curl.
+      - name: Health check
+        run: |
+          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health || exit 1

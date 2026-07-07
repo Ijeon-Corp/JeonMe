@@ -1,0 +1,66 @@
+name: Deploy Production
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production   # atur "required reviewers" di Settings > Environments
+    steps:
+      # Temuan kritis C2 (audit CI/CD): GHCR mewarisi visibility repo (default
+      # private) -- tanpa login eksplisit di sisi VPS, `docker compose pull`
+      # akan gagal 401/denied. Gunakan token read-only khusus VPS (scope
+      # read:packages saja), bukan PAT developer pribadi.
+      - name: Login GHCR di VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      # Temuan kritis C1 (audit CI/CD): sebelumnya langkah ini hanya berisi
+      # `echo` placeholder dan TIDAK menjalankan migrasi apa pun. Sekarang
+      # memakai subcommand `migrate` bawaan image API yang baru saja di-pull
+      # (image sudah membawa folder migrations yang persis cocok dengan versi
+      # ini, lihat docker/api/Dockerfile) -- dijalankan lewat `compose run`
+      # sekali pakai, terhubung ke network compose yang sama dengan db/redis.
+      - name: Jalankan migrasi database (production)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/jeonme-production
+            export IMAGE_TAG=${{ github.sha }}
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            docker compose -f docker-compose.prod.yml pull api
+            docker compose -f docker-compose.prod.yml run --rm api ./api migrate up
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/jeonme-production
+            export IMAGE_TAG=${{ github.sha }}
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+
+      # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali
+      # sleep+curl -- container butuh waktu bervariasi untuk siap tergantung
+      # kondisi koneksi DB/Redis saat cold start.
+      - name: Health check
+        run: |
+          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://jeonme.com/api/health || exit 1

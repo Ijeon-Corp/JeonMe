@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jeonme
+          POSTGRES_PASSWORD: jeonme
+          POSTGRES_DB: jeonme_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jeonme"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Download dependencies
+        working-directory: apps/api
+        run: go mod download
+
+      - name: Vet
+        working-directory: apps/api
+        run: go vet ./...
+
+      - name: Build binary
+        working-directory: apps/api
+        run: go build -o bin/api main.go
+
+      - name: Apply migrations to test database
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
+        # Memakai subcommand migrate bawaan binary (internal/migrate), bukan
+        # CLI golang-migrate terpisah -- lihat temuan kritis C3 di audit CI/CD:
+        # sebelumnya go test berjalan melawan skema kosong tanpa migrasi apa pun.
+        run: ./bin/api migrate up
+
+      - name: Run tests
+        working-directory: apps/api
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgres://jeonme:jeonme@localhost:5432/jeonme_test?sslmode=disable
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: ci-test-secret
+        run: go test ./... -v
+
+      # Non-blocking untuk sekarang (temuan sedang M3 di audit CI/CD) -- jadikan
+      # blocking setelah tim terbiasa dengan noise-nya dan backlog awal beres.
+      - name: Vulnerability scan (govulncheck)
+        working-directory: apps/api
+        continue-on-error: true
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint
+      - name: Type check
+        working-directory: apps/web
+        run: npm run typecheck
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+
+      # Non-blocking untuk sekarang (temuan sedang M3 di audit CI/CD).
+      - name: Audit dependency vulnerabilities
+        working-directory: apps/web
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
+
+  build-images:
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tag :latest hanya dipublikasikan dari main -- dipakai sebagai fallback
+      # oleh docker-compose.staging.yml (${IMAGE_TAG:-latest}) sebelum .env di
+      # VPS pernah diisi tag sungguhan oleh deploy-staging.yml. Lihat temuan
+      # tinggi H1 di audit CI/CD: sebelumnya tidak ada tag fallback yang benar-
+      # benar ada di registry, jadi deploy pertama kali akan gagal pull.
+      - name: Tentukan tag image tambahan
+        id: extra_tag
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "value=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build & push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/web/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+            ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', github.repository, steps.extra_tag.outputs.value) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
