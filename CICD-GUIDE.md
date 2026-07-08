@@ -579,8 +579,8 @@ Bug #1–6 diperbaiki di commit `edae5a8` s.d. `f6c6010`; #7–10 di commit `47c
 - ~~**L2**: Rollback belum otomatis~~ — **selesai**: `deploy-staging.yml` & `deploy-production.yml` menerima input `workflow_dispatch` opsional `image_tag` untuk rollback lewat GitHub Actions UI. `scripts/rollback.sh` tetap ada sebagai fallback SSH manual.
 - ~~**L3**: Linting Go masih minim~~ — **selesai**: `golangci-lint` (errcheck, staticcheck, unused, gosimple, ineffassign, bodyclose) ditambahkan ke job `test-backend`, config di `apps/api/.golangci.yml`.
 - ~~**CI `build-images` jalan juga di `develop`**~~ — **selesai**: dibatasi ke `main` saja.
-- **Backup database** — `scripts/backup-database.sh` (pg_dump + gzip + retensi 14 hari lokal) sudah dibuat dan diuji langsung di VPS untuk staging & production. **Belum** dijadwalkan cron dan **belum** ada upload offsite ke object storage (MinIO/R2 belum disiapkan) — backup lokal saja tidak cukup untuk skenario VPS hilang total.
-- **L4**: Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — sengaja ditunda karena belum ada pekerjaan async nyata untuk diproses (checkout & notifikasi belum dibangun, lihat rencana sprint Sprint 2/3). Membangun infrastruktur queue sebelum ada job yang butuh antre adalah kerja sia-sia.
+- ~~**Backup database**~~ — **selesai (sebagian)**: `scripts/backup-database.sh` (pg_dump + gzip + retensi 14 hari lokal) dijadwalkan cron harian (production 03:00, staging 03:30). **Belum** ada upload offsite ke object storage (MinIO/R2 belum disiapkan) — backup lokal saja tidak cukup untuk skenario VPS hilang total, jadi ini masih risiko yang harus disadari sampai object storage ada.
+- **L4** (sengaja ditunda, keputusan sadar): Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — belum ada pekerjaan async nyata untuk diproses (checkout & notifikasi belum dibangun, lihat rencana sprint Sprint 2/3). Membangun infrastruktur queue sebelum ada job yang butuh antre adalah kerja sia-sia; dikerjakan bareng saat fitur checkout/notifikasi mulai dibangun.
 
 ## 13. Zero/Minim-Downtime saat Deploy
 
