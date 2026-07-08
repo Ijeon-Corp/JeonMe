@@ -16,6 +16,7 @@ apps/api/.env
 *.log
 .vscode/
 .idea/
+.claude/
 
 # Backup zip lokal (bukan bagian dari source, jangan ikut ke repo)
 jeonme.zip
