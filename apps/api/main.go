@@ -18,6 +18,15 @@ import (
 	"github.com/jeonme/api/internal/routes"
 )
 
+// Version diisi saat build lewat -ldflags "-X main.Version=<sha>" (lihat
+// docker/api/Dockerfile & ci.yml). Diekspos di /api/health supaya pipeline
+// deploy bisa memverifikasi versi yang SUNGGUHAN jalan cocok dengan yang
+// baru saja di-deploy -- sebelumnya health check cuma mengecek "server
+// merespons ok", yang tetap true walau container lama masih jalan karena
+// step deploy gagal diam-diam (ketahuan waktu commit lama masih terpasang
+// di staging padahal IMAGE_TAG di .env sudah menunjuk versi baru).
+var Version = "dev"
+
 func main() {
 	// Subcommand `migrate` -- dipakai CI (sebelum go test) dan pipeline
 	// deploy (sebelum menyalakan versi baru), lihat .github/workflows/*.yml.
@@ -53,7 +62,7 @@ func main() {
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
 
-	routes.Register(r, db, rdb, cfg)
+	routes.Register(r, db, rdb, cfg, Version)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,

@@ -7,7 +7,12 @@ COPY apps/api/go.mod apps/api/go.sum* ./
 RUN go mod download
 
 COPY apps/api .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/api main.go
+
+# VERSION disuntik lewat --build-arg dari ci.yml (commit sha) dan diekspos di
+# /api/health -- supaya pipeline deploy bisa memverifikasi commit yang
+# SUNGGUHAN jalan, bukan cuma "server merespons ok" (lihat main.go).
+ARG VERSION=dev
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s -X main.Version=${VERSION}" -o /out/api main.go
 
 FROM alpine:3.20 AS runner
 RUN apk add --no-cache ca-certificates tzdata

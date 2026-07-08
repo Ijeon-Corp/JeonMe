@@ -153,6 +153,12 @@ jobs:
           context: .
           file: docker/api/Dockerfile
           push: true
+          # VERSION disuntik ke binary supaya /api/health bisa mengembalikan
+          # commit yang sungguhan jalan -- dipakai deploy-*.yml untuk
+          # memverifikasi deploy benar-benar memutakhirkan container, bukan
+          # cuma "server merespons ok" (lihat main.go & CICD-GUIDE.md §11).
+          build-args: |
+            VERSION=${{ github.sha }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.lower }}/api:${{ github.sha }}
             ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/api:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}

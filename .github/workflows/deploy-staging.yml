@@ -59,6 +59,21 @@ jobs:
             docker image prune -f
 
       # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali sleep+curl.
+      #
+      # Ditemukan dari rollout pertama: health check yang cuma mengecek
+      # "server merespons ok" TIDAK bisa mendeteksi deploy yang gagal diam-
+      # diam di tengah jalan (mis. step "Deploy via SSH" gagal transient
+      # setelah step migrasi sempat menimpa IMAGE_TAG di .env) -- container
+      # LAMA tetap menjawab sehat, menyembunyikan bahwa versi baru tidak
+      # pernah benar-benar naik. Sekarang verifikasi juga field `version`
+      # di respons cocok dengan commit yang baru saja di-deploy.
       - name: Health check
         run: |
-          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health || exit 1
+          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health -o /tmp/health.json || exit 1
+          cat /tmp/health.json
+          EXPECTED="${{ github.event.workflow_run.head_sha }}"
+          if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
+            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan commit yang di-deploy (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
+            exit 1
+          fi
+          echo "Versi terverifikasi cocok: ${EXPECTED}"

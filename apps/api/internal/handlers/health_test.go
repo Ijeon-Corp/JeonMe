@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -50,7 +51,7 @@ func TestHealthCheck_ReportsUpWhenDependenciesReachable(t *testing.T) {
 	assertTableExists(t, db, "users")
 	assertTableExists(t, db, "ledger_entries")
 
-	h := NewHealthHandler(db, rdb)
+	h := NewHealthHandler(db, rdb, "test-version")
 
 	router := gin.New()
 	router.GET("/api/health", h.Check)
@@ -61,6 +62,13 @@ func TestHealthCheck_ReportsUpWhenDependenciesReachable(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, ekspektasi %d. Body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	// Pipeline deploy memverifikasi field ini cocok dengan commit yang baru
+	// di-deploy -- kalau field ini hilang dari respons, deploy tidak akan
+	// pernah bisa mendeteksi container lama yang masih diam-diam berjalan.
+	if !strings.Contains(rec.Body.String(), `"version":"test-version"`) {
+		t.Fatalf("respons tidak menyertakan version yang benar. Body: %s", rec.Body.String())
 	}
 }
 

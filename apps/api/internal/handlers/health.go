@@ -13,20 +13,25 @@ import (
 // HealthHandler dipakai oleh workflow deploy-production.yml untuk
 // memverifikasi deploy benar-benar berhasil, bukan sekadar "container jalan".
 type HealthHandler struct {
-	DB    *pgxpool.Pool
-	Redis *redis.Client
+	DB      *pgxpool.Pool
+	Redis   *redis.Client
+	Version string
 }
 
-func NewHealthHandler(db *pgxpool.Pool, rdb *redis.Client) *HealthHandler {
-	return &HealthHandler{DB: db, Redis: rdb}
+func NewHealthHandler(db *pgxpool.Pool, rdb *redis.Client, version string) *HealthHandler {
+	return &HealthHandler{DB: db, Redis: rdb, Version: version}
 }
 
 // Check menguji koneksi DB dan Redis secara aktif -- bukan cuma "server nyala".
+// Version disertakan supaya pipeline deploy bisa memverifikasi commit yang
+// SUNGGUHAN jalan cocok dengan yang baru saja di-deploy, bukan cuma "server
+// merespons ok" (yang tetap true walau container lama masih jalan karena
+// step deploy gagal diam-diam di tengah jalan).
 func (h *HealthHandler) Check(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
 
-	status := gin.H{"status": "ok", "checks": gin.H{}}
+	status := gin.H{"status": "ok", "version": h.Version, "checks": gin.H{}}
 	checks := status["checks"].(gin.H)
 	httpStatus := http.StatusOK
 

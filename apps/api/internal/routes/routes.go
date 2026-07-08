@@ -13,8 +13,8 @@ import (
 // Register mendaftarkan seluruh route API. Struktur mengikuti pemisahan
 // modul pada Technical Design Document (auth, page, product, dst.)
 // sehingga tiap modul mudah diekstraksi jadi service terpisah nanti.
-func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, cfg *config.Config) {
-	health := handlers.NewHealthHandler(db, rdb)
+func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, version string) {
+	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, cfg.JWTSecret)
 	page := handlers.NewPageHandler(db)
 	product := handlers.NewProductHandler(db)
