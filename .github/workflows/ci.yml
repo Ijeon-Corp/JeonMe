@@ -50,6 +50,17 @@ jobs:
         working-directory: apps/api
         run: go vet ./...
 
+      # Sebelumnya linting Go cuma go vet (temuan L3 di audit CI/CD) --
+      # golangci-lint jalankan errcheck/staticcheck/unused/dkk sekaligus.
+      # Konfigurasi di apps/api/.golangci.yml, sudah diverifikasi bersih
+      # terhadap kode saat ini sebelum diaktifkan sebagai gate blocking.
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: apps/api
+          args: --timeout=3m
+
       - name: Build binary
         working-directory: apps/api
         run: go build -o bin/api main.go
@@ -111,7 +122,10 @@ jobs:
 
   build-images:
     needs: [test-backend, test-frontend]
-    if: github.event_name == 'push'
+    # Sebelumnya jalan untuk push ke branch mana pun (termasuk develop),
+    # padahal tidak ada environment yang deploy dari situ -- pemborosan
+    # build + storage GHCR. Dibatasi ke main saja.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

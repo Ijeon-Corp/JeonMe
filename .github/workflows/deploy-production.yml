@@ -3,13 +3,35 @@ name: Deploy Production
 on:
   push:
     tags: ["v*.*.*"]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: >-
+          Commit sha untuk rollback/redeploy manual (kosongkan untuk deploy
+          commit HEAD seperti biasa). Isi dengan sha rilis sebelumnya yang
+          diketahui sehat -- cek tab Actions atau `git log --oneline`.
+        required: false
+        type: string
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production   # atur "required reviewers" di Settings > Environments
     steps:
+      # Temuan L2 (audit CI/CD): sebelumnya rollback cuma bisa manual via SSH
+      # (scripts/rollback.sh). Kalau workflow_dispatch diisi image_tag, itu
+      # dipakai apa adanya -- kalau kosong (trigger normal dari tag/dispatch
+      # tanpa input), pakai commit HEAD seperti biasa.
+      - name: Tentukan IMAGE_TAG
+        id: image_tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "value=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rollback/redeploy manual ke tag: ${{ github.event.inputs.image_tag }}"
+          else
+            echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # Temuan kritis C2 (audit CI/CD): GHCR mewarisi visibility repo (default
       # private) -- tanpa login eksplisit di sisi VPS, `docker compose pull`
       # akan gagal 401/denied. Gunakan token read-only khusus VPS (scope
@@ -30,6 +52,12 @@ jobs:
       # (image sudah membawa folder migrations yang persis cocok dengan versi
       # ini, lihat docker/api/Dockerfile) -- dijalankan lewat `compose run`
       # sekali pakai, terhubung ke network compose yang sama dengan db/redis.
+      #
+      # Catatan rollback: ini menjalankan `migrate up`, BUKAN `migrate down`.
+      # Aman karena golang-migrate idempoten (skema yang sudah diterapkan
+      # tidak diulang) -- tapi kalau rilis yang di-rollback butuh migrasi
+      # turun (skema tidak backward-compatible), itu tetap perlu keputusan
+      # manual, lihat catatan di scripts/rollback.sh.
       - name: Jalankan migrasi database (production)
         uses: appleboy/ssh-action@v1
         with:
@@ -40,7 +68,7 @@ jobs:
           script: |
             set -e
             cd /opt/jeonme-production
-            export IMAGE_TAG=${{ github.sha }}
+            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull api
             docker compose -f docker-compose.prod.yml run --rm api migrate up
@@ -55,7 +83,7 @@ jobs:
           script: |
             set -e
             cd /opt/jeonme-production
-            export IMAGE_TAG=${{ github.sha }}
+            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
@@ -70,14 +98,14 @@ jobs:
       # diam di tengah jalan -- container LAMA tetap menjawab sehat,
       # menyembunyikan bahwa versi baru tidak pernah benar-benar naik.
       # Sekarang verifikasi juga field `version` di respons cocok dengan
-      # commit yang baru saja di-deploy.
+      # commit yang baru saja di-deploy (atau tag rollback yang diminta).
       - name: Health check
         run: |
           curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://jeonme.com/api/health -o /tmp/health.json || exit 1
           cat /tmp/health.json
-          EXPECTED="${{ github.sha }}"
+          EXPECTED="${{ steps.image_tag.outputs.value }}"
           if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
-            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan commit yang di-deploy (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
+            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
             exit 1
           fi
           echo "Versi terverifikasi cocok: ${EXPECTED}"

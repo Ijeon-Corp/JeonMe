@@ -5,13 +5,38 @@ on:
     workflows: ["CI"]
     branches: [main]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: >-
+          Commit sha untuk rollback/redeploy manual staging (kosongkan untuk
+          deploy commit HEAD main).
+        required: false
+        type: string
 
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success'
+    # workflow_dispatch selalu boleh jalan; trigger otomatis dari CI hanya
+    # kalau CI-nya sukses.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: staging
     steps:
+      # Temuan L2 (audit CI/CD): sebelumnya rollback staging cuma bisa manual
+      # via SSH (scripts/rollback.sh), dan tidak ada cara memicu deploy
+      # staging on-demand tanpa push baru sama sekali.
+      - name: Tentukan IMAGE_TAG
+        id: image_tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "value=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rollback/redeploy manual staging ke tag: ${{ github.event.inputs.image_tag }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # Temuan kritis C2 (audit CI/CD): tanpa login eksplisit di VPS,
       # `docker compose pull` akan gagal 401/denied terhadap GHCR privat.
       - name: Login GHCR di VPS
@@ -37,7 +62,7 @@ jobs:
           script: |
             set -e
             cd /opt/jeonme-staging
-            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull api
             docker compose -f docker-compose.staging.yml run --rm api migrate up
@@ -52,7 +77,7 @@ jobs:
           script: |
             set -e
             cd /opt/jeonme-staging
-            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
@@ -71,9 +96,9 @@ jobs:
         run: |
           curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health -o /tmp/health.json || exit 1
           cat /tmp/health.json
-          EXPECTED="${{ github.event.workflow_run.head_sha }}"
+          EXPECTED="${{ steps.image_tag.outputs.value }}"
           if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
-            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan commit yang di-deploy (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
+            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
             exit 1
           fi
           echo "Versi terverifikasi cocok: ${EXPECTED}"
