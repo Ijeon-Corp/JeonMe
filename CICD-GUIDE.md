@@ -574,13 +574,13 @@ Sepuluh bug/celah nyata ditemukan lewat proses coba-jalan-sungguhan dan inspeksi
 
 Bug #1–6 diperbaiki di commit `edae5a8` s.d. `f6c6010`; #7–10 di commit `47c51f4` s.d. `c421ab0`. Semua diverifikasi manual langsung di VPS sebelum dan sesudah fix, bukan cuma lewat CI.
 
-## 12. Yang Belum Dikerjakan (Prioritas Rendah)
+## 12. Yang Belum Dikerjakan
 
-- **L2**: Rollback belum otomatis lewat `workflow_dispatch` input — mitigasi sementara: `scripts/rollback.sh` (manual via SSH).
-- **L3**: Linting Go masih minim (`go vet` saja, belum `golangci-lint`).
-- **L4**: Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — dijadwalkan Sprint 2 di rencana sprint.
-- **Backup otomatis database production** (`pg_dump` terjadwal + upload object storage) belum disetup.
-- **CI `build-images`** juga jalan untuk push ke `develop` (bukan cuma `main`) walau belum ada environment yang deploy dari `develop` — pemborosan kecil, bukan bug.
+- ~~**L2**: Rollback belum otomatis~~ — **selesai**: `deploy-staging.yml` & `deploy-production.yml` menerima input `workflow_dispatch` opsional `image_tag` untuk rollback lewat GitHub Actions UI. `scripts/rollback.sh` tetap ada sebagai fallback SSH manual.
+- ~~**L3**: Linting Go masih minim~~ — **selesai**: `golangci-lint` (errcheck, staticcheck, unused, gosimple, ineffassign, bodyclose) ditambahkan ke job `test-backend`, config di `apps/api/.golangci.yml`.
+- ~~**CI `build-images` jalan juga di `develop`**~~ — **selesai**: dibatasi ke `main` saja.
+- **Backup database** — `scripts/backup-database.sh` (pg_dump + gzip + retensi 14 hari lokal) sudah dibuat dan diuji langsung di VPS untuk staging & production. **Belum** dijadwalkan cron dan **belum** ada upload offsite ke object storage (MinIO/R2 belum disiapkan) — backup lokal saja tidak cukup untuk skenario VPS hilang total.
+- **L4**: Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — sengaja ditunda karena belum ada pekerjaan async nyata untuk diproses (checkout & notifikasi belum dibangun, lihat rencana sprint Sprint 2/3). Membangun infrastruktur queue sebelum ada job yang butuh antre adalah kerja sia-sia.
 
 ## 13. Zero/Minim-Downtime saat Deploy
 
