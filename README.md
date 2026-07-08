@@ -1,5 +1,7 @@
 # Jeonme — Boilerplate Monorepo
 
+> **Developer baru bergabung?** Mulai dari **`DEVELOPER-GUIDE.md`** — berisi checklist onboarding, alur kerja git, dan penjelasan cara staging/production bekerja. Dokumen ini (`README.md`) fokus ke setup lokal & catatan versi.
+
 Boilerplate ini mengimplementasikan kerangka awal sesuai:
 - `PRD-Jeonme.docx` — lingkup fitur MVP
 - `SRS-Jeonme.docx` — requirement fungsional (kode REQ-F-xxx dirujuk langsung di komentar kode)

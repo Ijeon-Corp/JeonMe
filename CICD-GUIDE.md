@@ -4,6 +4,8 @@ Versi 2.0 — 8 Juli 2026 (rilis pertama `v0.1.0` sudah live di production)
 
 Dokumen ini adalah panduan lengkap pipeline CI/CD Jeonme — bagaimana cara kerjanya, bagaimana infrastruktur nyata disusun, dan katalog bug yang ditemukan (dan diperbaiki) selama rollout pertama. Semua contoh di dokumen ini **identik** dengan file yang sungguhan ada di `.github/workflows/` dan `docker-compose*.yml` — bukan contoh generik.
 
+> Kalau kamu baru bergabung dan cuma butuh gambaran singkat "bagaimana cara staging/production bekerja" tanpa detail implementasi, baca **`DEVELOPER-GUIDE.md`** dulu — dokumen ini (`CICD-GUIDE.md`) untuk saat kamu perlu detail penuh atau debug pipeline.
+
 > **Perubahan besar dari v1.0**: v1.0 mengasumsikan VPS terdedikasi dengan Nginx + Certbot berjalan **di dalam** Docker Compose. Rencana itu berubah total begitu diketahui VPS yang tersedia adalah **server shared** yang sudah menjalankan puluhan situs klien lain lewat Apache. Lihat Bagian 2 untuk arsitektur yang benar-benar dipakai.
 
 ---
