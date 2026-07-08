@@ -1,19 +1,37 @@
-import Link from "next/link";
+import Navbar from "@/components/landing/Navbar";
+import Hero from "@/components/landing/Hero";
+import TrustedBy from "@/components/landing/TrustedBy";
+import Features from "@/components/landing/Features";
+import ProductShowcase from "@/components/landing/ProductShowcase";
+import Monetization from "@/components/landing/Monetization";
+import Templates from "@/components/landing/Templates";
+import Analytics from "@/components/landing/Analytics";
+import Testimonials from "@/components/landing/Testimonials";
+import Pricing from "@/components/landing/Pricing";
+import FAQ from "@/components/landing/FAQ";
+import FinalCTA from "@/components/landing/FinalCTA";
+import Footer from "@/components/landing/Footer";
+import ScrollReveal from "@/components/landing/ScrollReveal";
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-4xl font-bold text-primary">Jeonme</h1>
-      <p className="max-w-md text-gray-600">
-        Satu link untuk semua yang kamu tawarkan — link-in-bio dan monetisasi
-        produk digital untuk kreator Indonesia.
-      </p>
-      <Link
-        href="/dashboard"
-        className="rounded-lg bg-primary px-6 py-3 font-medium text-white hover:opacity-90"
-      >
-        Mulai buat halamanmu
-      </Link>
-    </main>
+    <>
+      <ScrollReveal />
+      <Navbar />
+      <main>
+        <Hero />
+        <TrustedBy />
+        <Features />
+        <ProductShowcase />
+        <Monetization />
+        <Templates />
+        <Analytics />
+        <Testimonials />
+        <Pricing />
+        <FAQ />
+        <FinalCTA />
+      </main>
+      <Footer />
+    </>
   );
 }
