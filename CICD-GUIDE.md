@@ -555,9 +555,9 @@ volumes:
 
 Vhost staging (`staging.jeonme.com.conf`) sama persis, ganti domain dan port ke `23100`/`28180`.
 
-## 11. Katalog Bug Rollout Pertama (8 Juli 2026)
+## 11. Katalog Bug Rollout &amp; Review Lanjutan (8 Juli 2026)
 
-Enam bug nyata ditemukan lewat proses coba-jalan-sungguhan (bukan review kode saja) saat pertama kali menyalakan pipeline ini. Dicatat di sini supaya tidak terulang dan sebagai referensi debugging kalau muncul gejala serupa.
+Sepuluh bug/celah nyata ditemukan lewat proses coba-jalan-sungguhan dan inspeksi langsung VPS (bukan review kode saja). Dicatat di sini supaya tidak terulang dan sebagai referensi debugging kalau muncul gejala serupa.
 
 | # | Gejala | Penyebab | Perbaikan |
 |---|---|---|---|
@@ -567,8 +567,12 @@ Enam bug nyata ditemukan lewat proses coba-jalan-sungguhan (bukan review kode sa
 | 4 | `ci/test-backend` gagal: `dial tcp [::1]:6379: connect: connection refused` | Job `test-backend` tidak pernah punya service Redis, cuma Postgres | Tambah service `redis:7-alpine` ke job; sekalian ganti `localhost`→`127.0.0.1` di semua connection string |
 | 5 | Deploy Staging "sukses" tapi container `api`/`web` tidak pernah nyala, log menunjukkan API server malah start penuh saat migrasi | `docker compose run --rm api ./api migrate up` — image sudah `ENTRYPOINT ["./api"]`, jadi command efektifnya `./api ./api migrate up`; `os.Args[1]` jadi `"./api"`, bukan `"migrate"` | Ganti command jadi `migrate up` saja (tanpa `./api` di depan) |
 | 6 | Deploy Production gagal migrasi: `dial tcp ...5432: connect: connection refused` | `api` `depends_on: [db, redis]` tanpa kondisi — compose cuma menunggu container db "Started", bukan Postgres benar-benar siap menerima koneksi (race condition) | Tambah `healthcheck: pg_isready` ke `db`, ubah `depends_on` jadi `condition: service_healthy` |
+| 7 | Staging diam-diam menjalankan image commit lama padahal `.env` sudah menunjuk commit terbaru — ketahuan lewat inspeksi manual, bukan dari Actions | Kemungkinan step "Deploy via SSH" gagal transient setelah step migrasi sempat menimpa `IMAGE_TAG` di `.env`; health check tidak bisa mendeteksi ini karena cuma cek "server merespons ok" | `/api/health` sekarang mengembalikan field `version` (commit sha, disuntik `-ldflags -X` saat build); step Health check di kedua workflow deploy memverifikasi field ini cocok dengan commit yang di-deploy — kalau tidak, job gagal eksplisit |
+| 8 | `govulncheck` sudah ada di CI sejak awal (non-blocking) tapi tidak pernah benar-benar dicek isinya | Ternyata melaporkan 15 kerentanan *reachable*, 3 di antaranya dependency langsung dengan patch tersedia (`golang-jwt` di jalur auth, `pgx`, `go-redis`) | Upgrade ketiganya ke versi patched; 12 sisanya kerentanan Go stdlib, otomatis teratasi saat base image `golang:1.25-alpine` menarik patch 1.25.x terbaru |
+| 9 | Container log tidak dibatasi ukurannya | Driver `json-file` default tanpa `max-size`/`max-file` — risiko disk penuh pelan-pelan di server yang jalan lama | Tambah `max-size: 10m`, `max-file: 3` ke semua service via YAML anchor, staging &amp; production |
+| 10 | Image Docker jeonme menumpuk terus (12 image dalam &lt;24 jam) | `docker image prune -f` yang sudah ada di deploy-*.yml cuma menghapus image *dangling* (tak bertag), bukan image lama yang masih bertag | `scripts/cleanup-old-images.sh` — dibatasi hanya ke image `ghcr.io/*/jeonme/*` (VPS shared, tidak boleh sentuh image tenant lain), dijadwalkan cron mingguan (Minggu 04:00) |
 
-Semua 6 bug di atas sudah diperbaiki di kode saat ini (commit `edae5a8` s.d. `f6c6010`) dan diverifikasi manual langsung di VPS sebelum dan sesudah fix.
+Bug #1–6 diperbaiki di commit `edae5a8` s.d. `f6c6010`; #7–10 di commit `47c51f4` s.d. `c421ab0`. Semua diverifikasi manual langsung di VPS sebelum dan sesudah fix, bukan cuma lewat CI.
 
 ## 12. Yang Belum Dikerjakan (Prioritas Rendah)
 
@@ -576,6 +580,7 @@ Semua 6 bug di atas sudah diperbaiki di kode saat ini (commit `edae5a8` s.d. `f6
 - **L3**: Linting Go masih minim (`go vet` saja, belum `golangci-lint`).
 - **L4**: Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — dijadwalkan Sprint 2 di rencana sprint.
 - **Backup otomatis database production** (`pg_dump` terjadwal + upload object storage) belum disetup.
+- **CI `build-images`** juga jalan untuk push ke `develop` (bukan cuma `main`) walau belum ada environment yang deploy dari `develop` — pemborosan kecil, bukan bug.
 
 ## 13. Zero/Minim-Downtime saat Deploy
 
