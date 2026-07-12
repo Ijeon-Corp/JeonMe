@@ -1,5 +1,41 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicPage } from "@/lib/api-client";
+
+type PageParams = { params: Promise<{ username: string }> };
+
+// REQ-F-206: meta tag Open Graph supaya link halaman kreator tampil bagus
+// saat dibagikan di WhatsApp/Instagram/X, dst.
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+  const { username } = await params;
+  const page = await getPublicPage(username);
+
+  if (!page) {
+    return { title: "Halaman tidak ditemukan — Jeonme" };
+  }
+
+  const title = `@${page.username} — Jeonme`;
+  const description = page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://jeonme.com/${page.username}`,
+      siteName: "Jeonme",
+      images: page.avatar_url ? [{ url: page.avatar_url }] : undefined,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: page.avatar_url ? [page.avatar_url] : undefined,
+    },
+  };
+}
 
 // REQ-F-201: halaman ini harus dapat diakses tanpa login dan termuat cepat.
 // Menggunakan Server Component + fetch dengan revalidate agar mendapat
@@ -7,11 +43,7 @@ import { getPublicPage } from "@/lib/api-client";
 //
 // Next.js 16: route params sekarang berupa Promise dan wajib di-await
 // (breaking change sejak Next.js 15, lihat nextjs.org/docs/app/guides/upgrading/version-16).
-export default async function CreatorPage({
-  params,
-}: {
-  params: Promise<{ username: string }>;
-}) {
+export default async function CreatorPage({ params }: PageParams) {
   const { username } = await params;
   const page = await getPublicPage(username);
 
