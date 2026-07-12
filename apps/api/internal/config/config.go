@@ -52,7 +52,13 @@ func Load() *Config {
 		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum
 		// sempat mengisi kredensial MinIO sungguhan di .env -- fitur upload
 		// produk saja yang akan gagal saat dipakai, bukan seluruh API down.
-		S3Endpoint:  getEnv("S3_ENDPOINT", "http://localhost:9000"),
+		//
+		// PENTING: S3_ENDPOINT harus "host:port" TANPA skema (bukan
+		// "http://host:port") -- minio-go menolak endpoint dengan skema
+		// ("Endpoint url cannot have fully qualified paths"). Skema diatur
+		// lewat S3_USE_SSL, bukan lewat endpoint string. Ketahuan dari log
+		// error nyata saat verifikasi Sprint 2 di staging.
+		S3Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
 		S3AccessKey: getEnv("S3_ACCESS_KEY", "jeonme"),
 		S3SecretKey: getEnv("S3_SECRET_KEY", "jeonme12345"),
 		S3Bucket:    getEnv("S3_BUCKET", "jeonme-products"),
