@@ -195,8 +195,10 @@ export function reorderLinks(items: { id: string; position: number }[]) {
 export interface DashboardProduct {
   id: string;
   name: string;
+  description: string;
   price_idr: number;
   is_active: boolean;
+  has_file: boolean;
 }
 
 export function listProducts() {
@@ -207,6 +209,50 @@ export function createProduct(input: { name: string; description?: string; price
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/products",
     { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function updateProduct(
+  id: string,
+  input: Partial<{ name: string; description: string; price_idr: number; is_active: boolean }>
+) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/products/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function deleteProduct(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/products/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+// Upload file lewat multipart/form-data -- TIDAK lewat apiFetch() karena
+// browser wajib menentukan sendiri header Content-Type (dengan boundary)
+// untuk FormData; memaksanya jadi "application/json" akan merusak body.
+export async function uploadProductFile(id: string, file: File): Promise<{ message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/products/${id}/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function getProductDownloadURL(id: string) {
+  return apiFetch<{ download_url: string; expires_in_seconds: number }>(
+    `/dashboard/products/${id}/download-url`,
+    { method: "GET" },
     { auth: true }
   );
 }

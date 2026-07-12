@@ -20,6 +20,12 @@ type Config struct {
 	XenditWebhookKey string
 
 	CORSAllowedOrigins string
+
+	S3Endpoint  string
+	S3AccessKey string
+	S3SecretKey string
+	S3Bucket    string
+	S3UseSSL    bool
 }
 
 // Load membaca .env (jika ada) lalu environment variable asli.
@@ -41,6 +47,16 @@ func Load() *Config {
 		XenditWebhookKey: getEnv("XENDIT_WEBHOOK_VERIFICATION_TOKEN", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
+
+		// Nilai default sengaja dibuat "jalan tanpa perlu setup tambahan" (bukan
+		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum
+		// sempat mengisi kredensial MinIO sungguhan di .env -- fitur upload
+		// produk saja yang akan gagal saat dipakai, bukan seluruh API down.
+		S3Endpoint:  getEnv("S3_ENDPOINT", "http://localhost:9000"),
+		S3AccessKey: getEnv("S3_ACCESS_KEY", "jeonme"),
+		S3SecretKey: getEnv("S3_SECRET_KEY", "jeonme12345"),
+		S3Bucket:    getEnv("S3_BUCKET", "jeonme-products"),
+		S3UseSSL:    getEnv("S3_USE_SSL", "false") == "true",
 	}
 
 	return cfg

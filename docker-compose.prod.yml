@@ -43,6 +43,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      minio:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     logging: *default-logging
@@ -78,5 +80,25 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
+  # Object storage untuk file produk digital (REQ-F-302/304, Sprint 2).
+  # Self-hosted (bukan Cloudflare R2) -- console (9001) HANYA bind ke
+  # localhost, tidak pernah diekspos ke Apache/publik.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    env_file: .env
+    volumes: ["miniodata:/data"]
+    ports:
+      - "127.0.0.1:${MINIO_API_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pgdata:
+  miniodata:

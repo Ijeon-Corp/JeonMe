@@ -2,24 +2,41 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jeonme/api/internal/storage"
 )
 
-// ProductHandler adalah kerangka awal untuk REQ-F-301..304.
-// Upload file ke object storage (S3-compatible / MinIO / Cloudflare R2) dan
-// pembuatan signed URL BELUM diimplementasikan -- tim perlu menambahkan
-// SDK object storage pilihan (mis. aws-sdk-go-v2 untuk S3-compatible).
-type ProductHandler struct {
-	DB *pgxpool.Pool
+// maxProductFileSize -- 100MB, cukup untuk ebook/template/video pendek tanpa
+// membebani VPS shared. Batasi lebih longgar lewat env kalau perlu di masa depan.
+const maxProductFileSize = 100 * 1024 * 1024
+
+// allowedProductFileExt -- REQ-F-302 (validasi tipe file). Daftar putih
+// (bukan daftar hitam) supaya tipe file berbahaya (.exe, .sh, dst) tertolak
+// secara default alih-alih harus disebutkan satu-satu.
+var allowedProductFileExt = map[string]bool{
+	".pdf": true, ".zip": true, ".epub": true,
+	".mp4": true, ".mp3": true, ".mov": true,
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
 }
 
-func NewProductHandler(db *pgxpool.Pool) *ProductHandler {
-	return &ProductHandler{DB: db}
+// ProductHandler mengimplementasikan REQ-F-301..304.
+type ProductHandler struct {
+	DB      *pgxpool.Pool
+	Storage *storage.Client
+}
+
+func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client) *ProductHandler {
+	return &ProductHandler{DB: db, Storage: s3}
 }
 
 type createProductRequest struct {
@@ -53,8 +70,6 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// TODO: setelah file diunggah terpisah (multipart/presigned upload),
-	// perbarui file_key lalu izinkan is_active = true (REQ-F-303).
 	c.JSON(http.StatusCreated, gin.H{
 		"id":      id,
 		"message": "produk dibuat, unggah file sebelum mengaktifkan produk",
@@ -69,7 +84,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, name, price_idr, is_active FROM products WHERE user_id = $1
+		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file
+		FROM products WHERE user_id = $1
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -78,18 +94,199 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer rows.Close()
 
 	type item struct {
-		ID       string `json:"id"`
-		Name     string `json:"name"`
-		PriceIDR int64  `json:"price_idr"`
-		IsActive bool   `json:"is_active"`
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		PriceIDR    int64  `json:"price_idr"`
+		IsActive    bool   `json:"is_active"`
+		HasFile     bool   `json:"has_file"`
 	}
-	var items []item
+	items := []item{}
 	for rows.Next() {
 		var it item
-		if err := rows.Scan(&it.ID, &it.Name, &it.PriceIDR, &it.IsActive); err == nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile); err == nil {
 			items = append(items, it)
 		}
 	}
 
 	c.JSON(http.StatusOK, items)
+}
+
+type updateProductRequest struct {
+	Name        *string `json:"name" binding:"omitempty,max=200"`
+	Description *string `json:"description"`
+	PriceIDR    *int64  `json:"price_idr" binding:"omitempty,min=1000"`
+	IsActive    *bool   `json:"is_active"`
+}
+
+// Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
+// Produk hanya boleh diaktifkan kalau file_key sudah terisi (file sudah
+// diunggah) -- mencegah produk kosong tampil bisa "dibeli" di halaman publik.
+func (h *ProductHandler) Update(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req updateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var fileKey string
+	err := h.DB.QueryRow(ctx, `SELECT file_key FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	if req.IsActive != nil && *req.IsActive && fileKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
+		return
+	}
+
+	_, err = h.DB.Exec(ctx, `
+		UPDATE products SET
+			name = COALESCE($1, name),
+			description = COALESCE($2, description),
+			price_idr = COALESCE($3, price_idr),
+			is_active = COALESCE($4, is_active)
+		WHERE id = $5
+	`, req.Name, req.Description, req.PriceIDR, req.IsActive, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "produk diperbarui"})
+}
+
+// Delete — REQ-F-301 (lanjutan). Menghapus file di storage juga (best-effort,
+// tidak menggagalkan penghapusan record kalau storage sedang bermasalah).
+func (h *ProductHandler) Delete(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var fileKey string
+	err := h.DB.QueryRow(ctx, `SELECT file_key FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `DELETE FROM products WHERE id = $1`, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus produk"})
+		return
+	}
+
+	if h.Storage != nil && fileKey != "" {
+		_ = h.Storage.Delete(ctx, fileKey)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "produk dihapus"})
+}
+
+// UploadFile — REQ-F-302. Validasi ekstensi (daftar putih) dan ukuran
+// sebelum diteruskan ke storage; "pemindaian dasar file berbahaya" untuk MVP
+// berarti menolak ekstensi yang tidak dikenal, BUKAN antivirus/malware
+// scanning sungguhan -- itu di luar cakupan MVP (catat sebagai batasan).
+func (h *ProductHandler) UploadFile(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	var exists int
+	if err := h.DB.QueryRow(ctx, `SELECT 1 FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&exists); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"file\")"})
+		return
+	}
+
+	if fileHeader.Size > maxProductFileSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 100MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if !allowedProductFileExt[ext] {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("products/%s/%s", productID, fileHeader.Filename)
+	contentType := fileHeader.Header.Get("Content-Type")
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah file"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE products SET file_key = $1 WHERE id = $2`, key, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "file terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "file berhasil diunggah, produk siap diaktifkan"})
+}
+
+// GetDownloadURL — REQ-F-304: signed URL kedaluwarsa (15 menit), bukan
+// tautan permanen. Dipakai kreator untuk mengecek file yang sudah diunggah;
+// alur unduhan pembeli sungguhan menyusul di Sprint 3 (checkout).
+func (h *ProductHandler) GetDownloadURL(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var fileKey string
+	err := h.DB.QueryRow(ctx, `SELECT file_key FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
+		return
+	}
+	if fileKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "produk belum punya file"})
+		return
+	}
+
+	url, err := h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat tautan unduhan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"download_url": url, "expires_in_seconds": 900})
 }

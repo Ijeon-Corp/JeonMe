@@ -16,6 +16,7 @@ import (
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/migrate"
 	"github.com/jeonme/api/internal/routes"
+	"github.com/jeonme/api/internal/storage"
 )
 
 // Version diisi saat build lewat -ldflags "-X main.Version=<sha>" (lihat
@@ -57,12 +58,27 @@ func main() {
 	}
 	defer rdb.Close()
 
+	// Object storage bersifat soft-fail: kalau MinIO belum siap/salah kredensial,
+	// server tetap jalan (bukan mustGetEnv) -- hanya endpoint upload/download
+	// produk yang akan menolak dengan pesan jelas, bukan seluruh API down.
+	s3Client, err := storage.NewClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Bucket, cfg.S3UseSSL)
+	if err != nil {
+		log.Printf("peringatan: gagal membuat client object storage: %v (fitur upload produk tidak akan berfungsi)", err)
+		s3Client = nil
+	} else {
+		ensureCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := s3Client.EnsureBucket(ensureCtx); err != nil {
+			log.Printf("peringatan: gagal menyiapkan bucket object storage: %v", err)
+		}
+		cancel()
+	}
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
 
-	routes.Register(r, db, rdb, cfg, Version)
+	routes.Register(r, db, rdb, s3Client, cfg, Version)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,

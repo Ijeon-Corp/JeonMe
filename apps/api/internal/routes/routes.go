@@ -8,16 +8,19 @@ import (
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/middleware"
+	"github.com/jeonme/api/internal/storage"
 )
 
 // Register mendaftarkan seluruh route API. Struktur mengikuti pemisahan
 // modul pada Technical Design Document (auth, page, product, dst.)
 // sehingga tiap modul mudah diekstraksi jadi service terpisah nanti.
-func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, version string) {
+// s3 boleh nil (mis. kalau EnsureBucket gagal saat startup) -- ProductHandler
+// akan menolak endpoint upload/download dengan pesan jelas alih-alih panic.
+func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, cfg *config.Config, version string) {
 	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	page := handlers.NewPageHandler(db, rdb)
-	product := handlers.NewProductHandler(db)
+	product := handlers.NewProductHandler(db, s3)
 	links := handlers.NewLinksHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
@@ -58,6 +61,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, cfg *config.Co
 
 			dashboard.GET("/products", product.List)
 			dashboard.POST("/products", product.Create)
+			dashboard.PATCH("/products/:id", product.Update)
+			dashboard.DELETE("/products/:id", product.Delete)
+			dashboard.POST("/products/:id/upload", product.UploadFile)
+			dashboard.GET("/products/:id/download-url", product.GetDownloadURL)
 
 			// TODO: saldo & penarikan dana (REQ-F-501..504), dan analitik
 			// (REQ-F-601..603) -- Sprint 4 & 5 di Rencana-Sprint-Jeonme.xlsx.
