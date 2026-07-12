@@ -37,6 +37,34 @@ jobs:
             echo "value=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # ref di-checkout persis di commit yang IMAGE_TAG-nya dipakai (bukan
+      # selalu HEAD main) -- penting untuk rollback: docker-compose.staging.yml
+      # yang disinkronkan harus versi yang cocok dengan commit itu, bukan
+      # compose file terbaru yang mungkin sudah punya service baru yang tidak
+      # dikenal image lama.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.image_tag.outputs.value }}
+
+      # Bug baru (katalog CICD-GUIDE.md #12): docker-compose.staging.yml di
+      # VPS ditaruh manual sekali waktu setup awal dan TIDAK PERNAH disinkron
+      # ulang -- workflow ini sebelumnya cuma sed IMAGE_TAG di .env, tidak
+      # pernah menyalin ulang file compose itu sendiri. Ketahuan saat
+      # menambah service `minio` (Sprint 2): compose file di VPS diam-diam
+      # tertinggal tanpa ada yang sadar karena deploy tetap "sukses" (image
+      # API baru tetap start walau service minio di compose versi baru tidak
+      # pernah benar-benar ada di server).
+      - name: Sinkronkan docker-compose.staging.yml ke VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
+          source: "docker-compose.staging.yml"
+          target: "/opt/jeonme-staging/"
+          strip_components: 0
+
       # Temuan kritis C2 (audit CI/CD): tanpa login eksplisit di VPS,
       # `docker compose pull` akan gagal 401/denied terhadap GHCR privat.
       - name: Login GHCR di VPS

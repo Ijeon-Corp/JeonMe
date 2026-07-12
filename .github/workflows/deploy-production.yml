@@ -32,6 +32,29 @@ jobs:
             echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # ref di-checkout persis di commit/tag yang IMAGE_TAG-nya dipakai --
+      # penting untuk rollback: docker-compose.prod.yml yang disinkronkan
+      # harus versi yang cocok dengan rilis itu, bukan compose file terbaru
+      # yang mungkin sudah punya service baru yang tidak dikenal image lama.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.image_tag.outputs.value }}
+
+      # Bug baru (katalog CICD-GUIDE.md #12): docker-compose.prod.yml di VPS
+      # ditaruh manual sekali waktu setup awal dan TIDAK PERNAH disinkron
+      # ulang -- ditemukan bareng dengan kasus staging saat menambah service
+      # `minio` di Sprint 2 (lihat deploy-staging.yml untuk detail lengkap).
+      - name: Sinkronkan docker-compose.prod.yml ke VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/jeonme-production/"
+          strip_components: 0
+
       # Temuan kritis C2 (audit CI/CD): GHCR mewarisi visibility repo (default
       # private) -- tanpa login eksplisit di sisi VPS, `docker compose pull`
       # akan gagal 401/denied. Gunakan token read-only khusus VPS (scope
