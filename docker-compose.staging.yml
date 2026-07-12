@@ -67,17 +67,21 @@ services:
 
   # Object storage untuk file produk digital (REQ-F-302/304, Sprint 2).
   # Self-hosted (bukan Cloudflare R2) -- dipilih supaya tidak perlu akun pihak
-  # ketiga baru, jalan di VPS yang sama seperti db/redis. Console (9001) HANYA
-  # bind ke localhost, tidak pernah diekspos ke Apache/publik.
+  # ketiga baru, jalan di VPS yang sama seperti db/redis.
+  #
+  # SENGAJA TIDAK ada "ports:" -- api menjangkau ini lewat jaringan Docker
+  # internal (host "minio", port 9000), tidak pernah butuh port di-bind ke
+  # host sama sekali. Bug #13 (katalog CICD-GUIDE.md): VPS ini shared dengan
+  # tenant lain yang KEBETULAN sudah pakai port 9000/9001 host (MinIO milik
+  # proyek lain, "ijeon-minio" & "vc-minio") -- publish port di sini bikin
+  # deploy gagal "port is already allocated" walau aplikasi Jeonme sendiri
+  # sama sekali tidak butuh akses dari host/publik ke MinIO.
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     restart: unless-stopped
     env_file: .env
     volumes: ["miniodata_staging:/data"]
-    ports:
-      - "127.0.0.1:${MINIO_API_HOST_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
     logging: *default-logging
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
