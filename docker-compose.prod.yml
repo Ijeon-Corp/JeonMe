@@ -83,18 +83,18 @@ services:
   # Object storage untuk file produk digital (REQ-F-302/304, Sprint 2).
   # Self-hosted (bukan Cloudflare R2).
   #
-  # SENGAJA TIDAK ada "ports:" -- api menjangkau ini lewat jaringan Docker
-  # internal (host "minio", port 9000), tidak pernah butuh port di-bind ke
-  # host sama sekali. Bug #13 (katalog CICD-GUIDE.md): VPS ini shared dengan
-  # tenant lain yang KEBETULAN sudah pakai port 9000/9001 host (MinIO milik
-  # proyek lain) -- publish port di sini bikin deploy gagal "port is already
-  # allocated" walau aplikasi Jeonme sendiri sama sekali tidak butuh akses
-  # dari host/publik ke MinIO.
+  # Port 29000 (BUKAN default 9000 -- bentrok dengan MinIO tenant lain di VPS
+  # shared ini, lihat bug #14 katalog CICD-GUIDE.md) di-bind ke 127.0.0.1 saja,
+  # diproxy Apache lewat storage.jeonme.com dengan TLS -- supaya signed
+  # download URL produk (REQ-F-304) bisa diakses dari luar VPS, bukan cuma
+  # lewat jaringan Docker internal yang dipakai api (host "minio", port 9000).
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     restart: unless-stopped
     env_file: .env
+    ports:
+      - "127.0.0.1:29000:9000"
     volumes: ["miniodata:/data"]
     logging: *default-logging
     healthcheck:
