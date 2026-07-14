@@ -37,18 +37,25 @@ func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEn
 }
 
 type registerRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
-	Username string `json:"username" binding:"required,min=3,max=30"`
+	Email            string `json:"email" binding:"required,email"`
+	Password         string `json:"password" binding:"required,min=8"`
+	Username         string `json:"username" binding:"required,min=3,max=30"`
+	ConsentAccepted  bool   `json:"consent_accepted" binding:"required"`
 }
 
-// Register — REQ-F-101, REQ-F-102 (validasi keunikan username).
+// Register — REQ-F-101, REQ-F-102 (validasi keunikan username), NF-09
+// (persetujuan pemrosesan data pribadi sesuai UU PDP -- WAJIB dicentang,
+// waktunya dicatat di consent_accepted_at untuk bukti kepatuhan).
 // Setiap user baru langsung dibuatkan baris pages (belum published) supaya
 // endpoint CRUD tautan (REQ-F-202/203) punya sesuatu untuk ditautkan.
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if !req.ConsentAccepted {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kamu harus menyetujui pemrosesan data pribadi untuk mendaftar"})
 		return
 	}
 
@@ -70,8 +77,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx,
-		`INSERT INTO users (id, email, password_hash, username, role, kyc_status, created_at)
-		 VALUES ($1, $2, $3, $4, 'creator', 'unverified', now())`,
+		`INSERT INTO users (id, email, password_hash, username, role, kyc_status, consent_accepted_at, created_at)
+		 VALUES ($1, $2, $3, $4, 'creator', 'unverified', now(), now())`,
 		id, req.Email, string(hash), req.Username,
 	)
 	if err != nil {
@@ -122,7 +129,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	var id, passwordHash string
 	err := h.DB.QueryRow(ctx,
-		`SELECT id, password_hash FROM users WHERE email = $1`, req.Email,
+		`SELECT id, password_hash FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
 	).Scan(&id, &passwordHash)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})

@@ -38,6 +38,7 @@ type publicPageResponse struct {
 }
 
 type publicLink struct {
+	ID    string `json:"id"`
 	Title string `json:"title"`
 	URL   string `json:"url"`
 }
@@ -91,7 +92,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
-		SELECT title, url FROM links
+		SELECT id, title, url FROM links
 		WHERE page_id = (SELECT id FROM pages WHERE user_id = $1)
 		AND is_active = true
 		ORDER BY position ASC
@@ -100,7 +101,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		defer rows.Close()
 		for rows.Next() {
 			var l publicLink
-			if err := rows.Scan(&l.Title, &l.URL); err == nil {
+			if err := rows.Scan(&l.ID, &l.Title, &l.URL); err == nil {
 				resp.Links = append(resp.Links, l)
 			}
 		}

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicPage } from "@/lib/api-client";
 import BuyProductButton from "@/components/BuyProductButton";
+import PageAnalytics from "@/components/PageAnalytics";
+import TrackedLink from "@/components/TrackedLink";
 
 type PageParams = { params: Promise<{ username: string }> };
 
@@ -54,6 +56,7 @@ export default async function CreatorPage({ params }: PageParams) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center gap-6 px-6 py-12">
+      <PageAnalytics username={page.username} />
       {page.avatar_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -69,15 +72,15 @@ export default async function CreatorPage({ params }: PageParams) {
 
       <div className="flex w-full flex-col gap-3">
         {page.links.map((link) => (
-          <a
-            key={link.url}
+          <TrackedLink
+            key={link.id}
+            username={page.username}
+            linkId={link.id}
             href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
             className="w-full rounded-lg border border-gray-200 px-4 py-3 text-center font-medium hover:bg-gray-50"
           >
             {link.title}
-          </a>
+          </TrackedLink>
         ))}
       </div>
 

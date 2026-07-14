@@ -10,15 +10,20 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consentAccepted) {
+      setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      await register({ email, username, password });
+      await register({ email, username, password, consent_accepted: consentAccepted });
       // Langsung login supaya pengguna tidak perlu isi form dua kali.
       const { token } = await login({ email, password });
       setToken(token);
@@ -73,6 +78,17 @@ export default function RegisterPage() {
             />
             <p className="mt-1 text-xs text-muted">Minimal 8 karakter.</p>
           </div>
+
+          <label className="flex items-start gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={(e) => setConsentAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            Saya menyetujui pemrosesan data pribadi saya oleh Jeonme sesuai kebutuhan layanan
+            (sesuai UU PDP).
+          </label>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

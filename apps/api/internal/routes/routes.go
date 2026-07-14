@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -26,6 +28,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	xenditClient := xendit.NewClient(cfg.XenditSecretKey)
 	checkout := handlers.NewCheckoutHandler(db, xenditClient, cfg.XenditWebhookKey, cfg.PublicWebURL, cfg.PlatformFeePercent)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
+	analytics := handlers.NewAnalyticsHandler(db)
+	account := handlers.NewAccountHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -34,10 +38,16 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	{
 		authRequired := middleware.AuthRequired(cfg.JWTSecret, rdb)
 
+		// NF-05: rate limit lebih ketat untuk endpoint yang rawan
+		// disalahgunakan (brute force login/register, spam checkout/track).
+		authRateLimit := middleware.RateLimit(rdb, "auth", 10, time.Minute)
+		checkoutRateLimit := middleware.RateLimit(rdb, "checkout", 20, time.Minute)
+		trackRateLimit := middleware.RateLimit(rdb, "track", 60, time.Minute)
+
 		auth_ := api.Group("/auth")
 		{
-			auth_.POST("/register", auth.Register)
-			auth_.POST("/login", auth.Login)
+			auth_.POST("/register", authRateLimit, auth.Register)
+			auth_.POST("/login", authRateLimit, auth.Login)
 			auth_.POST("/logout", authRequired, auth.Logout)
 			auth_.POST("/password-reset/request", auth.RequestPasswordReset)
 			auth_.POST("/password-reset/confirm", auth.ConfirmPasswordReset)
@@ -49,6 +59,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
 		api.GET("/pages/:username", page.GetPublicPage)
+
+		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
+		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
 
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")
@@ -74,11 +87,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/payouts", balance.CreatePayout)
 			dashboard.GET("/payouts", balance.ListPayouts)
 
-			// TODO: analitik (REQ-F-601..603) -- Sprint 5 di Rencana-Sprint-Jeonme.xlsx.
+			dashboard.GET("/analytics/summary", analytics.GetSummary)
+
+			dashboard.DELETE("/account", account.DeleteAccount)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
-		api.POST("/checkout", checkout.Create)
+		api.POST("/checkout", checkoutRateLimit, checkout.Create)
 		api.GET("/checkout/:id/status", checkout.GetStatus)
 
 		// Webhook PSP -- REQ-F-403 (verifikasi signature via header

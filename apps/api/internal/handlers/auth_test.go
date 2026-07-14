@@ -62,10 +62,11 @@ func TestRegister_CreatesUserAndPage(t *testing.T) {
 	router.POST("/register", h.Register)
 
 	suffix := uuid.NewString()[:8]
-	body := map[string]string{
-		"email":    "test-" + suffix + "@example.com",
-		"password": "password123",
-		"username": "user" + suffix,
+	body := map[string]any{
+		"email":            "test-" + suffix + "@example.com",
+		"password":         "password123",
+		"username":         "user" + suffix,
+		"consent_accepted": true,
 	}
 
 	rec := doJSON(t, router, http.MethodPost, "/register", body, nil)
@@ -102,15 +103,15 @@ func TestRegister_DuplicateEmail_ReturnsConflict(t *testing.T) {
 	suffix := uuid.NewString()[:8]
 	email := "dup-" + suffix + "@example.com"
 
-	first := doJSON(t, router, http.MethodPost, "/register", map[string]string{
-		"email": email, "password": "password123", "username": "first" + suffix,
+	first := doJSON(t, router, http.MethodPost, "/register", map[string]any{
+		"email": email, "password": "password123", "username": "first" + suffix, "consent_accepted": true,
 	}, nil)
 	if first.Code != http.StatusCreated {
 		t.Fatalf("registrasi pertama gagal: status %d, body %s", first.Code, first.Body.String())
 	}
 
-	second := doJSON(t, router, http.MethodPost, "/register", map[string]string{
-		"email": email, "password": "password123", "username": "second" + suffix,
+	second := doJSON(t, router, http.MethodPost, "/register", map[string]any{
+		"email": email, "password": "password123", "username": "second" + suffix, "consent_accepted": true,
 	}, nil)
 	if second.Code != http.StatusConflict {
 		t.Fatalf("status = %d, ekspektasi %d (konflik email duplikat). Body: %s", second.Code, http.StatusConflict, second.Body.String())
@@ -132,8 +133,8 @@ func TestPasswordReset_RequestThenConfirm(t *testing.T) {
 	suffix := uuid.NewString()[:8]
 	email := "reset-" + suffix + "@example.com"
 
-	regRec := doJSON(t, router, http.MethodPost, "/register", map[string]string{
-		"email": email, "password": "oldpassword1", "username": "reset" + suffix,
+	regRec := doJSON(t, router, http.MethodPost, "/register", map[string]any{
+		"email": email, "password": "oldpassword1", "username": "reset" + suffix, "consent_accepted": true,
 	}, nil)
 	if regRec.Code != http.StatusCreated {
 		t.Fatalf("registrasi gagal: %s", regRec.Body.String())
@@ -163,5 +164,23 @@ func TestPasswordReset_RequestThenConfirm(t *testing.T) {
 	}, nil)
 	if loginRec.Code != http.StatusOK {
 		t.Fatalf("login dengan password baru gagal: status %d, body %s", loginRec.Code, loginRec.Body.String())
+	}
+}
+
+// NF-09: registrasi tanpa menyetujui pemrosesan data pribadi harus ditolak.
+func TestRegister_WithoutConsent_Rejected(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := newTestAuthHandler(t)
+
+	router := gin.New()
+	router.POST("/register", h.Register)
+
+	suffix := uuid.NewString()[:8]
+	rec := doJSON(t, router, http.MethodPost, "/register", map[string]any{
+		"email": "noconsent-" + suffix + "@example.com", "password": "password123",
+		"username": "noconsent" + suffix, "consent_accepted": false,
+	}, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, ekspektasi %d (consent wajib). Body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
 	}
 }

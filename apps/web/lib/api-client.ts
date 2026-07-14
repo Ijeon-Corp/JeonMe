@@ -51,6 +51,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
 // ---------- Halaman publik ----------
 
 export interface PublicLink {
+  id: string;
   title: string;
   url: string;
 }
@@ -96,7 +97,12 @@ export async function getPublicPage(username: string): Promise<PublicPage | null
 
 // ---------- Auth ----------
 
-export function register(input: { email: string; password: string; username: string }) {
+export function register(input: {
+  email: string;
+  password: string;
+  username: string;
+  consent_accepted: boolean;
+}) {
   return apiFetch<{ id: string; username: string }>("/auth/register", {
     method: "POST",
     body: JSON.stringify(input),
@@ -307,4 +313,61 @@ export function createPayout(input: { amount_idr: number; destination_account: s
 
 export function listPayouts() {
   return apiFetch<Payout[]>("/dashboard/payouts", { method: "GET" }, { auth: true });
+}
+
+// ---------- Analytics (Sprint 5) ----------
+
+// Fire-and-forget: kegagalan tracking TIDAK BOLEH mengganggu pengunjung
+// halaman publik, jadi error diabaikan diam-diam (bukan throw).
+export function trackEvent(username: string, input: { event_type: "view" | "click"; link_id?: string; referrer?: string }) {
+  fetch(`${API_BASE_URL}/pages/${username}/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+export interface DailyPoint {
+  date: string;
+  views: number;
+  clicks: number;
+}
+
+export interface TopLink {
+  link_id: string;
+  title: string;
+  clicks: number;
+}
+
+export interface TopProduct {
+  product_id: string;
+  name: string;
+  sold_count: number;
+  revenue_idr: number;
+}
+
+export interface TopReferrer {
+  referrer: string;
+  count: number;
+}
+
+export interface AnalyticsSummary {
+  total_views: number;
+  total_clicks: number;
+  daily_series: DailyPoint[];
+  top_links: TopLink[];
+  top_products: TopProduct[];
+  top_referrers: TopReferrer[];
+  range_days: number;
+}
+
+export function getAnalyticsSummary() {
+  return apiFetch<AnalyticsSummary>("/dashboard/analytics/summary", { method: "GET" }, { auth: true });
+}
+
+// ---------- Akun (NF-09) ----------
+
+export function deleteAccount() {
+  return apiFetch<{ message: string }>("/dashboard/account", { method: "DELETE" }, { auth: true });
 }

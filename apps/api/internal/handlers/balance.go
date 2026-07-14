@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jeonme/api/internal/audit"
 )
 
 // minPayoutIDR -- PLACEHOLDER bisnis, belum ada keputusan resmi. Rp50.000
@@ -156,6 +159,14 @@ func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 		VALUES ($1, $2, 'debit', $3, $4, now())
 	`, uuid.NewString(), userID, -req.AmountIDR, newBalance); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger penarikan"})
+		return
+	}
+
+	metadata, _ := json.Marshal(gin.H{
+		"amount_idr": req.AmountIDR, "destination_account": req.DestinationAccount, "balance_after": newBalance,
+	})
+	if err := audit.Log(ctx, tx, userID, "payout.requested", "payout", payoutID, metadata); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
 		return
 	}
 

@@ -91,3 +91,38 @@ func AuthRequired(jwtSecret string, rdb *redis.Client) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// RateLimit — NF-05. Fixed-window counter di Redis, dikunci per IP client +
+// prefix (supaya endpoint berbeda punya kuota terpisah, mis. login vs
+// checkout). Kalau Redis sedang bermasalah, request DIBIARKAN LEWAT (fail-
+// open) -- rate limit adalah pertahanan tambahan, bukan satu-satunya lapisan,
+// jadi Redis down tidak boleh membuat seluruh API ikut down.
+func RateLimit(rdb *redis.Client, keyPrefix string, limit int, window time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if rdb == nil {
+			c.Next()
+			return
+		}
+
+		key := "ratelimit:" + keyPrefix + ":" + c.ClientIP()
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		count, err := rdb.Incr(ctx, key).Result()
+		if err == nil && count == 1 {
+			rdb.Expire(ctx, key, window)
+		}
+		cancel()
+
+		if err != nil {
+			c.Next()
+			return
+		}
+
+		if count > int64(limit) {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "terlalu banyak permintaan, coba lagi nanti"})
+			return
+		}
+
+		c.Next()
+	}
+}

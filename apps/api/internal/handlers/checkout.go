@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/jeonme/api/internal/audit"
 	"github.com/jeonme/api/internal/xendit"
 )
 
@@ -242,6 +243,10 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui status order"})
 			return
 		}
+		if err := audit.Log(ctx, tx, productUserID, "order."+orderStatus, "order", orderID, nil); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
+			return
+		}
 
 		// REQ-F-501: kredit ledger kreator saat pembayaran benar-benar
 		// dikonfirmasi (bukan saat checkout dibuat). pg_advisory_xact_lock
@@ -264,11 +269,17 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 
 			netAmount := amountIDR - platformFeeIDR
 			newBalance := currentBalance + netAmount
+			ledgerID := uuid.NewString()
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
 				VALUES ($1, $2, $3, 'credit', $4, $5, now())
-			`, uuid.NewString(), productUserID, orderID, netAmount, newBalance); err != nil {
+			`, ledgerID, productUserID, orderID, netAmount, newBalance); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger"})
+				return
+			}
+			metadata, _ := json.Marshal(gin.H{"amount_idr": netAmount, "balance_after": newBalance, "order_id": orderID})
+			if err := audit.Log(ctx, tx, productUserID, "ledger.credit", "ledger_entry", ledgerID, metadata); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
 				return
 			}
 		}

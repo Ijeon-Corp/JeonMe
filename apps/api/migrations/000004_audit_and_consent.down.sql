@@ -1,0 +1,3 @@
+ALTER TABLE users DROP COLUMN IF EXISTS deleted_at;
+ALTER TABLE users DROP COLUMN IF EXISTS consent_accepted_at;
+DROP TABLE IF EXISTS audit_log;

@@ -29,8 +29,9 @@ func registerTestUser(t *testing.T, auth *AuthHandler) (userID string) {
 	router.POST("/register", auth.Register)
 
 	suffix := uuid.NewString()[:8]
-	rec := doJSON(t, router, http.MethodPost, "/register", map[string]string{
+	rec := doJSON(t, router, http.MethodPost, "/register", map[string]any{
 		"email": "links-" + suffix + "@example.com", "password": "password123", "username": "links" + suffix,
+		"consent_accepted": true,
 	}, nil)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("gagal setup user test: status %d, body %s", rec.Code, rec.Body.String())
