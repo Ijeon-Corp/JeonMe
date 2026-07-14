@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS reports;
+ALTER TABLE users DROP COLUMN IF EXISTS suspended_at;

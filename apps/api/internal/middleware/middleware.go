@@ -10,6 +10,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -88,6 +89,29 @@ func AuthRequired(jwtSecret string, rdb *redis.Client) gin.HandlerFunc {
 		c.Set("userID", claims["sub"])
 		c.Set("jti", jti)
 		c.Set("exp", int64(expFloat))
+		c.Next()
+	}
+}
+
+// AdminRequired — REQ-F-701/702/703. Dipasang SETELAH AuthRequired (butuh
+// "userID" sudah ada di context). Selalu cek role langsung ke database
+// (bukan klaim JWT) supaya demosi/suspend admin langsung berlaku, tidak
+// menunggu token lama kedaluwarsa -- endpoint admin bukan jalur trafik
+// tinggi, jadi biaya satu query tambahan ini sepadan dengan keamanannya.
+func AdminRequired(db *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetString("userID")
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		var role string
+		err := db.QueryRow(ctx, `SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).Scan(&role)
+		if err != nil || role != "admin" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "akses ditolak, hanya untuk admin"})
+			return
+		}
+
 		c.Next()
 	}
 }

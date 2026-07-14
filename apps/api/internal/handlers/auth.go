@@ -37,10 +37,10 @@ func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEn
 }
 
 type registerRequest struct {
-	Email            string `json:"email" binding:"required,email"`
-	Password         string `json:"password" binding:"required,min=8"`
-	Username         string `json:"username" binding:"required,min=3,max=30"`
-	ConsentAccepted  bool   `json:"consent_accepted" binding:"required"`
+	Email           string `json:"email" binding:"required,email"`
+	Password        string `json:"password" binding:"required,min=8"`
+	Username        string `json:"username" binding:"required,min=3,max=30"`
+	ConsentAccepted bool   `json:"consent_accepted" binding:"required"`
 }
 
 // Register — REQ-F-101, REQ-F-102 (validasi keunikan username), NF-09
@@ -128,9 +128,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	defer cancel()
 
 	var id, passwordHash string
+	var suspendedAt *time.Time
 	err := h.DB.QueryRow(ctx,
-		`SELECT id, password_hash FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
-	).Scan(&id, &passwordHash)
+		`SELECT id, password_hash, suspended_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
+	).Scan(&id, &passwordHash, &suspendedAt)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
@@ -138,6 +139,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
+		return
+	}
+
+	// Password sudah benar di titik ini -- aman memberi tahu status suspend
+	// secara eksplisit (REQ-F-701), ini bukan kebocoran informasi akun ke
+	// pihak yang tidak berhak (mereka sudah membuktikan tahu password-nya).
+	if suspendedAt != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "akun ini sedang ditangguhkan, hubungi admin"})
 		return
 	}
 

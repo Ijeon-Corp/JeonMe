@@ -30,6 +30,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
 	analytics := handlers.NewAnalyticsHandler(db)
 	account := handlers.NewAccountHandler(db)
+	admin := handlers.NewAdminHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -63,6 +64,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
 
+		// REQ-F-702 (bagian publik): siapa pun bisa melaporkan halaman/produk
+		// tanpa perlu akun.
+		api.POST("/reports", checkoutRateLimit, admin.CreateReport)
+
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")
 		dashboard.Use(authRequired)
@@ -90,6 +95,23 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
 
 			dashboard.DELETE("/account", account.DeleteAccount)
+		}
+
+		// Panel Admin -- REQ-F-701/702/703. Tidak ada jalur self-service untuk
+		// jadi admin (lihat komentar AdminHandler); dilindungi dua lapis:
+		// AuthRequired (harus login) + AdminRequired (role='admin' di DB).
+		adminRequired := middleware.AdminRequired(db)
+		adminGroup := api.Group("/admin")
+		adminGroup.Use(authRequired, adminRequired)
+		{
+			adminGroup.GET("/summary", admin.GetSummary)
+
+			adminGroup.GET("/users", admin.ListUsers)
+			adminGroup.PATCH("/users/:id/suspend", admin.SuspendUser)
+			adminGroup.PATCH("/users/:id/activate", admin.ActivateUser)
+
+			adminGroup.GET("/reports", admin.ListReports)
+			adminGroup.PATCH("/reports/:id/resolve", admin.ResolveReport)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.

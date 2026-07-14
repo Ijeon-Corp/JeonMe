@@ -29,6 +29,7 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client) *PageHandler {
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
+	ID        string       `json:"id"`
 	Username  string       `json:"username"`
 	Bio       string       `json:"bio"`
 	AvatarURL string       `json:"avatar_url"`
@@ -75,11 +76,11 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var userID string
 
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.id, u.username, p.bio, p.avatar_url, p.theme
+		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_published = true
-	`, username).Scan(&userID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme)
+	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {

@@ -77,10 +77,10 @@ type topLink struct {
 }
 
 type topProduct struct {
-	ProductID string `json:"product_id"`
-	Name      string `json:"name"`
-	SoldCount int64  `json:"sold_count"`
-	RevenueIDR int64 `json:"revenue_idr"`
+	ProductID  string `json:"product_id"`
+	Name       string `json:"name"`
+	SoldCount  int64  `json:"sold_count"`
+	RevenueIDR int64  `json:"revenue_idr"`
 }
 
 type topReferrer struct {

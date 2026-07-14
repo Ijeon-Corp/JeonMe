@@ -64,6 +64,7 @@ export interface PublicProduct {
 }
 
 export interface PublicPage {
+  id: string;
   username: string;
   bio: string;
   avatar_url: string;
@@ -370,4 +371,71 @@ export function getAnalyticsSummary() {
 
 export function deleteAccount() {
   return apiFetch<{ message: string }>("/dashboard/account", { method: "DELETE" }, { auth: true });
+}
+
+// ---------- Laporan konten publik (REQ-F-702) ----------
+
+export function createReport(input: { target_type: "page" | "product"; target_id: string; reason: string; reporter_email?: string }) {
+  return apiFetch<{ message: string }>("/reports", { method: "POST", body: JSON.stringify(input) });
+}
+
+// ---------- Panel Admin (Sprint 6) ----------
+// Tidak ada endpoint "whoami role" terpisah -- AdminGuard mengecek akses
+// dengan memanggil getAdminSummary() langsung; 403 berarti bukan admin.
+
+export interface AdminSummary {
+  total_users: number;
+  new_users_7_days: number;
+  total_orders: number;
+  total_revenue_idr: number;
+  pending_reports: number;
+}
+
+export function getAdminSummary() {
+  return apiFetch<AdminSummary>("/admin/summary", { method: "GET" }, { auth: true });
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  created_at: string;
+  suspended_at?: string;
+  deleted_at?: string;
+}
+
+export function listAdminUsers(search?: string) {
+  const query = search ? `?search=${encodeURIComponent(search)}` : "";
+  return apiFetch<AdminUser[]>(`/admin/users${query}`, { method: "GET" }, { auth: true });
+}
+
+export function suspendUser(id: string) {
+  return apiFetch<{ message: string }>(`/admin/users/${id}/suspend`, { method: "PATCH" }, { auth: true });
+}
+
+export function activateUser(id: string) {
+  return apiFetch<{ message: string }>(`/admin/users/${id}/activate`, { method: "PATCH" }, { auth: true });
+}
+
+export interface AdminReport {
+  id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  reporter_email: string;
+  status: string;
+  created_at: string;
+}
+
+export function listAdminReports(status = "pending") {
+  return apiFetch<AdminReport[]>(`/admin/reports?status=${status}`, { method: "GET" }, { auth: true });
+}
+
+export function resolveReport(id: string, action: "takedown" | "dismiss") {
+  return apiFetch<{ message: string }>(
+    `/admin/reports/${id}/resolve`,
+    { method: "PATCH", body: JSON.stringify({ action }) },
+    { auth: true }
+  );
 }

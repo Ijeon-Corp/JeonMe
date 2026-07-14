@@ -4,6 +4,7 @@ import { getPublicPage } from "@/lib/api-client";
 import BuyProductButton from "@/components/BuyProductButton";
 import PageAnalytics from "@/components/PageAnalytics";
 import TrackedLink from "@/components/TrackedLink";
+import ReportButton from "@/components/ReportButton";
 
 type PageParams = { params: Promise<{ username: string }> };
 
@@ -100,6 +101,8 @@ export default async function CreatorPage({ params }: PageParams) {
           ))}
         </div>
       )}
+
+      <ReportButton pageId={page.id} />
     </main>
   );
 }
