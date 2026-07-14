@@ -256,3 +256,22 @@ export function getProductDownloadURL(id: string) {
     { auth: true }
   );
 }
+
+// ---------- Checkout (publik, REQ-F-401) ----------
+
+export function createCheckout(input: { product_id: string; buyer_email: string; buyer_contact?: string }) {
+  return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface CheckoutStatus {
+  order_id: string;
+  status: "pending" | "paid" | "expired" | "failed";
+  product_name: string;
+}
+
+export function getCheckoutStatus(orderId: string) {
+  return apiFetch<CheckoutStatus>(`/checkout/${orderId}/status`, { method: "GET" });
+}

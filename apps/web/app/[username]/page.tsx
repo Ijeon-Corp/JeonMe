@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicPage } from "@/lib/api-client";
+import BuyProductButton from "@/components/BuyProductButton";
 
 type PageParams = { params: Promise<{ username: string }> };
 
@@ -91,6 +92,7 @@ export default async function CreatorPage({ params }: PageParams) {
               <p className="text-gray-500">
                 Rp {product.price_idr.toLocaleString("id-ID")}
               </p>
+              <BuyProductButton productId={product.id} />
             </div>
           ))}
         </div>

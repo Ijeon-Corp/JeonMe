@@ -20,6 +20,7 @@ type Config struct {
 	XenditWebhookKey string
 
 	CORSAllowedOrigins string
+	PublicWebURL       string
 
 	S3Endpoint  string
 	S3AccessKey string
@@ -47,6 +48,10 @@ func Load() *Config {
 		XenditWebhookKey: getEnv("XENDIT_WEBHOOK_VERIFICATION_TOKEN", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
+		// Dipakai membangun success/failure redirect URL Xendit Invoice
+		// (REQ-F-402) -- harus origin frontend yang benar-benar dipakai
+		// pembeli, bukan cuma daftar CORS.
+		PublicWebURL: getEnv("PUBLIC_WEB_URL", "http://localhost:3000"),
 
 		// Nilai default sengaja dibuat "jalan tanpa perlu setup tambahan" (bukan
 		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum

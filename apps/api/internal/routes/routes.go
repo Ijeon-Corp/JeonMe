@@ -9,6 +9,7 @@ import (
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/storage"
+	"github.com/jeonme/api/internal/xendit"
 )
 
 // Register mendaftarkan seluruh route API. Struktur mengikuti pemisahan
@@ -22,6 +23,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	page := handlers.NewPageHandler(db, rdb)
 	product := handlers.NewProductHandler(db, s3)
 	links := handlers.NewLinksHandler(db)
+	xenditClient := xendit.NewClient(cfg.XenditSecretKey)
+	checkout := handlers.NewCheckoutHandler(db, xenditClient, cfg.XenditWebhookKey, cfg.PublicWebURL)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -70,8 +73,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// (REQ-F-601..603) -- Sprint 4 & 5 di Rencana-Sprint-Jeonme.xlsx.
 		}
 
-		// TODO: endpoint checkout publik (REQ-F-401) dan webhook PSP (REQ-F-403)
-		// -- webhook WAJIB memverifikasi signature sebelum diproses (lihat
-		// Technical Design Document Bagian 5 & 6).
+		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
+		api.POST("/checkout", checkout.Create)
+		api.GET("/checkout/:id/status", checkout.GetStatus)
+
+		// Webhook PSP -- REQ-F-403 (verifikasi signature via header
+		// x-callback-token DI DALAM handler, sebelum payload diproses) &
+		// REQ-F-404 (idempotensi lewat unique constraint psp_transaction_id).
+		api.POST("/webhooks/xendit", checkout.Webhook)
 	}
 }
