@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -27,6 +28,9 @@ type Config struct {
 	S3SecretKey string
 	S3Bucket    string
 	S3UseSSL    bool
+
+	PlatformFeePercent float64
+	HoldingPeriodDays  int
 }
 
 // Load membaca .env (jika ada) lalu environment variable asli.
@@ -68,6 +72,14 @@ func Load() *Config {
 		S3SecretKey: getEnv("S3_SECRET_KEY", "jeonme12345"),
 		S3Bucket:    getEnv("S3_BUCKET", "jeonme-products"),
 		S3UseSSL:    getEnv("S3_USE_SSL", "false") == "true",
+
+		// PLACEHOLDER bisnis (Sprint 4, REQ-F-501/502) -- 5% & 3 hari adalah
+		// nilai umum di platform sejenis (Gumroad/Lemonsqueezy sekitar 5-10%,
+		// holding period anti-fraud beberapa hari), BUKAN keputusan bisnis
+		// resmi Jeonme. Ganti lewat env begitu ada keputusan final, tidak
+		// perlu ubah kode.
+		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 5.0),
+		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
 	}
 
 	return cfg
@@ -90,6 +102,32 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getEnvFloat(key string, fallback float64) float64 {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		log.Printf("peringatan: %s=%q bukan angka valid, pakai default %v", key, v, fallback)
+		return fallback
+	}
+	return f
+}
+
+func getEnvInt(key string, fallback int) int {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		log.Printf("peringatan: %s=%q bukan bilangan bulat valid, pakai default %v", key, v, fallback)
+		return fallback
+	}
+	return n
 }
 
 // mustGetEnv menghentikan aplikasi lebih awal (fail-fast) jika konfigurasi

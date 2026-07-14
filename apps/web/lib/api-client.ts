@@ -275,3 +275,36 @@ export interface CheckoutStatus {
 export function getCheckoutStatus(orderId: string) {
   return apiFetch<CheckoutStatus>(`/checkout/${orderId}/status`, { method: "GET" });
 }
+
+// ---------- Dashboard: saldo & penarikan (Sprint 4) ----------
+
+export interface Balance {
+  available_idr: number;
+  held_idr: number;
+  holding_period_days: number;
+}
+
+export function getBalance() {
+  return apiFetch<Balance>("/dashboard/balance", { method: "GET" }, { auth: true });
+}
+
+export interface Payout {
+  id: string;
+  amount_idr: number;
+  destination_account: string;
+  status: "requested" | "processing" | "completed" | "failed";
+  requested_at: string;
+  completed_at?: string;
+}
+
+export function createPayout(input: { amount_idr: number; destination_account: string }) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/payouts",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function listPayouts() {
+  return apiFetch<Payout[]>("/dashboard/payouts", { method: "GET" }, { auth: true });
+}

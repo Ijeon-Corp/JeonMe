@@ -24,7 +24,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	product := handlers.NewProductHandler(db, s3)
 	links := handlers.NewLinksHandler(db)
 	xenditClient := xendit.NewClient(cfg.XenditSecretKey)
-	checkout := handlers.NewCheckoutHandler(db, xenditClient, cfg.XenditWebhookKey, cfg.PublicWebURL)
+	checkout := handlers.NewCheckoutHandler(db, xenditClient, cfg.XenditWebhookKey, cfg.PublicWebURL, cfg.PlatformFeePercent)
+	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -69,8 +70,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/products/:id/upload", product.UploadFile)
 			dashboard.GET("/products/:id/download-url", product.GetDownloadURL)
 
-			// TODO: saldo & penarikan dana (REQ-F-501..504), dan analitik
-			// (REQ-F-601..603) -- Sprint 4 & 5 di Rencana-Sprint-Jeonme.xlsx.
+			dashboard.GET("/balance", balance.GetBalance)
+			dashboard.POST("/payouts", balance.CreatePayout)
+			dashboard.GET("/payouts", balance.ListPayouts)
+
+			// TODO: analitik (REQ-F-601..603) -- Sprint 5 di Rencana-Sprint-Jeonme.xlsx.
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.

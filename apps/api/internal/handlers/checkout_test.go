@@ -33,7 +33,7 @@ func newTestCheckoutHandler(t *testing.T, webhookToken string) (*CheckoutHandler
 	// Rencana-Sprint-Jeonme.xlsx Sprint 3). Test ini membuktikan perilaku
 	// "belum dikonfigurasi", bukan memanggil API Xendit sungguhan.
 	xenditClient := xendit.NewClient("")
-	checkout := NewCheckoutHandler(db, xenditClient, webhookToken, "http://localhost:3000")
+	checkout := NewCheckoutHandler(db, xenditClient, webhookToken, "http://localhost:3000", 5.0)
 
 	return checkout, NewAuthHandler(db, rdb, "test-secret", "test")
 }
@@ -190,5 +190,22 @@ func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	}
 	if paymentCount != 1 {
 		t.Fatalf("paymentCount = %d, ekspektasi tepat 1 walau webhook diterima 2 kali", paymentCount)
+	}
+
+	// REQ-F-501: ledger kreator harus ke-kredit TEPAT SEKALI (bukan 2x
+	// walau webhook diterima 2x) sebesar amount_idr order (platform_fee_idr
+	// default 0 di setup test ini).
+	var ledgerCount int
+	var ledgerAmount int64
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COUNT(*), COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE order_id = $1
+	`, orderID).Scan(&ledgerCount, &ledgerAmount); err != nil {
+		t.Fatalf("gagal query ledger_entries: %v", err)
+	}
+	if ledgerCount != 1 {
+		t.Fatalf("ledgerCount = %d, ekspektasi tepat 1 walau webhook diterima 2 kali", ledgerCount)
+	}
+	if ledgerAmount != 25000 {
+		t.Fatalf("ledgerAmount = %d, ekspektasi 25000", ledgerAmount)
 	}
 }

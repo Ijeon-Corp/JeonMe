@@ -23,14 +23,18 @@ import (
 // internal/xendit/client.go. CreateInvoice akan menolak dengan pesan jelas
 // (bukan crash) selama XENDIT_SECRET_KEY kosong.
 type CheckoutHandler struct {
-	DB           *pgxpool.Pool
-	Xendit       *xendit.Client
-	WebhookToken string
-	PublicWebURL string
+	DB                 *pgxpool.Pool
+	Xendit             *xendit.Client
+	WebhookToken       string
+	PublicWebURL       string
+	PlatformFeePercent float64
 }
 
-func NewCheckoutHandler(db *pgxpool.Pool, xenditClient *xendit.Client, webhookToken, publicWebURL string) *CheckoutHandler {
-	return &CheckoutHandler{DB: db, Xendit: xenditClient, WebhookToken: webhookToken, PublicWebURL: publicWebURL}
+func NewCheckoutHandler(db *pgxpool.Pool, xenditClient *xendit.Client, webhookToken, publicWebURL string, platformFeePercent float64) *CheckoutHandler {
+	return &CheckoutHandler{
+		DB: db, Xendit: xenditClient, WebhookToken: webhookToken,
+		PublicWebURL: publicWebURL, PlatformFeePercent: platformFeePercent,
+	}
 }
 
 type createCheckoutRequest struct {
@@ -67,6 +71,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	orderID := uuid.NewString()
 	externalID := "jeonme-order-" + orderID
+	platformFeeIDR := int64(float64(priceIDR) * h.PlatformFeePercent / 100)
 
 	// Order disimpan dalam transaksi yang BELUM di-commit sampai Xendit
 	// benar-benar berhasil membuat invoice -- kalau panggilan Xendit gagal,
@@ -81,8 +86,8 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, created_at)
-		VALUES ($1, $2, $3, $4, $5, 0, 'pending', $6, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, priceIDR, externalID)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, priceIDR, platformFeeIDR, externalID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
@@ -196,8 +201,14 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var orderID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM orders WHERE psp_reference = $1`, payload.ExternalID).Scan(&orderID); err != nil {
+	var orderID, productUserID string
+	var amountIDR, platformFeeIDR int64
+	err = h.DB.QueryRow(ctx, `
+		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE o.psp_reference = $1
+	`, payload.ExternalID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR)
+	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
 			return
@@ -215,7 +226,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 
 	// Idempotensi (REQ-F-404): kalau psp_transaction_id ini sudah pernah
 	// tercatat, INSERT tidak melakukan apa-apa (RowsAffected=0) -- webhook
-	// duplikat aman diabaikan tanpa mengubah status order lagi.
+	// duplikat aman diabaikan tanpa mengubah status order/ledger lagi.
 	res, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, order_id, psp, method, psp_transaction_id, status, raw_webhook_payload, verified_at)
 		VALUES ($1, $2, 'xendit', 'invoice', $3, $4, $5, now())
@@ -231,11 +242,40 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui status order"})
 			return
 		}
-		// TODO (Sprint 4): kalau orderStatus == "paid", buat ledger_entries
-		// (credit ke user pemilik produk, dikurangi platform_fee_idr) --
-		// REQ-F-501/502. TODO (Sprint 3 lanjutan, butuh worker/job queue
-		// Sprint 2 No.41): kirim notifikasi email/WhatsApp + link unduhan
-		// ke buyer (REQ-F-405) -- belum ada infra worker & provider email/WA.
+
+		// REQ-F-501: kredit ledger kreator saat pembayaran benar-benar
+		// dikonfirmasi (bukan saat checkout dibuat). pg_advisory_xact_lock
+		// menyerialkan write ke ledger user yang sama supaya balance_after
+		// selalu benar walau ada beberapa webhook masuk bersamaan untuk
+		// kreator yang sama.
+		if orderStatus == "paid" {
+			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, productUserID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger"})
+				return
+			}
+
+			var currentBalance int64
+			if err := tx.QueryRow(ctx, `
+				SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
+			`, productUserID).Scan(&currentBalance); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo"})
+				return
+			}
+
+			netAmount := amountIDR - platformFeeIDR
+			newBalance := currentBalance + netAmount
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
+				VALUES ($1, $2, $3, 'credit', $4, $5, now())
+			`, uuid.NewString(), productUserID, orderID, netAmount, newBalance); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger"})
+				return
+			}
+		}
+
+		// TODO (Sprint 3 lanjutan, butuh worker/job queue Sprint 2 No.41):
+		// kirim notifikasi email/WhatsApp + link unduhan ke buyer (REQ-F-405)
+		// -- belum ada infra worker & provider email/WA.
 	}
 
 	if err := tx.Commit(ctx); err != nil {
