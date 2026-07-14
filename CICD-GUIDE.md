@@ -31,7 +31,7 @@ Jeonme di-deploy ke **satu VPS shared** (`103.147.33.34`, Debian 12) yang sudah 
 Internet
    │
    ▼
-Cloudflare (proxied DNS untuk jeonme.com & staging.jeonme.com)
+Cloudflare (proxied DNS untuk *.jeonme.com)
    │
    ▼
 Apache :80/:443 di 103.147.33.34 (juga melayani puluhan domain lain)
@@ -40,23 +40,33 @@ Apache :80/:443 di 103.147.33.34 (juga melayani puluhan domain lain)
    │     /api/  → 127.0.0.1:28080         │  (docker-compose.prod.yml,
    │     /      → 127.0.0.1:23000         │   /opt/jeonme-production)
    │                                       │
-   └── staging.jeonme.com ─────────────────┤
-         /api/  → 127.0.0.1:28180          │  (docker-compose.staging.yml,
-         /      → 127.0.0.1:23100          │   /opt/jeonme-staging)
+   ├── staging.jeonme.com ─────────────────┤
+   │     /api/  → 127.0.0.1:28180          │  (docker-compose.staging.yml,
+   │     /      → 127.0.0.1:23100          │   /opt/jeonme-staging)
+   │                                       │
+   ├── storage.jeonme.com ─────────────────┤  (signed download URL produk,
+   │     /      → 127.0.0.1:29000 (MinIO)  │   REQ-F-304 -- lihat bug #15)
+   │                                       │
+   └── storage-staging.jeonme.com ─────────┘
+         /      → 127.0.0.1:29100 (MinIO)
 ```
 
 ### 2.1 Tabel Referensi Infrastruktur
 
 | Item | Production | Staging |
 |---|---|---|
-| Domain | `jeonme.com`, `www.jeonme.com` | `staging.jeonme.com` |
+| Domain app | `jeonme.com`, `www.jeonme.com` | `staging.jeonme.com` |
+| Domain storage (MinIO) | `storage.jeonme.com` | `storage-staging.jeonme.com` |
 | Direktori di VPS | `/opt/jeonme-production` | `/opt/jeonme-staging` |
 | File compose | `docker-compose.prod.yml` | `docker-compose.staging.yml` |
 | Port web (127.0.0.1) | `23000` | `23100` |
 | Port api (127.0.0.1) | `28080` | `28180` |
-| Vhost Apache | `/etc/apache2/sites-available/jeonme.com.conf` | `/etc/apache2/sites-available/staging.jeonme.com.conf` |
-| Sertifikat TLS | `/etc/letsencrypt/live/jeonme.com/` | `/etc/letsencrypt/live/staging.jeonme.com/` |
+| Port minio (127.0.0.1) | `29000` | `29100` |
+| Vhost Apache | `jeonme.com.conf`, `storage.jeonme.com.conf` | `staging.jeonme.com.conf`, `storage-staging.jeonme.com.conf` |
+| Sertifikat TLS | `/etc/letsencrypt/live/jeonme.com/`, `/etc/letsencrypt/live/storage-staging.jeonme.com/` (SAN cert, mencakup dua domain storage sekaligus) | sama (satu cert dipakai dua vhost storage) |
 | Trigger deploy | Tag `v*.*.*` + approval | Otomatis setelah CI sukses di `main` |
+
+Port MinIO (29000/29100) sengaja **bukan** default 9000/9001 -- VPS ini shared, dan port itu sudah dipakai proyek lain (lihat bug #14). Vhost `storage*.conf` dan sertifikat TLS-nya dipasang **manual lewat root** (di luar cakupan `deploy` user & pipeline CI/CD biasa) -- kalau perlu setup ulang di VPS baru, ikuti pola `storage.ijeon.com.conf` yang sudah ada di server sebagai referensi, dan pastikan `ProxyPreserveHost On` (S3 SigV4 memvalidasi header Host, beda dari vhost app biasa yang pakai `ProxyPreserveHost Off`).
 
 - **VPS**: `103.147.33.34`, SSH port `61512` (bukan port default 22 — **wajib** diisi lewat secret `*_SSH_PORT`, lihat Bagian 9).
 - **User deploy**: `deploy` (anggota grup `docker`, **tanpa** akses `sudo`) — dipilih daripada root persis karena server ini shared dengan banyak klien lain; kalau SSH key CI ini bocor, dampaknya terbatas ke container Jeonme, bukan seluruh server.
