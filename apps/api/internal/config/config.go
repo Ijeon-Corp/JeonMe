@@ -17,11 +17,17 @@ type Config struct {
 	RedisURL    string
 	JWTSecret   string
 
-	XenditSecretKey  string
-	XenditWebhookKey string
+	MidtransServerKey    string
+	MidtransClientKey    string
+	MidtransIsProduction bool
 
 	CORSAllowedOrigins string
 	PublicWebURL       string
+	// PublicAPIURL -- origin backend yang bisa diakses publik, dipakai
+	// membangun tautan unduhan di email notifikasi (REQ-F-405), BUKAN
+	// hostname internal Docker (mis. "api:8080"). Padanan sisi Go dari
+	// NEXT_PUBLIC_API_BASE_URL di frontend.
+	PublicAPIURL string
 
 	S3Endpoint  string
 	S3AccessKey string
@@ -31,6 +37,16 @@ type Config struct {
 
 	PlatformFeePercent float64
 	HoldingPeriodDays  int
+
+	// SMTP dipakai worker (subcommand `worker`) untuk mengirim notifikasi
+	// email (REQ-F-405). Kosong secara default -- job pengiriman akan
+	// log-only (bukan gagal/crash) selama belum ada provider SMTP asli,
+	// pola yang sama seperti S3/object storage soft-fail di atas.
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFromAddr string
 }
 
 // Load membaca .env (jika ada) lalu environment variable asli.
@@ -48,14 +64,16 @@ func Load() *Config {
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		JWTSecret:   mustGetEnv("JWT_SECRET"),
 
-		XenditSecretKey:  getEnv("XENDIT_SECRET_KEY", ""),
-		XenditWebhookKey: getEnv("XENDIT_WEBHOOK_VERIFICATION_TOKEN", ""),
+		MidtransServerKey:    getEnv("MIDTRANS_SERVER_KEY", ""),
+		MidtransClientKey:    getEnv("MIDTRANS_CLIENT_KEY", ""),
+		MidtransIsProduction: getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
-		// Dipakai membangun success/failure redirect URL Xendit Invoice
-		// (REQ-F-402) -- harus origin frontend yang benar-benar dipakai
-		// pembeli, bukan cuma daftar CORS.
+		// Dipakai membangun finish redirect URL Midtrans Snap (REQ-F-402) --
+		// harus origin frontend yang benar-benar dipakai pembeli, bukan cuma
+		// daftar CORS.
 		PublicWebURL: getEnv("PUBLIC_WEB_URL", "http://localhost:3000"),
+		PublicAPIURL: getEnv("PUBLIC_API_URL", "http://localhost:8080/api/v1"),
 
 		// Nilai default sengaja dibuat "jalan tanpa perlu setup tambahan" (bukan
 		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum
@@ -80,6 +98,12 @@ func Load() *Config {
 		// perlu ubah kode.
 		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 5.0),
 		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
+
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvInt("SMTP_PORT", 587),
+		SMTPUsername: getEnv("SMTP_USER", ""),
+		SMTPPassword: getEnv("SMTP_PASS", ""),
+		SMTPFromAddr: getEnv("SMTP_FROM", "no-reply@jeonme.com"),
 	}
 
 	return cfg

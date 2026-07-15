@@ -20,3 +20,7 @@ apps/api/.env
 
 # Backup zip lokal (bukan bagian dari source, jangan ikut ke repo)
 jeonme.zip
+
+# Override compose lokal per developer (mis. remap port kalau bentrok dengan
+# service native di mesin masing-masing) -- jangan ikut ke repo.
+docker-compose.override.yml

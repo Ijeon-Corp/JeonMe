@@ -4,14 +4,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/middleware"
+	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/storage"
-	"github.com/jeonme/api/internal/xendit"
 )
 
 // Register mendaftarkan seluruh route API. Struktur mengikuti pemisahan
@@ -19,14 +20,16 @@ import (
 // sehingga tiap modul mudah diekstraksi jadi service terpisah nanti.
 // s3 boleh nil (mis. kalau EnsureBucket gagal saat startup) -- ProductHandler
 // akan menolak endpoint upload/download dengan pesan jelas alih-alih panic.
-func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, cfg *config.Config, version string) {
+// queueClient boleh nil (mis. kalau REDIS_URL tidak valid) -- notifikasi
+// order.paid (REQ-F-405) akan dilewati dengan log peringatan, bukan panic.
+func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, queueClient *asynq.Client, cfg *config.Config, version string) {
 	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	page := handlers.NewPageHandler(db, rdb)
 	product := handlers.NewProductHandler(db, s3)
 	links := handlers.NewLinksHandler(db)
-	xenditClient := xendit.NewClient(cfg.XenditSecretKey)
-	checkout := handlers.NewCheckoutHandler(db, xenditClient, cfg.XenditWebhookKey, cfg.PublicWebURL, cfg.PlatformFeePercent)
+	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
+	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
 	analytics := handlers.NewAnalyticsHandler(db)
 	account := handlers.NewAccountHandler(db)
@@ -118,9 +121,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		api.POST("/checkout", checkoutRateLimit, checkout.Create)
 		api.GET("/checkout/:id/status", checkout.GetStatus)
 
-		// Webhook PSP -- REQ-F-403 (verifikasi signature via header
-		// x-callback-token DI DALAM handler, sebelum payload diproses) &
-		// REQ-F-404 (idempotensi lewat unique constraint psp_transaction_id).
-		api.POST("/webhooks/xendit", checkout.Webhook)
+		// REQ-F-405: tautan unduhan permanen yang diklik dari email
+		// notifikasi -- publik (pembeli tidak punya akun), lihat komentar
+		// CheckoutHandler.DownloadFile.
+		api.GET("/checkout/:id/download", checkout.DownloadFile)
+
+		// Webhook PSP -- REQ-F-403 (verifikasi signature_key di body DI
+		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi
+		// lewat unique constraint psp_transaction_id).
+		api.POST("/webhooks/midtrans", checkout.Webhook)
 	}
 }

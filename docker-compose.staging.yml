@@ -45,6 +45,21 @@ services:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     logging: *default-logging
 
+  # Proses TERPISAH dari `api` (image sama, subcommand `./api worker`) --
+  # memproses task asynq dari Redis (REQ-F-405: notifikasi email pembeli).
+  # Tidak perlu port publik -- worker tidak menerima request HTTP apa pun.
+  worker:
+    image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG:-latest}
+    command: ["worker"]
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    logging: *default-logging
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped

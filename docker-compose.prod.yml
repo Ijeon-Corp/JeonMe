@@ -49,16 +49,20 @@ services:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     logging: *default-logging
 
-  # worker:
-  #   image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
-  #   restart: unless-stopped
-  #   command: ["./api", "worker"]
-  #   env_file: .env
-  #   depends_on: [db, redis]
-  #   logging: *default-logging
-  #   TODO: main.go belum punya subcommand "worker". Tambahkan job queue
-  #   (mis. asynq berbasis Redis) untuk proses async (kirim email, dsb.)
-  #   sebelum mengaktifkan service ini.
+  # Proses TERPISAH dari `api` (image sama, subcommand `./api worker`) --
+  # memproses task asynq dari Redis (REQ-F-405: notifikasi email pembeli).
+  # Tidak perlu port publik -- worker tidak menerima request HTTP apa pun.
+  worker:
+    image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
+    command: ["worker"]
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    logging: *default-logging
 
   db:
     image: postgres:16-alpine

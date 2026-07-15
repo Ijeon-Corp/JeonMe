@@ -5,36 +5,43 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jeonme/api/internal/audit"
-	"github.com/jeonme/api/internal/xendit"
+	"github.com/jeonme/api/internal/midtrans"
+	"github.com/jeonme/api/internal/queue"
+	"github.com/jeonme/api/internal/storage"
 )
 
 // CheckoutHandler mengimplementasikan REQ-F-401 (checkout tanpa akun),
-// REQ-F-402 (integrasi Xendit), REQ-F-403/404 (webhook + idempotensi).
+// REQ-F-402 (integrasi Midtrans), REQ-F-403/404 (webhook + idempotensi).
 //
-// PENTING: Xendit belum diuji melawan akun sungguhan -- lihat catatan di
-// internal/xendit/client.go. CreateInvoice akan menolak dengan pesan jelas
-// (bukan crash) selama XENDIT_SECRET_KEY kosong.
+// Queue boleh nil (mis. kalau REDIS_URL tidak valid saat startup) --
+// notifikasi order.paid (REQ-F-405) akan dilewati dengan log peringatan,
+// BUKAN membuat webhook PSP gagal, sama seperti pola soft-fail Storage.
 type CheckoutHandler struct {
 	DB                 *pgxpool.Pool
-	Xendit             *xendit.Client
-	WebhookToken       string
+	Midtrans           *midtrans.Client
+	MidtransServerKey  string
 	PublicWebURL       string
 	PlatformFeePercent float64
+	Storage            *storage.Client
+	Queue              *asynq.Client
 }
 
-func NewCheckoutHandler(db *pgxpool.Pool, xenditClient *xendit.Client, webhookToken, publicWebURL string, platformFeePercent float64) *CheckoutHandler {
+func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, midtransServerKey, publicWebURL string, platformFeePercent float64, s3 *storage.Client, queueClient *asynq.Client) *CheckoutHandler {
 	return &CheckoutHandler{
-		DB: db, Xendit: xenditClient, WebhookToken: webhookToken,
+		DB: db, Midtrans: midtransClient, MidtransServerKey: midtransServerKey,
 		PublicWebURL: publicWebURL, PlatformFeePercent: platformFeePercent,
+		Storage: s3, Queue: queueClient,
 	}
 }
 
@@ -74,10 +81,10 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	externalID := "jeonme-order-" + orderID
 	platformFeeIDR := int64(float64(priceIDR) * h.PlatformFeePercent / 100)
 
-	// Order disimpan dalam transaksi yang BELUM di-commit sampai Xendit
-	// benar-benar berhasil membuat invoice -- kalau panggilan Xendit gagal,
-	// transaksi di-rollback supaya tidak ada order "pending" yatim yang
-	// tidak pernah bisa dibayar sama sekali.
+	// Order disimpan dalam transaksi yang BELUM di-commit sampai Midtrans
+	// benar-benar berhasil membuat transaksi Snap -- kalau panggilan Midtrans
+	// gagal, transaksi di-rollback supaya tidak ada order "pending" yatim
+	// yang tidak pernah bisa dibayar sama sekali.
 	tx, err := h.DB.Begin(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
@@ -94,16 +101,15 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		return
 	}
 
-	invoice, err := h.Xendit.CreateInvoice(ctx, xendit.CreateInvoiceRequest{
-		ExternalID:         externalID,
-		Amount:             priceIDR,
-		PayerEmail:         req.BuyerEmail,
-		Description:        fmt.Sprintf("Jeonme: %s", productName),
-		SuccessRedirectURL: h.PublicWebURL + "/checkout/" + orderID + "?status=success",
-		FailureRedirectURL: h.PublicWebURL + "/checkout/" + orderID + "?status=failed",
+	txn, err := h.Midtrans.CreateTransaction(ctx, midtrans.CreateTransactionRequest{
+		OrderID:           externalID,
+		GrossAmountIDR:    priceIDR,
+		ItemName:          fmt.Sprintf("Jeonme: %s", productName),
+		CustomerEmail:     req.BuyerEmail,
+		FinishRedirectURL: h.PublicWebURL + "/checkout/" + orderID,
 	})
 	if err != nil {
-		if err == xendit.ErrNotConfigured {
+		if err == midtrans.ErrNotConfigured {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "pembayaran belum dikonfigurasi, hubungi admin"})
 			return
 		}
@@ -118,7 +124,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"order_id":    orderID,
-		"invoice_url": invoice.InvoiceURL,
+		"invoice_url": txn.RedirectURL,
 	})
 }
 
@@ -155,46 +161,37 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// xenditStatusToOrderStatus memetakan status invoice Xendit ke status order kita.
-func xenditStatusToOrderStatus(xenditStatus string) (string, bool) {
-	switch xenditStatus {
-	case "PAID", "SETTLED":
-		return "paid", true
-	case "EXPIRED":
-		return "expired", true
-	default:
-		return "", false
-	}
-}
-
 // Webhook — REQ-F-403 (verifikasi signature WAJIB sebelum diproses) &
-// REQ-F-404 (idempotensi: webhook yang di-retry Xendit tidak boleh diproses
-// dua kali). Selalu membalas 200 kalau payload valid (termasuk saat duplikat)
-// supaya Xendit berhenti retry -- retry hanya berguna kalau error KITA yang
-// menyebabkan gagal, bukan karena event-nya sudah pernah diproses.
+// REQ-F-404 (idempotensi: notifikasi yang di-retry Midtrans tidak boleh
+// diproses dua kali). Selalu membalas 200 kalau payload valid (termasuk saat
+// duplikat) supaya Midtrans berhenti retry -- retry hanya berguna kalau
+// error KITA yang menyebabkan gagal, bukan karena event-nya sudah pernah
+// diproses.
 func (h *CheckoutHandler) Webhook(c *gin.Context) {
-	token := c.GetHeader("x-callback-token")
-	if !xendit.VerifyCallbackToken(token, h.WebhookToken) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token webhook tidak valid"})
-		return
-	}
-
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "gagal membaca payload"})
 		return
 	}
 
-	var payload xendit.InvoiceWebhookPayload
+	var payload midtrans.NotificationPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "payload tidak valid"})
 		return
 	}
 
-	orderStatus, recognized := xenditStatusToOrderStatus(payload.Status)
+	// REQ-F-403: signature_key di BODY (bukan header terpisah seperti
+	// Xendit sebelumnya) WAJIB diverifikasi sebelum payload diproses sama
+	// sekali.
+	if !midtrans.VerifySignature(payload.OrderID, payload.StatusCode, payload.GrossAmount, h.MidtransServerKey, payload.SignatureKey) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "signature webhook tidak valid"})
+		return
+	}
+
+	orderStatus, recognized := midtrans.StatusToOrderStatus(payload.TransactionStatus, payload.FraudStatus)
 	if !recognized {
-		// Status lain (mis. "PENDING") tidak butuh aksi -- tetap 200 supaya
-		// Xendit tidak retry sia-sia.
+		// Status lain (mis. "pending", "capture" yang masih "challenge")
+		// tidak butuh aksi -- tetap 200 supaya Midtrans tidak retry sia-sia.
 		c.JSON(http.StatusOK, gin.H{"message": "diterima, tidak ada aksi untuk status ini"})
 		return
 	}
@@ -208,7 +205,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.ExternalID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR)
+	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -230,13 +227,15 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	// duplikat aman diabaikan tanpa mengubah status order/ledger lagi.
 	res, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, order_id, psp, method, psp_transaction_id, status, raw_webhook_payload, verified_at)
-		VALUES ($1, $2, 'xendit', 'invoice', $3, $4, $5, now())
+		VALUES ($1, $2, 'midtrans', 'snap', $3, $4, $5, now())
 		ON CONFLICT (psp_transaction_id) WHERE psp_transaction_id != '' DO NOTHING
-	`, uuid.NewString(), orderID, payload.ID, orderStatus, body)
+	`, uuid.NewString(), orderID, payload.TransactionID, orderStatus, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pembayaran"})
 		return
 	}
+
+	shouldNotifyBuyer := false
 
 	if res.RowsAffected() > 0 {
 		if _, err := tx.Exec(ctx, `UPDATE orders SET status = $1 WHERE id = $2`, orderStatus, orderID); err != nil {
@@ -282,11 +281,9 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
 				return
 			}
+			shouldNotifyBuyer = true
 		}
 
-		// TODO (Sprint 3 lanjutan, butuh worker/job queue Sprint 2 No.41):
-		// kirim notifikasi email/WhatsApp + link unduhan ke buyer (REQ-F-405)
-		// -- belum ada infra worker & provider email/WA.
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -294,5 +291,78 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 		return
 	}
 
+	// REQ-F-405: enqueue notifikasi SETELAH commit berhasil (bukan di dalam
+	// transaksi) -- pengiriman email dilakukan async oleh proses `./api
+	// worker` (lihat internal/worker), supaya lambat/gagalnya SMTP tidak
+	// pernah membuat webhook PSP ini timeout atau gagal. Enqueue gagal
+	// hanya di-log, TIDAK mengubah respons -- pembayaran sudah sah tercatat
+	// terlepas dari nasib notifikasinya.
+	//
+	// shouldNotifyBuyer HANYA true kalau webhook ini yang PERTAMA KALI
+	// mengubah status (res.RowsAffected() > 0 di atas) -- webhook duplikat
+	// (retry PSP yang sangat umum terjadi) TIDAK BOLEH mengenqueue notifikasi
+	// lagi, kalau tidak pembeli bisa menerima email "pesanan siap diunduh"
+	// berkali-kali untuk satu pembayaran yang sama.
+	if shouldNotifyBuyer {
+		if h.Queue == nil {
+			log.Printf("checkout: job queue tidak tersedia, lewati notifikasi order %s", orderID)
+		} else if task, err := queue.NewOrderPaidTask(orderID); err != nil {
+			log.Printf("checkout: gagal membuat task notifikasi order %s: %v", orderID, err)
+		} else if _, err := h.Queue.Enqueue(task); err != nil {
+			log.Printf("checkout: gagal enqueue notifikasi order %s: %v", orderID, err)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "webhook diproses"})
+}
+
+// DownloadFile — REQ-F-405 (link unduhan pembeli). Endpoint PUBLIK (pembeli
+// tidak punya akun, REQ-F-401) yang diklik langsung dari email notifikasi.
+// Sengaja TIDAK menaruh presigned URL S3 langsung di badan email (masa
+// berlaku presigned URL cuma 15 menit, lihat REQ-F-304) -- tautan di email
+// mengarah ke endpoint tetap ini, yang membuatkan presigned URL BARU setiap
+// kali diklik lalu redirect. Jadi tautan di email tetap berfungsi kapan pun
+// dibuka, bukan cuma dalam 15 menit setelah pembayaran.
+func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	orderID := c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var status, fileKey string
+	err := h.DB.QueryRow(ctx, `
+		SELECT o.status, p.file_key FROM orders o
+		JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1
+	`, orderID).Scan(&status, &fileKey)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pesanan"})
+		return
+	}
+
+	if status != "paid" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "pesanan belum lunas"})
+		return
+	}
+	if fileKey == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file produk tidak tersedia"})
+		return
+	}
+
+	url, err := h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat tautan unduhan"})
+		return
+	}
+
+	c.Redirect(http.StatusFound, url)
 }

@@ -497,7 +497,16 @@ services:
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
 
-  # worker: (belum aktif -- lihat Bagian 12, temuan L4)
+  worker:
+    image: ghcr.io/${GHCR_REPO}/api:${IMAGE_TAG}
+    command: ["worker"]
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   db:
     image: postgres:16-alpine
@@ -600,7 +609,7 @@ Bug #1–6 diperbaiki di commit `edae5a8` s.d. `f6c6010`; #7–10 di commit `47c
 - ~~**L3**: Linting Go masih minim~~ — **selesai**: `golangci-lint` (errcheck, staticcheck, unused, gosimple, ineffassign, bodyclose) ditambahkan ke job `test-backend`, config di `apps/api/.golangci.yml`.
 - ~~**CI `build-images` jalan juga di `develop`**~~ — **selesai**: dibatasi ke `main` saja.
 - ~~**Backup database**~~ — **selesai (sebagian)**: `scripts/backup-database.sh` (pg_dump + gzip + retensi 14 hari lokal) dijadwalkan cron harian (production 03:00, staging 03:30). **Belum** ada upload offsite ke object storage (MinIO/R2 belum disiapkan) — backup lokal saja tidak cukup untuk skenario VPS hilang total, jadi ini masih risiko yang harus disadari sampai object storage ada.
-- **L4** (sengaja ditunda, keputusan sadar): Service `worker` untuk job queue async (email, notifikasi WA) belum ada subcommand-nya di `main.go` — belum ada pekerjaan async nyata untuk diproses (checkout & notifikasi belum dibangun, lihat rencana sprint Sprint 2/3). Membangun infrastruktur queue sebelum ada job yang butuh antre adalah kerja sia-sia; dikerjakan bareng saat fitur checkout/notifikasi mulai dibangun.
+- **L4** (selesai): Service `worker` untuk job queue async (asynq berbasis Redis) sudah aktif -- subcommand `./api worker` di `main.go`, proses TERPISAH dari server HTTP (`internal/queue`, `internal/mailer`, `internal/worker`). Task pertama: notifikasi email pembeli + link unduhan setelah webhook Midtrans "paid" (REQ-F-405). Diverifikasi end-to-end dengan proses server+worker nyata dan webhook sungguhan (bukan cuma unit test) -- termasuk memastikan webhook duplikat TIDAK mengenqueue notifikasi dua kali. SMTP provider asli & kanal WhatsApp masih belum ada (mailer soft-fail log-only selama `SMTP_HOST` kosong).
 
 ## 13. Zero/Minim-Downtime saat Deploy
 
@@ -615,7 +624,7 @@ Untuk MVP dengan 1 VPS, downtime beberapa detik saat `docker compose up -d` bias
 - [x] Sertifikat TLS terbit untuk `jeonme.com`, `www.jeonme.com`, `staging.jeonme.com`; renewal tercakup `certbot.timer` sistem.
 - [x] Health check endpoint teruji gagal→sukses (real rollout, bukan simulasi).
 - [x] GitHub Environment "production" sudah diberi *required reviewers*.
-- [ ] `.env` production sudah pakai kredensial live PSP (Xendit) — **belum**, masih kosong (fitur checkout belum dikerjakan, lihat rencana sprint).
+- [ ] `.env` production sudah pakai kredensial live PSP (Midtrans) — **belum**, masih kosong (belum ada akun sandbox/production Midtrans, lihat Rencana-Sprint-Jeonme.xlsx Sprint 3).
 - [ ] Backup otomatis database production — **belum**.
 - [ ] Smoke test transaksi dengan uang sungguhan — **belum relevan** sampai fitur checkout ada.
 

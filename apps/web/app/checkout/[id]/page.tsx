@@ -5,10 +5,10 @@ import { useParams } from "next/navigation";
 import { ApiError, CheckoutStatus, getCheckoutStatus } from "@/lib/api-client";
 
 // REQ-F-406: pesan gagal bayar yang jelas ke pembeli. Halaman ini adalah
-// success_redirect_url/failure_redirect_url dari Xendit Invoice -- statusnya
-// selalu dicek ulang ke backend (bukan percaya query string semata), karena
-// query string bisa saja tidak akurat kalau pembeli menutup tab sebelum
-// redirect selesai atau webhook belum sempat diproses.
+// callbacks.finish dari Midtrans Snap -- statusnya selalu dicek ulang ke
+// backend (bukan percaya query string semata), karena query string bisa
+// saja tidak akurat kalau pembeli menutup tab sebelum redirect selesai atau
+// webhook belum sempat diproses.
 export default function CheckoutStatusPage() {
   const params = useParams<{ id: string }>();
   const [status, setStatus] = useState<CheckoutStatus | null>(null);

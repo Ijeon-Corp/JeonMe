@@ -22,6 +22,22 @@ services:
       minio:
         condition: service_healthy
 
+  # Proses TERPISAH dari `api` (subcommand `./api worker`, image sama) --
+  # memproses task asynq dari Redis (REQ-F-405: notifikasi email pembeli).
+  # Dipisah supaya lambat/gagalnya pengiriman email tidak pernah berdampak
+  # ke latensi endpoint checkout/webhook PSP di service `api`.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    command: ["worker"]
+    env_file: apps/api/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"

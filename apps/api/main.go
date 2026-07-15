@@ -10,13 +10,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/database"
+	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/migrate"
+	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/routes"
 	"github.com/jeonme/api/internal/storage"
+	"github.com/jeonme/api/internal/worker"
 )
 
 // Version diisi saat build lewat -ldflags "-X main.Version=<sha>" (lihat
@@ -37,6 +41,16 @@ func main() {
 		if err := migrate.Run(os.Args[2:], databaseURL, "migrations"); err != nil {
 			log.Fatalf("migrate: %v", err)
 		}
+		return
+	}
+
+	// Subcommand `worker` -- proses TERPISAH dari server HTTP (container
+	// sendiri, lihat docker-compose*.yml service `worker`), memproses task
+	// asynq dari Redis. Dipisah dari server HTTP supaya lambat/gagalnya
+	// pengiriman email (REQ-F-405) tidak pernah berdampak ke latensi/
+	// ketersediaan endpoint checkout & webhook PSP.
+	if len(os.Args) > 1 && os.Args[1] == "worker" {
+		runWorker()
 		return
 	}
 
@@ -73,12 +87,23 @@ func main() {
 		cancel()
 	}
 
+	// Job queue (asynq) bersifat soft-fail sama seperti object storage --
+	// kalau REDIS_URL somehow tidak valid, server tetap jalan tanpa
+	// notifikasi order.paid (REQ-F-405) alih-alih ikut down.
+	var queueClient *asynq.Client
+	if redisOpt, err := queue.RedisOptFromURL(cfg.RedisURL); err != nil {
+		log.Printf("peringatan: gagal menyiapkan job queue: %v (notifikasi otomatis tidak akan berjalan)", err)
+	} else {
+		queueClient = asynq.NewClient(redisOpt)
+		defer queueClient.Close()
+	}
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
 
-	routes.Register(r, db, rdb, s3Client, cfg, Version)
+	routes.Register(r, db, rdb, s3Client, queueClient, cfg, Version)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -110,4 +135,34 @@ func main() {
 	}
 
 	log.Println("server berhenti dengan aman")
+}
+
+// runWorker menjalankan proses worker asynq (subcommand `./api worker`),
+// lihat komentar di main() dan service `worker` di docker-compose*.yml.
+// asynq.Server.Run menangani sendiri graceful shutdown lewat SIGINT/SIGTERM
+// (menunggu task yang sedang berjalan selesai) -- tidak perlu signal
+// handling manual seperti server HTTP di atas.
+func runWorker() {
+	cfg := config.Load()
+
+	db, err := database.NewPostgresPool(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("worker: gagal konek database: %v", err)
+	}
+	defer db.Close()
+
+	redisOpt, err := queue.RedisOptFromURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("worker: gagal menyiapkan koneksi Redis: %v", err)
+	}
+
+	mailerClient := mailer.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFromAddr)
+	handler := worker.NewHandler(db, mailerClient, cfg.PublicAPIURL)
+
+	srv := asynq.NewServer(redisOpt, asynq.Config{Concurrency: 5})
+
+	log.Println("Jeonme worker berjalan, menunggu task...")
+	if err := srv.Run(handler.Mux()); err != nil {
+		log.Fatalf("worker: gagal berjalan: %v", err)
+	}
 }

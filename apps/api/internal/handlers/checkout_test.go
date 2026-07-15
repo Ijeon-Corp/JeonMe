@@ -9,10 +9,10 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jeonme/api/internal/database"
-	"github.com/jeonme/api/internal/xendit"
+	"github.com/jeonme/api/internal/midtrans"
 )
 
-func newTestCheckoutHandler(t *testing.T, webhookToken string) (*CheckoutHandler, *AuthHandler) {
+func newTestCheckoutHandler(t *testing.T, serverKey string) (*CheckoutHandler, *AuthHandler) {
 	t.Helper()
 	dbURL := mustEnv(t, "DATABASE_URL")
 	redisURL := mustEnv(t, "REDIS_URL")
@@ -29,11 +29,11 @@ func newTestCheckoutHandler(t *testing.T, webhookToken string) (*CheckoutHandler
 	}
 	t.Cleanup(func() { rdb.Close() })
 
-	// XenditSecretKey sengaja kosong -- belum ada akun sandbox (lihat
-	// Rencana-Sprint-Jeonme.xlsx Sprint 3). Test ini membuktikan perilaku
-	// "belum dikonfigurasi", bukan memanggil API Xendit sungguhan.
-	xenditClient := xendit.NewClient("")
-	checkout := NewCheckoutHandler(db, xenditClient, webhookToken, "http://localhost:3000", 5.0)
+	midtransClient := midtrans.NewClient(serverKey, false)
+	// Storage & Queue sengaja nil -- test checkout fokus ke logika
+	// order/pembayaran, bukan upload file atau notifikasi async (yang
+	// masing-masing sudah punya soft-fail log-only saat nil).
+	checkout := NewCheckoutHandler(db, midtransClient, serverKey, "http://localhost:3000", 5.0, nil, nil)
 
 	return checkout, NewAuthHandler(db, rdb, "test-secret", "test")
 }
@@ -54,11 +54,12 @@ func createActiveTestProduct(t *testing.T, checkout *CheckoutHandler, userID str
 	return productID
 }
 
-// Tanpa XENDIT_SECRET_KEY, Create harus menolak dengan pesan jelas (503) DAN
-// tidak meninggalkan order "pending" yatim di database (transaksi rollback).
+// Tanpa MIDTRANS_SERVER_KEY, Create harus menolak dengan pesan jelas (503)
+// DAN tidak meninggalkan order "pending" yatim di database (transaksi
+// rollback).
 func TestCheckoutCreate_NotConfigured_RollsBackOrder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	checkout, auth := newTestCheckoutHandler(t, "test-webhook-token")
+	checkout, auth := newTestCheckoutHandler(t, "")
 	userID := registerTestUser(t, auth)
 	productID := createActiveTestProduct(t, checkout, userID, 25000)
 
@@ -80,7 +81,7 @@ func TestCheckoutCreate_NotConfigured_RollsBackOrder(t *testing.T) {
 		t.Fatalf("gagal query orders: %v", err)
 	}
 	if orderCount != 0 {
-		t.Fatalf("orderCount = %d, ekspektasi 0 -- order seharusnya di-rollback saat Xendit gagal", orderCount)
+		t.Fatalf("orderCount = %d, ekspektasi 0 -- order seharusnya di-rollback saat Midtrans gagal", orderCount)
 	}
 }
 
@@ -88,7 +89,7 @@ func TestCheckoutCreate_NotConfigured_RollsBackOrder(t *testing.T) {
 // upload file, lihat Sprint 2 REQ-F-303).
 func TestCheckoutCreate_InactiveProduct_ReturnsNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	checkout, auth := newTestCheckoutHandler(t, "test-webhook-token")
+	checkout, auth := newTestCheckoutHandler(t, "test-server-key")
 	userID := registerTestUser(t, auth)
 
 	productID := uuid.NewString()
@@ -113,10 +114,21 @@ func TestCheckoutCreate_InactiveProduct_ReturnsNotFound(t *testing.T) {
 	}
 }
 
-func webhookPayload(t *testing.T, invoiceID, externalID, status string) []byte {
+// webhookPayload menyusun payload notifikasi Midtrans sintetis dengan
+// signature_key yang benar-benar valid (dihitung pakai rumus resmi
+// midtrans.Sign) -- mensimulasikan apa yang Midtrans kirim, bukan memanggil
+// API Midtrans sungguhan.
+func webhookPayload(t *testing.T, serverKey, transactionID, orderID, transactionStatus string) []byte {
 	t.Helper()
-	body, err := json.Marshal(xendit.InvoiceWebhookPayload{
-		ID: invoiceID, ExternalID: externalID, Status: status, PaidAmount: 25000,
+	const statusCode = "200"
+	const grossAmount = "25000.00"
+	body, err := json.Marshal(midtrans.NotificationPayload{
+		OrderID:           orderID,
+		StatusCode:        statusCode,
+		GrossAmount:       grossAmount,
+		SignatureKey:      midtrans.Sign(orderID, statusCode, grossAmount, serverKey),
+		TransactionStatus: transactionStatus,
+		TransactionID:     transactionID,
 	})
 	if err != nil {
 		t.Fatalf("gagal encode payload webhook: %v", err)
@@ -124,16 +136,17 @@ func webhookPayload(t *testing.T, invoiceID, externalID, status string) []byte {
 	return body
 }
 
-// Webhook dengan token salah HARUS ditolak sebelum payload apa pun diproses
-// (REQ-F-403).
-func TestCheckoutWebhook_RejectsWrongToken(t *testing.T) {
+// Webhook dengan signature_key salah HARUS ditolak sebelum payload apa pun
+// diproses (REQ-F-403).
+func TestCheckoutWebhook_RejectsWrongSignature(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	checkout, _ := newTestCheckoutHandler(t, "the-real-token")
+	checkout, _ := newTestCheckoutHandler(t, "the-real-server-key")
 
 	router := gin.New()
 	router.POST("/webhook", checkout.Webhook)
 
-	rec := doJSON(t, router, http.MethodPost, "/webhook", nil, map[string]string{"x-callback-token": "salah"})
+	body := webhookPayload(t, "server-key-yang-salah", uuid.NewString(), uuid.NewString(), "settlement")
+	rec := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, ekspektasi %d. Body: %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
 	}
@@ -144,8 +157,8 @@ func TestCheckoutWebhook_RejectsWrongToken(t *testing.T) {
 // dan tepat satu baris payments tercatat walau Webhook dipanggil dua kali.
 func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	const token = "the-real-token"
-	checkout, auth := newTestCheckoutHandler(t, token)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
 	userID := registerTestUser(t, auth)
 	productID := createActiveTestProduct(t, checkout, userID, 25000)
 
@@ -162,16 +175,15 @@ func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	router := gin.New()
 	router.POST("/webhook", checkout.Webhook)
 
-	invoiceID := uuid.NewString()
-	body := webhookPayload(t, invoiceID, externalID, "PAID")
-	headers := map[string]string{"x-callback-token": token}
+	transactionID := uuid.NewString()
+	body := webhookPayload(t, serverKey, transactionID, externalID, "settlement")
 
-	first := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), headers)
+	first := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
 	if first.Code != http.StatusOK {
 		t.Fatalf("webhook pertama: status %d, body %s", first.Code, first.Body.String())
 	}
 
-	second := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), headers)
+	second := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
 	if second.Code != http.StatusOK {
 		t.Fatalf("webhook kedua (duplikat): status %d, body %s", second.Code, second.Body.String())
 	}

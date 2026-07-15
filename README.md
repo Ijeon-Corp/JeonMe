@@ -97,12 +97,12 @@ Ditandai `TODO` di kode, ringkasannya:
 | OAuth Google login | Belum ada | REQ-F-101 |
 | Proses KYC (upload identitas) | Belum ada | REQ-F-105 |
 | Upload file produk digital + signed URL | Belum ada | REQ-F-301, REQ-F-304 |
-| Checkout publik + integrasi Xendit | Belum ada | REQ-F-401..406 |
+| Checkout publik + integrasi Midtrans | Belum ada | REQ-F-401..406 |
 | Verifikasi signature webhook PSP | Belum ada (kerangka `middleware` siap ditambah) | REQ-F-403, NF-05 |
 | Ledger saldo (tertahan/tersedia) & penarikan dana | Belum ada | REQ-F-501..505 |
 | Analitik klik/kunjungan | Belum ada | REQ-F-601..603 |
 | Panel admin | Belum ada | REQ-F-701..703 |
-| Background job/queue (worker) | Belum ada, service `worker` di `docker-compose.prod.yml` masih dikomentari | — |
+| Background job/queue (worker) | Selesai (asynq berbasis Redis, subcommand `./api worker`) | REQ-F-405 |
 | Cache Redis untuk halaman publik | Kerangka disiapkan (komentar di `page.go`), belum diisi | NF-01, NF-02 |
 | Rate limiting API | Belum ada | NF-05 |
 | CI/CD | **Live di production** (`v0.1.0`, 8 Juli 2026) — push ke `main` otomatis deploy ke staging, tag rilis otomatis deploy ke production (dengan approval) — lihat `CICD-GUIDE.md` | — |
@@ -125,5 +125,5 @@ Panduan setup & referensi kondisi deployment saat ini ada di `SETUP-GUIDE.md`.
 
 - Ganti seluruh nilai `CHANGE_ME` di `.env`.
 - Jangan pernah commit file `.env` asli (sudah masuk `.gitignore`).
-- Aktifkan verifikasi signature webhook PSP sebelum menghubungkan Xendit mode live.
+- Aktifkan verifikasi signature webhook PSP sebelum menghubungkan Midtrans mode live.
 - Baca checklist go-live lengkap di `CICD-GUIDE.md` bagian 12.
