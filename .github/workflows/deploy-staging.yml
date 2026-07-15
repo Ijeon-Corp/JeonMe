@@ -21,6 +21,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: staging
+    permissions:
+      contents: read
+      packages: read
     steps:
       # Temuan L2 (audit CI/CD): sebelumnya rollback staging cuma bisa manual
       # via SSH (scripts/rollback.sh), dan tidak ada cara memicu deploy
@@ -36,6 +39,38 @@ jobs:
           else
             echo "value=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
           fi
+
+      # Bug #17 (katalog CICD-GUIDE.md): dipicu workflow_run SETELAH ci.yml
+      # sukses, jadi race condition ini kecil kemungkinan di jalur otomatis --
+      # tapi workflow_dispatch manual (redeploy/rollback) bisa saja dipicu
+      # tepat setelah push tanpa menunggu ci.yml selesai build image. Tunggu
+      # eksplisit supaya aman di kedua jalur, bukan cuma asumsi.
+      - name: Login ke GHCR (runner) untuk cek ketersediaan image
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nama repository huruf kecil (wajib untuk GHCR)
+        id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Tunggu image api & web tersedia di GHCR
+        run: |
+          IMAGE_TAG="${{ steps.image_tag.outputs.value }}"
+          REPO="${{ steps.repo.outputs.lower }}"
+          for i in $(seq 1 30); do
+            if docker manifest inspect "ghcr.io/${REPO}/api:${IMAGE_TAG}" >/dev/null 2>&1 && \
+               docker manifest inspect "ghcr.io/${REPO}/web:${IMAGE_TAG}" >/dev/null 2>&1; then
+              echo "Image tersedia setelah percobaan ke-${i}."
+              exit 0
+            fi
+            echo "Image belum tersedia (percobaan ${i}/30), tunggu 20 detik -- kemungkinan ci.yml masih build..."
+            sleep 20
+          done
+          echo "::error::Image ghcr.io/${REPO}/{api,web}:${IMAGE_TAG} tidak pernah tersedia setelah 10 menit -- cek apakah commit ini memang pernah lolos ci.yml (job build-images)."
+          exit 1
 
       # ref di-checkout persis di commit yang IMAGE_TAG-nya dipakai (bukan
       # selalu HEAD main) -- penting untuk rollback: docker-compose.staging.yml

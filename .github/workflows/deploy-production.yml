@@ -17,6 +17,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production   # atur "required reviewers" di Settings > Environments
+    permissions:
+      contents: read
+      packages: read
     steps:
       # Temuan L2 (audit CI/CD): sebelumnya rollback cuma bisa manual via SSH
       # (scripts/rollback.sh). Kalau workflow_dispatch diisi image_tag, itu
@@ -31,6 +34,43 @@ jobs:
           else
             echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
+
+      # Bug #17 (katalog CICD-GUIDE.md): workflow ini terpicu langsung oleh
+      # push tag, TANPA menunggu ci.yml (yang build & push image ke GHCR)
+      # selesai -- beda dari deploy-staging.yml yang memang menunggu lewat
+      # workflow_run. Kalau tag dibuat segera setelah push ke main (pola
+      # rilis yang wajar), "Deploy via SSH" bisa gagal "not found" karena
+      # image belum selesai di-build sama sekali -- race condition, bukan
+      # masalah kredensial/koneksi. Ketahuan dari log run yang gagal
+      # eksplisit (bukan cuma "stuck"), diperbaiki dengan menunggu image
+      # benar-benar ada di GHCR sebelum lanjut (aman juga untuk rollback ke
+      # commit lama yang image-nya sudah pasti ada -- loop langsung selesai).
+      - name: Login ke GHCR (runner) untuk cek ketersediaan image
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nama repository huruf kecil (wajib untuk GHCR)
+        id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Tunggu image api & web tersedia di GHCR
+        run: |
+          IMAGE_TAG="${{ steps.image_tag.outputs.value }}"
+          REPO="${{ steps.repo.outputs.lower }}"
+          for i in $(seq 1 30); do
+            if docker manifest inspect "ghcr.io/${REPO}/api:${IMAGE_TAG}" >/dev/null 2>&1 && \
+               docker manifest inspect "ghcr.io/${REPO}/web:${IMAGE_TAG}" >/dev/null 2>&1; then
+              echo "Image tersedia setelah percobaan ke-${i}."
+              exit 0
+            fi
+            echo "Image belum tersedia (percobaan ${i}/30), tunggu 20 detik -- kemungkinan ci.yml masih build..."
+            sleep 20
+          done
+          echo "::error::Image ghcr.io/${REPO}/{api,web}:${IMAGE_TAG} tidak pernah tersedia setelah 10 menit -- cek apakah commit/tag ini memang pernah lolos ci.yml (job build-images)."
+          exit 1
 
       # ref di-checkout persis di commit/tag yang IMAGE_TAG-nya dipakai --
       # penting untuk rollback: docker-compose.prod.yml yang disinkronkan
