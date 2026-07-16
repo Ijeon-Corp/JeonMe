@@ -256,6 +256,7 @@ export interface DashboardProduct {
   price_idr: number;
   is_active: boolean;
   has_file: boolean;
+  cover_image_url: string;
 }
 
 export function listProducts() {
@@ -294,6 +295,26 @@ export async function uploadProductFile(id: string, file: File): Promise<{ messa
   form.append("file", file);
 
   const res = await fetch(`${API_BASE_URL}/dashboard/products/${id}/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+// Sampul produk (gambar publik permanen, beda dari file produk yang privat
+// -- lihat komentar ProductHandler.UploadCover di backend).
+export async function uploadProductCover(id: string, file: File): Promise<{ cover_image_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("cover", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/products/${id}/cover`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: form,

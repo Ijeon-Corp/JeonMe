@@ -340,7 +340,7 @@ export default function DashboardLinksPage() {
                 links: links.filter((l) => l.is_active),
                 products: products
                   .filter((p) => p.is_active)
-                  .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr })),
+                  .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr, cover_image_url: p.cover_image_url })),
               }}
             />
           </PhoneFrame>

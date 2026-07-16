@@ -26,7 +26,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	page := handlers.NewPageHandler(db, rdb, s3)
-	product := handlers.NewProductHandler(db, s3)
+	product := handlers.NewProductHandler(db, s3, rdb)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -90,6 +90,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.PATCH("/products/:id", product.Update)
 			dashboard.DELETE("/products/:id", product.Delete)
 			dashboard.POST("/products/:id/upload", product.UploadFile)
+			dashboard.POST("/products/:id/cover", product.UploadCover)
 			dashboard.GET("/products/:id/download-url", product.GetDownloadURL)
 
 			dashboard.GET("/balance", balance.GetBalance)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -48,12 +49,21 @@ func (c *Client) EnsureBucket(ctx context.Context) error {
 }
 
 // EnsurePublicRead mengizinkan GetObject anonim HANYA untuk object di bawah
-// prefix tertentu (mis. "avatars") -- dipakai untuk foto profil (REQ-F-205),
-// yang harus bisa diakses langsung sebagai URL publik permanen (bukan
-// presigned URL yang kedaluwarsa 15 menit seperti file produk berbayar).
-// Prefix lain (mis. "products") TETAP privat -- bucket policy ini hanya
-// menambahkan izin baca untuk path spesifik, tidak membuka seluruh bucket.
-func (c *Client) EnsurePublicRead(ctx context.Context, prefix string) error {
+// prefix tertentu (mis. "avatars", "covers") -- dipakai untuk foto profil
+// (REQ-F-205) & sampul produk, yang harus bisa diakses langsung sebagai URL
+// publik permanen (bukan presigned URL yang kedaluwarsa 15 menit seperti
+// file produk berbayar). Prefix lain (mis. "products") TETAP privat.
+//
+// PENTING: SetBucketPolicy MENIMPA seluruh policy, bukan menambah -- semua
+// prefix publik WAJIB dikirim dalam SATU panggilan ini (lihat main.go),
+// bukan dipanggil terpisah per prefix, kalau tidak prefix yang diatur
+// sebelumnya akan diam-diam kehilangan akses publiknya.
+func (c *Client) EnsurePublicRead(ctx context.Context, prefixes ...string) error {
+	resources := make([]string, len(prefixes))
+	for i, prefix := range prefixes {
+		resources[i] = fmt.Sprintf(`"arn:aws:s3:::%s/%s/*"`, c.Bucket, prefix)
+	}
+
 	policy := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
@@ -61,13 +71,13 @@ func (c *Client) EnsurePublicRead(ctx context.Context, prefix string) error {
 				"Effect": "Allow",
 				"Principal": {"AWS": ["*"]},
 				"Action": ["s3:GetObject"],
-				"Resource": ["arn:aws:s3:::%s/%s/*"]
+				"Resource": [%s]
 			}
 		]
-	}`, c.Bucket, prefix)
+	}`, strings.Join(resources, ","))
 
 	if err := c.mc.SetBucketPolicy(ctx, c.Bucket, policy); err != nil {
-		return fmt.Errorf("gagal mengatur bucket policy publik untuk prefix %q: %w", prefix, err)
+		return fmt.Errorf("gagal mengatur bucket policy publik untuk prefix %v: %w", prefixes, err)
 	}
 	return nil
 }

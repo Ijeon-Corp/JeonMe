@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/storage"
 )
@@ -29,14 +30,45 @@ var allowedProductFileExt = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
 }
 
+// maxCoverImageSize -- 5MB, cukup untuk gambar sampul produk (bukan file
+// produk itu sendiri, lihat maxProductFileSize).
+const maxCoverImageSize = 5 * 1024 * 1024
+
+// allowedCoverExt -- content-type diambil dari ekstensi (BUKAN dipercaya
+// dari header klien) karena sampul disajikan langsung ke <img> di halaman
+// publik & dashboard lewat URL permanen, sama seperti avatar kreator
+// (lihat PageHandler.allowedAvatarExt).
+var allowedCoverExt = map[string]string{
+	".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+	".png": "image/png", ".webp": "image/webp",
+}
+
 // ProductHandler mengimplementasikan REQ-F-301..304.
 type ProductHandler struct {
 	DB      *pgxpool.Pool
 	Storage *storage.Client
+	RDB     *redis.Client
 }
 
-func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client) *ProductHandler {
-	return &ProductHandler{DB: db, Storage: s3}
+func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client, rdb *redis.Client) *ProductHandler {
+	return &ProductHandler{DB: db, Storage: s3, RDB: rdb}
+}
+
+// invalidatePageCache — bug ditemukan 16 Juli 2026: perubahan produk (buat/
+// ubah/hapus/unggah file/unggah sampul) TIDAK PERNAH menghapus cache
+// "page:<username>" (lihat PageHandler.GetPublicPage, TTL 30 detik) --
+// hanya UpdateMyPage & UploadAvatar yang melakukannya. Akibatnya produk
+// baru/sampul baru bisa "tidak tampil" di halaman publik sampai cache lama
+// kedaluwarsa sendiri. Dipanggil di setiap handler yang mengubah data
+// produk, best-effort (gagal invalidasi cache tidak menggagalkan request).
+func (h *ProductHandler) invalidatePageCache(ctx context.Context, userID string) {
+	if h.RDB == nil {
+		return
+	}
+	var username string
+	if err := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err == nil {
+		h.RDB.Del(ctx, "page:"+username)
+	}
 }
 
 type createProductRequest struct {
@@ -70,6 +102,8 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCache(ctx, userID)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"id":      id,
 		"message": "produk dibuat, unggah file sebelum mengaktifkan produk",
@@ -84,7 +118,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file
+		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url
 		FROM products WHERE user_id = $1
 	`, userID)
 	if err != nil {
@@ -94,17 +128,18 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer rows.Close()
 
 	type item struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		PriceIDR    int64  `json:"price_idr"`
-		IsActive    bool   `json:"is_active"`
-		HasFile     bool   `json:"has_file"`
+		ID            string `json:"id"`
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		PriceIDR      int64  `json:"price_idr"`
+		IsActive      bool   `json:"is_active"`
+		HasFile       bool   `json:"has_file"`
+		CoverImageURL string `json:"cover_image_url"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var it item
-		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile); err == nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -160,6 +195,8 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCache(ctx, userID)
+
 	c.JSON(http.StatusOK, gin.H{"message": "produk diperbarui"})
 }
 
@@ -187,6 +224,8 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 	if h.Storage != nil && fileKey != "" {
 		_ = h.Storage.Delete(ctx, fileKey)
 	}
+
+	h.invalidatePageCache(ctx, userID)
 
 	c.JSON(http.StatusOK, gin.H{"message": "produk dihapus"})
 }
@@ -249,7 +288,75 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCache(ctx, userID)
+
 	c.JSON(http.StatusOK, gin.H{"message": "file berhasil diunggah, produk siap diaktifkan"})
+}
+
+// UploadCover — gambar sampul produk yang ditampilkan di halaman publik &
+// dashboard. Terpisah dari UploadFile (file produk yang dijual, PRIVAT --
+// hanya bisa diakses lewat presigned URL setelah pembayaran) karena sampul
+// justru harus publik PERMANEN. Key selalu "covers/<productID>" (tanpa
+// ekstensi) supaya unggah ulang menimpa object yang sama, sama seperti
+// pola avatar kreator (lihat PageHandler.UploadAvatar).
+func (h *ProductHandler) UploadCover(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	var exists int
+	if err := h.DB.QueryRow(ctx, `SELECT 1 FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&exists); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("cover")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"cover\")"})
+		return
+	}
+
+	if fileHeader.Size > maxCoverImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran gambar melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedCoverExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("covers/%s", productID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah sampul"})
+		return
+	}
+
+	coverURL := h.Storage.PublicURL(key)
+	if _, err := h.DB.Exec(ctx, `UPDATE products SET cover_image_url = $1 WHERE id = $2`, coverURL, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "sampul terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidatePageCache(ctx, userID)
+
+	c.JSON(http.StatusOK, gin.H{"cover_image_url": coverURL, "message": "sampul produk berhasil diunggah"})
 }
 
 // GetDownloadURL — REQ-F-304: signed URL kedaluwarsa (15 menit), bukan

@@ -9,6 +9,7 @@ import {
   getProductDownloadURL,
   listProducts,
   updateProduct,
+  uploadProductCover,
   uploadProductFile,
 } from "@/lib/api-client";
 import { IconBox, IconInbox } from "@/components/icons";
@@ -18,11 +19,13 @@ export default function DashboardProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     listProducts()
@@ -43,7 +46,7 @@ export default function DashboardProductsPage() {
       const created = await createProduct({ name, price_idr: price });
       setProducts((prev) => [
         ...prev,
-        { id: created.id, name, description: "", price_idr: price, is_active: false, has_file: false },
+        { id: created.id, name, description: "", price_idr: price, is_active: false, has_file: false, cover_image_url: "" },
       ]);
       setName("");
       setPriceIDR("");
@@ -62,6 +65,19 @@ export default function DashboardProductsPage() {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function handleUploadCover(product: DashboardProduct, file: File) {
+    setError(null);
+    setCoverBusyId(product.id);
+    try {
+      const { cover_image_url } = await uploadProductCover(product.id, file);
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, cover_image_url } : p)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah sampul.");
+    } finally {
+      setCoverBusyId(null);
     }
   }
 
@@ -109,6 +125,7 @@ export default function DashboardProductsPage() {
       <h1 className="font-heading text-2xl font-bold text-ink">Produk</h1>
       <p className="mt-1 text-sm text-muted">
         Unggah file (pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB) sebelum mengaktifkan produk.
+        Tambahkan sampul (jpg/png/webp, maks 5MB) supaya tampil menarik di halaman publik.
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -119,9 +136,18 @@ export default function DashboardProductsPage() {
             <li key={p.id} className="rounded-xl border border-border px-4 py-3 transition-colors hover:border-primary/30">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
-                    <IconBox className="h-[18px] w-[18px]" />
-                  </div>
+                  {p.cover_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.cover_image_url}
+                      alt={p.name}
+                      className="h-9 w-9 flex-shrink-0 rounded-lg object-cover ring-1 ring-border"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                      <IconBox className="h-[18px] w-[18px]" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
                     <p className="text-xs text-muted">Rp {p.price_idr.toLocaleString("id-ID")}</p>
@@ -166,6 +192,28 @@ export default function DashboardProductsPage() {
                   className="font-semibold text-primary hover:underline disabled:opacity-50"
                 >
                   {busyId === p.id ? "Mengunggah..." : p.has_file ? "Ganti file" : "Unggah file"}
+                </button>
+
+                <input
+                  ref={(el) => {
+                    coverInputRefs.current[p.id] = el;
+                  }}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadCover(p, file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={coverBusyId === p.id}
+                  onClick={() => coverInputRefs.current[p.id]?.click()}
+                  className="font-semibold text-accent-dark hover:underline disabled:opacity-50"
+                >
+                  {coverBusyId === p.id ? "Mengunggah..." : p.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
                 </button>
 
                 {p.has_file && (
