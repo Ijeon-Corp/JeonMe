@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { ApiError, createCheckout } from "@/lib/api-client";
 
-export default function BuyProductButton({ productId }: { productId: string }) {
+export default function BuyProductButton({
+  productId,
+  buttonClassName = "bg-primary text-white hover:opacity-90",
+}: {
+  productId: string;
+  buttonClassName?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +33,7 @@ export default function BuyProductButton({ productId }: { productId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 w-full rounded-lg bg-primary py-1.5 text-xs font-bold text-white hover:opacity-90"
+        className={`mt-2.5 w-full rounded-lg py-1.5 text-xs transition-all duration-200 ${buttonClassName}`}
       >
         Beli
       </button>
@@ -35,20 +41,20 @@ export default function BuyProductButton({ productId }: { productId: string }) {
   }
 
   return (
-    <form onSubmit={handleBuy} className="mt-2 flex flex-col gap-1.5">
+    <form onSubmit={handleBuy} className="mt-2.5 flex flex-col gap-1.5">
       <input
         type="email"
         required
         placeholder="Email kamu"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-md border border-gray-200 px-2 py-1 text-xs focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
       />
-      {error && <p className="text-[10px] text-red-600">{error}</p>}
+      {error && <p className="text-[10px] text-red-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-primary py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-60"
+        className={`w-full rounded-lg py-1.5 text-xs transition-all duration-200 disabled:opacity-60 ${buttonClassName}`}
       >
         {loading ? "Memproses..." : "Bayar Sekarang"}
       </button>

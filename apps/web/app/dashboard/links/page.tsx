@@ -15,6 +15,8 @@ import {
   updateMyPage,
   uploadAvatar,
 } from "@/lib/api-client";
+import { PAGE_THEMES } from "@/lib/page-themes";
+import { IconExternal, IconInbox } from "@/components/icons";
 
 export default function DashboardLinksPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -122,38 +124,49 @@ export default function DashboardLinksPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-ink">Tautan & Halaman</h1>
+      <h1 className="font-heading text-2xl font-bold text-ink">Tautan & Halaman</h1>
       {error && (
         <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
 
       {page && (
-        <section className="mt-6 rounded-2xl border border-border bg-white p-5">
-          <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
-          <p className="text-sm text-muted">
-            jeonme.com/{page.username} —{" "}
-            <span className={page.is_published ? "font-semibold text-secondary-dark" : "font-semibold text-muted"}>
+        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
+            <a
+              href={`https://jeonme.com/${page.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <IconExternal className="h-3.5 w-3.5" />
+              jeonme.com/{page.username}
+            </a>
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
+            <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
               {page.is_published ? "Sudah terbit" : "Belum terbit"}
             </span>
-          </p>
+          </div>
 
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="mt-5 flex flex-col gap-5">
             <div>
-              <label className="mb-1 block text-sm font-semibold text-ink">Foto Profil</label>
+              <label className="mb-1.5 block text-sm font-semibold text-ink">Foto Profil</label>
               <div className="flex items-center gap-4">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={page.avatar_url}
                     alt={page.username}
-                    className="h-16 w-16 rounded-full object-cover"
+                    className="h-16 w-16 rounded-full object-cover ring-2 ring-primary-subtle"
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-subtle text-xs text-muted">
-                    Belum ada
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-subtle font-heading text-lg font-bold text-primary">
+                    {page.username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
-                <label className="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary">
+                <label className="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
                   {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
                   <input
                     type="file"
@@ -167,7 +180,7 @@ export default function DashboardLinksPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-ink">Bio (maks 160 karakter)</label>
+              <label className="mb-1.5 block text-sm font-semibold text-ink">Bio (maks 160 karakter)</label>
               <textarea
                 maxLength={160}
                 value={page.bio}
@@ -179,22 +192,31 @@ export default function DashboardLinksPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-semibold text-ink">Tema</label>
-              <div className="flex flex-wrap gap-2">
-                {THEME_PRESETS.map((theme) => (
-                  <button
-                    key={theme}
-                    type="button"
-                    onClick={() => handlePageSettingChange({ theme })}
-                    className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                      page.theme === theme
-                        ? "border-primary bg-primary text-white"
-                        : "border-border text-muted hover:border-primary hover:text-primary"
-                    }`}
-                  >
-                    {theme}
-                  </button>
-                ))}
+              <label className="mb-1.5 block text-sm font-semibold text-ink">Tema Halaman</label>
+              <div className="flex flex-wrap gap-2.5">
+                {THEME_PRESETS.map((theme) => {
+                  const meta = PAGE_THEMES[theme];
+                  const active = page.theme === theme;
+                  return (
+                    <button
+                      key={theme}
+                      type="button"
+                      onClick={() => handlePageSettingChange({ theme })}
+                      className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-all ${
+                        active
+                          ? "border-primary bg-primary-subtle text-primary shadow-card"
+                          : "border-border text-muted hover:border-primary/50 hover:text-ink"
+                      }`}
+                    >
+                      <span
+                        className="h-5 w-5 flex-shrink-0 rounded-full ring-2 ring-white shadow-sm"
+                        style={{ backgroundColor: meta.swatch }}
+                        aria-hidden
+                      />
+                      {meta.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -203,7 +225,7 @@ export default function DashboardLinksPage() {
                 type="checkbox"
                 checked={page.is_published}
                 onChange={(e) => handlePageSettingChange({ is_published: e.target.checked })}
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary"
               />
               Terbitkan halaman publik
             </label>
@@ -211,7 +233,7 @@ export default function DashboardLinksPage() {
         </section>
       )}
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Tautan</h2>
         <p className="mb-4 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
@@ -223,23 +245,23 @@ export default function DashboardLinksPage() {
               onDragStart={() => setDragId(link.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(link.id)}
-              className={`flex items-center gap-3 rounded-xl border border-border px-4 py-3 ${
-                link.is_active ? "bg-white" : "bg-gray-50 opacity-60"
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                link.is_active ? "border-border bg-white" : "border-border bg-gray-50 opacity-60"
               }`}
             >
-              <span className="cursor-grab text-muted" aria-hidden>
+              <span className="cursor-grab text-lg leading-none text-muted" aria-hidden>
                 ⠿
               </span>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
                 <p className="truncate text-xs text-muted">{link.url}</p>
               </div>
-              <label className="flex items-center gap-1.5 text-xs text-muted">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                 <input
                   type="checkbox"
                   checked={link.is_active}
                   onChange={() => handleToggleActive(link)}
-                  className="h-4 w-4"
+                  className="h-4 w-4 accent-primary"
                 />
                 Aktif
               </label>
@@ -251,7 +273,12 @@ export default function DashboardLinksPage() {
               </button>
             </li>
           ))}
-          {links.length === 0 && <p className="text-sm text-muted">Belum ada tautan.</p>}
+          {links.length === 0 && (
+            <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
+              <IconInbox className="h-4 w-4 flex-shrink-0" />
+              Belum ada tautan -- tambahkan yang pertama di bawah ini.
+            </li>
+          )}
         </ul>
 
         <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 sm:flex-row">

@@ -1,7 +1,13 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}"],
+  // "./lib/**" ditambahkan karena lib/page-themes.ts menyimpan string kelas
+  // Tailwind (termasuk arbitrary value seperti "bg-[#0A1512]") sebagai nilai
+  // objek, bukan literal langsung di JSX -- tanpa ini, JIT purge Tailwind
+  // tidak pernah "melihat" kelas-kelas itu dipakai di mana pun, jadi
+  // dihapus dari CSS akhir (ketahuan lewat tema selain "default" yang semua
+  // classnya kebetulan sudah dipakai di file lain yang ter-scan).
+  content: ["./app/**/*.{js,ts,jsx,tsx,mdx}", "./components/**/*.{js,ts,jsx,tsx,mdx}", "./lib/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       fontFamily: {

@@ -1,9 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
-import { clearToken, logout as apiLogout } from "@/lib/api-client";
+import { clearToken, getMyPage, logout as apiLogout } from "@/lib/api-client";
+import {
+  IconBox,
+  IconChart,
+  IconClose,
+  IconCopy,
+  IconExternal,
+  IconLink,
+  IconLogout,
+  IconMenu,
+  IconWallet,
+} from "@/components/icons";
+
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Ringkasan", icon: IconChart },
+  { href: "/dashboard/links", label: "Tautan & Halaman", icon: IconLink },
+  { href: "/dashboard/products", label: "Produk", icon: IconBox },
+  { href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
+];
 
 export default function DashboardLayout({
   children,
@@ -11,6 +30,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    getMyPage()
+      .then((p) => setUsername(p.username))
+      .catch(() => {
+        // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
+        // diamkan saja, jangan ganggu dashboard dengan pesan error.
+      });
+  }, []);
+
+  function handleCopyLink() {
+    if (!username) return;
+    navigator.clipboard.writeText(`https://jeonme.com/${username}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
 
   async function handleLogout() {
     try {
@@ -24,35 +64,117 @@ export default function DashboardLayout({
     }
   }
 
+  const sidebarContent = (
+    <>
+      <div>
+        <Link href="/dashboard" className="font-heading text-xl font-extrabold text-gradient">
+          Jeonme
+        </Link>
+
+        <nav className="mt-8 flex flex-col gap-1 text-sm">
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                  active
+                    ? "bg-primary text-white shadow-card"
+                    : "text-muted hover:bg-primary-subtle hover:text-primary"
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {username && (
+          <div className="rounded-xl border border-border bg-primary-subtle/60 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Halaman publikmu</p>
+            <p className="mt-1 truncate text-xs font-semibold text-ink">jeonme.com/{username}</p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-white py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
+              >
+                <IconCopy className="h-3 w-3" />
+                {copied ? "Tersalin!" : "Salin"}
+              </button>
+              <a
+                href={`https://jeonme.com/${username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-ink/5 py-1.5 text-[11px] font-semibold text-ink hover:bg-ink/10"
+              >
+                <IconExternal className="h-3 w-3" />
+                Lihat
+              </a>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
+        >
+          <IconLogout className="h-[18px] w-[18px]" />
+          Keluar
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <AuthGuard>
-      <div className="flex min-h-screen">
-        <aside className="flex w-56 flex-col justify-between border-r border-gray-200 p-4">
-          <div>
-            <p className="mb-6 font-semibold text-primary">Jeonme</p>
-            <nav className="flex flex-col gap-2 text-sm">
-              <Link href="/dashboard" className="rounded px-3 py-2 hover:bg-gray-100">
-                Ringkasan
-              </Link>
-              <Link href="/dashboard/links" className="rounded px-3 py-2 hover:bg-gray-100">
-                Tautan & Halaman
-              </Link>
-              <Link href="/dashboard/products" className="rounded px-3 py-2 hover:bg-gray-100">
-                Produk
-              </Link>
-              <Link href="/dashboard/balance" className="rounded px-3 py-2 hover:bg-gray-100">
-                Saldo & Penarikan
-              </Link>
-            </nav>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-          >
-            Keluar
-          </button>
+      <div className="flex min-h-screen bg-primary-subtle/30">
+        {/* Sidebar desktop */}
+        <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
+          {sidebarContent}
         </aside>
-        <main className="flex-1 p-6">{children}</main>
+
+        {/* Top bar + drawer mobile */}
+        <div className="flex flex-1 flex-col md:contents">
+          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+            <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
+              Jeonme
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="rounded-lg p-2 text-ink hover:bg-primary-subtle"
+              aria-label="Buka menu"
+            >
+              <IconMenu className="h-5 w-5" />
+            </button>
+          </header>
+
+          {mobileOpen && (
+            <div className="fixed inset-0 z-40 md:hidden">
+              <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
+              <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-white p-5 shadow-hero">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+                  aria-label="Tutup menu"
+                >
+                  <IconClose className="h-5 w-5" />
+                </button>
+                {sidebarContent}
+              </aside>
+            </div>
+          )}
+
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
+        </div>
       </div>
     </AuthGuard>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError, Balance, Payout, createPayout, getBalance, listPayouts } from "@/lib/api-client";
+import { IconInbox, IconWallet } from "@/components/icons";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
   requested: "Diajukan",
@@ -62,21 +63,27 @@ export default function DashboardBalancePage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-ink">Saldo & Penarikan</h1>
+      <h1 className="font-heading text-2xl font-bold text-ink">Saldo & Penarikan</h1>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {balance && (
         <section className="mt-6 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-border bg-white p-5">
-            <p className="text-xs font-semibold text-muted">Saldo Tersedia</p>
-            <p className="mt-1 font-heading text-2xl font-bold text-secondary-dark">
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <IconWallet className="h-4 w-4 text-secondary-dark" />
+              Saldo Tersedia
+            </div>
+            <p className="mt-2 font-heading text-2xl font-bold text-secondary-dark sm:text-3xl">
               Rp {balance.available_idr.toLocaleString("id-ID")}
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-white p-5">
-            <p className="text-xs font-semibold text-muted">Saldo Tertahan</p>
-            <p className="mt-1 font-heading text-2xl font-bold text-ink">
+          <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <IconWallet className="h-4 w-4 text-ink/50" />
+              Saldo Tertahan
+            </div>
+            <p className="mt-2 font-heading text-2xl font-bold text-ink sm:text-3xl">
               Rp {balance.held_idr.toLocaleString("id-ID")}
             </p>
             <p className="mt-1 text-[11px] text-muted">
@@ -86,7 +93,7 @@ export default function DashboardBalancePage() {
         </section>
       )}
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
         <p className="mt-1 text-xs text-muted">
           Minimum Rp50.000. Rekening/e-wallet tujuan belum melalui proses verifikasi -- pastikan
@@ -118,7 +125,7 @@ export default function DashboardBalancePage() {
         </form>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Riwayat Penarikan</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (
@@ -140,7 +147,12 @@ export default function DashboardBalancePage() {
               </span>
             </li>
           ))}
-          {payouts.length === 0 && <p className="text-sm text-muted">Belum ada penarikan.</p>}
+          {payouts.length === 0 && (
+            <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
+              <IconInbox className="h-4 w-4 flex-shrink-0" />
+              Belum ada penarikan.
+            </li>
+          )}
         </ul>
       </section>
     </div>

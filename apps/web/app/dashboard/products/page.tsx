@@ -11,6 +11,7 @@ import {
   updateProduct,
   uploadProductFile,
 } from "@/lib/api-client";
+import { IconBox, IconInbox } from "@/components/icons";
 
 export default function DashboardProductsPage() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -105,21 +106,26 @@ export default function DashboardProductsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-ink">Produk</h1>
+      <h1 className="font-heading text-2xl font-bold text-ink">Produk</h1>
       <p className="mt-1 text-sm text-muted">
         Unggah file (pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB) sebelum mengaktifkan produk.
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <ul className="flex flex-col gap-2">
           {products.map((p) => (
-            <li key={p.id} className="rounded-xl border border-border px-4 py-3">
+            <li key={p.id} className="rounded-xl border border-border px-4 py-3 transition-colors hover:border-primary/30">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-                  <p className="text-xs text-muted">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                    <IconBox className="h-[18px] w-[18px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
+                    <p className="text-xs text-muted">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                  </div>
                 </div>
                 <span
                   className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -182,7 +188,12 @@ export default function DashboardProductsPage() {
               </div>
             </li>
           ))}
-          {products.length === 0 && <p className="text-sm text-muted">Belum ada produk.</p>}
+          {products.length === 0 && (
+            <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
+              <IconInbox className="h-4 w-4 flex-shrink-0" />
+              Belum ada produk -- buat yang pertama di bawah ini.
+            </li>
+          )}
         </ul>
 
         <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-2 sm:flex-row">
