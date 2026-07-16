@@ -1,4 +1,34 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
+// PENTING (bug ditemukan 16 Juli 2026): NEXT_PUBLIC_API_BASE_URL adalah
+// nilai BUILD-TIME Next.js -- sekali ter-bake ke bundle browser saat
+// `npm run build`, tidak bisa diubah lagi lewat environment variable
+// container saat runtime. ci.yml TIDAK PERNAH mengirim build-arg ini, jadi
+// bundle browser yang di-deploy ke staging/production selalu jatuh ke
+// fallback lama "http://localhost:8080/api/v1" -- artinya browser
+// PENGUNJUNG SUNGGUHAN mencoba menghubungi localhost:8080 MEREKA SENDIRI,
+// bukan backend jeonme.com/staging.jeonme.com. Verifikasi browser
+// sebelumnya selalu (tanpa sadar) dijalankan lewat proses lokal
+// (`go run .` + `npm run dev` di host yang sama, TANPA Docker) sehingga
+// "localhost:8080" kebetulan selalu benar dan bug ini tidak pernah
+// ketahuan sampai pengguna sungguhan membuka domain asli.
+//
+// Perbaikan: path RELATIF ("/api/v1") di sisi BROWSER -- Apache/reverse
+// proxy sudah meneruskan /api/ ke backend di origin yang SAMA persis
+// (lihat CICD-GUIDE.md ProxyPass /api/), jadi tidak perlu tahu domainnya
+// sama sekali, otomatis benar di staging MAUPUN production dari satu image
+// yang sama. Di sisi SERVER (SSR/generateMetadata, jalan di dalam
+// container `web`), path relatif tidak bisa dipakai (fetch() Node.js wajib
+// URL absolut) dan "localhost" tidak menjangkau container `api` yang
+// terpisah -- pakai INTERNAL_API_BASE_URL (nama service Docker internal,
+// dibaca saat RUNTIME karena BUKAN prefix NEXT_PUBLIC_, lihat
+// docker-compose.staging.yml/.prod.yml).
+function resolveApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1";
+  }
+  return process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8080/api/v1";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const TOKEN_STORAGE_KEY = "jeonme_token";
 

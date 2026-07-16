@@ -5,7 +5,12 @@ services:
       dockerfile: docker/web/Dockerfile
     ports: ["3000:3000"]
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
+      # NEXT_PUBLIC_API_BASE_URL TIDAK berpengaruh di sini -- itu nilai
+      # build-time Next.js, sedangkan `environment:` compose cuma runtime
+      # (lihat bug ditemukan 16 Juli 2026 di lib/api-client.ts). Browser
+      # default ke path relatif "/api/v1", diteruskan next.config.js
+      # rewrites() ke container `api` ini lewat nama service Docker.
+      INTERNAL_API_BASE_URL: http://api:8080/api/v1
     depends_on: [api]
 
   api:
