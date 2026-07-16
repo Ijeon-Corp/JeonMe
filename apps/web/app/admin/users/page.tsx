@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminUser, ApiError, activateUser, listAdminUsers, suspendUser } from "@/lib/api-client";
+import { IconInbox, IconUsers } from "@/components/icons";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -47,7 +48,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-semibold text-ink">Pengguna</h1>
+      <h1 className="font-heading text-2xl font-bold text-ink">Pengguna</h1>
 
       <form onSubmit={handleSearch} className="mt-4 flex gap-2">
         <input
@@ -66,22 +67,27 @@ export default function AdminUsersPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-ink">
-                {u.username} <span className="font-normal text-muted">({u.email})</span>
-              </p>
-              <p className="text-xs text-muted">
-                {u.role}
-                {u.deleted_at && " · dihapus"}
-                {u.suspended_at && !u.deleted_at && " · ditangguhkan"}
-              </p>
+          <div key={u.id} className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3 shadow-card">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                <IconUsers className="h-[18px] w-[18px]" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {u.username} <span className="font-normal text-muted">({u.email})</span>
+                </p>
+                <p className="text-xs text-muted">
+                  {u.role}
+                  {u.deleted_at && " · dihapus"}
+                  {u.suspended_at && !u.deleted_at && " · ditangguhkan"}
+                </p>
+              </div>
             </div>
             {!u.deleted_at && u.role !== "admin" && (
               <button
                 type="button"
                 onClick={() => handleToggleSuspend(u)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+                className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
                   u.suspended_at ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
                 }`}
               >
@@ -90,7 +96,12 @@ export default function AdminUsersPage() {
             )}
           </div>
         ))}
-        {users.length === 0 && <p className="text-sm text-muted">Tidak ada pengguna ditemukan.</p>}
+        {users.length === 0 && (
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+            <IconInbox className="h-4 w-4 flex-shrink-0" />
+            Tidak ada pengguna ditemukan.
+          </div>
+        )}
       </div>
     </div>
   );

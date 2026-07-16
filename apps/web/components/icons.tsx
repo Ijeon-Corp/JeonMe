@@ -117,3 +117,30 @@ export function IconInbox({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconUsers({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 19c0-2.8 2.5-5 5.5-5s5.5 2.2 5.5 5M16 11a2.7 2.7 0 1 0 0-5.4M18.5 19c0-2.4-1.8-4.4-4.2-4.9"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconShield({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3.5 19 6.5v5c0 5-3 8-7 9-4-1-7-4-7-9v-5l7-3Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

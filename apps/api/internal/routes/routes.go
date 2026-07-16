@@ -117,6 +117,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 			adminGroup.GET("/reports", admin.ListReports)
 			adminGroup.PATCH("/reports/:id/resolve", admin.ResolveReport)
+
+			// REQ-F-505: rekonsiliasi disbursement lintas kreator -- admin
+			// memproses pengajuan penarikan secara manual (belum ada
+			// integrasi Disbursement API sungguhan).
+			adminGroup.GET("/payouts", admin.ListPayouts)
+			adminGroup.PATCH("/payouts/:id", admin.UpdatePayoutStatus)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.

@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -276,12 +278,189 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "laporan diproses"})
 }
 
+type adminPayoutItem struct {
+	ID                 string     `json:"id"`
+	Username           string     `json:"username"`
+	Email              string     `json:"email"`
+	AmountIDR          int64      `json:"amount_idr"`
+	DestinationAccount string     `json:"destination_account"`
+	Status             string     `json:"status"`
+	RequestedAt        time.Time  `json:"requested_at"`
+	CompletedAt        *time.Time `json:"completed_at,omitempty"`
+}
+
+// ListPayouts — REQ-F-505: admin melihat SEMUA pengajuan penarikan lintas
+// kreator (beda dari BalanceHandler.ListPayouts yang cuma punya kreator
+// sendiri). Default filter ke "requested"+"processing" (yang masih perlu
+// tindakan) -- kirim ?status=all untuk melihat riwayat lengkap termasuk
+// yang sudah selesai/gagal.
+func (h *AdminHandler) ListPayouts(c *gin.Context) {
+	status := c.DefaultQuery("status", "")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT p.id, u.username, u.email, p.amount_idr, p.destination_account, p.status, p.requested_at, p.completed_at
+		FROM payouts p JOIN users u ON u.id = p.user_id
+	`
+	args := []any{}
+	switch status {
+	case "", "needs_action":
+		query += `WHERE p.status IN ('requested', 'processing')`
+	case "all":
+		// tanpa filter
+	default:
+		query += `WHERE p.status = $1`
+		args = append(args, status)
+	}
+	query += ` ORDER BY p.requested_at ASC LIMIT 200`
+
+	rows, err := h.DB.Query(ctx, query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar penarikan"})
+		return
+	}
+	defer rows.Close()
+
+	items := []adminPayoutItem{}
+	for rows.Next() {
+		var it adminPayoutItem
+		if err := rows.Scan(&it.ID, &it.Username, &it.Email, &it.AmountIDR, &it.DestinationAccount, &it.Status, &it.RequestedAt, &it.CompletedAt); err == nil {
+			items = append(items, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+// payoutTransitions — state machine eksplisit: "completed"/"failed" adalah
+// status akhir, tidak bisa diubah lagi lewat endpoint ini. Mencegah admin
+// (atau klik ganda tak sengaja) memproses penarikan yang sama dua kali.
+var payoutTransitions = map[string]map[string]bool{
+	"requested":  {"processing": true, "failed": true},
+	"processing": {"completed": true, "failed": true},
+}
+
+type updatePayoutStatusRequest struct {
+	Status string `json:"status" binding:"required,oneof=processing completed failed"`
+}
+
+// UpdatePayoutStatus — REQ-F-505: admin memproses pengajuan penarikan
+// secara MANUAL (belum ada integrasi Disbursement API sungguhan, lihat
+// Rencana-Sprint-Jeonme.xlsx Sprint 4 No.52/53) -- transfer dana sungguhan
+// dilakukan admin di luar sistem (mis. lewat internet banking), lalu
+// ditandai di sini.
+//
+// Kalau status baru "failed": ledger debit yang dicatat saat PENGAJUAN
+// (BalanceHandler.CreatePayout langsung mendebit supaya saldo yang sama
+// tidak bisa diajukan dua kali) di-REVERSE (dikredit balik) DI DALAM
+// transaksi yang sama -- kalau tidak, saldo kreator hilang permanen padahal
+// uangnya tidak pernah benar-benar keluar dari platform.
+func (h *AdminHandler) UpdatePayoutStatus(c *gin.Context) {
+	payoutID := c.Param("id")
+	adminID := c.GetString("userID")
+
+	var req updatePayoutStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var currentStatus, payoutUserID string
+	var amountIDR int64
+	err = tx.QueryRow(ctx, `
+		SELECT status, user_id, amount_idr FROM payouts WHERE id = $1 FOR UPDATE
+	`, payoutID).Scan(&currentStatus, &payoutUserID, &amountIDR)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "penarikan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat penarikan"})
+		return
+	}
+
+	if !payoutTransitions[currentStatus][req.Status] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("tidak bisa mengubah status dari %q ke %q", currentStatus, req.Status)})
+		return
+	}
+
+	if req.Status == "completed" {
+		_, err = tx.Exec(ctx, `UPDATE payouts SET status = $1, completed_at = now() WHERE id = $2`, req.Status, payoutID)
+	} else {
+		_, err = tx.Exec(ctx, `UPDATE payouts SET status = $1 WHERE id = $2`, req.Status, payoutID)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui status"})
+		return
+	}
+
+	if req.Status == "failed" {
+		// Serialisasi lewat lock yang sama seperti CreatePayout/webhook
+		// checkout supaya balance_after selalu benar walau ada penulisan
+		// ledger lain untuk kreator yang sama bersamaan.
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, payoutUserID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci saldo"})
+			return
+		}
+
+		var currentBalance int64
+		if err := tx.QueryRow(ctx, `
+			SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
+		`, payoutUserID).Scan(&currentBalance); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo"})
+			return
+		}
+
+		newBalance := currentBalance + amountIDR
+		ledgerID := uuid.NewString()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO ledger_entries (id, user_id, type, amount_idr, balance_after, created_at)
+			VALUES ($1, $2, 'credit', $3, $4, now())
+		`, ledgerID, payoutUserID, amountIDR, newBalance); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengembalikan saldo"})
+			return
+		}
+
+		metadata, _ := json.Marshal(gin.H{"payout_id": payoutID, "amount_idr": amountIDR, "balance_after": newBalance, "reason": "payout_failed_reversal"})
+		if err := audit.Log(ctx, tx, payoutUserID, "ledger.credit", "ledger_entry", ledgerID, metadata); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
+			return
+		}
+	}
+
+	metadata, _ := json.Marshal(gin.H{"payout_id": payoutID, "from": currentStatus, "to": req.Status, "processed_by": adminID})
+	if err := audit.Log(ctx, tx, payoutUserID, "payout."+req.Status, "payout", payoutID, metadata); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "status penarikan diperbarui"})
+}
+
 type adminSummaryResponse struct {
 	TotalUsers      int64 `json:"total_users"`
 	NewUsers7Days   int64 `json:"new_users_7_days"`
 	TotalOrders     int64 `json:"total_orders"`
 	TotalRevenueIDR int64 `json:"total_revenue_idr"`
 	PendingReports  int64 `json:"pending_reports"`
+	PendingPayouts  int64 `json:"pending_payouts"`
 }
 
 // GetSummary — REQ-F-703.
@@ -308,6 +487,11 @@ func (h *AdminHandler) GetSummary(c *gin.Context) {
 
 	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM reports WHERE status = 'pending'`).Scan(&resp.PendingReports); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung laporan tertunda"})
+		return
+	}
+
+	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM payouts WHERE status IN ('requested', 'processing')`).Scan(&resp.PendingPayouts); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung penarikan tertunda"})
 		return
 	}
 

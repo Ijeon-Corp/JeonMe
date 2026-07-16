@@ -460,6 +460,7 @@ export interface AdminSummary {
   total_orders: number;
   total_revenue_idr: number;
   pending_reports: number;
+  pending_payouts: number;
 }
 
 export function getAdminSummary() {
@@ -507,6 +508,32 @@ export function resolveReport(id: string, action: "takedown" | "dismiss") {
   return apiFetch<{ message: string }>(
     `/admin/reports/${id}/resolve`,
     { method: "PATCH", body: JSON.stringify({ action }) },
+    { auth: true }
+  );
+}
+
+export interface AdminPayout {
+  id: string;
+  username: string;
+  email: string;
+  amount_idr: number;
+  destination_account: string;
+  status: "requested" | "processing" | "completed" | "failed";
+  requested_at: string;
+  completed_at?: string;
+}
+
+// REQ-F-505: rekonsiliasi disbursement lintas kreator. status default
+// ("needs_action") menampilkan hanya "requested"+"processing" -- kirim
+// "all" untuk melihat riwayat lengkap termasuk yang sudah selesai/gagal.
+export function listAdminPayouts(status: string = "needs_action") {
+  return apiFetch<AdminPayout[]>(`/admin/payouts?status=${status}`, { method: "GET" }, { auth: true });
+}
+
+export function updatePayoutStatus(id: string, status: "processing" | "completed" | "failed") {
+  return apiFetch<{ message: string }>(
+    `/admin/payouts/${id}`,
+    { method: "PATCH", body: JSON.stringify({ status }) },
     { auth: true }
   );
 }

@@ -24,3 +24,7 @@ jeonme.zip
 # Override compose lokal per developer (mis. remap port kalau bentrok dengan
 # service native di mesin masing-masing) -- jangan ikut ke repo.
 docker-compose.override.yml
+
+# File lock Excel sementara (dibuat otomatis saat file dibuka) -- bukan
+# bagian dari konten, jangan ikut ke repo.
+docs/~$*.xlsx
