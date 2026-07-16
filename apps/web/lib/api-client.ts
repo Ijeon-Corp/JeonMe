@@ -159,6 +159,26 @@ export function updateMyPage(input: Partial<Pick<MyPage, "theme" | "bio" | "is_p
   );
 }
 
+// Upload lewat multipart/form-data -- TIDAK lewat apiFetch(), sama seperti
+// uploadProductFile (lihat komentar di sana soal Content-Type/boundary).
+export async function uploadAvatar(file: File): Promise<{ avatar_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("avatar", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/page/avatar`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
 // ---------- Dashboard: tautan ----------
 
 export interface LinkItem {

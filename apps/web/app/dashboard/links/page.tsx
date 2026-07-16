@@ -13,6 +13,7 @@ import {
   reorderLinks,
   updateLink,
   updateMyPage,
+  uploadAvatar,
 } from "@/lib/api-client";
 
 export default function DashboardLinksPage() {
@@ -24,6 +25,7 @@ export default function DashboardLinksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     Promise.all([getMyPage(), listLinks()])
@@ -44,6 +46,22 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setPage(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan halaman.");
+    }
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // supaya pilih file yang sama lagi tetap memicu onChange
+    if (!file || !page) return;
+
+    setAvatarUploading(true);
+    try {
+      const { avatar_url } = await uploadAvatar(file);
+      setPage({ ...page, avatar_url });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
+    } finally {
+      setAvatarUploading(false);
     }
   }
 
@@ -120,6 +138,34 @@ export default function DashboardLinksPage() {
           </p>
 
           <div className="mt-4 flex flex-col gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-ink">Foto Profil</label>
+              <div className="flex items-center gap-4">
+                {page.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={page.avatar_url}
+                    alt={page.username}
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-subtle text-xs text-muted">
+                    Belum ada
+                  </div>
+                )}
+                <label className="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary">
+                  {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    onChange={handleAvatarChange}
+                    disabled={avatarUploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
             <div>
               <label className="mb-1 block text-sm font-semibold text-ink">Bio (maks 160 karakter)</label>
               <textarea

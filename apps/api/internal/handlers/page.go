@@ -3,24 +3,32 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/jeonme/api/internal/storage"
 )
 
 // PageHandler mengimplementasikan REQ-F-201 (halaman publik) dan
 // REQ-F-204 (ganti tema & bio). CRUD tautan ada di LinksHandler.
+// Storage boleh nil (mis. kalau EnsureBucket gagal saat startup) --
+// UploadAvatar akan menolak dengan pesan jelas alih-alih panic.
 type PageHandler struct {
-	DB  *pgxpool.Pool
-	RDB *redis.Client
+	DB      *pgxpool.Pool
+	RDB     *redis.Client
+	Storage *storage.Client
 }
 
-func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client) *PageHandler {
-	return &PageHandler{DB: db, RDB: rdb}
+func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *PageHandler {
+	return &PageHandler{DB: db, RDB: rdb, Storage: s3}
 }
 
 // publicPageCacheTTL sengaja pendek (bukan invalidate-on-write untuk setiap
@@ -213,4 +221,82 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "halaman diperbarui"})
+}
+
+// maxAvatarSize -- 5MB, cukup untuk foto profil tanpa membebani VPS shared.
+const maxAvatarSize = 5 * 1024 * 1024
+
+// allowedAvatarExt -- daftar putih ekstensi gambar + content-type yang benar
+// untuk disetel saat upload (TIDAK dipercaya begitu saja dari header yang
+// dikirim klien, tidak seperti product.go, karena avatar disajikan langsung
+// ke <img> di halaman publik lewat URL permanen -- content-type yang salah
+// bisa membuat browser menolak menampilkannya).
+var allowedAvatarExt = map[string]string{
+	".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+	".png": "image/png", ".webp": "image/webp",
+}
+
+// UploadAvatar — REQ-F-205: unggah foto profil. Key SELALU
+// "avatars/<userID>" (tanpa ekstensi di nama file) supaya unggahan ulang
+// menimpa object yang sama persis -- tidak ada file avatar lama yang
+// menumpuk di storage tiap kali kreator ganti foto profil.
+func (h *PageHandler) UploadAvatar(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"avatar\")"})
+		return
+	}
+
+	if fileHeader.Size > maxAvatarSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAvatarExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("avatars/%s", userID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah foto profil"})
+		return
+	}
+
+	avatarURL := h.Storage.PublicURL(key)
+	var username string
+	err = h.DB.QueryRow(ctx, `
+		UPDATE pages SET avatar_url = $1
+		FROM users u WHERE pages.user_id = $2 AND u.id = pages.user_id
+		RETURNING u.username
+	`, avatarURL, userID).Scan(&username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	if h.RDB != nil {
+		h.RDB.Del(ctx, "page:"+username)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL, "message": "foto profil berhasil diunggah"})
 }

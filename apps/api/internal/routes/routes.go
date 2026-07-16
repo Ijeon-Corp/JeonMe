@@ -25,7 +25,7 @@ import (
 func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, queueClient *asynq.Client, cfg *config.Config, version string) {
 	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
-	page := handlers.NewPageHandler(db, rdb)
+	page := handlers.NewPageHandler(db, rdb, s3)
 	product := handlers.NewProductHandler(db, s3)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
@@ -77,6 +77,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		{
 			dashboard.GET("/page", page.GetMyPage)
 			dashboard.PATCH("/page", page.UpdateMyPage)
+			dashboard.POST("/page/avatar", page.UploadAvatar)
 
 			dashboard.GET("/links", links.List)
 			dashboard.POST("/links", links.Create)

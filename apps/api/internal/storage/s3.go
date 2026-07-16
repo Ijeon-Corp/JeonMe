@@ -15,8 +15,10 @@ import (
 // service "minio" di jaringan Docker internal (staging/production), atau
 // provider S3-compatible lain di masa depan tanpa ubah kode pemanggil.
 type Client struct {
-	mc     *minio.Client
-	Bucket string
+	mc       *minio.Client
+	Bucket   string
+	endpoint string
+	useSSL   bool
 }
 
 func NewClient(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Client, error) {
@@ -27,7 +29,7 @@ func NewClient(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Cli
 	if err != nil {
 		return nil, fmt.Errorf("gagal membuat client MinIO: %w", err)
 	}
-	return &Client{mc: mc, Bucket: bucket}, nil
+	return &Client{mc: mc, Bucket: bucket, endpoint: endpoint, useSSL: useSSL}, nil
 }
 
 // EnsureBucket membuat bucket kalau belum ada. Dipanggil sekali saat startup
@@ -43,6 +45,44 @@ func (c *Client) EnsureBucket(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// EnsurePublicRead mengizinkan GetObject anonim HANYA untuk object di bawah
+// prefix tertentu (mis. "avatars") -- dipakai untuk foto profil (REQ-F-205),
+// yang harus bisa diakses langsung sebagai URL publik permanen (bukan
+// presigned URL yang kedaluwarsa 15 menit seperti file produk berbayar).
+// Prefix lain (mis. "products") TETAP privat -- bucket policy ini hanya
+// menambahkan izin baca untuk path spesifik, tidak membuka seluruh bucket.
+func (c *Client) EnsurePublicRead(ctx context.Context, prefix string) error {
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": {"AWS": ["*"]},
+				"Action": ["s3:GetObject"],
+				"Resource": ["arn:aws:s3:::%s/%s/*"]
+			}
+		]
+	}`, c.Bucket, prefix)
+
+	if err := c.mc.SetBucketPolicy(ctx, c.Bucket, policy); err != nil {
+		return fmt.Errorf("gagal mengatur bucket policy publik untuk prefix %q: %w", prefix, err)
+	}
+	return nil
+}
+
+// PublicURL membangun URL publik permanen (BUKAN presigned/kedaluwarsa)
+// untuk object yang sudah diizinkan baca publik lewat EnsurePublicRead.
+// endpoint di sini SUDAH berupa domain publik (storage.jeonme.com/
+// storage-staging.jeonme.com di staging/production, localhost:9000 di
+// lokal) -- lihat komentar S3_ENDPOINT di config.go.
+func (c *Client) PublicURL(key string) string {
+	scheme := "http"
+	if c.useSSL {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s/%s/%s", scheme, c.endpoint, c.Bucket, key)
 }
 
 // Upload menaruh file produk di bawah key yang sudah ditentukan pemanggil
