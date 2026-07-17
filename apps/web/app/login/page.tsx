@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, login, requestPasswordReset, setToken } from "@/lib/api-client";
+import { ApiError, getAdminSummary, login, requestPasswordReset, setToken } from "@/lib/api-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,7 +23,17 @@ export default function LoginPage() {
     try {
       const { token } = await login({ email, password });
       setToken(token);
-      router.push("/dashboard");
+
+      // Tidak ada klaim "role" di JWT (AdminRequired selalu cek DB langsung,
+      // lihat middleware) -- cara termudah tahu status admin ya langsung
+      // coba salah satu endpoint admin. 403/error apa pun berarti bukan
+      // admin, arahkan ke dashboard kreator seperti biasa.
+      try {
+        await getAdminSummary();
+        router.push("/admin");
+      } catch {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal masuk, coba lagi.");
     } finally {
