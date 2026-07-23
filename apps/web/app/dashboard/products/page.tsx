@@ -27,8 +27,7 @@ import {
   IconUpload,
 } from "@/components/icons";
 import Toggle from "@/components/Toggle";
-import PagePreview from "@/components/PagePreview";
-import PhoneFrame from "@/components/PhoneFrame";
+import LivePreviewPanel from "@/components/LivePreviewPanel";
 
 export default function DashboardProductsPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -340,43 +339,7 @@ export default function DashboardProductsPage() {
         )}
       </div>
 
-      <div className="mt-8 lg:sticky lg:top-6 lg:mt-0">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Langsung</p>
-          {page && (
-            <a
-              href={`https://jeonme.com/${page.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              <IconExternal className="h-3.5 w-3.5" />
-              Buka
-            </a>
-          )}
-        </div>
-        {page && (
-          <PhoneFrame>
-            <PagePreview
-              interactive={false}
-              rootClassName="min-h-full"
-              data={{
-                username: page.username,
-                bio: page.bio,
-                avatarUrl: page.avatar_url,
-                theme: page.theme,
-                links: links.filter((l) => l.is_active),
-                products: products
-                  .filter((p) => p.is_active)
-                  .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr, cover_image_url: p.cover_image_url })),
-              }}
-            />
-          </PhoneFrame>
-        )}
-        <p className="mt-3 text-center text-[11px] text-muted">
-          Menampilkan tautan &amp; produk yang aktif, persis seperti yang dilihat pengunjung.
-        </p>
-      </div>
+      <LivePreviewPanel page={page} links={links} products={products} />
     </div>
   );
 }

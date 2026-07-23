@@ -14,14 +14,30 @@ import {
   IconLink,
   IconLogout,
   IconMenu,
+  IconSettings,
+  IconSparkle,
   IconWallet,
 } from "@/components/icons";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Ringkasan", icon: IconChart },
-  { href: "/dashboard/links", label: "Tautan & Halaman", icon: IconLink },
-  { href: "/dashboard/products", label: "Produk", icon: IconBox },
-  { href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
+type NavLeaf = { href: string; label: string; icon: typeof IconChart };
+type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; items: NavLeaf[] };
+
+// "Halaman Saya" mengelompokkan Tautan/Produk/Desain jadi satu bagian --
+// ketiganya sama-sama menentukan apa yang tampil di halaman publik kreator
+// dan berbagi satu panel pratinjau langsung (lihat LivePreviewPanel).
+const NAV_ITEMS: NavEntry[] = [
+  { type: "link", href: "/dashboard", label: "Ringkasan", icon: IconChart },
+  {
+    type: "group",
+    label: "Halaman Saya",
+    items: [
+      { href: "/dashboard/links", label: "Tautan", icon: IconLink },
+      { href: "/dashboard/products", label: "Produk", icon: IconBox },
+      { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
+    ],
+  },
+  { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
+  { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
 ];
 
 export default function DashboardLayout({
@@ -73,22 +89,51 @@ export default function DashboardLayout({
 
         <nav className="mt-8 flex flex-col gap-1 text-sm">
           {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href;
-            const Icon = item.icon;
+            if (item.type === "link") {
+              const active = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                    active
+                      ? "bg-primary text-white shadow-card"
+                      : "text-muted hover:bg-primary-subtle hover:text-primary"
+                  }`}
+                >
+                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            }
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
-                  active
-                    ? "bg-primary text-white shadow-card"
-                    : "text-muted hover:bg-primary-subtle hover:text-primary"
-                }`}
-              >
-                <Icon className="h-[18px] w-[18px] flex-shrink-0" />
-                {item.label}
-              </Link>
+              <div key={item.label} className="mt-3 first:mt-0">
+                <p className="px-3.5 text-[11px] font-bold uppercase tracking-wider text-muted/70">{item.label}</p>
+                <div className="mt-1 flex flex-col gap-1">
+                  {item.items.map((sub) => {
+                    const active = pathname === sub.href;
+                    const Icon = sub.icon;
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                          active
+                            ? "bg-primary text-white shadow-card"
+                            : "text-muted hover:bg-primary-subtle hover:text-primary"
+                        }`}
+                      >
+                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                        {sub.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>

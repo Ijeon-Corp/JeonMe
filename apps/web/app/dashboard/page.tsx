@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  AnalyticsSummary,
-  ApiError,
-  clearToken,
-  deleteAccount,
-  getAnalyticsSummary,
-} from "@/lib/api-client";
+import { AnalyticsSummary, ApiError, getAnalyticsSummary } from "@/lib/api-client";
 import { IconChart, IconInbox, IconLink, IconSparkle } from "@/components/icons";
 
 export default function DashboardHomePage() {
-  const router = useRouter();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getAnalyticsSummary()
@@ -24,25 +15,6 @@ export default function DashboardHomePage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat ringkasan."))
       .finally(() => setLoading(false));
   }, []);
-
-  async function handleDeleteAccount() {
-    if (
-      !window.confirm(
-        "Yakin hapus akun? Halaman & produkmu akan dinonaktifkan dan datamu dianonimkan. Aksi ini tidak bisa dibatalkan."
-      )
-    ) {
-      return;
-    }
-    setDeleting(true);
-    try {
-      await deleteAccount();
-      clearToken();
-      router.push("/login");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus akun.");
-      setDeleting(false);
-    }
-  }
 
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
@@ -160,22 +132,6 @@ export default function DashboardHomePage() {
           )}
         </>
       )}
-
-      <section className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5">
-        <h2 className="font-heading text-sm font-bold text-red-700">Zona Berbahaya</h2>
-        <p className="mt-1 text-xs text-red-700/80">
-          Menghapus akun akan menonaktifkan halaman & produkmu dan menganonimkan data pribadimu.
-          Riwayat transaksi tetap disimpan untuk keperluan pembukuan.
-        </p>
-        <button
-          type="button"
-          onClick={handleDeleteAccount}
-          disabled={deleting}
-          className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
-        >
-          {deleting ? "Menghapus..." : "Hapus Akun"}
-        </button>
-      </section>
     </div>
   );
 }

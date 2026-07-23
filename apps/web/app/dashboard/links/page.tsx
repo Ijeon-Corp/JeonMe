@@ -6,7 +6,6 @@ import {
   DashboardProduct,
   LinkItem,
   MyPage,
-  THEME_PRESETS,
   createLink,
   deleteLink,
   getMyPage,
@@ -14,13 +13,10 @@ import {
   listProducts,
   reorderLinks,
   updateLink,
-  updateMyPage,
-  uploadAvatar,
 } from "@/lib/api-client";
-import { PAGE_THEMES } from "@/lib/page-themes";
-import { IconExternal, IconInbox } from "@/components/icons";
-import PagePreview from "@/components/PagePreview";
-import PhoneFrame from "@/components/PhoneFrame";
+import { IconInbox } from "@/components/icons";
+import LivePreviewPanel from "@/components/LivePreviewPanel";
+import Toggle from "@/components/Toggle";
 
 export default function DashboardLinksPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -32,7 +28,6 @@ export default function DashboardLinksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts()])
@@ -44,34 +39,6 @@ export default function DashboardLinksPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data."))
       .finally(() => setLoading(false));
   }, []);
-
-  async function handlePageSettingChange(patch: Partial<Pick<MyPage, "theme" | "bio" | "is_published">>) {
-    if (!page) return;
-    const previous = page;
-    setPage({ ...page, ...patch });
-    try {
-      await updateMyPage(patch);
-    } catch (err) {
-      setPage(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan halaman.");
-    }
-  }
-
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // supaya pilih file yang sama lagi tetap memicu onChange
-    if (!file || !page) return;
-
-    setAvatarUploading(true);
-    try {
-      const { avatar_url } = await uploadAvatar(file);
-      setPage({ ...page, avatar_url });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
-    } finally {
-      setAvatarUploading(false);
-    }
-  }
 
   async function handleCreateLink(e: React.FormEvent) {
     e.preventDefault();
@@ -131,119 +98,12 @@ export default function DashboardLinksPage() {
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className="max-w-2xl">
-        <h1 className="font-heading text-2xl font-bold text-ink">Tautan & Halaman</h1>
-        {error && (
-          <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
-        )}
+        <h1 className="font-heading text-2xl font-bold text-ink">Tautan</h1>
+        <p className="mt-1 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
-        {page && (
-          <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
-              <a
-                href={`https://jeonme.com/${page.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-              >
-                <IconExternal className="h-3.5 w-3.5" />
-                jeonme.com/{page.username}
-              </a>
-            </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-              <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
-                {page.is_published ? "Sudah terbit" : "Belum terbit"}
-              </span>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-5">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Foto Profil</label>
-                <div className="flex items-center gap-4">
-                  {page.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={page.avatar_url}
-                      alt={page.username}
-                      className="h-16 w-16 rounded-full object-cover ring-2 ring-primary-subtle"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-subtle font-heading text-lg font-bold text-primary">
-                      {page.username.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <label className="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
-                    {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                      onChange={handleAvatarChange}
-                      disabled={avatarUploading}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Bio (maks 160 karakter)</label>
-                <textarea
-                  maxLength={160}
-                  value={page.bio}
-                  onChange={(e) => setPage({ ...page, bio: e.target.value })}
-                  onBlur={(e) => handlePageSettingChange({ bio: e.target.value })}
-                  rows={3}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Tema Halaman</label>
-                <div className="flex flex-wrap gap-2.5">
-                  {THEME_PRESETS.map((theme) => {
-                    const meta = PAGE_THEMES[theme];
-                    const active = page.theme === theme;
-                    return (
-                      <button
-                        key={theme}
-                        type="button"
-                        onClick={() => handlePageSettingChange({ theme })}
-                        className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-all ${
-                          active
-                            ? "border-primary bg-primary-subtle text-primary shadow-card"
-                            : "border-border text-muted hover:border-primary/50 hover:text-ink"
-                        }`}
-                      >
-                        <span
-                          className="h-5 w-5 flex-shrink-0 rounded-full ring-2 ring-white shadow-sm"
-                          style={{ backgroundColor: meta.swatch }}
-                          aria-hidden
-                        />
-                        {meta.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <input
-                  type="checkbox"
-                  checked={page.is_published}
-                  onChange={(e) => handlePageSettingChange({ is_published: e.target.checked })}
-                  className="h-4 w-4 accent-primary"
-                />
-                Terbitkan halaman publik
-              </label>
-            </div>
-          </section>
-        )}
+        {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-          <h2 className="font-heading text-lg font-bold text-ink">Tautan</h2>
-          <p className="mb-4 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
-
           <ul className="flex flex-col gap-2">
             {links.map((link) => (
               <li
@@ -263,15 +123,14 @@ export default function DashboardLinksPage() {
                   <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
                   <p className="truncate text-xs text-muted">{link.url}</p>
                 </div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-1.5">
+                  <Toggle
                     checked={link.is_active}
                     onChange={() => handleToggleActive(link)}
-                    className="h-4 w-4 accent-primary"
+                    label={`Aktifkan ${link.title}`}
                   />
-                  Aktif
-                </label>
+                  <span className="text-xs font-semibold text-muted">Aktif</span>
+                </div>
                 <button
                   onClick={() => handleDelete(link.id)}
                   className="text-xs font-semibold text-red-600 hover:underline"
@@ -312,43 +171,7 @@ export default function DashboardLinksPage() {
         </section>
       </div>
 
-      <div className="mt-8 lg:sticky lg:top-6 lg:mt-0">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Langsung</p>
-          {page && (
-            <a
-              href={`https://jeonme.com/${page.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              <IconExternal className="h-3.5 w-3.5" />
-              Buka
-            </a>
-          )}
-        </div>
-        {page && (
-          <PhoneFrame>
-            <PagePreview
-              interactive={false}
-              rootClassName="min-h-full"
-              data={{
-                username: page.username,
-                bio: page.bio,
-                avatarUrl: page.avatar_url,
-                theme: page.theme,
-                links: links.filter((l) => l.is_active),
-                products: products
-                  .filter((p) => p.is_active)
-                  .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr, cover_image_url: p.cover_image_url })),
-              }}
-            />
-          </PhoneFrame>
-        )}
-        <p className="mt-3 text-center text-[11px] text-muted">
-          Menampilkan tautan &amp; produk yang aktif, persis seperti yang dilihat pengunjung.
-        </p>
-      </div>
+      <LivePreviewPanel page={page} links={links} products={products} />
     </div>
   );
 }

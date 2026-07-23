@@ -202,3 +202,17 @@ export function IconPlus({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconSettings({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={base} />
+      <path
+        d="M19.4 13.5c.1-.5.1-1 0-1.5l1.6-1.3-1.5-2.6-1.9.6a6 6 0 0 0-1.3-.8L15.9 6h-3l-.4 1.9c-.5.2-.9.5-1.3.8l-1.9-.6-1.5 2.6 1.6 1.3c-.1.5-.1 1 0 1.5l-1.6 1.3 1.5 2.6 1.9-.6c.4.3.8.6 1.3.8l.4 1.9h3l.4-1.9c.5-.2.9-.5 1.3-.8l1.9.6 1.5-2.6-1.6-1.3Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -27,6 +27,47 @@ export interface PagePreviewData {
   products: PagePreviewProduct[];
 }
 
+interface PreviewSourcePage {
+  username: string;
+  bio: string;
+  avatar_url: string;
+  theme: string;
+}
+
+interface PreviewSourceLink {
+  id: string;
+  title: string;
+  url: string;
+  is_active: boolean;
+}
+
+interface PreviewSourceProduct {
+  id: string;
+  name: string;
+  price_idr: number;
+  cover_image_url: string;
+  is_active: boolean;
+}
+
+// Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
+// supaya cara membangun data pratinjau dari state mentah tidak terduplikasi.
+export function toPreviewData(
+  page: PreviewSourcePage,
+  links: PreviewSourceLink[],
+  products: PreviewSourceProduct[]
+): PagePreviewData {
+  return {
+    username: page.username,
+    bio: page.bio,
+    avatarUrl: page.avatar_url,
+    theme: page.theme,
+    links: links.filter((l) => l.is_active),
+    products: products
+      .filter((p) => p.is_active)
+      .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr, cover_image_url: p.cover_image_url })),
+  };
+}
+
 // Tampilan halaman publik kreator -- dipakai di DUA tempat: halaman publik
 // sungguhan (app/[username]/page.tsx, interactive=true, tautan bisa
 // diklik & dilacak, tombol Beli memicu checkout sungguhan) dan pratinjau
