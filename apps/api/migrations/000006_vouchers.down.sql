@@ -1,0 +1,4 @@
+ALTER TABLE orders DROP COLUMN IF EXISTS discount_idr;
+ALTER TABLE orders DROP COLUMN IF EXISTS voucher_id;
+DROP TABLE IF EXISTS voucher_products;
+DROP TABLE IF EXISTS vouchers;

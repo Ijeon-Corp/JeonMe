@@ -49,6 +49,7 @@ type createCheckoutRequest struct {
 	ProductID    string `json:"product_id" binding:"required"`
 	BuyerEmail   string `json:"buyer_email" binding:"required,email"`
 	BuyerContact string `json:"buyer_contact"`
+	VoucherCode  string `json:"voucher_code"`
 }
 
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
@@ -77,9 +78,29 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// No.67 (Sprint 7): terapkan voucher SEBELUM platform_fee dihitung --
+	// fee dipotong dari uang yang benar-benar berpindah (harga terdiskon),
+	// bukan harga asli sebelum diskon.
+	var voucherID *string
+	var discountIDR int64
+	if req.VoucherCode != "" {
+		pricing, reason, err := resolveVoucher(ctx, h.DB, req.VoucherCode, req.ProductID, priceIDR)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memvalidasi voucher"})
+			return
+		}
+		if pricing == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": reason})
+			return
+		}
+		voucherID = &pricing.VoucherID
+		discountIDR = pricing.DiscountIDR
+	}
+	finalAmountIDR := priceIDR - discountIDR
+
 	orderID := uuid.NewString()
 	externalID := "jeonme-order-" + orderID
-	platformFeeIDR := int64(float64(priceIDR) * h.PlatformFeePercent / 100)
+	platformFeeIDR := int64(float64(finalAmountIDR) * h.PlatformFeePercent / 100)
 
 	// Order disimpan dalam transaksi yang BELUM di-commit sampai Midtrans
 	// benar-benar berhasil membuat transaksi Snap -- kalau panggilan Midtrans
@@ -93,17 +114,24 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, priceIDR, platformFeeIDR, externalID)
+		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
 	}
 
+	if voucherID != nil {
+		if _, err := tx.Exec(ctx, `UPDATE vouchers SET used_count = used_count + 1 WHERE id = $1`, *voucherID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat pemakaian voucher"})
+			return
+		}
+	}
+
 	txn, err := h.Midtrans.CreateTransaction(ctx, midtrans.CreateTransactionRequest{
 		OrderID:           externalID,
-		GrossAmountIDR:    priceIDR,
+		GrossAmountIDR:    finalAmountIDR,
 		ItemName:          fmt.Sprintf("Jeonme: %s", productName),
 		CustomerEmail:     req.BuyerEmail,
 		FinishRedirectURL: h.PublicWebURL + "/checkout/" + orderID,
@@ -125,6 +153,53 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"order_id":    orderID,
 		"invoice_url": txn.RedirectURL,
+	})
+}
+
+type validateVoucherRequest struct {
+	Code      string `json:"code" binding:"required"`
+	ProductID string `json:"product_id" binding:"required"`
+}
+
+// ValidateVoucher — endpoint publik untuk pratinjau real-time diskon di
+// halaman produk SEBELUM pembeli benar-benar submit checkout (No.67).
+// Tidak mencatat pemakaian (used_count) -- itu baru terjadi di Create.
+func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
+	var req validateVoucherRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var priceIDR int64
+	if err := h.DB.QueryRow(ctx, `
+		SELECT price_idr FROM products WHERE id = $1 AND is_active = true
+	`, req.ProductID).Scan(&priceIDR); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
+		return
+	}
+
+	pricing, reason, err := resolveVoucher(ctx, h.DB, req.Code, req.ProductID, priceIDR)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memvalidasi voucher"})
+		return
+	}
+	if pricing == nil {
+		c.JSON(http.StatusOK, gin.H{"valid": false, "message": reason})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"valid":            true,
+		"discount_idr":     pricing.DiscountIDR,
+		"final_amount_idr": priceIDR - pricing.DiscountIDR,
 	})
 }
 

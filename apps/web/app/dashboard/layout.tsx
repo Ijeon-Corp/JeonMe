@@ -16,6 +16,7 @@ import {
   IconMenu,
   IconSettings,
   IconSparkle,
+  IconTag,
   IconWallet,
 } from "@/components/icons";
 
@@ -25,6 +26,9 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 // "Halaman Saya" mengelompokkan Tautan/Produk/Desain jadi satu bagian --
 // ketiganya sama-sama menentukan apa yang tampil di halaman publik kreator
 // dan berbagi satu panel pratinjau langsung (lihat LivePreviewPanel).
+// "Produk & Monetisasi" baru ditambahkan mulai No.67 (voucher) -- sengaja
+// tidak dibuat kosong sejak redesain IA (No.97), baru muncul begitu ada
+// fitur nyata pertama yang mengisinya.
 const NAV_ITEMS: NavEntry[] = [
   { type: "link", href: "/dashboard", label: "Ringkasan", icon: IconChart },
   {
@@ -35,6 +39,11 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/products", label: "Produk", icon: IconBox },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
     ],
+  },
+  {
+    type: "group",
+    label: "Produk & Monetisasi",
+    items: [{ href: "/dashboard/vouchers", label: "Voucher", icon: IconTag }],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },

@@ -335,10 +335,81 @@ export function getProductDownloadURL(id: string) {
   );
 }
 
+// ---------- Dashboard: voucher/diskon (Sprint 7, No.67) ----------
+
+export interface DashboardVoucher {
+  id: string;
+  code: string;
+  batch_label: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  max_discount_idr: number | null;
+  min_purchase_idr: number;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  expires_at: string | null;
+  product_ids: string[];
+}
+
+export function listVouchers() {
+  return apiFetch<DashboardVoucher[]>("/dashboard/vouchers", { method: "GET" }, { auth: true });
+}
+
+export function createVoucher(input: {
+  code?: string;
+  batch_label?: string;
+  quantity?: number;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  max_discount_idr?: number;
+  min_purchase_idr?: number;
+  max_uses?: number;
+  expires_at?: string;
+  product_ids?: string[];
+}) {
+  return apiFetch<{ ids: string[]; message: string }>(
+    "/dashboard/vouchers",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function updateVoucher(id: string, input: Partial<{ is_active: boolean; max_uses: number; expires_at: string }>) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/vouchers/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function deleteVoucher(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/vouchers/${id}`, { method: "DELETE" }, { auth: true });
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
-export function createCheckout(input: { product_id: string; buyer_email: string; buyer_contact?: string }) {
+export function createCheckout(input: {
+  product_id: string;
+  buyer_email: string;
+  buyer_contact?: string;
+  voucher_code?: string;
+}) {
   return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface VoucherValidation {
+  valid: boolean;
+  discount_idr?: number;
+  final_amount_idr?: number;
+  message?: string;
+}
+
+export function validateVoucher(input: { code: string; product_id: string }) {
+  return apiFetch<VoucherValidation>("/checkout/validate-voucher", {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -27,6 +27,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	page := handlers.NewPageHandler(db, rdb, s3)
 	product := handlers.NewProductHandler(db, s3, rdb)
+	voucher := handlers.NewVoucherHandler(db)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -93,6 +94,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/products/:id/cover", product.UploadCover)
 			dashboard.GET("/products/:id/download-url", product.GetDownloadURL)
 
+			// No.67 (Sprint 7): voucher/diskon per produk, milik kreator
+			// sendiri seperti produk -- pola CRUD & ownership sama persis.
+			dashboard.GET("/vouchers", voucher.List)
+			dashboard.POST("/vouchers", voucher.Create)
+			dashboard.PATCH("/vouchers/:id", voucher.Update)
+			dashboard.DELETE("/vouchers/:id", voucher.Delete)
+
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)
 			dashboard.GET("/payouts", balance.ListPayouts)
@@ -128,6 +136,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
 		api.POST("/checkout", checkoutRateLimit, checkout.Create)
 		api.GET("/checkout/:id/status", checkout.GetStatus)
+
+		// No.67: pratinjau diskon voucher sebelum checkout sungguhan --
+		// rate limit sama dengan checkout supaya kode tidak bisa di-brute-force.
+		api.POST("/checkout/validate-voucher", checkoutRateLimit, checkout.ValidateVoucher)
 
 		// REQ-F-405: tautan unduhan permanen yang diklik dari email
 		// notifikasi -- publik (pembeli tidak punya akun), lihat komentar

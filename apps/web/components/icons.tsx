@@ -216,3 +216,17 @@ export function IconSettings({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconTag({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M11.5 4H6a2 2 0 0 0-2 2v5.5a2 2 0 0 0 .59 1.41l8 8a2 2 0 0 0 2.82 0l5.5-5.5a2 2 0 0 0 0-2.82l-8-8A2 2 0 0 0 11.5 4Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}

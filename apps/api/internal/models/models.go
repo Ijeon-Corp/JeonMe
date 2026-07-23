@@ -57,5 +57,26 @@ type Order struct {
 	PlatformFeeIDR int64     `json:"platform_fee_idr" db:"platform_fee_idr"`
 	Status         string    `json:"status" db:"status"` // pending | paid | failed | expired
 	PSPReference   string    `json:"psp_reference" db:"psp_reference"`
+	VoucherID      *string   `json:"voucher_id,omitempty" db:"voucher_id"`
+	DiscountIDR    int64     `json:"discount_idr" db:"discount_idr"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+}
+
+// Voucher merepresentasikan kode diskon yang dibuat kreator untuk produknya
+// sendiri -- kode tunggal (dipakai berkali-kali sampai max_uses) atau hasil
+// generate massal (batch_label diisi, tiap kode max_uses=1).
+type Voucher struct {
+	ID             string     `json:"id" db:"id"`
+	UserID         string     `json:"user_id" db:"user_id"`
+	Code           string     `json:"code" db:"code"`
+	BatchLabel     string     `json:"batch_label" db:"batch_label"`
+	DiscountType   string     `json:"discount_type" db:"discount_type"` // percentage | fixed
+	DiscountValue  int64      `json:"discount_value" db:"discount_value"`
+	MaxDiscountIDR *int64     `json:"max_discount_idr,omitempty" db:"max_discount_idr"`
+	MinPurchaseIDR int64      `json:"min_purchase_idr" db:"min_purchase_idr"`
+	MaxUses        *int       `json:"max_uses,omitempty" db:"max_uses"`
+	UsedCount      int        `json:"used_count" db:"used_count"`
+	IsActive       bool       `json:"is_active" db:"is_active"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 }
