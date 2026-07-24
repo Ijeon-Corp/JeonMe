@@ -31,6 +31,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	bundle := handlers.NewBundleHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
+	audience := handlers.NewAudienceHandler(db)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -51,6 +52,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		authRateLimit := middleware.RateLimit(rdb, "auth", 10, time.Minute)
 		checkoutRateLimit := middleware.RateLimit(rdb, "checkout", 20, time.Minute)
 		trackRateLimit := middleware.RateLimit(rdb, "track", 60, time.Minute)
+		leadsRateLimit := middleware.RateLimit(rdb, "leads", 20, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -74,6 +76,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// REQ-F-702 (bagian publik): siapa pun bisa melaporkan halaman/produk
 		// tanpa perlu akun.
 		api.POST("/reports", checkoutRateLimit, admin.CreateReport)
+
+		// No.73 (Sprint 8): blok pengumpulan lead di halaman publik -- siapa
+		// pun bisa submit tanpa akun, sama seperti /reports.
+		api.POST("/leads", leadsRateLimit, audience.SubscribeLead)
 
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")
@@ -123,6 +129,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.DELETE("/affiliates/:id", affiliate.Revoke)
 			dashboard.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
 			dashboard.GET("/affiliate-programs", affiliate.ListPrograms)
+
+			// No.73 (Sprint 8): blok pengumpulan lead + Manajer Audiens.
+			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
+			dashboard.PUT("/lead-capture", audience.UpsertLeadCaptureSettings)
+			dashboard.GET("/audience", audience.GetAudience)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

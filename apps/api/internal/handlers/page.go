@@ -37,14 +37,23 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID        string          `json:"id"`
-	Username  string          `json:"username"`
-	Bio       string          `json:"bio"`
-	AvatarURL string          `json:"avatar_url"`
-	Theme     string          `json:"theme"`
-	Links     []publicLink    `json:"links"`
-	Products  []publicItem    `json:"products"`
-	Donation  *publicDonation `json:"donation"`
+	ID          string             `json:"id"`
+	Username    string             `json:"username"`
+	Bio         string             `json:"bio"`
+	AvatarURL   string             `json:"avatar_url"`
+	Theme       string             `json:"theme"`
+	Links       []publicLink       `json:"links"`
+	Products    []publicItem       `json:"products"`
+	Donation    *publicDonation    `json:"donation"`
+	LeadCapture *publicLeadCapture `json:"lead_capture"`
+}
+
+// publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
+// pengunjung. nil kalau kreator belum mengaktifkan blok ini.
+type publicLeadCapture struct {
+	Title           string `json:"title"`
+	CollectEmail    bool   `json:"collect_email"`
+	CollectWhatsapp bool   `json:"collect_whatsapp"`
 }
 
 // publicDonation -- No.71: blok dukungan/donasi, TIDAK ikut array Products
@@ -165,6 +174,14 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			donation.MinAmountIDR = *minAmount
 		}
 		resp.Donation = &donation
+	}
+
+	var leadCapture publicLeadCapture
+	if err := h.DB.QueryRow(ctx, `
+		SELECT title, collect_email, collect_whatsapp FROM lead_capture_settings
+		WHERE user_id = $1 AND is_active = true
+	`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
+		resp.LeadCapture = &leadCapture
 	}
 
 	if h.RDB != nil {

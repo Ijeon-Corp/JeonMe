@@ -87,6 +87,13 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
                 minAmountIdr: page.donation.min_amount_idr,
               }
             : undefined,
+          leadCapture: page.lead_capture
+            ? {
+                title: page.lead_capture.title,
+                collectEmail: page.lead_capture.collect_email,
+                collectWhatsapp: page.lead_capture.collect_whatsapp,
+              }
+            : undefined,
           referralCode: ref,
         }}
         interactive

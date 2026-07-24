@@ -105,6 +105,12 @@ export interface PublicDonation {
   min_amount_idr: number;
 }
 
+export interface PublicLeadCapture {
+  title: string;
+  collect_email: boolean;
+  collect_whatsapp: boolean;
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -114,6 +120,13 @@ export interface PublicPage {
   links: PublicLink[];
   products: PublicProduct[];
   donation: PublicDonation | null;
+  lead_capture: PublicLeadCapture | null;
+}
+
+// No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
+// perlu akun, sama seperti createCheckout/trackClick.
+export function subscribeLead(input: { username: string; email?: string; whatsapp_number?: string }) {
+  return apiFetch<{ message: string }>("/leads", { method: "POST", body: JSON.stringify(input) });
 }
 
 /**
@@ -520,6 +533,40 @@ export function removeAffiliateCommission(affiliateId: string, productId: string
     { method: "DELETE" },
     { auth: true }
   );
+}
+
+// ---------- Dashboard: Manajer Audiens (Sprint 8, No.73) ----------
+// Blok pengumpulan lead di halaman publik + daftar kontak tersentralisasi
+// (subscriber form + pembeli produk, digabung lewat email).
+
+export interface LeadCaptureSettings {
+  is_active: boolean;
+  title: string;
+  collect_email: boolean;
+  collect_whatsapp: boolean;
+}
+
+export function getLeadCaptureSettings() {
+  return apiFetch<LeadCaptureSettings>("/dashboard/lead-capture", { method: "GET" }, { auth: true });
+}
+
+export function upsertLeadCaptureSettings(input: LeadCaptureSettings) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/lead-capture",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export interface AudienceContact {
+  email: string;
+  whatsapp_number: string;
+  sources: string[];
+  joined_at: string;
+}
+
+export function getAudience() {
+  return apiFetch<AudienceContact[]>("/dashboard/audience", { method: "GET" }, { auth: true });
 }
 
 // ---------- Checkout (publik, REQ-F-401) ----------

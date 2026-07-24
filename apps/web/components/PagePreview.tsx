@@ -1,8 +1,9 @@
 import { getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
+import LeadCaptureForm from "@/components/LeadCaptureForm";
 import TrackedLink from "@/components/TrackedLink";
 import ReportButton from "@/components/ReportButton";
-import { IconBox, IconChevronRight, IconHeart } from "@/components/icons";
+import { IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 
 export interface PagePreviewLink {
   id: string;
@@ -29,6 +30,12 @@ export interface PagePreviewDonation {
   minAmountIdr: number;
 }
 
+export interface PagePreviewLeadCapture {
+  title: string;
+  collectEmail: boolean;
+  collectWhatsapp: boolean;
+}
+
 export interface PagePreviewData {
   id?: string;
   username: string;
@@ -38,6 +45,7 @@ export interface PagePreviewData {
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   donation?: PagePreviewDonation;
+  leadCapture?: PagePreviewLeadCapture;
   // No.72: kode ?ref= dari URL halaman publik -- diteruskan ke tombol Beli
   // tiap produk supaya checkout bisa mengaitkan order ke afiliator.
   referralCode?: string;
@@ -176,6 +184,31 @@ export default function PagePreview({
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
                 </a>
               )
+            )}
+          </div>
+        )}
+
+        {data.leadCapture && (
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-2xl p-4 text-center ${theme.productCard}`}>
+            <IconMail className={`h-6 w-6 ${theme.chevron}`} />
+            <p className={`text-sm font-semibold ${theme.productTitle}`}>{data.leadCapture.title}</p>
+            {interactive ? (
+              <LeadCaptureForm
+                username={data.username}
+                collectEmail={data.leadCapture.collectEmail}
+                collectWhatsapp={data.leadCapture.collectWhatsapp}
+                inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                buttonClassName={theme.buyButton}
+              />
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Pratinjau -- tombol ini tidak aktif"
+                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+              >
+                Daftar
+              </button>
             )}
           </div>
         )}
