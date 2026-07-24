@@ -29,6 +29,14 @@ type Config struct {
 	// NEXT_PUBLIC_API_BASE_URL di frontend.
 	PublicAPIURL string
 
+	// CustomDomainCnameTarget -- No.81 (Sprint 9): target CNAME yang harus
+	// diarahkan kreator untuk domain kustomnya. BELUM ada wiring Apache/SSL
+	// produksi untuk menerima Host header sembarang (lihat CustomDomainHandler),
+	// jadi nilai ini murni dipakai untuk instruksi DNS & verifikasi CNAME,
+	// bukan bukti bahwa request sungguhan sudah bisa diterima lewat domain
+	// tersebut.
+	CustomDomainCnameTarget string
+
 	S3Endpoint  string
 	S3AccessKey string
 	S3SecretKey string
@@ -74,6 +82,8 @@ func Load() *Config {
 		// daftar CORS.
 		PublicWebURL: getEnv("PUBLIC_WEB_URL", "http://localhost:3000"),
 		PublicAPIURL: getEnv("PUBLIC_API_URL", "http://localhost:8080/api/v1"),
+
+		CustomDomainCnameTarget: getEnv("CUSTOM_DOMAIN_CNAME_TARGET", "custom.jeonme.com"),
 
 		// Nilai default sengaja dibuat "jalan tanpa perlu setup tambahan" (bukan
 		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum

@@ -14,6 +14,7 @@ import {
   IconCopy,
   IconExternal,
   IconGift,
+  IconGlobe,
   IconHeart,
   IconInbox,
   IconLink,
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/links", label: "Tautan", icon: IconLink },
       { href: "/dashboard/products", label: "Produk", icon: IconBox },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
+      { href: "/dashboard/custom-domain", label: "Domain Kustom", icon: IconGlobe },
     ],
   },
   {

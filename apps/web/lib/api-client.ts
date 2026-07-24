@@ -671,6 +671,42 @@ export function upsertSocialProofSettings(input: SocialProofSettings) {
   );
 }
 
+// ---------- Dashboard: domain kustom (Sprint 9, No.81) ----------
+// Bagian aplikasi saja -- lihat catatan lingkup di CustomDomainHandler
+// backend (belum ada wiring Apache/SSL produksi untuk domain sembarang).
+
+export interface DomainSettings {
+  domain: string;
+  verified: boolean;
+  verification_token: string;
+  cname_target: string;
+  txt_record_name: string;
+}
+
+export function getDomainSettings() {
+  return apiFetch<DomainSettings>("/dashboard/domain", { method: "GET" }, { auth: true });
+}
+
+export function setDomainSettings(domain: string) {
+  return apiFetch<DomainSettings>(
+    "/dashboard/domain",
+    { method: "PUT", body: JSON.stringify({ domain }) },
+    { auth: true }
+  );
+}
+
+export function verifyDomainSettings() {
+  return apiFetch<{ domain_settings: DomainSettings; message: string }>(
+    "/dashboard/domain/verify",
+    { method: "POST" },
+    { auth: true }
+  );
+}
+
+export function deleteDomainSettings() {
+  return apiFetch<{ message: string }>("/dashboard/domain", { method: "DELETE" }, { auth: true });
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
 export function createCheckout(input: {

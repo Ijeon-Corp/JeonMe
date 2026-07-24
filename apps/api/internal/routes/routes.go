@@ -33,6 +33,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
 	socialProof := handlers.NewSocialProofHandler(db)
+	customDomain := handlers.NewCustomDomainHandler(db, cfg.CustomDomainCnameTarget)
 	links := handlers.NewLinksHandler(db, queueClient)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -75,6 +76,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
 		api.GET("/pages/:username", page.GetPublicPage)
+
+		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
+		// proxy.ts (bukan browser).
+		api.GET("/domains/:domain/resolve", customDomain.ResolveUsername)
 
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
@@ -156,6 +161,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// No.76 (Sprint 8): notifikasi social proof "X baru saja membeli".
 			dashboard.GET("/social-proof", socialProof.Get)
 			dashboard.PUT("/social-proof", socialProof.Upsert)
+
+			// No.81 (Sprint 9): domain kustom -- lihat catatan lingkup di
+			// CustomDomainHandler (bagian aplikasi saja, belum wiring infra).
+			dashboard.GET("/domain", customDomain.Get)
+			dashboard.PUT("/domain", customDomain.Set)
+			dashboard.POST("/domain/verify", customDomain.Verify)
+			dashboard.DELETE("/domain", customDomain.Delete)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)
