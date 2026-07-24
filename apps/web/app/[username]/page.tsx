@@ -94,6 +94,13 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
                 collectWhatsapp: page.lead_capture.collect_whatsapp,
               }
             : undefined,
+          socialProof: page.social_proof
+            ? {
+                displaySeconds: page.social_proof.display_seconds,
+                intervalSeconds: page.social_proof.interval_seconds,
+                recent: page.social_proof.recent,
+              }
+            : undefined,
           referralCode: ref,
         }}
         interactive

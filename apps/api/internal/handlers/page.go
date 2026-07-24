@@ -46,6 +46,7 @@ type publicPageResponse struct {
 	Products    []publicItem       `json:"products"`
 	Donation    *publicDonation    `json:"donation"`
 	LeadCapture *publicLeadCapture `json:"lead_capture"`
+	SocialProof *publicSocialProof `json:"social_proof"`
 }
 
 // publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
@@ -54,6 +55,15 @@ type publicLeadCapture struct {
 	Title           string `json:"title"`
 	CollectEmail    bool   `json:"collect_email"`
 	CollectWhatsapp bool   `json:"collect_whatsapp"`
+}
+
+// publicSocialProof -- No.76 (Sprint 8): notifikasi "X baru saja membeli".
+// nil kalau kreator belum mengaktifkan ATAU belum ada pembelian sama sekali
+// (tidak ada gunanya menampilkan komponen tanpa data).
+type publicSocialProof struct {
+	DisplaySeconds  int              `json:"display_seconds"`
+	IntervalSeconds int              `json:"interval_seconds"`
+	Recent          []recentPurchase `json:"recent"`
 }
 
 // publicDonation -- No.71: blok dukungan/donasi, TIDAK ikut array Products
@@ -182,6 +192,23 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		WHERE user_id = $1 AND is_active = true
 	`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
 		resp.LeadCapture = &leadCapture
+	}
+
+	var spActive, spShowOnProductPage bool
+	var spDisplaySeconds, spIntervalSeconds int
+	if err := h.DB.QueryRow(ctx, `
+		SELECT is_active, show_on_product_page, display_seconds, interval_seconds
+		FROM social_proof_settings WHERE user_id = $1
+	`, userID).Scan(&spActive, &spShowOnProductPage, &spDisplaySeconds, &spIntervalSeconds); err == nil && spActive && spShowOnProductPage {
+		recent := fetchRecentPurchases(ctx, h.DB, `
+			SELECT p.name, o.buyer_email, o.created_at
+			FROM orders o JOIN products p ON p.id = o.product_id
+			WHERE p.user_id = $1 AND o.status = 'paid'
+			ORDER BY o.created_at DESC LIMIT 10
+		`, userID)
+		if len(recent) > 0 {
+			resp.SocialProof = &publicSocialProof{DisplaySeconds: spDisplaySeconds, IntervalSeconds: spIntervalSeconds, Recent: recent}
+		}
 	}
 
 	if h.RDB != nil {

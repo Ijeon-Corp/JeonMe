@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ApiError, BundleDownloadItem, CheckoutStatus, getBundleItems, getCheckoutStatus } from "@/lib/api-client";
+import SocialProofToast from "@/components/SocialProofToast";
 
 // REQ-F-406: pesan gagal bayar yang jelas ke pembeli. Halaman ini adalah
 // callbacks.finish dari Midtrans Snap -- statusnya selalu dicek ulang ke
@@ -60,6 +61,13 @@ export default function CheckoutStatusPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-primary-subtle/40 px-4">
+      {status?.social_proof && (
+        <SocialProofToast
+          recent={status.social_proof.recent}
+          displaySeconds={status.social_proof.display_seconds}
+          intervalSeconds={status.social_proof.interval_seconds}
+        />
+      )}
       <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-8 text-center shadow-card">
         {loading && <p className="text-sm text-muted">Memeriksa status pembayaran...</p>}
 

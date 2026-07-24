@@ -32,6 +32,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
+	socialProof := handlers.NewSocialProofHandler(db)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -134,6 +135,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
 			dashboard.PUT("/lead-capture", audience.UpsertLeadCaptureSettings)
 			dashboard.GET("/audience", audience.GetAudience)
+
+			// No.76 (Sprint 8): notifikasi social proof "X baru saja membeli".
+			dashboard.GET("/social-proof", socialProof.Get)
+			dashboard.PUT("/social-proof", socialProof.Upsert)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

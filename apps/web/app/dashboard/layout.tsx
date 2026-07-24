@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import { clearToken, getMyPage, logout as apiLogout } from "@/lib/api-client";
 import {
+  IconBell,
   IconBox,
   IconChart,
   IconClose,
@@ -57,7 +58,10 @@ const NAV_ITEMS: NavEntry[] = [
   {
     type: "group",
     label: "Audiens & Pemasaran",
-    items: [{ href: "/dashboard/audience", label: "Audiens", icon: IconInbox }],
+    items: [
+      { href: "/dashboard/audience", label: "Audiens", icon: IconInbox },
+      { href: "/dashboard/social-proof", label: "Social Proof", icon: IconBell },
+    ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },

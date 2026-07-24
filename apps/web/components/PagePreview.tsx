@@ -1,8 +1,10 @@
 import { getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
 import ReportButton from "@/components/ReportButton";
+import { RecentPurchase } from "@/lib/api-client";
 import { IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 
 export interface PagePreviewLink {
@@ -36,6 +38,12 @@ export interface PagePreviewLeadCapture {
   collectWhatsapp: boolean;
 }
 
+export interface PagePreviewSocialProof {
+  displaySeconds: number;
+  intervalSeconds: number;
+  recent: RecentPurchase[];
+}
+
 export interface PagePreviewData {
   id?: string;
   username: string;
@@ -46,6 +54,7 @@ export interface PagePreviewData {
   products: PagePreviewProduct[];
   donation?: PagePreviewDonation;
   leadCapture?: PagePreviewLeadCapture;
+  socialProof?: PagePreviewSocialProof;
   // No.72: kode ?ref= dari URL halaman publik -- diteruskan ke tombol Beli
   // tiap produk supaya checkout bisa mengaitkan order ke afiliator.
   referralCode?: string;
@@ -128,6 +137,13 @@ export default function PagePreview({
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`}>
+      {interactive && data.socialProof && (
+        <SocialProofToast
+          recent={data.socialProof.recent}
+          displaySeconds={data.socialProof.displaySeconds}
+          intervalSeconds={data.socialProof.intervalSeconds}
+        />
+      )}
       <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
         <div className="relative flex flex-col items-center">
           {theme.glow !== "hidden" && (

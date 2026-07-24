@@ -253,11 +253,22 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 }
 
 type checkoutStatusResponse struct {
-	OrderID    string `json:"order_id"`
-	Status     string `json:"status"`
-	Product    string `json:"product_name"`
-	IsBundle   bool   `json:"is_bundle"`
-	IsDonation bool   `json:"is_donation"`
+	OrderID     string               `json:"order_id"`
+	Status      string               `json:"status"`
+	Product     string               `json:"product_name"`
+	IsBundle    bool                 `json:"is_bundle"`
+	IsDonation  bool                 `json:"is_donation"`
+	SocialProof *checkoutSocialProof `json:"social_proof"`
+}
+
+// checkoutSocialProof -- No.76 (Sprint 8): beda dari publicSocialProof di
+// halaman publik (yang lintas produk) -- di halaman checkout hanya pembeli
+// PRODUK YANG SAMA yang relevan ("orang lain juga baru saja membeli produk
+// yang sedang kamu bayar ini").
+type checkoutSocialProof struct {
+	DisplaySeconds  int              `json:"display_seconds"`
+	IntervalSeconds int              `json:"interval_seconds"`
+	Recent          []recentPurchase `json:"recent"`
 }
 
 // GetStatus — dipakai halaman konfirmasi pembeli untuk menampilkan status
@@ -269,12 +280,13 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	defer cancel()
 
 	var resp checkoutStatusResponse
+	var productID, creatorUserID string
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.name, p.is_bundle, p.is_donation FROM orders o
+		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.user_id FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &resp.Product, &resp.IsBundle, &resp.IsDonation)
+	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &creatorUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -282,6 +294,23 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat status order"})
 		return
+	}
+
+	var spActive, spShowOnCheckout bool
+	var spDisplaySeconds, spIntervalSeconds int
+	if err := h.DB.QueryRow(ctx, `
+		SELECT is_active, show_on_checkout, display_seconds, interval_seconds
+		FROM social_proof_settings WHERE user_id = $1
+	`, creatorUserID).Scan(&spActive, &spShowOnCheckout, &spDisplaySeconds, &spIntervalSeconds); err == nil && spActive && spShowOnCheckout {
+		recent := fetchRecentPurchases(ctx, h.DB, `
+			SELECT p.name, o.buyer_email, o.created_at
+			FROM orders o JOIN products p ON p.id = o.product_id
+			WHERE o.product_id = $1 AND o.status = 'paid'
+			ORDER BY o.created_at DESC LIMIT 10
+		`, productID)
+		if len(recent) > 0 {
+			resp.SocialProof = &checkoutSocialProof{DisplaySeconds: spDisplaySeconds, IntervalSeconds: spIntervalSeconds, Recent: recent}
+		}
 	}
 
 	c.JSON(http.StatusOK, resp)

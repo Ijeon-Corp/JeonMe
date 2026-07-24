@@ -121,6 +121,7 @@ export interface PublicPage {
   products: PublicProduct[];
   donation: PublicDonation | null;
   lead_capture: PublicLeadCapture | null;
+  social_proof: SocialProofFeed | null;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -569,6 +570,28 @@ export function getAudience() {
   return apiFetch<AudienceContact[]>("/dashboard/audience", { method: "GET" }, { auth: true });
 }
 
+// ---------- Dashboard: notifikasi social proof (Sprint 8, No.76) ----------
+
+export interface SocialProofSettings {
+  is_active: boolean;
+  show_on_product_page: boolean;
+  show_on_checkout: boolean;
+  display_seconds: number;
+  interval_seconds: number;
+}
+
+export function getSocialProofSettings() {
+  return apiFetch<SocialProofSettings>("/dashboard/social-proof", { method: "GET" }, { auth: true });
+}
+
+export function upsertSocialProofSettings(input: SocialProofSettings) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/social-proof",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
 export function createCheckout(input: {
@@ -599,12 +622,25 @@ export function validateVoucher(input: { code: string; product_id: string; buyer
   });
 }
 
+export interface RecentPurchase {
+  product_name: string;
+  masked_email: string;
+  purchased_at: string;
+}
+
+export interface SocialProofFeed {
+  display_seconds: number;
+  interval_seconds: number;
+  recent: RecentPurchase[];
+}
+
 export interface CheckoutStatus {
   order_id: string;
   status: "pending" | "paid" | "expired" | "failed";
   product_name: string;
   is_bundle: boolean;
   is_donation: boolean;
+  social_proof: SocialProofFeed | null;
 }
 
 export function getCheckoutStatus(orderId: string) {
