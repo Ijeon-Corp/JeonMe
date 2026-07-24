@@ -37,19 +37,23 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID             string             `json:"id"`
-	Username       string             `json:"username"`
-	Bio            string             `json:"bio"`
-	AvatarURL      string             `json:"avatar_url"`
-	Theme          string             `json:"theme"`
-	SeoTitle       string             `json:"seo_title"`
-	SeoDescription string             `json:"seo_description"`
-	Noindex        bool               `json:"noindex"`
-	Links          []publicLink       `json:"links"`
-	Products       []publicItem       `json:"products"`
-	Donation       *publicDonation    `json:"donation"`
-	LeadCapture    *publicLeadCapture `json:"lead_capture"`
-	SocialProof    *publicSocialProof `json:"social_proof"`
+	ID                    string             `json:"id"`
+	Username              string             `json:"username"`
+	Bio                   string             `json:"bio"`
+	AvatarURL             string             `json:"avatar_url"`
+	Theme                 string             `json:"theme"`
+	SeoTitle              string             `json:"seo_title"`
+	SeoDescription        string             `json:"seo_description"`
+	Noindex               bool               `json:"noindex"`
+	CustomBackgroundType  string             `json:"custom_background_type"`
+	CustomBackgroundValue string             `json:"custom_background_value"`
+	CustomFont            string             `json:"custom_font"`
+	CustomButtonColor     string             `json:"custom_button_color"`
+	Links                 []publicLink       `json:"links"`
+	Products              []publicItem       `json:"products"`
+	Donation              *publicDonation    `json:"donation"`
+	LeadCapture           *publicLeadCapture `json:"lead_capture"`
+	SocialProof           *publicSocialProof `json:"social_proof"`
 }
 
 // publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
@@ -130,12 +134,14 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var userID string
 
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex
+		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_published = true
 	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
-		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex)
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -244,18 +250,22 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 }
 
 type myPageResponse struct {
-	Username       string `json:"username"`
-	Bio            string `json:"bio"`
-	AvatarURL      string `json:"avatar_url"`
-	Theme          string `json:"theme"`
-	IsPublished    bool   `json:"is_published"`
-	SeoTitle       string `json:"seo_title"`
-	SeoDescription string `json:"seo_description"`
-	Noindex        bool   `json:"noindex"`
+	Username              string `json:"username"`
+	Bio                   string `json:"bio"`
+	AvatarURL             string `json:"avatar_url"`
+	Theme                 string `json:"theme"`
+	IsPublished           bool   `json:"is_published"`
+	SeoTitle              string `json:"seo_title"`
+	SeoDescription        string `json:"seo_description"`
+	Noindex               bool   `json:"noindex"`
+	CustomBackgroundType  string `json:"custom_background_type"`
+	CustomBackgroundValue string `json:"custom_background_value"`
+	CustomFont            string `json:"custom_font"`
+	CustomButtonColor     string `json:"custom_button_color"`
 }
 
 // GetMyPage — dipakai dashboard untuk memuat pengaturan halaman milik kreator
-// yang sedang login (tema, bio, status publish, SEO).
+// yang sedang login (tema, bio, status publish, SEO, kustomisasi lanjutan).
 func (h *PageHandler) GetMyPage(c *gin.Context) {
 	userID := c.GetString("userID")
 
@@ -264,11 +274,13 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 
 	var resp myPageResponse
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex
+		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1
 	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
-		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex)
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
@@ -277,22 +289,34 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// availableThemes — preset tema (REQ-F-204). Belum ada builder tema bebas,
-// preset dianggap cukup untuk MVP.
+// availableThemes — preset tema (REQ-F-204) + "custom" (No.80, Sprint 9):
+// kustomisasi lanjutan (latar/font/warna tombol) di luar 5 preset.
 var availableThemes = map[string]bool{
-	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true,
+	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true, "custom": true,
+}
+
+var availableCustomFonts = map[string]bool{
+	"inter": true, "playfair": true, "lora": true, "montserrat": true, "roboto-mono": true,
 }
 
 type updatePageRequest struct {
-	Theme          *string `json:"theme"`
-	Bio            *string `json:"bio" binding:"omitempty,max=160"`
-	IsPublished    *bool   `json:"is_published"`
-	SeoTitle       *string `json:"seo_title" binding:"omitempty,max=70"`
-	SeoDescription *string `json:"seo_description" binding:"omitempty,max=160"`
-	Noindex        *bool   `json:"noindex"`
+	Theme                 *string `json:"theme"`
+	Bio                   *string `json:"bio" binding:"omitempty,max=160"`
+	IsPublished           *bool   `json:"is_published"`
+	SeoTitle              *string `json:"seo_title" binding:"omitempty,max=70"`
+	SeoDescription        *string `json:"seo_description" binding:"omitempty,max=160"`
+	Noindex               *bool   `json:"noindex"`
+	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image"`
+	CustomBackgroundValue *string `json:"custom_background_value" binding:"omitempty,max=500"`
+	CustomFont            *string `json:"custom_font"`
+	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
+// No.80 (Sprint 9): kustomisasi lanjutan (latar/font/warna tombol) hanya
+// berlaku kalau theme="custom" -- kolomnya tetap disimpan lepas dari nilai
+// theme saat ini supaya kreator tidak kehilangan pengaturannya kalau
+// sementara ganti-ganti preset untuk dibandingkan.
 func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	var req updatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -302,6 +326,10 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 
 	if req.Theme != nil && !availableThemes[*req.Theme] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "tema tidak dikenal"})
+		return
+	}
+	if req.CustomFont != nil && !availableCustomFonts[*req.CustomFont] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pilihan font tidak dikenal"})
 		return
 	}
 
@@ -318,9 +346,14 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			is_published = COALESCE($3, is_published),
 			seo_title = COALESCE($4, seo_title),
 			seo_description = COALESCE($5, seo_description),
-			noindex = COALESCE($6, noindex)
-		WHERE user_id = $7
-	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex, userID)
+			noindex = COALESCE($6, noindex),
+			custom_background_type = COALESCE($7, custom_background_type),
+			custom_background_value = COALESCE($8, custom_background_value),
+			custom_font = COALESCE($9, custom_font),
+			custom_button_color = COALESCE($10, custom_button_color)
+		WHERE user_id = $11
+	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
+		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return

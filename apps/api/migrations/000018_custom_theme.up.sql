@@ -1,0 +1,4 @@
+ALTER TABLE pages ADD COLUMN custom_background_type VARCHAR(10) NOT NULL DEFAULT 'solid';
+ALTER TABLE pages ADD COLUMN custom_background_value VARCHAR(500) NOT NULL DEFAULT '#FBF6E8';
+ALTER TABLE pages ADD COLUMN custom_font VARCHAR(20) NOT NULL DEFAULT 'inter';
+ALTER TABLE pages ADD COLUMN custom_button_color VARCHAR(7) NOT NULL DEFAULT '#1B4D3E';

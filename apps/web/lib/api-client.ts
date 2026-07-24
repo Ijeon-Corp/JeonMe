@@ -140,6 +140,10 @@ export interface PublicPage {
   seo_title: string;
   seo_description: string;
   noindex: boolean;
+  custom_background_type: "solid" | "image";
+  custom_background_value: string;
+  custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
+  custom_button_color: string;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -221,6 +225,10 @@ export interface MyPage {
   seo_title: string;
   seo_description: string;
   noindex: boolean;
+  custom_background_type: "solid" | "image";
+  custom_background_value: string;
+  custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
+  custom_button_color: string;
 }
 
 export const THEME_PRESETS = ["default", "midnight", "sunrise", "forest", "minimal"] as const;
@@ -230,7 +238,21 @@ export function getMyPage() {
 }
 
 export function updateMyPage(
-  input: Partial<Pick<MyPage, "theme" | "bio" | "is_published" | "seo_title" | "seo_description" | "noindex">>
+  input: Partial<
+    Pick<
+      MyPage,
+      | "theme"
+      | "bio"
+      | "is_published"
+      | "seo_title"
+      | "seo_description"
+      | "noindex"
+      | "custom_background_type"
+      | "custom_background_value"
+      | "custom_font"
+      | "custom_button_color"
+    >
+  >
 ) {
   return apiFetch<{ message: string }>(
     "/dashboard/page",

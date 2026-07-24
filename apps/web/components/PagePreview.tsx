@@ -1,4 +1,4 @@
-import { getPageTheme } from "@/lib/page-themes";
+import { CustomThemeConfig, getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
@@ -68,6 +68,8 @@ export interface PagePreviewData {
   // No.72: kode ?ref= dari URL halaman publik -- diteruskan ke tombol Beli
   // tiap produk supaya checkout bisa mengaitkan order ke afiliator.
   referralCode?: string;
+  // No.80 (Sprint 9): hanya dipakai kalau theme === "custom".
+  customTheme?: CustomThemeConfig;
 }
 
 interface PreviewSourcePage {
@@ -75,6 +77,10 @@ interface PreviewSourcePage {
   bio: string;
   avatar_url: string;
   theme: string;
+  custom_background_type?: CustomThemeConfig["backgroundType"];
+  custom_background_value?: string;
+  custom_font?: CustomThemeConfig["font"];
+  custom_button_color?: string;
 }
 
 interface PreviewSourceLink {
@@ -114,6 +120,15 @@ export function toPreviewData(
     bio: page.bio,
     avatarUrl: page.avatar_url,
     theme: page.theme,
+    customTheme:
+      page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
+        ? {
+            backgroundType: page.custom_background_type,
+            backgroundValue: page.custom_background_value,
+            font: page.custom_font,
+            buttonColor: page.custom_button_color,
+          }
+        : undefined,
     links: links
       .filter((l) => l.is_active)
       .map((l) => ({
@@ -157,10 +172,10 @@ export default function PagePreview({
   interactive?: boolean;
   rootClassName?: string;
 }) {
-  const theme = getPageTheme(data.theme);
+  const theme = getPageTheme(data.theme, data.customTheme);
 
   return (
-    <main className={`relative ${rootClassName} ${theme.page}`}>
+    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {interactive && data.socialProof && (
         <SocialProofToast
           recent={data.socialProof.recent}

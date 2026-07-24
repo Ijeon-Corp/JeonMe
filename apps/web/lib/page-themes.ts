@@ -1,9 +1,12 @@
-// Definisi visual 5 preset tema (REQ-F-204). Sebelumnya page.theme tersimpan
-// di database dan bisa dipilih dari dashboard, tapi TIDAK PERNAH diterapkan
-// di halaman publik -- kreator memilih tema, tidak ada yang berubah. Ini
-// satu-satunya sumber kebenaran untuk tampilan tiap tema, dipakai baik oleh
-// halaman publik maupun pratinjau di dashboard.
-export type PageThemeName = "default" | "midnight" | "sunrise" | "forest" | "minimal";
+// Definisi visual 5 preset tema (REQ-F-204) + 1 mode "custom" (No.80,
+// Sprint 9). Sebelumnya page.theme tersimpan di database dan bisa dipilih
+// dari dashboard, tapi TIDAK PERNAH diterapkan di halaman publik -- kreator
+// memilih tema, tidak ada yang berubah. Ini satu-satunya sumber kebenaran
+// untuk tampilan tiap tema, dipakai baik oleh halaman publik maupun
+// pratinjau di dashboard.
+import type { CSSProperties } from "react";
+
+export type PageThemeName = "default" | "midnight" | "sunrise" | "forest" | "minimal" | "custom";
 
 export type PageTheme = {
   label: string;
@@ -24,9 +27,37 @@ export type PageTheme = {
   footer: string;
   /** Warna solid untuk swatch pratinjau di dashboard (bukan kelas Tailwind). */
   swatch: string;
+  /**
+   * No.80: HANYA terisi untuk theme "custom" -- style inline dipasang di
+   * elemen pembungkus <main> (lihat PagePreview.tsx), berisi custom
+   * property CSS (--custom-bg, --custom-button-bg) yang lantas dirujuk oleh
+   * kelas Tailwind arbitrary-value di atas (page/buyButton). Pendekatan ini
+   * sengaja dipilih supaya warna/gambar latar & warna tombol yang truly
+   * dinamis (hex bebas, URL gambar bebas) TIDAK perlu meneruskan prop style
+   * baru ke setiap komponen tombol (BuyProductButton/LeadCaptureForm/dst)
+   * -- custom property CSS mewarisi ke seluruh turunan DOM secara alami.
+   */
+  pageStyle?: CSSProperties;
 };
 
-export const PAGE_THEMES: Record<PageThemeName, PageTheme> = {
+export interface CustomThemeConfig {
+  backgroundType: "solid" | "image";
+  backgroundValue: string;
+  font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
+  buttonColor: string;
+}
+
+export const CUSTOM_FONT_OPTIONS: { value: CustomThemeConfig["font"]; label: string; cssVar: string }[] = [
+  { value: "inter", label: "Inter (Default)", cssVar: "var(--font-body)" },
+  { value: "playfair", label: "Playfair Display (Serif Elegan)", cssVar: "var(--font-custom-playfair)" },
+  { value: "lora", label: "Lora (Serif Nyaman Dibaca)", cssVar: "var(--font-custom-lora)" },
+  { value: "montserrat", label: "Montserrat (Sans Modern)", cssVar: "var(--font-custom-montserrat)" },
+  { value: "roboto-mono", label: "Roboto Mono (Monospace)", cssVar: "var(--font-custom-roboto-mono)" },
+];
+
+// "custom" SENGAJA tidak masuk daftar ini -- dibangun secara dinamis oleh
+// getPageTheme() dari CustomThemeConfig, bukan preset statis.
+export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = {
   default: {
     label: "Default",
     page: "bg-primary-subtle bg-mesh",
@@ -114,6 +145,24 @@ export const PAGE_THEMES: Record<PageThemeName, PageTheme> = {
   },
 };
 
-export function getPageTheme(theme: string): PageTheme {
-  return PAGE_THEMES[theme as PageThemeName] ?? PAGE_THEMES.default;
+export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageTheme {
+  if (theme === "custom" && custom) {
+    const fontCssVar = CUSTOM_FONT_OPTIONS.find((f) => f.value === custom.font)?.cssVar ?? "var(--font-body)";
+    const base = PAGE_THEMES.sunrise;
+    return {
+      ...base,
+      label: "Custom",
+      page: custom.backgroundType === "image" ? "bg-[image:var(--custom-bg)] bg-cover bg-center bg-no-repeat" : "bg-[color:var(--custom-bg)]",
+      buyButton: "bg-[color:var(--custom-button-bg)] text-white font-bold hover:brightness-105",
+      swatch: custom.buttonColor,
+      pageStyle: {
+        // Nilai kustom properti CSS (bukan nama properti standar) --
+        // TypeScript tidak tahu nama "--custom-bg", jadi perlu type assertion.
+        ["--custom-bg" as string]: custom.backgroundType === "image" ? `url(${custom.backgroundValue})` : custom.backgroundValue,
+        ["--custom-button-bg" as string]: custom.buttonColor,
+        fontFamily: fontCssVar,
+      } as CSSProperties,
+    };
+  }
+  return PAGE_THEMES[theme as Exclude<PageThemeName, "custom">] ?? PAGE_THEMES.default;
 }

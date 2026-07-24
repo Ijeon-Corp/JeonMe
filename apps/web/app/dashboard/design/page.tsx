@@ -13,10 +13,26 @@ import {
   updateMyPage,
   uploadAvatar,
 } from "@/lib/api-client";
-import { PAGE_THEMES } from "@/lib/page-themes";
+import { CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
 import { IconExternal } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+
+type PageSettingsPatch = Partial<
+  Pick<
+    MyPage,
+    | "theme"
+    | "bio"
+    | "is_published"
+    | "seo_title"
+    | "seo_description"
+    | "noindex"
+    | "custom_background_type"
+    | "custom_background_value"
+    | "custom_font"
+    | "custom_button_color"
+  >
+>;
 
 export default function DashboardDesignPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -37,9 +53,7 @@ export default function DashboardDesignPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handlePageSettingChange(
-    patch: Partial<Pick<MyPage, "theme" | "bio" | "is_published" | "seo_title" | "seo_description" | "noindex">>
-  ) {
+  async function handlePageSettingChange(patch: PageSettingsPatch) {
     if (!page) return;
     const previous = page;
     setPage({ ...page, ...patch });
@@ -165,8 +179,104 @@ export default function DashboardDesignPage() {
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => handlePageSettingChange({ theme: "custom" })}
+                    className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-all ${
+                      page.theme === "custom"
+                        ? "border-primary bg-primary-subtle text-primary shadow-card"
+                        : "border-border text-muted hover:border-primary/50 hover:text-ink"
+                    }`}
+                  >
+                    <span
+                      className="h-5 w-5 flex-shrink-0 rounded-full ring-2 ring-white shadow-sm"
+                      style={{ backgroundColor: page.custom_button_color }}
+                      aria-hidden
+                    />
+                    Custom
+                  </button>
                 </div>
               </div>
+
+              {page.theme === "custom" && (
+                <div className="rounded-xl border border-border bg-primary-subtle/30 p-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Kustomisasi Lanjutan</p>
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink">Jenis Latar</label>
+                      <div className="flex gap-2">
+                        {(["solid", "image"] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => handlePageSettingChange({ custom_background_type: type })}
+                            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                              page.custom_background_type === type
+                                ? "border-primary bg-white text-primary"
+                                : "border-border text-muted"
+                            }`}
+                          >
+                            {type === "solid" ? "Warna Solid" : "Gambar"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {page.custom_background_type === "solid" ? (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Latar</label>
+                        <input
+                          type="color"
+                          value={page.custom_background_value}
+                          onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                          onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
+                          className="h-9 w-full rounded-lg border border-border"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-ink">URL Gambar Latar</label>
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={page.custom_background_value}
+                          onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                          onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
+                          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink">Font</label>
+                      <select
+                        value={page.custom_font}
+                        onChange={(e) =>
+                          handlePageSettingChange({ custom_font: e.target.value as MyPage["custom_font"] })
+                        }
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      >
+                        {CUSTOM_FONT_OPTIONS.map((f) => (
+                          <option key={f.value} value={f.value}>
+                            {f.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
+                      <input
+                        type="color"
+                        value={page.custom_button_color}
+                        onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
+                        onBlur={(e) => handlePageSettingChange({ custom_button_color: e.target.value })}
+                        className="h-9 w-full rounded-lg border border-border"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <Toggle

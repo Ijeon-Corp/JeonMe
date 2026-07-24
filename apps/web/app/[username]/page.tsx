@@ -71,6 +71,12 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
           bio: page.bio,
           avatarUrl: page.avatar_url,
           theme: page.theme,
+          customTheme: {
+            backgroundType: page.custom_background_type,
+            backgroundValue: page.custom_background_value,
+            font: page.custom_font,
+            buttonColor: page.custom_button_color,
+          },
           links: page.links.map((l) => ({
             id: l.id,
             title: l.title,
