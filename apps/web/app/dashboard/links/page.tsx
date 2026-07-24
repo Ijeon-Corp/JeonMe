@@ -6,6 +6,7 @@ import {
   DashboardProduct,
   LinkItem,
   MyPage,
+  createBlock,
   createLink,
   deleteLink,
   getMyPage,
@@ -14,9 +15,15 @@ import {
   reorderLinks,
   updateLink,
 } from "@/lib/api-client";
-import { IconInbox } from "@/components/icons";
+import { IconInbox, IconPlus } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+
+const BLOCK_TYPE_LABEL: Record<string, string> = {
+  video: "Video",
+  contact_form: "Formulir Kontak",
+  faq: "FAQ",
+};
 
 export default function DashboardLinksPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -42,6 +49,21 @@ export default function DashboardLinksPage() {
   const [lockCodeInput, setLockCodeInput] = useState("");
   const [lockMinAgeInput, setLockMinAgeInput] = useState("18");
   const [savingLock, setSavingLock] = useState(false);
+
+  // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
+  const [addingBlock, setAddingBlock] = useState(false);
+  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq">("video");
+  const [blockTitle, setBlockTitle] = useState("");
+  const [blockVideoUrl, setBlockVideoUrl] = useState("");
+  const [blockFaqItems, setBlockFaqItems] = useState<{ question: string; answer: string }[]>([
+    { question: "", answer: "" },
+  ]);
+  const [savingBlock, setSavingBlock] = useState(false);
+
+  const [contentEditId, setContentEditId] = useState<string | null>(null);
+  const [editVideoUrl, setEditVideoUrl] = useState("");
+  const [editFaqItems, setEditFaqItems] = useState<{ question: string; answer: string }[]>([]);
+  const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts()])
@@ -176,6 +198,83 @@ export default function DashboardLinksPage() {
     }
   }
 
+  async function handleCreateBlock(e: React.FormEvent) {
+    e.preventDefault();
+    if (!blockTitle.trim()) {
+      setError("Judul blok wajib diisi.");
+      return;
+    }
+    let blockData: Record<string, unknown> = {};
+    if (blockType === "video") {
+      if (!blockVideoUrl.trim()) {
+        setError("Tautan video wajib diisi.");
+        return;
+      }
+      blockData = { video_url: blockVideoUrl.trim() };
+    } else if (blockType === "faq") {
+      const items = blockFaqItems.filter((it) => it.question.trim() && it.answer.trim());
+      if (items.length === 0) {
+        setError("Isi minimal 1 pertanyaan FAQ (pertanyaan & jawaban).");
+        return;
+      }
+      blockData = { items };
+    }
+    setError(null);
+    setSavingBlock(true);
+    try {
+      const created = await createBlock({ block_type: blockType, title: blockTitle.trim(), block_data: blockData });
+      setLinks((prev) => [...prev, created]);
+      setAddingBlock(false);
+      setBlockTitle("");
+      setBlockVideoUrl("");
+      setBlockFaqItems([{ question: "", answer: "" }]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membuat blok.");
+    } finally {
+      setSavingBlock(false);
+    }
+  }
+
+  function openContentEdit(link: LinkItem) {
+    setContentEditId(link.id);
+    if (link.block_type === "video") {
+      setEditVideoUrl((link.block_data?.video_url as string) ?? "");
+    } else if (link.block_type === "faq") {
+      const items = (link.block_data?.items as { question: string; answer: string }[]) ?? [];
+      setEditFaqItems(items.length > 0 ? items : [{ question: "", answer: "" }]);
+    }
+  }
+
+  async function handleSaveContent(link: LinkItem) {
+    let blockData: Record<string, unknown>;
+    if (link.block_type === "video") {
+      if (!editVideoUrl.trim()) {
+        setError("Tautan video wajib diisi.");
+        return;
+      }
+      blockData = { video_url: editVideoUrl.trim() };
+    } else {
+      const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
+      if (items.length === 0) {
+        setError("Isi minimal 1 pertanyaan FAQ (pertanyaan & jawaban).");
+        return;
+      }
+      blockData = { items };
+    }
+    setError(null);
+    setSavingContent(true);
+    try {
+      await updateLink(link.id, { block_data: blockData });
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+      setContentEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan konten blok.");
+    } finally {
+      setSavingContent(false);
+    }
+  }
+
   function handleDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
     const from = links.findIndex((l) => l.id === dragId);
@@ -223,7 +322,13 @@ export default function DashboardLinksPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
-                    <p className="truncate text-xs text-muted">{link.url}</p>
+                    {link.block_type === "link" ? (
+                      <p className="truncate text-xs text-muted">{link.url}</p>
+                    ) : (
+                      <span className="inline-block rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                        {BLOCK_TYPE_LABEL[link.block_type]}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Toggle
@@ -241,7 +346,7 @@ export default function DashboardLinksPage() {
                   </button>
                 </div>
 
-                {scheduleEditId === link.id ? (
+                {link.block_type === "link" && (scheduleEditId === link.id ? (
                   <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
                       <input
@@ -297,9 +402,9 @@ export default function DashboardLinksPage() {
                   >
                     Jadwalkan tampil/sembunyi
                   </button>
-                )}
+                ))}
 
-                {lockEditId === link.id ? (
+                {link.block_type === "link" && (lockEditId === link.id ? (
                   <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <select
                       value={lockTypeInput}
@@ -374,7 +479,90 @@ export default function DashboardLinksPage() {
                   >
                     Kunci tautan
                   </button>
-                )}
+                ))}
+
+                {(link.block_type === "video" || link.block_type === "faq") &&
+                  (contentEditId === link.id ? (
+                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                      {link.block_type === "video" ? (
+                        <input
+                          type="url"
+                          placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                          value={editVideoUrl}
+                          onChange={(e) => setEditVideoUrl(e.target.value)}
+                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {editFaqItems.map((item, i) => (
+                            <div key={i} className="flex flex-col gap-1 rounded-md border border-border p-2">
+                              <input
+                                type="text"
+                                placeholder="Pertanyaan"
+                                value={item.question}
+                                onChange={(e) =>
+                                  setEditFaqItems((prev) =>
+                                    prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it))
+                                  )
+                                }
+                                className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              />
+                              <textarea
+                                placeholder="Jawaban"
+                                value={item.answer}
+                                onChange={(e) =>
+                                  setEditFaqItems((prev) =>
+                                    prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it))
+                                  )
+                                }
+                                rows={2}
+                                className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
+                                className="self-end text-[10px] font-bold text-red-600 hover:underline"
+                              >
+                                Hapus item
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
+                            className="self-start text-[11px] font-bold text-primary hover:underline"
+                          >
+                            + Tambah pertanyaan
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setContentEditId(null)}
+                          className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingContent}
+                          onClick={() => handleSaveContent(link)}
+                          className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                        >
+                          {savingContent ? "Menyimpan..." : "Simpan"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openContentEdit(link)}
+                      className="self-start text-[11px] font-bold text-primary hover:underline"
+                    >
+                      Edit Konten
+                    </button>
+                  ))}
               </li>
             ))}
             {links.length === 0 && (
@@ -406,6 +594,99 @@ export default function DashboardLinksPage() {
               Tambah
             </button>
           </form>
+
+          {!addingBlock ? (
+            <button
+              type="button"
+              onClick={() => setAddingBlock(true)}
+              className="mt-3 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            >
+              <IconPlus className="h-4 w-4" />
+              Tambah Blok Konten (Video/Formulir Kontak/FAQ)
+            </button>
+          ) : (
+            <form onSubmit={handleCreateBlock} className="mt-3 flex flex-col gap-2 rounded-xl border border-border p-3.5">
+              <select
+                value={blockType}
+                onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              >
+                <option value="video">Video (YouTube/TikTok)</option>
+                <option value="contact_form">Formulir Kontak</option>
+                <option value="faq">FAQ</option>
+              </select>
+              <input
+                type="text"
+                required
+                placeholder="Judul blok"
+                value={blockTitle}
+                onChange={(e) => setBlockTitle(e.target.value)}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+              {blockType === "video" && (
+                <input
+                  type="url"
+                  placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                  value={blockVideoUrl}
+                  onChange={(e) => setBlockVideoUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              )}
+              {blockType === "faq" && (
+                <div className="flex flex-col gap-2">
+                  {blockFaqItems.map((item, i) => (
+                    <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
+                      <input
+                        type="text"
+                        placeholder="Pertanyaan"
+                        value={item.question}
+                        onChange={(e) =>
+                          setBlockFaqItems((prev) =>
+                            prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it))
+                          )
+                        }
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <textarea
+                        placeholder="Jawaban"
+                        value={item.answer}
+                        onChange={(e) =>
+                          setBlockFaqItems((prev) =>
+                            prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it))
+                          )
+                        }
+                        rows={2}
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
+                    className="self-start text-xs font-bold text-primary hover:underline"
+                  >
+                    + Tambah pertanyaan
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAddingBlock(false)}
+                  className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBlock}
+                  className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  {savingBlock ? "Membuat..." : "Buat Blok"}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
       </div>
 

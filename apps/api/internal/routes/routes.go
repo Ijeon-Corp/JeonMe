@@ -33,7 +33,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
 	socialProof := handlers.NewSocialProofHandler(db)
-	links := handlers.NewLinksHandler(db)
+	links := handlers.NewLinksHandler(db, queueClient)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
@@ -57,6 +57,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.79: batasi lebih ketat dari leads -- ini juga jalur brute-force
 		// menebak kode akses tautan terkunci.
 		linkUnlockRateLimit := middleware.RateLimit(rdb, "link-unlock", 15, time.Minute)
+		// No.77: batasi spam formulir kontak.
+		contactFormRateLimit := middleware.RateLimit(rdb, "contact-form", 10, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -88,6 +90,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.79 (Sprint 9): buka tautan terkunci (usia/kode/subscribe).
 		api.POST("/links/:id/unlock", linkUnlockRateLimit, links.Unlock)
 
+		// No.77 (Sprint 9): kirim pesan lewat blok Formulir Kontak.
+		api.POST("/links/:id/contact", contactFormRateLimit, links.SubmitContactForm)
+
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")
 		dashboard.Use(authRequired)
@@ -101,6 +106,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.PATCH("/links/:id", links.Update)
 			dashboard.DELETE("/links/:id", links.Delete)
 			dashboard.PATCH("/links/reorder", links.Reorder)
+
+			// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
+			// -- baris links yang sama, cuma butuh endpoint create sendiri
+			// (validasi berbeda dari tautan biasa); edit/hapus/reorder pakai
+			// endpoint yang sudah ada di atas.
+			dashboard.POST("/blocks", links.CreateBlock)
 
 			dashboard.GET("/products", product.List)
 			dashboard.POST("/products", product.Create)

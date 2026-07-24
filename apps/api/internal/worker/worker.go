@@ -31,6 +31,7 @@ func NewHandler(db *pgxpool.Pool, mailerClient *mailer.Client, publicAPIURL stri
 func (h *Handler) Mux() *asynq.ServeMux {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(queue.TypeOrderPaidNotification, h.HandleOrderPaidNotification)
+	mux.HandleFunc(queue.TypeContactFormNotification, h.HandleContactFormNotification)
 	return mux
 }
 
@@ -95,5 +96,29 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 	}
 
 	log.Printf("worker: notifikasi order %s terkirim ke %s", payload.OrderID, buyerEmail)
+	return nil
+}
+
+// HandleContactFormNotification -- No.77 (Sprint 9): kirim email ke kreator
+// begitu ada pesan baru masuk lewat blok Formulir Kontak di halaman
+// publiknya. Tidak ada status untuk dicek ulang (beda dari order.paid) --
+// pesan yang sudah dienqueue selalu relevan untuk dikirim.
+func (h *Handler) HandleContactFormNotification(_ context.Context, t *asynq.Task) error {
+	var payload queue.ContactFormPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := fmt.Sprintf("Pesan baru dari formulir kontak halamanmu (@%s)", payload.PageUsername)
+	body := fmt.Sprintf(
+		"Ada pesan baru dari pengunjung halamanmu:\n\nNama: %s\nEmail: %s\n\nPesan:\n%s\n\nSalam,\nTim Jeonme",
+		payload.VisitorName, payload.VisitorEmail, payload.Message,
+	)
+
+	if err := h.Mailer.Send(payload.CreatorEmail, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim notifikasi formulir kontak: %w", err)
+	}
+
+	log.Printf("worker: notifikasi formulir kontak terkirim ke %s", payload.CreatorEmail)
 	return nil
 }

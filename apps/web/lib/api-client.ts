@@ -86,11 +86,19 @@ export interface PublicLink {
   url: string;
   lock_type: "" | "age" | "code" | "subscribe";
   lock_min_age: number | null;
+  block_type: "link" | "video" | "contact_form" | "faq";
+  block_data: Record<string, unknown>;
 }
 
 // No.79 (Sprint 9): buka tautan terkunci -- endpoint publik, tanpa akun.
 export function unlockLink(linkId: string, input: { code?: string; email?: string; whatsapp_number?: string }) {
   return apiFetch<{ url: string }>(`/links/${linkId}/unlock`, { method: "POST", body: JSON.stringify(input) });
+}
+
+// No.77 (Sprint 9): kirim pesan lewat blok Formulir Kontak -- endpoint
+// publik, tanpa akun.
+export function submitContactForm(linkId: string, input: { name: string; email: string; message: string }) {
+  return apiFetch<{ message: string }>(`/links/${linkId}/contact`, { method: "POST", body: JSON.stringify(input) });
 }
 
 export interface PublicProduct {
@@ -264,6 +272,20 @@ export interface LinkItem {
   lock_type: "" | "age" | "code" | "subscribe";
   lock_code: string;
   lock_min_age: number | null;
+  block_type: "link" | "video" | "contact_form" | "faq";
+  block_data: Record<string, unknown>;
+}
+
+// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ) -- baris
+// links yang sama, cuma butuh endpoint create sendiri (validasi berbeda
+// dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
+// reorderLinks yang sudah ada.
+export function createBlock(input: {
+  block_type: "video" | "contact_form" | "faq";
+  title: string;
+  block_data: Record<string, unknown>;
+}) {
+  return apiFetch<LinkItem>("/dashboard/blocks", { method: "POST", body: JSON.stringify(input) }, { auth: true });
 }
 
 export function listLinks() {
@@ -287,6 +309,7 @@ export function updateLink(
     lock_code: string;
     lock_min_age: number;
     clear_lock: boolean;
+    block_data: Record<string, unknown>;
   }>
 ) {
   return apiFetch<{ message: string }>(

@@ -77,6 +77,8 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             url: l.url,
             lockType: l.lock_type || undefined,
             lockMinAge: l.lock_min_age,
+            blockType: l.block_type,
+            blockData: l.block_data,
           })),
           products: page.products.map((p) => ({
             id: p.id,

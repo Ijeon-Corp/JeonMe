@@ -1,9 +1,12 @@
 import { getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
+import ContactFormBlock from "@/components/ContactFormBlock";
+import FaqBlock, { FaqItem } from "@/components/FaqBlock";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import LockedLinkButton from "@/components/LockedLinkButton";
 import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
+import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import ReportButton from "@/components/ReportButton";
 import { RecentPurchase } from "@/lib/api-client";
 import { IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
@@ -14,6 +17,10 @@ export interface PagePreviewLink {
   url: string;
   lockType?: "age" | "code" | "subscribe";
   lockMinAge?: number | null;
+  // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
+  // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
+  blockType?: "link" | "video" | "contact_form" | "faq";
+  blockData?: Record<string, unknown>;
 }
 
 export interface PagePreviewProduct {
@@ -75,6 +82,10 @@ interface PreviewSourceLink {
   title: string;
   url: string;
   is_active: boolean;
+  lock_type?: "" | "age" | "code" | "subscribe";
+  lock_min_age?: number | null;
+  block_type?: "link" | "video" | "contact_form" | "faq";
+  block_data?: Record<string, unknown>;
 }
 
 interface PreviewSourceProduct {
@@ -103,7 +114,17 @@ export function toPreviewData(
     bio: page.bio,
     avatarUrl: page.avatar_url,
     theme: page.theme,
-    links: links.filter((l) => l.is_active),
+    links: links
+      .filter((l) => l.is_active)
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        url: l.url,
+        lockType: l.lock_type || undefined,
+        lockMinAge: l.lock_min_age,
+        blockType: l.block_type,
+        blockData: l.block_data,
+      })),
     products: products
       .filter((p) => p.is_active)
       .map((p) => ({
@@ -179,8 +200,61 @@ export default function PagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-3">
-            {data.links.map((link) =>
-              link.lockType ? (
+            {data.links.map((link) => {
+              // No.77: blok konten baru dirender sepenuhnya terpisah dari
+              // tautan biasa -- tidak ada gerbang kunci/tracking klik untuk
+              // tipe ini (di luar cakupan yang diminta).
+              if (link.blockType === "video") {
+                return (
+                  <VideoEmbedBlock
+                    key={link.id}
+                    title={link.title}
+                    videoUrl={(link.blockData?.video_url as string) ?? ""}
+                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    titleClassName={theme.productTitle}
+                  />
+                );
+              }
+              if (link.blockType === "faq") {
+                return (
+                  <FaqBlock
+                    key={link.id}
+                    title={link.title}
+                    items={(link.blockData?.items as FaqItem[]) ?? []}
+                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    titleClassName={theme.productTitle}
+                    itemTitleClassName={theme.cardTitle}
+                    itemBodyClassName={theme.bio}
+                  />
+                );
+              }
+              if (link.blockType === "contact_form") {
+                return interactive ? (
+                  <ContactFormBlock
+                    key={link.id}
+                    linkId={link.id}
+                    title={link.title}
+                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    titleClassName={theme.productTitle}
+                    inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                    buttonClassName={theme.buyButton}
+                  />
+                ) : (
+                  <div key={link.id} className={`w-full rounded-2xl p-3.5 text-center ${theme.productCard}`}>
+                    <p className={`text-sm font-semibold ${theme.productTitle}`}>{link.title}</p>
+                    <button
+                      type="button"
+                      disabled
+                      title="Pratinjau -- tombol ini tidak aktif"
+                      className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                    >
+                      Kirim Pesan
+                    </button>
+                  </div>
+                );
+              }
+
+              return link.lockType ? (
                 interactive ? (
                   <LockedLinkButton
                     key={link.id}
@@ -224,8 +298,8 @@ export default function PagePreview({
                   <span className="truncate">{link.title}</span>
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
                 </a>
-              )
-            )}
+              );
+            })}
           </div>
         )}
 

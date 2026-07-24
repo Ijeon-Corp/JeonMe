@@ -2,43 +2,57 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jeonme/api/internal/queue"
 )
 
-// LinksHandler mengimplementasikan CRUD tautan (REQ-F-202) dan
-// nonaktifkan-sementara-tanpa-hapus (REQ-F-203).
+// LinksHandler mengimplementasikan CRUD tautan (REQ-F-202), nonaktifkan-
+// sementara-tanpa-hapus (REQ-F-203), dan blok konten baru (No.77, Sprint 9:
+// video embed, formulir kontak, FAQ) -- semuanya baris di tabel links yang
+// sama, dibedakan lewat block_type ('link' = tautan biasa, default).
+// Queue boleh nil (mis. REDIS_URL tidak valid saat startup) -- notifikasi
+// formulir kontak akan dilewati dengan log peringatan, sama seperti pola
+// soft-fail CheckoutHandler.
 type LinksHandler struct {
-	DB *pgxpool.Pool
+	DB    *pgxpool.Pool
+	Queue *asynq.Client
 }
 
-func NewLinksHandler(db *pgxpool.Pool) *LinksHandler {
-	return &LinksHandler{DB: db}
+func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client) *LinksHandler {
+	return &LinksHandler{DB: db, Queue: queueClient}
 }
 
 type linkItem struct {
-	ID         string     `json:"id"`
-	Title      string     `json:"title"`
-	URL        string     `json:"url"`
-	Position   int        `json:"position"`
-	IsActive   bool       `json:"is_active"`
-	StartsAt   *time.Time `json:"starts_at"`
-	EndsAt     *time.Time `json:"ends_at"`
-	LockType   string     `json:"lock_type"`
-	LockCode   string     `json:"lock_code"`
-	LockMinAge *int       `json:"lock_min_age"`
+	ID         string          `json:"id"`
+	Title      string          `json:"title"`
+	URL        string          `json:"url"`
+	Position   int             `json:"position"`
+	IsActive   bool            `json:"is_active"`
+	StartsAt   *time.Time      `json:"starts_at"`
+	EndsAt     *time.Time      `json:"ends_at"`
+	LockType   string          `json:"lock_type"`
+	LockCode   string          `json:"lock_code"`
+	LockMinAge *int            `json:"lock_min_age"`
+	BlockType  string          `json:"block_type"`
+	BlockData  json.RawMessage `json:"block_data"`
 }
 
-// List mengembalikan seluruh tautan milik kreator yang sedang login, urut
-// posisi. lock_code disertakan (BUKAN disembunyikan) karena ini endpoint
-// dashboard kreator sendiri -- dia yang membuat kodenya, wajar dia bisa
-// melihatnya lagi untuk diedit.
+// List mengembalikan seluruh tautan & blok konten milik kreator yang sedang
+// login, urut posisi (satu daftar tercampur -- lihat komentar LinksHandler).
+// lock_code disertakan (BUKAN disembunyikan) karena ini endpoint dashboard
+// kreator sendiri -- dia yang membuat kodenya, wajar dia bisa melihatnya
+// lagi untuk diedit.
 func (h *LinksHandler) List(c *gin.Context) {
 	userID := c.GetString("userID")
 
@@ -47,7 +61,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
-			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age
+			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
 		WHERE p.user_id = $1
@@ -63,7 +77,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
-			&it.LockType, &it.LockCode, &it.LockMinAge); err == nil {
+			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -113,7 +127,112 @@ func (h *LinksHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true})
+	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
+}
+
+// validVideoHosts -- No.77: "auto-embed" dibatasi ke YouTube/TikTok sesuai
+// scope (bukan embed generik sembarang situs, yang butuh whitelist iframe
+// jauh lebih hati-hati untuk keamanan).
+func isValidVideoEmbedURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	host := strings.ToLower(u.Host)
+	return strings.Contains(host, "youtube.com") || strings.Contains(host, "youtu.be") || strings.Contains(host, "tiktok.com")
+}
+
+// validateBlockData -- No.77: aturan tiap block_type. contact_form sengaja
+// tidak butuh field apa pun (form kontak selalu sama: nama/email/pesan,
+// tidak ada kustomisasi field untuk versi awal).
+func validateBlockData(blockType string, data map[string]any) (string, bool) {
+	switch blockType {
+	case "video":
+		videoURL, _ := data["video_url"].(string)
+		if !isValidVideoEmbedURL(videoURL) {
+			return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
+		}
+	case "faq":
+		items, ok := data["items"].([]any)
+		if !ok || len(items) == 0 {
+			return "isi minimal 1 pertanyaan FAQ", false
+		}
+		for _, raw := range items {
+			item, ok := raw.(map[string]any)
+			q, _ := item["question"].(string)
+			a, _ := item["answer"].(string)
+			if !ok || strings.TrimSpace(q) == "" || strings.TrimSpace(a) == "" {
+				return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
+			}
+		}
+	}
+	return "", true
+}
+
+type createBlockRequest struct {
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq"`
+	Title     string         `json:"title" binding:"required,max=100"`
+	BlockData map[string]any `json:"block_data"`
+}
+
+// CreateBlock — No.77 (Sprint 9): blok konten baru selain tautan biasa
+// (video embed, formulir kontak, FAQ/accordion) -- baris products biasa di
+// tabel links yang sama (pola identik bundel No.70: entitas baru TIDAK
+// perlu tabel terpisah kalau cukup jadi varian baris yang sudah ada),
+// ditaruh di posisi paling akhir dalam urutan yang SAMA dengan tautan biasa
+// (satu daftar tercampur di halaman publik).
+func (h *LinksHandler) CreateBlock(c *gin.Context) {
+	var req createBlockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.BlockData == nil {
+		req.BlockData = map[string]any{}
+	}
+	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var pageID string
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "halaman belum siap"})
+		return
+	}
+
+	var nextPosition int
+	if err := h.DB.QueryRow(ctx,
+		`SELECT COALESCE(MAX(position) + 1, 0) FROM links WHERE page_id = $1`, pageID,
+	).Scan(&nextPosition); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung posisi blok"})
+		return
+	}
+
+	blockDataJSON, err := json.Marshal(req.BlockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+
+	id := uuid.NewString()
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO links (id, page_id, title, url, position, is_active, block_type, block_data)
+		VALUES ($1, $2, $3, '', $4, true, $5, $6)
+	`, id, pageID, req.Title, nextPosition, req.BlockType, blockDataJSON); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat blok"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, linkItem{
+		ID: id, Title: req.Title, Position: nextPosition, IsActive: true,
+		BlockType: req.BlockType, BlockData: blockDataJSON,
+	})
 }
 
 type updateLinkRequest struct {
@@ -131,6 +250,10 @@ type updateLinkRequest struct {
 	LockCode   *string `json:"lock_code" binding:"omitempty,max=50"`
 	LockMinAge *int    `json:"lock_min_age" binding:"omitempty,min=13,max=99"`
 	ClearLock  bool    `json:"clear_lock"`
+	// No.77: mengedit isi blok konten (mis. tautan video baru atau item FAQ)
+	// -- divalidasi terhadap block_type baris yang SUDAH ada (tidak bisa
+	// ganti block_type lewat endpoint ini, cuma isinya).
+	BlockData map[string]any `json:"block_data"`
 }
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
@@ -227,6 +350,27 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// No.77: block_data divalidasi terhadap block_type baris yang SUDAH ADA
+	// (endpoint ini tidak bisa mengganti block_type, cuma isinya).
+	var blockDataJSON []byte
+	if req.BlockData != nil {
+		var currentBlockType string
+		if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&currentBlockType); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+			return
+		}
+		if msg, ok := validateBlockData(currentBlockType, req.BlockData); !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
+		}
+		encoded, err := json.Marshal(req.BlockData)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+			return
+		}
+		blockDataJSON = encoded
+	}
+
 	_, err := h.DB.Exec(ctx, `
 		UPDATE links SET
 			title = COALESCE($1, title),
@@ -236,9 +380,10 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			ends_at = COALESCE($5, ends_at),
 			lock_type = COALESCE($6, lock_type),
 			lock_code = COALESCE($7, lock_code),
-			lock_min_age = COALESCE($8, lock_min_age)
-		WHERE id = $9
-	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, linkID)
+			lock_min_age = COALESCE($8, lock_min_age),
+			block_data = COALESCE($9, block_data)
+		WHERE id = $10
+	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
@@ -318,6 +463,68 @@ func (h *LinksHandler) Unlock(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"url": url})
+}
+
+type contactFormRequest struct {
+	Name    string `json:"name" binding:"required,max=100"`
+	Email   string `json:"email" binding:"required,email"`
+	Message string `json:"message" binding:"required,max=2000"`
+}
+
+// SubmitContactForm — No.77 (Sprint 9): endpoint PUBLIK untuk blok Formulir
+// Kontak. Notifikasi ke kreator dikirim ASINKRON lewat queue (lihat
+// queue.TypeContactFormNotification) -- pengunjung tidak pernah menunggu
+// SMTP selesai, dan lambat/gagalnya SMTP tidak pernah membuat submit ini
+// gagal di sisi pengunjung.
+func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
+	linkID := c.Param("id")
+
+	var req contactFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var blockType, creatorEmail, pageUsername string
+	err := h.DB.QueryRow(ctx, `
+		SELECT l.block_type, u.email, u.username
+		FROM links l JOIN pages p ON p.id = l.page_id JOIN users u ON u.id = p.user_id
+		WHERE l.id = $1
+	`, linkID).Scan(&blockType, &creatorEmail, &pageUsername)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+		return
+	}
+	if blockType != "contact_form" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan formulir kontak"})
+		return
+	}
+
+	if h.Queue == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "pesan terkirim"})
+		return
+	}
+	task, err := queue.NewContactFormTask(queue.ContactFormPayload{
+		CreatorEmail: creatorEmail, PageUsername: pageUsername,
+		VisitorName: req.Name, VisitorEmail: req.Email, Message: req.Message,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengirim pesan"})
+		return
+	}
+	if _, err := h.Queue.Enqueue(task); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengirim pesan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "pesan terkirim"})
 }
 
 // Delete — REQ-F-202 (hapus permanen; untuk sementara pakai Update is_active=false).
