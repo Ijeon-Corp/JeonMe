@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
+import QRCodeModal from "@/components/QRCodeModal";
 import { clearToken, getMyPage, logout as apiLogout } from "@/lib/api-client";
 import {
   IconBell,
@@ -18,6 +19,7 @@ import {
   IconLink,
   IconLogout,
   IconMenu,
+  IconQrCode,
   IconSettings,
   IconSparkle,
   IconTag,
@@ -77,6 +79,7 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     getMyPage()
@@ -190,6 +193,14 @@ export default function DashboardLayout({
                 Lihat
               </a>
             </div>
+            <button
+              type="button"
+              onClick={() => setQrOpen(true)}
+              className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-border bg-white py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
+            >
+              <IconQrCode className="h-3 w-3" />
+              Kode QR
+            </button>
           </div>
         )}
 
@@ -248,6 +259,10 @@ export default function DashboardLayout({
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>
       </div>
+
+      {qrOpen && username && (
+        <QRCodeModal url={`https://jeonme.com/${username}`} username={username} onClose={() => setQrOpen(false)} />
+      )}
     </AuthGuard>
   );
 }

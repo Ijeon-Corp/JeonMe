@@ -267,6 +267,23 @@ export function IconBell({ className }: IconProps) {
   );
 }
 
+export function IconQrCode({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth={base} />
+      <rect x="14.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth={base} />
+      <rect x="3.5" y="14.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth={base} />
+      <path
+        d="M14.5 14.5h2.5v2.5M14.5 20h2.5M20 14.5v2.5M20 20h.01M17 20h.01"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconGift({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
