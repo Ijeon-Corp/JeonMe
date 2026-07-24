@@ -84,6 +84,13 @@ export interface PublicLink {
   id: string;
   title: string;
   url: string;
+  lock_type: "" | "age" | "code" | "subscribe";
+  lock_min_age: number | null;
+}
+
+// No.79 (Sprint 9): buka tautan terkunci -- endpoint publik, tanpa akun.
+export function unlockLink(linkId: string, input: { code?: string; email?: string; whatsapp_number?: string }) {
+  return apiFetch<{ url: string }>(`/links/${linkId}/unlock`, { method: "POST", body: JSON.stringify(input) });
 }
 
 export interface PublicProduct {
@@ -254,6 +261,9 @@ export interface LinkItem {
   is_active: boolean;
   starts_at: string | null;
   ends_at: string | null;
+  lock_type: "" | "age" | "code" | "subscribe";
+  lock_code: string;
+  lock_min_age: number | null;
 }
 
 export function listLinks() {
@@ -273,6 +283,10 @@ export function updateLink(
     starts_at: string;
     ends_at: string;
     clear_schedule: boolean;
+    lock_type: "age" | "code" | "subscribe";
+    lock_code: string;
+    lock_min_age: number;
+    clear_lock: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(

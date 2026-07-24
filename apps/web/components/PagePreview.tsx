@@ -1,6 +1,7 @@
 import { getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import LockedLinkButton from "@/components/LockedLinkButton";
 import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
 import ReportButton from "@/components/ReportButton";
@@ -11,6 +12,8 @@ export interface PagePreviewLink {
   id: string;
   title: string;
   url: string;
+  lockType?: "age" | "code" | "subscribe";
+  lockMinAge?: number | null;
 }
 
 export interface PagePreviewProduct {
@@ -177,7 +180,29 @@ export default function PagePreview({
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-3">
             {data.links.map((link) =>
-              interactive ? (
+              link.lockType ? (
+                interactive ? (
+                  <LockedLinkButton
+                    key={link.id}
+                    username={data.username}
+                    linkId={link.id}
+                    title={link.title}
+                    lockType={link.lockType}
+                    lockMinAge={link.lockMinAge ?? null}
+                    className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  />
+                ) : (
+                  <button
+                    key={link.id}
+                    type="button"
+                    disabled
+                    title="Pratinjau -- tombol ini tidak aktif"
+                    className={`flex w-full cursor-not-allowed items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  >
+                    <span className="truncate">🔒 {link.title}</span>
+                  </button>
+                )
+              ) : interactive ? (
                 <TrackedLink
                   key={link.id}
                   username={data.username}

@@ -36,6 +36,13 @@ export default function DashboardLinksPage() {
   const [scheduleEnd, setScheduleEnd] = useState("");
   const [savingSchedule, setSavingSchedule] = useState(false);
 
+  // No.79 (Sprint 9): kunci tautan (usia/kode/subscribe).
+  const [lockEditId, setLockEditId] = useState<string | null>(null);
+  const [lockTypeInput, setLockTypeInput] = useState<"age" | "code" | "subscribe">("code");
+  const [lockCodeInput, setLockCodeInput] = useState("");
+  const [lockMinAgeInput, setLockMinAgeInput] = useState("18");
+  const [savingLock, setSavingLock] = useState(false);
+
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts()])
       .then(([p, l, prod]) => {
@@ -121,6 +128,51 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membatalkan jadwal.");
+    }
+  }
+
+  function openLockForm(link: LinkItem) {
+    setLockEditId(link.id);
+    setLockTypeInput(link.lock_type || "code");
+    setLockCodeInput(link.lock_code || "");
+    setLockMinAgeInput(link.lock_min_age ? String(link.lock_min_age) : "18");
+  }
+
+  async function handleSaveLock(link: LinkItem) {
+    if (lockTypeInput === "code" && !lockCodeInput.trim()) {
+      setError("Kode akses wajib diisi untuk kunci kode.");
+      return;
+    }
+    if (lockTypeInput === "age" && (!lockMinAgeInput || Number(lockMinAgeInput) < 13)) {
+      setError("Batas usia minimal 13 tahun.");
+      return;
+    }
+    setError(null);
+    setSavingLock(true);
+    try {
+      await updateLink(link.id, {
+        lock_type: lockTypeInput,
+        lock_code: lockTypeInput === "code" ? lockCodeInput.trim() : undefined,
+        lock_min_age: lockTypeInput === "age" ? Number(lockMinAgeInput) : undefined,
+      });
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+      setLockEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunci tautan.");
+    } finally {
+      setSavingLock(false);
+    }
+  }
+
+  async function handleClearLock(link: LinkItem) {
+    setError(null);
+    try {
+      await updateLink(link.id, { clear_lock: true });
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membuka kunci tautan.");
     }
   }
 
@@ -244,6 +296,83 @@ export default function DashboardLinksPage() {
                     className="self-start text-[11px] font-bold text-primary hover:underline"
                   >
                     Jadwalkan tampil/sembunyi
+                  </button>
+                )}
+
+                {lockEditId === link.id ? (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                    <select
+                      value={lockTypeInput}
+                      onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe")}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    >
+                      <option value="code">Kode akses</option>
+                      <option value="age">Konfirmasi usia</option>
+                      <option value="subscribe">Wajib subscribe (email/WhatsApp)</option>
+                    </select>
+                    {lockTypeInput === "code" && (
+                      <input
+                        type="text"
+                        placeholder="Kode akses"
+                        value={lockCodeInput}
+                        onChange={(e) => setLockCodeInput(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    )}
+                    {lockTypeInput === "age" && (
+                      <input
+                        type="number"
+                        min={13}
+                        max={99}
+                        placeholder="Batas usia"
+                        value={lockMinAgeInput}
+                        onChange={(e) => setLockMinAgeInput(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    )}
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setLockEditId(null)}
+                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingLock}
+                        onClick={() => handleSaveLock(link)}
+                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                      >
+                        {savingLock ? "Menyimpan..." : "Simpan"}
+                      </button>
+                    </div>
+                  </div>
+                ) : link.lock_type ? (
+                  <div className="flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-secondary-dark">
+                      🔒 Terkunci --{" "}
+                      {link.lock_type === "code"
+                        ? "kode akses"
+                        : link.lock_type === "age"
+                          ? `usia ${link.lock_min_age ?? 18}+`
+                          : "wajib subscribe"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleClearLock(link)}
+                      className="text-[11px] font-bold text-red-600 hover:underline"
+                    >
+                      Buka Kunci
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openLockForm(link)}
+                    className="self-start text-[11px] font-bold text-primary hover:underline"
+                  >
+                    Kunci tautan
                   </button>
                 )}
               </li>

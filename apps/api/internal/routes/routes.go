@@ -54,6 +54,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		checkoutRateLimit := middleware.RateLimit(rdb, "checkout", 20, time.Minute)
 		trackRateLimit := middleware.RateLimit(rdb, "track", 60, time.Minute)
 		leadsRateLimit := middleware.RateLimit(rdb, "leads", 20, time.Minute)
+		// No.79: batasi lebih ketat dari leads -- ini juga jalur brute-force
+		// menebak kode akses tautan terkunci.
+		linkUnlockRateLimit := middleware.RateLimit(rdb, "link-unlock", 15, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -81,6 +84,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.73 (Sprint 8): blok pengumpulan lead di halaman publik -- siapa
 		// pun bisa submit tanpa akun, sama seperti /reports.
 		api.POST("/leads", leadsRateLimit, audience.SubscribeLead)
+
+		// No.79 (Sprint 9): buka tautan terkunci (usia/kode/subscribe).
+		api.POST("/links/:id/unlock", linkUnlockRateLimit, links.Unlock)
 
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")

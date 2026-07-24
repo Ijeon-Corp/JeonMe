@@ -71,7 +71,13 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
           bio: page.bio,
           avatarUrl: page.avatar_url,
           theme: page.theme,
-          links: page.links,
+          links: page.links.map((l) => ({
+            id: l.id,
+            title: l.title,
+            url: l.url,
+            lockType: l.lock_type || undefined,
+            lockMinAge: l.lock_min_age,
+          })),
           products: page.products.map((p) => ({
             id: p.id,
             name: p.name,

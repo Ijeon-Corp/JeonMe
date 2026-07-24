@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,16 +23,22 @@ func NewLinksHandler(db *pgxpool.Pool) *LinksHandler {
 }
 
 type linkItem struct {
-	ID       string     `json:"id"`
-	Title    string     `json:"title"`
-	URL      string     `json:"url"`
-	Position int        `json:"position"`
-	IsActive bool       `json:"is_active"`
-	StartsAt *time.Time `json:"starts_at"`
-	EndsAt   *time.Time `json:"ends_at"`
+	ID         string     `json:"id"`
+	Title      string     `json:"title"`
+	URL        string     `json:"url"`
+	Position   int        `json:"position"`
+	IsActive   bool       `json:"is_active"`
+	StartsAt   *time.Time `json:"starts_at"`
+	EndsAt     *time.Time `json:"ends_at"`
+	LockType   string     `json:"lock_type"`
+	LockCode   string     `json:"lock_code"`
+	LockMinAge *int       `json:"lock_min_age"`
 }
 
-// List mengembalikan seluruh tautan milik kreator yang sedang login, urut posisi.
+// List mengembalikan seluruh tautan milik kreator yang sedang login, urut
+// posisi. lock_code disertakan (BUKAN disembunyikan) karena ini endpoint
+// dashboard kreator sendiri -- dia yang membuat kodenya, wajar dia bisa
+// melihatnya lagi untuk diedit.
 func (h *LinksHandler) List(c *gin.Context) {
 	userID := c.GetString("userID")
 
@@ -39,7 +46,8 @@ func (h *LinksHandler) List(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at
+		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
+			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
 		WHERE p.user_id = $1
@@ -54,7 +62,8 @@ func (h *LinksHandler) List(c *gin.Context) {
 	items := []linkItem{}
 	for rows.Next() {
 		var it linkItem
-		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt); err == nil {
+		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
+			&it.LockType, &it.LockCode, &it.LockMinAge); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -114,6 +123,14 @@ type updateLinkRequest struct {
 	StartsAt      *string `json:"starts_at"`
 	EndsAt        *string `json:"ends_at"`
 	ClearSchedule bool    `json:"clear_schedule"`
+	// No.79 (Sprint 9): kunci tautan -- lock_type kosong ("") berarti tidak
+	// terkunci. "age" butuh lock_min_age, "code" butuh lock_code, "subscribe"
+	// tidak butuh keduanya (URL asli disembunyikan dari halaman publik,
+	// baru dibuka lewat POST /links/:id/unlock).
+	LockType   *string `json:"lock_type" binding:"omitempty,oneof=age code subscribe"`
+	LockCode   *string `json:"lock_code" binding:"omitempty,max=50"`
+	LockMinAge *int    `json:"lock_min_age" binding:"omitempty,min=13,max=99"`
+	ClearLock  bool    `json:"clear_lock"`
 }
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
@@ -168,21 +185,139 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// No.79: validasi field yang wajib menyertai tiap lock_type -- dicek
+	// terhadap NILAI AKHIR (yang baru diisi ATAU yang sudah tersimpan),
+	// sama seperti pola validasi pwyw/flash sale di ProductHandler.Update.
+	if req.LockType != nil {
+		var currentLockCode string
+		var currentLockMinAge *int
+		if err := h.DB.QueryRow(ctx, `SELECT lock_code, lock_min_age FROM links WHERE id = $1`, linkID).
+			Scan(&currentLockCode, &currentLockMinAge); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+			return
+		}
+		switch *req.LockType {
+		case "age":
+			minAge := currentLockMinAge
+			if req.LockMinAge != nil {
+				minAge = req.LockMinAge
+			}
+			if minAge == nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "batas usia wajib diisi untuk kunci usia"})
+				return
+			}
+		case "code":
+			code := currentLockCode
+			if req.LockCode != nil {
+				code = *req.LockCode
+			}
+			if code == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "kode akses wajib diisi untuk kunci kode"})
+				return
+			}
+		}
+	}
+
+	if req.ClearLock {
+		if _, err := h.DB.Exec(ctx, `
+			UPDATE links SET lock_type = NULL, lock_code = '', lock_min_age = NULL WHERE id = $1
+		`, linkID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuka kunci tautan"})
+			return
+		}
+	}
+
 	_, err := h.DB.Exec(ctx, `
 		UPDATE links SET
 			title = COALESCE($1, title),
 			url = COALESCE($2, url),
 			is_active = COALESCE($3, is_active),
 			starts_at = COALESCE($4, starts_at),
-			ends_at = COALESCE($5, ends_at)
-		WHERE id = $6
-	`, req.Title, req.URL, req.IsActive, starts, ends, linkID)
+			ends_at = COALESCE($5, ends_at),
+			lock_type = COALESCE($6, lock_type),
+			lock_code = COALESCE($7, lock_code),
+			lock_min_age = COALESCE($8, lock_min_age)
+		WHERE id = $9
+	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "tautan diperbarui"})
+}
+
+// Unlock — No.79 (Sprint 9): endpoint PUBLIK, dipanggil dari halaman publik
+// begitu pengunjung melewati gerbang kunci (konfirmasi usia, masukkan kode,
+// atau daftar email/whatsapp). Mengembalikan URL asli HANYA kalau gerbang
+// terlewati -- URL tidak pernah dikirim di payload halaman publik untuk
+// tautan terkunci (lihat PageHandler.GetPublicPage).
+type unlockLinkRequest struct {
+	Code           string `json:"code"`
+	Email          string `json:"email"`
+	WhatsappNumber string `json:"whatsapp_number"`
+}
+
+func (h *LinksHandler) Unlock(c *gin.Context) {
+	linkID := c.Param("id")
+
+	var req unlockLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var url, lockType, lockCode string
+	var creatorUserID string
+	err := h.DB.QueryRow(ctx, `
+		SELECT l.url, COALESCE(l.lock_type, ''), l.lock_code, p.user_id
+		FROM links l JOIN pages p ON p.id = l.page_id
+		WHERE l.id = $1
+	`, linkID).Scan(&url, &lockType, &lockCode, &creatorUserID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+		return
+	}
+
+	switch lockType {
+	case "code":
+		if strings.TrimSpace(req.Code) == "" || req.Code != lockCode {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "kode akses salah"})
+			return
+		}
+	case "subscribe":
+		email := strings.TrimSpace(strings.ToLower(req.Email))
+		whatsapp := strings.TrimSpace(req.WhatsappNumber)
+		if email == "" && whatsapp == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "isi email atau nomor WhatsApp"})
+			return
+		}
+		// No.79: subscribe-lock sekaligus jadi sumber lead baru untuk
+		// Manajer Audiens (No.73) -- INSERT ke tabel subscribers yang sama,
+		// dedupe email persis seperti AudienceHandler.SubscribeLead.
+		if _, err := h.DB.Exec(ctx, `
+			INSERT INTO subscribers (creator_user_id, email, whatsapp_number)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (creator_user_id, email) WHERE email <> '' DO UPDATE SET
+				whatsapp_number = CASE WHEN EXCLUDED.whatsapp_number <> '' THEN EXCLUDED.whatsapp_number ELSE subscribers.whatsapp_number END
+		`, creatorUserID, email, whatsapp); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data"})
+			return
+		}
+	case "age":
+		// Konfirmasi usia murni klik persetujuan (tidak ada verifikasi
+		// identitas sungguhan) -- konsisten dengan perilaku age-lock
+		// Linktree yang sebenarnya (dikonfirmasi riset kompetitor).
+	}
+
+	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 
 // Delete — REQ-F-202 (hapus permanen; untuk sementara pakai Update is_active=false).

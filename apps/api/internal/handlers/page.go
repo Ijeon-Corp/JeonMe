@@ -78,10 +78,16 @@ type publicDonation struct {
 	MinAmountIDR int64  `json:"min_amount_idr"`
 }
 
+// publicLink -- No.79 (Sprint 9): URL SENGAJA dikosongkan kalau LockType
+// terisi -- pengunjung harus lewat gerbang kunci (LinksHandler.Unlock)
+// dulu untuk mendapat URL asli, tidak boleh bocor lewat payload halaman
+// publik sebelum itu.
 type publicLink struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	URL        string `json:"url"`
+	LockType   string `json:"lock_type"`
+	LockMinAge *int   `json:"lock_min_age"`
 }
 
 type publicItem struct {
@@ -143,7 +149,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	// gate is_active manual yang sudah ada -- keduanya harus lolos.
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, title, url FROM links
+		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age FROM links
 		WHERE page_id = (SELECT id FROM pages WHERE user_id = $1)
 		AND is_active = true
 		AND (starts_at IS NULL OR starts_at <= now())
@@ -154,7 +160,12 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		defer rows.Close()
 		for rows.Next() {
 			var l publicLink
-			if err := rows.Scan(&l.ID, &l.Title, &l.URL); err == nil {
+			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge); err == nil {
+				// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
+				// komentar di definisi struct publicLink.
+				if l.LockType != "" {
+					l.URL = ""
+				}
 				resp.Links = append(resp.Links, l)
 			}
 		}
