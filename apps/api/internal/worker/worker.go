@@ -47,11 +47,12 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 	}
 
 	var buyerEmail, productName, status string
+	var isDonation bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.buyer_email, p.name, o.status
+		SELECT o.buyer_email, p.name, o.status, p.is_donation
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, payload.OrderID).Scan(&buyerEmail, &productName, &status)
+	`, payload.OrderID).Scan(&buyerEmail, &productName, &status, &isDonation)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			log.Printf("worker: order %s tidak ditemukan, lewati notifikasi", payload.OrderID)
@@ -67,14 +68,27 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 		return nil
 	}
 
-	downloadURL := fmt.Sprintf("%s/checkout/%s/download", h.PublicAPIURL, payload.OrderID)
-	subject := fmt.Sprintf("Pesananmu di Jeonme sudah bisa diunduh: %s", productName)
-	body := fmt.Sprintf(
-		"Terima kasih sudah membeli %s di Jeonme!\n\n"+
-			"Unduh file kamu lewat tautan berikut (bisa dipakai berkali-kali):\n%s\n\n"+
-			"Salam,\nTim Jeonme",
-		productName, downloadURL,
-	)
+	var subject, body string
+	if isDonation {
+		// No.71: donasi tidak pernah punya file -- ucapan terima kasih
+		// saja, TANPA tautan unduhan (tidak ada yang bisa diunduh).
+		subject = fmt.Sprintf("Terima kasih atas dukunganmu: %s", productName)
+		body = fmt.Sprintf(
+			"Terima kasih sudah memberi dukungan lewat %s di Jeonme!\n\n"+
+				"Dukunganmu langsung diteruskan ke kreator. Sampai jumpa lagi!\n\n"+
+				"Salam,\nTim Jeonme",
+			productName,
+		)
+	} else {
+		downloadURL := fmt.Sprintf("%s/checkout/%s/download", h.PublicAPIURL, payload.OrderID)
+		subject = fmt.Sprintf("Pesananmu di Jeonme sudah bisa diunduh: %s", productName)
+		body = fmt.Sprintf(
+			"Terima kasih sudah membeli %s di Jeonme!\n\n"+
+				"Unduh file kamu lewat tautan berikut (bisa dipakai berkali-kali):\n%s\n\n"+
+				"Salam,\nTim Jeonme",
+			productName, downloadURL,
+		)
+	}
 
 	if err := h.Mailer.Send(buyerEmail, subject, body); err != nil {
 		return fmt.Errorf("worker: gagal kirim notifikasi order %s: %w", payload.OrderID, err)

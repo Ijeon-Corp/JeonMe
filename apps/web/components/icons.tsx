@@ -231,6 +231,19 @@ export function IconTag({ className }: IconProps) {
   );
 }
 
+export function IconHeart({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 19.5s-7-4.35-9-8.35C1.5 8 3 5 6 5c2 0 3.2 1.1 4 2.4C10.8 6.1 12 5 14 5c3 0 4.5 3 3 6.15-2 4-9 8.35-9 8.35Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconGift({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

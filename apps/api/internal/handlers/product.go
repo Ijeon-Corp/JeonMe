@@ -127,13 +127,14 @@ func (h *ProductHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// No.70: bundel TIDAK ikut tampil di sini -- bundel punya halaman
-	// dashboard sendiri (/dashboard/bundles), sama seperti voucher.
+	// No.70/71: bundel & blok dukungan TIDAK ikut tampil di sini -- masing-
+	// masing punya halaman dashboard sendiri (/dashboard/bundles,
+	// /dashboard/donation), sama seperti voucher.
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
 			pwyw_enabled, pwyw_min_price_idr
-		FROM products WHERE user_id = $1 AND is_bundle = false
+		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -204,20 +205,21 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
-	var isBundle bool
+	var isBundle, isDonation bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
 	}
 
-	// No.70: bundel tidak pernah punya file sendiri -- keabsahannya sudah
-	// dijamin saat dibuat (minimal 2 produk aktif), jadi lewati pengecekan
-	// file_key yang berlaku untuk produk biasa.
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle {
+	// No.70/71: bundel & blok dukungan tidak pernah punya file sendiri --
+	// keabsahannya dijamin di tempat lain (bundel: minimal 2 produk aktif
+	// saat dibuat; donasi: selalu bayar-seikhlasnya, tidak pernah kirim
+	// file), jadi lewati pengecekan file_key yang berlaku untuk produk biasa.
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}

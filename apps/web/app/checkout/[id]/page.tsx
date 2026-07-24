@@ -76,7 +76,16 @@ export default function CheckoutStatusPage() {
               <>
                 <p className="font-heading text-lg font-bold text-secondary-dark">Pembayaran Berhasil</p>
                 <p className="mt-2 text-sm text-muted">
-                  Terima kasih! Pesananmu untuk <b>{status.product_name}</b> sudah dikonfirmasi.
+                  {status.is_donation ? (
+                    <>
+                      Terima kasih atas dukunganmu lewat <b>{status.product_name}</b>! Dukunganmu langsung diteruskan
+                      ke kreator.
+                    </>
+                  ) : (
+                    <>
+                      Terima kasih! Pesananmu untuk <b>{status.product_name}</b> sudah dikonfirmasi.
+                    </>
+                  )}
                 </p>
 
                 {status.is_bundle && (

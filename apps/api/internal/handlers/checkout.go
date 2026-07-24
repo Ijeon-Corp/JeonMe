@@ -241,10 +241,11 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 }
 
 type checkoutStatusResponse struct {
-	OrderID  string `json:"order_id"`
-	Status   string `json:"status"`
-	Product  string `json:"product_name"`
-	IsBundle bool   `json:"is_bundle"`
+	OrderID    string `json:"order_id"`
+	Status     string `json:"status"`
+	Product    string `json:"product_name"`
+	IsBundle   bool   `json:"is_bundle"`
+	IsDonation bool   `json:"is_donation"`
 }
 
 // GetStatus — dipakai halaman konfirmasi pembeli untuk menampilkan status
@@ -258,10 +259,10 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	var resp checkoutStatusResponse
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.name, p.is_bundle FROM orders o
+		SELECT o.status, p.name, p.is_bundle, p.is_donation FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &resp.Product, &resp.IsBundle)
+	`, orderID).Scan(&resp.Status, &resp.Product, &resp.IsBundle, &resp.IsDonation)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -448,12 +449,12 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	defer cancel()
 
 	var status, fileKey string
-	var isBundle bool
+	var isBundle, isDonation bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.file_key, p.is_bundle FROM orders o
+		SELECT o.status, p.file_key, p.is_bundle, p.is_donation FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &fileKey, &isBundle)
+	`, orderID).Scan(&status, &fileKey, &isBundle, &isDonation)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -472,7 +473,10 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	// jadi tidak bisa langsung redirect ke satu presigned URL seperti
 	// produk biasa -- arahkan ke halaman status checkout, yang menampilkan
 	// daftar unduhan lewat GET /checkout/:id/bundle-items.
-	if isBundle {
+	// No.71: donasi tidak pernah punya file sama sekali -- arahkan juga ke
+	// halaman status, yang menampilkan ucapan terima kasih tanpa tombol
+	// unduh (bukan error 404 "file tidak tersedia").
+	if isBundle || isDonation {
 		c.Redirect(http.StatusFound, h.PublicWebURL+"/checkout/"+orderID)
 		return
 	}

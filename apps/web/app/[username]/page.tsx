@@ -76,6 +76,13 @@ export default async function CreatorPage({ params }: PageParams) {
             isBundle: p.is_bundle,
             bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
           })),
+          donation: page.donation
+            ? {
+                productId: page.donation.product_id,
+                title: page.donation.title,
+                minAmountIdr: page.donation.min_amount_idr,
+              }
+            : undefined,
         }}
         interactive
       />

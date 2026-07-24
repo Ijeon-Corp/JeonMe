@@ -2,7 +2,7 @@ import { getPageTheme } from "@/lib/page-themes";
 import BuyProductButton from "@/components/BuyProductButton";
 import TrackedLink from "@/components/TrackedLink";
 import ReportButton from "@/components/ReportButton";
-import { IconBox, IconChevronRight } from "@/components/icons";
+import { IconBox, IconChevronRight, IconHeart } from "@/components/icons";
 
 export interface PagePreviewLink {
   id: string;
@@ -23,6 +23,12 @@ export interface PagePreviewProduct {
   bundleOriginalPriceIdr?: number;
 }
 
+export interface PagePreviewDonation {
+  productId: string;
+  title: string;
+  minAmountIdr: number;
+}
+
 export interface PagePreviewData {
   id?: string;
   username: string;
@@ -31,6 +37,7 @@ export interface PagePreviewData {
   theme: string;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
+  donation?: PagePreviewDonation;
 }
 
 interface PreviewSourcePage {
@@ -166,6 +173,37 @@ export default function PagePreview({
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
                 </a>
               )
+            )}
+          </div>
+        )}
+
+        {data.donation && (
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-2xl p-4 text-center ${theme.productCard}`}>
+            <IconHeart className={`h-6 w-6 ${theme.chevron}`} />
+            <p className={`text-sm font-semibold ${theme.productTitle}`}>{data.donation.title}</p>
+            <p className={`text-xs ${theme.bio}`}>
+              Mulai dari Rp {data.donation.minAmountIdr.toLocaleString("id-ID")}
+            </p>
+            {interactive ? (
+              <div className="w-full">
+                <BuyProductButton
+                  productId={data.donation.productId}
+                  buttonClassName={theme.buyButton}
+                  pwywMinPriceIdr={data.donation.minAmountIdr}
+                  hideVoucher
+                  openLabel="Dukung"
+                  submitLabel="Kirim Dukungan"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Pratinjau -- tombol ini tidak aktif"
+                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+              >
+                Dukung
+              </button>
             )}
           </div>
         )}

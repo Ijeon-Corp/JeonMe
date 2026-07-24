@@ -7,10 +7,19 @@ export default function BuyProductButton({
   productId,
   buttonClassName = "bg-primary text-white hover:opacity-90",
   pwywMinPriceIdr,
+  hideVoucher = false,
+  openLabel = "Beli",
+  submitLabel = "Bayar Sekarang",
 }: {
   productId: string;
   buttonClassName?: string;
   pwywMinPriceIdr?: number;
+  // No.71: dipakai ulang untuk blok dukungan/donasi -- kode voucher tidak
+  // masuk akal untuk donasi, dan labelnya perlu bilang "Dukung"/"Kirim
+  // Dukungan", bukan "Beli"/"Bayar Sekarang".
+  hideVoucher?: boolean;
+  openLabel?: string;
+  submitLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -76,7 +85,7 @@ export default function BuyProductButton({
         onClick={() => setOpen(true)}
         className={`mt-2.5 w-full rounded-lg py-1.5 text-xs transition-all duration-200 ${buttonClassName}`}
       >
-        Beli
+        {openLabel}
       </button>
     );
   }
@@ -107,46 +116,47 @@ export default function BuyProductButton({
         className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
       />
 
-      {!showVoucher ? (
-        <button
-          type="button"
-          onClick={() => setShowVoucher(true)}
-          className="text-left text-[10px] font-semibold underline opacity-80"
-        >
-          Punya kode voucher?
-        </button>
-      ) : (
-        <div className="flex flex-col gap-1">
-          <div className="flex gap-1">
-            <input
-              type="text"
-              placeholder="Kode voucher"
-              value={voucherCode}
-              onChange={(e) => {
-                setVoucherCode(e.target.value.toUpperCase());
-                setVoucherResult(null);
-                setVoucherMessage(null);
-              }}
-              className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs uppercase text-ink focus:border-primary focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleApplyVoucher}
-              disabled={checkingVoucher || !voucherCode.trim()}
-              className="flex-shrink-0 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-ink disabled:opacity-60"
-            >
-              {checkingVoucher ? "..." : "Terapkan"}
-            </button>
+      {!hideVoucher &&
+        (!showVoucher ? (
+          <button
+            type="button"
+            onClick={() => setShowVoucher(true)}
+            className="text-left text-[10px] font-semibold underline opacity-80"
+          >
+            Punya kode voucher?
+          </button>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-1">
+              <input
+                type="text"
+                placeholder="Kode voucher"
+                value={voucherCode}
+                onChange={(e) => {
+                  setVoucherCode(e.target.value.toUpperCase());
+                  setVoucherResult(null);
+                  setVoucherMessage(null);
+                }}
+                className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs uppercase text-ink focus:border-primary focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleApplyVoucher}
+                disabled={checkingVoucher || !voucherCode.trim()}
+                className="flex-shrink-0 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-ink disabled:opacity-60"
+              >
+                {checkingVoucher ? "..." : "Terapkan"}
+              </button>
+            </div>
+            {voucherResult && (
+              <p className="text-[10px] font-semibold text-green-300">
+                Diskon Rp {voucherResult.discountIDR.toLocaleString("id-ID")} diterapkan -- total Rp{" "}
+                {voucherResult.finalIDR.toLocaleString("id-ID")}
+              </p>
+            )}
+            {voucherMessage && <p className="text-[10px] text-red-400">{voucherMessage}</p>}
           </div>
-          {voucherResult && (
-            <p className="text-[10px] font-semibold text-green-300">
-              Diskon Rp {voucherResult.discountIDR.toLocaleString("id-ID")} diterapkan -- total Rp{" "}
-              {voucherResult.finalIDR.toLocaleString("id-ID")}
-            </p>
-          )}
-          {voucherMessage && <p className="text-[10px] text-red-400">{voucherMessage}</p>}
-        </div>
-      )}
+        ))}
 
       {error && <p className="text-[10px] text-red-400">{error}</p>}
       <button
@@ -154,7 +164,7 @@ export default function BuyProductButton({
         disabled={loading}
         className={`w-full rounded-lg py-1.5 text-xs transition-all duration-200 disabled:opacity-60 ${buttonClassName}`}
       >
-        {loading ? "Memproses..." : "Bayar Sekarang"}
+        {loading ? "Memproses..." : submitLabel}
       </button>
     </form>
   );

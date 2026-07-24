@@ -29,6 +29,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
 	bundle := handlers.NewBundleHandler(db)
+	donation := handlers.NewDonationHandler(db)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -107,6 +108,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// ada, jadi cuma perlu List+Create di sini.
 			dashboard.GET("/bundles", bundle.List)
 			dashboard.POST("/bundles", bundle.Create)
+
+			// No.71 (Sprint 7): blok dukungan/donasi -- juga baris products
+			// (is_donation=true), tapi cuma SATU per kreator, jadi cukup
+			// Get+Upsert (bukan CRUD list biasa).
+			dashboard.GET("/donation", donation.Get)
+			dashboard.PUT("/donation", donation.Upsert)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

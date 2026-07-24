@@ -37,13 +37,23 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID        string       `json:"id"`
-	Username  string       `json:"username"`
-	Bio       string       `json:"bio"`
-	AvatarURL string       `json:"avatar_url"`
-	Theme     string       `json:"theme"`
-	Links     []publicLink `json:"links"`
-	Products  []publicItem `json:"products"`
+	ID        string          `json:"id"`
+	Username  string          `json:"username"`
+	Bio       string          `json:"bio"`
+	AvatarURL string          `json:"avatar_url"`
+	Theme     string          `json:"theme"`
+	Links     []publicLink    `json:"links"`
+	Products  []publicItem    `json:"products"`
+	Donation  *publicDonation `json:"donation"`
+}
+
+// publicDonation -- No.71: blok dukungan/donasi, TIDAK ikut array Products
+// (tampil sebagai blok tersendiri di halaman publik, bukan kartu di grid
+// Produk). nil kalau kreator belum mengaktifkan blok ini.
+type publicDonation struct {
+	ProductID    string `json:"product_id"`
+	Title        string `json:"title"`
+	MinAmountIDR int64  `json:"min_amount_idr"`
 }
 
 type publicLink struct {
@@ -125,12 +135,14 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
 	// di halaman publik sebagai produk yang bisa dibeli, dengan harga
 	// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
+	// No.71: blok dukungan/donasi DIFILTER di sini -- ia tampil sebagai blok
+	// tersendiri (resp.Donation), bukan kartu di grid Produk.
 	resp.Products = []publicItem{}
 	productRows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
 			p.is_bundle,
 			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id)
-		FROM products p WHERE p.user_id = $1 AND p.is_active = true
+		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false
 	`, userID)
 	if err == nil {
 		defer productRows.Close()
@@ -141,6 +153,18 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 				resp.Products = append(resp.Products, p)
 			}
 		}
+	}
+
+	var donation publicDonation
+	var minAmount *int64
+	if err := h.DB.QueryRow(ctx, `
+		SELECT id, name, pwyw_min_price_idr FROM products
+		WHERE user_id = $1 AND is_donation = true AND is_active = true
+	`, userID).Scan(&donation.ProductID, &donation.Title, &minAmount); err == nil {
+		if minAmount != nil {
+			donation.MinAmountIDR = *minAmount
+		}
+		resp.Donation = &donation
 	}
 
 	if h.RDB != nil {

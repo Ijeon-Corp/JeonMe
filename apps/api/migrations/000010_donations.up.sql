@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN is_donation BOOLEAN NOT NULL DEFAULT false;

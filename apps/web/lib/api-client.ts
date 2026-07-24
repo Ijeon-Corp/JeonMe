@@ -99,6 +99,12 @@ export interface PublicProduct {
   bundle_original_price_idr: number | null;
 }
 
+export interface PublicDonation {
+  product_id: string;
+  title: string;
+  min_amount_idr: number;
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -107,6 +113,7 @@ export interface PublicPage {
   theme: string;
   links: PublicLink[];
   products: PublicProduct[];
+  donation: PublicDonation | null;
 }
 
 /**
@@ -437,6 +444,29 @@ export function createBundle(input: { name: string; price_idr: number; product_i
   );
 }
 
+// ---------- Dashboard: blok dukungan/donasi (Sprint 7, No.71) ----------
+// Donasi juga baris produk biasa (is_donation=true, pwyw_enabled=true),
+// tapi cuma SATU per kreator -- Get+Upsert, bukan CRUD list.
+
+export interface DonationSettings {
+  product_id: string | null;
+  enabled: boolean;
+  title: string;
+  min_amount_idr: number | null;
+}
+
+export function getDonationSettings() {
+  return apiFetch<DonationSettings>("/dashboard/donation", { method: "GET" }, { auth: true });
+}
+
+export function upsertDonationSettings(input: { enabled: boolean; title: string; min_amount_idr: number }) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/donation",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
 export function createCheckout(input: {
@@ -471,6 +501,7 @@ export interface CheckoutStatus {
   status: "pending" | "paid" | "expired" | "failed";
   product_name: string;
   is_bundle: boolean;
+  is_donation: boolean;
 }
 
 export function getCheckoutStatus(orderId: string) {
