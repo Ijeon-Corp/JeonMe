@@ -118,6 +118,26 @@ func (c *Client) Delete(ctx context.Context, key string) error {
 	return c.mc.RemoveObject(ctx, c.Bucket, key, minio.RemoveObjectOptions{})
 }
 
+// Download mengambil seluruh isi object ke memori -- dipakai No.85
+// (watermark PDF) yang perlu memproses seluruh byte file produk sebelum
+// diunggah ulang sebagai salinan ber-watermark. Cukup aman untuk ukuran
+// file produk saat ini (maksimum 100MB, lihat maxProductFileSize) --
+// BUKAN pola streaming, jangan dipakai untuk file yang bisa jauh lebih
+// besar di masa depan.
+func (c *Client) Download(ctx context.Context, key string) ([]byte, error) {
+	obj, err := c.mc.GetObject(ctx, c.Bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil file: %w", err)
+	}
+	defer obj.Close()
+
+	data, err := io.ReadAll(obj)
+	if err != nil {
+		return nil, fmt.Errorf("gagal membaca file: %w", err)
+	}
+	return data, nil
+}
+
 // PresignedDownloadURL — REQ-F-304: URL unduhan aman & kedaluwarsa, bukan
 // tautan permanen ke file. Dipakai dashboard kreator untuk mengecek file yang
 // diunggah, dan nantinya oleh alur checkout (Sprint 3) untuk pembeli.

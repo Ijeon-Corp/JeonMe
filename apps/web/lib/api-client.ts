@@ -370,6 +370,8 @@ export interface DashboardProduct {
   is_flash_sale_active: boolean;
   pwyw_enabled: boolean;
   pwyw_min_price_idr: number | null;
+  watermark_enabled: boolean;
+  is_pdf: boolean;
 }
 
 export function listProducts() {
@@ -397,6 +399,7 @@ export function updateProduct(
     clear_flash_sale: boolean;
     pwyw_enabled: boolean;
     pwyw_min_price_idr: number;
+    watermark_enabled: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(

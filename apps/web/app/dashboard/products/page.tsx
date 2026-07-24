@@ -96,6 +96,8 @@ export default function DashboardProductsPage() {
           is_flash_sale_active: false,
           pwyw_enabled: false,
           pwyw_min_price_idr: null,
+          watermark_enabled: false,
+          is_pdf: false,
         },
       ]);
       setName("");
@@ -113,7 +115,8 @@ export default function DashboardProductsPage() {
     setBusyId(product.id);
     try {
       await uploadProductFile(product.id, file);
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, has_file: true } : p)));
+      const isPdf = file.name.toLowerCase().endsWith(".pdf");
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, has_file: true, is_pdf: isPdf } : p)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
     } finally {
@@ -147,6 +150,20 @@ export default function DashboardProductsPage() {
     } catch (err) {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, is_active: product.is_active } : p)));
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status produk.");
+    }
+  }
+
+  // No.85: watermark otomatis (email pembeli + ID pesanan) hanya berlaku
+  // untuk file PDF -- lihat catatan lingkup di applyPdfWatermark backend.
+  async function handleToggleWatermark(product: DashboardProduct) {
+    const next = !product.watermark_enabled;
+    setError(null);
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, watermark_enabled: next } : p)));
+    try {
+      await updateProduct(product.id, { watermark_enabled: next });
+    } catch (err) {
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, watermark_enabled: product.watermark_enabled } : p)));
+      setError(err instanceof ApiError ? err.message : "Gagal memperbarui pengaturan watermark.");
     }
   }
 
@@ -401,6 +418,19 @@ export default function DashboardProductsPage() {
                   {p.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
                   {busyId === p.id ? "Mengunggah..." : p.has_file ? "File terunggah -- ganti" : "Unggah file produk"}
                 </button>
+
+                {p.is_pdf && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Toggle
+                      checked={p.watermark_enabled}
+                      onChange={() => handleToggleWatermark(p)}
+                      label={`Watermark otomatis ${p.name}`}
+                    />
+                    <span className="text-xs font-semibold text-muted">
+                      Watermark email pembeli + ID pesanan
+                    </span>
+                  </div>
+                )}
 
                 {flashSaleEditId === p.id ? (
                   <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">

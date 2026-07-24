@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -528,13 +529,13 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var status, fileKey string
-	var isBundle, isDonation bool
+	var status, fileKey, buyerEmail string
+	var isBundle, isDonation, watermarkEnabled bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.file_key, p.is_bundle, p.is_donation FROM orders o
+		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.watermark_enabled FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &fileKey, &isBundle, &isDonation)
+	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &watermarkEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -566,13 +567,44 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	url, err := h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+	url, err := h.downloadURLFor(ctx, fileKey, watermarkEnabled, buyerEmail, orderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat tautan unduhan"})
 		return
 	}
 
 	c.Redirect(http.StatusFound, url)
+}
+
+// downloadURLFor — No.85: kalau watermark diaktifkan kreator DAN file
+// berformat PDF, unduh file asli, sisipkan watermark (email pembeli + ID
+// pesanan), lalu unggah SALINANNYA ke key terpisah ("watermarked/...")
+// sebelum di-presign -- file asli di key produk TIDAK PERNAH diubah.
+// Presigned URL dibuat ulang tiap dipanggil (pola sama seperti sebelumnya,
+// lihat komentar DownloadFile), begitu juga proses watermarking -- bukan
+// dipersiapkan sekali di muka, supaya perubahan pengaturan watermark
+// kreator langsung berlaku untuk unduhan berikutnya tanpa perlu migrasi data.
+func (h *CheckoutHandler) downloadURLFor(ctx context.Context, fileKey string, watermarkEnabled bool, buyerEmail, orderID string) (string, error) {
+	if !watermarkEnabled || !isPdfKey(fileKey) {
+		return h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+	}
+
+	original, err := h.Storage.Download(ctx, fileKey)
+	if err != nil {
+		return "", fmt.Errorf("gagal mengunduh file asli: %w", err)
+	}
+
+	watermarked, err := applyPdfWatermark(original, fmt.Sprintf("%s | %s", buyerEmail, orderID))
+	if err != nil {
+		return "", err
+	}
+
+	watermarkedKey := fmt.Sprintf("watermarked/%s/%s", orderID, fileKey)
+	if err := h.Storage.Upload(ctx, watermarkedKey, bytes.NewReader(watermarked), int64(len(watermarked)), "application/pdf"); err != nil {
+		return "", fmt.Errorf("gagal mengunggah salinan ber-watermark: %w", err)
+	}
+
+	return h.Storage.PresignedDownloadURL(ctx, watermarkedKey, 15*time.Minute)
 }
 
 // GetBundleItems — No.70: dipanggil dari halaman status checkout untuk
@@ -590,14 +622,14 @@ func (h *CheckoutHandler) GetBundleItems(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var status string
+	var status, buyerEmail string
 	var isBundle bool
 	var bundleProductID string
 	if err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.is_bundle, p.id FROM orders o
+		SELECT o.status, o.buyer_email, p.is_bundle, p.id FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &isBundle, &bundleProductID); err != nil {
+	`, orderID).Scan(&status, &buyerEmail, &isBundle, &bundleProductID); err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
 			return
@@ -615,7 +647,7 @@ func (h *CheckoutHandler) GetBundleItems(c *gin.Context) {
 	}
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT ip.name, ip.file_key FROM bundle_items bi
+		SELECT ip.name, ip.file_key, ip.watermark_enabled FROM bundle_items bi
 		JOIN products ip ON ip.id = bi.item_product_id
 		WHERE bi.bundle_product_id = $1
 		ORDER BY ip.name
@@ -633,10 +665,14 @@ func (h *CheckoutHandler) GetBundleItems(c *gin.Context) {
 	items := []bundleItem{}
 	for rows.Next() {
 		var name, fileKey string
-		if err := rows.Scan(&name, &fileKey); err != nil || fileKey == "" {
+		var watermarkEnabled bool
+		if err := rows.Scan(&name, &fileKey, &watermarkEnabled); err != nil || fileKey == "" {
 			continue
 		}
-		url, err := h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+		// No.85: tiap produk di dalam bundel punya pengaturan watermark
+		// sendiri-sendiri (bundel tidak menambah kolom baru -- item bundel
+		// tetap baris products biasa).
+		url, err := h.downloadURLFor(ctx, fileKey, watermarkEnabled, buyerEmail, orderID)
 		if err != nil {
 			continue
 		}

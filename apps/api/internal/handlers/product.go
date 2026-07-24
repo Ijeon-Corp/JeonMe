@@ -133,7 +133,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
-			pwyw_enabled, pwyw_min_price_idr
+			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf
 		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false
 	`, userID)
 	if err != nil {
@@ -157,13 +157,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 		IsFlashSaleActive bool       `json:"is_flash_sale_active"`
 		PwywEnabled       bool       `json:"pwyw_enabled"`
 		PwywMinPriceIDR   *int64     `json:"pwyw_min_price_idr"`
+		WatermarkEnabled  bool       `json:"watermark_enabled"`
+		IsPdf             bool       `json:"is_pdf"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var it item
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
-			&it.PwywEnabled, &it.PwywMinPriceIDR); err == nil {
+			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -182,6 +184,7 @@ type updateProductRequest struct {
 	ClearFlashSale    bool    `json:"clear_flash_sale"`
 	PwywEnabled       *bool   `json:"pwyw_enabled"`
 	PwywMinPriceIDR   *int64  `json:"pwyw_min_price_idr" binding:"omitempty,min=1000"`
+	WatermarkEnabled  *bool   `json:"watermark_enabled"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -254,6 +257,13 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// No.85: watermark cuma berlaku untuk file PDF (sama seperti batasan
+	// Lynk.id) -- ditolak lebih awal daripada diam-diam tidak berefek.
+	if req.WatermarkEnabled != nil && *req.WatermarkEnabled && !isPdfKey(fileKey) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "watermark hanya berlaku untuk file produk berformat PDF"})
+		return
+	}
+
 	// No.68: validasi flash sale -- ketiga field wajib diisi bersamaan,
 	// harga flash sale harus lebih murah dari harga (baru, kalau diubah
 	// bersamaan) saat ini, dan periode harus masuk akal.
@@ -308,10 +318,11 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			flash_sale_starts_at = COALESCE($6, flash_sale_starts_at),
 			flash_sale_ends_at = COALESCE($7, flash_sale_ends_at),
 			pwyw_enabled = COALESCE($8, pwyw_enabled),
-			pwyw_min_price_idr = COALESCE($9, pwyw_min_price_idr)
-		WHERE id = $10
+			pwyw_min_price_idr = COALESCE($9, pwyw_min_price_idr),
+			watermark_enabled = COALESCE($10, watermark_enabled)
+		WHERE id = $11
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
-		req.PwywEnabled, req.PwywMinPriceIDR, productID)
+		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return
