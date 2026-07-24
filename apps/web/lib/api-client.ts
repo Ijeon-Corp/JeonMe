@@ -807,6 +807,66 @@ export function listPayouts() {
   return apiFetch<Payout[]>("/dashboard/payouts", { method: "GET" }, { auth: true });
 }
 
+// ---------- Dashboard: verifikasi KYC (Sprint 10, No.84) ----------
+// TIDAK memblokir penarikan -- hanya dipakai admin untuk memprioritaskan
+// antrian proses manual (lihat catatan lingkup di KycHandler backend).
+
+export interface KycStatus {
+  status: "unverified" | "pending" | "verified" | "rejected";
+  full_name_ktp: string;
+  bank_account_name: string;
+  domicile_address: string;
+  business_description: string;
+  promotion_channels: string;
+  has_ktp_photo: boolean;
+  has_selfie_photo: boolean;
+  has_bank_proof: boolean;
+  rejection_reason?: string;
+  submitted_at?: string;
+  reviewed_at?: string;
+}
+
+export function getKycStatus() {
+  return apiFetch<KycStatus>("/dashboard/kyc", { method: "GET" }, { auth: true });
+}
+
+// Upload lewat multipart/form-data -- TIDAK lewat apiFetch(), sama seperti
+// uploadProductFile (browser wajib menentukan sendiri header Content-Type
+// dengan boundary untuk FormData).
+export async function submitKyc(input: {
+  full_name_ktp: string;
+  bank_account_name: string;
+  domicile_address: string;
+  business_description: string;
+  promotion_channels: string;
+  ktp_photo: File;
+  selfie_photo: File;
+  bank_proof: File;
+}): Promise<{ message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("full_name_ktp", input.full_name_ktp);
+  form.append("bank_account_name", input.bank_account_name);
+  form.append("domicile_address", input.domicile_address);
+  form.append("business_description", input.business_description);
+  form.append("promotion_channels", input.promotion_channels);
+  form.append("ktp_photo", input.ktp_photo);
+  form.append("selfie_photo", input.selfie_photo);
+  form.append("bank_proof", input.bank_proof);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/kyc`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Pengajuan gagal (${res.status})`);
+  }
+  return body;
+}
+
 // ---------- Analytics (Sprint 5) ----------
 
 // Fire-and-forget: kegagalan tracking TIDAK BOLEH mengganggu pengunjung
@@ -939,6 +999,7 @@ export interface AdminPayout {
   amount_idr: number;
   destination_account: string;
   status: "requested" | "processing" | "completed" | "failed";
+  kyc_status_at_request: "unverified" | "pending" | "verified" | "rejected";
   requested_at: string;
   completed_at?: string;
 }
@@ -954,6 +1015,44 @@ export function updatePayoutStatus(id: string, status: "processing" | "completed
   return apiFetch<{ message: string }>(
     `/admin/payouts/${id}`,
     { method: "PATCH", body: JSON.stringify({ status }) },
+    { auth: true }
+  );
+}
+
+// ---------- Admin: review KYC (Sprint 10, No.84) ----------
+
+export interface AdminKycItem {
+  user_id: string;
+  username: string;
+  email: string;
+  status: "unverified" | "pending" | "verified" | "rejected";
+  full_name_ktp: string;
+  submitted_at?: string;
+}
+
+export function listAdminKyc(status: string = "pending") {
+  return apiFetch<AdminKycItem[]>(`/admin/kyc?status=${status}`, { method: "GET" }, { auth: true });
+}
+
+export interface AdminKycDetail extends AdminKycItem {
+  bank_account_name: string;
+  domicile_address: string;
+  business_description: string;
+  promotion_channels: string;
+  ktp_photo_url?: string;
+  selfie_photo_url?: string;
+  bank_proof_url?: string;
+  rejection_reason?: string;
+}
+
+export function getAdminKycDetail(userId: string) {
+  return apiFetch<AdminKycDetail>(`/admin/kyc/${userId}`, { method: "GET" }, { auth: true });
+}
+
+export function reviewKyc(userId: string, input: { status: "verified" | "rejected"; rejection_reason?: string }) {
+  return apiFetch<{ message: string }>(
+    `/admin/kyc/${userId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
     { auth: true }
   );
 }

@@ -66,7 +66,8 @@ export default function AdminPayoutsPage() {
       <h1 className="font-heading text-2xl font-bold text-ink">Penarikan Dana</h1>
       <p className="mt-1 text-sm text-muted">
         Proses pengajuan penarikan kreator secara manual -- transfer dana dilakukan di luar sistem
-        (mis. internet banking), lalu tandai statusnya di sini.
+        (mis. internet banking), lalu tandai statusnya di sini. Kreator dengan KYC terverifikasi
+        ditampilkan lebih dulu supaya diproses lebih cepat.
       </p>
 
       <div className="mt-4 flex gap-2">
@@ -114,9 +115,16 @@ export default function AdminPayoutsPage() {
                   <p className="text-xs text-muted">{p.destination_account}</p>
                 </div>
               </div>
-              <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[p.status]}`}>
-                {STATUS_LABEL[p.status]}
-              </span>
+              <div className="flex flex-shrink-0 items-center gap-1.5">
+                {p.kyc_status_at_request === "verified" && (
+                  <span className="rounded-full bg-secondary-subtle px-2.5 py-1 text-xs font-semibold text-secondary-dark">
+                    KYC Terverifikasi
+                  </span>
+                )}
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[p.status]}`}>
+                  {STATUS_LABEL[p.status]}
+                </span>
+              </div>
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs">

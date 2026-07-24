@@ -85,10 +85,11 @@ type createPayoutRequest struct {
 	DestinationAccount string `json:"destination_account" binding:"required"`
 }
 
-// CreatePayout — REQ-F-503. Rekening/e-wallet tujuan BELUM diverifikasi lewat
-// proses apa pun (KYC/REQ-F-105 juga belum diimplementasikan) -- diterima
-// apa adanya dari input pengguna. Ini batasan MVP yang perlu diselesaikan
-// sebelum menangani penarikan dana sungguhan dalam jumlah besar.
+// CreatePayout — REQ-F-503. Rekening/e-wallet tujuan diterima apa adanya
+// dari input pengguna (belum ada validasi bahwa rekening benar-benar milik
+// pemilik akun di luar cross-check nama lewat proses KYC manual, lihat
+// KycHandler No.84) -- status KYC dicatat sebagai snapshot untuk
+// memprioritaskan proses, bukan untuk memvalidasi nomor rekening itu sendiri.
 func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 	var req createPayoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -138,11 +139,23 @@ func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 		return
 	}
 
+	// Snapshot status KYC SAAT pengajuan dibuat (No.84) -- dipakai admin untuk
+	// memprioritaskan antrian proses manual (verified duluan), BUKAN untuk
+	// memblokir penarikan. Default 'unverified' kalau kreator belum pernah
+	// mengajukan KYC sama sekali (belum ada baris di kyc_verifications).
+	var kycStatus string
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE((SELECT status FROM kyc_verifications WHERE user_id = $1), 'unverified')
+	`, userID).Scan(&kycStatus); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa status KYC"})
+		return
+	}
+
 	payoutID := uuid.NewString()
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO payouts (id, user_id, amount_idr, destination_account, status, requested_at)
-		VALUES ($1, $2, $3, $4, 'requested', now())
-	`, payoutID, userID, req.AmountIDR, req.DestinationAccount); err != nil {
+		INSERT INTO payouts (id, user_id, amount_idr, destination_account, status, requested_at, kyc_status_at_request)
+		VALUES ($1, $2, $3, $4, 'requested', now(), $5)
+	`, payoutID, userID, req.AmountIDR, req.DestinationAccount, kycStatus); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat pengajuan penarikan"})
 		return
 	}

@@ -285,6 +285,7 @@ type adminPayoutItem struct {
 	AmountIDR          int64      `json:"amount_idr"`
 	DestinationAccount string     `json:"destination_account"`
 	Status             string     `json:"status"`
+	KycStatusAtRequest string     `json:"kyc_status_at_request"`
 	RequestedAt        time.Time  `json:"requested_at"`
 	CompletedAt        *time.Time `json:"completed_at,omitempty"`
 }
@@ -301,7 +302,8 @@ func (h *AdminHandler) ListPayouts(c *gin.Context) {
 	defer cancel()
 
 	query := `
-		SELECT p.id, u.username, u.email, p.amount_idr, p.destination_account, p.status, p.requested_at, p.completed_at
+		SELECT p.id, u.username, u.email, p.amount_idr, p.destination_account, p.status,
+		       p.kyc_status_at_request, p.requested_at, p.completed_at
 		FROM payouts p JOIN users u ON u.id = p.user_id
 	`
 	args := []any{}
@@ -314,7 +316,10 @@ func (h *AdminHandler) ListPayouts(c *gin.Context) {
 		query += `WHERE p.status = $1`
 		args = append(args, status)
 	}
-	query += ` ORDER BY p.requested_at ASC LIMIT 200`
+	// Kreator terverifikasi KYC diprioritaskan lebih dulu dalam antrian
+	// (No.84) -- TIDAK memblokir yang belum terverifikasi, hanya diproses
+	// belakangan sesuai urutan pengajuan di antara sesama status yang sama.
+	query += ` ORDER BY (p.kyc_status_at_request = 'verified') DESC, p.requested_at ASC LIMIT 200`
 
 	rows, err := h.DB.Query(ctx, query, args...)
 	if err != nil {
@@ -326,7 +331,7 @@ func (h *AdminHandler) ListPayouts(c *gin.Context) {
 	items := []adminPayoutItem{}
 	for rows.Next() {
 		var it adminPayoutItem
-		if err := rows.Scan(&it.ID, &it.Username, &it.Email, &it.AmountIDR, &it.DestinationAccount, &it.Status, &it.RequestedAt, &it.CompletedAt); err == nil {
+		if err := rows.Scan(&it.ID, &it.Username, &it.Email, &it.AmountIDR, &it.DestinationAccount, &it.Status, &it.KycStatusAtRequest, &it.RequestedAt, &it.CompletedAt); err == nil {
 			items = append(items, it)
 		}
 	}

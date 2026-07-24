@@ -22,6 +22,7 @@ import {
   IconMenu,
   IconQrCode,
   IconSettings,
+  IconShield,
   IconSparkle,
   IconTag,
   IconUsers,
@@ -68,6 +69,7 @@ const NAV_ITEMS: NavEntry[] = [
     ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
+  { type: "link", href: "/dashboard/kyc", label: "Verifikasi KYC", icon: IconShield },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
 ];
 

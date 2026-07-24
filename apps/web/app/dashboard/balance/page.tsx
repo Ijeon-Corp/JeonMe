@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ApiError, Balance, Payout, createPayout, getBalance, listPayouts } from "@/lib/api-client";
-import { IconInbox, IconWallet } from "@/components/icons";
+import { IconInbox, IconShield, IconWallet } from "@/components/icons";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
   requested: "Diajukan",
@@ -96,8 +97,12 @@ export default function DashboardBalancePage() {
       <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
         <p className="mt-1 text-xs text-muted">
-          Minimum Rp50.000. Rekening/e-wallet tujuan belum melalui proses verifikasi -- pastikan
-          nomor yang kamu masukkan benar.
+          Minimum Rp50.000. Pastikan nomor rekening/e-wallet tujuan benar.{" "}
+          <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
+            <IconShield className="h-3 w-3" />
+            Verifikasi KYC
+          </Link>{" "}
+          supaya penarikanmu diprioritaskan diproses.
         </p>
         <form onSubmit={handleRequestPayout} className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input

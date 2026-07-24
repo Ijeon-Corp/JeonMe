@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Pengguna", icon: IconUsers },
   { href: "/admin/reports", label: "Laporan", icon: IconFlag },
   { href: "/admin/payouts", label: "Penarikan", icon: IconWallet },
+  { href: "/admin/kyc", label: "Review KYC", icon: IconShield },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

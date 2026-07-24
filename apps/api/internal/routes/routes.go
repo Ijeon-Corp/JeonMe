@@ -41,6 +41,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	analytics := handlers.NewAnalyticsHandler(db)
 	account := handlers.NewAccountHandler(db)
 	admin := handlers.NewAdminHandler(db)
+	kyc := handlers.NewKycHandler(db, s3)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -173,6 +174,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/payouts", balance.CreatePayout)
 			dashboard.GET("/payouts", balance.ListPayouts)
 
+			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
+			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).
+			dashboard.GET("/kyc", kyc.Get)
+			dashboard.POST("/kyc", kyc.Submit)
+
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
 
 			dashboard.DELETE("/account", account.DeleteAccount)
@@ -199,6 +205,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// integrasi Disbursement API sungguhan).
 			adminGroup.GET("/payouts", admin.ListPayouts)
 			adminGroup.PATCH("/payouts/:id", admin.UpdatePayoutStatus)
+
+			// No.84 (Sprint 10): review pengajuan KYC kreator.
+			adminGroup.GET("/kyc", kyc.AdminList)
+			adminGroup.GET("/kyc/:userId", kyc.AdminGetDetail)
+			adminGroup.PATCH("/kyc/:userId", kyc.AdminReview)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
