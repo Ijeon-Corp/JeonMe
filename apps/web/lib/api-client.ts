@@ -907,6 +907,11 @@ export interface TopReferrer {
   count: number;
 }
 
+export interface DeviceBreakdown {
+  device_type: string;
+  count: number;
+}
+
 export interface AnalyticsSummary {
   total_views: number;
   total_clicks: number;
@@ -914,11 +919,53 @@ export interface AnalyticsSummary {
   top_links: TopLink[];
   top_products: TopProduct[];
   top_referrers: TopReferrer[];
+  device_breakdown: DeviceBreakdown[];
   range_days: number;
+  from_date: string;
+  to_date: string;
 }
 
-export function getAnalyticsSummary() {
-  return apiFetch<AnalyticsSummary>("/dashboard/analytics/summary", { method: "GET" }, { auth: true });
+// No.86 (Sprint 10): rentang tanggal kustom -- kirim { from, to } (YYYY-MM-DD)
+// untuk rentang bebas, atau { range_days } untuk preset lama (default 30
+// kalau keduanya kosong). Backend menolak kalau keduanya dicampur secara
+// tidak konsisten (lihat resolveDateRange).
+export function getAnalyticsSummary(params?: { from?: string; to?: string; range_days?: number }) {
+  const q = new URLSearchParams();
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  if (params?.range_days) q.set("range_days", String(params.range_days));
+  const qs = q.toString();
+  return apiFetch<AnalyticsSummary>(`/dashboard/analytics/summary${qs ? `?${qs}` : ""}`, { method: "GET" }, { auth: true });
+}
+
+// Ekspor CSV -- TIDAK lewat apiFetch() karena responsnya bukan JSON
+// (text/csv), diunduh langsung sebagai file lewat Blob + anchor sementara.
+export async function exportAnalyticsCSV(params?: { from?: string; to?: string; range_days?: number }): Promise<void> {
+  const q = new URLSearchParams();
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  if (params?.range_days) q.set("range_days", String(params.range_days));
+  const qs = q.toString();
+
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/dashboard/analytics/export${qs ? `?${qs}` : ""}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, body?.error ?? `Ekspor gagal (${res.status})`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename=([^;]+)/.exec(disposition);
+  const filename = match ? match[1].trim() : "analitik.csv";
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------- Akun (NF-09) ----------

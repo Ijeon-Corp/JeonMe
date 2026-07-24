@@ -180,6 +180,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/kyc", kyc.Submit)
 
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
+			dashboard.GET("/analytics/export", analytics.ExportDailyCSV)
 
 			dashboard.DELETE("/account", account.DeleteAccount)
 		}
