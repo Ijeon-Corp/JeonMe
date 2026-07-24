@@ -241,9 +241,10 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 }
 
 type checkoutStatusResponse struct {
-	OrderID string `json:"order_id"`
-	Status  string `json:"status"`
-	Product string `json:"product_name"`
+	OrderID  string `json:"order_id"`
+	Status   string `json:"status"`
+	Product  string `json:"product_name"`
+	IsBundle bool   `json:"is_bundle"`
 }
 
 // GetStatus — dipakai halaman konfirmasi pembeli untuk menampilkan status
@@ -257,10 +258,10 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	var resp checkoutStatusResponse
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.name FROM orders o
+		SELECT o.status, p.name, p.is_bundle FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &resp.Product)
+	`, orderID).Scan(&resp.Status, &resp.Product, &resp.IsBundle)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -447,11 +448,12 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	defer cancel()
 
 	var status, fileKey string
+	var isBundle bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.file_key FROM orders o
+		SELECT o.status, p.file_key, p.is_bundle FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &fileKey)
+	`, orderID).Scan(&status, &fileKey, &isBundle)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -465,6 +467,16 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "pesanan belum lunas"})
 		return
 	}
+
+	// No.70: bundel punya banyak file (satu per produk yang termasuk),
+	// jadi tidak bisa langsung redirect ke satu presigned URL seperti
+	// produk biasa -- arahkan ke halaman status checkout, yang menampilkan
+	// daftar unduhan lewat GET /checkout/:id/bundle-items.
+	if isBundle {
+		c.Redirect(http.StatusFound, h.PublicWebURL+"/checkout/"+orderID)
+		return
+	}
+
 	if fileKey == "" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "file produk tidak tersedia"})
 		return
@@ -477,4 +489,75 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, url)
+}
+
+// GetBundleItems — No.70: dipanggil dari halaman status checkout untuk
+// bundel yang sudah lunas, mengembalikan presigned URL BARU per produk
+// yang termasuk (pola sama seperti DownloadFile -- selalu dibuat baru
+// tiap dipanggil, bukan disimpan permanen).
+func (h *CheckoutHandler) GetBundleItems(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	orderID := c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var status string
+	var isBundle bool
+	var bundleProductID string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT o.status, p.is_bundle, p.id FROM orders o
+		JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1
+	`, orderID).Scan(&status, &isBundle, &bundleProductID); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pesanan"})
+		return
+	}
+	if status != "paid" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "pesanan belum lunas"})
+		return
+	}
+	if !isBundle {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pesanan ini bukan bundel"})
+		return
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT ip.name, ip.file_key FROM bundle_items bi
+		JOIN products ip ON ip.id = bi.item_product_id
+		WHERE bi.bundle_product_id = $1
+		ORDER BY ip.name
+	`, bundleProductID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat isi bundel"})
+		return
+	}
+	defer rows.Close()
+
+	type bundleItem struct {
+		Name        string `json:"name"`
+		DownloadURL string `json:"download_url"`
+	}
+	items := []bundleItem{}
+	for rows.Next() {
+		var name, fileKey string
+		if err := rows.Scan(&name, &fileKey); err != nil || fileKey == "" {
+			continue
+		}
+		url, err := h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+		if err != nil {
+			continue
+		}
+		items = append(items, bundleItem{Name: name, DownloadURL: url})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"items": items})
 }

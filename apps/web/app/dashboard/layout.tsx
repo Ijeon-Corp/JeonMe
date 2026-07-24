@@ -11,6 +11,7 @@ import {
   IconClose,
   IconCopy,
   IconExternal,
+  IconGift,
   IconLink,
   IconLogout,
   IconMenu,
@@ -43,7 +44,10 @@ const NAV_ITEMS: NavEntry[] = [
   {
     type: "group",
     label: "Produk & Monetisasi",
-    items: [{ href: "/dashboard/vouchers", label: "Voucher", icon: IconTag }],
+    items: [
+      { href: "/dashboard/vouchers", label: "Voucher", icon: IconTag },
+      { href: "/dashboard/bundles", label: "Bundel", icon: IconGift },
+    ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },

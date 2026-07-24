@@ -127,11 +127,13 @@ func (h *ProductHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	// No.70: bundel TIDAK ikut tampil di sini -- bundel punya halaman
+	// dashboard sendiri (/dashboard/bundles), sama seperti voucher.
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
 			pwyw_enabled, pwyw_min_price_idr
-		FROM products WHERE user_id = $1
+		FROM products WHERE user_id = $1 AND is_bundle = false
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -202,16 +204,20 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
+	var isBundle bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
 	}
 
-	if req.IsActive != nil && *req.IsActive && fileKey == "" {
+	// No.70: bundel tidak pernah punya file sendiri -- keabsahannya sudah
+	// dijamin saat dibuat (minimal 2 produk aktif), jadi lewati pengecekan
+	// file_key yang berlaku untuk produk biasa.
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}

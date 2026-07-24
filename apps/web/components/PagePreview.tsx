@@ -19,6 +19,8 @@ export interface PagePreviewProduct {
   isFlashSaleActive?: boolean;
   pwywEnabled?: boolean;
   pwywMinPriceIdr?: number;
+  isBundle?: boolean;
+  bundleOriginalPriceIdr?: number;
 }
 
 export interface PagePreviewData {
@@ -55,6 +57,8 @@ interface PreviewSourceProduct {
   is_flash_sale_active?: boolean;
   pwyw_enabled?: boolean;
   pwyw_min_price_idr?: number | null;
+  is_bundle?: boolean;
+  bundle_original_price_idr?: number | null;
 }
 
 // Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
@@ -81,6 +85,8 @@ export function toPreviewData(
         isFlashSaleActive: p.is_flash_sale_active,
         pwywEnabled: p.pwyw_enabled,
         pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
+        isBundle: p.is_bundle,
+        bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
       })),
   };
 }
@@ -187,6 +193,15 @@ export default function PagePreview({
                     <p className={`text-xs font-bold ${theme.productPrice}`}>
                       Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
                     </p>
+                  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
+                      </p>
+                      <p className={`text-xs font-bold ${theme.productPrice}`}>
+                        Rp {product.price_idr.toLocaleString("id-ID")}
+                      </p>
+                    </div>
                   ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
                     <div className="flex items-center gap-1.5">
                       <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>

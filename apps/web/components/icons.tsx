@@ -230,3 +230,20 @@ export function IconTag({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconGift({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="9" width="16" height="4" rx="0.5" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M5 13h14v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7Z" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M12 9v12" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path
+        d="M12 9c0-2.2-1.8-4-4-4s-2 3 0 4M12 9c0-2.2 1.8-4 4-4s2 3 0 4"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS bundle_items;
+ALTER TABLE products DROP COLUMN IF EXISTS is_bundle;

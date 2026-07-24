@@ -95,6 +95,8 @@ export interface PublicProduct {
   is_flash_sale_active: boolean;
   pwyw_enabled: boolean;
   pwyw_min_price_idr: number | null;
+  is_bundle: boolean;
+  bundle_original_price_idr: number | null;
 }
 
 export interface PublicPage {
@@ -409,6 +411,32 @@ export function deleteVoucher(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/vouchers/${id}`, { method: "DELETE" }, { auth: true });
 }
 
+// ---------- Dashboard: bundel produk (Sprint 7, No.70) ----------
+// Bundel adalah baris produk biasa (is_bundle=true) -- toggle aktif &
+// hapus pakai updateProduct()/deleteProduct() yang sudah ada, cuma
+// List & Create yang punya endpoint sendiri.
+
+export interface DashboardBundle {
+  id: string;
+  name: string;
+  price_idr: number;
+  is_active: boolean;
+  original_total_idr: number;
+  item_names: string[];
+}
+
+export function listBundles() {
+  return apiFetch<DashboardBundle[]>("/dashboard/bundles", { method: "GET" }, { auth: true });
+}
+
+export function createBundle(input: { name: string; price_idr: number; product_ids: string[] }) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/bundles",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
 export function createCheckout(input: {
@@ -442,10 +470,23 @@ export interface CheckoutStatus {
   order_id: string;
   status: "pending" | "paid" | "expired" | "failed";
   product_name: string;
+  is_bundle: boolean;
 }
 
 export function getCheckoutStatus(orderId: string) {
   return apiFetch<CheckoutStatus>(`/checkout/${orderId}/status`, { method: "GET" });
+}
+
+export interface BundleDownloadItem {
+  name: string;
+  download_url: string;
+}
+
+// No.70: dipanggil dari halaman status checkout begitu order bundel
+// lunas -- presigned URL baru dibuat tiap dipanggil (15 menit), sama
+// seperti pola getProductDownloadURL.
+export function getBundleItems(orderId: string) {
+  return apiFetch<{ items: BundleDownloadItem[] }>(`/checkout/${orderId}/bundle-items`, { method: "GET" });
 }
 
 // ---------- Dashboard: saldo & penarikan (Sprint 4) ----------

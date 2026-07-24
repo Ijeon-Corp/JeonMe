@@ -28,6 +28,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	page := handlers.NewPageHandler(db, rdb, s3)
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
+	bundle := handlers.NewBundleHandler(db)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -101,6 +102,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.PATCH("/vouchers/:id", voucher.Update)
 			dashboard.DELETE("/vouchers/:id", voucher.Delete)
 
+			// No.70 (Sprint 7): bundel adalah baris products biasa --
+			// toggle aktif/hapus pakai product.Update/Delete yang sudah
+			// ada, jadi cuma perlu List+Create di sini.
+			dashboard.GET("/bundles", bundle.List)
+			dashboard.POST("/bundles", bundle.Create)
+
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)
 			dashboard.GET("/payouts", balance.ListPayouts)
@@ -145,6 +152,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// notifikasi -- publik (pembeli tidak punya akun), lihat komentar
 		// CheckoutHandler.DownloadFile.
 		api.GET("/checkout/:id/download", checkout.DownloadFile)
+
+		// No.70: daftar unduhan multi-file untuk bundel yang sudah lunas --
+		// publik, cuma bisa diakses kalau tahu orderID yang valid & lunas.
+		api.GET("/checkout/:id/bundle-items", checkout.GetBundleItems)
 
 		// Webhook PSP -- REQ-F-403 (verifikasi signature_key di body DI
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi

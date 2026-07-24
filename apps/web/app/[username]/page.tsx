@@ -73,6 +73,8 @@ export default async function CreatorPage({ params }: PageParams) {
             isFlashSaleActive: p.is_flash_sale_active,
             pwywEnabled: p.pwyw_enabled,
             pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
+            isBundle: p.is_bundle,
+            bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
           })),
         }}
         interactive

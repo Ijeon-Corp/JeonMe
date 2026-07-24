@@ -53,14 +53,16 @@ type publicLink struct {
 }
 
 type publicItem struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	PriceIDR          int64  `json:"price_idr"`
-	CoverImage        string `json:"cover_image_url"`
-	EffectivePriceIDR int64  `json:"effective_price_idr"`
-	IsFlashSaleActive bool   `json:"is_flash_sale_active"`
-	PwywEnabled       bool   `json:"pwyw_enabled"`
-	PwywMinPriceIDR   *int64 `json:"pwyw_min_price_idr"`
+	ID                     string `json:"id"`
+	Name                   string `json:"name"`
+	PriceIDR               int64  `json:"price_idr"`
+	CoverImage             string `json:"cover_image_url"`
+	EffectivePriceIDR      int64  `json:"effective_price_idr"`
+	IsFlashSaleActive      bool   `json:"is_flash_sale_active"`
+	PwywEnabled            bool   `json:"pwyw_enabled"`
+	PwywMinPriceIDR        *int64 `json:"pwyw_min_price_idr"`
+	IsBundle               bool   `json:"is_bundle"`
+	BundleOriginalPriceIDR *int64 `json:"bundle_original_price_idr"`
 }
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
@@ -120,17 +122,22 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		}
 	}
 
+	// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
+	// di halaman publik sebagai produk yang bisa dibeli, dengan harga
+	// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
 	resp.Products = []publicItem{}
 	productRows, err := h.DB.Query(ctx, `
-		SELECT id, name, price_idr, cover_image_url, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr
-		FROM products WHERE user_id = $1 AND is_active = true
+		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
+			p.is_bundle,
+			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id)
+		FROM products p WHERE p.user_id = $1 AND p.is_active = true
 	`, userID)
 	if err == nil {
 		defer productRows.Close()
 		for productRows.Next() {
 			var p publicItem
 			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
-				&p.PwywEnabled, &p.PwywMinPriceIDR); err == nil {
+				&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR); err == nil {
 				resp.Products = append(resp.Products, p)
 			}
 		}
