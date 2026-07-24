@@ -138,11 +138,16 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		return
 	}
 
+	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
+	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
+	// gate is_active manual yang sudah ada -- keduanya harus lolos.
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, title, url FROM links
 		WHERE page_id = (SELECT id FROM pages WHERE user_id = $1)
 		AND is_active = true
+		AND (starts_at IS NULL OR starts_at <= now())
+		AND (ends_at IS NULL OR ends_at >= now())
 		ORDER BY position ASC
 	`, userID)
 	if err == nil {

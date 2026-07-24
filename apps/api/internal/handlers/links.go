@@ -22,11 +22,13 @@ func NewLinksHandler(db *pgxpool.Pool) *LinksHandler {
 }
 
 type linkItem struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	URL      string `json:"url"`
-	Position int    `json:"position"`
-	IsActive bool   `json:"is_active"`
+	ID       string     `json:"id"`
+	Title    string     `json:"title"`
+	URL      string     `json:"url"`
+	Position int        `json:"position"`
+	IsActive bool       `json:"is_active"`
+	StartsAt *time.Time `json:"starts_at"`
+	EndsAt   *time.Time `json:"ends_at"`
 }
 
 // List mengembalikan seluruh tautan milik kreator yang sedang login, urut posisi.
@@ -37,7 +39,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT l.id, l.title, l.url, l.position, l.is_active
+		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
 		WHERE p.user_id = $1
@@ -52,7 +54,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	items := []linkItem{}
 	for rows.Next() {
 		var it linkItem
-		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive); err == nil {
+		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -106,12 +108,18 @@ func (h *LinksHandler) Create(c *gin.Context) {
 }
 
 type updateLinkRequest struct {
-	Title    *string `json:"title" binding:"omitempty,max=100"`
-	URL      *string `json:"url" binding:"omitempty,url,max=2048"`
-	IsActive *bool   `json:"is_active"`
+	Title         *string `json:"title" binding:"omitempty,max=100"`
+	URL           *string `json:"url" binding:"omitempty,url,max=2048"`
+	IsActive      *bool   `json:"is_active"`
+	StartsAt      *string `json:"starts_at"`
+	EndsAt        *string `json:"ends_at"`
+	ClearSchedule bool    `json:"clear_schedule"`
 }
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
+// No.78 (Sprint 9): penjadwalan starts_at/ends_at -- tautan otomatis
+// tampil/sembunyi di halaman publik pada rentang waktu tertentu, TANPA
+// perlu toggle is_active manual (lihat filter di PageHandler.GetPublicPage).
 func (h *LinksHandler) Update(c *gin.Context) {
 	linkID := c.Param("id")
 	userID := c.GetString("userID")
@@ -130,13 +138,45 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		return
 	}
 
+	var starts, ends *time.Time
+	if req.StartsAt != nil || req.EndsAt != nil {
+		if req.StartsAt == nil || req.EndsAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "starts_at dan ends_at wajib diisi bersamaan"})
+			return
+		}
+		s, err := time.Parse(time.RFC3339, *req.StartsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format starts_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		e, err := time.Parse(time.RFC3339, *req.EndsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format ends_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		if !e.After(s) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "waktu berakhir jadwal harus setelah waktu mulai"})
+			return
+		}
+		starts, ends = &s, &e
+	}
+
+	if req.ClearSchedule {
+		if _, err := h.DB.Exec(ctx, `UPDATE links SET starts_at = NULL, ends_at = NULL WHERE id = $1`, linkID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membatalkan jadwal"})
+			return
+		}
+	}
+
 	_, err := h.DB.Exec(ctx, `
 		UPDATE links SET
 			title = COALESCE($1, title),
 			url = COALESCE($2, url),
-			is_active = COALESCE($3, is_active)
-		WHERE id = $4
-	`, req.Title, req.URL, req.IsActive, linkID)
+			is_active = COALESCE($3, is_active),
+			starts_at = COALESCE($4, starts_at),
+			ends_at = COALESCE($5, ends_at)
+		WHERE id = $6
+	`, req.Title, req.URL, req.IsActive, starts, ends, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return

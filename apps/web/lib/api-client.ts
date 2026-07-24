@@ -252,6 +252,8 @@ export interface LinkItem {
   url: string;
   position: number;
   is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
 }
 
 export function listLinks() {
@@ -262,7 +264,17 @@ export function createLink(input: { title: string; url: string }) {
   return apiFetch<LinkItem>("/dashboard/links", { method: "POST", body: JSON.stringify(input) }, { auth: true });
 }
 
-export function updateLink(id: string, input: Partial<{ title: string; url: string; is_active: boolean }>) {
+export function updateLink(
+  id: string,
+  input: Partial<{
+    title: string;
+    url: string;
+    is_active: boolean;
+    starts_at: string;
+    ends_at: string;
+    clear_schedule: boolean;
+  }>
+) {
   return apiFetch<{ message: string }>(
     `/dashboard/links/${id}`,
     { method: "PATCH", body: JSON.stringify(input) },
