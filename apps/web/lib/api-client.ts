@@ -50,6 +50,35 @@ export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
 }
 
+// No.87 (Sprint 10): ruang kerja aktif ("bertindak sebagai" pemilik lain
+// kalau pengguna ini kolaborator). Disimpan terpisah dari token supaya
+// bertahan lintas navigasi tapi TIDAK ikut ke akun lain kalau logout+login
+// beda pengguna di browser yang sama (dibersihkan saat clearToken).
+const ACTIVE_WORKSPACE_STORAGE_KEY = "jeonme_active_workspace_owner_id";
+
+export function getActiveWorkspaceOwnerId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY);
+}
+
+export function setActiveWorkspaceOwnerId(ownerId: string | null): void {
+  if (typeof window === "undefined") return;
+  if (ownerId) {
+    window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, ownerId);
+  } else {
+    window.localStorage.removeItem(ACTIVE_WORKSPACE_STORAGE_KEY);
+  }
+}
+
+// Header X-Act-As-Owner HANYA berpengaruh pada rute yang dipasangi
+// middleware.ActAsOwner di backend (tautan/produk/desain) -- rute lain
+// (saldo/KYC/domain/dst.) mengabaikannya sepenuhnya, jadi aman dikirim di
+// SETIAP request tanpa perlu pengecualian per endpoint di sisi klien.
+function activeWorkspaceHeaders(): Record<string, string> {
+  const ownerId = getActiveWorkspaceOwnerId();
+  return ownerId ? { "X-Act-As-Owner": ownerId } : {};
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -65,6 +94,8 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   if (opts.auth) {
     const token = getToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
+    const workspaceHeaders = activeWorkspaceHeaders();
+    for (const [key, value] of Object.entries(workspaceHeaders)) headers.set(key, value);
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
@@ -270,7 +301,7 @@ export async function uploadAvatar(file: File): Promise<{ avatar_url: string; me
 
   const res = await fetch(`${API_BASE_URL}/dashboard/page/avatar`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
     body: form,
   });
 
@@ -423,7 +454,7 @@ export async function uploadProductFile(id: string, file: File): Promise<{ messa
 
   const res = await fetch(`${API_BASE_URL}/dashboard/products/${id}/upload`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
     body: form,
   });
 
@@ -443,7 +474,7 @@ export async function uploadProductCover(id: string, file: File): Promise<{ cove
 
   const res = await fetch(`${API_BASE_URL}/dashboard/products/${id}/cover`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
     body: form,
   });
 
@@ -1105,4 +1136,70 @@ export function reviewKyc(userId: string, input: { status: "verified" | "rejecte
     { method: "PATCH", body: JSON.stringify(input) },
     { auth: true }
   );
+}
+
+// ---------- Dashboard: kolaborator / multi-admin (Sprint 10, No.87) ----------
+// Lihat catatan lingkup di CollaboratorHandler backend -- kolaborator HANYA
+// bisa diberi akses ke tautan/produk/desain, tidak pernah saldo/KYC/domain.
+
+export interface DashboardCollaborator {
+  id: string;
+  email: string;
+  can_edit_links: boolean;
+  can_edit_products: boolean;
+  can_edit_design: boolean;
+  status: "invited" | "active" | "revoked";
+  invited_at: string;
+  accepted_at?: string;
+}
+
+export function listCollaborators() {
+  return apiFetch<DashboardCollaborator[]>("/dashboard/collaborators", { method: "GET" }, { auth: true });
+}
+
+export function inviteCollaborator(input: {
+  email: string;
+  can_edit_links: boolean;
+  can_edit_products: boolean;
+  can_edit_design: boolean;
+}) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/collaborators",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function revokeCollaborator(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/collaborators/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+export interface PendingCollaborationInvite {
+  id: string;
+  owner_username: string;
+  can_edit_links: boolean;
+  can_edit_products: boolean;
+  can_edit_design: boolean;
+  invited_at: string;
+}
+
+export function listInvitesForMe() {
+  return apiFetch<PendingCollaborationInvite[]>("/dashboard/collaboration-invites", { method: "GET" }, { auth: true });
+}
+
+export function acceptCollaborationInvite(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/collaboration-invites/${id}/accept`, { method: "POST" }, { auth: true });
+}
+
+export interface Workspace {
+  owner_user_id: string;
+  owner_username: string;
+  is_self: boolean;
+  can_edit_links: boolean;
+  can_edit_products: boolean;
+  can_edit_design: boolean;
+}
+
+export function listWorkspaces() {
+  return apiFetch<Workspace[]>("/dashboard/workspaces", { method: "GET" }, { auth: true });
 }

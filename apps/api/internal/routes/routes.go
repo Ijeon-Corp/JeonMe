@@ -42,6 +42,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	account := handlers.NewAccountHandler(db)
 	admin := handlers.NewAdminHandler(db)
 	kyc := handlers.NewKycHandler(db, s3)
+	collaborator := handlers.NewCollaboratorHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -103,56 +104,89 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		dashboard := api.Group("/dashboard")
 		dashboard.Use(authRequired)
 		{
-			dashboard.GET("/page", page.GetMyPage)
-			dashboard.PATCH("/page", page.UpdateMyPage)
-			dashboard.POST("/page/avatar", page.UploadAvatar)
+			// No.87 (Sprint 10): kolaborator dengan akses terbatas. Ketiga
+			// sub-grup di bawah dipasangi middleware.ActAsOwner supaya
+			// kolaborator AKTIF dengan izin terkait bisa mengelola rute-rute
+			// ini ATAS NAMA pemiliknya (lewat header X-Act-As-Owner) --
+			// saldo/penarikan/KYC/domain/audiens/hapus akun SENGAJA TIDAK
+			// dipasangi middleware ini sama sekali (lihat CollaboratorHandler).
+			actAsDesign := middleware.ActAsOwner(db, "can_edit_design")
+			actAsLinks := middleware.ActAsOwner(db, "can_edit_links")
+			actAsProducts := middleware.ActAsOwner(db, "can_edit_products")
 
-			dashboard.GET("/links", links.List)
-			dashboard.POST("/links", links.Create)
-			dashboard.PATCH("/links/:id", links.Update)
-			dashboard.DELETE("/links/:id", links.Delete)
-			dashboard.PATCH("/links/reorder", links.Reorder)
+			designGroup := dashboard.Group("")
+			designGroup.Use(actAsDesign)
+			{
+				designGroup.GET("/page", page.GetMyPage)
+				designGroup.PATCH("/page", page.UpdateMyPage)
+				designGroup.POST("/page/avatar", page.UploadAvatar)
+			}
 
-			// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
-			// -- baris links yang sama, cuma butuh endpoint create sendiri
-			// (validasi berbeda dari tautan biasa); edit/hapus/reorder pakai
-			// endpoint yang sudah ada di atas.
-			dashboard.POST("/blocks", links.CreateBlock)
+			linksGroup := dashboard.Group("")
+			linksGroup.Use(actAsLinks)
+			{
+				linksGroup.GET("/links", links.List)
+				linksGroup.POST("/links", links.Create)
+				linksGroup.PATCH("/links/:id", links.Update)
+				linksGroup.DELETE("/links/:id", links.Delete)
+				linksGroup.PATCH("/links/reorder", links.Reorder)
 
-			dashboard.GET("/products", product.List)
-			dashboard.POST("/products", product.Create)
-			dashboard.PATCH("/products/:id", product.Update)
-			dashboard.DELETE("/products/:id", product.Delete)
-			dashboard.POST("/products/:id/upload", product.UploadFile)
-			dashboard.POST("/products/:id/cover", product.UploadCover)
-			dashboard.GET("/products/:id/download-url", product.GetDownloadURL)
+				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
+				// -- baris links yang sama, cuma butuh endpoint create sendiri
+				// (validasi berbeda dari tautan biasa); edit/hapus/reorder pakai
+				// endpoint yang sudah ada di atas.
+				linksGroup.POST("/blocks", links.CreateBlock)
+			}
 
-			// No.67 (Sprint 7): voucher/diskon per produk, milik kreator
-			// sendiri seperti produk -- pola CRUD & ownership sama persis.
-			dashboard.GET("/vouchers", voucher.List)
-			dashboard.POST("/vouchers", voucher.Create)
-			dashboard.PATCH("/vouchers/:id", voucher.Update)
-			dashboard.DELETE("/vouchers/:id", voucher.Delete)
+			productsGroup := dashboard.Group("")
+			productsGroup.Use(actAsProducts)
+			{
+				productsGroup.GET("/products", product.List)
+				productsGroup.POST("/products", product.Create)
+				productsGroup.PATCH("/products/:id", product.Update)
+				productsGroup.DELETE("/products/:id", product.Delete)
+				productsGroup.POST("/products/:id/upload", product.UploadFile)
+				productsGroup.POST("/products/:id/cover", product.UploadCover)
+				productsGroup.GET("/products/:id/download-url", product.GetDownloadURL)
 
-			// No.70 (Sprint 7): bundel adalah baris products biasa --
-			// toggle aktif/hapus pakai product.Update/Delete yang sudah
-			// ada, jadi cuma perlu List+Create di sini.
-			dashboard.GET("/bundles", bundle.List)
-			dashboard.POST("/bundles", bundle.Create)
+				// No.67 (Sprint 7): voucher/diskon per produk, milik kreator
+				// sendiri seperti produk -- pola CRUD & ownership sama persis.
+				productsGroup.GET("/vouchers", voucher.List)
+				productsGroup.POST("/vouchers", voucher.Create)
+				productsGroup.PATCH("/vouchers/:id", voucher.Update)
+				productsGroup.DELETE("/vouchers/:id", voucher.Delete)
 
-			// No.71 (Sprint 7): blok dukungan/donasi -- juga baris products
-			// (is_donation=true), tapi cuma SATU per kreator, jadi cukup
-			// Get+Upsert (bukan CRUD list biasa).
-			dashboard.GET("/donation", donation.Get)
-			dashboard.PUT("/donation", donation.Upsert)
+				// No.70 (Sprint 7): bundel adalah baris products biasa --
+				// toggle aktif/hapus pakai product.Update/Delete yang sudah
+				// ada, jadi cuma perlu List+Create di sini.
+				productsGroup.GET("/bundles", bundle.List)
+				productsGroup.POST("/bundles", bundle.Create)
 
-			// No.72 (Sprint 7): program afiliasi privat -- kreator undang
-			// afiliator (email) + atur komisi per produk.
-			dashboard.POST("/affiliates", affiliate.Upsert)
-			dashboard.GET("/affiliates", affiliate.ListMine)
-			dashboard.DELETE("/affiliates/:id", affiliate.Revoke)
-			dashboard.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
-			dashboard.GET("/affiliate-programs", affiliate.ListPrograms)
+				// No.71 (Sprint 7): blok dukungan/donasi -- juga baris products
+				// (is_donation=true), tapi cuma SATU per kreator, jadi cukup
+				// Get+Upsert (bukan CRUD list biasa).
+				productsGroup.GET("/donation", donation.Get)
+				productsGroup.PUT("/donation", donation.Upsert)
+
+				// No.72 (Sprint 7): program afiliasi privat -- kreator undang
+				// afiliator (email) + atur komisi per produk.
+				productsGroup.POST("/affiliates", affiliate.Upsert)
+				productsGroup.GET("/affiliates", affiliate.ListMine)
+				productsGroup.DELETE("/affiliates/:id", affiliate.Revoke)
+				productsGroup.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
+				productsGroup.GET("/affiliate-programs", affiliate.ListPrograms)
+			}
+
+			// No.87: manajemen kolaborator itu sendiri SELALU beroperasi
+			// sebagai diri sendiri (bukan lewat ActAsOwner) -- pemilik
+			// mengundang/mencabut, siapa pun bisa melihat & menerima
+			// undangan yang ditujukan ke emailnya sendiri.
+			dashboard.POST("/collaborators", collaborator.Invite)
+			dashboard.GET("/collaborators", collaborator.ListMine)
+			dashboard.DELETE("/collaborators/:id", collaborator.Revoke)
+			dashboard.GET("/collaboration-invites", collaborator.ListInvitesForMe)
+			dashboard.POST("/collaboration-invites/:id/accept", collaborator.AcceptInvite)
+			dashboard.GET("/workspaces", collaborator.ListWorkspaces)
 
 			// No.73 (Sprint 8): blok pengumpulan lead + Manajer Audiens.
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)

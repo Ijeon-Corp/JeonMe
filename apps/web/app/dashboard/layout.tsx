@@ -5,7 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import QRCodeModal from "@/components/QRCodeModal";
-import { clearToken, getMyPage, logout as apiLogout } from "@/lib/api-client";
+import {
+  Workspace,
+  clearToken,
+  getActiveWorkspaceOwnerId,
+  getMyPage,
+  listWorkspaces,
+  logout as apiLogout,
+  setActiveWorkspaceOwnerId,
+} from "@/lib/api-client";
 import {
   IconBell,
   IconBox,
@@ -70,6 +78,7 @@ const NAV_ITEMS: NavEntry[] = [
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
   { type: "link", href: "/dashboard/kyc", label: "Verifikasi KYC", icon: IconShield },
+  { type: "link", href: "/dashboard/team", label: "Tim & Kolaborator", icon: IconUsers },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
 ];
 
@@ -84,6 +93,8 @@ export default function DashboardLayout({
   const [username, setUsername] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
 
   useEffect(() => {
     getMyPage()
@@ -92,7 +103,25 @@ export default function DashboardLayout({
         // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
         // diamkan saja, jangan ganggu dashboard dengan pesan error.
       });
+
+    // No.87: pemilih ruang kerja hanya tampil kalau pengguna ini punya lebih
+    // dari satu ruang kerja (dirinya sendiri + minimal satu kolaborasi aktif).
+    listWorkspaces()
+      .then(setWorkspaces)
+      .catch(() => {
+        // Sama seperti di atas -- gagal dimuat diamkan saja.
+      });
   }, []);
+
+  function handleWorkspaceChange(ownerId: string) {
+    const isSelf = workspaces.find((w) => w.owner_user_id === ownerId)?.is_self;
+    setActiveWorkspaceOwnerId(isSelf ? null : ownerId);
+    // Reload penuh -- cara paling sederhana & aman supaya SEMUA halaman
+    // dashboard yang sedang terbuka mengambil ulang datanya sesuai ruang
+    // kerja baru, tanpa perlu menyambungkan event "ganti ruang kerja" ke
+    // tiap halaman satu per satu.
+    window.location.reload();
+  }
 
   function handleCopyLink() {
     if (!username) return;
@@ -120,6 +149,28 @@ export default function DashboardLayout({
         <Link href="/dashboard" className="font-heading text-xl font-extrabold text-gradient">
           Jeonme
         </Link>
+
+        {workspaces.length > 1 && (
+          <div className="mt-4">
+            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
+              Kelola sebagai
+            </label>
+            <select
+              value={activeOwnerId ?? workspaces.find((w) => w.is_self)?.owner_user_id ?? ""}
+              onChange={(e) => {
+                setActiveOwnerIdState(e.target.value);
+                handleWorkspaceChange(e.target.value);
+              }}
+              className="mt-1 w-full rounded-lg border border-border bg-white px-2.5 py-2 text-xs font-semibold text-ink focus:border-primary focus:outline-none"
+            >
+              {workspaces.map((w) => (
+                <option key={w.owner_user_id} value={w.owner_user_id}>
+                  {w.is_self ? "Akun saya" : `@${w.owner_username}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="mt-8 flex flex-col gap-1 text-sm">
           {NAV_ITEMS.map((item) => {

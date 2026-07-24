@@ -22,7 +22,7 @@ func CORS(allowedOrigins string) gin.HandlerFunc {
 	cfg := cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Act-As-Owner"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
@@ -112,6 +112,45 @@ func AdminRequired(db *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// ActAsOwner — No.87 (Sprint 10): dipasang SETELAH AuthRequired HANYA pada
+// grup rute yang boleh diakses kolaborator (tautan/produk/desain -- lihat
+// routes.go), TIDAK PERNAH pada saldo/penarikan/KYC/hapus akun/domain
+// kustom/admin. Kalau header X-Act-As-Owner ada DAN pengguna yang login
+// adalah kolaborator AKTIF dengan flag izin `permissionColumn`=true untuk
+// pemilik tersebut, "userID" di context DIGANTI ke ID pemilik supaya
+// handler di baliknya (yang semua sudah memakai c.GetString("userID") apa
+// adanya) otomatis beroperasi atas nama pemilik TANPA perlu diubah satu per
+// satu. Kalau header kosong, middleware ini tidak melakukan apa-apa (jalur
+// normal: bertindak sebagai diri sendiri).
+func ActAsOwner(db *pgxpool.Pool, permissionColumn string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ownerID := c.GetHeader("X-Act-As-Owner")
+		if ownerID == "" {
+			c.Next()
+			return
+		}
+
+		requesterID := c.GetString("userID")
+		if ownerID == requesterID {
+			c.Next()
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		var allowed bool
+		query := `SELECT ` + permissionColumn + ` FROM collaborators WHERE owner_user_id = $1 AND collaborator_user_id = $2 AND status = 'active'`
+		if err := db.QueryRow(ctx, query, ownerID, requesterID).Scan(&allowed); err != nil || !allowed {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "kamu tidak punya akses ke ruang kerja ini"})
+			return
+		}
+
+		c.Set("userID", ownerID)
 		c.Next()
 	}
 }
