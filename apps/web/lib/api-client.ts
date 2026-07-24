@@ -467,6 +467,61 @@ export function upsertDonationSettings(input: { enabled: boolean; title: string;
   );
 }
 
+// ---------- Dashboard: program afiliasi (Sprint 7, No.72) ----------
+// Mode privat: kreator undang afiliator (harus sudah jadi pengguna Jeonme)
+// lewat email, atur komisi custom per produk. Satu afiliator = satu
+// referral_code untuk semua produk yang dikomisikan kepadanya.
+
+export interface AffiliateProductCommission {
+  product_id: string;
+  product_name: string;
+  commission_percent: number;
+}
+
+export interface MyAffiliate {
+  id: string;
+  affiliate_email: string;
+  referral_code: string;
+  referral_base_url: string;
+  commissions: AffiliateProductCommission[];
+}
+
+export interface AffiliateProgram {
+  id: string;
+  creator_username: string;
+  referral_code: string;
+  referral_url: string;
+  commissions: AffiliateProductCommission[];
+}
+
+export function upsertAffiliate(input: { affiliate_email: string; product_id: string; commission_percent: number }) {
+  return apiFetch<{ message: string; affiliate_id: string }>(
+    "/dashboard/affiliates",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function listMyAffiliates() {
+  return apiFetch<MyAffiliate[]>("/dashboard/affiliates", { method: "GET" }, { auth: true });
+}
+
+export function listAffiliatePrograms() {
+  return apiFetch<AffiliateProgram[]>("/dashboard/affiliate-programs", { method: "GET" }, { auth: true });
+}
+
+export function revokeAffiliate(affiliateId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/affiliates/${affiliateId}`, { method: "DELETE" }, { auth: true });
+}
+
+export function removeAffiliateCommission(affiliateId: string, productId: string) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/affiliates/${affiliateId}/products/${productId}`,
+    { method: "DELETE" },
+    { auth: true }
+  );
+}
+
 // ---------- Checkout (publik, REQ-F-401) ----------
 
 export function createCheckout(input: {
@@ -475,6 +530,7 @@ export function createCheckout(input: {
   buyer_contact?: string;
   voucher_code?: string;
   buyer_amount_idr?: number;
+  referral_code?: string;
 }) {
   return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
     method: "POST",

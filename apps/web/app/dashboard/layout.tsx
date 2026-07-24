@@ -19,6 +19,7 @@ import {
   IconSettings,
   IconSparkle,
   IconTag,
+  IconUsers,
   IconWallet,
 } from "@/components/icons";
 
@@ -49,6 +50,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/vouchers", label: "Voucher", icon: IconTag },
       { href: "/dashboard/bundles", label: "Bundel", icon: IconGift },
       { href: "/dashboard/donation", label: "Dukungan", icon: IconHeart },
+      { href: "/dashboard/affiliates", label: "Afiliasi", icon: IconUsers },
     ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },

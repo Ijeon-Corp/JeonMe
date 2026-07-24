@@ -38,6 +38,9 @@ export interface PagePreviewData {
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   donation?: PagePreviewDonation;
+  // No.72: kode ?ref= dari URL halaman publik -- diteruskan ke tombol Beli
+  // tiap produk supaya checkout bisa mengaitkan order ke afiliator.
+  referralCode?: string;
 }
 
 interface PreviewSourcePage {
@@ -259,6 +262,7 @@ export default function PagePreview({
                       productId={product.id}
                       buttonClassName={theme.buyButton}
                       pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+                      referralCode={data.referralCode}
                     />
                   ) : (
                     <button

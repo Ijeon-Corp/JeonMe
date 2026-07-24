@@ -10,6 +10,7 @@ export default function BuyProductButton({
   hideVoucher = false,
   openLabel = "Beli",
   submitLabel = "Bayar Sekarang",
+  referralCode,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -20,6 +21,9 @@ export default function BuyProductButton({
   hideVoucher?: boolean;
   openLabel?: string;
   submitLabel?: string;
+  // No.72: kode ?ref= dari URL halaman publik, diteruskan apa adanya ke
+  // checkout -- backend yang memvalidasi & mengabaikan kalau tidak cocok.
+  referralCode?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -70,6 +74,7 @@ export default function BuyProductButton({
         buyer_email: email,
         voucher_code: voucherResult ? voucherCode.trim() : undefined,
         buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
+        referral_code: referralCode,
       });
       window.location.href = invoice_url;
     } catch (err) {

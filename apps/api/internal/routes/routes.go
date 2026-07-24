@@ -30,6 +30,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	voucher := handlers.NewVoucherHandler(db)
 	bundle := handlers.NewBundleHandler(db)
 	donation := handlers.NewDonationHandler(db)
+	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	links := handlers.NewLinksHandler(db)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -114,6 +115,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// Get+Upsert (bukan CRUD list biasa).
 			dashboard.GET("/donation", donation.Get)
 			dashboard.PUT("/donation", donation.Upsert)
+
+			// No.72 (Sprint 7): program afiliasi privat -- kreator undang
+			// afiliator (email) + atur komisi per produk.
+			dashboard.POST("/affiliates", affiliate.Upsert)
+			dashboard.GET("/affiliates", affiliate.ListMine)
+			dashboard.DELETE("/affiliates/:id", affiliate.Revoke)
+			dashboard.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
+			dashboard.GET("/affiliate-programs", affiliate.ListPrograms)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

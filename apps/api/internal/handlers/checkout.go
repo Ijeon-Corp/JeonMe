@@ -51,6 +51,7 @@ type createCheckoutRequest struct {
 	BuyerContact   string `json:"buyer_contact"`
 	VoucherCode    string `json:"voucher_code"`
 	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
+	ReferralCode   string `json:"referral_code"`
 }
 
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
@@ -121,6 +122,17 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	}
 	finalAmountIDR := priceIDR - discountIDR
 
+	// No.72 (Sprint 7): komisi afiliasi dihitung dari harga yang BENAR-BENAR
+	// dibayar (setelah voucher), sama seperti platform_fee -- kode referral
+	// yang tidak cocok dengan produk ini (bukan bagian program afiliasi
+	// produk ini) diabaikan diam-diam, checkout tetap lanjut tanpa komisi.
+	var affiliateID *string
+	var affiliateCommissionIDR int64
+	if id, _, commissionPercent, ok := resolveAffiliate(ctx, h.DB, req.ReferralCode, req.ProductID); ok {
+		affiliateID = &id
+		affiliateCommissionIDR = int64(float64(finalAmountIDR) * commissionPercent / 100)
+	}
+
 	orderID := uuid.NewString()
 	externalID := "jeonme-order-" + orderID
 	platformFeeIDR := int64(float64(finalAmountIDR) * h.PlatformFeePercent / 100)
@@ -137,9 +149,9 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR)
+		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
@@ -314,12 +326,13 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	defer cancel()
 
 	var orderID, productUserID string
-	var amountIDR, platformFeeIDR int64
+	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
+	var affiliateID *string
 	err = h.DB.QueryRow(ctx, `
-		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr
+		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR)
+	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -380,7 +393,9 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				return
 			}
 
-			netAmount := amountIDR - platformFeeIDR
+			// No.72: komisi afiliasi dipotong dari bagian kreator (afiliator
+			// dibayar dari pendapatan kreator, BUKAN biaya tambahan platform).
+			netAmount := amountIDR - platformFeeIDR - affiliateCommissionIDR
 			newBalance := currentBalance + netAmount
 			ledgerID := uuid.NewString()
 			if _, err := tx.Exec(ctx, `
@@ -394,6 +409,42 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			if err := audit.Log(ctx, tx, productUserID, "ledger.credit", "ledger_entry", ledgerID, metadata); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
 				return
+			}
+
+			// No.72: kredit ledger afiliator, pola sama persis seperti ledger
+			// kreator di atas (lock per user_id supaya balance_after benar
+			// walau ada beberapa webhook afiliator yang sama masuk bersamaan).
+			if affiliateID != nil && affiliateCommissionIDR > 0 {
+				var affiliateUserID string
+				if err := tx.QueryRow(ctx, `SELECT affiliate_user_id FROM affiliates WHERE id = $1`, *affiliateID).Scan(&affiliateUserID); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat afiliator"})
+					return
+				}
+				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, affiliateUserID); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger afiliator"})
+					return
+				}
+				var affiliateCurrentBalance int64
+				if err := tx.QueryRow(ctx, `
+					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
+				`, affiliateUserID).Scan(&affiliateCurrentBalance); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo afiliator"})
+					return
+				}
+				affiliateNewBalance := affiliateCurrentBalance + affiliateCommissionIDR
+				affiliateLedgerID := uuid.NewString()
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
+					VALUES ($1, $2, $3, 'credit', $4, $5, now())
+				`, affiliateLedgerID, affiliateUserID, orderID, affiliateCommissionIDR, affiliateNewBalance); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger afiliator"})
+					return
+				}
+				affiliateMetadata, _ := json.Marshal(gin.H{"amount_idr": affiliateCommissionIDR, "balance_after": affiliateNewBalance, "order_id": orderID})
+				if err := audit.Log(ctx, tx, affiliateUserID, "ledger.credit", "ledger_entry", affiliateLedgerID, affiliateMetadata); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log afiliator"})
+					return
+				}
 			}
 			shouldNotifyBuyer = true
 		}

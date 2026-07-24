@@ -4,7 +4,10 @@ import { getPublicPage } from "@/lib/api-client";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 
-type PageParams = { params: Promise<{ username: string }> };
+type PageParams = {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ ref?: string }>;
+};
 
 // REQ-F-206: meta tag Open Graph supaya link halaman kreator tampil bagus
 // saat dibagikan di WhatsApp/Instagram/X, dst.
@@ -45,8 +48,9 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 //
 // Next.js 16: route params sekarang berupa Promise dan wajib di-await
 // (breaking change sejak Next.js 15, lihat nextjs.org/docs/app/guides/upgrading/version-16).
-export default async function CreatorPage({ params }: PageParams) {
+export default async function CreatorPage({ params, searchParams }: PageParams) {
   const { username } = await params;
+  const { ref } = await searchParams;
   const page = await getPublicPage(username);
 
   if (!page) {
@@ -83,6 +87,7 @@ export default async function CreatorPage({ params }: PageParams) {
                 minAmountIdr: page.donation.min_amount_idr,
               }
             : undefined,
+          referralCode: ref,
         }}
         interactive
       />
