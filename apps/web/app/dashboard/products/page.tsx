@@ -50,6 +50,10 @@ export default function DashboardProductsPage() {
   const [flashEnd, setFlashEnd] = useState("");
   const [savingFlashSale, setSavingFlashSale] = useState(false);
 
+  const [pwywEditId, setPwywEditId] = useState<string | null>(null);
+  const [pwywMinPrice, setPwywMinPrice] = useState("");
+  const [savingPwyw, setSavingPwyw] = useState(false);
+
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -90,6 +94,8 @@ export default function DashboardProductsPage() {
           flash_sale_ends_at: null,
           effective_price_idr: price,
           is_flash_sale_active: false,
+          pwyw_enabled: false,
+          pwyw_min_price_idr: null,
         },
       ]);
       setName("");
@@ -208,6 +214,42 @@ export default function DashboardProductsPage() {
     }
   }
 
+  function openPwywForm(product: DashboardProduct) {
+    setPwywEditId(product.id);
+    setPwywMinPrice(product.pwyw_min_price_idr ? String(product.pwyw_min_price_idr) : "");
+  }
+
+  async function handleSavePwyw(product: DashboardProduct) {
+    const minPrice = Number(pwywMinPrice);
+    if (!minPrice || minPrice < 1000) {
+      setError("Harga minimum wajib diisi, minimal Rp1.000.");
+      return;
+    }
+    setError(null);
+    setSavingPwyw(true);
+    try {
+      await updateProduct(product.id, { pwyw_enabled: true, pwyw_min_price_idr: minPrice });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setPwywEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengaktifkan bayar seikhlasnya.");
+    } finally {
+      setSavingPwyw(false);
+    }
+  }
+
+  async function handleClearPwyw(product: DashboardProduct) {
+    setError(null);
+    try {
+      await updateProduct(product.id, { pwyw_enabled: false });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menonaktifkan bayar seikhlasnya.");
+    }
+  }
+
   async function handleGetDownloadLink(id: string) {
     setError(null);
     try {
@@ -286,7 +328,11 @@ export default function DashboardProductsPage() {
 
               <div className="flex flex-1 flex-col p-4">
                 <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-                {p.is_flash_sale_active ? (
+                {p.pwyw_enabled ? (
+                  <p className="mt-0.5 text-sm font-bold text-secondary-dark">
+                    Mulai dari Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
+                  </p>
+                ) : p.is_flash_sale_active ? (
                   <div className="mt-0.5 flex items-center gap-1.5">
                     <p className="text-xs text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</p>
                     <p className="text-sm font-bold text-accent-dark">
@@ -397,6 +443,33 @@ export default function DashboardProductsPage() {
                       </button>
                     </div>
                   </div>
+                ) : pwywEditId === p.id ? (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                    <input
+                      type="number"
+                      placeholder="Harga minimum (Rp)"
+                      value={pwywMinPrice}
+                      onChange={(e) => setPwywMinPrice(e.target.value)}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPwywEditId(null)}
+                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingPwyw}
+                        onClick={() => handleSavePwyw(p)}
+                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                      >
+                        {savingPwyw ? "Menyimpan..." : "Simpan"}
+                      </button>
+                    </div>
+                  </div>
                 ) : p.is_flash_sale_active ? (
                   <div className="mt-3 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
                     <span className="text-[11px] font-semibold text-accent-dark">
@@ -411,15 +484,37 @@ export default function DashboardProductsPage() {
                       Batalkan
                     </button>
                   </div>
+                ) : p.pwyw_enabled ? (
+                  <div className="mt-3 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-secondary-dark">
+                      Bayar seikhlasnya aktif, min Rp{(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleClearPwyw(p)}
+                      className="text-[11px] font-bold text-red-600 hover:underline"
+                    >
+                      Batalkan
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => openFlashSaleForm(p)}
-                    className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-accent hover:text-accent-dark"
-                  >
-                    <IconSparkle className="h-3.5 w-3.5" />
-                    Jadwalkan Flash Sale
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openFlashSaleForm(p)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-accent hover:text-accent-dark"
+                    >
+                      <IconSparkle className="h-3.5 w-3.5" />
+                      Flash Sale
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openPwywForm(p)}
+                      className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-secondary hover:text-secondary-dark"
+                    >
+                      Bayar Seikhlasnya
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

@@ -59,6 +59,8 @@ type publicItem struct {
 	CoverImage        string `json:"cover_image_url"`
 	EffectivePriceIDR int64  `json:"effective_price_idr"`
 	IsFlashSaleActive bool   `json:"is_flash_sale_active"`
+	PwywEnabled       bool   `json:"pwyw_enabled"`
+	PwywMinPriceIDR   *int64 `json:"pwyw_min_price_idr"`
 }
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
@@ -120,14 +122,15 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 
 	resp.Products = []publicItem{}
 	productRows, err := h.DB.Query(ctx, `
-		SELECT id, name, price_idr, cover_image_url, `+effectivePriceExpr+`
+		SELECT id, name, price_idr, cover_image_url, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr
 		FROM products WHERE user_id = $1 AND is_active = true
 	`, userID)
 	if err == nil {
 		defer productRows.Close()
 		for productRows.Next() {
 			var p publicItem
-			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive); err == nil {
+			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
+				&p.PwywEnabled, &p.PwywMinPriceIDR); err == nil {
 				resp.Products = append(resp.Products, p)
 			}
 		}

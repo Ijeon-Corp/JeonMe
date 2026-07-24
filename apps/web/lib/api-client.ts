@@ -93,6 +93,8 @@ export interface PublicProduct {
   cover_image_url: string;
   effective_price_idr: number;
   is_flash_sale_active: boolean;
+  pwyw_enabled: boolean;
+  pwyw_min_price_idr: number | null;
 }
 
 export interface PublicPage {
@@ -264,6 +266,8 @@ export interface DashboardProduct {
   flash_sale_ends_at: string | null;
   effective_price_idr: number;
   is_flash_sale_active: boolean;
+  pwyw_enabled: boolean;
+  pwyw_min_price_idr: number | null;
 }
 
 export function listProducts() {
@@ -289,6 +293,8 @@ export function updateProduct(
     flash_sale_starts_at: string;
     flash_sale_ends_at: string;
     clear_flash_sale: boolean;
+    pwyw_enabled: boolean;
+    pwyw_min_price_idr: number;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -410,6 +416,7 @@ export function createCheckout(input: {
   buyer_email: string;
   buyer_contact?: string;
   voucher_code?: string;
+  buyer_amount_idr?: number;
 }) {
   return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
     method: "POST",
@@ -424,7 +431,7 @@ export interface VoucherValidation {
   message?: string;
 }
 
-export function validateVoucher(input: { code: string; product_id: string }) {
+export function validateVoucher(input: { code: string; product_id: string; buyer_amount_idr?: number }) {
   return apiFetch<VoucherValidation>("/checkout/validate-voucher", {
     method: "POST",
     body: JSON.stringify(input),

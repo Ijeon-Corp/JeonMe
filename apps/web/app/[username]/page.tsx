@@ -71,6 +71,8 @@ export default async function CreatorPage({ params }: PageParams) {
             cover_image_url: p.cover_image_url,
             effectivePriceIdr: p.effective_price_idr,
             isFlashSaleActive: p.is_flash_sale_active,
+            pwywEnabled: p.pwyw_enabled,
+            pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
           })),
         }}
         interactive

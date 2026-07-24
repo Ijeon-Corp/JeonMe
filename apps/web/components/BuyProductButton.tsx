@@ -6,14 +6,17 @@ import { ApiError, createCheckout, validateVoucher } from "@/lib/api-client";
 export default function BuyProductButton({
   productId,
   buttonClassName = "bg-primary text-white hover:opacity-90",
+  pwywMinPriceIdr,
 }: {
   productId: string;
   buttonClassName?: string;
+  pwywMinPriceIdr?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [buyerAmount, setBuyerAmount] = useState(pwywMinPriceIdr ? String(pwywMinPriceIdr) : "");
 
   const [showVoucher, setShowVoucher] = useState(false);
   const [voucherCode, setVoucherCode] = useState("");
@@ -27,7 +30,11 @@ export default function BuyProductButton({
     setVoucherMessage(null);
     setVoucherResult(null);
     try {
-      const res = await validateVoucher({ code: voucherCode.trim(), product_id: productId });
+      const res = await validateVoucher({
+        code: voucherCode.trim(),
+        product_id: productId,
+        buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
+      });
       if (res.valid && res.discount_idr !== undefined && res.final_amount_idr !== undefined) {
         setVoucherResult({ discountIDR: res.discount_idr, finalIDR: res.final_amount_idr });
       } else {
@@ -43,12 +50,17 @@ export default function BuyProductButton({
   async function handleBuy(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (pwywMinPriceIdr !== undefined && (!buyerAmount || Number(buyerAmount) < pwywMinPriceIdr)) {
+      setError(`Jumlah pembayaran minimal Rp${pwywMinPriceIdr.toLocaleString("id-ID")}.`);
+      return;
+    }
     setLoading(true);
     try {
       const { invoice_url } = await createCheckout({
         product_id: productId,
         buyer_email: email,
         voucher_code: voucherResult ? voucherCode.trim() : undefined,
+        buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
       });
       window.location.href = invoice_url;
     } catch (err) {
@@ -71,6 +83,21 @@ export default function BuyProductButton({
 
   return (
     <form onSubmit={handleBuy} className="mt-2.5 flex flex-col gap-1.5">
+      {pwywMinPriceIdr !== undefined && (
+        <div>
+          <label className="text-[10px] font-semibold opacity-80">
+            Bayar berapa saja, min Rp{pwywMinPriceIdr.toLocaleString("id-ID")}
+          </label>
+          <input
+            type="number"
+            required
+            min={pwywMinPriceIdr}
+            value={buyerAmount}
+            onChange={(e) => setBuyerAmount(e.target.value)}
+            className="mt-0.5 w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+          />
+        </div>
+      )}
       <input
         type="email"
         required

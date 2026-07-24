@@ -17,6 +17,8 @@ export interface PagePreviewProduct {
   cover_image_url?: string;
   effectivePriceIdr?: number;
   isFlashSaleActive?: boolean;
+  pwywEnabled?: boolean;
+  pwywMinPriceIdr?: number;
 }
 
 export interface PagePreviewData {
@@ -51,6 +53,8 @@ interface PreviewSourceProduct {
   is_active: boolean;
   effective_price_idr?: number;
   is_flash_sale_active?: boolean;
+  pwyw_enabled?: boolean;
+  pwyw_min_price_idr?: number | null;
 }
 
 // Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
@@ -75,6 +79,8 @@ export function toPreviewData(
         cover_image_url: p.cover_image_url,
         effectivePriceIdr: p.effective_price_idr,
         isFlashSaleActive: p.is_flash_sale_active,
+        pwywEnabled: p.pwyw_enabled,
+        pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
       })),
   };
 }
@@ -177,7 +183,11 @@ export default function PagePreview({
                     )}
                   </div>
                   <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                  {product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
+                  {product.pwywEnabled ? (
+                    <p className={`text-xs font-bold ${theme.productPrice}`}>
+                      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
+                    </p>
+                  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
                     <div className="flex items-center gap-1.5">
                       <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
                         Rp {product.price_idr.toLocaleString("id-ID")}
@@ -192,7 +202,11 @@ export default function PagePreview({
                     </p>
                   )}
                   {interactive ? (
-                    <BuyProductButton productId={product.id} buttonClassName={theme.buyButton} />
+                    <BuyProductButton
+                      productId={product.id}
+                      buttonClassName={theme.buyButton}
+                      pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+                    />
                   ) : (
                     <button
                       type="button"

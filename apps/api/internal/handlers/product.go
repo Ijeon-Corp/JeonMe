@@ -129,7 +129,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
-			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`
+			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
+			pwyw_enabled, pwyw_min_price_idr
 		FROM products WHERE user_id = $1
 	`, userID)
 	if err != nil {
@@ -151,12 +152,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 		FlashSaleEndsAt   *time.Time `json:"flash_sale_ends_at"`
 		EffectivePriceIDR int64      `json:"effective_price_idr"`
 		IsFlashSaleActive bool       `json:"is_flash_sale_active"`
+		PwywEnabled       bool       `json:"pwyw_enabled"`
+		PwywMinPriceIDR   *int64     `json:"pwyw_min_price_idr"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var it item
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
-			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive); err == nil {
+			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
+			&it.PwywEnabled, &it.PwywMinPriceIDR); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -173,6 +177,8 @@ type updateProductRequest struct {
 	FlashSaleStartsAt *string `json:"flash_sale_starts_at"`
 	FlashSaleEndsAt   *string `json:"flash_sale_ends_at"`
 	ClearFlashSale    bool    `json:"clear_flash_sale"`
+	PwywEnabled       *bool   `json:"pwyw_enabled"`
+	PwywMinPriceIDR   *int64  `json:"pwyw_min_price_idr" binding:"omitempty,min=1000"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -193,7 +199,13 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 	var fileKey string
 	var currentPriceIDR int64
-	err := h.DB.QueryRow(ctx, `SELECT file_key, price_idr FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey, &currentPriceIDR)
+	var currentFlashSalePriceIDR *int64
+	var currentPwywEnabled bool
+	var currentPwywMinPriceIDR *int64
+	err := h.DB.QueryRow(ctx, `
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr
+		FROM products WHERE id = $1 AND user_id = $2
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
@@ -202,6 +214,36 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	if req.IsActive != nil && *req.IsActive && fileKey == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
+	}
+
+	// No.69: pwyw & flash sale (No.68) sengaja tidak boleh aktif bersamaan
+	// pada produk yang sama -- kalau pembeli sudah bebas menentukan harga
+	// sendiri, harga coret flash sale jadi tidak masuk akal.
+	pwywWillBeEnabled := currentPwywEnabled
+	if req.PwywEnabled != nil {
+		pwywWillBeEnabled = *req.PwywEnabled
+	}
+	flashSaleWillBeSet := currentFlashSalePriceIDR != nil
+	if req.ClearFlashSale {
+		flashSaleWillBeSet = false
+	}
+	if req.FlashSalePriceIDR != nil && req.FlashSaleStartsAt != nil && req.FlashSaleEndsAt != nil {
+		flashSaleWillBeSet = true
+	}
+	if pwywWillBeEnabled && flashSaleWillBeSet {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bayar seikhlasnya dan flash sale tidak bisa aktif bersamaan -- batalkan salah satu dulu"})
+		return
+	}
+
+	if req.PwywEnabled != nil && *req.PwywEnabled {
+		minPrice := currentPwywMinPriceIDR
+		if req.PwywMinPriceIDR != nil {
+			minPrice = req.PwywMinPriceIDR
+		}
+		if minPrice == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "harga minimum wajib diisi untuk mengaktifkan bayar seikhlasnya"})
+			return
+		}
 	}
 
 	// No.68: validasi flash sale -- ketiga field wajib diisi bersamaan,
@@ -256,9 +298,12 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			is_active = COALESCE($4, is_active),
 			flash_sale_price_idr = COALESCE($5, flash_sale_price_idr),
 			flash_sale_starts_at = COALESCE($6, flash_sale_starts_at),
-			flash_sale_ends_at = COALESCE($7, flash_sale_ends_at)
-		WHERE id = $8
-	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds, productID)
+			flash_sale_ends_at = COALESCE($7, flash_sale_ends_at),
+			pwyw_enabled = COALESCE($8, pwyw_enabled),
+			pwyw_min_price_idr = COALESCE($9, pwyw_min_price_idr)
+		WHERE id = $10
+	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
+		req.PwywEnabled, req.PwywMinPriceIDR, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

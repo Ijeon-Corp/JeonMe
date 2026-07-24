@@ -46,10 +46,11 @@ func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, midtr
 }
 
 type createCheckoutRequest struct {
-	ProductID    string `json:"product_id" binding:"required"`
-	BuyerEmail   string `json:"buyer_email" binding:"required,email"`
-	BuyerContact string `json:"buyer_contact"`
-	VoucherCode  string `json:"voucher_code"`
+	ProductID      string `json:"product_id" binding:"required"`
+	BuyerEmail     string `json:"buyer_email" binding:"required,email"`
+	BuyerContact   string `json:"buyer_contact"`
+	VoucherCode    string `json:"voucher_code"`
+	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
 }
 
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
@@ -67,12 +68,15 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var productName string
 	var priceIDR int64
 	var flashSaleActive bool
+	var pwywEnabled bool
+	var pwywMinPriceIDR *int64
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+` FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive)
+		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr
+		FROM products WHERE id = $1 AND is_active = true
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -80,6 +84,21 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// No.69: kalau bayar-seikhlasnya aktif, harga yang pembeli tentukan
+	// sendiri MENGGANTIKAN (bukan menumpuk di atas) harga efektif produk --
+	// lihat catatan interaksi dengan flash sale di ProductHandler.Update.
+	if pwywEnabled {
+		minPrice := int64(1000)
+		if pwywMinPriceIDR != nil {
+			minPrice = *pwywMinPriceIDR
+		}
+		if req.BuyerAmountIDR == nil || *req.BuyerAmountIDR < minPrice {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("jumlah pembayaran minimal Rp%d", minPrice)})
+			return
+		}
+		priceIDR = *req.BuyerAmountIDR
 	}
 
 	// No.67 (Sprint 7): terapkan voucher SEBELUM platform_fee dihitung --
@@ -161,8 +180,9 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 }
 
 type validateVoucherRequest struct {
-	Code      string `json:"code" binding:"required"`
-	ProductID string `json:"product_id" binding:"required"`
+	Code           string `json:"code" binding:"required"`
+	ProductID      string `json:"product_id" binding:"required"`
+	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
 }
 
 // ValidateVoucher — endpoint publik untuk pratinjau real-time diskon di
@@ -180,17 +200,27 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 
 	var priceIDR int64
 	var flashSaleActive bool
+	var pwywEnabled bool
+	var pwywMinPriceIDR *int64
 	// No.68: pratinjau juga pakai harga efektif supaya konsisten dengan
 	// yang benar-benar dikenakan saat checkout sungguhan.
 	if err := h.DB.QueryRow(ctx, `
-		SELECT `+effectivePriceExpr+` FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&priceIDR, &flashSaleActive); err != nil {
+		SELECT `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr
+		FROM products WHERE id = $1 AND is_active = true
+	`, req.ProductID).Scan(&priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR); err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// No.69: kalau pwyw aktif, basis harga pratinjau adalah jumlah yang
+	// pembeli sudah masukkan (kalau ada) -- tanpa ini, harga dasar tidak
+	// diketahui sampai pembeli benar-benar menentukan jumlahnya.
+	if pwywEnabled && req.BuyerAmountIDR != nil {
+		priceIDR = *req.BuyerAmountIDR
 	}
 
 	pricing, reason, err := resolveVoucher(ctx, h.DB, req.Code, req.ProductID, priceIDR)
