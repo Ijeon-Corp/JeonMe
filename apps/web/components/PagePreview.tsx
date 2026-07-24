@@ -15,6 +15,8 @@ export interface PagePreviewProduct {
   name: string;
   price_idr: number;
   cover_image_url?: string;
+  effectivePriceIdr?: number;
+  isFlashSaleActive?: boolean;
 }
 
 export interface PagePreviewData {
@@ -47,6 +49,8 @@ interface PreviewSourceProduct {
   price_idr: number;
   cover_image_url: string;
   is_active: boolean;
+  effective_price_idr?: number;
+  is_flash_sale_active?: boolean;
 }
 
 // Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
@@ -64,7 +68,14 @@ export function toPreviewData(
     links: links.filter((l) => l.is_active),
     products: products
       .filter((p) => p.is_active)
-      .map((p) => ({ id: p.id, name: p.name, price_idr: p.price_idr, cover_image_url: p.cover_image_url })),
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        price_idr: p.price_idr,
+        cover_image_url: p.cover_image_url,
+        effectivePriceIdr: p.effective_price_idr,
+        isFlashSaleActive: p.is_flash_sale_active,
+      })),
   };
 }
 
@@ -166,9 +177,20 @@ export default function PagePreview({
                     )}
                   </div>
                   <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                  <p className={`text-xs font-bold ${theme.productPrice}`}>
-                    Rp {product.price_idr.toLocaleString("id-ID")}
-                  </p>
+                  {product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                        Rp {product.price_idr.toLocaleString("id-ID")}
+                      </p>
+                      <p className={`text-xs font-bold ${theme.productPrice}`}>
+                        Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className={`text-xs font-bold ${theme.productPrice}`}>
+                      Rp {product.price_idr.toLocaleString("id-ID")}
+                    </p>
+                  )}
                   {interactive ? (
                     <BuyProductButton productId={product.id} buttonClassName={theme.buyButton} />
                   ) : (

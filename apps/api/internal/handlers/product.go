@@ -110,6 +110,16 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	})
 }
 
+// effectivePriceExpr -- No.68: harga flash sale dihitung LIVE dari now(),
+// bukan disimpan sebagai flag yang perlu direset manual/lewat cron. Dipakai
+// berulang di List/GetPublicPage/checkout, disalin apa adanya di tiap query
+// (mengikuti gaya kodebase ini -- SQL mentah, bukan query builder).
+const effectivePriceExpr = `
+	CASE WHEN flash_sale_price_idr IS NOT NULL AND now() BETWEEN flash_sale_starts_at AND flash_sale_ends_at
+		THEN flash_sale_price_idr ELSE price_idr END AS effective_price_idr,
+	(flash_sale_price_idr IS NOT NULL AND now() BETWEEN flash_sale_starts_at AND flash_sale_ends_at) AS is_flash_sale_active
+`
+
 // List mengembalikan seluruh produk milik kreator yang sedang login.
 func (h *ProductHandler) List(c *gin.Context) {
 	userID := c.GetString("userID")
@@ -118,7 +128,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url
+		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
+			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`
 		FROM products WHERE user_id = $1
 	`, userID)
 	if err != nil {
@@ -128,18 +139,24 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer rows.Close()
 
 	type item struct {
-		ID            string `json:"id"`
-		Name          string `json:"name"`
-		Description   string `json:"description"`
-		PriceIDR      int64  `json:"price_idr"`
-		IsActive      bool   `json:"is_active"`
-		HasFile       bool   `json:"has_file"`
-		CoverImageURL string `json:"cover_image_url"`
+		ID                string     `json:"id"`
+		Name              string     `json:"name"`
+		Description       string     `json:"description"`
+		PriceIDR          int64      `json:"price_idr"`
+		IsActive          bool       `json:"is_active"`
+		HasFile           bool       `json:"has_file"`
+		CoverImageURL     string     `json:"cover_image_url"`
+		FlashSalePriceIDR *int64     `json:"flash_sale_price_idr"`
+		FlashSaleStartsAt *time.Time `json:"flash_sale_starts_at"`
+		FlashSaleEndsAt   *time.Time `json:"flash_sale_ends_at"`
+		EffectivePriceIDR int64      `json:"effective_price_idr"`
+		IsFlashSaleActive bool       `json:"is_flash_sale_active"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var it item
-		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL); err == nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
+			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -148,10 +165,14 @@ func (h *ProductHandler) List(c *gin.Context) {
 }
 
 type updateProductRequest struct {
-	Name        *string `json:"name" binding:"omitempty,max=200"`
-	Description *string `json:"description"`
-	PriceIDR    *int64  `json:"price_idr" binding:"omitempty,min=1000"`
-	IsActive    *bool   `json:"is_active"`
+	Name              *string `json:"name" binding:"omitempty,max=200"`
+	Description       *string `json:"description"`
+	PriceIDR          *int64  `json:"price_idr" binding:"omitempty,min=1000"`
+	IsActive          *bool   `json:"is_active"`
+	FlashSalePriceIDR *int64  `json:"flash_sale_price_idr" binding:"omitempty,min=1"`
+	FlashSaleStartsAt *string `json:"flash_sale_starts_at"`
+	FlashSaleEndsAt   *string `json:"flash_sale_ends_at"`
+	ClearFlashSale    bool    `json:"clear_flash_sale"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -171,7 +192,8 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	defer cancel()
 
 	var fileKey string
-	err := h.DB.QueryRow(ctx, `SELECT file_key FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey)
+	var currentPriceIDR int64
+	err := h.DB.QueryRow(ctx, `SELECT file_key, price_idr FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&fileKey, &currentPriceIDR)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
@@ -182,14 +204,61 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// No.68: validasi flash sale -- ketiga field wajib diisi bersamaan,
+	// harga flash sale harus lebih murah dari harga (baru, kalau diubah
+	// bersamaan) saat ini, dan periode harus masuk akal.
+	var flashStarts, flashEnds *time.Time
+	if req.FlashSalePriceIDR != nil || req.FlashSaleStartsAt != nil || req.FlashSaleEndsAt != nil {
+		if req.FlashSalePriceIDR == nil || req.FlashSaleStartsAt == nil || req.FlashSaleEndsAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "harga, mulai, dan berakhir flash sale wajib diisi bersamaan"})
+			return
+		}
+		effectivePrice := currentPriceIDR
+		if req.PriceIDR != nil {
+			effectivePrice = *req.PriceIDR
+		}
+		if *req.FlashSalePriceIDR >= effectivePrice {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "harga flash sale harus lebih murah dari harga produk"})
+			return
+		}
+		starts, err := time.Parse(time.RFC3339, *req.FlashSaleStartsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format flash_sale_starts_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		ends, err := time.Parse(time.RFC3339, *req.FlashSaleEndsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format flash_sale_ends_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		if !ends.After(starts) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "waktu berakhir flash sale harus setelah waktu mulai"})
+			return
+		}
+		flashStarts, flashEnds = &starts, &ends
+	}
+
+	if req.ClearFlashSale {
+		if _, err := h.DB.Exec(ctx, `
+			UPDATE products SET flash_sale_price_idr = NULL, flash_sale_starts_at = NULL, flash_sale_ends_at = NULL
+			WHERE id = $1
+		`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membatalkan flash sale"})
+			return
+		}
+	}
+
 	_, err = h.DB.Exec(ctx, `
 		UPDATE products SET
 			name = COALESCE($1, name),
 			description = COALESCE($2, description),
 			price_idr = COALESCE($3, price_idr),
-			is_active = COALESCE($4, is_active)
-		WHERE id = $5
-	`, req.Name, req.Description, req.PriceIDR, req.IsActive, productID)
+			is_active = COALESCE($4, is_active),
+			flash_sale_price_idr = COALESCE($5, flash_sale_price_idr),
+			flash_sale_starts_at = COALESCE($6, flash_sale_starts_at),
+			flash_sale_ends_at = COALESCE($7, flash_sale_ends_at)
+		WHERE id = $8
+	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

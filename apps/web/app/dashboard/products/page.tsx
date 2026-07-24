@@ -23,6 +23,7 @@ import {
   IconExternal,
   IconInbox,
   IconPlus,
+  IconSparkle,
   IconTrash,
   IconUpload,
 } from "@/components/icons";
@@ -42,6 +43,12 @@ export default function DashboardProductsPage() {
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [flashSaleEditId, setFlashSaleEditId] = useState<string | null>(null);
+  const [flashPrice, setFlashPrice] = useState("");
+  const [flashStart, setFlashStart] = useState("");
+  const [flashEnd, setFlashEnd] = useState("");
+  const [savingFlashSale, setSavingFlashSale] = useState(false);
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -70,7 +77,20 @@ export default function DashboardProductsPage() {
       const created = await createProduct({ name, price_idr: price });
       setProducts((prev) => [
         ...prev,
-        { id: created.id, name, description: "", price_idr: price, is_active: false, has_file: false, cover_image_url: "" },
+        {
+          id: created.id,
+          name,
+          description: "",
+          price_idr: price,
+          is_active: false,
+          has_file: false,
+          cover_image_url: "",
+          flash_sale_price_idr: null,
+          flash_sale_starts_at: null,
+          flash_sale_ends_at: null,
+          effective_price_idr: price,
+          is_flash_sale_active: false,
+        },
       ]);
       setName("");
       setPriceIDR("");
@@ -136,6 +156,58 @@ export default function DashboardProductsPage() {
     }
   }
 
+  function openFlashSaleForm(product: DashboardProduct) {
+    setFlashSaleEditId(product.id);
+    setFlashPrice(product.flash_sale_price_idr ? String(product.flash_sale_price_idr) : "");
+    setFlashStart(product.flash_sale_starts_at ? product.flash_sale_starts_at.slice(0, 16) : "");
+    setFlashEnd(product.flash_sale_ends_at ? product.flash_sale_ends_at.slice(0, 16) : "");
+  }
+
+  async function handleSaveFlashSale(product: DashboardProduct) {
+    const flashPriceValue = Number(flashPrice);
+    if (!flashPriceValue || flashPriceValue >= product.price_idr) {
+      setError("Harga flash sale wajib diisi dan harus lebih murah dari harga produk.");
+      return;
+    }
+    if (!flashStart || !flashEnd) {
+      setError("Waktu mulai dan berakhir flash sale wajib diisi.");
+      return;
+    }
+    const startsAt = new Date(flashStart).toISOString();
+    const endsAt = new Date(flashEnd).toISOString();
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setError("Waktu berakhir flash sale harus setelah waktu mulai.");
+      return;
+    }
+    setError(null);
+    setSavingFlashSale(true);
+    try {
+      await updateProduct(product.id, {
+        flash_sale_price_idr: flashPriceValue,
+        flash_sale_starts_at: startsAt,
+        flash_sale_ends_at: endsAt,
+      });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setFlashSaleEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menjadwalkan flash sale.");
+    } finally {
+      setSavingFlashSale(false);
+    }
+  }
+
+  async function handleClearFlashSale(product: DashboardProduct) {
+    setError(null);
+    try {
+      await updateProduct(product.id, { clear_flash_sale: true });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membatalkan flash sale.");
+    }
+  }
+
   async function handleGetDownloadLink(id: string) {
     setError(null);
     try {
@@ -182,6 +254,11 @@ export default function DashboardProductsPage() {
                 >
                   {p.is_active ? "Aktif" : "Belum aktif"}
                 </span>
+                {p.is_flash_sale_active && (
+                  <span className="absolute right-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                    Flash Sale
+                  </span>
+                )}
 
                 <input
                   ref={(el) => {
@@ -209,7 +286,16 @@ export default function DashboardProductsPage() {
 
               <div className="flex flex-1 flex-col p-4">
                 <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-                <p className="mt-0.5 text-sm font-bold text-secondary-dark">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                {p.is_flash_sale_active ? (
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <p className="text-xs text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                    <p className="text-sm font-bold text-accent-dark">
+                      Rp {p.effective_price_idr.toLocaleString("id-ID")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-0.5 text-sm font-bold text-secondary-dark">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                )}
 
                 <div className="mt-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -269,6 +355,72 @@ export default function DashboardProductsPage() {
                   {p.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
                   {busyId === p.id ? "Mengunggah..." : p.has_file ? "File terunggah -- ganti" : "Unggah file produk"}
                 </button>
+
+                {flashSaleEditId === p.id ? (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                    <input
+                      type="number"
+                      placeholder="Harga flash sale (Rp)"
+                      value={flashPrice}
+                      onChange={(e) => setFlashPrice(e.target.value)}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                    <div className="flex gap-1.5">
+                      <input
+                        type="datetime-local"
+                        value={flashStart}
+                        onChange={(e) => setFlashStart(e.target.value)}
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <input
+                        type="datetime-local"
+                        value={flashEnd}
+                        onChange={(e) => setFlashEnd(e.target.value)}
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setFlashSaleEditId(null)}
+                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingFlashSale}
+                        onClick={() => handleSaveFlashSale(p)}
+                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                      >
+                        {savingFlashSale ? "Menyimpan..." : "Simpan"}
+                      </button>
+                    </div>
+                  </div>
+                ) : p.is_flash_sale_active ? (
+                  <div className="mt-3 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-accent-dark">
+                      Flash sale sampai{" "}
+                      {p.flash_sale_ends_at && new Date(p.flash_sale_ends_at).toLocaleString("id-ID")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleClearFlashSale(p)}
+                      className="text-[11px] font-bold text-red-600 hover:underline"
+                    >
+                      Batalkan
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openFlashSaleForm(p)}
+                    className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-accent hover:text-accent-dark"
+                  >
+                    <IconSparkle className="h-3.5 w-3.5" />
+                    Jadwalkan Flash Sale
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -64,7 +64,14 @@ export default async function CreatorPage({ params }: PageParams) {
           avatarUrl: page.avatar_url,
           theme: page.theme,
           links: page.links,
-          products: page.products,
+          products: page.products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            price_idr: p.price_idr,
+            cover_image_url: p.cover_image_url,
+            effectivePriceIdr: p.effective_price_idr,
+            isFlashSaleActive: p.is_flash_sale_active,
+          })),
         }}
         interactive
       />

@@ -66,9 +66,13 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	var productName string
 	var priceIDR int64
+	var flashSaleActive bool
+	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
+	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
+	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, price_idr FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR)
+		SELECT name, `+effectivePriceExpr+` FROM products WHERE id = $1 AND is_active = true
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -175,9 +179,12 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 	defer cancel()
 
 	var priceIDR int64
+	var flashSaleActive bool
+	// No.68: pratinjau juga pakai harga efektif supaya konsisten dengan
+	// yang benar-benar dikenakan saat checkout sungguhan.
 	if err := h.DB.QueryRow(ctx, `
-		SELECT price_idr FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&priceIDR); err != nil {
+		SELECT `+effectivePriceExpr+` FROM products WHERE id = $1 AND is_active = true
+	`, req.ProductID).Scan(&priceIDR, &flashSaleActive); err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
 			return

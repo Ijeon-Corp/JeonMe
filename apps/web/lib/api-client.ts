@@ -91,6 +91,8 @@ export interface PublicProduct {
   name: string;
   price_idr: number;
   cover_image_url: string;
+  effective_price_idr: number;
+  is_flash_sale_active: boolean;
 }
 
 export interface PublicPage {
@@ -257,6 +259,11 @@ export interface DashboardProduct {
   is_active: boolean;
   has_file: boolean;
   cover_image_url: string;
+  flash_sale_price_idr: number | null;
+  flash_sale_starts_at: string | null;
+  flash_sale_ends_at: string | null;
+  effective_price_idr: number;
+  is_flash_sale_active: boolean;
 }
 
 export function listProducts() {
@@ -273,7 +280,16 @@ export function createProduct(input: { name: string; description?: string; price
 
 export function updateProduct(
   id: string,
-  input: Partial<{ name: string; description: string; price_idr: number; is_active: boolean }>
+  input: Partial<{
+    name: string;
+    description: string;
+    price_idr: number;
+    is_active: boolean;
+    flash_sale_price_idr: number;
+    flash_sale_starts_at: string;
+    flash_sale_ends_at: string;
+    clear_flash_sale: boolean;
+  }>
 ) {
   return apiFetch<{ message: string }>(
     `/dashboard/products/${id}`,
