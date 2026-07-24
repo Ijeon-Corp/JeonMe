@@ -122,6 +122,9 @@ export interface PublicPage {
   donation: PublicDonation | null;
   lead_capture: PublicLeadCapture | null;
   social_proof: SocialProofFeed | null;
+  seo_title: string;
+  seo_description: string;
+  noindex: boolean;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -200,6 +203,9 @@ export interface MyPage {
   avatar_url: string;
   theme: string;
   is_published: boolean;
+  seo_title: string;
+  seo_description: string;
+  noindex: boolean;
 }
 
 export const THEME_PRESETS = ["default", "midnight", "sunrise", "forest", "minimal"] as const;
@@ -208,7 +214,9 @@ export function getMyPage() {
   return apiFetch<MyPage>("/dashboard/page", { method: "GET" }, { auth: true });
 }
 
-export function updateMyPage(input: Partial<Pick<MyPage, "theme" | "bio" | "is_published">>) {
+export function updateMyPage(
+  input: Partial<Pick<MyPage, "theme" | "bio" | "is_published" | "seo_title" | "seo_description" | "noindex">>
+) {
   return apiFetch<{ message: string }>(
     "/dashboard/page",
     { method: "PATCH", body: JSON.stringify(input) },

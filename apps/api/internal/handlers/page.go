@@ -37,16 +37,19 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID          string             `json:"id"`
-	Username    string             `json:"username"`
-	Bio         string             `json:"bio"`
-	AvatarURL   string             `json:"avatar_url"`
-	Theme       string             `json:"theme"`
-	Links       []publicLink       `json:"links"`
-	Products    []publicItem       `json:"products"`
-	Donation    *publicDonation    `json:"donation"`
-	LeadCapture *publicLeadCapture `json:"lead_capture"`
-	SocialProof *publicSocialProof `json:"social_proof"`
+	ID             string             `json:"id"`
+	Username       string             `json:"username"`
+	Bio            string             `json:"bio"`
+	AvatarURL      string             `json:"avatar_url"`
+	Theme          string             `json:"theme"`
+	SeoTitle       string             `json:"seo_title"`
+	SeoDescription string             `json:"seo_description"`
+	Noindex        bool               `json:"noindex"`
+	Links          []publicLink       `json:"links"`
+	Products       []publicItem       `json:"products"`
+	Donation       *publicDonation    `json:"donation"`
+	LeadCapture    *publicLeadCapture `json:"lead_capture"`
+	SocialProof    *publicSocialProof `json:"social_proof"`
 }
 
 // publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
@@ -119,11 +122,12 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var userID string
 
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme
+		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_published = true
-	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme)
+	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -222,15 +226,18 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 }
 
 type myPageResponse struct {
-	Username    string `json:"username"`
-	Bio         string `json:"bio"`
-	AvatarURL   string `json:"avatar_url"`
-	Theme       string `json:"theme"`
-	IsPublished bool   `json:"is_published"`
+	Username       string `json:"username"`
+	Bio            string `json:"bio"`
+	AvatarURL      string `json:"avatar_url"`
+	Theme          string `json:"theme"`
+	IsPublished    bool   `json:"is_published"`
+	SeoTitle       string `json:"seo_title"`
+	SeoDescription string `json:"seo_description"`
+	Noindex        bool   `json:"noindex"`
 }
 
 // GetMyPage — dipakai dashboard untuk memuat pengaturan halaman milik kreator
-// yang sedang login (tema, bio, status publish).
+// yang sedang login (tema, bio, status publish, SEO).
 func (h *PageHandler) GetMyPage(c *gin.Context) {
 	userID := c.GetString("userID")
 
@@ -239,10 +246,11 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 
 	var resp myPageResponse
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published
+		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1
-	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished)
+	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
@@ -258,9 +266,12 @@ var availableThemes = map[string]bool{
 }
 
 type updatePageRequest struct {
-	Theme       *string `json:"theme"`
-	Bio         *string `json:"bio" binding:"omitempty,max=160"`
-	IsPublished *bool   `json:"is_published"`
+	Theme          *string `json:"theme"`
+	Bio            *string `json:"bio" binding:"omitempty,max=160"`
+	IsPublished    *bool   `json:"is_published"`
+	SeoTitle       *string `json:"seo_title" binding:"omitempty,max=70"`
+	SeoDescription *string `json:"seo_description" binding:"omitempty,max=160"`
+	Noindex        *bool   `json:"noindex"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -286,9 +297,12 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 		UPDATE pages SET
 			theme = COALESCE($1, theme),
 			bio = COALESCE($2, bio),
-			is_published = COALESCE($3, is_published)
-		WHERE user_id = $4
-	`, req.Theme, req.Bio, req.IsPublished, userID)
+			is_published = COALESCE($3, is_published),
+			seo_title = COALESCE($4, seo_title),
+			seo_description = COALESCE($5, seo_description),
+			noindex = COALESCE($6, noindex)
+		WHERE user_id = $7
+	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return

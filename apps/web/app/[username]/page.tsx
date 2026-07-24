@@ -19,12 +19,16 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     return { title: "Halaman tidak ditemukan — Jeonme" };
   }
 
-  const title = `@${page.username} — Jeonme`;
-  const description = page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`;
+  // No.83 (Sprint 9): judul/deskripsi manual kreator MENGGANTIKAN default
+  // kalau diisi -- melengkapi OG tags (No.32) yang sudah ada dengan kontrol
+  // eksplisit, bukan cuma turunan otomatis dari username/bio.
+  const title = page.seo_title || `@${page.username} — Jeonme`;
+  const description = page.seo_description || page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`;
 
   return {
     title,
     description,
+    robots: page.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       title,
       description,
