@@ -15,7 +15,32 @@ import {
   reorderLinks,
   updateLink,
 } from "@/lib/api-client";
-import { IconChart, IconClock, IconGripVertical, IconInbox, IconLock, IconPencil, IconPlus, IconTrash } from "@/components/icons";
+import {
+  IconBook,
+  IconChart,
+  IconChevronRight,
+  IconClock,
+  IconClose,
+  IconFacebook,
+  IconGripVertical,
+  IconInbox,
+  IconInstagram,
+  IconLink,
+  IconLinkedin,
+  IconLock,
+  IconMail,
+  IconPencil,
+  IconPlayCircle,
+  IconPlus,
+  IconSearch,
+  IconSpotify,
+  IconTelegram,
+  IconTiktok,
+  IconTrash,
+  IconWhatsapp,
+  IconX,
+  IconYoutube,
+} from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 
@@ -24,6 +49,55 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   contact_form: "Formulir Kontak",
   faq: "FAQ",
 };
+
+type IconComponent = (props: { className?: string }) => React.ReactElement;
+
+// Modal "Tambah" ala Linktree (tangkapan layar pengguna): ganti trigger
+// polos jadi galeri pilihan berkategori. Cuma 2 kategori nyata yang bisa
+// diisi jujur dari kapabilitas Jeonme -- "Sosial Media" (tautan cepat ke
+// platform populer, memakai ulang ikon deteksi platform yang sudah ada di
+// link-icons.ts) dan "Konten" (4 tipe blok yang SUDAH direndang di halaman
+// publik utama: link/video/faq/contact_form). "Collection" & "Product" ala
+// Linktree SENGAJA TIDAK dibuatkan tile -- grup tautan carousel belum ada
+// konsepnya, dan Produk sudah punya halaman/tabel sendiri (bukan varian
+// baris links), membuat tile untuk keduanya di sini cuma tiruan tanpa fungsi.
+type PlatformQuickAdd = {
+  key: string;
+  label: string;
+  description: string;
+  Icon: IconComponent;
+  kind: "link" | "video";
+  urlTemplate: string;
+};
+
+const DISARANKAN_KEYS = ["instagram", "tiktok", "youtube", "whatsapp", "spotify"];
+
+const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
+  { key: "instagram", label: "Instagram", description: "Tautkan profil Instagram kamu", Icon: IconInstagram, kind: "link", urlTemplate: "https://instagram.com/" },
+  { key: "tiktok", label: "TikTok", description: "Tampilkan video TikTok sebagai embed", Icon: IconTiktok, kind: "video", urlTemplate: "" },
+  { key: "youtube", label: "YouTube", description: "Tampilkan video YouTube sebagai embed", Icon: IconYoutube, kind: "video", urlTemplate: "" },
+  { key: "whatsapp", label: "WhatsApp", description: "Tautkan nomor WhatsApp kamu", Icon: IconWhatsapp, kind: "link", urlTemplate: "https://wa.me/62" },
+  { key: "spotify", label: "Spotify", description: "Tautkan profil atau album Spotify", Icon: IconSpotify, kind: "link", urlTemplate: "https://open.spotify.com/" },
+  { key: "telegram", label: "Telegram", description: "Tautkan akun Telegram kamu", Icon: IconTelegram, kind: "link", urlTemplate: "https://t.me/" },
+  { key: "x", label: "X (Twitter)", description: "Tautkan profil X kamu", Icon: IconX, kind: "link", urlTemplate: "https://x.com/" },
+  { key: "facebook", label: "Facebook", description: "Tautkan halaman atau profil Facebook", Icon: IconFacebook, kind: "link", urlTemplate: "https://facebook.com/" },
+  { key: "linkedin", label: "LinkedIn", description: "Tautkan profil LinkedIn", Icon: IconLinkedin, kind: "link", urlTemplate: "https://linkedin.com/in/" },
+  { key: "email", label: "Email", description: "Tautkan alamat email kamu", Icon: IconMail, kind: "link", urlTemplate: "mailto:" },
+];
+
+type ContentTile = {
+  key: "link" | "video" | "faq" | "contact_form";
+  label: string;
+  description: string;
+  Icon: IconComponent;
+};
+
+const CONTENT_TILES: ContentTile[] = [
+  { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
+  { key: "video", label: "Video", description: "Tampilkan video YouTube/TikTok sebagai embed", Icon: IconPlayCircle },
+  { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan pengunjung", Icon: IconBook },
+  { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan pengunjung", Icon: IconMail },
+];
 
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
 // Linktree sungguhan yang dikirim pengguna: tombol "+ Add" besar & mencolok
@@ -48,6 +122,11 @@ export default function DashboardLinksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
+
+  // Modal "Tambah" ala Linktree.
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addCategory, setAddCategory] = useState<"disarankan" | "sosial" | "konten">("disarankan");
+  const [addSearch, setAddSearch] = useState("");
 
   // Edit inline judul/URL langsung di kartu (ikon pensil) -- sebelumnya
   // judul/URL tidak bisa diubah sama sekali setelah dibuat, padahal backend
@@ -107,6 +186,51 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat tautan.");
     }
+  }
+
+  // Dipanggil dari modal "Tambah" -- membuka form tautan biasa yang sudah
+  // ada (addingLink), dengan judul/URL PRAISI dari tile "Tautan" (kosong)
+  // atau baris platform Sosial Media (judul platform + contoh URL siap
+  // dilengkapi, mis. "https://wa.me/62").
+  function openLinkFormPrefilled(title: string, url: string) {
+    setNewTitle(title);
+    setNewURL(url);
+    setAddingLink(true);
+    setAddModalOpen(false);
+  }
+
+  // Dipanggil untuk tile "Video" & baris Suggested YouTube/TikTok -- BEDA
+  // dari tautan biasa, disimpan sebagai block_type "video" supaya halaman
+  // publik merender embed video asli (VideoEmbedBlock), bukan cuma tautan
+  // teks -- inilah yang bikin pilihan platform ini "fungsional" sungguhan,
+  // bukan cuma ikon dekoratif.
+  function openVideoFormPrefilled(title: string) {
+    setBlockType("video");
+    setBlockTitle(title);
+    setBlockVideoUrl("");
+    setAddingBlock(true);
+    setAddModalOpen(false);
+  }
+
+  function openBlockFormPrefilled(type: "faq" | "contact_form", title: string) {
+    setBlockType(type);
+    setBlockTitle(title);
+    setAddingBlock(true);
+    setAddModalOpen(false);
+  }
+
+  function handleSelectPlatform(platform: PlatformQuickAdd) {
+    if (platform.kind === "video") {
+      openVideoFormPrefilled(`Video ${platform.label}`);
+    } else {
+      openLinkFormPrefilled(platform.label, platform.urlTemplate);
+    }
+  }
+
+  function handleSelectContentTile(tile: ContentTile) {
+    if (tile.key === "link") openLinkFormPrefilled("", "");
+    else if (tile.key === "video") openVideoFormPrefilled("");
+    else openBlockFormPrefilled(tile.key, tile.label);
   }
 
   async function handleToggleActive(link: LinkItem) {
@@ -345,17 +469,21 @@ export default function DashboardLinksPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        {!addingLink ? (
-          <button
-            type="button"
-            onClick={() => setAddingLink(true)}
-            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
-          >
-            <IconPlus className="h-5 w-5" />
-            Tambah
-          </button>
-        ) : (
-          <form onSubmit={handleCreateLink} className="mt-6 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
+        <button
+          type="button"
+          onClick={() => {
+            setAddCategory("disarankan");
+            setAddSearch("");
+            setAddModalOpen(true);
+          }}
+          className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+        >
+          <IconPlus className="h-5 w-5" />
+          Tambah
+        </button>
+
+        {addingLink && (
+          <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
             <input
               type="text"
               required
@@ -383,6 +511,78 @@ export default function DashboardLinksPage() {
             >
               Batal
             </button>
+          </form>
+        )}
+
+        {addingBlock && (
+          <form onSubmit={handleCreateBlock} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
+            <select
+              value={blockType}
+              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            >
+              <option value="video">Video (YouTube/TikTok)</option>
+              <option value="contact_form">Formulir Kontak</option>
+              <option value="faq">FAQ</option>
+            </select>
+            <input
+              type="text"
+              required
+              placeholder="Judul blok"
+              value={blockTitle}
+              onChange={(e) => setBlockTitle(e.target.value)}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+            {blockType === "video" && (
+              <input
+                type="url"
+                placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                value={blockVideoUrl}
+                onChange={(e) => setBlockVideoUrl(e.target.value)}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            )}
+            {blockType === "faq" && (
+              <div className="flex flex-col gap-2">
+                {blockFaqItems.map((item, i) => (
+                  <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
+                    <input
+                      type="text"
+                      placeholder="Pertanyaan"
+                      value={item.question}
+                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                    <textarea
+                      placeholder="Jawaban"
+                      value={item.answer}
+                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
+                      rows={2}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
+                  className="self-start text-xs font-bold text-primary hover:underline"
+                >
+                  + Tambah pertanyaan
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAddingBlock(false)}
+                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+              >
+                Batal
+              </button>
+              <button type="submit" disabled={savingBlock} className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60">
+                {savingBlock ? "Membuat..." : "Buat Blok"}
+              </button>
+            </div>
           </form>
         )}
 
@@ -691,89 +891,197 @@ export default function DashboardLinksPage() {
           )}
         </ul>
 
-        {!addingBlock ? (
-          <button
-            type="button"
-            onClick={() => setAddingBlock(true)}
-            className="mt-4 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            Tambah Blok Konten (Video/Formulir Kontak/FAQ)
-          </button>
-        ) : (
-          <form onSubmit={handleCreateBlock} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
-            <select
-              value={blockType}
-              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              <option value="video">Video (YouTube/TikTok)</option>
-              <option value="contact_form">Formulir Kontak</option>
-              <option value="faq">FAQ</option>
-            </select>
-            <input
-              type="text"
-              required
-              placeholder="Judul blok"
-              value={blockTitle}
-              onChange={(e) => setBlockTitle(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
-            {blockType === "video" && (
-              <input
-                type="url"
-                placeholder="https://youtube.com/... atau https://tiktok.com/..."
-                value={blockVideoUrl}
-                onChange={(e) => setBlockVideoUrl(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            )}
-            {blockType === "faq" && (
-              <div className="flex flex-col gap-2">
-                {blockFaqItems.map((item, i) => (
-                  <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
-                    <input
-                      type="text"
-                      placeholder="Pertanyaan"
-                      value={item.question}
-                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                    <textarea
-                      placeholder="Jawaban"
-                      value={item.answer}
-                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
-                      rows={2}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                  className="self-start text-xs font-bold text-primary hover:underline"
-                >
-                  + Tambah pertanyaan
-                </button>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAddingBlock(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
-              >
-                Batal
-              </button>
-              <button type="submit" disabled={savingBlock} className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60">
-                {savingBlock ? "Membuat..." : "Buat Blok"}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
 
+      {addModalOpen && (
+        <AddModal
+          category={addCategory}
+          onCategoryChange={setAddCategory}
+          search={addSearch}
+          onSearchChange={setAddSearch}
+          onClose={() => setAddModalOpen(false)}
+          onSelectPlatform={handleSelectPlatform}
+          onSelectContentTile={handleSelectContentTile}
+          onQuickPasteLink={(url) => openLinkFormPrefilled("", url)}
+        />
+      )}
+
       <LivePreviewPanel page={page} links={links} products={products} />
+    </div>
+  );
+}
+
+const ADD_CATEGORIES = [
+  { key: "disarankan", label: "Disarankan" },
+  { key: "sosial", label: "Sosial Media" },
+  { key: "konten", label: "Konten" },
+] as const;
+
+function isUrlLike(value: string): boolean {
+  return /^https?:\/\/\S+\.\S+/i.test(value.trim());
+}
+
+function AddModal({
+  category,
+  onCategoryChange,
+  search,
+  onSearchChange,
+  onClose,
+  onSelectPlatform,
+  onSelectContentTile,
+  onQuickPasteLink,
+}: {
+  category: "disarankan" | "sosial" | "konten";
+  onCategoryChange: (c: "disarankan" | "sosial" | "konten") => void;
+  search: string;
+  onSearchChange: (v: string) => void;
+  onClose: () => void;
+  onSelectPlatform: (p: PlatformQuickAdd) => void;
+  onSelectContentTile: (t: ContentTile) => void;
+  onQuickPasteLink: (url: string) => void;
+}) {
+  const searchLower = search.trim().toLowerCase();
+  const pastedUrl = isUrlLike(search);
+
+  const contentRows = searchLower
+    ? CONTENT_TILES.filter((t) => t.label.toLowerCase().includes(searchLower))
+    : category === "konten"
+      ? CONTENT_TILES
+      : [];
+
+  const platformRows = searchLower
+    ? SUGGESTED_PLATFORMS.filter((p) => p.label.toLowerCase().includes(searchLower))
+    : category === "sosial"
+      ? SUGGESTED_PLATFORMS
+      : category === "disarankan"
+        ? SUGGESTED_PLATFORMS.filter((p) => DISARANKAN_KEYS.includes(p.key))
+        : [];
+
+  const sectionLabel = searchLower
+    ? "Hasil Pencarian"
+    : category === "disarankan"
+      ? "Disarankan"
+      : category === "sosial"
+        ? "Sosial Media"
+        : "Konten";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="font-heading text-lg font-bold text-ink">Tambah</h2>
+          <button type="button" onClick={onClose} className="text-muted hover:text-ink">
+            <IconClose className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-shrink-0 border-b border-border px-5 py-3">
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2.5">
+            <IconSearch className="h-4 w-4 flex-shrink-0 text-muted" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Tempel atau cari tautan"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {pastedUrl && (
+            <button
+              type="button"
+              onClick={() => onQuickPasteLink(search.trim())}
+              className="mb-3 flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary-subtle/30 p-3 text-left hover:bg-primary-subtle/50"
+            >
+              <IconLink className="h-5 w-5 flex-shrink-0 text-primary" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">Tambahkan tautan ini</p>
+                <p className="truncate text-xs text-muted">{search.trim()}</p>
+              </div>
+            </button>
+          )}
+
+          {!searchLower && (
+            <>
+              <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
+                {ADD_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => onCategoryChange(cat.key)}
+                    className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+                      category === cat.key ? "bg-ink text-white" : "bg-gray-100 text-muted hover:bg-gray-200"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-4 grid grid-cols-4 gap-2">
+                {CONTENT_TILES.map((tile) => (
+                  <button
+                    key={tile.key}
+                    type="button"
+                    onClick={() => onSelectContentTile(tile)}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-border p-2.5 hover:border-primary/50"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                      <tile.Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-center text-[11px] font-semibold text-ink">{tile.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {(contentRows.length > 0 || platformRows.length > 0) && (
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{sectionLabel}</p>
+          )}
+
+          <div className="flex flex-col gap-1">
+            {contentRows.map((tile) => (
+              <button
+                key={tile.key}
+                type="button"
+                onClick={() => onSelectContentTile(tile)}
+                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-gray-50"
+              >
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                  <tile.Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{tile.label}</p>
+                  <p className="truncate text-xs text-muted">{tile.description}</p>
+                </div>
+                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              </button>
+            ))}
+
+            {platformRows.map((platform) => (
+              <button
+                key={platform.key}
+                type="button"
+                onClick={() => onSelectPlatform(platform)}
+                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-gray-50"
+              >
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-ink">
+                  <platform.Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{platform.label}</p>
+                  <p className="truncate text-xs text-muted">{platform.description}</p>
+                </div>
+                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

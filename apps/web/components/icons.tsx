@@ -565,6 +565,26 @@ export function IconPaintbrush({ className }: IconProps) {
   );
 }
 
+// ---------- Modal "Tambah" ala Linktree (dashboard/links) ----------
+
+export function IconSearch({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth={base} />
+      <path d="m20 20-4.3-4.3" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconPlayCircle({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth={base} />
+      <path d="M10.3 9.3v5.4l4.6-2.7-4.6-2.7Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconPencil({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
