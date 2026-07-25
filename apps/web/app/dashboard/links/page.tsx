@@ -15,10 +15,9 @@ import {
   reorderLinks,
   updateLink,
 } from "@/lib/api-client";
-import { IconInbox, IconPlus } from "@/components/icons";
+import { IconChart, IconClock, IconGripVertical, IconInbox, IconLock, IconPencil, IconPlus, IconTrash } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
-import { detectLinkIcon } from "@/lib/link-icons";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -26,6 +25,18 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   faq: "FAQ",
 };
 
+// Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
+// Linktree sungguhan yang dikirim pengguna: tombol "+ Add" besar & mencolok
+// (bukan trigger teks kecil), tiap kartu tautan punya baris ikon aksi
+// (jadwal/kunci/hapus) + jumlah klik NYATA, judul & URL bisa diedit inline
+// (ikon pensil), grip drag-handle jadi ikon SVG (bukan karakter unicode).
+//
+// SENGAJA TIDAK direplikasi: header profil (avatar/bio) di atas -- itu
+// SUDAH dikelola di halaman Desain (accordion "Header"), duplikasi di sini
+// akan bikin dua sumber kebenaran; tombol "Add collection"/"View archive"
+// -- Jeonme belum punya konsep grup tautan (carousel) atau arsip tautan
+// terhapus, membuat tombol untuk fitur yang tidak ada bukan tujuan
+// permintaan ini.
 export default function DashboardLinksPage() {
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -37,6 +48,12 @@ export default function DashboardLinksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
+
+  // Edit inline judul/URL langsung di kartu (ikon pensil) -- sebelumnya
+  // judul/URL tidak bisa diubah sama sekali setelah dibuat, padahal backend
+  // (updateLink) sudah mendukungnya sejak awal.
+  const [editingField, setEditingField] = useState<{ id: string; field: "title" | "url" } | null>(null);
+  const [editingValue, setEditingValue] = useState("");
 
   // No.78 (Sprint 9): penjadwalan tautan -- pola sama persis seperti
   // penjadwalan flash sale produk (No.68).
@@ -111,6 +128,28 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus tautan.");
+    }
+  }
+
+  function startEditField(link: LinkItem, field: "title" | "url") {
+    setEditingField({ id: link.id, field });
+    setEditingValue(field === "title" ? link.title : link.url);
+  }
+
+  async function saveEditField(link: LinkItem) {
+    if (!editingField || editingField.id !== link.id) return;
+    const field = editingField.field;
+    const value = editingValue.trim();
+    setEditingField(null);
+    if (!value || value === (field === "title" ? link.title : link.url)) return;
+
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, [field]: value } : l)));
+    try {
+      await updateLink(link.id, field === "title" ? { title: value } : { url: value });
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : `Gagal memperbarui ${field === "title" ? "judul" : "URL"}.`);
     }
   }
 
@@ -306,62 +345,172 @@ export default function DashboardLinksPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-          <ul className="flex flex-col gap-2">
-            {links.map((link) => (
-              <li
-                key={link.id}
-                draggable
-                onDragStart={() => setDragId(link.id)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(link.id)}
-                className={`flex flex-col gap-2 rounded-xl border px-4 py-3 transition-colors ${
-                  link.is_active ? "border-border bg-white" : "border-border bg-gray-50 opacity-60"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="cursor-grab text-lg leading-none text-muted" aria-hidden>
-                    ⠿
-                  </span>
-                  {link.block_type === "link" && (
-                    <span
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary"
-                      title={detectLinkIcon(link.url).label}
-                    >
-                      {(() => {
-                        const { Icon: RowIcon } = detectLinkIcon(link.url);
-                        return <RowIcon className="h-4 w-4" />;
-                      })()}
+        {!addingLink ? (
+          <button
+            type="button"
+            onClick={() => setAddingLink(true)}
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+          >
+            <IconPlus className="h-5 w-5" />
+            Tambah
+          </button>
+        ) : (
+          <form onSubmit={handleCreateLink} className="mt-6 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
+            <input
+              type="text"
+              required
+              autoFocus
+              placeholder="Judul tautan"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <input
+              type="url"
+              required
+              placeholder="https://..."
+              value={newURL}
+              onChange={(e) => setNewURL(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
+              Tambah
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddingLink(false)}
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+            >
+              Batal
+            </button>
+          </form>
+        )}
+
+        <ul className="mt-4 flex flex-col gap-3">
+          {links.map((link) => (
+            <li
+              key={link.id}
+              draggable
+              onDragStart={() => setDragId(link.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(link.id)}
+              className={`flex flex-col gap-2.5 rounded-2xl border bg-white p-4 shadow-card transition-colors ${
+                link.is_active ? "border-border" : "border-border opacity-60"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
+                <div className="min-w-0 flex-1">
+                  {editingField?.id === link.id && editingField.field === "title" ? (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingValue}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => saveEditField(link)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                      className="w-full rounded-md border border-primary px-2 py-1 text-sm font-semibold text-ink focus:outline-none"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
+                      {link.block_type === "link" && (
+                        <button
+                          type="button"
+                          onClick={() => startEditField(link, "title")}
+                          className="flex-shrink-0 text-muted hover:text-primary"
+                          title="Ubah judul"
+                        >
+                          <IconPencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {link.block_type !== "link" && (
+                    <span className="mt-1 inline-block rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                      {BLOCK_TYPE_LABEL[link.block_type]}
                     </span>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
-                    {link.block_type === "link" ? (
-                      <p className="truncate text-xs text-muted">{link.url}</p>
-                    ) : (
-                      <span className="inline-block rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
-                        {BLOCK_TYPE_LABEL[link.block_type]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Toggle
-                      checked={link.is_active}
-                      onChange={() => handleToggleActive(link)}
-                      label={`Aktifkan ${link.title}`}
-                    />
-                    <span className="text-xs font-semibold text-muted">Aktif</span>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(link.id)}
-                    className="text-xs font-semibold text-red-600 hover:underline"
-                  >
-                    Hapus
-                  </button>
                 </div>
+                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={`Aktifkan ${link.title}`} />
+              </div>
 
-                {link.block_type === "link" && (scheduleEditId === link.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+              {link.block_type === "link" && (
+                <div className="ml-7 flex items-center gap-1.5">
+                  {editingField?.id === link.id && editingField.field === "url" ? (
+                    <input
+                      type="url"
+                      autoFocus
+                      value={editingValue}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => saveEditField(link)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-muted focus:outline-none"
+                    />
+                  ) : (
+                    <>
+                      <p className="truncate text-xs text-muted">{link.url}</p>
+                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah URL">
+                        <IconPencil className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Baris ikon aksi -- jadwal/kunci (khusus tautan biasa), jumlah klik, hapus. */}
+              <div className="ml-7 flex items-center gap-1">
+                {link.block_type === "link" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openScheduleForm(link)}
+                      title="Jadwalkan tampil/sembunyi"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        link.starts_at && link.ends_at ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      <IconClock className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openLockForm(link)}
+                      title="Kunci tautan"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        link.lock_type ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      <IconLock className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+                {(link.block_type === "video" || link.block_type === "faq") && (
+                  <button
+                    type="button"
+                    onClick={() => openContentEdit(link)}
+                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-primary hover:bg-primary-subtle"
+                  >
+                    Edit Konten
+                  </button>
+                )}
+                <div className="flex-1" />
+                <span className="flex items-center gap-1 text-xs text-muted">
+                  <IconChart className="h-3.5 w-3.5" />
+                  {link.click_count.toLocaleString("id-ID")} klik
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(link.id)}
+                  title="Hapus tautan"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                >
+                  <IconTrash className="h-4 w-4" />
+                </button>
+              </div>
+
+              {link.block_type === "link" &&
+                (scheduleEditId === link.id ? (
+                  <div className="ml-7 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
                       <input
                         type="datetime-local"
@@ -394,32 +543,23 @@ export default function DashboardLinksPage() {
                       </button>
                     </div>
                   </div>
-                ) : link.starts_at && link.ends_at ? (
-                  <div className="flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-accent-dark">
-                      Terjadwal {new Date(link.starts_at).toLocaleString("id-ID")} s/d{" "}
-                      {new Date(link.ends_at).toLocaleString("id-ID")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleClearSchedule(link)}
-                      className="text-[11px] font-bold text-red-600 hover:underline"
-                    >
-                      Batalkan
-                    </button>
-                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => openScheduleForm(link)}
-                    className="self-start text-[11px] font-bold text-primary hover:underline"
-                  >
-                    Jadwalkan tampil/sembunyi
-                  </button>
+                  link.starts_at &&
+                  link.ends_at && (
+                    <div className="ml-7 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
+                      <span className="text-[11px] font-semibold text-accent-dark">
+                        Terjadwal {new Date(link.starts_at).toLocaleString("id-ID")} s/d {new Date(link.ends_at).toLocaleString("id-ID")}
+                      </span>
+                      <button type="button" onClick={() => handleClearSchedule(link)} className="text-[11px] font-bold text-red-600 hover:underline">
+                        Batalkan
+                      </button>
+                    </div>
+                  )
                 ))}
 
-                {link.block_type === "link" && (lockEditId === link.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+              {link.block_type === "link" &&
+                (lockEditId === link.id ? (
+                  <div className="ml-7 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe")}
@@ -467,260 +607,170 @@ export default function DashboardLinksPage() {
                       </button>
                     </div>
                   </div>
-                ) : link.lock_type ? (
-                  <div className="flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-secondary-dark">
-                      🔒 Terkunci --{" "}
-                      {link.lock_type === "code"
-                        ? "kode akses"
-                        : link.lock_type === "age"
-                          ? `usia ${link.lock_min_age ?? 18}+`
-                          : "wajib subscribe"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleClearLock(link)}
-                      className="text-[11px] font-bold text-red-600 hover:underline"
-                    >
-                      Buka Kunci
-                    </button>
-                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => openLockForm(link)}
-                    className="self-start text-[11px] font-bold text-primary hover:underline"
-                  >
-                    Kunci tautan
-                  </button>
+                  link.lock_type && (
+                    <div className="ml-7 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
+                      <span className="text-[11px] font-semibold text-secondary-dark">
+                        Terkunci -- {link.lock_type === "code" ? "kode akses" : link.lock_type === "age" ? `usia ${link.lock_min_age ?? 18}+` : "wajib subscribe"}
+                      </span>
+                      <button type="button" onClick={() => handleClearLock(link)} className="text-[11px] font-bold text-red-600 hover:underline">
+                        Buka Kunci
+                      </button>
+                    </div>
+                  )
                 ))}
 
-                {(link.block_type === "video" || link.block_type === "faq") &&
-                  (contentEditId === link.id ? (
-                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                      {link.block_type === "video" ? (
-                        <input
-                          type="url"
-                          placeholder="https://youtube.com/... atau https://tiktok.com/..."
-                          value={editVideoUrl}
-                          onChange={(e) => setEditVideoUrl(e.target.value)}
-                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                        />
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          {editFaqItems.map((item, i) => (
-                            <div key={i} className="flex flex-col gap-1 rounded-md border border-border p-2">
-                              <input
-                                type="text"
-                                placeholder="Pertanyaan"
-                                value={item.question}
-                                onChange={(e) =>
-                                  setEditFaqItems((prev) =>
-                                    prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it))
-                                  )
-                                }
-                                className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
-                              />
-                              <textarea
-                                placeholder="Jawaban"
-                                value={item.answer}
-                                onChange={(e) =>
-                                  setEditFaqItems((prev) =>
-                                    prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it))
-                                  )
-                                }
-                                rows={2}
-                                className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
-                                className="self-end text-[10px] font-bold text-red-600 hover:underline"
-                              >
-                                Hapus item
-                              </button>
-                            </div>
-                          ))}
+              {(link.block_type === "video" || link.block_type === "faq") && contentEditId === link.id && (
+                <div className="ml-7 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  {link.block_type === "video" ? (
+                    <input
+                      type="url"
+                      placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                      value={editVideoUrl}
+                      onChange={(e) => setEditVideoUrl(e.target.value)}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {editFaqItems.map((item, i) => (
+                        <div key={i} className="flex flex-col gap-1 rounded-md border border-border p-2">
+                          <input
+                            type="text"
+                            placeholder="Pertanyaan"
+                            value={item.question}
+                            onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
+                            className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                          />
+                          <textarea
+                            placeholder="Jawaban"
+                            value={item.answer}
+                            onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
+                            rows={2}
+                            className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                          />
                           <button
                             type="button"
-                            onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                            className="self-start text-[11px] font-bold text-primary hover:underline"
+                            onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="self-end text-[10px] font-bold text-red-600 hover:underline"
                           >
-                            + Tambah pertanyaan
+                            Hapus item
                           </button>
                         </div>
-                      )}
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setContentEditId(null)}
-                          className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
-                        >
-                          Batal
-                        </button>
-                        <button
-                          type="button"
-                          disabled={savingContent}
-                          onClick={() => handleSaveContent(link)}
-                          className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                        >
-                          {savingContent ? "Menyimpan..." : "Simpan"}
-                        </button>
-                      </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
+                        className="self-start text-[11px] font-bold text-primary hover:underline"
+                      >
+                        + Tambah pertanyaan
+                      </button>
                     </div>
-                  ) : (
+                  )}
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted">
+                      Batal
+                    </button>
                     <button
                       type="button"
-                      onClick={() => openContentEdit(link)}
-                      className="self-start text-[11px] font-bold text-primary hover:underline"
+                      disabled={savingContent}
+                      onClick={() => handleSaveContent(link)}
+                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                     >
-                      Edit Konten
+                      {savingContent ? "Menyimpan..." : "Simpan"}
                     </button>
-                  ))}
-              </li>
-            ))}
-            {links.length === 0 && (
-              <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
-                <IconInbox className="h-4 w-4 flex-shrink-0" />
-                Belum ada tautan -- tambahkan yang pertama di bawah ini.
-              </li>
-            )}
-          </ul>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+          {links.length === 0 && (
+            <li className="flex items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted">
+              <IconInbox className="h-4 w-4 flex-shrink-0" />
+              Belum ada tautan -- klik &quot;Tambah&quot; di atas.
+            </li>
+          )}
+        </ul>
 
-          {!addingLink ? (
-            <button
-              type="button"
-              onClick={() => setAddingLink(true)}
-              className="mt-4 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+        {!addingBlock ? (
+          <button
+            type="button"
+            onClick={() => setAddingBlock(true)}
+            className="mt-4 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+          >
+            <IconPlus className="h-4 w-4" />
+            Tambah Blok Konten (Video/Formulir Kontak/FAQ)
+          </button>
+        ) : (
+          <form onSubmit={handleCreateBlock} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
+            <select
+              value={blockType}
+              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
-              <IconPlus className="h-4 w-4" />
-              Tambah Tautan
-            </button>
-          ) : (
-            <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                required
-                autoFocus
-                placeholder="Judul tautan"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
+              <option value="video">Video (YouTube/TikTok)</option>
+              <option value="contact_form">Formulir Kontak</option>
+              <option value="faq">FAQ</option>
+            </select>
+            <input
+              type="text"
+              required
+              placeholder="Judul blok"
+              value={blockTitle}
+              onChange={(e) => setBlockTitle(e.target.value)}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+            {blockType === "video" && (
               <input
                 type="url"
-                required
-                placeholder="https://..."
-                value={newURL}
-                onChange={(e) => setNewURL(e.target.value)}
-                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                value={blockVideoUrl}
+                onChange={(e) => setBlockVideoUrl(e.target.value)}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
-              <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
-                Tambah
-              </button>
+            )}
+            {blockType === "faq" && (
+              <div className="flex flex-col gap-2">
+                {blockFaqItems.map((item, i) => (
+                  <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
+                    <input
+                      type="text"
+                      placeholder="Pertanyaan"
+                      value={item.question}
+                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                    <textarea
+                      placeholder="Jawaban"
+                      value={item.answer}
+                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
+                      rows={2}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
+                  className="self-start text-xs font-bold text-primary hover:underline"
+                >
+                  + Tambah pertanyaan
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setAddingLink(false)}
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                onClick={() => setAddingBlock(false)}
+                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
               >
                 Batal
               </button>
-            </form>
-          )}
-
-          {!addingBlock ? (
-            <button
-              type="button"
-              onClick={() => setAddingBlock(true)}
-              className="mt-3 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
-            >
-              <IconPlus className="h-4 w-4" />
-              Tambah Blok Konten (Video/Formulir Kontak/FAQ)
-            </button>
-          ) : (
-            <form onSubmit={handleCreateBlock} className="mt-3 flex flex-col gap-2 rounded-xl border border-border p-3.5">
-              <select
-                value={blockType}
-                onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                <option value="video">Video (YouTube/TikTok)</option>
-                <option value="contact_form">Formulir Kontak</option>
-                <option value="faq">FAQ</option>
-              </select>
-              <input
-                type="text"
-                required
-                placeholder="Judul blok"
-                value={blockTitle}
-                onChange={(e) => setBlockTitle(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-              {blockType === "video" && (
-                <input
-                  type="url"
-                  placeholder="https://youtube.com/... atau https://tiktok.com/..."
-                  value={blockVideoUrl}
-                  onChange={(e) => setBlockVideoUrl(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
-              )}
-              {blockType === "faq" && (
-                <div className="flex flex-col gap-2">
-                  {blockFaqItems.map((item, i) => (
-                    <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
-                      <input
-                        type="text"
-                        placeholder="Pertanyaan"
-                        value={item.question}
-                        onChange={(e) =>
-                          setBlockFaqItems((prev) =>
-                            prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it))
-                          )
-                        }
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <textarea
-                        placeholder="Jawaban"
-                        value={item.answer}
-                        onChange={(e) =>
-                          setBlockFaqItems((prev) =>
-                            prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it))
-                          )
-                        }
-                        rows={2}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                    className="self-start text-xs font-bold text-primary hover:underline"
-                  >
-                    + Tambah pertanyaan
-                  </button>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAddingBlock(false)}
-                  className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingBlock}
-                  className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
-                >
-                  {savingBlock ? "Membuat..." : "Buat Blok"}
-                </button>
-              </div>
-            </form>
-          )}
-        </section>
+              <button type="submit" disabled={savingBlock} className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60">
+                {savingBlock ? "Membuat..." : "Buat Blok"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       <LivePreviewPanel page={page} links={links} products={products} />

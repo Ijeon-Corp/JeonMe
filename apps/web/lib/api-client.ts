@@ -416,6 +416,9 @@ export interface LinkItem {
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
   block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data: Record<string, unknown>;
+  // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
+  // NYATA dari analytics_events, dihitung backend.
+  click_count: number;
 }
 
 // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ) -- baris

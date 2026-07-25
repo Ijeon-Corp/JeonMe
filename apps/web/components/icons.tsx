@@ -520,3 +520,43 @@ export function IconLinkedin({ className }: IconProps) {
     </svg>
   );
 }
+
+// ---------- Redesain dashboard Tautan ala Linktree (tangkapan layar pengguna) ----------
+
+export function IconLock({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="5.5" y="10.5" width="13" height="9" rx="2" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Grip drag-handle 6-titik (2 kolom x 3 baris) -- menggantikan karakter
+// unicode "⠿" dengan ikon SVG yang konsisten skalanya dengan ikon lain.
+export function IconGripVertical({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="9" cy="6" r="1.4" />
+      <circle cx="9" cy="12" r="1.4" />
+      <circle cx="9" cy="18" r="1.4" />
+      <circle cx="15" cy="6" r="1.4" />
+      <circle cx="15" cy="12" r="1.4" />
+      <circle cx="15" cy="18" r="1.4" />
+    </svg>
+  );
+}
+
+export function IconPencil({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M4 20l.9-3.6a2 2 0 0 1 .53-.94l10.3-10.3a1.5 1.5 0 0 1 2.12 0l1.08 1.08a1.5 1.5 0 0 1 0 2.12L8.64 18.57a2 2 0 0 1-.94.53L4 20Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -47,6 +47,11 @@ type linkItem struct {
 	LockMinAge *int            `json:"lock_min_age"`
 	BlockType  string          `json:"block_type"`
 	BlockData  json.RawMessage `json:"block_data"`
+	// ClickCount -- redesign dashboard Tautan ala Linktree (referensi
+	// tangkapan layar pengguna): jumlah klik NYATA dari analytics_events
+	// (REQ-F-601) yang sudah tercatat sejak awal, sebelumnya tidak pernah
+	// ditampilkan per-tautan di dashboard (cuma top-5 di Ringkasan/No.86).
+	ClickCount int64 `json:"click_count"`
 }
 
 // List mengembalikan seluruh tautan & blok konten milik kreator yang sedang
@@ -62,7 +67,8 @@ func (h *LinksHandler) List(c *gin.Context) {
 
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
-			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data
+			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data,
+			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -78,7 +84,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
-			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData); err == nil {
+			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
