@@ -509,10 +509,13 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 // availableThemes — preset tema (REQ-F-204) + "custom" (No.80, Sprint 9):
 // kustomisasi lanjutan (latar/font/warna tombol) di luar preset. "Desain 2.0"
 // (permintaan langsung pengguna, di luar backlog Excel): preset diperluas
-// dari 5 jadi 10 supaya galeri template lebih variatif ala Linktree/Lynk.id.
+// dari 5 jadi 10, lalu ditambah 6 lagi bernuansa gradien vivid (bloom/blaze/
+// cyber/mint/golden/cosmic) supaya galeri template lebih variatif ala
+// Linktree/Lynk.id.
 var availableThemes = map[string]bool{
 	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true,
 	"rose": true, "ocean": true, "lavender": true, "noir": true, "peach": true,
+	"bloom": true, "blaze": true, "cyber": true, "mint": true, "golden": true, "cosmic": true,
 	"custom": true,
 }
 

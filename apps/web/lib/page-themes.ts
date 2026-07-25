@@ -10,6 +10,11 @@ import type { CSSProperties } from "react";
 // peach baru) supaya galeri template lebih variatif ala Linktree/Lynk.id --
 // palet warnanya SENGAJA lepas dari identitas brand Jeonme sendiri (primary/
 // secondary/accent) karena halaman ini milik KREATOR, bukan marketing Jeonme.
+// Galeri tema (permintaan langsung pengguna, tangkapan layar galeri
+// "Customizable" Linktree): tambah 6 preset baru bernuansa gradien vivid
+// (bloom/blaze/cyber/mint/golden/cosmic) supaya galeri lebih variatif,
+// melengkapi 10 preset "Desain 2.0" sebelumnya yang mayoritas latar solid
+// atau gradien lembut.
 export type PageThemeName =
   | "default"
   | "midnight"
@@ -21,6 +26,12 @@ export type PageThemeName =
   | "lavender"
   | "noir"
   | "peach"
+  | "bloom"
+  | "blaze"
+  | "cyber"
+  | "mint"
+  | "golden"
+  | "cosmic"
   | "custom";
 
 export type PageTheme = {
@@ -42,6 +53,16 @@ export type PageTheme = {
   footer: string;
   /** Warna solid untuk swatch pratinjau di dashboard (bukan kelas Tailwind). */
   swatch: string;
+  /**
+   * previewBg/previewIsDark -- kartu galeri tema ala Linktree (permintaan
+   * langsung pengguna): berbeda dari `swatch` (warna solid kecil dipakai di
+   * ikon baris accordion), ini string CSS `background` LENGKAP (boleh
+   * gradien multi-warna) untuk mengisi seluruh kartu pratinjau portrait di
+   * galeri, plus penanda kontras teks supaya huruf sampel "Aa" & pil tombol
+   * pratinjau tetap terbaca di atasnya.
+   */
+  previewBg: string;
+  previewIsDark: boolean;
   /**
    * No.80: HANYA terisi untuk theme "custom" -- style inline dipasang di
    * elemen pembungkus <main> (lihat PagePreview.tsx), berisi custom
@@ -117,6 +138,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "btn-primary text-white",
     footer: "text-muted/70 hover:text-primary",
     swatch: "#1B4D3E",
+    previewBg: "linear-gradient(160deg, #EAF3EF 0%, #FFFFFF 100%)",
+    previewIsDark: false,
   },
   midnight: {
     label: "Midnight",
@@ -134,6 +157,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-accent text-ink font-bold hover:brightness-110",
     footer: "text-white/30 hover:text-accent",
     swatch: "#0A1512",
+    previewBg: "radial-gradient(120% 120% at 30% 15%, #1c332c 0%, #0A1512 60%)",
+    previewIsDark: true,
   },
   sunrise: {
     label: "Sunrise",
@@ -151,6 +176,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-gradient-to-r from-accent to-accent-dark text-white font-bold hover:brightness-105",
     footer: "text-muted/60 hover:text-accent-dark",
     swatch: "#E0C378",
+    previewBg: "linear-gradient(160deg, #FCE8CE 0%, #FBF6E8 55%, #FFFFFF 100%)",
+    previewIsDark: false,
   },
   forest: {
     label: "Forest",
@@ -168,6 +195,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-accent text-primary-dark font-bold hover:brightness-105",
     footer: "text-white/35 hover:text-accent-light",
     swatch: "#123328",
+    previewBg: "linear-gradient(160deg, #123328 0%, #1B4D3E 50%, #123328 100%)",
+    previewIsDark: true,
   },
   minimal: {
     label: "Minimal",
@@ -185,6 +214,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-ink text-white hover:bg-ink/90",
     footer: "text-muted/50 hover:text-ink",
     swatch: "#1C2B25",
+    previewBg: "#FFFFFF",
+    previewIsDark: false,
   },
   // "Desain 2.0": 5 preset baru di bawah ini SENGAJA pakai palet warna
   // Tailwind standar (rose/sky/violet/amber/stone) yang LEPAS dari identitas
@@ -205,6 +236,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-rose-500 text-white font-bold hover:brightness-105",
     footer: "text-muted/60 hover:text-rose-500",
     swatch: "#F43F5E",
+    previewBg: "linear-gradient(160deg, #FFF1F2 0%, #FFFFFF 100%)",
+    previewIsDark: false,
   },
   ocean: {
     label: "Ocean",
@@ -222,6 +255,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-blue-600 text-white font-bold hover:brightness-105",
     footer: "text-muted/60 hover:text-blue-600",
     swatch: "#2563EB",
+    previewBg: "linear-gradient(160deg, #F0F9FF 0%, #FFFFFF 100%)",
+    previewIsDark: false,
   },
   lavender: {
     label: "Lavender",
@@ -239,6 +274,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-violet-500 text-white font-bold hover:brightness-105",
     footer: "text-muted/60 hover:text-violet-500",
     swatch: "#8B5CF6",
+    previewBg: "linear-gradient(160deg, #F5F3FF 0%, #FFFFFF 100%)",
+    previewIsDark: false,
   },
   noir: {
     label: "Noir",
@@ -256,6 +293,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-amber-400 text-[#0B0B0B] font-bold hover:brightness-105",
     footer: "text-white/30 hover:text-amber-400",
     swatch: "#D4AF37",
+    previewBg: "radial-gradient(120% 120% at 70% 15%, #241d0a 0%, #0B0B0B 60%)",
+    previewIsDark: true,
   },
   peach: {
     label: "Peach",
@@ -273,6 +312,126 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-orange-400 text-white font-bold hover:brightness-105",
     footer: "text-muted/60 hover:text-orange-500",
     swatch: "#FB923C",
+    previewBg: "linear-gradient(160deg, #FFF7ED 0%, #FFFBEB 55%, #FFFFFF 100%)",
+    previewIsDark: false,
+  },
+  // 6 preset baru (permintaan langsung pengguna: "tambahkan tema seperti
+  // gradient dan sejenisnya") -- latar gradien VIVID multi-warna, beda dari
+  // 10 preset di atas yang mayoritas solid gelap atau gradien lembut/pastel.
+  bloom: {
+    label: "Bloom",
+    page: "bg-gradient-to-br from-fuchsia-600 via-purple-700 to-indigo-800",
+    glow: "bg-gradient-to-br from-white/20 via-fuchsia-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/70",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-fuchsia-200",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#C026D3",
+    previewBg: "linear-gradient(135deg, #C026D3 0%, #7E22CE 50%, #3730A3 100%)",
+    previewIsDark: true,
+  },
+  blaze: {
+    label: "Blaze",
+    page: "bg-gradient-to-br from-orange-500 via-pink-600 to-purple-700",
+    glow: "bg-gradient-to-br from-yellow-200/25 via-pink-300/15 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/70",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-orange-100",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#F97316",
+    previewBg: "linear-gradient(135deg, #F97316 0%, #DB2777 55%, #7E22CE 100%)",
+    previewIsDark: true,
+  },
+  cyber: {
+    label: "Cyber",
+    page: "bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950",
+    glow: "bg-gradient-to-br from-cyan-400/30 via-blue-500/15 to-transparent",
+    avatarRing: "ring-4 ring-cyan-300/40 shadow-[0_0_70px_-12px_rgba(34,211,238,0.5)]",
+    name: "text-white",
+    bio: "text-white/60",
+    card: "border border-cyan-400/20 bg-white/[0.05] backdrop-blur hover:bg-white/[0.09] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-cyan-300/60",
+    productCard: "border border-cyan-400/20 bg-white/[0.05] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-cyan-300",
+    buyButton: "bg-cyan-400 text-[#0f172a] font-bold hover:brightness-105",
+    footer: "text-white/30 hover:text-cyan-300",
+    swatch: "#22D3EE",
+    previewBg:
+      "radial-gradient(120% 120% at 30% 10%, rgba(34,211,238,0.35) 0%, transparent 45%), linear-gradient(160deg, #0f172a 0%, #1e1b4b 55%, #2e1065 100%)",
+    previewIsDark: true,
+  },
+  mint: {
+    label: "Mint",
+    page: "bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600",
+    glow: "bg-gradient-to-br from-white/25 via-emerald-200/15 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-emerald-100",
+    buyButton: "bg-white text-teal-700 font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#14B8A6",
+    previewBg: "linear-gradient(135deg, #34D399 0%, #14B8A6 50%, #0891B2 100%)",
+    previewIsDark: true,
+  },
+  golden: {
+    label: "Golden",
+    page: "bg-gradient-to-br from-amber-300 via-orange-400 to-rose-400",
+    glow: "bg-gradient-to-br from-white/30 via-amber-100/20 to-transparent",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-white/40 bg-white/70 backdrop-blur hover:bg-white/80 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/40 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-orange-700",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#FB923C",
+    previewBg: "linear-gradient(135deg, #FCD34D 0%, #FB923C 50%, #FB7185 100%)",
+    previewIsDark: false,
+  },
+  cosmic: {
+    label: "Cosmic",
+    page: "bg-gradient-to-b from-[#0B0B1E] via-[#1B1140] to-[#0B0B1E]",
+    glow: "bg-gradient-to-br from-violet-500/30 via-fuchsia-500/15 to-transparent",
+    avatarRing: "ring-4 ring-violet-300/40 shadow-[0_0_70px_-12px_rgba(167,139,250,0.5)]",
+    name: "text-white",
+    bio: "text-white/60",
+    card: "border border-violet-400/20 bg-white/[0.05] backdrop-blur hover:bg-white/[0.09] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-violet-300/60",
+    productCard: "border border-violet-400/20 bg-white/[0.05] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-violet-300",
+    buyButton: "bg-violet-400 text-[#0B0B1E] font-bold hover:brightness-105",
+    footer: "text-white/30 hover:text-violet-300",
+    swatch: "#A78BFA",
+    previewBg: "linear-gradient(160deg, #0B0B1E 0%, #1B1140 50%, #0B0B1E 100%)",
+    previewIsDark: true,
   },
 };
 

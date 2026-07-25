@@ -336,7 +336,9 @@ export interface MyPage {
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
-// peach baru) -- lihat catatan lingkup di page-themes.ts.
+// peach baru); galeri tema ala Linktree menambah 6 lagi bernuansa gradien
+// vivid (bloom/blaze/cyber/mint/golden/cosmic) -- lihat catatan lingkup di
+// page-themes.ts.
 export const THEME_PRESETS = [
   "default",
   "midnight",
@@ -348,6 +350,12 @@ export const THEME_PRESETS = [
   "lavender",
   "noir",
   "peach",
+  "bloom",
+  "blaze",
+  "cyber",
+  "mint",
+  "golden",
+  "cosmic",
 ] as const;
 
 export function getMyPage() {

@@ -547,6 +547,24 @@ export function IconGripVertical({ className }: IconProps) {
   );
 }
 
+// ---------- Galeri tema ala Linktree (kartu "Custom" berikon kuas) ----------
+
+export function IconPaintbrush({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M14.5 4.5 19.5 9.5 10.6 18.4c-.7.7-1.7 1.1-2.7 1.1H4v-3.9c0-1 .4-2 1.1-2.7L14.5 4.5Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M13 6 18 11" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path d="M4 19.5c1.5.6 3.2.4 4.3-.7" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconPencil({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
