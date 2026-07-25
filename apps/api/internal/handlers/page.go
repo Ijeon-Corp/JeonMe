@@ -38,26 +38,29 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID                    string             `json:"id"`
-	Username              string             `json:"username"`
-	Bio                   string             `json:"bio"`
-	AvatarURL             string             `json:"avatar_url"`
-	Theme                 string             `json:"theme"`
-	SeoTitle              string             `json:"seo_title"`
-	SeoDescription        string             `json:"seo_description"`
-	Noindex               bool               `json:"noindex"`
-	CustomBackgroundType  string             `json:"custom_background_type"`
-	CustomBackgroundValue string             `json:"custom_background_value"`
-	CustomFont            string             `json:"custom_font"`
-	CustomButtonColor     string             `json:"custom_button_color"`
-	Links                 []publicLink       `json:"links"`
-	Products              []publicItem       `json:"products"`
-	Donation              *publicDonation    `json:"donation"`
-	LeadCapture           *publicLeadCapture `json:"lead_capture"`
-	SocialProof           *publicSocialProof `json:"social_proof"`
-	IsVerified            bool               `json:"is_verified"`
-	Events                []publicEvent      `json:"events"`
-	Bookings              []publicBooking    `json:"bookings"`
+	ID                    string `json:"id"`
+	Username              string `json:"username"`
+	Bio                   string `json:"bio"`
+	AvatarURL             string `json:"avatar_url"`
+	Theme                 string `json:"theme"`
+	SeoTitle              string `json:"seo_title"`
+	SeoDescription        string `json:"seo_description"`
+	Noindex               bool   `json:"noindex"`
+	CustomBackgroundType  string `json:"custom_background_type"`
+	CustomBackgroundValue string `json:"custom_background_value"`
+	CustomFont            string `json:"custom_font"`
+	CustomButtonColor     string `json:"custom_button_color"`
+	// CustomButtonStyle -- "Desain 2.0": fill/outline/shadow, HANYA relevan
+	// kalau Theme="custom".
+	CustomButtonStyle string             `json:"custom_button_style"`
+	Links             []publicLink       `json:"links"`
+	Products          []publicItem       `json:"products"`
+	Donation          *publicDonation    `json:"donation"`
+	LeadCapture       *publicLeadCapture `json:"lead_capture"`
+	SocialProof       *publicSocialProof `json:"social_proof"`
+	IsVerified        bool               `json:"is_verified"`
+	Events            []publicEvent      `json:"events"`
+	Bookings          []publicBooking    `json:"bookings"`
 	// LoyaltyActive -- No.94 (Sprint 13): cuma penanda ada/tidaknya program
 	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
 	// lewat GET /pages/:username/loyalty).
@@ -178,14 +181,14 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
-			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_primary = true AND p.is_published = true
 	`, username).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
-		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -222,13 +225,13 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
 		SELECT p.user_id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
-			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
 	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
-		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -449,6 +452,7 @@ type myPageResponse struct {
 	CustomBackgroundValue string             `json:"custom_background_value"`
 	CustomFont            string             `json:"custom_font"`
 	CustomButtonColor     string             `json:"custom_button_color"`
+	CustomButtonStyle     string             `json:"custom_button_style"`
 	Verification          verificationStatus `json:"verification"`
 }
 
@@ -474,13 +478,13 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
-			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
 	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
-		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
@@ -503,13 +507,20 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 }
 
 // availableThemes — preset tema (REQ-F-204) + "custom" (No.80, Sprint 9):
-// kustomisasi lanjutan (latar/font/warna tombol) di luar 5 preset.
+// kustomisasi lanjutan (latar/font/warna tombol) di luar preset. "Desain 2.0"
+// (permintaan langsung pengguna, di luar backlog Excel): preset diperluas
+// dari 5 jadi 10 supaya galeri template lebih variatif ala Linktree/Lynk.id.
 var availableThemes = map[string]bool{
-	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true, "custom": true,
+	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true,
+	"rose": true, "ocean": true, "lavender": true, "noir": true, "peach": true,
+	"custom": true,
 }
 
+// availableCustomFonts -- "Desain 2.0": diperluas dari 5 jadi 9 pilihan font
+// (Poppins/Quicksand/Merriweather/Space Grotesk ditambahkan).
 var availableCustomFonts = map[string]bool{
 	"inter": true, "playfair": true, "lora": true, "montserrat": true, "roboto-mono": true,
+	"poppins": true, "quicksand": true, "merriweather": true, "space-grotesk": true,
 }
 
 type updatePageRequest struct {
@@ -519,10 +530,14 @@ type updatePageRequest struct {
 	SeoTitle              *string `json:"seo_title" binding:"omitempty,max=70"`
 	SeoDescription        *string `json:"seo_description" binding:"omitempty,max=160"`
 	Noindex               *bool   `json:"noindex"`
-	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image"`
+	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image gradient"`
 	CustomBackgroundValue *string `json:"custom_background_value" binding:"omitempty,max=500"`
 	CustomFont            *string `json:"custom_font"`
 	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
+	// CustomButtonStyle -- "Desain 2.0": axis baru terpisah dari warna tombol
+	// (fill=isi penuh seperti sebelumnya, outline=transparan+border, shadow=
+	// isi penuh+bayangan warna di bawahnya), HANYA berlaku kalau theme="custom".
+	CustomButtonStyle *string `json:"custom_button_style" binding:"omitempty,oneof=fill outline shadow"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -563,10 +578,12 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_background_type = COALESCE($7, custom_background_type),
 			custom_background_value = COALESCE($8, custom_background_value),
 			custom_font = COALESCE($9, custom_font),
-			custom_button_color = COALESCE($10, custom_button_color)
-		WHERE user_id = $11 AND is_primary = true
+			custom_button_color = COALESCE($10, custom_button_color),
+			custom_button_style = COALESCE($11, custom_button_style)
+		WHERE user_id = $12 AND is_primary = true
 	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
-		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, userID)
+		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
+		req.CustomButtonStyle, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return
@@ -768,10 +785,11 @@ type updateExtraPageRequest struct {
 	Theme                 *string `json:"theme"`
 	Bio                   *string `json:"bio" binding:"omitempty,max=160"`
 	IsPublished           *bool   `json:"is_published"`
-	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image"`
+	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image gradient"`
 	CustomBackgroundValue *string `json:"custom_background_value" binding:"omitempty,max=500"`
 	CustomFont            *string `json:"custom_font"`
 	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
+	CustomButtonStyle     *string `json:"custom_button_style" binding:"omitempty,oneof=fill outline shadow"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -817,10 +835,11 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_background_type = COALESCE($6, custom_background_type),
 			custom_background_value = COALESCE($7, custom_background_value),
 			custom_font = COALESCE($8, custom_font),
-			custom_button_color = COALESCE($9, custom_button_color)
-		WHERE id = $10 AND user_id = $11 AND is_primary = false
+			custom_button_color = COALESCE($9, custom_button_color),
+			custom_button_style = COALESCE($10, custom_button_style)
+		WHERE id = $11 AND user_id = $12 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.Bio, req.IsPublished,
-		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
+		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {

@@ -1,0 +1,13 @@
+-- "Desain 2.0" -- permintaan langsung pengguna (bukan dari backlog Excel):
+-- fitur desain halaman publik dinilai "masih sangat simpel" dibanding
+-- Linktree/Lynk.id. Mengerjakan 3 hal yang SENGAJA diskip di No.80 (Sprint 9)
+-- karena keterbatasan waktu waktu itu: gaya tombol (fill/outline/shadow),
+-- latar gradien, dan galeri preset tema yang lebih banyak/variatif (5 -> 10).
+--
+-- Hanya gaya tombol yang butuh kolom baru -- gradien memakai ulang kolom
+-- custom_background_value yang sudah ada (menyimpan string CSS
+-- linear-gradient(...) lengkap, backend tetap memperlakukannya sebagai
+-- string opaque persis seperti sekarang memperlakukan warna solid/URL
+-- gambar), dan preset tema baru tidak perlu kolom baru sama sekali (kolom
+-- theme tidak punya CHECK constraint di DB, validasi cukup di map Go).
+ALTER TABLE pages ADD COLUMN custom_button_style VARCHAR(10) NOT NULL DEFAULT 'fill';

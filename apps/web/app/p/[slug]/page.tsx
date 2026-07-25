@@ -67,6 +67,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             backgroundValue: page.custom_background_value,
             font: page.custom_font,
             buttonColor: page.custom_button_color,
+            buttonStyle: page.custom_button_style,
           },
           links: page.links.map((l) => ({
             id: l.id,

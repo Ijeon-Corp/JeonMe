@@ -209,10 +209,20 @@ export interface PublicPage {
   seo_title: string;
   seo_description: string;
   noindex: boolean;
-  custom_background_type: "solid" | "image";
+  custom_background_type: "solid" | "gradient" | "image";
   custom_background_value: string;
-  custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
+  custom_font:
+    | "inter"
+    | "playfair"
+    | "lora"
+    | "montserrat"
+    | "roboto-mono"
+    | "poppins"
+    | "quicksand"
+    | "merriweather"
+    | "space-grotesk";
   custom_button_color: string;
+  custom_button_style: "fill" | "outline" | "shadow";
   is_verified: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
@@ -301,10 +311,22 @@ export interface MyPage {
   seo_title: string;
   seo_description: string;
   noindex: boolean;
-  custom_background_type: "solid" | "image";
+  custom_background_type: "solid" | "gradient" | "image";
   custom_background_value: string;
-  custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
+  custom_font:
+    | "inter"
+    | "playfair"
+    | "lora"
+    | "montserrat"
+    | "roboto-mono"
+    | "poppins"
+    | "quicksand"
+    | "merriweather"
+    | "space-grotesk";
   custom_button_color: string;
+  // custom_button_style -- "Desain 2.0": fill/outline/shadow, HANYA relevan
+  // kalau theme="custom".
+  custom_button_style: "fill" | "outline" | "shadow";
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -313,7 +335,20 @@ export interface MyPage {
   };
 }
 
-export const THEME_PRESETS = ["default", "midnight", "sunrise", "forest", "minimal"] as const;
+// "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
+// peach baru) -- lihat catatan lingkup di page-themes.ts.
+export const THEME_PRESETS = [
+  "default",
+  "midnight",
+  "sunrise",
+  "forest",
+  "minimal",
+  "rose",
+  "ocean",
+  "lavender",
+  "noir",
+  "peach",
+] as const;
 
 export function getMyPage() {
   return apiFetch<MyPage>("/dashboard/page", { method: "GET" }, { auth: true });
@@ -333,6 +368,7 @@ export function updateMyPage(
       | "custom_background_value"
       | "custom_font"
       | "custom_button_color"
+      | "custom_button_style"
     >
   >
 ) {
@@ -475,10 +511,11 @@ export function updateExtraPage(
     theme: string;
     bio: string;
     is_published: boolean;
-    custom_background_type: "solid" | "image";
+    custom_background_type: "solid" | "gradient" | "image";
     custom_background_value: string;
     custom_font: string;
     custom_button_color: string;
+    custom_button_style: "fill" | "outline" | "shadow";
   }>
 ) {
   return apiFetch<{ message: string }>(

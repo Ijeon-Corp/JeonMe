@@ -13,7 +13,7 @@ import {
   updateMyPage,
   uploadAvatar,
 } from "@/lib/api-client";
-import { CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
+import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
 import { IconBadgeCheck, IconCheck, IconExternal } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
@@ -31,8 +31,23 @@ type PageSettingsPatch = Partial<
     | "custom_background_value"
     | "custom_font"
     | "custom_button_color"
+    | "custom_button_style"
   >
 >;
+
+// "Desain 2.0": gradien disimpan sebagai string CSS linear-gradient(...)
+// LENGKAP di custom_background_value (backend memperlakukannya sebagai
+// string opaque) -- dua helper ini membangun & mem-parse-ulang string itu
+// supaya dashboard bisa menampilkan 2 color picker (awal/akhir) alih-alih
+// minta kreator mengetik CSS mentah.
+function buildGradient(start: string, end: string): string {
+  return `linear-gradient(135deg, ${start} 0%, ${end} 100%)`;
+}
+
+function parseGradient(value: string): { start: string; end: string } {
+  const hexCodes = value.match(/#[0-9a-fA-F]{6}/g);
+  return { start: hexCodes?.[0] ?? "#667EEA", end: hexCodes?.[1] ?? "#764BA2" };
+}
 
 export default function DashboardDesignPage() {
   const [page, setPage] = useState<MyPage | null>(null);
@@ -41,6 +56,8 @@ export default function DashboardDesignPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [gradientStart, setGradientStart] = useState("#667EEA");
+  const [gradientEnd, setGradientEnd] = useState("#764BA2");
 
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts()])
@@ -48,10 +65,21 @@ export default function DashboardDesignPage() {
         setPage(p);
         setLinks(l);
         setProducts(prod);
+        if (p.custom_background_type === "gradient") {
+          const { start, end } = parseGradient(p.custom_background_value);
+          setGradientStart(start);
+          setGradientEnd(end);
+        }
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data."))
       .finally(() => setLoading(false));
   }, []);
+
+  function handleGradientChange(start: string, end: string) {
+    setGradientStart(start);
+    setGradientEnd(end);
+    handlePageSettingChange({ custom_background_type: "gradient", custom_background_value: buildGradient(start, end) });
+  }
 
   async function handlePageSettingChange(patch: PageSettingsPatch) {
     if (!page) return;
@@ -184,8 +212,9 @@ export default function DashboardDesignPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Tema Halaman</label>
-                <div className="flex flex-wrap gap-2.5">
+                <label className="mb-1.5 block text-sm font-semibold text-ink">Galeri Template</label>
+                <p className="mb-2 text-xs text-muted">Pilih salah satu template siap pakai, atau buat kombinasi sendiri lewat Custom.</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {THEME_PRESETS.map((theme) => {
                     const meta = PAGE_THEMES[theme];
                     const active = page.theme === theme;
@@ -194,36 +223,34 @@ export default function DashboardDesignPage() {
                         key={theme}
                         type="button"
                         onClick={() => handlePageSettingChange({ theme })}
-                        className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
                           active
-                            ? "border-primary bg-primary-subtle text-primary shadow-card"
-                            : "border-border text-muted hover:border-primary/50 hover:text-ink"
+                            ? "border-primary bg-primary-subtle shadow-card"
+                            : "border-border hover:border-primary/50"
                         }`}
                       >
                         <span
-                          className="h-5 w-5 flex-shrink-0 rounded-full ring-2 ring-white shadow-sm"
+                          className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5"
                           style={{ backgroundColor: meta.swatch }}
                           aria-hidden
                         />
-                        {meta.label}
+                        <span className={`text-xs font-semibold ${active ? "text-primary" : "text-ink"}`}>{meta.label}</span>
                       </button>
                     );
                   })}
                   <button
                     type="button"
                     onClick={() => handlePageSettingChange({ theme: "custom" })}
-                    className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-all ${
-                      page.theme === "custom"
-                        ? "border-primary bg-primary-subtle text-primary shadow-card"
-                        : "border-border text-muted hover:border-primary/50 hover:text-ink"
+                    className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                      page.theme === "custom" ? "border-primary bg-primary-subtle shadow-card" : "border-border hover:border-primary/50"
                     }`}
                   >
                     <span
-                      className="h-5 w-5 flex-shrink-0 rounded-full ring-2 ring-white shadow-sm"
+                      className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5"
                       style={{ backgroundColor: page.custom_button_color }}
                       aria-hidden
                     />
-                    Custom
+                    <span className={`text-xs font-semibold ${page.theme === "custom" ? "text-primary" : "text-ink"}`}>Custom</span>
                   </button>
                 </div>
               </div>
@@ -235,24 +262,28 @@ export default function DashboardDesignPage() {
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-ink">Jenis Latar</label>
                       <div className="flex gap-2">
-                        {(["solid", "image"] as const).map((type) => (
+                        {(["solid", "gradient", "image"] as const).map((type) => (
                           <button
                             key={type}
                             type="button"
-                            onClick={() => handlePageSettingChange({ custom_background_type: type })}
+                            onClick={() =>
+                              type === "gradient"
+                                ? handleGradientChange(gradientStart, gradientEnd)
+                                : handlePageSettingChange({ custom_background_type: type })
+                            }
                             className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
                               page.custom_background_type === type
                                 ? "border-primary bg-white text-primary"
                                 : "border-border text-muted"
                             }`}
                           >
-                            {type === "solid" ? "Warna Solid" : "Gambar"}
+                            {type === "solid" ? "Warna Solid" : type === "gradient" ? "Gradien" : "Gambar"}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {page.custom_background_type === "solid" ? (
+                    {page.custom_background_type === "solid" && (
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Latar</label>
                         <input
@@ -263,7 +294,34 @@ export default function DashboardDesignPage() {
                           className="h-9 w-full rounded-lg border border-border"
                         />
                       </div>
-                    ) : (
+                    )}
+
+                    {page.custom_background_type === "gradient" && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Gradien (Awal &amp; Akhir)</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={gradientStart}
+                            onChange={(e) => handleGradientChange(e.target.value, gradientEnd)}
+                            className="h-9 w-full rounded-lg border border-border"
+                          />
+                          <input
+                            type="color"
+                            value={gradientEnd}
+                            onChange={(e) => handleGradientChange(gradientStart, e.target.value)}
+                            className="h-9 w-full rounded-lg border border-border"
+                          />
+                        </div>
+                        <div
+                          className="mt-2 h-9 w-full rounded-lg ring-1 ring-black/5"
+                          style={{ background: buildGradient(gradientStart, gradientEnd) }}
+                          aria-hidden
+                        />
+                      </div>
+                    )}
+
+                    {page.custom_background_type === "image" && (
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-ink">URL Gambar Latar</label>
                         <input
@@ -303,6 +361,26 @@ export default function DashboardDesignPage() {
                         onBlur={(e) => handlePageSettingChange({ custom_button_color: e.target.value })}
                         className="h-9 w-full rounded-lg border border-border"
                       />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
+                      <div className="flex gap-2">
+                        {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => handlePageSettingChange({ custom_button_style: opt.value })}
+                            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                              page.custom_button_style === opt.value
+                                ? "border-primary bg-white text-primary"
+                                : "border-border text-muted"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

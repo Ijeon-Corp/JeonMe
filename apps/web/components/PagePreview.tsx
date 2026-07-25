@@ -128,6 +128,7 @@ interface PreviewSourcePage {
   custom_background_value?: string;
   custom_font?: CustomThemeConfig["font"];
   custom_button_color?: string;
+  custom_button_style?: CustomThemeConfig["buttonStyle"];
   is_verified?: boolean;
 }
 
@@ -176,6 +177,7 @@ export function toPreviewData(
             backgroundValue: page.custom_background_value,
             font: page.custom_font,
             buttonColor: page.custom_button_color,
+            buttonStyle: page.custom_button_style ?? "fill",
           }
         : undefined,
     links: links
