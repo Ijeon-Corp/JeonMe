@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-client";
 import {
   IconBell,
+  IconBook,
   IconBox,
   IconCalendar,
   IconChart,
@@ -68,6 +69,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/donation", label: "Dukungan", icon: IconHeart },
       { href: "/dashboard/affiliates", label: "Afiliasi", icon: IconUsers },
       { href: "/dashboard/events", label: "Event", icon: IconCalendar },
+      { href: "/dashboard/courses", label: "Kelas & Kursus", icon: IconBook },
     ],
   },
   {

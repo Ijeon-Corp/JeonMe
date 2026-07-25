@@ -34,6 +34,10 @@ export interface PagePreviewProduct {
   pwywMinPriceIdr?: number;
   isBundle?: boolean;
   bundleOriginalPriceIdr?: number;
+  // No.91 (Sprint 11): kursus tampil di grid Produk yang sama, cukup
+  // ditandai jumlah bab-nya.
+  isCourse?: boolean;
+  chapterCount?: number;
 }
 
 export interface PagePreviewDonation {
@@ -476,6 +480,9 @@ export default function PagePreview({
                     )}
                   </div>
                   <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+                  {product.isCourse && (
+                    <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
+                  )}
                   {product.pwywEnabled ? (
                     <p className={`text-xs font-bold ${theme.productPrice}`}>
                       Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}

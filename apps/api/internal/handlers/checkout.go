@@ -284,6 +284,7 @@ type checkoutStatusResponse struct {
 	Product     string               `json:"product_name"`
 	IsBundle    bool                 `json:"is_bundle"`
 	IsDonation  bool                 `json:"is_donation"`
+	IsCourse    bool                 `json:"is_course"`
 	SocialProof *checkoutSocialProof `json:"social_proof"`
 }
 
@@ -309,10 +310,10 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	var productID, creatorUserID string
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.user_id FROM orders o
+		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.user_id FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &creatorUserID)
+	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &resp.IsCourse, &creatorUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -555,12 +556,12 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	defer cancel()
 
 	var status, fileKey, buyerEmail string
-	var isBundle, isDonation, watermarkEnabled bool
+	var isBundle, isDonation, isCourse, watermarkEnabled bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.watermark_enabled FROM orders o
+		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.watermark_enabled FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &watermarkEnabled)
+	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &watermarkEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -582,7 +583,10 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	// No.71: donasi tidak pernah punya file sama sekali -- arahkan juga ke
 	// halaman status, yang menampilkan ucapan terima kasih tanpa tombol
 	// unduh (bukan error 404 "file tidak tersedia").
-	if isBundle || isDonation {
+	// No.91: kursus punya banyak bab video (bukan satu file) -- arahkan juga
+	// ke halaman status, yang menampilkan daftar bab lewat
+	// GET /checkout/:id/course-chapters.
+	if isBundle || isDonation || isCourse {
 		c.Redirect(http.StatusFound, h.PublicWebURL+"/checkout/"+orderID)
 		return
 	}
@@ -705,4 +709,65 @@ func (h *CheckoutHandler) GetBundleItems(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+// GetCourseChapters — No.91: dipanggil dari halaman status checkout untuk
+// kursus yang sudah lunas, mengembalikan seluruh bab video terurut. Video
+// selalu berupa tautan embed YouTube/TikTok (lihat CourseHandler), jadi
+// TIDAK perlu presigned URL sama sekali -- beda dari bundel yang filenya
+// privat di storage.
+func (h *CheckoutHandler) GetCourseChapters(c *gin.Context) {
+	orderID := c.Param("id")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var status string
+	var isCourse bool
+	var courseProductID string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT o.status, p.is_course, p.id FROM orders o
+		JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1
+	`, orderID).Scan(&status, &isCourse, &courseProductID); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pesanan"})
+		return
+	}
+	if status != "paid" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "pesanan belum lunas"})
+		return
+	}
+	if !isCourse {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pesanan ini bukan kursus"})
+		return
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT title, description, video_url FROM course_chapters
+		WHERE course_product_id = $1 ORDER BY position ASC
+	`, courseProductID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat bab kursus"})
+		return
+	}
+	defer rows.Close()
+
+	type chapter struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		VideoURL    string `json:"video_url"`
+	}
+	chapters := []chapter{}
+	for rows.Next() {
+		var ch chapter
+		if err := rows.Scan(&ch.Title, &ch.Description, &ch.VideoURL); err == nil {
+			chapters = append(chapters, ch)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"chapters": chapters})
 }

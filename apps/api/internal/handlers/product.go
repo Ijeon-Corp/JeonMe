@@ -127,14 +127,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// No.70/71/90: bundel, blok dukungan, dan event TIDAK ikut tampil di sini
-	// -- masing-masing punya halaman dashboard sendiri (/dashboard/bundles,
-	// /dashboard/donation, /dashboard/events), sama seperti voucher.
+	// No.70/71/90/91: bundel, blok dukungan, event, dan kursus TIDAK ikut
+	// tampil di sini -- masing-masing punya halaman dashboard sendiri
+	// (/dashboard/bundles, /dashboard/donation, /dashboard/events,
+	// /dashboard/courses), sama seperti voucher.
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
 			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf
-		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false AND is_event = false
+		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false AND is_event = false AND is_course = false
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -217,22 +218,23 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
-	var isBundle, isDonation, isEvent bool
+	var isBundle, isDonation, isEvent, isCourse bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
 	}
 
-	// No.70/71/90: bundel, blok dukungan, dan event tidak pernah punya file
-	// sendiri -- keabsahannya dijamin di tempat lain (bundel: minimal 2
-	// produk aktif saat dibuat; donasi: selalu bayar-seikhlasnya; event:
-	// yang dijual adalah tiket, bukan file), jadi lewati pengecekan
-	// file_key yang berlaku untuk produk biasa.
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent {
+	// No.70/71/90/91: bundel, blok dukungan, event, dan kursus tidak pernah
+	// punya file sendiri -- keabsahannya dijamin di tempat lain (bundel:
+	// minimal 2 produk aktif saat dibuat; donasi: selalu bayar-seikhlasnya;
+	// event: yang dijual adalah tiket; kursus: materinya video per-bab di
+	// course_chapters), jadi lewati pengecekan file_key yang berlaku untuk
+	// produk biasa.
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}

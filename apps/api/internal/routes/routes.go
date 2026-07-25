@@ -30,6 +30,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	voucher := handlers.NewVoucherHandler(db)
 	bundle := handlers.NewBundleHandler(db)
 	event := handlers.NewEventHandler(db)
+	course := handlers.NewCourseHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
@@ -182,6 +183,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// yang sudah ada, jadi cuma perlu List+Create di sini.
 				productsGroup.GET("/events", event.List)
 				productsGroup.POST("/events", event.Create)
+
+				// No.91 (Sprint 11): blok kelas/kursus video -- juga baris
+				// products biasa (is_course=true), toggle aktif/hapus pakai
+				// product.Update/Delete yang sudah ada.
+				productsGroup.GET("/courses", course.List)
+				productsGroup.POST("/courses", course.Create)
+				productsGroup.GET("/courses/:id/chapters", course.GetChapters)
+				productsGroup.PUT("/courses/:id/chapters", course.ReplaceChapters)
 			}
 
 			// No.87: manajemen kolaborator itu sendiri SELALU beroperasi
@@ -273,6 +282,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.70: daftar unduhan multi-file untuk bundel yang sudah lunas --
 		// publik, cuma bisa diakses kalau tahu orderID yang valid & lunas.
 		api.GET("/checkout/:id/bundle-items", checkout.GetBundleItems)
+		api.GET("/checkout/:id/course-chapters", checkout.GetCourseChapters)
 
 		// Webhook PSP -- REQ-F-403 (verifikasi signature_key di body DI
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi

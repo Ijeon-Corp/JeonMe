@@ -110,6 +110,8 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
             isBundle: p.is_bundle,
             bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
+            isCourse: p.is_course,
+            chapterCount: p.chapter_count,
           })),
           donation: page.donation
             ? {

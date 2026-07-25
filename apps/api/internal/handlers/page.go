@@ -127,6 +127,11 @@ type publicItem struct {
 	PwywMinPriceIDR        *int64 `json:"pwyw_min_price_idr"`
 	IsBundle               bool   `json:"is_bundle"`
 	BundleOriginalPriceIDR *int64 `json:"bundle_original_price_idr"`
+	// No.91 (Sprint 11): kursus tampil di grid Produk yang sama seperti
+	// produk biasa (bukan blok tersendiri seperti Event/Donation), cukup
+	// ditandai jumlah bab-nya.
+	IsCourse     bool `json:"is_course"`
+	ChapterCount int  `json:"chapter_count"`
 }
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
@@ -223,7 +228,9 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	productRows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
 			p.is_bundle,
-			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id)
+			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
+			p.is_course,
+			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id)
 		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false
 	`, userID)
 	if err == nil {
@@ -231,7 +238,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		for productRows.Next() {
 			var p publicItem
 			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
-				&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR); err == nil {
+				&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR,
+				&p.IsCourse, &p.ChapterCount); err == nil {
 				resp.Products = append(resp.Products, p)
 			}
 		}

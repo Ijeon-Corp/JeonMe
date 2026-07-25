@@ -143,6 +143,8 @@ export interface PublicProduct {
   pwyw_min_price_idr: number | null;
   is_bundle: boolean;
   bundle_original_price_idr: number | null;
+  is_course: boolean;
+  chapter_count: number;
 }
 
 export interface PublicDonation {
@@ -642,6 +644,62 @@ export function createEvent(input: {
   );
 }
 
+// ---------- Dashboard: blok kelas/kursus video (Sprint 11, No.91) ----------
+// Kursus adalah baris produk biasa (is_course=true) -- toggle aktif & hapus
+// pakai updateProduct()/deleteProduct() yang sudah ada. Video per-bab wajib
+// tautan YouTube/TikTok (sama seperti blok video No.77), bukan upload file.
+
+export interface CourseChapterInput {
+  title: string;
+  description?: string;
+  video_url: string;
+}
+
+export interface DashboardCourse {
+  id: string;
+  name: string;
+  description: string;
+  price_idr: number;
+  is_active: boolean;
+  prerequisites: string;
+  chapter_count: number;
+}
+
+export function listCourses() {
+  return apiFetch<DashboardCourse[]>("/dashboard/courses", { method: "GET" }, { auth: true });
+}
+
+export function createCourse(input: {
+  name: string;
+  description?: string;
+  price_idr: number;
+  prerequisites?: string;
+  chapters: CourseChapterInput[];
+}) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/courses",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export interface DashboardCourseChapter extends CourseChapterInput {
+  id: string;
+  position: number;
+}
+
+export function getCourseChapters(courseId: string) {
+  return apiFetch<DashboardCourseChapter[]>(`/dashboard/courses/${courseId}/chapters`, { method: "GET" }, { auth: true });
+}
+
+export function replaceCourseChapters(courseId: string, chapters: CourseChapterInput[]) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/courses/${courseId}/chapters`,
+    { method: "PUT", body: JSON.stringify({ chapters }) },
+    { auth: true }
+  );
+}
+
 // ---------- Dashboard: blok dukungan/donasi (Sprint 7, No.71) ----------
 // Donasi juga baris produk biasa (is_donation=true, pwyw_enabled=true),
 // tapi cuma SATU per kreator -- Get+Upsert, bukan CRUD list.
@@ -860,6 +918,7 @@ export interface CheckoutStatus {
   product_name: string;
   is_bundle: boolean;
   is_donation: boolean;
+  is_course: boolean;
   social_proof: SocialProofFeed | null;
 }
 
@@ -877,6 +936,19 @@ export interface BundleDownloadItem {
 // seperti pola getProductDownloadURL.
 export function getBundleItems(orderId: string) {
   return apiFetch<{ items: BundleDownloadItem[] }>(`/checkout/${orderId}/bundle-items`, { method: "GET" });
+}
+
+// No.91 (Sprint 11): dipanggil dari halaman status checkout begitu order
+// kursus lunas -- video selalu tautan embed YouTube/TikTok, tidak perlu
+// presigned URL sama sekali (beda dari bundel yang filenya privat).
+export interface CourseChapterView {
+  title: string;
+  description: string;
+  video_url: string;
+}
+
+export function getCourseChaptersForOrder(orderId: string) {
+  return apiFetch<{ chapters: CourseChapterView[] }>(`/checkout/${orderId}/course-chapters`, { method: "GET" });
 }
 
 // ---------- Dashboard: saldo & penarikan (Sprint 4) ----------

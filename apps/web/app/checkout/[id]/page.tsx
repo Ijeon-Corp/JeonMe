@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, BundleDownloadItem, CheckoutStatus, getBundleItems, getCheckoutStatus } from "@/lib/api-client";
+import {
+  ApiError,
+  BundleDownloadItem,
+  CheckoutStatus,
+  CourseChapterView,
+  getBundleItems,
+  getCheckoutStatus,
+  getCourseChaptersForOrder,
+} from "@/lib/api-client";
 import SocialProofToast from "@/components/SocialProofToast";
+import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 
 // REQ-F-406: pesan gagal bayar yang jelas ke pembeli. Halaman ini adalah
 // callbacks.finish dari Midtrans Snap -- statusnya selalu dicek ulang ke
@@ -21,6 +30,12 @@ export default function CheckoutStatusPage() {
   // produk biasa (lihat komentar CheckoutHandler.DownloadFile).
   const [bundleItems, setBundleItems] = useState<BundleDownloadItem[] | null>(null);
   const [bundleError, setBundleError] = useState<string | null>(null);
+
+  // No.91: kursus punya banyak bab video -- dimuat terpisah begitu status
+  // sudah "paid", sama seperti pola bundel di atas (video selalu tautan
+  // embed, jadi tidak butuh presigned URL sama sekali).
+  const [courseChapters, setCourseChapters] = useState<CourseChapterView[] | null>(null);
+  const [courseError, setCourseError] = useState<string | null>(null);
 
   useEffect(() => {
     let attempts = 0;
@@ -59,6 +74,14 @@ export default function CheckoutStatusPage() {
     }
   }, [status, params.id]);
 
+  useEffect(() => {
+    if (status?.status === "paid" && status.is_course) {
+      getCourseChaptersForOrder(params.id)
+        .then((res) => setCourseChapters(res.chapters))
+        .catch((err) => setCourseError(err instanceof ApiError ? err.message : "Gagal memuat bab kursus."));
+    }
+  }, [status, params.id]);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-primary-subtle/40 px-4">
       {status?.social_proof && (
@@ -68,7 +91,11 @@ export default function CheckoutStatusPage() {
           intervalSeconds={status.social_proof.interval_seconds}
         />
       )}
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-8 text-center shadow-card">
+      <div
+        className={`w-full rounded-2xl border border-border bg-white p-8 text-center shadow-card ${
+          status?.status === "paid" && status.is_course ? "max-w-xl" : "max-w-sm"
+        }`}
+      >
         {loading && <p className="text-sm text-muted">Memeriksa status pembayaran...</p>}
 
         {error && (
@@ -111,6 +138,25 @@ export default function CheckoutStatusPage() {
                       >
                         Unduh: {item.name}
                       </a>
+                    ))}
+                  </div>
+                )}
+
+                {status.is_course && (
+                  <div className="mt-4 flex flex-col gap-4 text-left">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Materi Kursus</p>
+                    {courseError && <p className="text-sm text-red-600">{courseError}</p>}
+                    {!courseChapters && !courseError && <p className="text-xs text-muted">Memuat bab kursus...</p>}
+                    {courseChapters?.map((chapter, i) => (
+                      <div key={i}>
+                        <VideoEmbedBlock
+                          title={`Bab ${i + 1}: ${chapter.title}`}
+                          videoUrl={chapter.video_url}
+                          cardClassName="rounded-xl border border-border bg-primary-subtle/20 p-3"
+                          titleClassName="text-ink"
+                        />
+                        {chapter.description && <p className="mt-2 text-xs text-muted">{chapter.description}</p>}
+                      </div>
                     ))}
                   </div>
                 )}
