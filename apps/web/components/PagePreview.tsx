@@ -12,6 +12,7 @@ import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import ReportButton from "@/components/ReportButton";
 import { RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
+import { detectLinkIcon } from "@/lib/link-icons";
 
 export interface PagePreviewLink {
   id: string;
@@ -358,28 +359,40 @@ export default function PagePreview({
                   </button>
                 )
               ) : interactive ? (
-                <TrackedLink
-                  key={link.id}
-                  username={data.username}
-                  pageSlug={data.pageSlug}
-                  linkId={link.id}
-                  href={link.url}
-                  className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                >
-                  <span className="truncate">{link.title}</span>
-                  <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
-                </TrackedLink>
+                (() => {
+                  const { Icon: LinkPlatformIcon } = detectLinkIcon(link.url);
+                  return (
+                    <TrackedLink
+                      key={link.id}
+                      username={data.username}
+                      pageSlug={data.pageSlug}
+                      linkId={link.id}
+                      href={link.url}
+                      className={`group flex w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    >
+                      <LinkPlatformIcon className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className="min-w-0 flex-1 truncate">{link.title}</span>
+                      <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
+                    </TrackedLink>
+                  );
+                })()
               ) : (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                >
-                  <span className="truncate">{link.title}</span>
-                  <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
-                </a>
+                (() => {
+                  const { Icon: LinkPlatformIcon } = detectLinkIcon(link.url);
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`group flex w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    >
+                      <LinkPlatformIcon className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className="min-w-0 flex-1 truncate">{link.title}</span>
+                      <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
+                    </a>
+                  );
+                })()
               );
             })}
           </div>

@@ -400,3 +400,123 @@ export function IconPhone({ className }: IconProps) {
     </svg>
   );
 }
+
+// ---------- Ikon platform (deteksi otomatis dari URL tautan) ----------
+// Sengaja SEDERHANA & monokrom (gaya sama seperti ikon lain di atas),
+// BUKAN logo resmi berwarna -- cukup untuk memberi sinyal visual platform
+// apa yang dituju sebuah tautan, bukan replika brand yang presisi.
+
+export function IconYoutube({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3" y="6" width="18" height="12" rx="4" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M10.5 9.5v5l4.5-2.5-4.5-2.5Z" fill="currentColor" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconTiktok({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M14 4v9.5a3 3 0 1 1-3-3"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 4c0 2.4 1.8 4.2 4 4.4"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconInstagram({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="4" width="16" height="16" rx="5" stroke="currentColor" strokeWidth={base} />
+      <circle cx="12" cy="12" r="3.4" stroke="currentColor" strokeWidth={base} />
+      <circle cx="16.6" cy="7.4" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconWhatsapp({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M6 19.5 7 16a7.5 7.5 0 1 1 3 2.7l-4 0.8Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 10.2c0 3 2.3 5.3 5.3 5.3.4 0 .6-.4.5-.8l-.3-1a.6.6 0 0 0-.7-.4l-1 .2a4 4 0 0 1-2.8-2.8l.2-1a.6.6 0 0 0-.4-.7l-1-.3c-.4-.1-.8.1-.8.5v.6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function IconTelegram({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M4 12.5 19 5l-2.5 14.5-5-3.8-2.3 2.3-.5-4L18 7 8.2 12.2 4 12.5Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Logo X (Twitter) -- dua bilah menyilang solid, sengaja BEDA dari IconClose
+// (garis tipis, penuh sudut ke sudut) supaya tidak tertukar maknanya.
+export function IconX({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M6.5 6 11 12.2 6.2 18h1.9l3.9-4.7L15.5 18h2L13 11.4 17.4 6h-1.9l-3.6 4.3L8.5 6h-2Z" />
+    </svg>
+  );
+}
+
+export function IconFacebook({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="4" width="16" height="16" rx="5" stroke="currentColor" strokeWidth={base} />
+      <path
+        d="M13.5 18v-5h1.8l.3-2.3h-2.1V9.2c0-.7.2-1.1 1.2-1.1h1V6c-.5-.1-1.1-.1-1.7-.1-1.9 0-3.1 1.1-3.1 3.1v1.7H9v2.3h1.9v5h2.6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function IconSpotify({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth={base} />
+      <path d="M7.5 10.2c3-.9 6-.7 8.7.9M7.9 13c2.4-.6 4.8-.5 7 .8M8.3 15.6c1.9-.4 3.7-.3 5.3.6" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconLinkedin({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="4" width="16" height="16" rx="5" stroke="currentColor" strokeWidth={base} />
+      <circle cx="8.3" cy="8.3" r="1.1" fill="currentColor" />
+      <path d="M8.3 11v6" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path d="M12 17v-3.5c0-1.4 1-2.5 2.3-2.5s2.2 1 2.2 2.5V17" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 11v6" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}

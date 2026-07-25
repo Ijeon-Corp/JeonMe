@@ -18,6 +18,7 @@ import {
 import { IconInbox, IconPlus } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+import { detectLinkIcon } from "@/lib/link-icons";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -32,6 +33,7 @@ export default function DashboardLinksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [addingLink, setAddingLink] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function DashboardLinksPage() {
       setLinks((prev) => [...prev, created]);
       setNewTitle("");
       setNewURL("");
+      setAddingLink(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat tautan.");
     }
@@ -320,6 +323,17 @@ export default function DashboardLinksPage() {
                   <span className="cursor-grab text-lg leading-none text-muted" aria-hidden>
                     ⠿
                   </span>
+                  {link.block_type === "link" && (
+                    <span
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary"
+                      title={detectLinkIcon(link.url).label}
+                    >
+                      {(() => {
+                        const { Icon: RowIcon } = detectLinkIcon(link.url);
+                        return <RowIcon className="h-4 w-4" />;
+                      })()}
+                    </span>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink">{link.title}</p>
                     {link.block_type === "link" ? (
@@ -573,27 +587,46 @@ export default function DashboardLinksPage() {
             )}
           </ul>
 
-          <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
-              required
-              placeholder="Judul tautan"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <input
-              type="url"
-              required
-              placeholder="https://..."
-              value={newURL}
-              onChange={(e) => setNewURL(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
-              Tambah
+          {!addingLink ? (
+            <button
+              type="button"
+              onClick={() => setAddingLink(true)}
+              className="mt-4 flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            >
+              <IconPlus className="h-4 w-4" />
+              Tambah Tautan
             </button>
-          </form>
+          ) : (
+            <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                required
+                autoFocus
+                placeholder="Judul tautan"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                type="url"
+                required
+                placeholder="https://..."
+                value={newURL}
+                onChange={(e) => setNewURL(e.target.value)}
+                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
+                Tambah
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddingLink(false)}
+                className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+              >
+                Batal
+              </button>
+            </form>
+          )}
 
           {!addingBlock ? (
             <button
