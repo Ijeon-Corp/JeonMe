@@ -335,6 +335,10 @@ export default function PagePreview({
                 );
               }
 
+              // Gaya ala Linktree: judul SELALU rata tengah di dalam tombol
+              // (bukan rata kiri+panah kanan seperti daftar menu biasa),
+              // ikon platform (kalau ada) mengambang di kiri absolut supaya
+              // tidak menggeser judul dari titik tengah tombol.
               return link.lockType ? (
                 interactive ? (
                   <LockedLinkButton
@@ -345,7 +349,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -353,9 +357,9 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`flex w-full cursor-not-allowed items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
-                    <span className="truncate">🔒 {link.title}</span>
+                    <span className="w-full truncate text-center">🔒 {link.title}</span>
                   </button>
                 )
               ) : interactive ? (
@@ -368,11 +372,10 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group flex w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <LinkPlatformIcon className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
-                      <span className="min-w-0 flex-1 truncate">{link.title}</span>
-                      <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
+                      <LinkPlatformIcon className={`absolute left-4 h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className="w-full truncate text-center">{link.title}</span>
                     </TrackedLink>
                   );
                 })()
@@ -385,11 +388,10 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group flex w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <LinkPlatformIcon className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
-                      <span className="min-w-0 flex-1 truncate">{link.title}</span>
-                      <IconChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5 ${theme.chevron}`} />
+                      <LinkPlatformIcon className={`absolute left-4 h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className="w-full truncate text-center">{link.title}</span>
                     </a>
                   );
                 })()
