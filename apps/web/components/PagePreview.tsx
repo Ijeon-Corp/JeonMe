@@ -4,6 +4,7 @@ import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import LoyaltyPointsWidget from "@/components/LoyaltyPointsWidget";
 import LockedLinkButton from "@/components/LockedLinkButton";
 import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
@@ -96,6 +97,9 @@ export interface PagePreviewData {
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
   bookings?: PagePreviewBooking[];
+  // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
+  // poin pengunjung dicek terpisah lewat LoyaltyPointsWidget (butuh email).
+  loyaltyActive?: boolean;
   donation?: PagePreviewDonation;
   leadCapture?: PagePreviewLeadCapture;
   socialProof?: PagePreviewSocialProof;
@@ -383,6 +387,17 @@ export default function PagePreview({
                 Daftar
               </button>
             )}
+          </div>
+        )}
+
+        {data.loyaltyActive && interactive && (
+          <div className={`mt-8 w-full rounded-2xl p-4 text-left ${theme.productCard}`}>
+            <LoyaltyPointsWidget
+              username={data.username}
+              cardClassName=""
+              titleClassName={theme.productTitle}
+              buttonClassName={theme.buyButton}
+            />
           </div>
         )}
 

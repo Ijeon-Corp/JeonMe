@@ -72,6 +72,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
           avatarUrl: page.avatar_url,
           theme: page.theme,
           isVerified: page.is_verified,
+          loyaltyActive: page.loyalty_active,
           customTheme: {
             backgroundType: page.custom_background_type,
             backgroundValue: page.custom_background_value,

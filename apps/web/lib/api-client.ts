@@ -216,6 +216,7 @@ export interface PublicPage {
   is_verified: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
+  loyalty_active: boolean;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -663,6 +664,102 @@ export function createEvent(input: {
     "/dashboard/events",
     { method: "POST", body: JSON.stringify(input) },
     { auth: true }
+  );
+}
+
+// ---------- Dashboard: program poin loyalitas (Sprint 13, No.94) ----------
+// Penukaran reward menghasilkan voucher lewat sistem voucher (No.67) yang
+// sudah ada -- lihat catatan lingkup di LoyaltyHandler backend.
+
+export interface LoyaltySettings {
+  is_active: boolean;
+  point_type: "percentage" | "nominal";
+  points_rate: number;
+  points_limit: number | null;
+  min_purchase_idr: number;
+}
+
+export function getLoyaltySettings() {
+  return apiFetch<LoyaltySettings>("/dashboard/loyalty/settings", { method: "GET" }, { auth: true });
+}
+
+export function upsertLoyaltySettings(input: {
+  is_active: boolean;
+  point_type: "percentage" | "nominal";
+  points_rate: number;
+  points_limit?: number;
+  clear_limit?: boolean;
+  min_purchase_idr: number;
+}) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/loyalty/settings",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export interface LoyaltyReward {
+  id: string;
+  name: string;
+  points_needed: number;
+  discount_type: "percentage" | "nominal";
+  discount_value: number;
+  valid_until: string | null;
+  is_published: boolean;
+  redeemed_count: number;
+}
+
+export function listLoyaltyRewards() {
+  return apiFetch<LoyaltyReward[]>("/dashboard/loyalty/rewards", { method: "GET" }, { auth: true });
+}
+
+export function createLoyaltyReward(input: {
+  name: string;
+  points_needed: number;
+  discount_type: "percentage" | "nominal";
+  discount_value: number;
+  valid_until?: string;
+}) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/loyalty/rewards",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function updateLoyaltyReward(id: string, input: { is_published: boolean }) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/loyalty/rewards/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function deleteLoyaltyReward(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/loyalty/rewards/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+// Publik: pembeli mengecek poin & menukar reward, tanpa akun (cukup email).
+export interface PublicLoyaltyReward {
+  id: string;
+  name: string;
+  points_needed: number;
+  discount_type: "percentage" | "nominal";
+  discount_value: number;
+  valid_until: string | null;
+}
+
+export function getMyLoyaltyPoints(username: string, email: string) {
+  return apiFetch<{ total_points: number; rewards: PublicLoyaltyReward[] }>(
+    `/pages/${username}/loyalty?email=${encodeURIComponent(email)}`,
+    { method: "GET" }
+  );
+}
+
+export function redeemLoyaltyReward(rewardId: string, buyerEmail: string) {
+  return apiFetch<{ message: string; voucher_code: string; reward_name: string }>(
+    `/loyalty/rewards/${rewardId}/redeem`,
+    { method: "POST", body: JSON.stringify({ buyer_email: buyerEmail }) }
   );
 }
 

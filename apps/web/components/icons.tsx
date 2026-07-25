@@ -223,6 +223,19 @@ export function IconBadgeCheck({ className }: IconProps) {
   );
 }
 
+export function IconStar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3.5 14.7 9l6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6-4.4-4.2 6-.9 2.7-5.5Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconClock({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

@@ -447,14 +447,14 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var orderID, productUserID string
+	var orderID, productUserID, buyerEmail string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
 	err = h.DB.QueryRow(ctx, `
-		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr
+		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR)
+	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -568,6 +568,15 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 					return
 				}
 			}
+
+			// No.94 (Sprint 13): poin loyalitas dihitung dari amountIDR
+			// (nilai order SEBELUM potongan platform, sama seperti dasar
+			// perhitungan komisi afiliasi) -- lihat awardLoyaltyPoints.
+			if err := awardLoyaltyPoints(ctx, tx, productUserID, buyerEmail, orderID, amountIDR); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat poin loyalitas"})
+				return
+			}
+
 			shouldNotifyBuyer = true
 		}
 

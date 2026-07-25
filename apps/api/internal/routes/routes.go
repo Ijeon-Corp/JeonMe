@@ -32,6 +32,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db)
 	booking := handlers.NewBookingHandler(db)
+	loyalty := handlers.NewLoyaltyHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
@@ -85,6 +86,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.92 (Sprint 11): daftar slot booking yang tersedia -- dimuat
 		// pengunjung saat memilih jadwal sebelum checkout.
 		api.GET("/products/:id/available-slots", booking.ListAvailableSlots)
+
+		// No.94 (Sprint 13): pembeli mengecek poin & menukar reward, publik
+		// (tanpa akun, cukup email pembeli seperti checkout).
+		api.GET("/pages/:username/loyalty", loyalty.GetMyPoints)
+		api.POST("/loyalty/rewards/:id/redeem", loyalty.RedeemReward)
 
 		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
 		// proxy.ts (bukan browser).
@@ -205,6 +211,16 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.GET("/bookings/:id/slots", booking.ListSlots)
 				productsGroup.POST("/bookings/:id/slots", booking.CreateSlots)
 				productsGroup.DELETE("/bookings/:id/slots/:slotId", booking.DeleteSlot)
+
+				// No.94 (Sprint 13): program poin loyalitas + katalog reward.
+				// Penukaran reward menghasilkan voucher lewat tabel vouchers
+				// yang sudah ada -- lihat catatan lingkup di LoyaltyHandler.
+				productsGroup.GET("/loyalty/settings", loyalty.GetSettings)
+				productsGroup.PUT("/loyalty/settings", loyalty.UpsertSettings)
+				productsGroup.GET("/loyalty/rewards", loyalty.ListRewards)
+				productsGroup.POST("/loyalty/rewards", loyalty.CreateReward)
+				productsGroup.PATCH("/loyalty/rewards/:id", loyalty.UpdateReward)
+				productsGroup.DELETE("/loyalty/rewards/:id", loyalty.DeleteReward)
 			}
 
 			// No.87: manajemen kolaborator itu sendiri SELALU beroperasi

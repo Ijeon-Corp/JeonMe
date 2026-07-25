@@ -57,6 +57,10 @@ type publicPageResponse struct {
 	IsVerified            bool               `json:"is_verified"`
 	Events                []publicEvent      `json:"events"`
 	Bookings              []publicBooking    `json:"bookings"`
+	// LoyaltyActive -- No.94 (Sprint 13): cuma penanda ada/tidaknya program
+	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
+	// lewat GET /pages/:username/loyalty).
+	LoyaltyActive bool `json:"loyalty_active"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -331,6 +335,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
 		resp.LeadCapture = &leadCapture
 	}
+
+	_ = h.DB.QueryRow(ctx, `SELECT is_active FROM loyalty_settings WHERE user_id = $1`, userID).Scan(&resp.LoyaltyActive)
 
 	var spActive, spShowOnProductPage bool
 	var spDisplaySeconds, spIntervalSeconds int
