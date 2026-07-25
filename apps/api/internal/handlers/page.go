@@ -56,6 +56,21 @@ type publicPageResponse struct {
 	SocialProof           *publicSocialProof `json:"social_proof"`
 	IsVerified            bool               `json:"is_verified"`
 	Events                []publicEvent      `json:"events"`
+	Bookings              []publicBooking    `json:"bookings"`
+}
+
+// publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
+// array Products (harus pilih slot dulu sebelum bisa checkout, beda dari
+// alur beli langsung produk biasa). Daftar slot yang tersedia dimuat
+// TERPISAH lewat GET /products/:id/available-slots (lazy, bukan
+// digabungkan di sini) supaya payload halaman utama tetap ringan.
+type publicBooking struct {
+	ProductID          string `json:"product_id"`
+	Name               string `json:"name"`
+	Description        string `json:"description"`
+	PriceIDR           int64  `json:"price_idr"`
+	DurationMinutes    int    `json:"duration_minutes"`
+	AvailableSlotCount int    `json:"available_slot_count"`
 }
 
 // publicEvent -- No.90 (Sprint 11): blok event, TIDAK ikut array Products
@@ -221,9 +236,9 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
 	// di halaman publik sebagai produk yang bisa dibeli, dengan harga
 	// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
-	// No.71/90: blok dukungan/donasi & event DIFILTER di sini -- masing-
-	// masing tampil sebagai blok tersendiri (resp.Donation/resp.Events),
-	// bukan kartu di grid Produk.
+	// No.71/90/92: blok dukungan/donasi, event, & booking DIFILTER di sini --
+	// masing-masing tampil sebagai blok tersendiri (resp.Donation/resp.
+	// Events/resp.Bookings), bukan kartu di grid Produk.
 	resp.Products = []publicItem{}
 	productRows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
@@ -231,7 +246,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
 			p.is_course,
 			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id)
-		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false
+		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
 	`, userID)
 	if err == nil {
 		defer productRows.Close()
@@ -285,6 +300,26 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 					ev.SpotsLeft = &left
 				}
 				resp.Events = append(resp.Events, ev)
+			}
+		}
+	}
+
+	// No.92 (Sprint 11): hanya booking dengan minimal 1 slot tersedia yang
+	// ditampilkan -- tidak ada gunanya menampilkan blok booking yang tidak
+	// bisa dipesan sama sekali.
+	resp.Bookings = []publicBooking{}
+	bookingRows, err := h.DB.Query(ctx, `
+		SELECT p.id, p.name, p.description, p.price_idr, p.booking_duration_minutes,
+			(SELECT COUNT(*) FROM booking_slots bs WHERE bs.booking_product_id = p.id AND bs.order_id IS NULL AND bs.starts_at > now())
+		FROM products p
+		WHERE p.user_id = $1 AND p.is_active = true AND p.is_booking = true
+	`, userID)
+	if err == nil {
+		defer bookingRows.Close()
+		for bookingRows.Next() {
+			var bk publicBooking
+			if err := bookingRows.Scan(&bk.ProductID, &bk.Name, &bk.Description, &bk.PriceIDR, &bk.DurationMinutes, &bk.AvailableSlotCount); err == nil && bk.AvailableSlotCount > 0 {
+				resp.Bookings = append(resp.Bookings, bk)
 			}
 		}
 	}

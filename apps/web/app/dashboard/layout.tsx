@@ -20,6 +20,7 @@ import {
   IconBox,
   IconCalendar,
   IconChart,
+  IconClock,
   IconClose,
   IconCopy,
   IconExternal,
@@ -70,6 +71,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/affiliates", label: "Afiliasi", icon: IconUsers },
       { href: "/dashboard/events", label: "Event", icon: IconCalendar },
       { href: "/dashboard/courses", label: "Kelas & Kursus", icon: IconBook },
+      { href: "/dashboard/bookings", label: "Booking Konsultasi", icon: IconClock },
     ],
   },
   {

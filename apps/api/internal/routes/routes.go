@@ -31,6 +31,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	bundle := handlers.NewBundleHandler(db)
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db)
+	booking := handlers.NewBookingHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
@@ -80,6 +81,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
 		api.GET("/pages/:username", page.GetPublicPage)
+
+		// No.92 (Sprint 11): daftar slot booking yang tersedia -- dimuat
+		// pengunjung saat memilih jadwal sebelum checkout.
+		api.GET("/products/:id/available-slots", booking.ListAvailableSlots)
 
 		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
 		// proxy.ts (bukan browser).
@@ -191,6 +196,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.POST("/courses", course.Create)
 				productsGroup.GET("/courses/:id/chapters", course.GetChapters)
 				productsGroup.PUT("/courses/:id/chapters", course.ReplaceChapters)
+
+				// No.92 (Sprint 11): booking konsultasi -- lihat catatan lingkup
+				// di BookingHandler (TIDAK terhubung Google Calendar, kuota
+				// dijamin lewat klaim slot atomik di database sendiri).
+				productsGroup.GET("/bookings", booking.List)
+				productsGroup.POST("/bookings", booking.Create)
+				productsGroup.GET("/bookings/:id/slots", booking.ListSlots)
+				productsGroup.POST("/bookings/:id/slots", booking.CreateSlots)
+				productsGroup.DELETE("/bookings/:id/slots/:slotId", booking.DeleteSlot)
 			}
 
 			// No.87: manajemen kolaborator itu sendiri SELALU beroperasi

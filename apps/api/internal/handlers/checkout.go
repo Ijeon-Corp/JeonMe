@@ -53,6 +53,12 @@ type createCheckoutRequest struct {
 	VoucherCode    string `json:"voucher_code"`
 	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
 	ReferralCode   string `json:"referral_code"`
+	// SlotID -- No.92 (Sprint 11): wajib diisi kalau produknya booking
+	// konsultasi (is_booking=true), menunjuk slot waktu yang dipilih
+	// pembeli. Diklaim ATOMIK di dalam transaksi yang sama seperti
+	// pembuatan order (lihat di bawah) supaya dua pembeli tidak bisa
+	// merebut slot yang sama.
+	SlotID string `json:"slot_id"`
 }
 
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
@@ -75,13 +81,14 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var isEvent bool
 	var eventEndsAt *time.Time
 	var eventCapacity *int
+	var isBooking bool
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity
+		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking
 		FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity)
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -89,6 +96,32 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// No.92: booking wajib menyertakan slot_id -- validasi keberadaan &
+	// ketersediaannya di sini (SEBELUM transaksi dibuka) supaya pesan error
+	// jelas; klaim ATOMIK sungguhan terjadi di dalam transaksi di bawah
+	// (mencegah race condition dua pembeli merebut slot yang sama).
+	if isBooking {
+		if req.SlotID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "pilih slot waktu terlebih dahulu"})
+			return
+		}
+		var slotTaken bool
+		if err := h.DB.QueryRow(ctx, `
+			SELECT order_id IS NOT NULL FROM booking_slots WHERE id = $1 AND booking_product_id = $2
+		`, req.SlotID, req.ProductID).Scan(&slotTaken); err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "slot tidak ditemukan"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa slot"})
+			return
+		}
+		if slotTaken {
+			c.JSON(http.StatusConflict, gin.H{"error": "slot ini sudah dipesan orang lain, pilih slot lain"})
+			return
+		}
 	}
 
 	// No.90 (Sprint 11): event tidak bisa dibeli lagi setelah lewat, dan
@@ -190,6 +223,26 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 	}
 
+	// No.92: klaim slot ATOMIK -- UPDATE ... WHERE order_id IS NULL hanya
+	// berhasil mengubah SATU baris kalau slot memang masih kosong; kalau
+	// RowsAffected()==0 berarti ada pembeli lain yang berhasil merebutnya
+	// lebih dulu tepat di antara pengecekan di atas dan titik ini (race
+	// condition asli, bukan hipotetis -- makanya pengecekan awal TIDAK
+	// cukup sendirian, klaim di sini yang jadi sumber kebenaran akhir).
+	if isBooking {
+		tag, err := tx.Exec(ctx, `
+			UPDATE booking_slots SET order_id = $1 WHERE id = $2 AND booking_product_id = $3 AND order_id IS NULL
+		`, orderID, req.SlotID, req.ProductID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengklaim slot"})
+			return
+		}
+		if tag.RowsAffected() == 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "slot ini sudah dipesan orang lain, pilih slot lain"})
+			return
+		}
+	}
+
 	txn, err := h.Midtrans.CreateTransaction(ctx, midtrans.CreateTransactionRequest{
 		OrderID:           externalID,
 		GrossAmountIDR:    finalAmountIDR,
@@ -279,13 +332,15 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 }
 
 type checkoutStatusResponse struct {
-	OrderID     string               `json:"order_id"`
-	Status      string               `json:"status"`
-	Product     string               `json:"product_name"`
-	IsBundle    bool                 `json:"is_bundle"`
-	IsDonation  bool                 `json:"is_donation"`
-	IsCourse    bool                 `json:"is_course"`
-	SocialProof *checkoutSocialProof `json:"social_proof"`
+	OrderID      string               `json:"order_id"`
+	Status       string               `json:"status"`
+	Product      string               `json:"product_name"`
+	IsBundle     bool                 `json:"is_bundle"`
+	IsDonation   bool                 `json:"is_donation"`
+	IsCourse     bool                 `json:"is_course"`
+	IsBooking    bool                 `json:"is_booking"`
+	BookedSlotAt *time.Time           `json:"booked_slot_at,omitempty"`
+	SocialProof  *checkoutSocialProof `json:"social_proof"`
 }
 
 // checkoutSocialProof -- No.76 (Sprint 8): beda dari publicSocialProof di
@@ -310,10 +365,10 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	var productID, creatorUserID string
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.user_id FROM orders o
+		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.user_id FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &resp.IsCourse, &creatorUserID)
+	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &resp.IsCourse, &resp.IsBooking, &creatorUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -321,6 +376,17 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat status order"})
 		return
+	}
+
+	// No.92: tampilkan waktu slot yang berhasil dipesan (kalau ada) supaya
+	// pembeli langsung tahu jadwal konsultasinya tanpa perlu buka email.
+	if resp.IsBooking {
+		var bookedAt time.Time
+		if err := h.DB.QueryRow(ctx, `
+			SELECT starts_at FROM booking_slots WHERE order_id = $1
+		`, orderID).Scan(&bookedAt); err == nil {
+			resp.BookedSlotAt = &bookedAt
+		}
 	}
 
 	var spActive, spShowOnCheckout bool
@@ -556,12 +622,12 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	defer cancel()
 
 	var status, fileKey, buyerEmail string
-	var isBundle, isDonation, isCourse, watermarkEnabled bool
+	var isBundle, isDonation, isCourse, isBooking, watermarkEnabled bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.watermark_enabled FROM orders o
+		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.watermark_enabled FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &watermarkEnabled)
+	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &isBooking, &watermarkEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -586,7 +652,9 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	// No.91: kursus punya banyak bab video (bukan satu file) -- arahkan juga
 	// ke halaman status, yang menampilkan daftar bab lewat
 	// GET /checkout/:id/course-chapters.
-	if isBundle || isDonation || isCourse {
+	// No.92: booking tidak pernah punya file sama sekali -- arahkan juga ke
+	// halaman status, yang menampilkan konfirmasi jadwal yang sudah dipesan.
+	if isBundle || isDonation || isCourse || isBooking {
 		c.Redirect(http.StatusFound, h.PublicWebURL+"/checkout/"+orderID)
 		return
 	}

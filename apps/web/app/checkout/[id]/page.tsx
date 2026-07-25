@@ -123,6 +123,15 @@ export default function CheckoutStatusPage() {
                   )}
                 </p>
 
+                {status.is_booking && status.booked_slot_at && (
+                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Jadwal Konsultasimu</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">
+                      {new Date(status.booked_slot_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}
+                    </p>
+                  </div>
+                )}
+
                 {status.is_bundle && (
                   <div className="mt-4 flex flex-col gap-2 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Unduh Semua File</p>

@@ -99,6 +99,14 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             isOnline: e.is_online,
             spotsLeft: e.spots_left,
           })),
+          bookings: page.bookings.map((b) => ({
+            productId: b.product_id,
+            name: b.name,
+            description: b.description,
+            priceIdr: b.price_idr,
+            durationMinutes: b.duration_minutes,
+            availableSlotCount: b.available_slot_count,
+          })),
           products: page.products.map((p) => ({
             id: p.id,
             name: p.name,

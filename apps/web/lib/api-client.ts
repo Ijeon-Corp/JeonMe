@@ -174,6 +174,27 @@ export interface PublicLeadCapture {
   collect_whatsapp: boolean;
 }
 
+// No.92 (Sprint 11): blok booking konsultasi. Slot tersedia dimuat
+// terpisah lewat getAvailableSlots(), bukan digabung di sini.
+export interface PublicBooking {
+  product_id: string;
+  name: string;
+  description: string;
+  price_idr: number;
+  duration_minutes: number;
+  available_slot_count: number;
+}
+
+export interface AvailableSlot {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+export function getAvailableSlots(productId: string) {
+  return apiFetch<AvailableSlot[]>(`/products/${productId}/available-slots`, { method: "GET" });
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -194,6 +215,7 @@ export interface PublicPage {
   custom_button_color: string;
   is_verified: boolean;
   events: PublicEvent[];
+  bookings: PublicBooking[];
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -644,6 +666,60 @@ export function createEvent(input: {
   );
 }
 
+// ---------- Dashboard: booking konsultasi (Sprint 11, No.92) ----------
+// Booking adalah baris produk biasa (is_booking=true) -- toggle aktif &
+// hapus pakai updateProduct()/deleteProduct() yang sudah ada. SENGAJA
+// TIDAK terhubung Google Calendar (butuh kredensial OAuth terpisah yang
+// belum ada) -- kuota/bentrok jadwal dijamin lewat klaim slot atomik di
+// database sendiri, lihat catatan lingkup BookingHandler backend.
+
+export interface DashboardBooking {
+  id: string;
+  name: string;
+  description: string;
+  price_idr: number;
+  is_active: boolean;
+  duration_minutes: number;
+  available_slot_count: number;
+  booked_slot_count: number;
+}
+
+export function listBookings() {
+  return apiFetch<DashboardBooking[]>("/dashboard/bookings", { method: "GET" }, { auth: true });
+}
+
+export function createBooking(input: { name: string; description?: string; price_idr: number; duration_minutes: number }) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/bookings",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export interface DashboardBookingSlot {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  is_booked: boolean;
+  buyer_email?: string;
+}
+
+export function listBookingSlots(bookingId: string) {
+  return apiFetch<DashboardBookingSlot[]>(`/dashboard/bookings/${bookingId}/slots`, { method: "GET" }, { auth: true });
+}
+
+export function createBookingSlots(bookingId: string, startTimes: string[]) {
+  return apiFetch<{ message: string; created_count: number }>(
+    `/dashboard/bookings/${bookingId}/slots`,
+    { method: "POST", body: JSON.stringify({ start_times: startTimes }) },
+    { auth: true }
+  );
+}
+
+export function deleteBookingSlot(bookingId: string, slotId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/bookings/${bookingId}/slots/${slotId}`, { method: "DELETE" }, { auth: true });
+}
+
 // ---------- Dashboard: blok kelas/kursus video (Sprint 11, No.91) ----------
 // Kursus adalah baris produk biasa (is_course=true) -- toggle aktif & hapus
 // pakai updateProduct()/deleteProduct() yang sudah ada. Video per-bab wajib
@@ -879,6 +955,9 @@ export function createCheckout(input: {
   voucher_code?: string;
   buyer_amount_idr?: number;
   referral_code?: string;
+  // No.92 (Sprint 11): wajib diisi untuk produk booking konsultasi --
+  // slot dipilih lewat getAvailableSlots() sebelum checkout ini dipanggil.
+  slot_id?: string;
 }) {
   return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
     method: "POST",
@@ -919,6 +998,8 @@ export interface CheckoutStatus {
   is_bundle: boolean;
   is_donation: boolean;
   is_course: boolean;
+  is_booking: boolean;
+  booked_slot_at?: string;
   social_proof: SocialProofFeed | null;
 }
 

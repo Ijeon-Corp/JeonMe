@@ -1,4 +1,5 @@
 import { CustomThemeConfig, getPageTheme } from "@/lib/page-themes";
+import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
@@ -60,6 +61,16 @@ export interface PagePreviewEvent {
   spotsLeft: number | null;
 }
 
+// No.92 (Sprint 11): blok booking konsultasi.
+export interface PagePreviewBooking {
+  productId: string;
+  name: string;
+  description: string;
+  priceIdr: number;
+  durationMinutes: number;
+  availableSlotCount: number;
+}
+
 export interface PagePreviewLeadCapture {
   title: string;
   collectEmail: boolean;
@@ -84,6 +95,7 @@ export interface PagePreviewData {
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
+  bookings?: PagePreviewBooking[];
   donation?: PagePreviewDonation;
   leadCapture?: PagePreviewLeadCapture;
   socialProof?: PagePreviewSocialProof;
@@ -426,6 +438,41 @@ export default function PagePreview({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {data.bookings && data.bookings.length > 0 && (
+          <div className="mt-8 w-full">
+            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Booking Konsultasi</p>
+            <div className="flex w-full flex-col gap-3">
+              {data.bookings.map((booking) => (
+                <div key={booking.productId} className={`flex flex-col gap-2 rounded-2xl p-4 ${theme.productCard}`}>
+                  <div className="flex items-center gap-2">
+                    <IconCalendar className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                    <p className={`text-sm font-semibold ${theme.productTitle}`}>{booking.name}</p>
+                  </div>
+                  <p className={`text-xs ${theme.bio}`}>
+                    {booking.durationMinutes} menit &middot; {booking.availableSlotCount} slot tersedia
+                  </p>
+                  {booking.description && <p className={`text-xs ${theme.bio}`}>{booking.description}</p>}
+                  <p className={`text-sm font-bold ${theme.productTitle}`}>
+                    Rp {booking.priceIdr.toLocaleString("id-ID")}
+                  </p>
+                  {interactive ? (
+                    <BookSlotButton productId={booking.productId} buttonClassName={theme.buyButton} />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="Pratinjau -- tombol ini tidak aktif"
+                      className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                    >
+                      Pilih Jadwal
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
