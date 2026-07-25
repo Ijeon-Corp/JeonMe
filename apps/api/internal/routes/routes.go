@@ -29,6 +29,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
 	bundle := handlers.NewBundleHandler(db)
+	event := handlers.NewEventHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
@@ -175,6 +176,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.DELETE("/affiliates/:id", affiliate.Revoke)
 				productsGroup.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
 				productsGroup.GET("/affiliate-programs", affiliate.ListPrograms)
+
+				// No.90 (Sprint 11): blok event -- juga baris products biasa
+				// (is_event=true), toggle aktif/hapus pakai product.Update/Delete
+				// yang sudah ada, jadi cuma perlu List+Create di sini.
+				productsGroup.GET("/events", event.List)
+				productsGroup.POST("/events", event.Create)
 			}
 
 			// No.87: manajemen kolaborator itu sendiri SELALU beroperasi

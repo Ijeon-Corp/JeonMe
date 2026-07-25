@@ -151,6 +151,21 @@ export interface PublicDonation {
   min_amount_idr: number;
 }
 
+// No.90 (Sprint 11): blok event.
+export interface PublicEvent {
+  product_id: string;
+  name: string;
+  description: string;
+  effective_price_idr: number;
+  is_flash_sale_active: boolean;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  location: string;
+  is_online: boolean;
+  spots_left: number | null;
+}
+
 export interface PublicLeadCapture {
   title: string;
   collect_email: boolean;
@@ -176,6 +191,7 @@ export interface PublicPage {
   custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
   custom_button_color: string;
   is_verified: boolean;
+  events: PublicEvent[];
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -438,6 +454,12 @@ export function updateProduct(
     pwyw_enabled: boolean;
     pwyw_min_price_idr: number;
     watermark_enabled: boolean;
+    event_starts_at: string;
+    event_ends_at: string;
+    event_location: string;
+    event_is_online: boolean;
+    event_capacity: number;
+    clear_event_capacity: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -573,6 +595,48 @@ export function listBundles() {
 export function createBundle(input: { name: string; price_idr: number; product_ids: string[] }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/bundles",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// ---------- Dashboard: blok event (Sprint 11, No.90) ----------
+// Event adalah baris produk biasa (is_event=true) -- toggle aktif & hapus
+// pakai updateProduct()/deleteProduct() yang sudah ada, reschedule/edit
+// kuota juga lewat updateProduct() (field event_* opsional).
+
+export interface DashboardEvent {
+  id: string;
+  name: string;
+  description: string;
+  price_idr: number;
+  is_active: boolean;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  location: string;
+  is_online: boolean;
+  capacity: number | null;
+  attendee_count: number;
+}
+
+export function listEvents() {
+  return apiFetch<DashboardEvent[]>("/dashboard/events", { method: "GET" }, { auth: true });
+}
+
+export function createEvent(input: {
+  name: string;
+  description?: string;
+  price_idr: number;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  location?: string;
+  is_online: boolean;
+  capacity?: number;
+}) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/events",
     { method: "POST", body: JSON.stringify(input) },
     { auth: true }
   );

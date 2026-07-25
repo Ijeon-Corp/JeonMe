@@ -1,0 +1,7 @@
+ALTER TABLE products ADD COLUMN is_event BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE products ADD COLUMN event_starts_at TIMESTAMPTZ;
+ALTER TABLE products ADD COLUMN event_ends_at TIMESTAMPTZ;
+ALTER TABLE products ADD COLUMN event_timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Jakarta';
+ALTER TABLE products ADD COLUMN event_location VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN event_is_online BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE products ADD COLUMN event_capacity INT;

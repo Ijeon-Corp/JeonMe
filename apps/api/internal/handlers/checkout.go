@@ -72,13 +72,16 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var flashSaleActive bool
 	var pwywEnabled bool
 	var pwywMinPriceIDR *int64
+	var isEvent bool
+	var eventEndsAt *time.Time
+	var eventCapacity *int
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr
+		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity
 		FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR)
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -86,6 +89,28 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// No.90 (Sprint 11): event tidak bisa dibeli lagi setelah lewat, dan
+	// dibatasi kuota kalau creator mengisinya. Jumlah "terpakai" dihitung
+	// dari SELURUH order (lihat komentar EventHandler.List) -- konsisten
+	// dengan cara used_count voucher bekerja.
+	if isEvent {
+		if eventEndsAt != nil && eventEndsAt.Before(time.Now()) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "event ini sudah berakhir"})
+			return
+		}
+		if eventCapacity != nil {
+			var attendeeCount int
+			if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE product_id = $1`, req.ProductID).Scan(&attendeeCount); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa kuota event"})
+				return
+			}
+			if attendeeCount >= *eventCapacity {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "kuota event ini sudah penuh"})
+				return
+			}
+		}
 	}
 
 	// No.69: kalau bayar-seikhlasnya aktif, harga yang pembeli tentukan

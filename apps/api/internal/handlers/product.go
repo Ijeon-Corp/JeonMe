@@ -127,14 +127,14 @@ func (h *ProductHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// No.70/71: bundel & blok dukungan TIDAK ikut tampil di sini -- masing-
-	// masing punya halaman dashboard sendiri (/dashboard/bundles,
-	// /dashboard/donation), sama seperti voucher.
+	// No.70/71/90: bundel, blok dukungan, dan event TIDAK ikut tampil di sini
+	// -- masing-masing punya halaman dashboard sendiri (/dashboard/bundles,
+	// /dashboard/donation, /dashboard/events), sama seperti voucher.
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
 			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf
-		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false
+		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false AND is_event = false
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -185,6 +185,15 @@ type updateProductRequest struct {
 	PwywEnabled       *bool   `json:"pwyw_enabled"`
 	PwywMinPriceIDR   *int64  `json:"pwyw_min_price_idr" binding:"omitempty,min=1000"`
 	WatermarkEnabled  *bool   `json:"watermark_enabled"`
+
+	// No.90 (Sprint 11): reschedule/edit event -- lihat EventHandler.Create
+	// untuk validasi awal saat pembuatan.
+	EventStartsAt      *string `json:"event_starts_at"`
+	EventEndsAt        *string `json:"event_ends_at"`
+	EventLocation      *string `json:"event_location"`
+	EventIsOnline      *bool   `json:"event_is_online"`
+	EventCapacity      *int    `json:"event_capacity" binding:"omitempty,min=1"`
+	ClearEventCapacity bool    `json:"clear_event_capacity"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -208,23 +217,56 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
-	var isBundle, isDonation bool
+	var isBundle, isDonation, isEvent bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
 	}
 
-	// No.70/71: bundel & blok dukungan tidak pernah punya file sendiri --
-	// keabsahannya dijamin di tempat lain (bundel: minimal 2 produk aktif
-	// saat dibuat; donasi: selalu bayar-seikhlasnya, tidak pernah kirim
-	// file), jadi lewati pengecekan file_key yang berlaku untuk produk biasa.
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation {
+	// No.70/71/90: bundel, blok dukungan, dan event tidak pernah punya file
+	// sendiri -- keabsahannya dijamin di tempat lain (bundel: minimal 2
+	// produk aktif saat dibuat; donasi: selalu bayar-seikhlasnya; event:
+	// yang dijual adalah tiket, bukan file), jadi lewati pengecekan
+	// file_key yang berlaku untuk produk biasa.
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
+	}
+
+	// No.90: reschedule event -- kedua waktu wajib diisi bersamaan (pola
+	// sama seperti flash sale), berakhir harus setelah mulai.
+	var eventStarts, eventEnds *time.Time
+	if req.EventStartsAt != nil || req.EventEndsAt != nil {
+		if req.EventStartsAt == nil || req.EventEndsAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "waktu mulai dan berakhir event wajib diisi bersamaan"})
+			return
+		}
+		starts, err := time.Parse(time.RFC3339, *req.EventStartsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format event_starts_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		ends, err := time.Parse(time.RFC3339, *req.EventEndsAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format event_ends_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		if !ends.After(starts) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "waktu berakhir event harus setelah waktu mulai"})
+			return
+		}
+		eventStarts, eventEnds = &starts, &ends
+	}
+
+	if req.ClearEventCapacity {
+		if _, err := h.DB.Exec(ctx, `UPDATE products SET event_capacity = NULL WHERE id = $1`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas kuota"})
+			return
+		}
 	}
 
 	// No.69: pwyw & flash sale (No.68) sengaja tidak boleh aktif bersamaan
@@ -319,10 +361,16 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			flash_sale_ends_at = COALESCE($7, flash_sale_ends_at),
 			pwyw_enabled = COALESCE($8, pwyw_enabled),
 			pwyw_min_price_idr = COALESCE($9, pwyw_min_price_idr),
-			watermark_enabled = COALESCE($10, watermark_enabled)
-		WHERE id = $11
+			watermark_enabled = COALESCE($10, watermark_enabled),
+			event_starts_at = COALESCE($11, event_starts_at),
+			event_ends_at = COALESCE($12, event_ends_at),
+			event_location = COALESCE($13, event_location),
+			event_is_online = COALESCE($14, event_is_online),
+			event_capacity = COALESCE($15, event_capacity)
+		WHERE id = $16
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
-		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled, productID)
+		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
+		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

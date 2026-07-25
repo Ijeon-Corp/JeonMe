@@ -223,6 +223,15 @@ export function IconBadgeCheck({ className }: IconProps) {
   );
 }
 
+export function IconCalendar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="4" y="5.5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth={base} />
+      <path d="M4 9.5h16M8 3.5v4M16 3.5v4" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconPlus({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

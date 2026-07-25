@@ -17,6 +17,7 @@ import {
 import {
   IconBell,
   IconBox,
+  IconCalendar,
   IconChart,
   IconClose,
   IconCopy,
@@ -66,6 +67,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/bundles", label: "Bundel", icon: IconGift },
       { href: "/dashboard/donation", label: "Dukungan", icon: IconHeart },
       { href: "/dashboard/affiliates", label: "Afiliasi", icon: IconUsers },
+      { href: "/dashboard/events", label: "Event", icon: IconCalendar },
     ],
   },
   {

@@ -55,6 +55,25 @@ type publicPageResponse struct {
 	LeadCapture           *publicLeadCapture `json:"lead_capture"`
 	SocialProof           *publicSocialProof `json:"social_proof"`
 	IsVerified            bool               `json:"is_verified"`
+	Events                []publicEvent      `json:"events"`
+}
+
+// publicEvent -- No.90 (Sprint 11): blok event, TIDAK ikut array Products
+// (tampil sebagai kartu tersendiri dengan tanggal/waktu/kuota, bukan grid
+// produk biasa) -- beberapa event bisa aktif sekaligus, beda dari Donation
+// yang cuma satu per kreator. SpotsLeft nil kalau kuota tidak dibatasi.
+type publicEvent struct {
+	ProductID         string    `json:"product_id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	EffectivePriceIDR int64     `json:"effective_price_idr"`
+	IsFlashSaleActive bool      `json:"is_flash_sale_active"`
+	StartsAt          time.Time `json:"starts_at"`
+	EndsAt            time.Time `json:"ends_at"`
+	Timezone          string    `json:"timezone"`
+	Location          string    `json:"location"`
+	IsOnline          bool      `json:"is_online"`
+	SpotsLeft         *int      `json:"spots_left"`
 }
 
 // publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
@@ -197,14 +216,15 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
 	// di halaman publik sebagai produk yang bisa dibeli, dengan harga
 	// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
-	// No.71: blok dukungan/donasi DIFILTER di sini -- ia tampil sebagai blok
-	// tersendiri (resp.Donation), bukan kartu di grid Produk.
+	// No.71/90: blok dukungan/donasi & event DIFILTER di sini -- masing-
+	// masing tampil sebagai blok tersendiri (resp.Donation/resp.Events),
+	// bukan kartu di grid Produk.
 	resp.Products = []publicItem{}
 	productRows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
 			p.is_bundle,
 			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id)
-		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false
+		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false
 	`, userID)
 	if err == nil {
 		defer productRows.Close()
@@ -227,6 +247,38 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			donation.MinAmountIDR = *minAmount
 		}
 		resp.Donation = &donation
+	}
+
+	// No.90 (Sprint 11): event yang sudah lewat TIDAK ditampilkan lagi
+	// (event_ends_at < now()) -- tidak ada gunanya menjual tiket ke acara
+	// yang sudah selesai.
+	resp.Events = []publicEvent{}
+	eventRows, err := h.DB.Query(ctx, `
+		SELECT p.id, p.name, p.description, `+effectivePriceExpr+`,
+			p.event_starts_at, p.event_ends_at, p.event_timezone, p.event_location, p.event_is_online,
+			p.event_capacity, (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id)
+		FROM products p
+		WHERE p.user_id = $1 AND p.is_active = true AND p.is_event = true AND p.event_ends_at >= now()
+		ORDER BY p.event_starts_at ASC
+	`, userID)
+	if err == nil {
+		defer eventRows.Close()
+		for eventRows.Next() {
+			var ev publicEvent
+			var capacity *int
+			var attendeeCount int
+			if err := eventRows.Scan(&ev.ProductID, &ev.Name, &ev.Description, &ev.EffectivePriceIDR, &ev.IsFlashSaleActive,
+				&ev.StartsAt, &ev.EndsAt, &ev.Timezone, &ev.Location, &ev.IsOnline, &capacity, &attendeeCount); err == nil {
+				if capacity != nil {
+					left := *capacity - attendeeCount
+					if left < 0 {
+						left = 0
+					}
+					ev.SpotsLeft = &left
+				}
+				resp.Events = append(resp.Events, ev)
+			}
+		}
 	}
 
 	var leadCapture publicLeadCapture

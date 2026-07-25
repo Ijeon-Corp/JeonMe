@@ -9,7 +9,7 @@ import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import ReportButton from "@/components/ReportButton";
 import { RecentPurchase } from "@/lib/api-client";
-import { IconBadgeCheck, IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
+import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 
 export interface PagePreviewLink {
   id: string;
@@ -42,6 +42,20 @@ export interface PagePreviewDonation {
   minAmountIdr: number;
 }
 
+// No.90 (Sprint 11): blok event.
+export interface PagePreviewEvent {
+  productId: string;
+  name: string;
+  description: string;
+  effectivePriceIdr: number;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  location: string;
+  isOnline: boolean;
+  spotsLeft: number | null;
+}
+
 export interface PagePreviewLeadCapture {
   title: string;
   collectEmail: boolean;
@@ -65,6 +79,7 @@ export interface PagePreviewData {
   isVerified?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
+  events?: PagePreviewEvent[];
   donation?: PagePreviewDonation;
   leadCapture?: PagePreviewLeadCapture;
   socialProof?: PagePreviewSocialProof;
@@ -352,6 +367,62 @@ export default function PagePreview({
                 Daftar
               </button>
             )}
+          </div>
+        )}
+
+        {data.events && data.events.length > 0 && (
+          <div className="mt-8 w-full">
+            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Event</p>
+            <div className="flex w-full flex-col gap-3">
+              {data.events.map((event) => {
+                const startsLabel = new Intl.DateTimeFormat("id-ID", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone: event.timezone,
+                }).format(new Date(event.startsAt));
+                const soldOut = event.spotsLeft !== null && event.spotsLeft <= 0;
+                return (
+                  <div key={event.productId} className={`flex flex-col gap-2 rounded-2xl p-4 ${theme.productCard}`}>
+                    <div className="flex items-center gap-2">
+                      <IconCalendar className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <p className={`text-sm font-semibold ${theme.productTitle}`}>{event.name}</p>
+                    </div>
+                    <p className={`text-xs ${theme.bio}`}>
+                      {startsLabel} ({event.timezone}) &middot; {event.isOnline ? "Online" : event.location || "Offline"}
+                    </p>
+                    {event.description && <p className={`text-xs ${theme.bio}`}>{event.description}</p>}
+                    <div className="flex items-center justify-between">
+                      <p className={`text-sm font-bold ${theme.productTitle}`}>
+                        Rp {event.effectivePriceIdr.toLocaleString("id-ID")}
+                      </p>
+                      {event.spotsLeft !== null && (
+                        <p className={`text-[11px] ${theme.bio}`}>
+                          {soldOut ? "Kuota penuh" : `${event.spotsLeft} slot tersisa`}
+                        </p>
+                      )}
+                    </div>
+                    {interactive ? (
+                      <BuyProductButton
+                        productId={event.productId}
+                        buttonClassName={theme.buyButton}
+                        openLabel={soldOut ? "Kuota Penuh" : "Daftar"}
+                        submitLabel="Bayar & Daftar"
+                        referralCode={data.referralCode}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="Pratinjau -- tombol ini tidak aktif"
+                        className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                      >
+                        Daftar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

@@ -87,6 +87,18 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             blockType: l.block_type,
             blockData: l.block_data,
           })),
+          events: page.events.map((e) => ({
+            productId: e.product_id,
+            name: e.name,
+            description: e.description,
+            effectivePriceIdr: e.effective_price_idr,
+            startsAt: e.starts_at,
+            endsAt: e.ends_at,
+            timezone: e.timezone,
+            location: e.location,
+            isOnline: e.is_online,
+            spotsLeft: e.spots_left,
+          })),
           products: page.products.map((p) => ({
             id: p.id,
             name: p.name,
