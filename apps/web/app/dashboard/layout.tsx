@@ -20,6 +20,7 @@ import {
   IconBox,
   IconCalendar,
   IconChart,
+  IconChevronRight,
   IconClock,
   IconClose,
   IconCopy,
@@ -106,6 +107,36 @@ export default function DashboardLayout({
   const [qrOpen, setQrOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
+
+  // Menu per grup jadi collapsible (permintaan langsung pengguna) --
+  // sidebar sudah terlalu panjang (~21 item nav di 3 grup + 5 tautan
+  // lepas) untuk selalu tampil terbuka semua. Grup yang berisi halaman
+  // aktif saat pertama kali layout ini dimuat otomatis terbuka (dihitung
+  // sekali lewat initializer useState, memakai pathname yang sudah
+  // tersedia saat render pertama), grup lain mulai tertutup. Sesudahnya
+  // sepenuhnya dikendalikan manual oleh klik pengguna -- SENGAJA tidak
+  // dipaksa terbuka ulang lewat effect setiap pathname berubah (selain
+  // menghindari pola setState-di-dalam-effect yang anti-pola React, itu
+  // juga akan membuat tombol tutup terasa "rusak" -- diklik tapi grup
+  // yang berisi halaman aktif tidak pernah benar-benar tertutup).
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of NAV_ITEMS) {
+      if (item.type === "group" && item.items.some((sub) => sub.href === pathname)) {
+        initial.add(item.label);
+      }
+    }
+    return initial;
+  });
+
+  function toggleGroup(label: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
 
   useEffect(() => {
     getMyPage()
@@ -205,30 +236,47 @@ export default function DashboardLayout({
               );
             }
 
+            const groupHasActive = item.items.some((sub) => sub.href === pathname);
+            const expanded = expandedGroups.has(item.label);
             return (
               <div key={item.label} className="mt-3 first:mt-0">
-                <p className="px-3.5 text-[11px] font-bold uppercase tracking-wider text-muted/70">{item.label}</p>
-                <div className="mt-1 flex flex-col gap-1">
-                  {item.items.map((sub) => {
-                    const active = pathname === sub.href;
-                    const Icon = sub.icon;
-                    return (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        onClick={() => setMobileOpen(false)}
-                        className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
-                          active
-                            ? "bg-primary text-white shadow-card"
-                            : "text-muted hover:bg-primary-subtle hover:text-primary"
-                        }`}
-                      >
-                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
-                        {sub.label}
-                      </Link>
-                    );
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(item.label)}
+                  className="flex w-full items-center justify-between rounded-lg px-3.5 py-1.5 text-left hover:bg-primary-subtle/50"
+                >
+                  <span
+                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-primary" : "text-muted/70"}`}
+                  >
+                    {item.label}
+                  </span>
+                  <IconChevronRight
+                    className={`h-3.5 w-3.5 flex-shrink-0 text-muted/50 transition-transform ${expanded ? "rotate-90" : ""}`}
+                  />
+                </button>
+                {expanded && (
+                  <div className="mt-1 flex flex-col gap-1">
+                    {item.items.map((sub) => {
+                      const active = pathname === sub.href;
+                      const Icon = sub.icon;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                            active
+                              ? "bg-primary text-white shadow-card"
+                              : "text-muted hover:bg-primary-subtle hover:text-primary"
+                          }`}
+                        >
+                          <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                          {sub.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
