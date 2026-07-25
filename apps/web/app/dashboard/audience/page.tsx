@@ -9,7 +9,7 @@ import {
   upsertLeadCaptureSettings,
 } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
-import { IconInbox } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 
 const SOURCE_LABEL: Record<string, string> = {
   lead_capture: "Subscriber",
@@ -190,10 +190,7 @@ export default function DashboardAudiencePage() {
           </tbody>
         </table>
         {contacts.length === 0 && (
-          <div className="flex items-center gap-2 px-4 py-6 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada kontak -- aktifkan blok pengumpulan lead atau tunggu pembeli pertama.
-          </div>
+          <EmptyState bordered={false} text="Belum ada kontak -- aktifkan blok pengumpulan lead atau tunggu pembeli pertama." />
         )}
       </div>
     </div>

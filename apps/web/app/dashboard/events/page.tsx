@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ApiError, DashboardEvent, createEvent, deleteProduct, listEvents, updateProduct } from "@/lib/api-client";
-import { IconCalendar, IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconCalendar, IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 // Indonesia TIDAK memakai daylight saving time -- offset per zona waktu
@@ -297,12 +298,7 @@ export default function DashboardEventsPage() {
           </div>
         ))}
 
-        {events.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada event -- klik &quot;Buat Event&quot; di atas untuk membuat yang pertama.
-          </div>
-        )}
+        {events.length === 0 && <EmptyState text='Belum ada event -- klik "Buat Event" di atas untuk membuat yang pertama.' />}
       </div>
     </div>
   );

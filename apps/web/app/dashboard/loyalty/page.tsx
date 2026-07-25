@@ -12,7 +12,8 @@ import {
   updateLoyaltyReward,
   upsertLoyaltySettings,
 } from "@/lib/api-client";
-import { IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 export default function DashboardLoyaltyPage() {
@@ -283,12 +284,7 @@ export default function DashboardLoyaltyPage() {
               </div>
             </div>
           ))}
-          {rewards.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-4 text-sm text-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada reward -- tambahkan di atas.
-            </div>
-          )}
+          {rewards.length === 0 && <EmptyState text="Belum ada reward -- tambahkan di atas." />}
         </div>
       </section>
     </div>

@@ -13,7 +13,8 @@ import {
   revokeAffiliate,
   upsertAffiliate,
 } from "@/lib/api-client";
-import { IconCopy, IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconCopy, IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 
 export default function DashboardAffiliatesPage() {
   const [affiliates, setAffiliates] = useState<MyAffiliate[]>([]);
@@ -229,10 +230,7 @@ export default function DashboardAffiliatesPage() {
         ))}
 
         {affiliates.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada afiliator -- klik &quot;Undang Afiliator&quot; di atas untuk mengundang yang pertama.
-          </div>
+          <EmptyState text='Belum ada afiliator -- klik "Undang Afiliator" di atas untuk mengundang yang pertama.' />
         )}
       </div>
 
@@ -265,12 +263,7 @@ export default function DashboardAffiliatesPage() {
           </div>
         ))}
 
-        {programs.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada kreator yang mengundangmu sebagai afiliator.
-          </div>
-        )}
+        {programs.length === 0 && <EmptyState text="Belum ada kreator yang mengundangmu sebagai afiliator." />}
       </div>
     </div>
   );

@@ -11,7 +11,8 @@ import {
   listProducts,
   updateProduct,
 } from "@/lib/api-client";
-import { IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 export default function DashboardBundlesPage() {
@@ -220,12 +221,7 @@ export default function DashboardBundlesPage() {
           </div>
         ))}
 
-        {bundles.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada bundel -- klik &quot;Buat Bundel&quot; di atas untuk membuat yang pertama.
-          </div>
-        )}
+        {bundles.length === 0 && <EmptyState text='Belum ada bundel -- klik "Buat Bundel" di atas untuk membuat yang pertama.' />}
       </div>
     </div>
   );

@@ -11,7 +11,8 @@ import {
   listVouchers,
   updateVoucher,
 } from "@/lib/api-client";
-import { IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 type Mode = "single" | "bulk";
@@ -396,12 +397,7 @@ export default function DashboardVouchersPage() {
           );
         })}
 
-        {vouchers.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada voucher -- klik &quot;Buat Voucher&quot; di atas untuk membuat yang pertama.
-          </div>
-        )}
+        {vouchers.length === 0 && <EmptyState text='Belum ada voucher -- klik "Buat Voucher" di atas untuk membuat yang pertama.' />}
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ import {
   replaceCourseChapters,
   updateProduct,
 } from "@/lib/api-client";
-import { IconChevronRight, IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_url: "" };
@@ -392,12 +393,7 @@ export default function DashboardCoursesPage() {
           </div>
         ))}
 
-        {courses.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada kursus -- klik &quot;Buat Kursus&quot; di atas untuk membuat yang pertama.
-          </div>
-        )}
+        {courses.length === 0 && <EmptyState text='Belum ada kursus -- klik "Buat Kursus" di atas untuk membuat yang pertama.' />}
       </div>
     </div>
   );

@@ -261,7 +261,7 @@ export default function DashboardHomePage() {
             </section>
 
             {summary.total_views === 0 && (
-              <section className="mt-4 flex items-center gap-3 rounded-2xl border border-dashed border-border bg-white/60 p-5">
+              <section className="mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-white/60 p-5 text-center">
                 <IconSparkle className="h-5 w-5 flex-shrink-0 text-accent" />
                 <p className="text-xs text-muted">
                   Belum ada kunjungan. Bagikan tautan halamanmu di bio Instagram/TikTok supaya statistik mulai terisi.
@@ -277,7 +277,7 @@ export default function DashboardHomePage() {
 
 function EmptyRow({ text }: { text: string }) {
   return (
-    <li className="flex items-center gap-2 text-xs text-muted">
+    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-muted">
       <IconInbox className="h-3.5 w-3.5 flex-shrink-0" />
       {text}
     </li>

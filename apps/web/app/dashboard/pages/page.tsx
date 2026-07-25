@@ -15,7 +15,8 @@ import {
   listMyExtraPages,
   updateExtraPage,
 } from "@/lib/api-client";
-import { IconChevronRight, IconGlobe, IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconChevronRight, IconGlobe, IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 type LandingBlockType = "heading" | "text" | "image" | "button";
@@ -518,12 +519,7 @@ export default function DashboardExtraPagesPage() {
           </div>
         ))}
 
-        {pages.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada halaman tambahan -- klik &quot;Buat Halaman Baru&quot; di atas.
-          </div>
-        )}
+        {pages.length === 0 && <EmptyState text='Belum ada halaman tambahan -- klik "Buat Halaman Baru" di atas.' />}
       </div>
     </div>
   );

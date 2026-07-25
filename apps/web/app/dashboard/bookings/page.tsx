@@ -12,7 +12,8 @@ import {
   listBookings,
   updateProduct,
 } from "@/lib/api-client";
-import { IconCalendar, IconChevronRight, IconInbox, IconPlus, IconTrash } from "@/components/icons";
+import { IconCalendar, IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 
 // Indonesia TIDAK memakai daylight saving time -- pola sama seperti
@@ -332,12 +333,7 @@ export default function DashboardBookingsPage() {
           </div>
         ))}
 
-        {bookings.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada booking -- klik &quot;Buat Booking&quot; di atas untuk membuat yang pertama.
-          </div>
-        )}
+        {bookings.length === 0 && <EmptyState text='Belum ada booking -- klik "Buat Booking" di atas untuk membuat yang pertama.' />}
       </div>
     </div>
   );

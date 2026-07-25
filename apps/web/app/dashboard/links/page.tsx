@@ -23,7 +23,6 @@ import {
   IconClose,
   IconFacebook,
   IconGripVertical,
-  IconInbox,
   IconInstagram,
   IconLink,
   IconLinkedin,
@@ -41,6 +40,7 @@ import {
   IconX,
   IconYoutube,
 } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 
@@ -883,12 +883,7 @@ export default function DashboardLinksPage() {
               )}
             </li>
           ))}
-          {links.length === 0 && (
-            <li className="flex items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada tautan -- klik &quot;Tambah&quot; di atas.
-            </li>
-          )}
+          {links.length === 0 && <EmptyState as="li" text='Belum ada tautan -- klik "Tambah" di atas.' />}
         </ul>
 
       </div>

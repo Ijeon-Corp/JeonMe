@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, Balance, FeeBreakdown, Payout, createPayout, getBalance, getFeeBreakdown, listPayouts } from "@/lib/api-client";
-import { IconInbox, IconShield, IconWallet } from "@/components/icons";
+import { IconShield, IconWallet } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
   requested: "Diajukan",
@@ -189,12 +190,7 @@ export default function DashboardBalancePage() {
               </span>
             </li>
           ))}
-          {payouts.length === 0 && (
-            <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada penarikan.
-            </li>
-          )}
+          {payouts.length === 0 && <EmptyState as="li" text="Belum ada penarikan." />}
         </ul>
       </section>
     </div>

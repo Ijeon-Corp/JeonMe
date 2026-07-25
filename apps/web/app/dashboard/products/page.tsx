@@ -21,12 +21,12 @@ import {
   IconCamera,
   IconCheck,
   IconExternal,
-  IconInbox,
   IconPlus,
   IconSparkle,
   IconTrash,
   IconUpload,
 } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 
@@ -609,10 +609,7 @@ export default function DashboardProductsPage() {
         </div>
 
         {products.length === 0 && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-4 text-sm text-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            Belum ada produk -- klik &quot;Tambah Produk&quot; di atas untuk membuat yang pertama.
-          </div>
+          <EmptyState className="mt-4" text='Belum ada produk -- klik "Tambah Produk" di atas untuk membuat yang pertama.' />
         )}
       </div>
 

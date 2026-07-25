@@ -11,7 +11,8 @@ import {
   listInvitesForMe,
   revokeCollaborator,
 } from "@/lib/api-client";
-import { IconCheck, IconInbox, IconTrash, IconUsers } from "@/components/icons";
+import { IconCheck, IconTrash, IconUsers } from "@/components/icons";
+import EmptyState from "@/components/EmptyState";
 
 const STATUS_LABEL: Record<DashboardCollaborator["status"], string> = {
   invited: "Menunggu diterima",
@@ -205,12 +206,7 @@ export default function DashboardTeamPage() {
               </button>
             </li>
           ))}
-          {collaborators.length === 0 && (
-            <li className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted">
-              <IconInbox className="h-4 w-4 flex-shrink-0" />
-              Belum ada kolaborator.
-            </li>
-          )}
+          {collaborators.length === 0 && <EmptyState as="li" text="Belum ada kolaborator." />}
         </ul>
       </section>
     </div>
