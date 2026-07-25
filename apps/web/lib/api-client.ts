@@ -1403,6 +1403,18 @@ export async function exportAnalyticsCSV(params?: { from?: string; to?: string; 
   URL.revokeObjectURL(url);
 }
 
+// No.96 (Sprint 13): asisten analitik TANPA LLM API sungguhan (keputusan
+// eksplisit pengguna -- lihat catatan lingkup di AnalyticsHandler.Ask
+// backend). Jawaban dirangkai dari templat + data analitik 30 hari terakhir
+// yang sudah ada, nol biaya per-query.
+export function askAnalyticsAssistant(question: string) {
+  return apiFetch<{ answer: string }>(
+    "/dashboard/analytics/ask",
+    { method: "POST", body: JSON.stringify({ question }) },
+    { auth: true }
+  );
+}
+
 // ---------- Akun (NF-09) ----------
 
 export function deleteAccount() {

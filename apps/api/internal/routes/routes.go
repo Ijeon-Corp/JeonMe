@@ -276,6 +276,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
 			dashboard.GET("/analytics/export", analytics.ExportDailyCSV)
 
+			// No.96 (Sprint 13): asisten analitik TANPA LLM API sungguhan --
+			// lihat catatan lingkup di AnalyticsHandler.Ask.
+			dashboard.POST("/analytics/ask", analytics.Ask)
+
 			dashboard.DELETE("/account", account.DeleteAccount)
 		}
 

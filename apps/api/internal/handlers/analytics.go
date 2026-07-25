@@ -139,6 +139,8 @@ func resolveDateRange(c *gin.Context) (from, to time.Time, rangeDays int, err er
 
 var errInvalidDateRange = &dateRangeError{"tanggal \"to\" harus setelah \"from\""}
 var errDateRangeTooWide = &dateRangeError{"rentang tanggal maksimum 366 hari"}
+var errGagalMemuatHalaman = &dateRangeError{"gagal memuat halaman"}
+var errGagalHitungRingkasan = &dateRangeError{"gagal menghitung ringkasan"}
 
 type dateRangeError struct{ msg string }
 
@@ -200,10 +202,24 @@ func (h *AnalyticsHandler) GetSummary(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
+	resp, err := h.computeSummary(ctx, userID, from, to, rangeDays)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// computeSummary — logika inti ringkasan analitik, diekstrak dari GetSummary
+// supaya bisa dipakai ulang oleh AssistantHandler.Ask (No.96) TANPA
+// duplikasi query. Query yang gagal untuk satu bagian (mis. top referrer)
+// diam-diam dilewati (bukan gagal total) -- konsisten dengan perilaku asli
+// GetSummary sebelum diekstrak.
+func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, from, to time.Time, rangeDays int) (analyticsSummaryResponse, error) {
 	var pageID string
 	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
-		return
+		return analyticsSummaryResponse{}, errGagalMemuatHalaman
 	}
 
 	resp := analyticsSummaryResponse{
@@ -212,16 +228,14 @@ func (h *AnalyticsHandler) GetSummary(c *gin.Context) {
 		TopReferrers: []topReferrer{}, DeviceBreakdown: []deviceBreakdown{},
 	}
 
-	err = h.DB.QueryRow(ctx, `
+	if err := h.DB.QueryRow(ctx, `
 		SELECT
 			COUNT(*) FILTER (WHERE event_type = 'view'),
 			COUNT(*) FILTER (WHERE event_type = 'click')
 		FROM analytics_events
 		WHERE page_id = $1 AND created_at BETWEEN $2 AND $3
-	`, pageID, from, to).Scan(&resp.TotalViews, &resp.TotalClicks)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung ringkasan"})
-		return
+	`, pageID, from, to).Scan(&resp.TotalViews, &resp.TotalClicks); err != nil {
+		return analyticsSummaryResponse{}, errGagalHitungRingkasan
 	}
 
 	dailyRows, err := h.DB.Query(ctx, `
@@ -314,7 +328,7 @@ func (h *AnalyticsHandler) GetSummary(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, resp)
+	return resp, nil
 }
 
 // ExportDailyCSV — No.86: ekspor rentang tanggal yang sama seperti GetSummary
@@ -367,4 +381,162 @@ func (h *AnalyticsHandler) ExportDailyCSV(c *gin.Context) {
 		}
 	}
 	w.Flush()
+}
+
+// ---------- No.96 (Sprint 13): asisten analitik "AI" ----------
+//
+// LINGKUP DIPERSEMPIT (keputusan eksplisit pengguna, 25 Juli 2026): TANPA
+// panggilan API LLM sungguhan (OpenAI/Anthropic/dst), yang berbayar per-query
+// dan belum ada keputusan anggaran untuk itu -- lihat catatan lingkup asli
+// backlog ("hitung dulu biaya API LLM per-query sebelum komit"). Sebagai
+// gantinya: pencocokan kata kunci sederhana atas pertanyaan bahasa natural,
+// dipetakan ke query analitik yang SUDAH ADA (computeSummary), lalu dirangkai
+// jadi kalimat jawaban dari angka NYATA -- nol biaya per-query, jujur soal
+// keterbatasannya (bukan "AI" sungguhan, cuma templat + data asli).
+type assistantIntent struct {
+	keywords []string
+	answer   func(resp analyticsSummaryResponse) string
+}
+
+var assistantIntents = []assistantIntent{
+	{
+		keywords: []string{"traffic", "trafik", "sumber", "referrer", "dari mana"},
+		answer: func(resp analyticsSummaryResponse) string {
+			if len(resp.TopReferrers) == 0 {
+				return "Belum ada data sumber trafik yang tercatat dalam " + strconv.Itoa(resp.RangeDays) +
+					" hari terakhir (kemungkinan pengunjung datang langsung tanpa referrer, atau memang belum ada kunjungan)."
+			}
+			var b strings.Builder
+			b.WriteString("Sumber trafik terbesarmu dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir: ")
+			for i, r := range resp.TopReferrers {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(strconv.Itoa(i+1) + ". " + r.Referrer + " (" + strconv.FormatInt(r.Count, 10) + " kunjungan)")
+			}
+			b.WriteString(".")
+			return b.String()
+		},
+	},
+	{
+		keywords: []string{"produk", "laku", "terjual", "jual", "best seller"},
+		answer: func(resp analyticsSummaryResponse) string {
+			if len(resp.TopProducts) == 0 {
+				return "Belum ada produk yang terjual dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir."
+			}
+			var b strings.Builder
+			b.WriteString("Produk terlaris dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir: ")
+			for i, p := range resp.TopProducts {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(strconv.Itoa(i+1) + ". " + p.Name + " (" + strconv.FormatInt(p.SoldCount, 10) +
+					"x terjual, Rp" + strconv.FormatInt(p.RevenueIDR, 10) + ")")
+			}
+			b.WriteString(".")
+			return b.String()
+		},
+	},
+	{
+		keywords: []string{"tren", "trend", "naik", "turun", "grafik"},
+		answer: func(resp analyticsSummaryResponse) string {
+			if len(resp.DailySeries) < 2 {
+				return "Data kunjungan masih terlalu sedikit untuk melihat tren dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir."
+			}
+			mid := len(resp.DailySeries) / 2
+			var firstHalf, secondHalf int64
+			for _, d := range resp.DailySeries[:mid] {
+				firstHalf += d.Views
+			}
+			for _, d := range resp.DailySeries[mid:] {
+				secondHalf += d.Views
+			}
+			verdict := "stabil"
+			if secondHalf > firstHalf {
+				verdict = "naik"
+			} else if secondHalf < firstHalf {
+				verdict = "turun"
+			}
+			return "Tren kunjungan halamanmu " + verdict + " -- paruh pertama " + strconv.Itoa(resp.RangeDays) +
+				" hari terakhir tercatat " + strconv.FormatInt(firstHalf, 10) + " kunjungan, paruh kedua " +
+				strconv.FormatInt(secondHalf, 10) + " kunjungan."
+		},
+	},
+	{
+		keywords: []string{"perangkat", "device", "hp", "desktop", "mobile", "tablet"},
+		answer: func(resp analyticsSummaryResponse) string {
+			if len(resp.DeviceBreakdown) == 0 {
+				return "Belum ada data perangkat pengunjung dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir."
+			}
+			var b strings.Builder
+			b.WriteString("Perangkat pengunjungmu dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir: ")
+			for i, d := range resp.DeviceBreakdown {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(d.DeviceType + " (" + strconv.FormatInt(d.Count, 10) + " kunjungan)")
+			}
+			b.WriteString(".")
+			return b.String()
+		},
+	},
+	{
+		keywords: []string{"tautan", "link", "klik", "diklik"},
+		answer: func(resp analyticsSummaryResponse) string {
+			if len(resp.TopLinks) == 0 {
+				return "Belum ada tautan yang diklik dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir."
+			}
+			var b strings.Builder
+			b.WriteString("Tautan paling banyak diklik dalam " + strconv.Itoa(resp.RangeDays) + " hari terakhir: ")
+			for i, l := range resp.TopLinks {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(strconv.Itoa(i+1) + ". " + l.Title + " (" + strconv.FormatInt(l.Clicks, 10) + "x klik)")
+			}
+			b.WriteString(".")
+			return b.String()
+		},
+	},
+}
+
+const assistantFallbackHint = "Aku belum paham pertanyaan itu. Coba tanya soal: sumber trafik, produk terlaris, " +
+	"tren kunjungan, perangkat pengunjung, atau tautan paling banyak diklik."
+
+type askAssistantRequest struct {
+	Question string `json:"question" binding:"required,max=500"`
+}
+
+// Ask — No.96, versi TANPA LLM API (lihat catatan lingkup di atas).
+func (h *AnalyticsHandler) Ask(c *gin.Context) {
+	var req askAssistantRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := c.GetString("userID")
+	question := strings.ToLower(req.Question)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	to := time.Now()
+	from := to.AddDate(0, 0, -30)
+	resp, err := h.computeSummary(ctx, userID, from, to, 30)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, intent := range assistantIntents {
+		for _, kw := range intent.keywords {
+			if strings.Contains(question, kw) {
+				c.JSON(http.StatusOK, gin.H{"answer": intent.answer(resp)})
+				return
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"answer": assistantFallbackHint})
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnalyticsSummary, ApiError, exportAnalyticsCSV, getAnalyticsSummary } from "@/lib/api-client";
 import { IconChart, IconDownload, IconInbox, IconLink, IconSparkle } from "@/components/icons";
+import AnalyticsAssistant from "@/components/AnalyticsAssistant";
 
 const PRESETS = [7, 30, 90];
 
@@ -140,6 +141,8 @@ export default function DashboardHomePage() {
       </div>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+
+      <AnalyticsAssistant />
 
       {loading ? (
         <p className="mt-6 text-sm text-muted">Memuat...</p>
