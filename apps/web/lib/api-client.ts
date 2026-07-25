@@ -763,6 +763,65 @@ export function redeemLoyaltyReward(rewardId: string, buyerEmail: string) {
   );
 }
 
+// ---------- Dashboard: kartu kontak digital (Sprint 13, No.95) ----------
+// LINGKUP DIPERSEMPIT: tanpa Apple/Google Wallet (butuh kredensial developer
+// yang belum ada) -- pengunjung mengunduh file vCard (.vcf) standar yang
+// dibuat di sisi frontend, bukan lewat integrasi Wallet pihak ketiga.
+
+export interface BusinessCard {
+  is_active: boolean;
+  full_name: string;
+  job_title: string;
+  company: string;
+  phone: string;
+  whatsapp_number: string;
+  email: string;
+  website: string;
+  collect_contact_back: boolean;
+}
+
+export function getBusinessCard() {
+  return apiFetch<BusinessCard>("/dashboard/business-card", { method: "GET" }, { auth: true });
+}
+
+export function upsertBusinessCard(input: BusinessCard) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/business-card",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export interface PublicBusinessCard {
+  username: string;
+  avatar_url: string;
+  full_name: string;
+  job_title: string;
+  company: string;
+  phone: string;
+  whatsapp_number: string;
+  email: string;
+  website: string;
+  collect_contact_back: boolean;
+}
+
+export async function getPublicBusinessCard(username: string): Promise<PublicBusinessCard | null> {
+  const res = await fetch(`${API_BASE_URL}/cards/${username}`, { next: { revalidate: 60 } });
+
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`Gagal memuat kartu kontak: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export function submitCardContact(username: string, input: { name: string; email: string; whatsapp_number: string }) {
+  return apiFetch<{ message: string }>(`/cards/${username}/contact`, { method: "POST", body: JSON.stringify(input) });
+}
+
 // ---------- Dashboard: booking konsultasi (Sprint 11, No.92) ----------
 // Booking adalah baris produk biasa (is_booking=true) -- toggle aktif &
 // hapus pakai updateProduct()/deleteProduct() yang sudah ada. SENGAJA
@@ -975,6 +1034,7 @@ export function upsertLeadCaptureSettings(input: LeadCaptureSettings) {
 }
 
 export interface AudienceContact {
+  name: string;
   email: string;
   whatsapp_number: string;
   sources: string[];

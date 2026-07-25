@@ -12,14 +12,17 @@ import Toggle from "@/components/Toggle";
 import { IconInbox } from "@/components/icons";
 
 const SOURCE_LABEL: Record<string, string> = {
-  subscriber: "Subscriber",
+  lead_capture: "Subscriber",
   buyer: "Pembeli",
+  business_card: "Kartu Kontak",
 };
 
 function toCSV(contacts: AudienceContact[]): string {
-  const header = "email,whatsapp_number,sources,joined_at";
+  const header = "name,email,whatsapp_number,sources,joined_at";
   const rows = contacts.map((c) =>
-    [c.email, c.whatsapp_number, c.sources.join("|"), c.joined_at].map((v) => `"${v.replace(/"/g, '""')}"`).join(",")
+    [c.name, c.email, c.whatsapp_number, c.sources.join("|"), c.joined_at]
+      .map((v) => `"${v.replace(/"/g, '""')}"`)
+      .join(",")
   );
   return [header, ...rows].join("\n");
 }
@@ -159,6 +162,7 @@ export default function DashboardAudiencePage() {
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border text-muted">
+              <th className="px-4 py-2.5 font-semibold">Nama</th>
               <th className="px-4 py-2.5 font-semibold">Email</th>
               <th className="px-4 py-2.5 font-semibold">WhatsApp</th>
               <th className="px-4 py-2.5 font-semibold">Sumber</th>
@@ -168,6 +172,7 @@ export default function DashboardAudiencePage() {
           <tbody>
             {contacts.map((c, i) => (
               <tr key={i} className="border-b border-border last:border-0">
+                <td className="px-4 py-2.5 text-ink">{c.name || "-"}</td>
                 <td className="px-4 py-2.5 text-ink">{c.email || "-"}</td>
                 <td className="px-4 py-2.5 text-ink">{c.whatsapp_number || "-"}</td>
                 <td className="px-4 py-2.5">

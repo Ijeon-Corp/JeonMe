@@ -8,7 +8,19 @@ import { IconClose } from "@/components/icons";
 // offline (banner event, kemasan produk, dsb). Murni sisi klien -- URL
 // halaman publik sudah diketahui (jeonme.com/{username}), tidak perlu
 // endpoint backend sama sekali.
-export default function QRCodeModal({ url, username, onClose }: { url: string; username: string; onClose: () => void }) {
+export default function QRCodeModal({
+  url,
+  username,
+  onClose,
+  title = "Kode QR Halamanmu",
+  description = "Cetak di banner, stiker kemasan, atau materi promosi offline lainnya.",
+}: {
+  url: string;
+  username: string;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   function handleDownload() {
@@ -32,8 +44,8 @@ export default function QRCodeModal({ url, username, onClose }: { url: string; u
           <IconClose className="h-4 w-4" />
         </button>
 
-        <p className="font-heading text-sm font-bold text-ink">Kode QR Halamanmu</p>
-        <p className="mt-1 text-xs text-muted">Cetak di banner, stiker kemasan, atau materi promosi offline lainnya.</p>
+        <p className="font-heading text-sm font-bold text-ink">{title}</p>
+        <p className="mt-1 text-xs text-muted">{description}</p>
 
         <div className="mt-4 flex items-center justify-center">
           <QRCodeCanvas ref={canvasRef} value={url} size={200} level="M" marginSize={2} />

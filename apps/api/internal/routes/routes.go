@@ -33,6 +33,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	course := handlers.NewCourseHandler(db)
 	booking := handlers.NewBookingHandler(db)
 	loyalty := handlers.NewLoyaltyHandler(db)
+	businessCard := handlers.NewBusinessCardHandler(db)
 	donation := handlers.NewDonationHandler(db)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db)
@@ -91,6 +92,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// (tanpa akun, cukup email pembeli seperti checkout).
 		api.GET("/pages/:username/loyalty", loyalty.GetMyPoints)
 		api.POST("/loyalty/rewards/:id/redeem", loyalty.RedeemReward)
+
+		// No.95 (Sprint 13): kartu kontak digital -- endpoint dituju QR code
+		// kartu (bukan halaman utama kreator), publik.
+		api.GET("/cards/:username", businessCard.GetPublicCard)
+		api.POST("/cards/:username/contact", leadsRateLimit, businessCard.SubmitCardContact)
 
 		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
 		// proxy.ts (bukan browser).
@@ -238,6 +244,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
 			dashboard.PUT("/lead-capture", audience.UpsertLeadCaptureSettings)
 			dashboard.GET("/audience", audience.GetAudience)
+
+			// No.95 (Sprint 13): kartu kontak digital -- lihat catatan lingkup
+			// di BusinessCardHandler (vCard .vcf, TANPA Apple/Google Wallet).
+			dashboard.GET("/business-card", businessCard.GetCard)
+			dashboard.PUT("/business-card", businessCard.UpsertCard)
 
 			// No.76 (Sprint 8): notifikasi social proof "X baru saja membeli".
 			dashboard.GET("/social-proof", socialProof.Get)

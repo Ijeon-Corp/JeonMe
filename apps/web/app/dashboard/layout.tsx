@@ -31,6 +31,7 @@ import {
   IconLink,
   IconLogout,
   IconMenu,
+  IconPhone,
   IconQrCode,
   IconSettings,
   IconShield,
@@ -82,6 +83,7 @@ const NAV_ITEMS: NavEntry[] = [
     items: [
       { href: "/dashboard/audience", label: "Audiens", icon: IconInbox },
       { href: "/dashboard/social-proof", label: "Social Proof", icon: IconBell },
+      { href: "/dashboard/business-card", label: "Kartu Kontak", icon: IconPhone },
     ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },

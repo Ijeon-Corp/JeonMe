@@ -144,8 +144,8 @@ func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 	}
 
 	if _, err := h.DB.Exec(ctx, `
-		INSERT INTO subscribers (creator_user_id, email, whatsapp_number)
-		VALUES ($1, $2, $3)
+		INSERT INTO subscribers (creator_user_id, email, whatsapp_number, source)
+		VALUES ($1, $2, $3, 'lead_capture')
 		ON CONFLICT (creator_user_id, email) WHERE email <> '' DO UPDATE SET
 			whatsapp_number = CASE WHEN EXCLUDED.whatsapp_number <> '' THEN EXCLUDED.whatsapp_number ELSE subscribers.whatsapp_number END
 	`, creatorUserID, email, whatsapp); err != nil {
@@ -157,6 +157,7 @@ func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 }
 
 type audienceContact struct {
+	Name           string   `json:"name"`
 	Email          string   `json:"email"`
 	WhatsappNumber string   `json:"whatsapp_number"`
 	Sources        []string `json:"sources"`
@@ -179,19 +180,19 @@ func (h *AudienceHandler) GetAudience(c *gin.Context) {
 	order := []*audienceContact{}
 
 	subRows, err := h.DB.Query(ctx, `
-		SELECT email, whatsapp_number, created_at FROM subscribers WHERE creator_user_id = $1 ORDER BY created_at DESC
+		SELECT email, whatsapp_number, name, source, created_at FROM subscribers WHERE creator_user_id = $1 ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat subscriber"})
 		return
 	}
 	for subRows.Next() {
-		var email, whatsapp string
+		var email, whatsapp, name, source string
 		var joinedAt time.Time
-		if err := subRows.Scan(&email, &whatsapp, &joinedAt); err != nil {
+		if err := subRows.Scan(&email, &whatsapp, &name, &source, &joinedAt); err != nil {
 			continue
 		}
-		item := &audienceContact{Email: email, WhatsappNumber: whatsapp, Sources: []string{"subscriber"}, JoinedAt: joinedAt.Format(time.RFC3339)}
+		item := &audienceContact{Email: email, WhatsappNumber: whatsapp, Name: name, Sources: []string{source}, JoinedAt: joinedAt.Format(time.RFC3339)}
 		order = append(order, item)
 		if email != "" {
 			byEmail[email] = item

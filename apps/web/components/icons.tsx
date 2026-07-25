@@ -386,3 +386,17 @@ export function IconGift({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconPhone({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M5 4.5h3.2l1.3 4-2 1.5a10 10 0 0 0 4.5 4.5l1.5-2 4 1.3V17a1.5 1.5 0 0 1-1.6 1.5C10.4 18 6 13.6 5.5 8.6A1.5 1.5 0 0 1 7 7"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
