@@ -9,7 +9,7 @@ import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import ReportButton from "@/components/ReportButton";
 import { RecentPurchase } from "@/lib/api-client";
-import { IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
+import { IconBadgeCheck, IconBox, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 
 export interface PagePreviewLink {
   id: string;
@@ -60,6 +60,9 @@ export interface PagePreviewData {
   bio: string;
   avatarUrl: string;
   theme: string;
+  // No.88 (Sprint 10): badge terverifikasi -- dihitung backend dari email
+  // terverifikasi + profil lengkap + minimal 1 transaksi sukses.
+  isVerified?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   donation?: PagePreviewDonation;
@@ -81,6 +84,7 @@ interface PreviewSourcePage {
   custom_background_value?: string;
   custom_font?: CustomThemeConfig["font"];
   custom_button_color?: string;
+  is_verified?: boolean;
 }
 
 interface PreviewSourceLink {
@@ -120,6 +124,7 @@ export function toPreviewData(
     bio: page.bio,
     avatarUrl: page.avatar_url,
     theme: page.theme,
+    isVerified: page.is_verified ?? false,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -208,7 +213,14 @@ export default function PagePreview({
           )}
 
           <div className="relative mt-5 text-center">
-            <h1 className={`font-heading text-xl font-bold ${theme.name}`}>@{data.username}</h1>
+            <h1 className={`flex items-center justify-center gap-1.5 font-heading text-xl font-bold ${theme.name}`}>
+              @{data.username}
+              {data.isVerified && (
+                <span title="Kreator terverifikasi">
+                  <IconBadgeCheck className="h-[18px] w-[18px] flex-shrink-0 text-primary" />
+                </span>
+              )}
+            </h1>
             {data.bio && <p className={`mt-2 max-w-xs text-sm leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           </div>
         </div>

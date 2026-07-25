@@ -14,7 +14,7 @@ import {
   uploadAvatar,
 } from "@/lib/api-client";
 import { CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
-import { IconExternal } from "@/components/icons";
+import { IconBadgeCheck, IconCheck, IconExternal } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 
@@ -110,6 +110,36 @@ export default function DashboardDesignPage() {
               <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
                 {page.is_published ? "Sudah terbit" : "Belum terbit"}
               </span>
+            </div>
+
+            {/* No.88 (Sprint 10): progres badge terverifikasi -- sinyal
+                kepercayaan gratis, otomatis dari data yang sudah ada, tanpa
+                proses review manual. */}
+            <div
+              className={`mt-4 rounded-xl border p-3.5 ${
+                page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-border bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-muted"}`} />
+                <span className="text-xs font-bold text-ink">
+                  {page.verification.is_verified ? "Badge Terverifikasi Aktif" : "Badge Terverifikasi"}
+                </span>
+              </div>
+              <ul className="mt-2 flex flex-col gap-1 text-[11px]">
+                <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-muted"}`}>
+                  {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                  Email terverifikasi
+                </li>
+                <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-muted"}`}>
+                  {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                  Profil lengkap (foto + bio terisi)
+                </li>
+                <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-muted"}`}>
+                  {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                  Minimal 1 transaksi sukses
+                </li>
+              </ul>
             </div>
 
             <div className="mt-5 flex flex-col gap-5">

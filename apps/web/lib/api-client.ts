@@ -175,6 +175,7 @@ export interface PublicPage {
   custom_background_value: string;
   custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
   custom_button_color: string;
+  is_verified: boolean;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -260,6 +261,12 @@ export interface MyPage {
   custom_background_value: string;
   custom_font: "inter" | "playfair" | "lora" | "montserrat" | "roboto-mono";
   custom_button_color: string;
+  verification: {
+    email_verified: boolean;
+    profile_complete: boolean;
+    has_paid_order: boolean;
+    is_verified: boolean;
+  };
 }
 
 export const THEME_PRESETS = ["default", "midnight", "sunrise", "forest", "minimal"] as const;

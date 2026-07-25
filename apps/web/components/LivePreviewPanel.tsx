@@ -35,7 +35,11 @@ export default function LivePreviewPanel({
       </div>
       {page && (
         <PhoneFrame>
-          <PagePreview interactive={false} rootClassName="min-h-full" data={toPreviewData(page, links, products)} />
+          <PagePreview
+            interactive={false}
+            rootClassName="min-h-full"
+            data={toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products)}
+          />
         </PhoneFrame>
       )}
       <p className="mt-3 text-center text-[11px] text-muted">

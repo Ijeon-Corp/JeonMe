@@ -209,6 +209,20 @@ export function IconDownload({ className }: IconProps) {
   );
 }
 
+export function IconBadgeCheck({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="m12 3 2.09 1.26 2.44-.2 1.05 2.2 2.2 1.05-.2 2.44L21 12l-1.42 2.25.2 2.44-2.2 1.05-1.05 2.2-2.44-.2L12 21l-2.09-1.26-2.44.2-1.05-2.2-2.2-1.05.2-2.44L3 12l1.42-2.25-.2-2.44 2.2-1.05 1.05-2.2 2.44.2Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 12.2 11 14.7l4.5-5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconPlus({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

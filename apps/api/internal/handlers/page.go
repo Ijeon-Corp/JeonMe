@@ -54,6 +54,7 @@ type publicPageResponse struct {
 	Donation              *publicDonation    `json:"donation"`
 	LeadCapture           *publicLeadCapture `json:"lead_capture"`
 	SocialProof           *publicSocialProof `json:"social_proof"`
+	IsVerified            bool               `json:"is_verified"`
 }
 
 // publicLeadCapture -- No.73 (Sprint 8): blok pengumpulan email/whatsapp
@@ -132,16 +133,19 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 
 	var resp publicPageResponse
 	var userID string
+	var emailVerified bool
 
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
-			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_published = true
 	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
-		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor)
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&emailVerified)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -151,6 +155,17 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
 	}
+
+	// No.88 (Sprint 10): badge terverifikasi -- sinyal kepercayaan murah untuk
+	// pembeli, dihitung LANGSUNG dari data yang sudah ada (BUKAN proses review
+	// manual seperti Linktree): email terverifikasi + profil lengkap (bio DAN
+	// foto profil terisi) + minimal 1 transaksi sukses (order status='paid').
+	var hasPaidOrder bool
+	_ = h.DB.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM orders o JOIN products pr ON pr.id = o.product_id WHERE pr.user_id = $1 AND o.status = 'paid')
+	`, userID).Scan(&hasPaidOrder)
+	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
+	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
 
 	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
 	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
@@ -250,18 +265,29 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 }
 
 type myPageResponse struct {
-	Username              string `json:"username"`
-	Bio                   string `json:"bio"`
-	AvatarURL             string `json:"avatar_url"`
-	Theme                 string `json:"theme"`
-	IsPublished           bool   `json:"is_published"`
-	SeoTitle              string `json:"seo_title"`
-	SeoDescription        string `json:"seo_description"`
-	Noindex               bool   `json:"noindex"`
-	CustomBackgroundType  string `json:"custom_background_type"`
-	CustomBackgroundValue string `json:"custom_background_value"`
-	CustomFont            string `json:"custom_font"`
-	CustomButtonColor     string `json:"custom_button_color"`
+	Username              string             `json:"username"`
+	Bio                   string             `json:"bio"`
+	AvatarURL             string             `json:"avatar_url"`
+	Theme                 string             `json:"theme"`
+	IsPublished           bool               `json:"is_published"`
+	SeoTitle              string             `json:"seo_title"`
+	SeoDescription        string             `json:"seo_description"`
+	Noindex               bool               `json:"noindex"`
+	CustomBackgroundType  string             `json:"custom_background_type"`
+	CustomBackgroundValue string             `json:"custom_background_value"`
+	CustomFont            string             `json:"custom_font"`
+	CustomButtonColor     string             `json:"custom_button_color"`
+	Verification          verificationStatus `json:"verification"`
+}
+
+// verificationStatus -- No.88 (Sprint 10): rincian syarat badge terverifikasi
+// supaya dashboard bisa menunjukkan progres ("2/3 syarat terpenuhi, tambahkan
+// X") alih-alih hanya boolean tunggal seperti di halaman publik.
+type verificationStatus struct {
+	EmailVerified   bool `json:"email_verified"`
+	ProfileComplete bool `json:"profile_complete"`
+	HasPaidOrder    bool `json:"has_paid_order"`
+	IsVerified      bool `json:"is_verified"`
 }
 
 // GetMyPage — dipakai dashboard untuk memuat pengaturan halaman milik kreator
@@ -273,17 +299,32 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 	defer cancel()
 
 	var resp myPageResponse
+	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
-			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1
 	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
-		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor)
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
+	}
+
+	var hasPaidOrder bool
+	_ = h.DB.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM orders o JOIN products pr ON pr.id = o.product_id WHERE pr.user_id = $1 AND o.status = 'paid')
+	`, userID).Scan(&hasPaidOrder)
+	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
+	resp.Verification = verificationStatus{
+		EmailVerified:   emailVerified,
+		ProfileComplete: profileComplete,
+		HasPaidOrder:    hasPaidOrder,
+		IsVerified:      emailVerified && profileComplete && hasPaidOrder,
 	}
 
 	c.JSON(http.StatusOK, resp)
