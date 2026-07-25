@@ -14,9 +14,18 @@ import {
   uploadAvatar,
 } from "@/lib/api-client";
 import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
-import { IconBadgeCheck, IconCheck, IconExternal } from "@/components/icons";
+import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+
+// "Desain 2.0" lanjutan: Linktree membuka override tiap elemen (Wallpaper/
+// Buttons/Text) sebagai panel TERPISAH yang diklik satu-satu ("tiap satu
+// buka panel sendiri" -- riset kompetitor No.80/97), bukan satu panel
+// gabungan. Elemen yang KITA dukung dipetakan ke 3 bagian: Latar
+// (Wallpaper), Tombol (Buttons), Font (Text) -- Header/Colors/Stickers/
+// Footer Linktree TIDAK punya padanan kustomisasi di Jeonme saat ini,
+// jadi tidak dibuatkan bagian kosong sekadar untuk meniru strukturnya.
+type CustomSection = "latar" | "tombol" | "font";
 
 type PageSettingsPatch = Partial<
   Pick<
@@ -58,6 +67,11 @@ export default function DashboardDesignPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [gradientStart, setGradientStart] = useState("#667EEA");
   const [gradientEnd, setGradientEnd] = useState("#764BA2");
+  const [expandedSection, setExpandedSection] = useState<CustomSection | null>(null);
+
+  function toggleSection(section: CustomSection) {
+    setExpandedSection((prev) => (prev === section ? null : section));
+  }
 
   useEffect(() => {
     Promise.all([getMyPage(), listLinks(), listProducts()])
@@ -256,131 +270,212 @@ export default function DashboardDesignPage() {
               </div>
 
               {page.theme === "custom" && (
-                <div className="rounded-xl border border-border bg-primary-subtle/30 p-4">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Kustomisasi Lanjutan</p>
-                  <div className="flex flex-col gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-ink">Jenis Latar</label>
-                      <div className="flex gap-2">
-                        {(["solid", "gradient", "image"] as const).map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() =>
-                              type === "gradient"
-                                ? handleGradientChange(gradientStart, gradientEnd)
-                                : handlePageSettingChange({ custom_background_type: type })
-                            }
-                            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                              page.custom_background_type === type
-                                ? "border-primary bg-white text-primary"
-                                : "border-border text-muted"
-                            }`}
-                          >
-                            {type === "solid" ? "Warna Solid" : type === "gradient" ? "Gradien" : "Gambar"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {page.custom_background_type === "solid" && (
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Latar</label>
-                        <input
-                          type="color"
-                          value={page.custom_background_value}
-                          onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
-                          onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
-                          className="h-9 w-full rounded-lg border border-border"
-                        />
-                      </div>
-                    )}
-
-                    {page.custom_background_type === "gradient" && (
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Gradien (Awal &amp; Akhir)</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={gradientStart}
-                            onChange={(e) => handleGradientChange(e.target.value, gradientEnd)}
-                            className="h-9 w-full rounded-lg border border-border"
-                          />
-                          <input
-                            type="color"
-                            value={gradientEnd}
-                            onChange={(e) => handleGradientChange(gradientStart, e.target.value)}
-                            className="h-9 w-full rounded-lg border border-border"
-                          />
-                        </div>
-                        <div
-                          className="mt-2 h-9 w-full rounded-lg ring-1 ring-black/5"
-                          style={{ background: buildGradient(gradientStart, gradientEnd) }}
-                          aria-hidden
-                        />
-                      </div>
-                    )}
-
-                    {page.custom_background_type === "image" && (
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-ink">URL Gambar Latar</label>
-                        <input
-                          type="url"
-                          placeholder="https://..."
-                          value={page.custom_background_value}
-                          onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
-                          onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
-                          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-ink">Font</label>
-                      <select
-                        value={page.custom_font}
-                        onChange={(e) =>
-                          handlePageSettingChange({ custom_font: e.target.value as MyPage["custom_font"] })
-                        }
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Kustomisasi Lanjutan</p>
+                  <div className="flex flex-col gap-2">
+                    {/* Latar (Wallpaper) */}
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("latar")}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                       >
-                        {CUSTOM_FONT_OPTIONS.map((f) => (
-                          <option key={f.value} value={f.value}>
-                            {f.label}
-                          </option>
-                        ))}
-                      </select>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-7 w-7 flex-shrink-0 rounded-md ring-1 ring-black/5"
+                            style={{
+                              background:
+                                page.custom_background_type === "gradient"
+                                  ? buildGradient(gradientStart, gradientEnd)
+                                  : page.custom_background_type === "image"
+                                    ? `url(${page.custom_background_value}) center/cover`
+                                    : page.custom_background_value,
+                            }}
+                            aria-hidden
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Latar</p>
+                            <p className="text-xs text-muted">
+                              {page.custom_background_type === "solid"
+                                ? "Warna Solid"
+                                : page.custom_background_type === "gradient"
+                                  ? "Gradien"
+                                  : "Gambar"}
+                            </p>
+                          </div>
+                        </div>
+                        <IconChevronRight
+                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "latar" ? "rotate-90" : ""}`}
+                        />
+                      </button>
+
+                      {expandedSection === "latar" && (
+                        <div className="flex flex-col gap-3 border-t border-border bg-primary-subtle/20 p-4">
+                          <div className="flex gap-2">
+                            {(["solid", "gradient", "image"] as const).map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() =>
+                                  type === "gradient"
+                                    ? handleGradientChange(gradientStart, gradientEnd)
+                                    : handlePageSettingChange({ custom_background_type: type })
+                                }
+                                className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                                  page.custom_background_type === type
+                                    ? "border-primary bg-white text-primary"
+                                    : "border-border text-muted"
+                                }`}
+                              >
+                                {type === "solid" ? "Warna Solid" : type === "gradient" ? "Gradien" : "Gambar"}
+                              </button>
+                            ))}
+                          </div>
+
+                          {page.custom_background_type === "solid" && (
+                            <input
+                              type="color"
+                              value={page.custom_background_value}
+                              onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                              onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
+                              className="h-9 w-full rounded-lg border border-border"
+                            />
+                          )}
+
+                          {page.custom_background_type === "gradient" && (
+                            <div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="color"
+                                  value={gradientStart}
+                                  onChange={(e) => handleGradientChange(e.target.value, gradientEnd)}
+                                  className="h-9 w-full rounded-lg border border-border"
+                                />
+                                <input
+                                  type="color"
+                                  value={gradientEnd}
+                                  onChange={(e) => handleGradientChange(gradientStart, e.target.value)}
+                                  className="h-9 w-full rounded-lg border border-border"
+                                />
+                              </div>
+                              <div
+                                className="mt-2 h-9 w-full rounded-lg ring-1 ring-black/5"
+                                style={{ background: buildGradient(gradientStart, gradientEnd) }}
+                                aria-hidden
+                              />
+                            </div>
+                          )}
+
+                          {page.custom_background_type === "image" && (
+                            <input
+                              type="url"
+                              placeholder="https://..."
+                              value={page.custom_background_value}
+                              onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                              onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
+                              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
-                      <input
-                        type="color"
-                        value={page.custom_button_color}
-                        onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
-                        onBlur={(e) => handlePageSettingChange({ custom_button_color: e.target.value })}
-                        className="h-9 w-full rounded-lg border border-border"
-                      />
+                    {/* Tombol (Buttons) */}
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("tombol")}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-7 w-7 flex-shrink-0 rounded-md ring-1 ring-black/5"
+                            style={{ backgroundColor: page.custom_button_color }}
+                            aria-hidden
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Tombol</p>
+                            <p className="text-xs text-muted">
+                              {CUSTOM_BUTTON_STYLE_OPTIONS.find((o) => o.value === page.custom_button_style)?.label}
+                            </p>
+                          </div>
+                        </div>
+                        <IconChevronRight
+                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "tombol" ? "rotate-90" : ""}`}
+                        />
+                      </button>
+
+                      {expandedSection === "tombol" && (
+                        <div className="flex flex-col gap-3 border-t border-border bg-primary-subtle/20 p-4">
+                          <div>
+                            <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
+                            <input
+                              type="color"
+                              value={page.custom_button_color}
+                              onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
+                              onBlur={(e) => handlePageSettingChange({ custom_button_color: e.target.value })}
+                              className="h-9 w-full rounded-lg border border-border"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
+                            <div className="flex gap-2">
+                              {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => handlePageSettingChange({ custom_button_style: opt.value })}
+                                  className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                                    page.custom_button_style === opt.value
+                                      ? "border-primary bg-white text-primary"
+                                      : "border-border text-muted"
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
-                      <div className="flex gap-2">
-                        {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handlePageSettingChange({ custom_button_style: opt.value })}
-                            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                              page.custom_button_style === opt.value
-                                ? "border-primary bg-white text-primary"
-                                : "border-border text-muted"
-                            }`}
+                    {/* Font (Text) */}
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("font")}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ink/5 font-heading text-sm font-bold text-ink" aria-hidden>
+                            Aa
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Font</p>
+                            <p className="text-xs text-muted">{CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label}</p>
+                          </div>
+                        </div>
+                        <IconChevronRight
+                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "font" ? "rotate-90" : ""}`}
+                        />
+                      </button>
+
+                      {expandedSection === "font" && (
+                        <div className="border-t border-border bg-primary-subtle/20 p-4">
+                          <select
+                            value={page.custom_font}
+                            onChange={(e) => handlePageSettingChange({ custom_font: e.target.value as MyPage["custom_font"] })}
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                           >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                            {CUSTOM_FONT_OPTIONS.map((f) => (
+                              <option key={f.value} value={f.value}>
+                                {f.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
