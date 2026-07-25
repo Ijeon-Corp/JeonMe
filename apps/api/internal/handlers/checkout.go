@@ -384,9 +384,9 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	// duplikat aman diabaikan tanpa mengubah status order/ledger lagi.
 	res, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, order_id, psp, method, psp_transaction_id, status, raw_webhook_payload, verified_at)
-		VALUES ($1, $2, 'midtrans', 'snap', $3, $4, $5, now())
+		VALUES ($1, $2, 'midtrans', $3, $4, $5, $6, now())
 		ON CONFLICT (psp_transaction_id) WHERE psp_transaction_id != '' DO NOTHING
-	`, uuid.NewString(), orderID, payload.TransactionID, orderStatus, body)
+	`, uuid.NewString(), orderID, payload.PaymentType, payload.TransactionID, orderStatus, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pembayaran"})
 		return

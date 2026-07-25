@@ -848,6 +848,29 @@ export function listPayouts() {
   return apiFetch<Payout[]>("/dashboard/payouts", { method: "GET" }, { auth: true });
 }
 
+// No.89 (Sprint 10): transparansi biaya per metode pembayaran.
+export interface FeeReferenceItem {
+  method: string;
+  label: string;
+  fee_description: string;
+}
+
+export interface FeeBreakdownItem {
+  method: string;
+  label: string;
+  transaction_count: number;
+  total_fee_idr: number;
+}
+
+export interface FeeBreakdown {
+  reference: FeeReferenceItem[];
+  actual: FeeBreakdownItem[];
+}
+
+export function getFeeBreakdown() {
+  return apiFetch<FeeBreakdown>("/dashboard/balance/fee-breakdown", { method: "GET" }, { auth: true });
+}
+
 // ---------- Dashboard: verifikasi KYC (Sprint 10, No.84) ----------
 // TIDAK memblokir penarikan -- hanya dipakai admin untuk memprioritaskan
 // antrian proses manual (lihat catatan lingkup di KycHandler backend).

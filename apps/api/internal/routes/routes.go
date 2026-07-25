@@ -208,6 +208,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/payouts", balance.CreatePayout)
 			dashboard.GET("/payouts", balance.ListPayouts)
 
+			// No.89 (Sprint 10): transparansi biaya per metode pembayaran.
+			dashboard.GET("/balance/fee-breakdown", balance.GetFeeBreakdown)
+
 			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
 			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).
 			dashboard.GET("/kyc", kyc.Get)

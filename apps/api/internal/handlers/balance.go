@@ -227,3 +227,94 @@ func (h *BalanceHandler) ListPayouts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, items)
 }
+
+// paymentMethodLabel — No.89 (Sprint 10): nama tampilan untuk nilai
+// payment_type mentah dari Midtrans (lihat midtrans.NotificationPayload).
+func paymentMethodLabel(method string) string {
+	switch method {
+	case "qris":
+		return "QRIS"
+	case "bank_transfer", "echannel", "permata_va":
+		return "Transfer Bank/Virtual Account"
+	case "gopay":
+		return "GoPay"
+	case "shopeepay":
+		return "ShopeePay"
+	case "credit_card":
+		return "Kartu Kredit/Debit"
+	case "":
+		return "Belum ada transaksi lunas"
+	default:
+		return method
+	}
+}
+
+type feeReferenceItem struct {
+	Method         string `json:"method"`
+	Label          string `json:"label"`
+	FeeDescription string `json:"fee_description"`
+}
+
+// feeReferenceTable -- PLACEHOLDER bisnis (belum ada keputusan resmi biaya
+// per kanal Jeonme sendiri, mirip status minPayoutIDR di atas), sumber
+// angka dari riset publik Lynk.id (QRIS ~0.70%, VA flat Rp3-4rb) sebagai
+// estimasi kasar sampai ada kontrak Midtrans/keputusan bisnis resmi.
+// TIDAK dipakai untuk menghitung platform_fee_idr sungguhan di manapun --
+// murni referensi/edukasi untuk kreator, angka aktual tetap flat lewat
+// PlatformFeePercent (lihat CreatePayout/CheckoutHandler.Create).
+var feeReferenceTable = []feeReferenceItem{
+	{Method: "qris", Label: "QRIS", FeeDescription: "±0,7% dari nilai transaksi"},
+	{Method: "bank_transfer", Label: "Transfer Bank/Virtual Account", FeeDescription: "Flat ±Rp4.000 per transaksi"},
+	{Method: "gopay", Label: "GoPay", FeeDescription: "±1,5%–2% dari nilai transaksi"},
+	{Method: "shopeepay", Label: "ShopeePay", FeeDescription: "±1,5%–2% dari nilai transaksi"},
+	{Method: "credit_card", Label: "Kartu Kredit/Debit", FeeDescription: "±2,9% + Rp2.000 per transaksi"},
+}
+
+type feeBreakdownItem struct {
+	Method           string `json:"method"`
+	Label            string `json:"label"`
+	TransactionCount int64  `json:"transaction_count"`
+	TotalFeeIDR      int64  `json:"total_fee_idr"`
+}
+
+type feeBreakdownResponse struct {
+	Reference []feeReferenceItem `json:"reference"`
+	Actual    []feeBreakdownItem `json:"actual"`
+}
+
+// GetFeeBreakdown — No.89: transparansi biaya per metode pembayaran.
+// "reference" adalah estimasi umum (lihat feeReferenceTable); "actual"
+// adalah rincian SUNGGUHAN dari transaksi lunas kreator ini, dikelompokkan
+// per kanal pembayaran ASLI yang dipilih pembeli (payments.method, diisi
+// dari payload.PaymentType webhook -- lihat CheckoutHandler.Webhook).
+func (h *BalanceHandler) GetFeeBreakdown(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT COALESCE(NULLIF(pay.method, ''), '') AS method, COUNT(*), COALESCE(SUM(o.platform_fee_idr), 0)
+		FROM payments pay
+		JOIN orders o ON o.id = pay.order_id
+		JOIN products p ON p.id = o.product_id
+		WHERE p.user_id = $1 AND o.status = 'paid'
+		GROUP BY method ORDER BY COUNT(*) DESC
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat rincian biaya"})
+		return
+	}
+	defer rows.Close()
+
+	actual := []feeBreakdownItem{}
+	for rows.Next() {
+		var it feeBreakdownItem
+		if err := rows.Scan(&it.Method, &it.TransactionCount, &it.TotalFeeIDR); err == nil {
+			it.Label = paymentMethodLabel(it.Method)
+			actual = append(actual, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, feeBreakdownResponse{Reference: feeReferenceTable, Actual: actual})
+}

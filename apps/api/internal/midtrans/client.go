@@ -139,6 +139,13 @@ type NotificationPayload struct {
 	TransactionStatus string `json:"transaction_status"`
 	TransactionID     string `json:"transaction_id"`
 	FraudStatus       string `json:"fraud_status"`
+	// PaymentType -- No.89 (Sprint 10): kanal pembayaran sungguhan yang
+	// dipilih pembeli di Midtrans Snap (mis. "qris", "bank_transfer",
+	// "gopay", "shopeepay", "credit_card") -- SEBELUMNYA tidak pernah
+	// ditangkap sama sekali (payments.method selalu diisi literal "snap",
+	// yang cuma nama WIDGET checkout-nya, bukan kanal pembayaran
+	// sesungguhnya). Dipakai untuk rincian biaya per metode pembayaran.
+	PaymentType string `json:"payment_type"`
 }
 
 // Sign menghitung signature_key sesuai rumus resmi Midtrans. Dipakai

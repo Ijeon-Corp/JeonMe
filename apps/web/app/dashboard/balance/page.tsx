@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ApiError, Balance, Payout, createPayout, getBalance, listPayouts } from "@/lib/api-client";
+import { ApiError, Balance, FeeBreakdown, Payout, createPayout, getBalance, getFeeBreakdown, listPayouts } from "@/lib/api-client";
 import { IconInbox, IconShield, IconWallet } from "@/components/icons";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
@@ -15,6 +15,7 @@ const STATUS_LABEL: Record<Payout["status"], string> = {
 export default function DashboardBalancePage() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,9 +24,10 @@ export default function DashboardBalancePage() {
   const [submitting, setSubmitting] = useState(false);
 
   function reload() {
-    return Promise.all([getBalance(), listPayouts()]).then(([b, p]) => {
+    return Promise.all([getBalance(), listPayouts(), getFeeBreakdown()]).then(([b, p, f]) => {
       setBalance(b);
       setPayouts(p);
+      setFeeBreakdown(f);
     });
   }
 
@@ -91,6 +93,41 @@ export default function DashboardBalancePage() {
               Tertahan {balance.holding_period_days} hari sejak pembayaran (anti-fraud)
             </p>
           </div>
+        </section>
+      )}
+
+      {feeBreakdown && (
+        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+          <h2 className="font-heading text-lg font-bold text-ink">Rincian Biaya per Metode Pembayaran</h2>
+          <p className="mt-1 text-xs text-muted">
+            Estimasi umum potongan platform per kanal (belum termasuk potongan Jeonme sendiri, masih dalam
+            evaluasi bisnis) -- rincian nyata di bawah dihitung dari transaksi lunas milikmu.
+          </p>
+
+          <div className="mt-3 flex flex-col gap-1.5">
+            {feeBreakdown.reference.map((r) => (
+              <div key={r.method} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs">
+                <span className="font-semibold text-ink">{r.label}</span>
+                <span className="text-muted">{r.fee_description}</span>
+              </div>
+            ))}
+          </div>
+
+          {feeBreakdown.actual.length > 0 && (
+            <>
+              <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted">Transaksi Nyata Milikmu</p>
+              <div className="mt-2 flex flex-col gap-1.5">
+                {feeBreakdown.actual.map((a) => (
+                  <div key={a.method} className="flex items-center justify-between rounded-lg bg-primary-subtle/30 px-3 py-2 text-xs">
+                    <span className="font-semibold text-ink">
+                      {a.label} <span className="font-normal text-muted">({a.transaction_count}x)</span>
+                    </span>
+                    <span className="font-semibold text-primary">Rp {a.total_fee_idr.toLocaleString("id-ID")}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       )}
 
