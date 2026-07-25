@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -145,6 +146,11 @@ func isValidVideoEmbedURL(raw string) bool {
 // validateBlockData -- No.77: aturan tiap block_type. contact_form sengaja
 // tidak butuh field apa pun (form kontak selalu sama: nama/email/pesan,
 // tidak ada kustomisasi field untuk versi awal).
+// No.99 (Sprint 14): heading/text/image ditambah untuk builder landing page
+// blok manual (TANPA "Create with AI" -- lihat catatan lingkup di migrasi
+// 000030). "button" TIDAK butuh validasi block_data khusus -- memakai ulang
+// kolom title/url yang sudah ada di links, sama seperti tautan biasa, cuma
+// dirender sebagai tombol CTA besar bukan baris daftar.
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
 	switch blockType {
 	case "video":
@@ -165,13 +171,25 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
 			}
 		}
+	case "heading", "text":
+		text, _ := data["text"].(string)
+		if strings.TrimSpace(text) == "" {
+			return "isi teks blok ini", false
+		}
+	case "image":
+		imageURL, _ := data["image_url"].(string)
+		u, err := url.Parse(imageURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return "image_url wajib diisi dengan URL gambar yang valid", false
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button"`
 	Title     string         `json:"title" binding:"required,max=100"`
+	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
 }
 
@@ -190,6 +208,10 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	if req.BlockData == nil {
 		req.BlockData = map[string]any{}
 	}
+	if req.BlockType == "button" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url wajib diisi untuk tombol CTA"})
+		return
+	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -206,33 +228,41 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 		return
 	}
 
-	var nextPosition int
-	if err := h.DB.QueryRow(ctx,
-		`SELECT COALESCE(MAX(position) + 1, 0) FROM links WHERE page_id = $1`, pageID,
-	).Scan(&nextPosition); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung posisi blok"})
-		return
-	}
-
-	blockDataJSON, err := json.Marshal(req.BlockData)
+	id, position, blockDataJSON, err := h.insertBlock(ctx, pageID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
-		return
-	}
-
-	id := uuid.NewString()
-	if _, err := h.DB.Exec(ctx, `
-		INSERT INTO links (id, page_id, title, url, position, is_active, block_type, block_data)
-		VALUES ($1, $2, $3, '', $4, true, $5, $6)
-	`, id, pageID, req.Title, nextPosition, req.BlockType, blockDataJSON); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat blok"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, linkItem{
-		ID: id, Title: req.Title, Position: nextPosition, IsActive: true,
+		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
 		BlockType: req.BlockType, BlockData: blockDataJSON,
 	})
+}
+
+// insertBlock -- logika inti INSERT blok (dipakai CreateBlock & CreateBlockForPage,
+// No.99) supaya tidak duplikasi query hitung posisi + marshal block_data.
+func (h *LinksHandler) insertBlock(ctx context.Context, pageID string, req createBlockRequest) (id string, position int, blockDataJSON []byte, err error) {
+	if err = h.DB.QueryRow(ctx,
+		`SELECT COALESCE(MAX(position) + 1, 0) FROM links WHERE page_id = $1`, pageID,
+	).Scan(&position); err != nil {
+		return "", 0, nil, errors.New("gagal menghitung posisi blok")
+	}
+
+	blockDataJSON, err = json.Marshal(req.BlockData)
+	if err != nil {
+		return "", 0, nil, errors.New("gagal menyimpan data blok")
+	}
+
+	id = uuid.NewString()
+	if _, err = h.DB.Exec(ctx, `
+		INSERT INTO links (id, page_id, title, url, position, is_active, block_type, block_data)
+		VALUES ($1, $2, $3, $4, $5, true, $6, $7)
+	`, id, pageID, req.Title, req.URL, position, req.BlockType, blockDataJSON); err != nil {
+		return "", 0, nil, errors.New("gagal membuat blok")
+	}
+
+	return id, position, blockDataJSON, nil
 }
 
 type updateLinkRequest struct {
@@ -743,6 +773,50 @@ func (h *LinksHandler) CreateForPage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
+}
+
+// CreateBlockForPage — No.99 (Sprint 14): blok builder landing page
+// (heading/text/image/button, plus video/faq/contact_form yang sudah ada
+// dari No.77) untuk halaman TAMBAHAN mana pun (bio atau landing).
+func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req createBlockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.BlockData == nil {
+		req.BlockData = map[string]any{}
+	}
+	if req.BlockType == "button" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url wajib diisi untuk tombol CTA"})
+		return
+	}
+	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if !h.ownsPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	id, position, blockDataJSON, err := h.insertBlock(ctx, pageID, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, linkItem{
+		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
+		BlockType: req.BlockType, BlockData: blockDataJSON,
+	})
 }
 
 func (h *LinksHandler) ownsPage(ctx context.Context, pageID, userID string) bool {

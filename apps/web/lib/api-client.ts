@@ -117,7 +117,7 @@ export interface PublicLink {
   url: string;
   lock_type: "" | "age" | "code" | "subscribe";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data: Record<string, unknown>;
 }
 
@@ -217,6 +217,9 @@ export interface PublicPage {
   events: PublicEvent[];
   bookings: PublicBooking[];
   loyalty_active: boolean;
+  // page_type -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
+  // "landing" (halaman tambahan No.98 dengan builder blok manual).
+  page_type: "bio" | "landing";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -373,7 +376,9 @@ export interface LinkItem {
   lock_type: "" | "age" | "code" | "subscribe";
   lock_code: string;
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq";
+  // No.99 (Sprint 14): heading/text/image/button -- builder landing page
+  // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data: Record<string, unknown>;
 }
 
@@ -382,8 +387,9 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   title: string;
+  url?: string;
   block_data: Record<string, unknown>;
 }) {
   return apiFetch<LinkItem>("/dashboard/blocks", { method: "POST", body: JSON.stringify(input) }, { auth: true });
@@ -444,13 +450,16 @@ export interface ExtraPage {
   bio: string;
   theme: string;
   is_published: boolean;
+  // page_type -- No.99 (Sprint 14): "bio" (default, No.98) atau "landing"
+  // (builder blok manual, lihat catatan lingkup di migrasi 000030).
+  page_type: "bio" | "landing";
 }
 
 export function listMyExtraPages() {
   return apiFetch<ExtraPage[]>("/dashboard/pages", { method: "GET" }, { auth: true });
 }
 
-export function createExtraPage(input: { name: string; slug: string }) {
+export function createExtraPage(input: { name: string; slug: string; page_type?: "bio" | "landing" }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/pages",
     { method: "POST", body: JSON.stringify(input) },
@@ -499,6 +508,24 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
   return apiFetch<{ message: string }>(
     `/dashboard/pages/${pageId}/links/reorder`,
     { method: "PATCH", body: JSON.stringify(items) },
+    { auth: true }
+  );
+}
+
+// No.99 (Sprint 14): blok builder landing page (heading/text/image/button)
+// untuk halaman TAMBAHAN -- TANPA "Create with AI", murni blok manual.
+export function createExtraPageBlock(
+  pageId: string,
+  input: {
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form";
+    title: string;
+    url?: string;
+    block_data: Record<string, unknown>;
+  }
+) {
+  return apiFetch<LinkItem>(
+    `/dashboard/pages/${pageId}/blocks`,
+    { method: "POST", body: JSON.stringify(input) },
     { auth: true }
   );
 }

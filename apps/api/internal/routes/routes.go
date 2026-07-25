@@ -176,6 +176,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				linksGroup.GET("/pages/:id/links", links.ListForPage)
 				linksGroup.POST("/pages/:id/links", links.CreateForPage)
 				linksGroup.PATCH("/pages/:id/links/reorder", links.ReorderForPage)
+
+				// No.99 (Sprint 14): blok builder landing page (heading/text/
+				// image/button/dst) untuk halaman TAMBAHAN.
+				linksGroup.POST("/pages/:id/blocks", links.CreateBlockForPage)
 			}
 
 			productsGroup := dashboard.Group("")

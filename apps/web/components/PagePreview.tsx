@@ -1,4 +1,4 @@
-import { CustomThemeConfig, getPageTheme } from "@/lib/page-themes";
+import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
@@ -21,7 +21,8 @@ export interface PagePreviewLink {
   lockMinAge?: number | null;
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
-  blockType?: "link" | "video" | "contact_form" | "faq";
+  // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   blockData?: Record<string, unknown>;
 }
 
@@ -91,6 +92,10 @@ export interface PagePreviewData {
   // utama) -- membuat tracking klik/kunjungan lewat slug, bukan username
   // (lihat catatan di PageAnalytics/TrackedLink/LockedLinkButton).
   pageSlug?: string;
+  // pageType -- No.99 (Sprint 14): "landing" merender blok penuh-lebar
+  // (heading/text/image/button/dst) TANPA avatar/produk/monetisasi, beda
+  // dari layout bio biasa. Default "bio" kalau tidak diisi.
+  pageType?: "bio" | "landing";
   bio: string;
   avatarUrl: string;
   theme: string;
@@ -133,7 +138,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data?: Record<string, unknown>;
 }
 
@@ -217,6 +222,13 @@ export default function PagePreview({
   rootClassName?: string;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
+
+  // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
+  // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
+  // monetisasi, beda dari layout bio biasa di bawah.
+  if (data.pageType === "landing") {
+    return <LandingPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} />;
+  }
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
@@ -602,6 +614,149 @@ export default function PagePreview({
         )}
 
         <div className="mt-10 flex flex-col items-center gap-3">
+          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
+          <a
+            href="https://jeonme.com"
+            className={`font-heading text-xs font-semibold tracking-wide transition-colors ${theme.footer}`}
+          >
+            Dibuat dengan Jeonme
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// LandingPagePreview -- No.99 (Sprint 14): halaman landing, penuh-lebar,
+// blok saja (heading/text/image/button + video/faq/contact_form yang sudah
+// ada dari No.77). TIDAK ada avatar/bio-header/produk/monetisasi -- landing
+// page difokuskan buat satu tujuan/kampanye tertentu, bukan mini-toko.
+// TANPA "Create with AI" (keputusan eksplisit pengguna): semua blok dibuat
+// manual lewat dashboard, bukan digenerate model bahasa.
+function LandingPagePreview({
+  data,
+  interactive,
+  rootClassName,
+  theme,
+}: {
+  data: PagePreviewData;
+  interactive: boolean;
+  rootClassName: string;
+  theme: PageTheme;
+}) {
+  return (
+    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
+        {data.links.map((block) => {
+          switch (block.blockType) {
+            case "heading":
+              return (
+                <h1 key={block.id} className={`text-center font-heading text-3xl font-bold ${theme.name}`}>
+                  {(block.blockData?.text as string) ?? ""}
+                </h1>
+              );
+            case "text":
+              return (
+                <p key={block.id} className={`max-w-lg text-center text-sm leading-relaxed ${theme.bio}`}>
+                  {(block.blockData?.text as string) ?? ""}
+                </p>
+              );
+            case "image":
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={block.id}
+                  src={(block.blockData?.image_url as string) ?? ""}
+                  alt={(block.blockData?.caption as string) || block.title}
+                  className="w-full rounded-2xl object-cover"
+                />
+              );
+            case "button":
+              return interactive ? (
+                <TrackedLink
+                  key={block.id}
+                  username={data.username}
+                  pageSlug={data.pageSlug}
+                  linkId={block.id}
+                  href={block.url}
+                  className={`flex w-full max-w-sm items-center justify-center rounded-2xl px-6 py-4 text-center text-base font-bold transition-all duration-300 ${theme.buyButton}`}
+                >
+                  {block.title}
+                </TrackedLink>
+              ) : (
+                <button
+                  key={block.id}
+                  type="button"
+                  disabled
+                  title="Pratinjau -- tombol ini tidak aktif"
+                  className={`w-full max-w-sm cursor-not-allowed rounded-2xl px-6 py-4 text-center text-base font-bold opacity-80 ${theme.buyButton}`}
+                >
+                  {block.title}
+                </button>
+              );
+            case "video":
+              return (
+                <VideoEmbedBlock
+                  key={block.id}
+                  title={block.title}
+                  videoUrl={(block.blockData?.video_url as string) ?? ""}
+                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  titleClassName={theme.productTitle}
+                />
+              );
+            case "faq":
+              return (
+                <FaqBlock
+                  key={block.id}
+                  title={block.title}
+                  items={(block.blockData?.items as FaqItem[]) ?? []}
+                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  titleClassName={theme.productTitle}
+                  itemTitleClassName={theme.cardTitle}
+                  itemBodyClassName={theme.bio}
+                />
+              );
+            case "contact_form":
+              return interactive ? (
+                <ContactFormBlock
+                  key={block.id}
+                  linkId={block.id}
+                  title={block.title}
+                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  titleClassName={theme.productTitle}
+                  inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                  buttonClassName={theme.buyButton}
+                />
+              ) : (
+                <div key={block.id} className={`w-full rounded-2xl p-3.5 text-center ${theme.productCard}`}>
+                  <p className={`text-sm font-semibold ${theme.productTitle}`}>{block.title}</p>
+                </div>
+              );
+            default:
+              return interactive ? (
+                <TrackedLink
+                  key={block.id}
+                  username={data.username}
+                  pageSlug={data.pageSlug}
+                  linkId={block.id}
+                  href={block.url}
+                  className={`flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                >
+                  <span className="truncate">{block.title}</span>
+                  <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                </TrackedLink>
+              ) : (
+                <div
+                  key={block.id}
+                  className={`flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                >
+                  <span className="truncate">{block.title}</span>
+                </div>
+              );
+          }
+        })}
+
+        <div className="mt-6 flex flex-col items-center gap-3">
           {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
           <a
             href="https://jeonme.com"

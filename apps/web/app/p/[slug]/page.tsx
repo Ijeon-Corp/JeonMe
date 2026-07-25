@@ -56,6 +56,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
           id: page.id,
           username: page.username,
           pageSlug: slug,
+          pageType: page.page_type,
           bio: page.bio,
           avatarUrl: page.avatar_url,
           theme: page.theme,

@@ -62,6 +62,9 @@ type publicPageResponse struct {
 	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
 	// lewat GET /pages/:username/loyalty).
 	LoyaltyActive bool `json:"loyalty_active"`
+	// PageType -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
+	// "landing" (builder blok manual, halaman tambahan No.98 saja).
+	PageType string `json:"page_type"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -193,6 +196,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		return
 	}
 	resp.ID = pageID
+	resp.PageType = "bio"
 
 	h.finishPublicPageResponse(c, ctx, "page:"+username, userID, pageID, emailVerified, &resp)
 }
@@ -219,13 +223,13 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	err := h.DB.QueryRow(ctx, `
 		SELECT p.user_id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
-			u.email_verified_at IS NOT NULL
+			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
 	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
-		&emailVerified)
+		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -676,6 +680,9 @@ type extraPageItem struct {
 	Bio         string `json:"bio"`
 	Theme       string `json:"theme"`
 	IsPublished bool   `json:"is_published"`
+	// PageType -- No.99 (Sprint 14): "bio" (default, No.98) atau "landing"
+	// (builder blok manual, lihat catatan lingkup di migrasi 000030).
+	PageType string `json:"page_type"`
 }
 
 // ListMyPages — daftar halaman TAMBAHAN milik kreator yang login (TIDAK
@@ -688,7 +695,7 @@ func (h *PageHandler) ListMyPages(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, name, COALESCE(slug, ''), bio, theme, is_published
+		SELECT id, name, COALESCE(slug, ''), bio, theme, is_published, page_type
 		FROM pages WHERE user_id = $1 AND is_primary = false
 		ORDER BY name ASC
 	`, userID)
@@ -701,7 +708,7 @@ func (h *PageHandler) ListMyPages(c *gin.Context) {
 	items := []extraPageItem{}
 	for rows.Next() {
 		var it extraPageItem
-		if err := rows.Scan(&it.ID, &it.Name, &it.Slug, &it.Bio, &it.Theme, &it.IsPublished); err == nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.Slug, &it.Bio, &it.Theme, &it.IsPublished, &it.PageType); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -712,6 +719,8 @@ func (h *PageHandler) ListMyPages(c *gin.Context) {
 type createExtraPageRequest struct {
 	Name string `json:"name" binding:"required,max=100"`
 	Slug string `json:"slug" binding:"required,max=50"`
+	// PageType -- No.99: opsional, default "bio" kalau kosong.
+	PageType string `json:"page_type" binding:"omitempty,oneof=bio landing"`
 }
 
 // CreatePage — membuat halaman bio TAMBAHAN baru (is_primary=false), belum
@@ -727,6 +736,10 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "slug hanya boleh huruf kecil, angka, dan tanda hubung (3-50 karakter)"})
 		return
 	}
+	pageType := req.PageType
+	if pageType == "" {
+		pageType = "bio"
+	}
 
 	userID := c.GetString("userID")
 
@@ -735,8 +748,8 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 
 	var pageID string
 	err := h.DB.QueryRow(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug) VALUES ($1, false, $2, $3) RETURNING id
-	`, userID, strings.TrimSpace(req.Name), slug).Scan(&pageID)
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type) VALUES ($1, false, $2, $3, $4) RETURNING id
+	`, userID, strings.TrimSpace(req.Name), slug, pageType).Scan(&pageID)
 	if err != nil {
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})
