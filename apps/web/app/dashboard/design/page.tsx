@@ -18,14 +18,23 @@ import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal } from "@/com
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 
-// "Desain 2.0" lanjutan: Linktree membuka override tiap elemen (Wallpaper/
-// Buttons/Text) sebagai panel TERPISAH yang diklik satu-satu ("tiap satu
-// buka panel sendiri" -- riset kompetitor No.80/97), bukan satu panel
-// gabungan. Elemen yang KITA dukung dipetakan ke 3 bagian: Latar
-// (Wallpaper), Tombol (Buttons), Font (Text) -- Header/Colors/Stickers/
-// Footer Linktree TIDAK punya padanan kustomisasi di Jeonme saat ini,
-// jadi tidak dibuatkan bagian kosong sekadar untuk meniru strukturnya.
-type CustomSection = "latar" | "tombol" | "font";
+// Struktur halaman ini diikutkan PERSIS seperti halaman Design Linktree
+// (dikonfirmasi lewat tangkapan layar pengguna): satu baris "Theme" berdiri
+// sendiri di atas, lalu label "Customize", lalu baris-baris Header/Wallpaper/
+// Buttons/Text -- SEMUA baris berbentuk accordion sebaris (ikon+label+nilai
+// saat ini+panah), diklik satu-satu untuk membuka detailnya, bukan satu
+// panel gabungan. BEDA PENTING dari versi sebelumnya: di Linktree, baris
+// Wallpaper/Buttons/Text SELALU tampil (bukan cuma muncul kalau pilih tema
+// "Custom") -- menyentuh salah satunya otomatis "mempromosikan" tema aktif
+// jadi Custom di belakang layar (lihat handleCustomize), meniru perilaku
+// "override apa pun di atas tema manapun" ala Linktree TANPA perlu kolom
+// database baru sama sekali (custom_* sudah ada sejak No.80/Desain 2.0).
+//
+// Colors & Stickers & Footer milik Linktree TIDAK dibuatkan baris -- Jeonme
+// belum punya kustomisasi warna terpisah dari tombol, elemen dekoratif, atau
+// kustomisasi footer, dan membuat baris kosong sekadar meniru bentuk tanpa
+// fungsi nyata bukan tujuan permintaan ini.
+type CustomSection = "theme" | "header" | "latar" | "tombol" | "font";
 
 type PageSettingsPatch = Partial<
   Pick<
@@ -56,6 +65,46 @@ function buildGradient(start: string, end: string): string {
 function parseGradient(value: string): { start: string; end: string } {
   const hexCodes = value.match(/#[0-9a-fA-F]{6}/g);
   return { start: hexCodes?.[0] ?? "#667EEA", end: hexCodes?.[1] ?? "#764BA2" };
+}
+
+// AccordionRow -- satu pola baris dipakai untuk KELIMA baris (Theme/Header/
+// Latar/Tombol/Font) supaya visualnya konsisten persis seperti referensi:
+// ikon kotak membulat di kiri, label+nilai saat ini, panah di kanan yang
+// berputar 90° saat terbuka, detail muncul di bawah dengan latar sedikit
+// berbeda.
+function AccordionRow({
+  icon,
+  label,
+  value,
+  expanded,
+  onToggle,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value?: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-white">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+        <div className="flex items-center gap-3">
+          {icon}
+          <div>
+            <p className="text-sm font-semibold text-ink">{label}</p>
+            {value && <p className="text-xs text-muted">{value}</p>}
+          </div>
+        </div>
+        <IconChevronRight className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expanded ? "rotate-90" : ""}`} />
+      </button>
+
+      {expanded && children && (
+        <div className="flex flex-col gap-3 border-t border-border bg-primary-subtle/20 p-4">{children}</div>
+      )}
+    </div>
+  );
 }
 
 export default function DashboardDesignPage() {
@@ -89,12 +138,6 @@ export default function DashboardDesignPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleGradientChange(start: string, end: string) {
-    setGradientStart(start);
-    setGradientEnd(end);
-    handlePageSettingChange({ custom_background_type: "gradient", custom_background_value: buildGradient(start, end) });
-  }
-
   async function handlePageSettingChange(patch: PageSettingsPatch) {
     if (!page) return;
     const previous = page;
@@ -105,6 +148,20 @@ export default function DashboardDesignPage() {
       setPage(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan halaman.");
     }
+  }
+
+  // handleCustomize -- dipakai KHUSUS oleh baris Wallpaper/Buttons/Text.
+  // Menyentuh salah satu kontrol di baris ini otomatis mempromosikan tema
+  // aktif jadi "custom" (meniru "override di atas tema manapun" ala
+  // Linktree), APAPUN preset yang sedang aktif sebelumnya.
+  function handleCustomize(patch: Omit<PageSettingsPatch, "theme">) {
+    return handlePageSettingChange({ ...patch, theme: "custom" });
+  }
+
+  function handleGradientChange(start: string, end: string) {
+    setGradientStart(start);
+    setGradientEnd(end);
+    handleCustomize({ custom_background_type: "gradient", custom_background_value: buildGradient(start, end) });
   }
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -123,7 +180,17 @@ export default function DashboardDesignPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
+
+  const presetMeta = PAGE_THEMES[page.theme as keyof typeof PAGE_THEMES] as (typeof PAGE_THEMES)[keyof typeof PAGE_THEMES] | undefined;
+  const themeSwatch = page.theme === "custom" ? page.custom_button_color : (presetMeta?.swatch ?? "#1B4D3E");
+  const themeLabel = page.theme === "custom" ? "Custom" : (presetMeta?.label ?? "Default");
+  const backgroundSwatch =
+    page.custom_background_type === "gradient"
+      ? buildGradient(gradientStart, gradientEnd)
+      : page.custom_background_type === "image"
+        ? `url(${page.custom_background_value}) center/cover`
+        : page.custom_background_value;
 
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
@@ -133,74 +200,127 @@ export default function DashboardDesignPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        {page && (
-          <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
-              <a
-                href={`https://jeonme.com/${page.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-              >
-                <IconExternal className="h-3.5 w-3.5" />
-                jeonme.com/{page.username}
-              </a>
-            </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-              <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
-                {page.is_published ? "Sudah terbit" : "Belum terbit"}
+        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
+            <a
+              href={`https://jeonme.com/${page.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <IconExternal className="h-3.5 w-3.5" />
+              jeonme.com/{page.username}
+            </a>
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
+            <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
+              {page.is_published ? "Sudah terbit" : "Belum terbit"}
+            </span>
+          </div>
+
+          {/* No.88 (Sprint 10): progres badge terverifikasi -- sinyal
+              kepercayaan gratis, otomatis dari data yang sudah ada, tanpa
+              proses review manual. */}
+          <div
+            className={`mt-4 rounded-xl border p-3.5 ${
+              page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-border bg-gray-50"
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-muted"}`} />
+              <span className="text-xs font-bold text-ink">
+                {page.verification.is_verified ? "Badge Terverifikasi Aktif" : "Badge Terverifikasi"}
               </span>
             </div>
+            <ul className="mt-2 flex flex-col gap-1 text-[11px]">
+              <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-muted"}`}>
+                {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                Email terverifikasi
+              </li>
+              <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-muted"}`}>
+                {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                Profil lengkap (foto + bio terisi)
+              </li>
+              <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-muted"}`}>
+                {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
+                Minimal 1 transaksi sukses
+              </li>
+            </ul>
+          </div>
 
-            {/* No.88 (Sprint 10): progres badge terverifikasi -- sinyal
-                kepercayaan gratis, otomatis dari data yang sudah ada, tanpa
-                proses review manual. */}
-            <div
-              className={`mt-4 rounded-xl border p-3.5 ${
-                page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-border bg-gray-50"
-              }`}
+          <div className="mt-5 flex flex-col gap-4">
+            {/* Theme -- berdiri sendiri di atas, persis posisi di Linktree. */}
+            <AccordionRow
+              icon={<span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: themeSwatch }} aria-hidden />}
+              label="Tema"
+              value={themeLabel}
+              expanded={expandedSection === "theme"}
+              onToggle={() => toggleSection("theme")}
             >
-              <div className="flex items-center gap-1.5">
-                <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-muted"}`} />
-                <span className="text-xs font-bold text-ink">
-                  {page.verification.is_verified ? "Badge Terverifikasi Aktif" : "Badge Terverifikasi"}
-                </span>
+              <p className="text-xs text-muted">Pilih salah satu template siap pakai, atau lanjut sesuaikan sendiri di bawah (otomatis jadi Custom).</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {THEME_PRESETS.map((theme) => {
+                  const meta = PAGE_THEMES[theme];
+                  const active = page.theme === theme;
+                  return (
+                    <button
+                      key={theme}
+                      type="button"
+                      onClick={() => handlePageSettingChange({ theme })}
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        active ? "border-primary bg-white shadow-card" : "border-border bg-white hover:border-primary/50"
+                      }`}
+                    >
+                      <span className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: meta.swatch }} aria-hidden />
+                      <span className={`text-xs font-semibold ${active ? "text-primary" : "text-ink"}`}>{meta.label}</span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => handlePageSettingChange({ theme: "custom" })}
+                  className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                    page.theme === "custom" ? "border-primary bg-white shadow-card" : "border-border bg-white hover:border-primary/50"
+                  }`}
+                >
+                  <span className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />
+                  <span className={`text-xs font-semibold ${page.theme === "custom" ? "text-primary" : "text-ink"}`}>Custom</span>
+                </button>
               </div>
-              <ul className="mt-2 flex flex-col gap-1 text-[11px]">
-                <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-muted"}`}>
-                  {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                  Email terverifikasi
-                </li>
-                <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-muted"}`}>
-                  {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                  Profil lengkap (foto + bio terisi)
-                </li>
-                <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-muted"}`}>
-                  {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                  Minimal 1 transaksi sukses
-                </li>
-              </ul>
-            </div>
+            </AccordionRow>
 
-            <div className="mt-5 flex flex-col gap-5">
+            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">Sesuaikan</p>
+
+            {/* Header -- foto profil & bio. */}
+            <AccordionRow
+              icon={
+                page.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={page.avatar_url} alt={page.username} className="h-8 w-8 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
+                ) : (
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle font-heading text-sm font-bold text-primary">
+                    {page.username.slice(0, 1).toUpperCase()}
+                  </span>
+                )
+              }
+              label="Header"
+              expanded={expandedSection === "header"}
+              onToggle={() => toggleSection("header")}
+            >
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Foto Profil</label>
-                <div className="flex items-center gap-4">
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Foto Profil</label>
+                <div className="flex items-center gap-3">
                   {page.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={page.avatar_url}
-                      alt={page.username}
-                      className="h-16 w-16 rounded-full object-cover ring-2 ring-primary-subtle"
-                    />
+                    <img src={page.avatar_url} alt={page.username} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-subtle font-heading text-lg font-bold text-primary">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle font-heading text-base font-bold text-primary">
                       {page.username.slice(0, 1).toUpperCase()}
                     </div>
                   )}
-                  <label className="cursor-pointer rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
+                  <label className="cursor-pointer rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
                     {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
                     <input
                       type="file"
@@ -212,333 +332,197 @@ export default function DashboardDesignPage() {
                   </label>
                 </div>
               </div>
-
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Bio (maks 160 karakter)</label>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Bio (maks 160 karakter)</label>
                 <textarea
                   maxLength={160}
                   value={page.bio}
                   onChange={(e) => setPage({ ...page, bio: e.target.value })}
                   onBlur={(e) => handlePageSettingChange({ bio: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </div>
+            </AccordionRow>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Galeri Template</label>
-                <p className="mb-2 text-xs text-muted">Pilih salah satu template siap pakai, atau buat kombinasi sendiri lewat Custom.</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {THEME_PRESETS.map((theme) => {
-                    const meta = PAGE_THEMES[theme];
-                    const active = page.theme === theme;
-                    return (
-                      <button
-                        key={theme}
-                        type="button"
-                        onClick={() => handlePageSettingChange({ theme })}
-                        className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                          active
-                            ? "border-primary bg-primary-subtle shadow-card"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <span
-                          className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5"
-                          style={{ backgroundColor: meta.swatch }}
-                          aria-hidden
-                        />
-                        <span className={`text-xs font-semibold ${active ? "text-primary" : "text-ink"}`}>{meta.label}</span>
-                      </button>
-                    );
-                  })}
+            {/* Wallpaper -- SELALU tampil (tidak digating theme==="custom"),
+                menyesuaikan otomatis promosi ke Custom lewat handleCustomize. */}
+            <AccordionRow
+              icon={<span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ background: backgroundSwatch }} aria-hidden />}
+              label="Latar"
+              value={
+                page.custom_background_type === "solid" ? "Warna Solid" : page.custom_background_type === "gradient" ? "Gradien" : "Gambar"
+              }
+              expanded={expandedSection === "latar"}
+              onToggle={() => toggleSection("latar")}
+            >
+              <div className="flex gap-2">
+                {(["solid", "gradient", "image"] as const).map((type) => (
                   <button
+                    key={type}
                     type="button"
-                    onClick={() => handlePageSettingChange({ theme: "custom" })}
-                    className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                      page.theme === "custom" ? "border-primary bg-primary-subtle shadow-card" : "border-border hover:border-primary/50"
+                    onClick={() =>
+                      type === "gradient" ? handleGradientChange(gradientStart, gradientEnd) : handleCustomize({ custom_background_type: type })
+                    }
+                    className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                      page.custom_background_type === type ? "border-primary bg-white text-primary" : "border-border text-muted"
                     }`}
                   >
-                    <span
-                      className="h-10 w-full flex-shrink-0 rounded-lg ring-1 ring-black/5"
-                      style={{ backgroundColor: page.custom_button_color }}
-                      aria-hidden
-                    />
-                    <span className={`text-xs font-semibold ${page.theme === "custom" ? "text-primary" : "text-ink"}`}>Custom</span>
+                    {type === "solid" ? "Warna Solid" : type === "gradient" ? "Gradien" : "Gambar"}
                   </button>
-                </div>
+                ))}
               </div>
 
-              {page.theme === "custom" && (
+              {page.custom_background_type === "solid" && (
+                <input
+                  type="color"
+                  value={page.custom_background_value}
+                  onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_background_value: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border"
+                />
+              )}
+
+              {page.custom_background_type === "gradient" && (
                 <div>
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Kustomisasi Lanjutan</p>
-                  <div className="flex flex-col gap-2">
-                    {/* Latar (Wallpaper) */}
-                    <div className="overflow-hidden rounded-xl border border-border">
-                      <button
-                        type="button"
-                        onClick={() => toggleSection("latar")}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="h-7 w-7 flex-shrink-0 rounded-md ring-1 ring-black/5"
-                            style={{
-                              background:
-                                page.custom_background_type === "gradient"
-                                  ? buildGradient(gradientStart, gradientEnd)
-                                  : page.custom_background_type === "image"
-                                    ? `url(${page.custom_background_value}) center/cover`
-                                    : page.custom_background_value,
-                            }}
-                            aria-hidden
-                          />
-                          <div>
-                            <p className="text-sm font-semibold text-ink">Latar</p>
-                            <p className="text-xs text-muted">
-                              {page.custom_background_type === "solid"
-                                ? "Warna Solid"
-                                : page.custom_background_type === "gradient"
-                                  ? "Gradien"
-                                  : "Gambar"}
-                            </p>
-                          </div>
-                        </div>
-                        <IconChevronRight
-                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "latar" ? "rotate-90" : ""}`}
-                        />
-                      </button>
-
-                      {expandedSection === "latar" && (
-                        <div className="flex flex-col gap-3 border-t border-border bg-primary-subtle/20 p-4">
-                          <div className="flex gap-2">
-                            {(["solid", "gradient", "image"] as const).map((type) => (
-                              <button
-                                key={type}
-                                type="button"
-                                onClick={() =>
-                                  type === "gradient"
-                                    ? handleGradientChange(gradientStart, gradientEnd)
-                                    : handlePageSettingChange({ custom_background_type: type })
-                                }
-                                className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                                  page.custom_background_type === type
-                                    ? "border-primary bg-white text-primary"
-                                    : "border-border text-muted"
-                                }`}
-                              >
-                                {type === "solid" ? "Warna Solid" : type === "gradient" ? "Gradien" : "Gambar"}
-                              </button>
-                            ))}
-                          </div>
-
-                          {page.custom_background_type === "solid" && (
-                            <input
-                              type="color"
-                              value={page.custom_background_value}
-                              onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
-                              onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
-                              className="h-9 w-full rounded-lg border border-border"
-                            />
-                          )}
-
-                          {page.custom_background_type === "gradient" && (
-                            <div>
-                              <div className="flex gap-2">
-                                <input
-                                  type="color"
-                                  value={gradientStart}
-                                  onChange={(e) => handleGradientChange(e.target.value, gradientEnd)}
-                                  className="h-9 w-full rounded-lg border border-border"
-                                />
-                                <input
-                                  type="color"
-                                  value={gradientEnd}
-                                  onChange={(e) => handleGradientChange(gradientStart, e.target.value)}
-                                  className="h-9 w-full rounded-lg border border-border"
-                                />
-                              </div>
-                              <div
-                                className="mt-2 h-9 w-full rounded-lg ring-1 ring-black/5"
-                                style={{ background: buildGradient(gradientStart, gradientEnd) }}
-                                aria-hidden
-                              />
-                            </div>
-                          )}
-
-                          {page.custom_background_type === "image" && (
-                            <input
-                              type="url"
-                              placeholder="https://..."
-                              value={page.custom_background_value}
-                              onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
-                              onBlur={(e) => handlePageSettingChange({ custom_background_value: e.target.value })}
-                              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tombol (Buttons) */}
-                    <div className="overflow-hidden rounded-xl border border-border">
-                      <button
-                        type="button"
-                        onClick={() => toggleSection("tombol")}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="h-7 w-7 flex-shrink-0 rounded-md ring-1 ring-black/5"
-                            style={{ backgroundColor: page.custom_button_color }}
-                            aria-hidden
-                          />
-                          <div>
-                            <p className="text-sm font-semibold text-ink">Tombol</p>
-                            <p className="text-xs text-muted">
-                              {CUSTOM_BUTTON_STYLE_OPTIONS.find((o) => o.value === page.custom_button_style)?.label}
-                            </p>
-                          </div>
-                        </div>
-                        <IconChevronRight
-                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "tombol" ? "rotate-90" : ""}`}
-                        />
-                      </button>
-
-                      {expandedSection === "tombol" && (
-                        <div className="flex flex-col gap-3 border-t border-border bg-primary-subtle/20 p-4">
-                          <div>
-                            <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
-                            <input
-                              type="color"
-                              value={page.custom_button_color}
-                              onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
-                              onBlur={(e) => handlePageSettingChange({ custom_button_color: e.target.value })}
-                              className="h-9 w-full rounded-lg border border-border"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
-                            <div className="flex gap-2">
-                              {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => handlePageSettingChange({ custom_button_style: opt.value })}
-                                  className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                                    page.custom_button_style === opt.value
-                                      ? "border-primary bg-white text-primary"
-                                      : "border-border text-muted"
-                                  }`}
-                                >
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Font (Text) */}
-                    <div className="overflow-hidden rounded-xl border border-border">
-                      <button
-                        type="button"
-                        onClick={() => toggleSection("font")}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-ink/5 font-heading text-sm font-bold text-ink" aria-hidden>
-                            Aa
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-ink">Font</p>
-                            <p className="text-xs text-muted">{CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label}</p>
-                          </div>
-                        </div>
-                        <IconChevronRight
-                          className={`h-4 w-4 flex-shrink-0 text-muted transition-transform ${expandedSection === "font" ? "rotate-90" : ""}`}
-                        />
-                      </button>
-
-                      {expandedSection === "font" && (
-                        <div className="border-t border-border bg-primary-subtle/20 p-4">
-                          <select
-                            value={page.custom_font}
-                            onChange={(e) => handlePageSettingChange({ custom_font: e.target.value as MyPage["custom_font"] })}
-                            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                          >
-                            {CUSTOM_FONT_OPTIONS.map((f) => (
-                              <option key={f.value} value={f.value}>
-                                {f.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={gradientStart}
+                      onChange={(e) => handleGradientChange(e.target.value, gradientEnd)}
+                      className="h-9 w-full rounded-lg border border-border"
+                    />
+                    <input
+                      type="color"
+                      value={gradientEnd}
+                      onChange={(e) => handleGradientChange(gradientStart, e.target.value)}
+                      className="h-9 w-full rounded-lg border border-border"
+                    />
                   </div>
+                  <div className="mt-2 h-9 w-full rounded-lg ring-1 ring-black/5" style={{ background: buildGradient(gradientStart, gradientEnd) }} aria-hidden />
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
-                <Toggle
-                  checked={page.is_published}
-                  onChange={() => handlePageSettingChange({ is_published: !page.is_published })}
-                  label="Terbitkan halaman publik"
-                />
-                <span className="text-sm font-semibold text-ink">Terbitkan halaman publik</span>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {page && (
-          <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
-            <h2 className="font-heading text-lg font-bold text-ink">SEO</h2>
-            <p className="mt-1 text-xs text-muted">
-              Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan
-              halaman dari mesin pencari.
-            </p>
-
-            <div className="mt-4 flex flex-col gap-5">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Judul SEO (maks 70 karakter)</label>
+              {page.custom_background_type === "image" && (
                 <input
-                  type="text"
-                  maxLength={70}
-                  value={page.seo_title}
-                  placeholder={`@${page.username} — Jeonme`}
-                  onChange={(e) => setPage({ ...page, seo_title: e.target.value })}
-                  onBlur={(e) => handlePageSettingChange({ seo_title: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  type="url"
+                  placeholder="https://..."
+                  value={page.custom_background_value}
+                  onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_background_value: e.target.value })}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
-              </div>
+              )}
+            </AccordionRow>
 
+            {/* Buttons -- SELALU tampil. */}
+            <AccordionRow
+              icon={<span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />}
+              label="Tombol"
+              value={CUSTOM_BUTTON_STYLE_OPTIONS.find((o) => o.value === page.custom_button_style)?.label}
+              expanded={expandedSection === "tombol"}
+              onToggle={() => toggleSection("tombol")}
+            >
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-ink">Deskripsi SEO (maks 160 karakter)</label>
-                <textarea
-                  maxLength={160}
-                  value={page.seo_description}
-                  placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`}
-                  onChange={(e) => setPage({ ...page, seo_description: e.target.value })}
-                  onBlur={(e) => handlePageSettingChange({ seo_description: e.target.value })}
-                  rows={2}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
+                <input
+                  type="color"
+                  value={page.custom_button_color}
+                  onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_button_color: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border"
                 />
               </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
+                <div className="flex gap-2">
+                  {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleCustomize({ custom_button_style: opt.value })}
+                      className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                        page.custom_button_style === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </AccordionRow>
 
-              <div className="flex items-center gap-2">
-                <Toggle
-                  checked={page.noindex}
-                  onChange={() => handlePageSettingChange({ noindex: !page.noindex })}
-                  label="Sembunyikan dari mesin pencari"
-                />
-                <span className="text-sm font-semibold text-ink">Sembunyikan dari mesin pencari (noindex)</span>
-              </div>
+            {/* Text -- SELALU tampil. */}
+            <AccordionRow
+              icon={
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 font-heading text-sm font-bold text-ink" aria-hidden>
+                  Aa
+                </span>
+              }
+              label="Font"
+              value={CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label}
+              expanded={expandedSection === "font"}
+              onToggle={() => toggleSection("font")}
+            >
+              <select
+                value={page.custom_font}
+                onChange={(e) => handleCustomize({ custom_font: e.target.value as MyPage["custom_font"] })}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              >
+                {CUSTOM_FONT_OPTIONS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </AccordionRow>
+
+            <div className="flex items-center gap-2">
+              <Toggle checked={page.is_published} onChange={() => handlePageSettingChange({ is_published: !page.is_published })} label="Terbitkan halaman publik" />
+              <span className="text-sm font-semibold text-ink">Terbitkan halaman publik</span>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
+
+        <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+          <h2 className="font-heading text-lg font-bold text-ink">SEO</h2>
+          <p className="mt-1 text-xs text-muted">
+            Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan halaman dari mesin pencari.
+          </p>
+
+          <div className="mt-4 flex flex-col gap-5">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-ink">Judul SEO (maks 70 karakter)</label>
+              <input
+                type="text"
+                maxLength={70}
+                value={page.seo_title}
+                placeholder={`@${page.username} — Jeonme`}
+                onChange={(e) => setPage({ ...page, seo_title: e.target.value })}
+                onBlur={(e) => handlePageSettingChange({ seo_title: e.target.value })}
+                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-ink">Deskripsi SEO (maks 160 karakter)</label>
+              <textarea
+                maxLength={160}
+                value={page.seo_description}
+                placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`}
+                onChange={(e) => setPage({ ...page, seo_description: e.target.value })}
+                onBlur={(e) => handlePageSettingChange({ seo_description: e.target.value })}
+                rows={2}
+                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Toggle checked={page.noindex} onChange={() => handlePageSettingChange({ noindex: !page.noindex })} label="Sembunyikan dari mesin pencari" />
+              <span className="text-sm font-semibold text-ink">Sembunyikan dari mesin pencari (noindex)</span>
+            </div>
+          </div>
+        </section>
       </div>
 
       <LivePreviewPanel page={page} links={links} products={products} />
