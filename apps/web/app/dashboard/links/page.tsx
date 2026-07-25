@@ -69,21 +69,105 @@ type PlatformQuickAdd = {
   Icon: IconComponent;
   kind: "link" | "video";
   urlTemplate: string;
+  badgeClass: string;
 };
 
 const DISARANKAN_KEYS = ["instagram", "tiktok", "youtube", "whatsapp", "spotify"];
 
+// badgeClass -- samakan persis dengan warna brand di lib/link-icons.ts
+// (dipakai di daftar tautan & pratinjau publik) supaya modal ini pun
+// menampilkan warna platform yang sama, bukan abu-abu netral generik.
 const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
-  { key: "instagram", label: "Instagram", description: "Tautkan profil Instagram kamu", Icon: IconInstagram, kind: "link", urlTemplate: "https://instagram.com/" },
-  { key: "tiktok", label: "TikTok", description: "Tampilkan video TikTok sebagai embed", Icon: IconTiktok, kind: "video", urlTemplate: "" },
-  { key: "youtube", label: "YouTube", description: "Tampilkan video YouTube sebagai embed", Icon: IconYoutube, kind: "video", urlTemplate: "" },
-  { key: "whatsapp", label: "WhatsApp", description: "Tautkan nomor WhatsApp kamu", Icon: IconWhatsapp, kind: "link", urlTemplate: "https://wa.me/62" },
-  { key: "spotify", label: "Spotify", description: "Tautkan profil atau album Spotify", Icon: IconSpotify, kind: "link", urlTemplate: "https://open.spotify.com/" },
-  { key: "telegram", label: "Telegram", description: "Tautkan akun Telegram kamu", Icon: IconTelegram, kind: "link", urlTemplate: "https://t.me/" },
-  { key: "x", label: "X (Twitter)", description: "Tautkan profil X kamu", Icon: IconX, kind: "link", urlTemplate: "https://x.com/" },
-  { key: "facebook", label: "Facebook", description: "Tautkan halaman atau profil Facebook", Icon: IconFacebook, kind: "link", urlTemplate: "https://facebook.com/" },
-  { key: "linkedin", label: "LinkedIn", description: "Tautkan profil LinkedIn", Icon: IconLinkedin, kind: "link", urlTemplate: "https://linkedin.com/in/" },
-  { key: "email", label: "Email", description: "Tautkan alamat email kamu", Icon: IconMail, kind: "link", urlTemplate: "mailto:" },
+  {
+    key: "instagram",
+    label: "Instagram",
+    description: "Tautkan profil Instagram kamu",
+    Icon: IconInstagram,
+    kind: "link",
+    urlTemplate: "https://instagram.com/",
+    badgeClass: "bg-gradient-to-br from-[#FEDA75] via-[#D62976] to-[#4F5BD5] text-white",
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    description: "Tampilkan video TikTok sebagai embed",
+    Icon: IconTiktok,
+    kind: "video",
+    urlTemplate: "",
+    badgeClass: "bg-black text-white",
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    description: "Tampilkan video YouTube sebagai embed",
+    Icon: IconYoutube,
+    kind: "video",
+    urlTemplate: "",
+    badgeClass: "bg-[#FF0000] text-white",
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    description: "Tautkan nomor WhatsApp kamu",
+    Icon: IconWhatsapp,
+    kind: "link",
+    urlTemplate: "https://wa.me/62",
+    badgeClass: "bg-[#25D366] text-white",
+  },
+  {
+    key: "spotify",
+    label: "Spotify",
+    description: "Tautkan profil atau album Spotify",
+    Icon: IconSpotify,
+    kind: "link",
+    urlTemplate: "https://open.spotify.com/",
+    badgeClass: "bg-[#1DB954] text-white",
+  },
+  {
+    key: "telegram",
+    label: "Telegram",
+    description: "Tautkan akun Telegram kamu",
+    Icon: IconTelegram,
+    kind: "link",
+    urlTemplate: "https://t.me/",
+    badgeClass: "bg-[#26A5E4] text-white",
+  },
+  {
+    key: "x",
+    label: "X (Twitter)",
+    description: "Tautkan profil X kamu",
+    Icon: IconX,
+    kind: "link",
+    urlTemplate: "https://x.com/",
+    badgeClass: "bg-black text-white",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    description: "Tautkan halaman atau profil Facebook",
+    Icon: IconFacebook,
+    kind: "link",
+    urlTemplate: "https://facebook.com/",
+    badgeClass: "bg-[#1877F2] text-white",
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    description: "Tautkan profil LinkedIn",
+    Icon: IconLinkedin,
+    kind: "link",
+    urlTemplate: "https://linkedin.com/in/",
+    badgeClass: "bg-[#0A66C2] text-white",
+  },
+  {
+    key: "email",
+    label: "Email",
+    description: "Tautkan alamat email kamu",
+    Icon: IconMail,
+    kind: "link",
+    urlTemplate: "mailto:",
+    badgeClass: "bg-slate-600 text-white",
+  },
 ];
 
 type ContentTile = {
@@ -603,12 +687,9 @@ export default function DashboardLinksPage() {
                 <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
                 {link.block_type === "link" &&
                   (() => {
-                    const { Icon, label } = detectLinkIcon(link.url);
+                    const { Icon, label, badgeClass } = detectLinkIcon(link.url);
                     return (
-                      <span
-                        title={label}
-                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary"
-                      >
+                      <span title={label} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
                         <Icon className="h-3.5 w-3.5" />
                       </span>
                     );
@@ -1077,7 +1158,7 @@ function AddModal({
                 onClick={() => onSelectPlatform(platform)}
                 className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-gray-50"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-ink">
+                <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${platform.badgeClass}`}>
                   <platform.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

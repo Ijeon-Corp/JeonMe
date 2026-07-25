@@ -364,7 +364,7 @@ export default function PagePreview({
                 )
               ) : interactive ? (
                 (() => {
-                  const { Icon: LinkPlatformIcon } = detectLinkIcon(link.url);
+                  const { Icon: LinkPlatformIcon, badgeClass } = detectLinkIcon(link.url);
                   return (
                     <TrackedLink
                       key={link.id}
@@ -374,14 +374,16 @@ export default function PagePreview({
                       href={link.url}
                       className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <LinkPlatformIcon className={`absolute left-4 h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      </span>
                       <span className="w-full truncate text-center">{link.title}</span>
                     </TrackedLink>
                   );
                 })()
               ) : (
                 (() => {
-                  const { Icon: LinkPlatformIcon } = detectLinkIcon(link.url);
+                  const { Icon: LinkPlatformIcon, badgeClass } = detectLinkIcon(link.url);
                   return (
                     <a
                       key={link.id}
@@ -390,7 +392,9 @@ export default function PagePreview({
                       rel="noopener noreferrer"
                       className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <LinkPlatformIcon className={`absolute left-4 h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+                      <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      </span>
                       <span className="w-full truncate text-center">{link.title}</span>
                     </a>
                   );
