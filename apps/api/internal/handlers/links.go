@@ -64,7 +64,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
-		WHERE p.user_id = $1
+		WHERE p.user_id = $1 AND p.is_primary = true
 		ORDER BY l.position ASC
 	`, userID)
 	if err != nil {
@@ -104,7 +104,7 @@ func (h *LinksHandler) Create(c *gin.Context) {
 	defer cancel()
 
 	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "halaman belum siap"})
 		return
 	}
@@ -201,7 +201,7 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	defer cancel()
 
 	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "halaman belum siap"})
 		return
 	}
@@ -578,7 +578,7 @@ func (h *LinksHandler) Reorder(c *gin.Context) {
 	for _, item := range req {
 		res, err := tx.Exec(ctx, `
 			UPDATE links SET position = $1
-			WHERE id = $2 AND page_id = (SELECT id FROM pages WHERE user_id = $3)
+			WHERE id = $2 AND page_id = (SELECT id FROM pages WHERE user_id = $3 AND is_primary = true)
 		`, item.Position, item.ID, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan urutan"})
@@ -598,6 +598,53 @@ func (h *LinksHandler) Reorder(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "urutan tautan diperbarui"})
 }
 
+// ReorderForPage — versi Reorder untuk halaman TAMBAHAN (No.98), page_id
+// eksplisit dari URL alih-alih diasumsikan halaman utama.
+func (h *LinksHandler) ReorderForPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req []reorderItem
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if !h.ownsPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	for _, item := range req {
+		res, err := tx.Exec(ctx, `UPDATE links SET position = $1 WHERE id = $2 AND page_id = $3`, item.Position, item.ID, pageID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan urutan"})
+			return
+		}
+		if res.RowsAffected() == 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tautan bukan milik halaman ini"})
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan urutan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "urutan tautan diperbarui"})
+}
+
 func (h *LinksHandler) ownsLink(ctx context.Context, linkID, userID string) bool {
 	var exists int
 	err := h.DB.QueryRow(ctx, `
@@ -605,6 +652,102 @@ func (h *LinksHandler) ownsLink(ctx context.Context, linkID, userID string) bool
 		JOIN pages p ON p.id = l.page_id
 		WHERE l.id = $1 AND p.user_id = $2
 	`, linkID, userID).Scan(&exists)
+	if err != nil && err != pgx.ErrNoRows {
+		return false
+	}
+	return err == nil
+}
+
+// ---------- No.98 (Sprint 14): tautan untuk halaman bio TAMBAHAN ----------
+//
+// Update/Delete/Unlock/SubmitContactForm/Reorder TIDAK perlu versi baru --
+// ownsLink() sudah memeriksa kepemilikan lewat p.user_id tanpa peduli
+// is_primary, jadi rute /dashboard/links/:id yang sudah ada otomatis bekerja
+// untuk tautan di halaman MANA PUN milik kreator yang sama, termasuk halaman
+// tambahan. Hanya List & Create yang perlu versi page-scoped baru, karena
+// versi lama SELALU menargetkan halaman utama (WHERE ... AND is_primary = true).
+
+// ListForPage — GET /dashboard/pages/:id/links, dipakai dashboard halaman
+// tambahan (juga bisa dipakai untuk halaman utama kalau perlu, tidak
+// dibatasi is_primary di sini karena kepemilikan sudah cukup sebagai gerbang).
+func (h *LinksHandler) ListForPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if !h.ownsPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, title, url, position, is_active, starts_at, ends_at,
+			COALESCE(lock_type, ''), lock_code, lock_min_age, block_type, block_data
+		FROM links WHERE page_id = $1
+		ORDER BY position ASC
+	`, pageID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+		return
+	}
+	defer rows.Close()
+
+	items := []linkItem{}
+	for rows.Next() {
+		var it linkItem
+		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
+			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData); err == nil {
+			items = append(items, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+// CreateForPage — POST /dashboard/pages/:id/links.
+func (h *LinksHandler) CreateForPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req createLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if !h.ownsPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	var nextPosition int
+	if err := h.DB.QueryRow(ctx,
+		`SELECT COALESCE(MAX(position) + 1, 0) FROM links WHERE page_id = $1`, pageID,
+	).Scan(&nextPosition); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung posisi tautan"})
+		return
+	}
+
+	id := uuid.NewString()
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO links (id, page_id, title, url, position, is_active)
+		VALUES ($1, $2, $3, $4, $5, true)
+	`, id, pageID, req.Title, req.URL, nextPosition); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat tautan"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
+}
+
+func (h *LinksHandler) ownsPage(ctx context.Context, pageID, userID string) bool {
+	var exists int
+	err := h.DB.QueryRow(ctx, `SELECT 1 FROM pages WHERE id = $1 AND user_id = $2`, pageID, userID).Scan(&exists)
 	if err != nil && err != pgx.ErrNoRows {
 		return false
 	}

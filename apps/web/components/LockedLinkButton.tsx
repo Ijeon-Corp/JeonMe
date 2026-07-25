@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, trackEvent, unlockLink } from "@/lib/api-client";
+import { ApiError, trackEvent, trackEventBySlug, unlockLink } from "@/lib/api-client";
 
 // No.79 (Sprint 9): tombol pengganti TrackedLink untuk tautan terkunci --
 // URL asli TIDAK PERNAH ada di payload halaman publik untuk tautan ini
 // (lihat komentar PageHandler.publicLink), jadi harus lewat gerbang kunci
 // dulu (POST /links/:id/unlock) untuk mendapat URL sebelum membuka tab baru.
+// No.98 (Sprint 14): `pageSlug` diisi kalau ini halaman bio TAMBAHAN --
+// lihat catatan di PageAnalytics soal kenapa tidak boleh lewat username.
 export default function LockedLinkButton({
   username,
+  pageSlug,
   linkId,
   title,
   lockType,
@@ -16,6 +19,7 @@ export default function LockedLinkButton({
   className,
 }: {
   username: string;
+  pageSlug?: string;
   linkId: string;
   title: string;
   lockType: "age" | "code" | "subscribe";
@@ -43,7 +47,11 @@ export default function LockedLinkButton({
         email: lockType === "subscribe" ? email.trim() || undefined : undefined,
         whatsapp_number: lockType === "subscribe" ? whatsapp.trim() || undefined : undefined,
       });
-      trackEvent(username, { event_type: "click", link_id: linkId });
+      if (pageSlug) {
+        trackEventBySlug(pageSlug, { event_type: "click", link_id: linkId });
+      } else {
+        trackEvent(username, { event_type: "click", link_id: linkId });
+      }
       window.open(url, "_blank", "noopener,noreferrer");
       setOpen(false);
     } catch (err) {

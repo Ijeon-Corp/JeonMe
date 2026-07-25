@@ -140,7 +140,7 @@ func (h *BusinessCardHandler) GetPublicCard(c *gin.Context) {
 		SELECT COALESCE(p.avatar_url, ''), bc.full_name, bc.job_title, bc.company, bc.phone, bc.whatsapp_number, bc.email, bc.website, bc.collect_contact_back
 		FROM business_cards bc
 		JOIN users u ON u.id = bc.user_id
-		LEFT JOIN pages p ON p.user_id = u.id
+		LEFT JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.username = $1 AND bc.is_active = true
 	`, username).Scan(&resp.AvatarURL, &resp.FullName, &resp.JobTitle, &resp.Company, &resp.Phone,
 		&resp.WhatsappNumber, &resp.Email, &resp.Website, &resp.CollectContactBack)

@@ -87,6 +87,10 @@ export interface PagePreviewSocialProof {
 export interface PagePreviewData {
   id?: string;
   username: string;
+  // No.98 (Sprint 14): diisi kalau ini halaman bio TAMBAHAN (bukan halaman
+  // utama) -- membuat tracking klik/kunjungan lewat slug, bukan username
+  // (lihat catatan di PageAnalytics/TrackedLink/LockedLinkButton).
+  pageSlug?: string;
   bio: string;
   avatarUrl: string;
   theme: string;
@@ -321,6 +325,7 @@ export default function PagePreview({
                   <LockedLinkButton
                     key={link.id}
                     username={data.username}
+                    pageSlug={data.pageSlug}
                     linkId={link.id}
                     title={link.title}
                     lockType={link.lockType}
@@ -342,6 +347,7 @@ export default function PagePreview({
                 <TrackedLink
                   key={link.id}
                   username={data.username}
+                  pageSlug={data.pageSlug}
                   linkId={link.id}
                   href={link.url}
                   className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}

@@ -61,6 +61,7 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/products", label: "Produk", icon: IconBox },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
       { href: "/dashboard/custom-domain", label: "Domain Kustom", icon: IconGlobe },
+      { href: "/dashboard/pages", label: "Halaman Tambahan", icon: IconGlobe },
     ],
   },
   {

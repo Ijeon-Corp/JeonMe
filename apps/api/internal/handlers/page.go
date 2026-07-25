@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -155,7 +156,9 @@ type publicItem struct {
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
 // Endpoint trafik tertinggi di seluruh sistem, jadi dicek dulu di cache Redis
-// (NF-01/02) sebelum menyentuh database.
+// (NF-01/02) sebelum menyentuh database. HANYA menjangkau halaman UTAMA
+// (is_primary=true) -- halaman TAMBAHAN (No.98) diakses lewat slug sendiri,
+// lihat GetPublicPageBySlug.
 func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	username := c.Param("username")
 	cacheKey := "page:" + username
@@ -163,33 +166,24 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	if h.RDB != nil {
-		if cached, err := h.RDB.Get(ctx, cacheKey).Result(); err == nil {
-			var resp publicPageResponse
-			if json.Unmarshal([]byte(cached), &resp) == nil {
-				c.Header("X-Cache", "HIT")
-				c.JSON(http.StatusOK, resp)
-				return
-			}
-		}
+	if h.servePublicPageFromCache(c, ctx, cacheKey) {
+		return
 	}
 
 	var resp publicPageResponse
-	var userID string
+	var userID, pageID string
 	var emailVerified bool
-
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
-		WHERE u.username = $1 AND p.is_published = true
-	`, username).Scan(&userID, &resp.ID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+		WHERE u.username = $1 AND p.is_primary = true AND p.is_published = true
+	`, username).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
 		&emailVerified)
-
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -198,7 +192,80 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
 	}
+	resp.ID = pageID
 
+	h.finishPublicPageResponse(c, ctx, "page:"+username, userID, pageID, emailVerified, &resp)
+}
+
+// GetPublicPageBySlug — No.98 (Sprint 14): diakses tanpa login di
+// jeonme.com/p/{slug}, namespace terpisah dari username akun supaya tidak
+// bentrok. Halaman tambahan berbagi katalog produk/monetisasi yang SAMA
+// dengan kreatornya (lihat catatan lingkup di migrasi 000029) -- cuma
+// bio/avatar/tema/tautan yang independen per halaman.
+func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
+	slug := c.Param("slug")
+	cacheKey := "page-slug:" + slug
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if h.servePublicPageFromCache(c, ctx, cacheKey) {
+		return
+	}
+
+	var resp publicPageResponse
+	var userID, pageID string
+	var emailVerified bool
+	err := h.DB.QueryRow(ctx, `
+		SELECT p.user_id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
+			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
+			u.email_verified_at IS NOT NULL
+		FROM pages p JOIN users u ON u.id = p.user_id
+		WHERE p.slug = $1 AND p.is_published = true
+	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
+		&emailVerified)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
+		return
+	}
+	resp.ID = pageID
+
+	h.finishPublicPageResponse(c, ctx, "page-slug:"+slug, userID, pageID, emailVerified, &resp)
+}
+
+// servePublicPageFromCache — dicek SEBELUM query DB apa pun (username/slug
+// sudah cukup untuk membentuk cacheKey, tidak perlu resolusi userID/pageID
+// dulu) supaya cache HIT tetap secepat sebelum halaman tambahan (No.98) ada.
+func (h *PageHandler) servePublicPageFromCache(c *gin.Context, ctx context.Context, cacheKey string) bool {
+	if h.RDB == nil {
+		return false
+	}
+	cached, err := h.RDB.Get(ctx, cacheKey).Result()
+	if err != nil {
+		return false
+	}
+	var resp publicPageResponse
+	if json.Unmarshal([]byte(cached), &resp) != nil {
+		return false
+	}
+	c.Header("X-Cache", "HIT")
+	c.JSON(http.StatusOK, resp)
+	return true
+}
+
+// finishPublicPageResponse — logika inti halaman publik (badge terverifikasi,
+// tautan, produk & seluruh blok monetisasi + penyimpanan cache), dipakai
+// bersama oleh GetPublicPage (halaman utama) & GetPublicPageBySlug (No.98,
+// halaman tambahan) supaya tidak ada duplikasi query. userID menentukan
+// katalog produk/monetisasi (dibagi lintas SEMUA halaman kreator), pageID
+// menentukan daftar tautan (independen PER halaman).
+func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Context, cacheKey, userID, pageID string, emailVerified bool, resp *publicPageResponse) {
 	// No.88 (Sprint 10): badge terverifikasi -- sinyal kepercayaan murah untuk
 	// pembeli, dihitung LANGSUNG dari data yang sudah ada (BUKAN proses review
 	// manual seperti Linktree): email terverifikasi + profil lengkap (bio DAN
@@ -216,12 +283,12 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data FROM links
-		WHERE page_id = (SELECT id FROM pages WHERE user_id = $1)
+		WHERE page_id = $1
 		AND is_active = true
 		AND (starts_at IS NULL OR starts_at <= now())
 		AND (ends_at IS NULL OR ends_at >= now())
 		ORDER BY position ASC
-	`, userID)
+	`, pageID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -406,7 +473,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
-		WHERE p.user_id = $1
+		WHERE p.user_id = $1 AND p.is_primary = true
 	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor,
@@ -493,7 +560,7 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_background_value = COALESCE($8, custom_background_value),
 			custom_font = COALESCE($9, custom_font),
 			custom_button_color = COALESCE($10, custom_button_color)
-		WHERE user_id = $11
+		WHERE user_id = $11 AND is_primary = true
 	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, userID)
 	if err != nil {
@@ -573,7 +640,7 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 	var username string
 	err = h.DB.QueryRow(ctx, `
 		UPDATE pages SET avatar_url = $1
-		FROM users u WHERE pages.user_id = $2 AND u.id = pages.user_id
+		FROM users u WHERE pages.user_id = $2 AND u.id = pages.user_id AND pages.is_primary = true
 		RETURNING u.username
 	`, avatarURL, userID).Scan(&username)
 	if err != nil {
@@ -586,4 +653,234 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL, "message": "foto profil berhasil diunggah"})
+}
+
+// ---------- No.98 (Sprint 14): halaman bio tambahan per akun ----------
+//
+// Ditemukan lewat fitur "Your Pages" Linktree -- satu akun bisa kelola
+// beberapa halaman bio terpisah, masing-masing dengan bio/tema/tautan
+// sendiri, tapi TETAP berbagi katalog produk/event/booking/dst yang SAMA
+// dengan kreatornya (monetisasi tetap per-USER, bukan per-halaman -- lihat
+// catatan lingkup lengkap di migrasi 000029). Halaman UTAMA (is_primary=true,
+// dibuat otomatis saat registrasi) TIDAK BERUBAH sama sekali -- semua route
+// di atas (/dashboard/page, /dashboard/links, dst) tetap hanya menjangkau
+// halaman utama. Halaman tambahan diakses publik lewat jeonme.com/p/{slug},
+// namespace terpisah dari username akun.
+
+var slugPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$`)
+
+type extraPageItem struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Bio         string `json:"bio"`
+	Theme       string `json:"theme"`
+	IsPublished bool   `json:"is_published"`
+}
+
+// ListMyPages — daftar halaman TAMBAHAN milik kreator yang login (TIDAK
+// termasuk halaman utama -- itu sudah dimuat lewat GetMyPage), dipakai
+// dashboard untuk menampilkan pemilih/daftar halaman.
+func (h *PageHandler) ListMyPages(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, name, COALESCE(slug, ''), bio, theme, is_published
+		FROM pages WHERE user_id = $1 AND is_primary = false
+		ORDER BY name ASC
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman tambahan"})
+		return
+	}
+	defer rows.Close()
+
+	items := []extraPageItem{}
+	for rows.Next() {
+		var it extraPageItem
+		if err := rows.Scan(&it.ID, &it.Name, &it.Slug, &it.Bio, &it.Theme, &it.IsPublished); err == nil {
+			items = append(items, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+type createExtraPageRequest struct {
+	Name string `json:"name" binding:"required,max=100"`
+	Slug string `json:"slug" binding:"required,max=50"`
+}
+
+// CreatePage — membuat halaman bio TAMBAHAN baru (is_primary=false), belum
+// dipublikasikan sampai kreator mengisi & mempublikasikannya lewat UpdatePage.
+func (h *PageHandler) CreatePage(c *gin.Context) {
+	var req createExtraPageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	slug := strings.ToLower(strings.TrimSpace(req.Slug))
+	if !slugPattern.MatchString(slug) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "slug hanya boleh huruf kecil, angka, dan tanda hubung (3-50 karakter)"})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var pageID string
+	err := h.DB.QueryRow(ctx, `
+		INSERT INTO pages (user_id, is_primary, name, slug) VALUES ($1, false, $2, $3) RETURNING id
+	`, userID, strings.TrimSpace(req.Name), slug).Scan(&pageID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat halaman"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"id": pageID, "message": "halaman dibuat, isi & publikasikan lewat pengaturan halaman"})
+}
+
+type updateExtraPageRequest struct {
+	Name                  *string `json:"name" binding:"omitempty,max=100"`
+	Slug                  *string `json:"slug" binding:"omitempty,max=50"`
+	Theme                 *string `json:"theme"`
+	Bio                   *string `json:"bio" binding:"omitempty,max=160"`
+	IsPublished           *bool   `json:"is_published"`
+	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image"`
+	CustomBackgroundValue *string `json:"custom_background_value" binding:"omitempty,max=500"`
+	CustomFont            *string `json:"custom_font"`
+	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
+}
+
+// UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
+// lewat UpdateMyPage). Ditolak kalau pageID yang dituju ternyata halaman
+// utama atau bukan milik kreator yang login.
+func (h *PageHandler) UpdatePage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req updateExtraPageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Theme != nil && !availableThemes[*req.Theme] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tema tidak dikenal"})
+		return
+	}
+	if req.CustomFont != nil && !availableCustomFonts[*req.CustomFont] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pilihan font tidak dikenal"})
+		return
+	}
+	var slug *string
+	if req.Slug != nil {
+		s := strings.ToLower(strings.TrimSpace(*req.Slug))
+		if !slugPattern.MatchString(s) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "slug hanya boleh huruf kecil, angka, dan tanda hubung (3-50 karakter)"})
+			return
+		}
+		slug = &s
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `
+		UPDATE pages SET
+			name = COALESCE($1, name),
+			slug = COALESCE($2, slug),
+			theme = COALESCE($3, theme),
+			bio = COALESCE($4, bio),
+			is_published = COALESCE($5, is_published),
+			custom_background_type = COALESCE($6, custom_background_type),
+			custom_background_value = COALESCE($7, custom_background_value),
+			custom_font = COALESCE($8, custom_font),
+			custom_button_color = COALESCE($9, custom_button_color)
+		WHERE id = $10 AND user_id = $11 AND is_primary = false
+	`, req.Name, slug, req.Theme, req.Bio, req.IsPublished,
+		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
+		pageID, userID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	if h.RDB != nil {
+		var currentSlug string
+		if scanErr := h.DB.QueryRow(ctx, `SELECT slug FROM pages WHERE id = $1`, pageID).Scan(&currentSlug); scanErr == nil && currentSlug != "" {
+			h.RDB.Del(ctx, "page-slug:"+currentSlug)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "halaman diperbarui"})
+}
+
+// DeletePage — menghapus halaman TAMBAHAN beserta seluruh tautannya
+// (ON DELETE CASCADE). analytics_events yang mereferensikan tautan itu
+// dihapus dulu DALAM SATU TRANSAKSI supaya cascade delete tautan tidak
+// gagal karena FK analytics_events.link_id (NO ACTION, bukan CASCADE).
+func (h *PageHandler) DeletePage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var slug string
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(slug, '') FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
+	`, pageID, userID).Scan(&slug); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
+		return
+	}
+
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM analytics_events WHERE link_id IN (SELECT id FROM links WHERE page_id = $1)
+	`, pageID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus halaman"})
+		return
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM pages WHERE id = $1`, pageID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus halaman"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus halaman"})
+		return
+	}
+
+	if h.RDB != nil && slug != "" {
+		h.RDB.Del(ctx, "page-slug:"+slug)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "halaman dihapus"})
 }

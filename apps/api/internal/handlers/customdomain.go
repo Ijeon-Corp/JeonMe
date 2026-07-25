@@ -75,7 +75,7 @@ func (h *CustomDomainHandler) Get(c *gin.Context) {
 	var domain, token string
 	var verified bool
 	if err := h.DB.QueryRow(ctx, `
-		SELECT custom_domain, custom_domain_verified, custom_domain_token FROM pages WHERE user_id = $1
+		SELECT custom_domain, custom_domain_verified, custom_domain_token FROM pages WHERE user_id = $1 AND is_primary = true
 	`, userID).Scan(&domain, &verified, &token); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pengaturan domain"})
 		return
@@ -117,7 +117,7 @@ func (h *CustomDomainHandler) Set(c *gin.Context) {
 
 	if _, err := h.DB.Exec(ctx, `
 		UPDATE pages SET custom_domain = $1, custom_domain_verified = false, custom_domain_token = $2
-		WHERE user_id = $3
+		WHERE user_id = $3 AND is_primary = true
 	`, domain, token, userID); err != nil {
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "domain ini sudah dipakai kreator lain"})
@@ -145,7 +145,7 @@ func (h *CustomDomainHandler) Verify(c *gin.Context) {
 	defer cancel()
 
 	var domain, token string
-	if err := h.DB.QueryRow(ctx, `SELECT custom_domain, custom_domain_token FROM pages WHERE user_id = $1`, userID).
+	if err := h.DB.QueryRow(ctx, `SELECT custom_domain, custom_domain_token FROM pages WHERE user_id = $1 AND is_primary = true`, userID).
 		Scan(&domain, &token); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat domain"})
 		return
@@ -171,7 +171,7 @@ func (h *CustomDomainHandler) Verify(c *gin.Context) {
 	}
 
 	verified := cnameOK && txtOK
-	if _, err := h.DB.Exec(ctx, `UPDATE pages SET custom_domain_verified = $1 WHERE user_id = $2`, verified, userID); err != nil {
+	if _, err := h.DB.Exec(ctx, `UPDATE pages SET custom_domain_verified = $1 WHERE user_id = $2 AND is_primary = true`, verified, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan status verifikasi"})
 		return
 	}
@@ -200,7 +200,7 @@ func (h *CustomDomainHandler) Delete(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.DB.Exec(ctx, `
-		UPDATE pages SET custom_domain = '', custom_domain_verified = false, custom_domain_token = '' WHERE user_id = $1
+		UPDATE pages SET custom_domain = '', custom_domain_verified = false, custom_domain_token = '' WHERE user_id = $1 AND is_primary = true
 	`, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal melepas domain"})
 		return

@@ -84,6 +84,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
 		api.GET("/pages/:username", page.GetPublicPage)
 
+		// No.98 (Sprint 14): halaman bio TAMBAHAN, namespace slug terpisah
+		// dari username akun -- lihat catatan lingkup di PageHandler.
+		api.GET("/p/:slug", page.GetPublicPageBySlug)
+
 		// No.92 (Sprint 11): daftar slot booking yang tersedia -- dimuat
 		// pengunjung saat memilih jadwal sebelum checkout.
 		api.GET("/products/:id/available-slots", booking.ListAvailableSlots)
@@ -104,6 +108,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
+
+		// No.98 (Sprint 14): tracking klik/kunjungan untuk halaman bio TAMBAHAN.
+		api.POST("/p/:slug/track", trackRateLimit, analytics.TrackBySlug)
 
 		// REQ-F-702 (bagian publik): siapa pun bisa melaporkan halaman/produk
 		// tanpa perlu akun.
@@ -139,6 +146,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				designGroup.GET("/page", page.GetMyPage)
 				designGroup.PATCH("/page", page.UpdateMyPage)
 				designGroup.POST("/page/avatar", page.UploadAvatar)
+
+				// No.98 (Sprint 14): halaman bio TAMBAHAN (bukan halaman utama
+				// di atas) -- lihat catatan lingkup di PageHandler.
+				designGroup.GET("/pages", page.ListMyPages)
+				designGroup.POST("/pages", page.CreatePage)
+				designGroup.PATCH("/pages/:id", page.UpdatePage)
+				designGroup.DELETE("/pages/:id", page.DeletePage)
 			}
 
 			linksGroup := dashboard.Group("")
@@ -155,6 +169,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// (validasi berbeda dari tautan biasa); edit/hapus/reorder pakai
 				// endpoint yang sudah ada di atas.
 				linksGroup.POST("/blocks", links.CreateBlock)
+
+				// No.98 (Sprint 14): tautan untuk halaman bio TAMBAHAN --
+				// edit/hapus/kunci tautan tetap pakai endpoint /links/:id di atas
+				// (ownsLink tidak peduli is_primary), lihat catatan di links.go.
+				linksGroup.GET("/pages/:id/links", links.ListForPage)
+				linksGroup.POST("/pages/:id/links", links.CreateForPage)
+				linksGroup.PATCH("/pages/:id/links/reorder", links.ReorderForPage)
 			}
 
 			productsGroup := dashboard.Group("")

@@ -76,25 +76,54 @@ func (h *AnalyticsHandler) Track(c *gin.Context) {
 
 	var pageID string
 	if err := h.DB.QueryRow(ctx, `
-		SELECT p.id FROM pages p JOIN users u ON u.id = p.user_id WHERE u.username = $1
+		SELECT p.id FROM pages p JOIN users u ON u.id = p.user_id WHERE u.username = $1 AND p.is_primary = true
 	`, username).Scan(&pageID); err != nil {
 		c.Status(http.StatusNoContent)
 		return
 	}
 
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent())
+	c.Status(http.StatusNoContent)
+}
+
+// TrackBySlug — No.98 (Sprint 14): sama seperti Track, tapi untuk halaman
+// bio TAMBAHAN (diresolusi lewat slug, bukan username+is_primary) --
+// mencegah klik/kunjungan di halaman tambahan salah tercatat ke halaman
+// utama kreator yang sama (keduanya berbagi users.username yang sama).
+func (h *AnalyticsHandler) TrackBySlug(c *gin.Context) {
+	slug := c.Param("slug")
+
+	var req trackEventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	var pageID string
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE slug = $1`, slug).Scan(&pageID); err != nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent())
+	c.Status(http.StatusNoContent)
+}
+
+func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, req trackEventRequest, userAgent string) {
 	var linkID *string
 	if req.LinkID != "" {
 		linkID = &req.LinkID
 	}
 
-	deviceType := classifyDevice(c.Request.UserAgent())
+	deviceType := classifyDevice(userAgent)
 
 	_, _ = h.DB.Exec(ctx, `
 		INSERT INTO analytics_events (id, page_id, event_type, link_id, referrer, device_type, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, now())
 	`, uuid.NewString(), pageID, req.EventType, linkID, req.Referrer, deviceType)
-
-	c.Status(http.StatusNoContent)
 }
 
 // resolveDateRange — No.86: mendukung DUA cara memilih rentang: preset
@@ -218,7 +247,7 @@ func (h *AnalyticsHandler) GetSummary(c *gin.Context) {
 // GetSummary sebelum diekstrak.
 func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, from, to time.Time, rangeDays int) (analyticsSummaryResponse, error) {
 	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
 		return analyticsSummaryResponse{}, errGagalMemuatHalaman
 	}
 
@@ -349,7 +378,7 @@ func (h *AnalyticsHandler) ExportDailyCSV(c *gin.Context) {
 	defer cancel()
 
 	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1`, userID).Scan(&pageID); err != nil {
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
 	}

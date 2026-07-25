@@ -432,6 +432,94 @@ export function reorderLinks(items: { id: string; position: number }[]) {
   );
 }
 
+// ---------- Dashboard: halaman bio TAMBAHAN (Sprint 14, No.98) ----------
+// LINGKUP: halaman tambahan (is_primary=false) punya bio/tema/tautan
+// sendiri, tapi berbagi katalog produk/monetisasi yang SAMA dengan halaman
+// utama -- lihat catatan lingkup lengkap di PageHandler (backend).
+
+export interface ExtraPage {
+  id: string;
+  name: string;
+  slug: string;
+  bio: string;
+  theme: string;
+  is_published: boolean;
+}
+
+export function listMyExtraPages() {
+  return apiFetch<ExtraPage[]>("/dashboard/pages", { method: "GET" }, { auth: true });
+}
+
+export function createExtraPage(input: { name: string; slug: string }) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/pages",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function updateExtraPage(
+  id: string,
+  input: Partial<{
+    name: string;
+    slug: string;
+    theme: string;
+    bio: string;
+    is_published: boolean;
+    custom_background_type: "solid" | "image";
+    custom_background_value: string;
+    custom_font: string;
+    custom_button_color: string;
+  }>
+) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/pages/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function deleteExtraPage(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/pages/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+export function listExtraPageLinks(pageId: string) {
+  return apiFetch<LinkItem[]>(`/dashboard/pages/${pageId}/links`, { method: "GET" }, { auth: true });
+}
+
+export function createExtraPageLink(pageId: string, input: { title: string; url: string }) {
+  return apiFetch<LinkItem>(
+    `/dashboard/pages/${pageId}/links`,
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function reorderExtraPageLinks(pageId: string, items: { id: string; position: number }[]) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/pages/${pageId}/links/reorder`,
+    { method: "PATCH", body: JSON.stringify(items) },
+    { auth: true }
+  );
+}
+
+/**
+ * Mengambil data halaman bio TAMBAHAN publik lewat slug (jeonme.com/p/{slug}).
+ * Mengembalikan null kalau tidak ditemukan (404), sama seperti getPublicPage.
+ */
+export async function getPublicPageBySlug(slug: string): Promise<PublicPage | null> {
+  const res = await fetch(`${API_BASE_URL}/p/${slug}`, { next: { revalidate: 60 } });
+
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`Gagal memuat halaman publik: ${res.status}`);
+  }
+
+  return res.json();
+}
+
 // ---------- Dashboard: produk ----------
 
 export interface DashboardProduct {
@@ -1311,6 +1399,19 @@ export async function submitKyc(input: {
 // halaman publik, jadi error diabaikan diam-diam (bukan throw).
 export function trackEvent(username: string, input: { event_type: "view" | "click"; link_id?: string; referrer?: string }) {
   fetch(`${API_BASE_URL}/pages/${username}/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }).catch(() => {
+    // Sengaja diabaikan -- lihat komentar di atas.
+  });
+}
+
+// No.98 (Sprint 14): tracking untuk halaman bio TAMBAHAN, diresolusi lewat
+// slug (bukan username) supaya tidak salah tercatat ke halaman utama
+// kreator yang sama -- lihat AnalyticsHandler.TrackBySlug (backend).
+export function trackEventBySlug(slug: string, input: { event_type: "view" | "click"; link_id?: string; referrer?: string }) {
+  fetch(`${API_BASE_URL}/p/${slug}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
