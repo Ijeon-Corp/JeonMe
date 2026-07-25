@@ -114,7 +114,7 @@ export default function DashboardLoyaltyPage() {
   if (loading || !settings) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Program Loyalitas</h1>
       <p className="mt-1 text-sm text-muted">
         Beri poin ke pembeli setiap transaksi, biarkan mereka menukarnya dengan reward -- mekanisme retensi

@@ -85,7 +85,7 @@ export default function DashboardCustomDomainPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Domain Kustom</h1>
       <p className="mt-1 text-sm text-muted">
         Arahkan domainmu sendiri (mis. toko.namamu.com) ke halaman Jeonme-mu. Fitur PRO di kompetitor -- gratis di

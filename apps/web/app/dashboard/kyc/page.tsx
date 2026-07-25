@@ -92,7 +92,7 @@ export default function DashboardKycPage() {
   const canSubmit = status?.status === "unverified" || status?.status === "rejected";
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Verifikasi Rekening (KYC)</h1>
       <p className="mt-1 text-sm text-muted">
         Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeonme. Akun

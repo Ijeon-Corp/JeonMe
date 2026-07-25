@@ -154,7 +154,7 @@ export default function DashboardVouchersPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Voucher</h1>
       <p className="mt-1 text-sm text-muted">
         Buat kode diskon untuk produkmu -- kode tunggal (dipakai berkali-kali) atau generate banyak kode sekali pakai

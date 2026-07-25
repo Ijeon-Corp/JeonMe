@@ -57,7 +57,7 @@ export default function DashboardSocialProofPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-lg">
+    <div className="mx-auto max-w-lg">
       <h1 className="font-heading text-2xl font-bold text-ink">Notifikasi Social Proof</h1>
       <p className="mt-1 text-sm text-muted">
         Tampilkan notifikasi &quot;X baru saja membeli&quot; di halaman publik & checkout untuk mendorong konversi.

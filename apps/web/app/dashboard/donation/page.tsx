@@ -53,7 +53,7 @@ export default function DashboardDonationPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-lg">
+    <div className="mx-auto max-w-lg">
       <h1 className="font-heading text-2xl font-bold text-ink">Blok Dukungan</h1>
       <p className="mt-1 text-sm text-muted">
         Biarkan pengunjung memberi dukungan dengan nominal bebas, tanpa harus membeli produk apa pun.

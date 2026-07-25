@@ -95,7 +95,7 @@ export default function DashboardAudiencePage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Audiens</h1>
       <p className="mt-1 text-sm text-muted">
         Kumpulkan email/WhatsApp pengunjung lewat blok di halaman publik, dan lihat semua kontak (subscriber + pembeli)

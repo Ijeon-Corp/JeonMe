@@ -43,6 +43,7 @@ import {
 import EmptyState from "@/components/EmptyState";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+import { detectLinkIcon } from "@/lib/link-icons";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -600,6 +601,18 @@ export default function DashboardLinksPage() {
             >
               <div className="flex items-center gap-3">
                 <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
+                {link.block_type === "link" &&
+                  (() => {
+                    const { Icon, label } = detectLinkIcon(link.url);
+                    return (
+                      <span
+                        title={label}
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                    );
+                  })()}
                 <div className="min-w-0 flex-1">
                   {editingField?.id === link.id && editingField.field === "title" ? (
                     <input

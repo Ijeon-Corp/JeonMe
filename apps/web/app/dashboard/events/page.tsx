@@ -127,7 +127,7 @@ export default function DashboardEventsPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Event</h1>
       <p className="mt-1 text-sm text-muted">
         Jual tiket event online/offline dengan tanggal, waktu, zona waktu, dan kuota peserta.

@@ -98,7 +98,7 @@ export default function DashboardAffiliatesPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Program Afiliasi</h1>
       <p className="mt-1 text-sm text-muted">
         Undang afiliator dengan komisi custom per produk. Versi awal: mode privat -- afiliator harus sudah jadi

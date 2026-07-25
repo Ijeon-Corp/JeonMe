@@ -101,7 +101,7 @@ export default function DashboardBundlesPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="font-heading text-2xl font-bold text-ink">Bundel</h1>
       <p className="mt-1 text-sm text-muted">
         Gabungkan beberapa produk aktif jadi satu paket dengan harga lebih murah dari jumlah aslinya.
