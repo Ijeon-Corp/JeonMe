@@ -142,6 +142,15 @@ export interface CustomThemeConfig {
   // (toggle "Alternative title font", default MATI di referensi).
   titleFont?: CustomFontValue | "";
   titleColor?: string;
+  // styleOverride -- bug dilaporkan pengguna (migrasi 000035): dulu
+  // menyentuh panel Tombol/Font MEMAKSA `theme` jadi "custom", membuang
+  // seluruh latar/mood preset yang sudah dipilih. Sekarang field-field di
+  // atas (button*/pageTextColor/titleFont/titleColor) HANYA diterapkan
+  // kalau flag ini true -- independen dari `theme`, jadi bisa jadi lapisan
+  // di ATAS preset apa pun, bukan cuma di atas latar "custom". Latar
+  // (backgroundType/backgroundValue/label "Custom") TETAP eksklusif untuk
+  // theme === "custom", TIDAK terpengaruh flag ini.
+  styleOverride?: boolean;
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 9 pilihan (Poppins/Quicksand/
@@ -635,8 +644,45 @@ function buildCustomButtonClass(custom: CustomThemeConfig): string {
   }
 }
 
+// getPageTheme -- bug dilaporkan pengguna (migrasi 000035): "kenapa saya
+// ubah warna tombol ataupun font malah merubah tema yang sudah saya
+// pilih". Akar masalah lama: kustomisasi tombol/font HANYA diterapkan
+// kalau theme==="custom", jadi dashboard memaksa ganti `theme` jadi
+// "custom" tiap kali panel Tombol/Font disentuh -- otomatis membuang
+// SELURUH latar/mood preset yang sudah dipilih (glow/avatarRing/
+// productCard/dst ikut jadi milik tema "Custom", bukan preset semula).
+//
+// Sekarang DUA KONSEP dipisah:
+// 1. Latar/mood (`theme`) -- preset (default/midnight/dst) ATAU "custom"
+//    (custom_background_type/value) -- TIDAK berubah lewat panel Tombol/Font.
+// 2. Lapisan tombol/font (`custom.styleOverride`) -- independen, bisa
+//    diterapkan DI ATAS tema apa pun (preset ATAU custom), diaktifkan
+//    otomatis oleh dashboard begitu kreator menyentuh panel Tombol/Font
+//    (lihat handleStyleOverride di dashboard/design/page.tsx), TANPA
+//    menyentuh `theme` sama sekali.
 export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageTheme {
-  if (theme === "custom" && custom) {
+  const isCustomBg = theme === "custom";
+  const styleOverride = !!custom?.styleOverride;
+
+  if (!isCustomBg && !styleOverride) {
+    return PAGE_THEMES[theme as Exclude<PageThemeName, "custom">] ?? PAGE_THEMES.default;
+  }
+
+  const base = isCustomBg ? PAGE_THEMES.sunrise : (PAGE_THEMES[theme as Exclude<PageThemeName, "custom">] ?? PAGE_THEMES.default);
+  const result: PageTheme = { ...base };
+  const pageStyle: Record<string, string | undefined> = { ...(base.pageStyle as Record<string, string | undefined> | undefined) };
+
+  if (isCustomBg && custom) {
+    // "gradient" pakai kelas sama seperti "image" -- background-image CSS
+    // menerima baik url(...) maupun linear-gradient(...) lewat properti yang
+    // sama, jadi tidak perlu kelas Tailwind terpisah.
+    const isImageLike = custom.backgroundType === "image" || custom.backgroundType === "gradient";
+    result.label = "Custom";
+    result.page = isImageLike ? "bg-[image:var(--custom-bg)] bg-cover bg-center bg-no-repeat" : "bg-[color:var(--custom-bg)]";
+    pageStyle["--custom-bg"] = custom.backgroundType === "image" ? `url(${custom.backgroundValue})` : custom.backgroundValue;
+  }
+
+  if (styleOverride && custom) {
     const fontCssVar = CUSTOM_FONT_OPTIONS.find((f) => f.value === custom.font)?.cssVar ?? "var(--font-body)";
     // titleFont kosong -> undefined -> nameStyle di bawah ikut kosong ->
     // <h1> otomatis mewarisi fontFamily halaman dari <main> (custom.font),
@@ -644,42 +690,27 @@ export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageThe
     const titleFontCssVar = custom.titleFont
       ? CUSTOM_FONT_OPTIONS.find((f) => f.value === custom.titleFont)?.cssVar
       : undefined;
-    const base = PAGE_THEMES.sunrise;
-    // "gradient" pakai kelas sama seperti "image" -- background-image CSS
-    // menerima baik url(...) maupun linear-gradient(...) lewat properti yang
-    // sama, jadi tidak perlu kelas Tailwind terpisah.
-    const isImageLike = custom.backgroundType === "image" || custom.backgroundType === "gradient";
     const buttonClass = buildCustomButtonClass(custom);
-    return {
-      ...base,
-      label: "Custom",
-      page: isImageLike ? "bg-[image:var(--custom-bg)] bg-cover bg-center bg-no-repeat" : "bg-[color:var(--custom-bg)]",
-      card: buttonClass,
-      cardTitle: "text-[color:var(--custom-button-text)]",
-      buyButton: buttonClass,
-      // "Fonts" (referensi tangkapan layar): warna judul & warna teks umum
-      // independen -- kosong berarti ikuti default tema sunrise di bawahnya.
-      name: custom.titleColor
-        ? "text-[color:var(--custom-title-color)]"
-        : custom.pageTextColor
-          ? "text-[color:var(--custom-page-text-color)]"
-          : base.name,
-      bio: custom.pageTextColor ? "text-[color:var(--custom-page-text-color)]" : base.bio,
-      swatch: custom.buttonColor,
-      pageStyle: {
-        // Nilai kustom properti CSS (bukan nama properti standar) --
-        // TypeScript tidak tahu nama "--custom-bg", jadi perlu type assertion.
-        // Gradient SUDAH berupa string CSS linear-gradient(...) lengkap dari
-        // dashboard, dipakai langsung tanpa dibungkus url() (beda dari "image").
-        ["--custom-bg" as string]: custom.backgroundType === "image" ? `url(${custom.backgroundValue})` : custom.backgroundValue,
-        ["--custom-button-bg" as string]: custom.buttonColor,
-        ["--custom-button-text" as string]: custom.buttonTextColor || "#FFFFFF",
-        ...(custom.pageTextColor ? { ["--custom-page-text-color" as string]: custom.pageTextColor } : {}),
-        ...(custom.titleColor ? { ["--custom-title-color" as string]: custom.titleColor } : {}),
-        fontFamily: fontCssVar,
-      } as CSSProperties,
-      nameStyle: titleFontCssVar ? ({ fontFamily: titleFontCssVar } as CSSProperties) : undefined,
-    };
+    result.card = buttonClass;
+    result.cardTitle = "text-[color:var(--custom-button-text)]";
+    result.buyButton = buttonClass;
+    // "Fonts" (referensi tangkapan layar): warna judul & warna teks umum
+    // independen -- kosong berarti ikuti default tema (preset atau sunrise).
+    result.name = custom.titleColor
+      ? "text-[color:var(--custom-title-color)]"
+      : custom.pageTextColor
+        ? "text-[color:var(--custom-page-text-color)]"
+        : base.name;
+    result.bio = custom.pageTextColor ? "text-[color:var(--custom-page-text-color)]" : base.bio;
+    result.swatch = custom.buttonColor;
+    pageStyle["--custom-button-bg"] = custom.buttonColor;
+    pageStyle["--custom-button-text"] = custom.buttonTextColor || "#FFFFFF";
+    if (custom.pageTextColor) pageStyle["--custom-page-text-color"] = custom.pageTextColor;
+    if (custom.titleColor) pageStyle["--custom-title-color"] = custom.titleColor;
+    pageStyle.fontFamily = fontCssVar;
+    result.nameStyle = titleFontCssVar ? ({ fontFamily: titleFontCssVar } as CSSProperties) : undefined;
   }
-  return PAGE_THEMES[theme as Exclude<PageThemeName, "custom">] ?? PAGE_THEMES.default;
+
+  result.pageStyle = pageStyle as CSSProperties;
+  return result;
 }

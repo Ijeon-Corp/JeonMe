@@ -61,15 +61,19 @@ type publicPageResponse struct {
 	CustomButtonStyle string `json:"custom_button_style"`
 	// CustomButtonRounded/Shadow/TextColor & CustomPageTextColor/TitleFont/
 	// TitleColor -- permintaan langsung pengguna (referensi tangkapan layar):
-	// kontrol tombol & teks yang lebih lengkap, HANYA relevan kalau
-	// Theme="custom". Kosong (untuk *Font/*Color) berarti "ikuti default
-	// tema" -- lihat komentar getPageTheme di page-themes.ts.
+	// kontrol tombol & teks yang lebih lengkap. CustomStyleOverride
+	// menentukan apakah field-field ini DITERAPKAN -- BUKAN lagi terikat ke
+	// Theme="custom" (bug: dulu menyentuh panel Tombol/Font memaksa ganti
+	// Theme jadi "custom", ikut membuang latar/mood preset yang sudah
+	// dipilih) -- sekarang bisa jadi lapisan independen di atas tema APAPUN,
+	// lihat komentar getPageTheme di page-themes.ts.
 	CustomButtonRounded   string             `json:"custom_button_rounded"`
 	CustomButtonShadow    string             `json:"custom_button_shadow"`
 	CustomButtonTextColor string             `json:"custom_button_text_color"`
 	CustomPageTextColor   string             `json:"custom_page_text_color"`
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
+	CustomStyleOverride   bool               `json:"custom_style_override"`
 	Links                 []publicLink       `json:"links"`
 	Products              []publicItem       `json:"products"`
 	Donation              *publicDonation    `json:"donation"`
@@ -200,7 +204,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		SELECT u.id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -209,7 +213,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride,
 		&emailVerified)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -481,6 +485,7 @@ type myPageResponse struct {
 	CustomPageTextColor   string             `json:"custom_page_text_color"`
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
+	CustomStyleOverride   bool               `json:"custom_style_override"`
 	Verification          verificationStatus `json:"verification"`
 }
 
@@ -508,7 +513,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		SELECT u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -516,7 +521,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride,
 		&emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
@@ -572,16 +577,19 @@ type updatePageRequest struct {
 	CustomFont            *string `json:"custom_font"`
 	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
 	// CustomButtonStyle -- "Desain 2.0": axis gaya tombol (fill=isi penuh,
-	// outline=transparan+border, glass=transparan+blur ala kaca), HANYA
-	// berlaku kalau theme="custom". "shadow" (nilai lama) sudah dilebur jadi
-	// axis independen CustomButtonShadow lewat migrasi 000034.
+	// outline=transparan+border, glass=transparan+blur ala kaca). "shadow"
+	// (nilai lama) sudah dilebur jadi axis independen CustomButtonShadow
+	// lewat migrasi 000034.
 	CustomButtonStyle *string `json:"custom_button_style" binding:"omitempty,oneof=fill outline glass"`
 	// CustomButtonRounded/Shadow/TextColor & CustomPageTextColor/TitleFont/
 	// TitleColor -- permintaan langsung pengguna (referensi tangkapan layar
-	// panel "Buttons"/"Fonts"): kontrol lebih lengkap, semua opsional &
-	// HANYA relevan kalau theme="custom". *Color kosong ("") berarti "ikuti
-	// warna bawaan tema" (divalidasi manual di bawah, bukan lewat binding
-	// len=7, supaya string kosong tetap diterima).
+	// panel "Buttons"/"Fonts"): kontrol lebih lengkap, semua opsional.
+	// DITERAPKAN hanya kalau CustomStyleOverride true -- BUKAN lagi terikat
+	// ke theme="custom" (lihat migrasi 000035: bug lama memaksa ganti theme
+	// tiap kali panel ini disentuh, ikut membuang preset yang sudah dipilih).
+	// *Color kosong ("") berarti "ikuti warna bawaan tema" (divalidasi
+	// manual di bawah, bukan lewat binding len=7, supaya string kosong
+	// tetap diterima).
 	CustomButtonRounded   *string `json:"custom_button_rounded" binding:"omitempty,oneof=none sm md full"`
 	CustomButtonShadow    *string `json:"custom_button_shadow" binding:"omitempty,oneof=none soft strong hard"`
 	CustomButtonTextColor *string `json:"custom_button_text_color" binding:"omitempty,len=7"`
@@ -590,13 +598,21 @@ type updatePageRequest struct {
 	// (toggle "Alternative title font" pada referensi, default mati).
 	CustomTitleFont  *string `json:"custom_title_font" binding:"omitempty,max=20"`
 	CustomTitleColor *string `json:"custom_title_color" binding:"omitempty,max=7"`
+	// CustomStyleOverride -- migrasi 000035 (bug dilaporkan pengguna):
+	// dinyalakan otomatis oleh frontend begitu kreator menyentuh panel
+	// Tombol ATAU Font, TANPA memaksa `theme` berubah -- lihat komentar
+	// getPageTheme (page-themes.ts) untuk cara lapisan ini diterapkan di
+	// atas tema APAPUN.
+	CustomStyleOverride *bool `json:"custom_style_override"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
-// No.80 (Sprint 9): kustomisasi lanjutan (latar/font/warna tombol) hanya
-// berlaku kalau theme="custom" -- kolomnya tetap disimpan lepas dari nilai
-// theme saat ini supaya kreator tidak kehilangan pengaturannya kalau
-// sementara ganti-ganti preset untuk dibandingkan.
+// No.80 (Sprint 9): kustomisasi lanjutan (latar/font/warna tombol) TIDAK lagi
+// terikat ke theme="custom" (bug diperbaiki lewat migrasi 000035) --
+// kolomnya tetap disimpan lepas dari nilai theme saat ini supaya kreator
+// tidak kehilangan pengaturannya kalau sementara ganti-ganti preset untuk
+// dibandingkan, DAN supaya kustomisasi tombol/font bisa diterapkan di atas
+// preset apa pun, bukan cuma di atas latar "custom".
 func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	var req updatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -653,12 +669,13 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_button_text_color = COALESCE($15, custom_button_text_color),
 			custom_page_text_color = COALESCE($16, custom_page_text_color),
 			custom_title_font = COALESCE($17, custom_title_font),
-			custom_title_color = COALESCE($18, custom_title_color)
-		WHERE user_id = $19 AND is_primary = true
+			custom_title_color = COALESCE($18, custom_title_color),
+			custom_style_override = COALESCE($19, custom_style_override)
+		WHERE user_id = $20 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, userID)
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return

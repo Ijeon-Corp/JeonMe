@@ -143,6 +143,7 @@ interface PreviewSourcePage {
   custom_page_text_color?: string;
   custom_title_font?: CustomThemeConfig["titleFont"];
   custom_title_color?: string;
+  custom_style_override?: boolean;
   is_verified?: boolean;
 }
 
@@ -199,6 +200,7 @@ export function toPreviewData(
             pageTextColor: page.custom_page_text_color ?? "",
             titleFont: page.custom_title_font ?? "",
             titleColor: page.custom_title_color ?? "",
+            styleOverride: page.custom_style_override ?? false,
           }
         : undefined,
     links: links
@@ -262,14 +264,10 @@ export default function PagePreview({
           intervalSeconds={data.socialProof.intervalSeconds}
         />
       )}
-      {/* Topbar ala Linktree (permintaan langsung pengguna, tangkapan layar
-          halaman publik): logo Jeonme kiri (tautan ke jeonme.com, setara
-          logo Linktree yang tautan ke linktree.com), tombol share kanan. */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
-        <a href="https://jeonme.com" target="_blank" rel="noopener noreferrer" title="Dibuat dengan Jeonme">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="Jeonme" className="h-9 w-9 rounded-xl shadow-card" />
-        </a>
+      {/* Topbar: cuma tombol share kanan -- logo Jeonme di pojok kiri
+          DIHILANGKAN (permintaan langsung pengguna), branding Jeonme cukup
+          lewat pil "Buat halaman gratis di Jeonme" di bagian bawah. */}
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
@@ -298,7 +296,7 @@ export default function PagePreview({
 
           <div className="relative mt-5 text-center">
             <h1
-              className={`flex items-center justify-center gap-1.5 font-heading text-lg font-bold ${theme.name}`}
+              className={`flex items-center justify-center gap-1.5 font-heading text-base font-bold ${theme.name}`}
               style={theme.nameStyle}
             >
               {data.displayName || data.username}
@@ -324,7 +322,7 @@ export default function PagePreview({
                     key={link.id}
                     title={link.title}
                     videoUrl={(link.blockData?.video_url as string) ?? ""}
-                    cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                   />
                 );
@@ -335,7 +333,7 @@ export default function PagePreview({
                     key={link.id}
                     title={link.title}
                     items={(link.blockData?.items as FaqItem[]) ?? []}
-                    cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                     itemTitleClassName={theme.cardTitle}
                     itemBodyClassName={theme.bio}
@@ -348,13 +346,13 @@ export default function PagePreview({
                     key={link.id}
                     linkId={link.id}
                     title={link.title}
-                    cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                     inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                     buttonClassName={theme.buyButton}
                   />
                 ) : (
-                  <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
+                  <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
                     <p className={`text-xs font-semibold ${theme.productTitle}`}>{link.title}</p>
                     <button
                       type="button"
@@ -382,7 +380,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -390,7 +388,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full break-words text-center">🔒 {link.title}</span>
                   </button>
@@ -405,12 +403,12 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-3 top-1/2 flex h-7 w-7 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      <span className={`absolute left-2.5 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-3 w-3" />
                       </span>
-                      <span className="w-full break-words px-7 text-center">{link.title}</span>
+                      <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </TrackedLink>
                   );
                 })()
@@ -423,12 +421,12 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-3 top-1/2 flex h-7 w-7 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      <span className={`absolute left-2.5 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-3 w-3" />
                       </span>
-                      <span className="w-full break-words px-7 text-center">{link.title}</span>
+                      <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </a>
                   );
                 })()
@@ -438,7 +436,7 @@ export default function PagePreview({
         )}
 
         {data.leadCapture && (
-          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-3 text-center ${theme.productCard}`}>
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
             <IconMail className={`h-5 w-5 ${theme.chevron}`} />
             <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.leadCapture.title}</p>
             {interactive ? (
@@ -485,7 +483,7 @@ export default function PagePreview({
                 }).format(new Date(event.startsAt));
                 const soldOut = event.spotsLeft !== null && event.spotsLeft <= 0;
                 return (
-                  <div key={event.productId} className={`flex flex-col gap-1.5 rounded-xl p-3 ${theme.productCard}`}>
+                  <div key={event.productId} className={`flex flex-col gap-1.5 rounded-xl p-2.5 ${theme.productCard}`}>
                     <div className="flex items-center gap-2">
                       <IconCalendar className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
                       <p className={`text-xs font-semibold ${theme.productTitle}`}>{event.name}</p>
@@ -534,7 +532,7 @@ export default function PagePreview({
             <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Booking Konsultasi</p>
             <div className="flex w-full flex-col gap-3">
               {data.bookings.map((booking) => (
-                <div key={booking.productId} className={`flex flex-col gap-1.5 rounded-xl p-3 ${theme.productCard}`}>
+                <div key={booking.productId} className={`flex flex-col gap-1.5 rounded-xl p-2.5 ${theme.productCard}`}>
                   <div className="flex items-center gap-2">
                     <IconCalendar className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
                     <p className={`text-xs font-semibold ${theme.productTitle}`}>{booking.name}</p>
@@ -565,7 +563,7 @@ export default function PagePreview({
         )}
 
         {data.donation && (
-          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-3 text-center ${theme.productCard}`}>
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
             <IconHeart className={`h-5 w-5 ${theme.chevron}`} />
             <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.donation.title}</p>
             <p className={`text-xs ${theme.bio}`}>
@@ -678,15 +676,18 @@ export default function PagePreview({
             <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
-          {interactive && (
-            <PageFooterLinks
-              pageId={data.id}
-              username={data.username}
-              bio={data.bio}
-              isVerified={data.isVerified}
-              footerClassName={theme.footer}
-            />
-          )}
+          {/* Footer SELALU tampil, termasuk di pratinjau dashboard
+              (interactive=false) -- permintaan langsung pengguna: "tampilkan
+              seluruh footer privacy dll", sebelumnya sengaja disembunyikan
+              di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
+              pesan "tidak tersedia", lihat PageFooterLinks). */}
+          <PageFooterLinks
+            pageId={data.id}
+            username={data.username}
+            bio={data.bio}
+            isVerified={data.isVerified}
+            footerClassName={theme.footer}
+          />
         </div>
       </div>
     </main>
@@ -724,7 +725,7 @@ function LandingPagePreview({
           switch (block.blockType) {
             case "heading":
               return (
-                <h1 key={block.id} className={`text-center font-heading text-2xl font-bold ${theme.name}`}>
+                <h1 key={block.id} className={`text-center font-heading text-xl font-bold ${theme.name}`}>
                   {(block.blockData?.text as string) ?? ""}
                 </h1>
               );
@@ -752,7 +753,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full max-w-sm items-center justify-center rounded-xl px-5 py-3 text-center text-sm font-bold transition-all duration-300 ${theme.buyButton}`}
+                  className={`flex w-full max-w-sm items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
                 >
                   {block.title}
                 </TrackedLink>
@@ -762,7 +763,7 @@ function LandingPagePreview({
                   type="button"
                   disabled
                   title="Pratinjau -- tombol ini tidak aktif"
-                  className={`w-full max-w-sm cursor-not-allowed rounded-xl px-5 py-3 text-center text-sm font-bold opacity-80 ${theme.buyButton}`}
+                  className={`w-full max-w-sm cursor-not-allowed rounded-xl px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
                 >
                   {block.title}
                 </button>
@@ -773,7 +774,7 @@ function LandingPagePreview({
                   key={block.id}
                   title={block.title}
                   videoUrl={(block.blockData?.video_url as string) ?? ""}
-                  cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                 />
               );
@@ -783,7 +784,7 @@ function LandingPagePreview({
                   key={block.id}
                   title={block.title}
                   items={(block.blockData?.items as FaqItem[]) ?? []}
-                  cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                   itemTitleClassName={theme.cardTitle}
                   itemBodyClassName={theme.bio}
@@ -795,13 +796,13 @@ function LandingPagePreview({
                   key={block.id}
                   linkId={block.id}
                   title={block.title}
-                  cardClassName={`w-full rounded-xl p-3 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                   inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                   buttonClassName={theme.buyButton}
                 />
               ) : (
-                <div key={block.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
+                <div key={block.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
                   <p className={`text-xs font-semibold ${theme.productTitle}`}>{block.title}</p>
                 </div>
               );
@@ -813,7 +814,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                   <IconChevronRight className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
@@ -821,7 +822,7 @@ function LandingPagePreview({
               ) : (
                 <div
                   key={block.id}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                 </div>
@@ -840,15 +841,18 @@ function LandingPagePreview({
             <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
-          {interactive && (
-            <PageFooterLinks
-              pageId={data.id}
-              username={data.username}
-              bio={data.bio}
-              isVerified={data.isVerified}
-              footerClassName={theme.footer}
-            />
-          )}
+          {/* Footer SELALU tampil, termasuk di pratinjau dashboard
+              (interactive=false) -- permintaan langsung pengguna: "tampilkan
+              seluruh footer privacy dll", sebelumnya sengaja disembunyikan
+              di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
+              pesan "tidak tersedia", lihat PageFooterLinks). */}
+          <PageFooterLinks
+            pageId={data.id}
+            username={data.username}
+            bio={data.bio}
+            isVerified={data.isVerified}
+            footerClassName={theme.footer}
+          />
         </div>
       </div>
     </main>

@@ -90,6 +90,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             pageTextColor: page.custom_page_text_color,
             titleFont: page.custom_title_font,
             titleColor: page.custom_title_color,
+            styleOverride: page.custom_style_override,
           },
           links: page.links.map((l) => ({
             id: l.id,

@@ -30,12 +30,18 @@ import Toggle from "@/components/Toggle";
 // sendiri di atas, lalu label "Customize", lalu baris-baris Header/Wallpaper/
 // Buttons/Text -- SEMUA baris berbentuk accordion sebaris (ikon+label+nilai
 // saat ini+panah), diklik satu-satu untuk membuka detailnya, bukan satu
-// panel gabungan. BEDA PENTING dari versi sebelumnya: di Linktree, baris
-// Wallpaper/Buttons/Text SELALU tampil (bukan cuma muncul kalau pilih tema
-// "Custom") -- menyentuh salah satunya otomatis "mempromosikan" tema aktif
-// jadi Custom di belakang layar (lihat handleCustomize), meniru perilaku
-// "override apa pun di atas tema manapun" ala Linktree TANPA perlu kolom
-// database baru sama sekali (custom_* sudah ada sejak No.80/Desain 2.0).
+// panel gabungan. Wallpaper/Buttons/Text SELALU tampil (bukan cuma muncul
+// kalau pilih tema "Custom").
+//
+// Bug dilaporkan pengguna (migrasi 000035): SEBELUMNYA menyentuh SALAH SATU
+// dari ketiganya (termasuk Buttons/Text) memaksa `theme` ganti jadi "custom"
+// -- membuang latar/mood preset yang sudah dipilih kreator. Diperbaiki:
+// Wallpaper TETAP mempromosikan ke "custom" (lihat handleCustomize -- latar
+// memang mendefinisikan tema, tidak bisa "custom TAPI tetap preset X"), tapi
+// Buttons/Text sekarang lewat handleStyleOverride yang HANYA menyalakan flag
+// custom_style_override (lapisan independen di atas tema APA PUN), TANPA
+// menyentuh `theme` -- meniru "override tombol/font di atas tema manapun"
+// yang sesungguhnya dimaksud, bukan mengganti seluruh tema.
 //
 // Colors & Stickers & Footer milik Linktree TIDAK dibuatkan baris -- Jeonme
 // belum punya kustomisasi warna terpisah dari tombol, elemen dekoratif, atau
@@ -64,6 +70,7 @@ type PageSettingsPatch = Partial<
     | "custom_page_text_color"
     | "custom_title_font"
     | "custom_title_color"
+    | "custom_style_override"
   >
 >;
 
@@ -165,12 +172,22 @@ export default function DashboardDesignPage() {
     }
   }
 
-  // handleCustomize -- dipakai KHUSUS oleh baris Wallpaper/Buttons/Text.
-  // Menyentuh salah satu kontrol di baris ini otomatis mempromosikan tema
-  // aktif jadi "custom" (meniru "override di atas tema manapun" ala
-  // Linktree), APAPUN preset yang sedang aktif sebelumnya.
+  // handleCustomize -- dipakai KHUSUS oleh baris Wallpaper (latar). Latar
+  // memang MENDEFINISIKAN mood/tema (tidak bisa "pakai gradien custom TAPI
+  // tetap tema Midnight" sekaligus) jadi menyentuhnya tetap mempromosikan
+  // tema aktif jadi "custom", APAPUN preset yang sedang aktif sebelumnya.
   function handleCustomize(patch: Omit<PageSettingsPatch, "theme">) {
     return handlePageSettingChange({ ...patch, theme: "custom" });
+  }
+
+  // handleStyleOverride -- dipakai KHUSUS oleh baris Buttons/Text. Bug
+  // dilaporkan pengguna: menyentuh tombol/font SEBELUMNYA ikut memaksa ganti
+  // `theme` jadi "custom" (lewat handleCustomize) -- membuang latar/mood
+  // preset yang sudah dipilih kreator. Sekarang HANYA menyalakan flag
+  // custom_style_override (lapisan independen di atas tema apa pun, lihat
+  // getPageTheme di page-themes.ts), `theme` TIDAK disentuh sama sekali.
+  function handleStyleOverride(patch: Omit<PageSettingsPatch, "theme" | "custom_style_override">) {
+    return handlePageSettingChange({ ...patch, custom_style_override: true });
   }
 
   function handleGradientChange(start: string, end: string) {
@@ -525,7 +542,7 @@ export default function DashboardDesignPage() {
                   type="color"
                   value={page.custom_button_color}
                   onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
-                  onBlur={(e) => handleCustomize({ custom_button_color: e.target.value })}
+                  onBlur={(e) => handleStyleOverride({ custom_button_color: e.target.value })}
                   className="h-9 w-full rounded-lg border border-border"
                 />
               </div>
@@ -535,7 +552,7 @@ export default function DashboardDesignPage() {
                   type="color"
                   value={page.custom_button_text_color || "#FFFFFF"}
                   onChange={(e) => setPage({ ...page, custom_button_text_color: e.target.value })}
-                  onBlur={(e) => handleCustomize({ custom_button_text_color: e.target.value })}
+                  onBlur={(e) => handleStyleOverride({ custom_button_text_color: e.target.value })}
                   className="h-9 w-full rounded-lg border border-border"
                 />
               </div>
@@ -546,7 +563,7 @@ export default function DashboardDesignPage() {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => handleCustomize({ custom_button_style: opt.value })}
+                      onClick={() => handleStyleOverride({ custom_button_style: opt.value })}
                       className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
                         page.custom_button_style === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
                       }`}
@@ -563,7 +580,7 @@ export default function DashboardDesignPage() {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => handleCustomize({ custom_button_rounded: opt.value })}
+                      onClick={() => handleStyleOverride({ custom_button_rounded: opt.value })}
                       title={opt.label}
                       className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
                         page.custom_button_rounded === opt.value ? "border-primary bg-white" : "border-border"
@@ -581,7 +598,7 @@ export default function DashboardDesignPage() {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => handleCustomize({ custom_button_shadow: opt.value })}
+                      onClick={() => handleStyleOverride({ custom_button_shadow: opt.value })}
                       className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
                         page.custom_button_shadow === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
                       }`}
@@ -609,7 +626,7 @@ export default function DashboardDesignPage() {
                 <label className="mb-1.5 block text-xs font-semibold text-ink">Font Halaman</label>
                 <select
                   value={page.custom_font}
-                  onChange={(e) => handleCustomize({ custom_font: e.target.value as MyPage["custom_font"] })}
+                  onChange={(e) => handleStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 >
                   {CUSTOM_FONT_OPTIONS.map((f) => (
@@ -626,13 +643,13 @@ export default function DashboardDesignPage() {
                   type="color"
                   value={page.custom_page_text_color || "#FFFFFF"}
                   onChange={(e) => setPage({ ...page, custom_page_text_color: e.target.value })}
-                  onBlur={(e) => handleCustomize({ custom_page_text_color: e.target.value })}
+                  onBlur={(e) => handleStyleOverride({ custom_page_text_color: e.target.value })}
                   className="h-9 w-full rounded-lg border border-border"
                 />
                 {page.custom_page_text_color && (
                   <button
                     type="button"
-                    onClick={() => handleCustomize({ custom_page_text_color: "" })}
+                    onClick={() => handleStyleOverride({ custom_page_text_color: "" })}
                     className="mt-1 text-[11px] font-semibold text-primary hover:underline"
                   >
                     Kembalikan ke warna bawaan tema
@@ -647,7 +664,7 @@ export default function DashboardDesignPage() {
                 </div>
                 <Toggle
                   checked={!!page.custom_title_font}
-                  onChange={() => handleCustomize({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
+                  onChange={() => handleStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
                   label="Font judul terpisah"
                 />
               </div>
@@ -655,7 +672,7 @@ export default function DashboardDesignPage() {
               {page.custom_title_font && (
                 <select
                   value={page.custom_title_font}
-                  onChange={(e) => handleCustomize({ custom_title_font: e.target.value as MyPage["custom_font"] })}
+                  onChange={(e) => handleStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 >
                   {CUSTOM_FONT_OPTIONS.map((f) => (
@@ -672,13 +689,13 @@ export default function DashboardDesignPage() {
                   type="color"
                   value={page.custom_title_color || "#FFFFFF"}
                   onChange={(e) => setPage({ ...page, custom_title_color: e.target.value })}
-                  onBlur={(e) => handleCustomize({ custom_title_color: e.target.value })}
+                  onBlur={(e) => handleStyleOverride({ custom_title_color: e.target.value })}
                   className="h-9 w-full rounded-lg border border-border"
                 />
                 {page.custom_title_color && (
                   <button
                     type="button"
-                    onClick={() => handleCustomize({ custom_title_color: "" })}
+                    onClick={() => handleStyleOverride({ custom_title_color: "" })}
                     className="mt-1 text-[11px] font-semibold text-primary hover:underline"
                   >
                     Kembalikan ke warna bawaan tema

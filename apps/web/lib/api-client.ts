@@ -233,6 +233,11 @@ export interface PublicPage {
   custom_page_text_color: string;
   custom_title_font: "" | PublicPage["custom_font"];
   custom_title_color: string;
+  // custom_style_override -- migrasi 000035 (bug dilaporkan pengguna):
+  // menentukan apakah custom_button_*/custom_page_text_color/custom_title_*
+  // di atas DITERAPKAN, independen dari `theme` -- lihat komentar
+  // getPageTheme di page-themes.ts.
+  custom_style_override: boolean;
   is_verified: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
@@ -336,8 +341,8 @@ export interface MyPage {
     | "space-grotesk";
   custom_button_color: string;
   // custom_button_style -- "Desain 2.0": fill/outline/glass, HANYA relevan
-  // kalau theme="custom". ("shadow", nilai lama, sudah dilebur jadi axis
-  // independen custom_button_shadow di bawah -- lihat migrasi 000034.)
+  // ("shadow", nilai lama, sudah dilebur jadi axis independen
+  // custom_button_shadow di bawah -- lihat migrasi 000034.)
   custom_button_style: "fill" | "outline" | "glass";
   custom_button_rounded: "none" | "sm" | "md" | "full";
   custom_button_shadow: "none" | "soft" | "strong" | "hard";
@@ -348,6 +353,12 @@ export interface MyPage {
   custom_page_text_color: string;
   custom_title_font: "" | MyPage["custom_font"];
   custom_title_color: string;
+  // custom_style_override -- migrasi 000035 (bug dilaporkan pengguna:
+  // mengubah tombol/font sebelumnya memaksa ganti theme jadi "custom" &
+  // membuang preset yang sudah dipilih): field-field custom_button_*/
+  // custom_page_text_color/custom_title_* di atas SEKARANG independen dari
+  // theme, hanya diterapkan kalau flag ini true.
+  custom_style_override: boolean;
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -410,6 +421,7 @@ export function updateMyPage(
       | "custom_page_text_color"
       | "custom_title_font"
       | "custom_title_color"
+      | "custom_style_override"
     >
   >
 ) {
