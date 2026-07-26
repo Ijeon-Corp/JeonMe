@@ -650,10 +650,10 @@ export default function PagePreview({
             href="https://jeonme.com/register"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink shadow-card transition-transform hover:scale-105"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
+            <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
           {interactive && (
@@ -812,10 +812,10 @@ function LandingPagePreview({
             href="https://jeonme.com/register"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink shadow-card transition-transform hover:scale-105"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
+            <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
           {interactive && (
