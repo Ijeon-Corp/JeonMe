@@ -22,9 +22,11 @@ import {
   IconCheck,
   IconExternal,
   IconPlus,
+  IconShield,
   IconSparkle,
   IconTrash,
   IconUpload,
+  IconWallet,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
@@ -290,35 +292,81 @@ export default function DashboardProductsPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {products.map((p) => (
-            <div
-              key={p.id}
-              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-card transition-shadow hover:shadow-card-hover"
+        {/* Redesain jadi baris kompak ala halaman Tautan (permintaan langsung
+            pengguna: kartu grid sebelumnya dengan gambar sampul rasio 4:3
+            lebar penuh terasa "size besar") -- thumbnail kecil di kiri,
+            info+harga di tengah, sakelar+ikon aksi di kanan. Semua logika
+            (flash sale/bayar seikhlasnya/watermark/unggah file) TIDAK
+            diubah, cuma tata letaknya. */}
+        {!adding ? (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+          >
+            <IconPlus className="h-5 w-5" />
+            Tambah Produk
+          </button>
+        ) : (
+          <form onSubmit={handleCreate} className="mt-6 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
+            <input
+              type="text"
+              autoFocus
+              required
+              placeholder="Nama produk"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <input
+              type="number"
+              required
+              placeholder="Harga (IDR)"
+              min={1000}
+              value={priceIDR}
+              onChange={(e) => setPriceIDR(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+              {creating ? "Membuat..." : "Buat"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setName("");
+                setPriceIDR("");
+              }}
+              className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
             >
-              <div className="relative aspect-[4/3] w-full bg-primary-subtle">
-                {p.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-primary/40">
-                    <IconBox className="h-10 w-10" />
-                  </div>
-                )}
+              Batal
+            </button>
+          </form>
+        )}
 
-                <span
-                  className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm ${
-                    p.is_active ? "bg-secondary text-white" : "bg-white/90 text-muted"
-                  }`}
+        <ul className="mt-4 flex flex-col gap-3">
+          {products.map((p) => (
+            <li key={p.id} className="flex flex-col gap-2.5 rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={coverBusyId === p.id}
+                  onClick={() => coverInputRefs.current[p.id]?.click()}
+                  title={p.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
+                  className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-primary-subtle disabled:opacity-60"
                 >
-                  {p.is_active ? "Aktif" : "Belum aktif"}
-                </span>
-                {p.is_flash_sale_active && (
-                  <span className="absolute right-2.5 top-2.5 rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-                    Flash Sale
+                  {p.cover_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-primary/40">
+                      <IconBox className="h-6 w-6" />
+                    </div>
+                  )}
+                  <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
+                    <IconCamera className="h-2.5 w-2.5" />
                   </span>
-                )}
-
+                </button>
                 <input
                   ref={(el) => {
                     coverInputRefs.current[p.id] = el;
@@ -332,67 +380,46 @@ export default function DashboardProductsPage() {
                     e.target.value = "";
                   }}
                 />
-                <button
-                  type="button"
-                  disabled={coverBusyId === p.id}
-                  onClick={() => coverInputRefs.current[p.id]?.click()}
-                  className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 rounded-full bg-ink/70 px-2.5 py-1.5 text-[11px] font-semibold text-white backdrop-blur transition-colors hover:bg-ink/85 disabled:opacity-60"
-                >
-                  <IconCamera className="h-3.5 w-3.5" />
-                  {coverBusyId === p.id ? "Mengunggah..." : p.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
-                </button>
-              </div>
 
-              <div className="flex flex-1 flex-col p-4">
-                <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-                {p.pwyw_enabled ? (
-                  <p className="mt-0.5 text-sm font-bold text-secondary-dark">
-                    Mulai dari Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
-                  </p>
-                ) : p.is_flash_sale_active ? (
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    <p className="text-xs text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</p>
-                    <p className="text-sm font-bold text-accent-dark">
-                      Rp {p.effective_price_idr.toLocaleString("id-ID")}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-0.5 text-sm font-bold text-secondary-dark">Rp {p.price_idr.toLocaleString("id-ID")}</p>
-                )}
-
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Toggle
-                      checked={p.is_active}
-                      onChange={() => handleToggleActive(p)}
-                      disabled={!p.has_file && !p.is_active}
-                      label={`Aktifkan ${p.name}`}
-                    />
-                    <span className="text-xs font-semibold text-muted">Aktif</span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {p.has_file && (
-                      <button
-                        type="button"
-                        onClick={() => handleGetDownloadLink(p.id)}
-                        title="Lihat file"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-secondary-dark hover:bg-secondary-subtle"
-                      >
-                        <IconExternal className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(p)}
-                      title="Hapus produk"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
+                    <span
+                      className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        p.is_active ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-muted"
+                      }`}
                     >
-                      <IconTrash className="h-4 w-4" />
-                    </button>
+                      {p.is_active ? "Aktif" : "Belum aktif"}
+                    </span>
+                    {p.is_flash_sale_active && (
+                      <span className="flex-shrink-0 rounded-full bg-accent-subtle px-2 py-0.5 text-[10px] font-bold text-accent-dark">
+                        Flash Sale
+                      </span>
+                    )}
                   </div>
+                  {p.pwyw_enabled ? (
+                    <p className="mt-0.5 text-xs font-bold text-secondary-dark">
+                      Mulai dari Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
+                    </p>
+                  ) : p.is_flash_sale_active ? (
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <p className="text-[11px] text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                      <p className="text-xs font-bold text-accent-dark">Rp {p.effective_price_idr.toLocaleString("id-ID")}</p>
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 text-xs font-bold text-secondary-dark">Rp {p.price_idr.toLocaleString("id-ID")}</p>
+                  )}
                 </div>
 
+                <Toggle
+                  checked={p.is_active}
+                  onChange={() => handleToggleActive(p)}
+                  disabled={!p.has_file && !p.is_active}
+                  label={`Aktifkan ${p.name}`}
+                />
+              </div>
+
+              <div className="ml-[68px] flex items-center gap-1">
                 <input
                   ref={(el) => {
                     fileInputRefs.current[p.id] = el;
@@ -409,204 +436,162 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={busyId === p.id}
                   onClick={() => fileInputRefs.current[p.id]?.click()}
-                  className={`mt-3 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors disabled:opacity-60 ${
-                    p.has_file
-                      ? "border border-border text-ink hover:border-primary hover:text-primary"
-                      : "btn-primary text-white"
+                  title={p.has_file ? "File terunggah -- ganti" : "Unggah file produk"}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-60 ${
+                    p.has_file ? "text-secondary-dark hover:bg-secondary-subtle" : "text-primary hover:bg-primary-subtle"
                   }`}
                 >
-                  {p.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
-                  {busyId === p.id ? "Mengunggah..." : p.has_file ? "File terunggah -- ganti" : "Unggah file produk"}
+                  {p.has_file ? <IconCheck className="h-4 w-4" /> : <IconUpload className="h-4 w-4" />}
                 </button>
-
-                {p.is_pdf && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <Toggle
-                      checked={p.watermark_enabled}
-                      onChange={() => handleToggleWatermark(p)}
-                      label={`Watermark otomatis ${p.name}`}
-                    />
-                    <span className="text-xs font-semibold text-muted">
-                      Watermark email pembeli + ID pesanan
-                    </span>
-                  </div>
+                {p.has_file && (
+                  <button
+                    type="button"
+                    onClick={() => handleGetDownloadLink(p.id)}
+                    title="Lihat file"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle"
+                  >
+                    <IconExternal className="h-4 w-4" />
+                  </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => openFlashSaleForm(p)}
+                  title="Flash Sale"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                    p.is_flash_sale_active ? "text-accent-dark" : "text-muted"
+                  }`}
+                >
+                  <IconSparkle className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openPwywForm(p)}
+                  title="Bayar Seikhlasnya"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                    p.pwyw_enabled ? "text-secondary-dark" : "text-muted"
+                  }`}
+                >
+                  <IconWallet className="h-4 w-4" />
+                </button>
+                {p.is_pdf && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleWatermark(p)}
+                    title="Watermark otomatis (email pembeli + ID pesanan)"
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      p.watermark_enabled ? "text-primary" : "text-muted"
+                    }`}
+                  >
+                    <IconShield className="h-4 w-4" />
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => handleDelete(p)}
+                  title="Hapus produk"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                >
+                  <IconTrash className="h-4 w-4" />
+                </button>
+              </div>
 
-                {flashSaleEditId === p.id ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+              {flashSaleEditId === p.id ? (
+                <div className="ml-[68px] flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <input
+                    type="number"
+                    placeholder="Harga flash sale (Rp)"
+                    value={flashPrice}
+                    onChange={(e) => setFlashPrice(e.target.value)}
+                    className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  />
+                  <div className="flex gap-1.5">
                     <input
-                      type="number"
-                      placeholder="Harga flash sale (Rp)"
-                      value={flashPrice}
-                      onChange={(e) => setFlashPrice(e.target.value)}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      type="datetime-local"
+                      value={flashStart}
+                      onChange={(e) => setFlashStart(e.target.value)}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
-                    <div className="flex gap-1.5">
-                      <input
-                        type="datetime-local"
-                        value={flashStart}
-                        onChange={(e) => setFlashStart(e.target.value)}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <input
-                        type="datetime-local"
-                        value={flashEnd}
-                        onChange={(e) => setFlashEnd(e.target.value)}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setFlashSaleEditId(null)}
-                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingFlashSale}
-                        onClick={() => handleSaveFlashSale(p)}
-                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                      >
-                        {savingFlashSale ? "Menyimpan..." : "Simpan"}
-                      </button>
-                    </div>
-                  </div>
-                ) : pwywEditId === p.id ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <input
-                      type="number"
-                      placeholder="Harga minimum (Rp)"
-                      value={pwywMinPrice}
-                      onChange={(e) => setPwywMinPrice(e.target.value)}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      type="datetime-local"
+                      value={flashEnd}
+                      onChange={(e) => setFlashEnd(e.target.value)}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setPwywEditId(null)}
-                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingPwyw}
-                        onClick={() => handleSavePwyw(p)}
-                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                      >
-                        {savingPwyw ? "Menyimpan..." : "Simpan"}
-                      </button>
-                    </div>
                   </div>
-                ) : p.is_flash_sale_active ? (
-                  <div className="mt-3 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-accent-dark">
-                      Flash sale sampai{" "}
-                      {p.flash_sale_ends_at && new Date(p.flash_sale_ends_at).toLocaleString("id-ID")}
-                    </span>
+                  <div className="flex gap-1.5">
                     <button
                       type="button"
-                      onClick={() => handleClearFlashSale(p)}
-                      className="text-[11px] font-bold text-red-600 hover:underline"
+                      onClick={() => setFlashSaleEditId(null)}
+                      className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
                     >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingFlashSale}
+                      onClick={() => handleSaveFlashSale(p)}
+                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    >
+                      {savingFlashSale ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                p.is_flash_sale_active && (
+                  <div className="ml-[68px] flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-accent-dark">
+                      Flash sale sampai {p.flash_sale_ends_at && new Date(p.flash_sale_ends_at).toLocaleString("id-ID")}
+                    </span>
+                    <button type="button" onClick={() => handleClearFlashSale(p)} className="text-[11px] font-bold text-red-600 hover:underline">
                       Batalkan
                     </button>
                   </div>
-                ) : p.pwyw_enabled ? (
-                  <div className="mt-3 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
+                )
+              )}
+
+              {pwywEditId === p.id ? (
+                <div className="ml-[68px] flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <input
+                    type="number"
+                    placeholder="Harga minimum (Rp)"
+                    value={pwywMinPrice}
+                    onChange={(e) => setPwywMinPrice(e.target.value)}
+                    className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  />
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPwywEditId(null)}
+                      className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingPwyw}
+                      onClick={() => handleSavePwyw(p)}
+                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    >
+                      {savingPwyw ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                p.pwyw_enabled && (
+                  <div className="ml-[68px] flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
                     <span className="text-[11px] font-semibold text-secondary-dark">
                       Bayar seikhlasnya aktif, min Rp{(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleClearPwyw(p)}
-                      className="text-[11px] font-bold text-red-600 hover:underline"
-                    >
+                    <button type="button" onClick={() => handleClearPwyw(p)} className="text-[11px] font-bold text-red-600 hover:underline">
                       Batalkan
                     </button>
                   </div>
-                ) : (
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openFlashSaleForm(p)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-accent hover:text-accent-dark"
-                    >
-                      <IconSparkle className="h-3.5 w-3.5" />
-                      Flash Sale
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openPwywForm(p)}
-                      className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-ink hover:border-secondary hover:text-secondary-dark"
-                    >
-                      Bayar Seikhlasnya
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+                )
+              )}
+            </li>
           ))}
-
-          {/* Kartu "tambah produk" -- selalu jadi item terakhir di grid,
-              lebih mudah ditemukan daripada form terpisah di bawah daftar. */}
-          {adding ? (
-            <form
-              onSubmit={handleCreate}
-              className="flex flex-col justify-center gap-2.5 rounded-2xl border-2 border-dashed border-primary/40 bg-primary-subtle/40 p-4"
-            >
-              <input
-                type="text"
-                autoFocus
-                required
-                placeholder="Nama produk"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <input
-                type="number"
-                required
-                placeholder="Harga (IDR)"
-                min={1000}
-                value={priceIDR}
-                onChange={(e) => setPriceIDR(e.target.value)}
-                className="w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdding(false);
-                    setName("");
-                    setPriceIDR("");
-                  }}
-                  className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
-                >
-                  {creating ? "Membuat..." : "Buat"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border text-muted transition-colors hover:border-primary hover:text-primary"
-            >
-              <IconPlus className="h-6 w-6" />
-              <span className="text-sm font-semibold">Tambah Produk</span>
-            </button>
-          )}
-        </div>
+        </ul>
 
         {products.length === 0 && (
           <EmptyState className="mt-4" text='Belum ada produk -- klik "Tambah Produk" di atas untuk membuat yang pertama.' />
