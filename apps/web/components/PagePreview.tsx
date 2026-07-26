@@ -367,7 +367,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center rounded-xl px-7 py-5 text-lg font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -375,7 +375,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-6 py-4 text-base font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-7 py-5 text-lg font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full break-words text-center">🔒 {link.title}</span>
                   </button>
@@ -390,12 +390,12 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-7 py-5 text-lg font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-4 top-1/2 flex h-8 w-8 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-4 w-4" />
+                      <span className={`absolute left-5 top-1/2 flex h-10 w-10 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-5 w-5" />
                       </span>
-                      <span className="w-full break-words px-9 text-center">{link.title}</span>
+                      <span className="w-full break-words px-11 text-center">{link.title}</span>
                     </TrackedLink>
                   );
                 })()
@@ -408,12 +408,12 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-7 py-5 text-lg font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-4 top-1/2 flex h-8 w-8 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-4 w-4" />
+                      <span className={`absolute left-5 top-1/2 flex h-10 w-10 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-5 w-5" />
                       </span>
-                      <span className="w-full break-words px-9 text-center">{link.title}</span>
+                      <span className="w-full break-words px-11 text-center">{link.title}</span>
                     </a>
                   );
                 })()
