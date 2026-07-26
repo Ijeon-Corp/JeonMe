@@ -526,7 +526,10 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 		return
 	}
 
-	coverURL := h.Storage.PublicURL(key)
+	// "?v=<timestamp>" wajib -- key storage selalu sama ("covers/<productID>"),
+	// tanpa ini URL sampul byte-identik antar-unggahan & browser/CDN akan
+	// terus menampilkan sampul lama walau unggahan baru sudah sukses.
+	coverURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
 	if _, err := h.DB.Exec(ctx, `UPDATE products SET cover_image_url = $1 WHERE id = $2`, coverURL, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "sampul terunggah tapi gagal menyimpan referensinya"})
 		return

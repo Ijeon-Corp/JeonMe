@@ -670,7 +670,14 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	avatarURL := h.Storage.PublicURL(key)
+	// Query param "?v=<timestamp>" WAJIB ditambahkan & DISIMPAN ke DB (bukan
+	// cuma di respons) -- key storage SELALU sama ("avatars/<userID>"), jadi
+	// tanpa ini URL foto baru byte-identik dengan URL foto lama, & browser
+	// (juga cache/CDN apa pun di depan storage) akan terus menampilkan foto
+	// LAMA dari cache-nya sendiri walau unggahan baru sudah sukses di server
+	// -- bug nyata yang dilaporkan pengguna ("upload tidak berubah, tidak ada
+	// error") karena upload memang TIDAK gagal, cuma URL-nya tidak berubah.
+	avatarURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
 	var username string
 	err = h.DB.QueryRow(ctx, `
 		UPDATE pages SET avatar_url = $1
@@ -746,7 +753,10 @@ func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
 		return
 	}
 
-	backgroundURL := h.Storage.PublicURL(key)
+	// Sama seperti UploadAvatar: "?v=<timestamp>" wajib disimpan ke DB, bukan
+	// hanya di respons -- key storage selalu sama, tanpa ini URL byte-identik
+	// antar-unggahan & browser/CDN akan terus menampilkan gambar latar lama.
+	backgroundURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
 	var username string
 	err = h.DB.QueryRow(ctx, `
 		UPDATE pages SET custom_background_type = 'image', custom_background_value = $1
