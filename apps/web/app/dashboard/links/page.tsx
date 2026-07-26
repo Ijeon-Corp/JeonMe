@@ -9,6 +9,7 @@ import {
   createBlock,
   createLink,
   deleteLink,
+  deleteLinkIcon,
   getMyPage,
   listLinks,
   listProducts,
@@ -16,6 +17,7 @@ import {
   updateLink,
   updateMyPage,
   uploadAvatar,
+  uploadLinkIcon,
 } from "@/lib/api-client";
 import {
   IconBook,
@@ -220,6 +222,10 @@ export default function DashboardLinksPage() {
   const [newURL, setNewURL] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
 
+  // Permintaan langsung pengguna: unggah gambar kustom per tautan
+  // (menggantikan ikon platform otomatis di halaman publik).
+  const [iconUploadingId, setIconUploadingId] = useState<string | null>(null);
+
   // Modal "Tambah" ala Linktree.
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addCategory, setAddCategory] = useState<"disarankan" | "sosial" | "konten">("disarankan");
@@ -388,6 +394,37 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus tautan.");
+    }
+  }
+
+  // handleIconUpload/handleRemoveIcon -- permintaan langsung pengguna:
+  // unggah gambar kustom per tautan, menggantikan ikon platform otomatis
+  // di halaman publik.
+  async function handleIconUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setIconUploadingId(link.id);
+    setError(null);
+    try {
+      const { custom_icon_url } = await uploadLinkIcon(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah ikon tautan.");
+    } finally {
+      setIconUploadingId(null);
+    }
+  }
+
+  async function handleRemoveIcon(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url: "" } : l)));
+    try {
+      await deleteLinkIcon(link.id);
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
     }
   }
 
@@ -855,14 +892,24 @@ export default function DashboardLinksPage() {
               <div className="flex items-center gap-3">
                 <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
                 {link.block_type === "link" &&
-                  (() => {
-                    const { Icon, label, badgeClass } = detectLinkIcon(link.url);
-                    return (
-                      <span title={label} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                    );
-                  })()}
+                  (link.custom_icon_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={link.custom_icon_url}
+                      alt=""
+                      title="Ikon kustom"
+                      className="h-7 w-7 flex-shrink-0 rounded-full object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    (() => {
+                      const { Icon, label, badgeClass } = detectLinkIcon(link.url);
+                      return (
+                        <span title={label} className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                      );
+                    })()
+                  ))}
                 <div className="min-w-0 flex-1">
                   {editingField?.id === link.id && editingField.field === "title" ? (
                     <input
@@ -945,6 +992,38 @@ export default function DashboardLinksPage() {
                     >
                       <IconLock className="h-4 w-4" />
                     </button>
+                    {/* Permintaan langsung pengguna: unggah gambar kustom per
+                        tautan, menggantikan ikon platform otomatis di halaman
+                        publik. */}
+                    <label
+                      title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
+                      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        link.custom_icon_url ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      {iconUploadingId === link.id ? (
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                      ) : (
+                        <IconCamera className="h-4 w-4" />
+                      )}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleIconUpload(e, link)}
+                        disabled={iconUploadingId === link.id}
+                        className="hidden"
+                      />
+                    </label>
+                    {link.custom_icon_url && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIcon(link)}
+                        title="Hapus ikon kustom (kembali ke deteksi otomatis)"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                      >
+                        <IconClose className="h-4 w-4" />
+                      </button>
+                    )}
                   </>
                 )}
                 {(link.block_type === "video" || link.block_type === "faq") && (

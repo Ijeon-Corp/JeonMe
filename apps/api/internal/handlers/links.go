@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/queue"
+	"github.com/jeonme/api/internal/storage"
 )
 
 // LinksHandler mengimplementasikan CRUD tautan (REQ-F-202), nonaktifkan-
@@ -27,13 +30,14 @@ import (
 // formulir kontak akan dilewati dengan log peringatan, sama seperti pola
 // soft-fail CheckoutHandler.
 type LinksHandler struct {
-	DB    *pgxpool.Pool
-	Queue *asynq.Client
-	RDB   *redis.Client
+	DB      *pgxpool.Pool
+	Queue   *asynq.Client
+	RDB     *redis.Client
+	Storage *storage.Client
 }
 
-func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client, rdb *redis.Client) *LinksHandler {
-	return &LinksHandler{DB: db, Queue: queueClient, RDB: rdb}
+func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client, rdb *redis.Client, s3 *storage.Client) *LinksHandler {
+	return &LinksHandler{DB: db, Queue: queueClient, RDB: rdb, Storage: s3}
 }
 
 // invalidatePageCacheByID — sama seperti invalidateUserPageCache (cache.go),
@@ -88,6 +92,11 @@ type linkItem struct {
 	// (REQ-F-601) yang sudah tercatat sejak awal, sebelumnya tidak pernah
 	// ditampilkan per-tautan di dashboard (cuma top-5 di Ringkasan/No.86).
 	ClickCount int64 `json:"click_count"`
+	// CustomIconURL -- permintaan langsung pengguna: gambar kustom per
+	// tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
+	// (lihat lib/link-icons.ts sisi klien). Kosong berarti tetap pakai
+	// deteksi otomatis seperti sebelumnya.
+	CustomIconURL string `json:"custom_icon_url"`
 }
 
 // List mengembalikan seluruh tautan & blok konten milik kreator yang sedang
@@ -103,7 +112,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
-			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data,
+			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -120,7 +129,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
-			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.ClickCount); err == nil {
+			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -465,6 +474,105 @@ func (h *LinksHandler) Update(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "tautan diperbarui"})
+}
+
+// maxLinkIconSize -- 2MB, cukup untuk ikon kecil (bukan foto resolusi
+// penuh seperti avatar/latar).
+const maxLinkIconSize = 2 * 1024 * 1024
+
+// UploadIcon -- permintaan langsung pengguna: unggah gambar kustom per
+// tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL di
+// halaman publik (lihat lib/link-icons.ts sisi klien -- deteksi otomatis
+// TETAP jalan seperti biasa untuk tautan yang belum diberi ikon kustom).
+// Pola SAMA PERSIS seperti PageHandler.UploadAvatar/UploadCustomBackground:
+// key storage SELALU "link-icons/<linkID>" (unggah ulang menimpa, bukan
+// menumpuk) + query param cache-busting "?v=<timestamp>" WAJIB disimpan ke
+// DB (bukan cuma di respons) -- lihat komentar panjang di UploadAvatar
+// soal kenapa ini penting (bug nyata yang pernah dilaporkan pengguna).
+func (h *LinksHandler) UploadIcon(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("icon")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"icon\")"})
+		return
+	}
+	if fileHeader.Size > maxLinkIconSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 2MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAvatarExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("link-icons/%s", linkID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah ikon"})
+		return
+	}
+
+	iconURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET custom_icon_url = $1 WHERE id = $2`, iconURL, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ikon terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"custom_icon_url": iconURL, "message": "ikon tautan berhasil diunggah"})
+}
+
+// DeleteIcon -- mengembalikan tautan ke deteksi ikon otomatis (menghapus
+// custom_icon_url). Objek di storage TIDAK wajib berhasil terhapus untuk
+// endpoint ini sukses (soft-fail, sama seperti pola lain di codebase) --
+// yang penting kolom DB bersih, file yatim di storage bukan masalah kritis.
+func (h *LinksHandler) DeleteIcon(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET custom_icon_url = '' WHERE id = $1`, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus ikon tautan"})
+		return
+	}
+
+	if h.Storage != nil {
+		_ = h.Storage.Delete(ctx, fmt.Sprintf("link-icons/%s", linkID))
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"message": "ikon tautan dihapus, kembali ke deteksi otomatis"})
 }
 
 // Unlock — No.79 (Sprint 9): endpoint PUBLIK, dipanggil dari halaman publik

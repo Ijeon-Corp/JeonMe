@@ -119,6 +119,7 @@ export interface PublicLink {
   lock_min_age: number | null;
   block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data: Record<string, unknown>;
+  custom_icon_url: string;
 }
 
 // No.79 (Sprint 9): buka tautan terkunci -- endpoint publik, tanpa akun.
@@ -494,6 +495,10 @@ export interface LinkItem {
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
   click_count: number;
+  // custom_icon_url -- permintaan langsung pengguna: gambar kustom per
+  // tautan, menggantikan ikon platform yang terdeteksi otomatis dari URL
+  // (lihat lib/link-icons.ts). Kosong berarti tetap pakai deteksi otomatis.
+  custom_icon_url: string;
 }
 
 // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ) -- baris
@@ -542,6 +547,32 @@ export function updateLink(
 
 export function deleteLink(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+// uploadLinkIcon -- permintaan langsung pengguna: unggah gambar kustom per
+// tautan, menggantikan ikon platform otomatis di halaman publik. Lewat
+// multipart/form-data (bukan apiFetch JSON biasa), sama seperti
+// uploadCustomBackground/uploadProductCover.
+export async function uploadLinkIcon(id: string, file: File): Promise<{ custom_icon_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("icon", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/icon`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteLinkIcon(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/icon`, { method: "DELETE" }, { auth: true });
 }
 
 export function reorderLinks(items: { id: string; position: number }[]) {

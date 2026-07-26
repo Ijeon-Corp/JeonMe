@@ -161,6 +161,11 @@ type publicLink struct {
 	LockMinAge *int            `json:"lock_min_age"`
 	BlockType  string          `json:"block_type"`
 	BlockData  json.RawMessage `json:"block_data"`
+	// CustomIconURL -- permintaan langsung pengguna: gambar kustom per
+	// tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
+	// di sisi klien (lihat lib/link-icons.ts). Kosong berarti tetap pakai
+	// deteksi otomatis.
+	CustomIconURL string `json:"custom_icon_url"`
 }
 
 type publicItem struct {
@@ -314,7 +319,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	// gate is_active manual yang sudah ada -- keduanya harus lolos.
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data FROM links
+		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url FROM links
 		WHERE page_id = $1
 		AND is_active = true
 		AND (starts_at IS NULL OR starts_at <= now())
@@ -325,7 +330,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		defer rows.Close()
 		for rows.Next() {
 			var l publicLink
-			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData); err == nil {
+			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL); err == nil {
 				// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 				// komentar di definisi struct publicLink.
 				if l.LockType != "" {

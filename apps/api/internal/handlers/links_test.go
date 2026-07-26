@@ -63,7 +63,7 @@ func newTestLinksHandler(t *testing.T) (*LinksHandler, *AuthHandler) {
 	}
 	t.Cleanup(func() { rdb.Close() })
 
-	return NewLinksHandler(db, nil, rdb), NewAuthHandler(db, rdb, "test-secret", "test")
+	return NewLinksHandler(db, nil, rdb, nil), NewAuthHandler(db, rdb, "test-secret", "test")
 }
 
 // Alur inti CRUD tautan: buat, muncul di List berurutan, lalu bisa diedit.

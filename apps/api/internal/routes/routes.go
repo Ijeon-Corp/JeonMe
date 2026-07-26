@@ -39,7 +39,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	audience := handlers.NewAudienceHandler(db, rdb)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	customDomain := handlers.NewCustomDomainHandler(db, cfg.CustomDomainCnameTarget)
-	links := handlers.NewLinksHandler(db, queueClient, rdb)
+	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
@@ -164,6 +164,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				linksGroup.PATCH("/links/:id", links.Update)
 				linksGroup.DELETE("/links/:id", links.Delete)
 				linksGroup.PATCH("/links/reorder", links.Reorder)
+				// Permintaan langsung pengguna: unggah gambar kustom per tautan
+				// (menggantikan ikon platform otomatis di halaman publik).
+				linksGroup.POST("/links/:id/icon", links.UploadIcon)
+				linksGroup.DELETE("/links/:id/icon", links.DeleteIcon)
 
 				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
 				// -- baris links yang sama, cuma butuh endpoint create sendiri

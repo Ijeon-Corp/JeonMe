@@ -26,6 +26,10 @@ export interface PagePreviewLink {
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
   blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   blockData?: Record<string, unknown>;
+  // customIconUrl -- permintaan langsung pengguna: gambar kustom per
+  // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
+  // (lihat lib/link-icons.ts). Kosong berarti tetap pakai deteksi otomatis.
+  customIconUrl?: string;
 }
 
 export interface PagePreviewProduct {
@@ -156,6 +160,7 @@ interface PreviewSourceLink {
   lock_min_age?: number | null;
   block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
   block_data?: Record<string, unknown>;
+  custom_icon_url?: string;
 }
 
 interface PreviewSourceProduct {
@@ -213,6 +218,7 @@ export function toPreviewData(
         lockMinAge: l.lock_min_age,
         blockType: l.block_type,
         blockData: l.block_data,
+        customIconUrl: l.custom_icon_url || undefined,
       })),
     products: products
       .filter((p) => p.is_active)
@@ -405,8 +411,13 @@ export default function PagePreview({
                       href={link.url}
                       className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-                        <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
+                      <span className="absolute left-3 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+                        {link.customIconUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          <LinkPlatformIcon className={`h-5 w-5 ${iconColorClass}`} />
+                        )}
                       </span>
                       <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </TrackedLink>
@@ -423,8 +434,13 @@ export default function PagePreview({
                       rel="noopener noreferrer"
                       className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-                        <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
+                      <span className="absolute left-3 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+                        {link.customIconUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          <LinkPlatformIcon className={`h-5 w-5 ${iconColorClass}`} />
+                        )}
                       </span>
                       <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </a>

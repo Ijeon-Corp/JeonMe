@@ -79,6 +79,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             lockMinAge: l.lock_min_age,
             blockType: l.block_type,
             blockData: l.block_data,
+            customIconUrl: l.custom_icon_url || undefined,
           })),
           events: page.events.map((e) => ({
             productId: e.product_id,
