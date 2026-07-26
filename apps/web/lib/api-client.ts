@@ -226,7 +226,13 @@ export interface PublicPage {
     | "merriweather"
     | "space-grotesk";
   custom_button_color: string;
-  custom_button_style: "fill" | "outline" | "shadow";
+  custom_button_style: "fill" | "outline" | "glass";
+  custom_button_rounded: "none" | "sm" | "md" | "full";
+  custom_button_shadow: "none" | "soft" | "strong" | "hard";
+  custom_button_text_color: string;
+  custom_page_text_color: string;
+  custom_title_font: "" | PublicPage["custom_font"];
+  custom_title_color: string;
   is_verified: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
@@ -329,9 +335,19 @@ export interface MyPage {
     | "merriweather"
     | "space-grotesk";
   custom_button_color: string;
-  // custom_button_style -- "Desain 2.0": fill/outline/shadow, HANYA relevan
-  // kalau theme="custom".
-  custom_button_style: "fill" | "outline" | "shadow";
+  // custom_button_style -- "Desain 2.0": fill/outline/glass, HANYA relevan
+  // kalau theme="custom". ("shadow", nilai lama, sudah dilebur jadi axis
+  // independen custom_button_shadow di bawah -- lihat migrasi 000034.)
+  custom_button_style: "fill" | "outline" | "glass";
+  custom_button_rounded: "none" | "sm" | "md" | "full";
+  custom_button_shadow: "none" | "soft" | "strong" | "hard";
+  custom_button_text_color: string;
+  // custom_page_text_color/custom_title_color kosong ("") berarti "ikuti
+  // warna bawaan tema". custom_title_font kosong berarti "samakan dengan
+  // font halaman" (toggle "Alternative title font", default mati).
+  custom_page_text_color: string;
+  custom_title_font: "" | MyPage["custom_font"];
+  custom_title_color: string;
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -388,6 +404,12 @@ export function updateMyPage(
       | "custom_font"
       | "custom_button_color"
       | "custom_button_style"
+      | "custom_button_rounded"
+      | "custom_button_shadow"
+      | "custom_button_text_color"
+      | "custom_page_text_color"
+      | "custom_title_font"
+      | "custom_title_color"
     >
   >
 ) {

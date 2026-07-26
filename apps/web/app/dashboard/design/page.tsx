@@ -14,7 +14,13 @@ import {
   uploadAvatar,
   uploadCustomBackground,
 } from "@/lib/api-client";
-import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
+import {
+  CUSTOM_BUTTON_ROUNDED_OPTIONS,
+  CUSTOM_BUTTON_SHADOW_OPTIONS,
+  CUSTOM_BUTTON_STYLE_OPTIONS,
+  CUSTOM_FONT_OPTIONS,
+  PAGE_THEMES,
+} from "@/lib/page-themes";
 import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconPaintbrush } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
@@ -52,6 +58,12 @@ type PageSettingsPatch = Partial<
     | "custom_font"
     | "custom_button_color"
     | "custom_button_style"
+    | "custom_button_rounded"
+    | "custom_button_shadow"
+    | "custom_button_text_color"
+    | "custom_page_text_color"
+    | "custom_title_font"
+    | "custom_title_color"
   >
 >;
 
@@ -518,6 +530,16 @@ export default function DashboardDesignPage() {
                 />
               </div>
               <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Teks Tombol</label>
+                <input
+                  type="color"
+                  value={page.custom_button_text_color || "#FFFFFF"}
+                  onChange={(e) => setPage({ ...page, custom_button_text_color: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_button_text_color: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border"
+                />
+              </div>
+              <div>
                 <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
                 <div className="flex gap-2">
                   {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
@@ -527,6 +549,41 @@ export default function DashboardDesignPage() {
                       onClick={() => handleCustomize({ custom_button_style: opt.value })}
                       className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
                         page.custom_button_style === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Kelengkungan Sudut</label>
+                <div className="flex gap-2">
+                  {CUSTOM_BUTTON_ROUNDED_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleCustomize({ custom_button_rounded: opt.value })}
+                      title={opt.label}
+                      className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
+                        page.custom_button_rounded === opt.value ? "border-primary bg-white" : "border-border"
+                      }`}
+                    >
+                      <span className={`block h-3 w-6 border-2 border-ink/60 ${opt.className}`} aria-hidden />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Bayangan Tombol</label>
+                <div className="flex gap-2">
+                  {CUSTOM_BUTTON_SHADOW_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleCustomize({ custom_button_shadow: opt.value })}
+                      className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
+                        page.custom_button_shadow === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
                       }`}
                     >
                       {opt.label}
@@ -548,17 +605,86 @@ export default function DashboardDesignPage() {
               expanded={expandedSection === "font"}
               onToggle={() => toggleSection("font")}
             >
-              <select
-                value={page.custom_font}
-                onChange={(e) => handleCustomize({ custom_font: e.target.value as MyPage["custom_font"] })}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                {CUSTOM_FONT_OPTIONS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Font Halaman</label>
+                <select
+                  value={page.custom_font}
+                  onChange={(e) => handleCustomize({ custom_font: e.target.value as MyPage["custom_font"] })}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                >
+                  {CUSTOM_FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Teks Halaman</label>
+                <input
+                  type="color"
+                  value={page.custom_page_text_color || "#FFFFFF"}
+                  onChange={(e) => setPage({ ...page, custom_page_text_color: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_page_text_color: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border"
+                />
+                {page.custom_page_text_color && (
+                  <button
+                    type="button"
+                    onClick={() => handleCustomize({ custom_page_text_color: "" })}
+                    className="mt-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    Kembalikan ke warna bawaan tema
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold text-ink">Font Judul Terpisah</p>
+                  <p className="text-[11px] text-muted">Default sama dengan font halaman.</p>
+                </div>
+                <Toggle
+                  checked={!!page.custom_title_font}
+                  onChange={() => handleCustomize({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
+                  label="Font judul terpisah"
+                />
+              </div>
+
+              {page.custom_title_font && (
+                <select
+                  value={page.custom_title_font}
+                  onChange={(e) => handleCustomize({ custom_title_font: e.target.value as MyPage["custom_font"] })}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                >
+                  {CUSTOM_FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Judul</label>
+                <input
+                  type="color"
+                  value={page.custom_title_color || "#FFFFFF"}
+                  onChange={(e) => setPage({ ...page, custom_title_color: e.target.value })}
+                  onBlur={(e) => handleCustomize({ custom_title_color: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border"
+                />
+                {page.custom_title_color && (
+                  <button
+                    type="button"
+                    onClick={() => handleCustomize({ custom_title_color: "" })}
+                    className="mt-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    Kembalikan ke warna bawaan tema
+                  </button>
+                )}
+              </div>
             </AccordionRow>
 
             <div className="flex items-center gap-2">

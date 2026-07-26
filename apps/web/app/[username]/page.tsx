@@ -84,6 +84,12 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             font: page.custom_font,
             buttonColor: page.custom_button_color,
             buttonStyle: page.custom_button_style,
+            buttonRounded: page.custom_button_rounded,
+            buttonShadow: page.custom_button_shadow,
+            buttonTextColor: page.custom_button_text_color,
+            pageTextColor: page.custom_page_text_color,
+            titleFont: page.custom_title_font,
+            titleColor: page.custom_title_color,
           },
           links: page.links.map((l) => ({
             id: l.id,

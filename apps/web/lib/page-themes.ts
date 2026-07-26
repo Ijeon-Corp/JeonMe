@@ -86,7 +86,32 @@ export type PageTheme = {
    * -- custom property CSS mewarisi ke seluruh turunan DOM secara alami.
    */
   pageStyle?: CSSProperties;
+  /**
+   * nameStyle -- permintaan langsung pengguna (panel "Font", opsi
+   * "Alternative title font"): HANYA terisi untuk theme "custom" DAN kalau
+   * kreator mengaktifkan font judul terpisah dari font halaman -- dipasang
+   * KHUSUS di elemen <h1> nama (lihat PagePreview.tsx), beda dari pageStyle
+   * yang berlaku ke seluruh halaman lewat elemen <main>.
+   */
+  nameStyle?: CSSProperties;
 };
+
+export type CustomFontValue =
+  | "inter"
+  | "playfair"
+  | "lora"
+  | "montserrat"
+  | "roboto-mono"
+  | "poppins"
+  | "quicksand"
+  | "merriweather"
+  | "space-grotesk";
+
+// Tipe non-optional berdiri sendiri (bukan langsung CustomThemeConfig["buttonRounded"]
+// dkk, yang optional) supaya bisa dipakai sebagai key Record<...> di bawah
+// tanpa "undefined" ikut masuk union-nya.
+export type CustomButtonRounded = "none" | "sm" | "md" | "full";
+export type CustomButtonShadowLevel = "none" | "soft" | "strong" | "hard";
 
 export interface CustomThemeConfig {
   // "Desain 2.0": "gradient" ditambah -- disimpan sebagai string CSS
@@ -94,21 +119,29 @@ export interface CustomThemeConfig {
   // sebagai string opaque, sama seperti warna solid/URL gambar sekarang).
   backgroundType: "solid" | "gradient" | "image";
   backgroundValue: string;
-  font:
-    | "inter"
-    | "playfair"
-    | "lora"
-    | "montserrat"
-    | "roboto-mono"
-    | "poppins"
-    | "quicksand"
-    | "merriweather"
-    | "space-grotesk";
+  font: CustomFontValue;
   buttonColor: string;
-  // buttonStyle -- "Desain 2.0": axis baru terpisah dari warna tombol.
-  // fill = isi penuh (perilaku lama), outline = transparan+border, shadow =
-  // isi penuh + bayangan warna di bawahnya.
-  buttonStyle: "fill" | "outline" | "shadow";
+  // buttonStyle -- "Desain 2.0": axis gaya tombol. fill = isi penuh, outline
+  // = transparan+border, glass = transparan+blur ala kaca (permintaan
+  // langsung pengguna, referensi tangkapan layar panel "Buttons"). "shadow"
+  // (nilai lama) sudah dilebur jadi axis independen `buttonShadow` di bawah.
+  buttonStyle: "fill" | "outline" | "glass";
+  // buttonRounded/buttonShadow/buttonTextColor & pageTextColor/titleFont/
+  // titleColor -- permintaan langsung pengguna (referensi tangkapan layar
+  // panel "Buttons"/"Fonts"): kontrol lebih lengkap ala Linktree. SEMUA
+  // opsional -- halaman TAMBAHAN (No.98/ExtraPage) belum punya UI untuk
+  // ini, jadi cukup diabaikan (getPageTheme jatuh balik ke default kalau
+  // undefined, lihat di bawah), TIDAK memaksa halaman utama & tambahan
+  // sama-sama mengisinya. *Color kosong ("")/undefined & titleFont kosong/
+  // undefined berarti "ikuti default tema".
+  buttonRounded?: CustomButtonRounded;
+  buttonShadow?: CustomButtonShadowLevel;
+  buttonTextColor?: string;
+  pageTextColor?: string;
+  // titleFont kosong/undefined berarti "samakan dengan font halaman"
+  // (toggle "Alternative title font", default MATI di referensi).
+  titleFont?: CustomFontValue | "";
+  titleColor?: string;
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 9 pilihan (Poppins/Quicksand/
@@ -126,9 +159,23 @@ export const CUSTOM_FONT_OPTIONS: { value: CustomThemeConfig["font"]; label: str
 ];
 
 export const CUSTOM_BUTTON_STYLE_OPTIONS: { value: CustomThemeConfig["buttonStyle"]; label: string }[] = [
-  { value: "fill", label: "Isi Penuh" },
+  { value: "fill", label: "Solid" },
+  { value: "glass", label: "Glass" },
   { value: "outline", label: "Outline" },
-  { value: "shadow", label: "Bayangan" },
+];
+
+export const CUSTOM_BUTTON_ROUNDED_OPTIONS: { value: CustomButtonRounded; label: string; className: string }[] = [
+  { value: "none", label: "Kotak", className: "rounded-none" },
+  { value: "sm", label: "Sedikit", className: "rounded-md" },
+  { value: "md", label: "Sedang", className: "rounded-xl" },
+  { value: "full", label: "Penuh", className: "rounded-full" },
+];
+
+export const CUSTOM_BUTTON_SHADOW_OPTIONS: { value: CustomButtonShadowLevel; label: string }[] = [
+  { value: "none", label: "Tanpa" },
+  { value: "soft", label: "Lembut" },
+  { value: "strong", label: "Kuat" },
+  { value: "hard", label: "Tegas" },
 ];
 
 // "custom" SENGAJA tidak masuk daftar ini -- dibangun secara dinamis oleh
@@ -550,34 +597,74 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
   },
 };
 
-// buildCustomButtonClass -- "Desain 2.0": axis gaya tombol terpisah dari
-// warna. Warna SELALU lewat custom property CSS --custom-button-bg (sudah
-// ada sejak No.80), gaya tombol menentukan bagaimana warna itu dipakai.
-function buildCustomButtonClass(style: CustomThemeConfig["buttonStyle"]): string {
-  switch (style) {
+const BUTTON_ROUNDED_CLASS: Record<CustomButtonRounded, string> = {
+  none: "rounded-none",
+  sm: "rounded-md",
+  md: "rounded-xl",
+  full: "rounded-full",
+};
+
+const BUTTON_SHADOW_CLASS: Record<CustomButtonShadowLevel, string> = {
+  none: "",
+  soft: "shadow-md",
+  strong: "shadow-xl",
+  hard: "shadow-[4px_4px_0_0_rgba(0,0,0,0.25)]",
+};
+
+// buildCustomButtonClass -- permintaan langsung pengguna (referensi
+// tangkapan layar panel "Buttons"): gaya/kelengkungan/bayangan tombol tiga
+// axis INDEPENDEN. Warna latar selalu lewat --custom-button-bg (sudah ada
+// sejak No.80), warna teks lewat --custom-button-text (baru) -- keduanya
+// custom property CSS, bukan literal di kelas, supaya hex bebas dari
+// kreator tidak perlu daftar kelas Tailwind statis. Dipakai BERSAMA untuk
+// kartu tautan (card/cardTitle) MAUPUN tombol Beli/Dukung/dst (buyButton) --
+// meniru Linktree yang memperlakukan semua tombol di halaman sebagai satu
+// gaya visual seragam, bukan cuma tombol sekunder seperti sebelumnya.
+function buildCustomButtonClass(custom: CustomThemeConfig): string {
+  const rounded = BUTTON_ROUNDED_CLASS[custom.buttonRounded ?? "full"] ?? "rounded-full";
+  const shadow = BUTTON_SHADOW_CLASS[custom.buttonShadow ?? "soft"] ?? "";
+  const base = `${rounded} ${shadow} text-[color:var(--custom-button-text)] font-bold transition-all duration-300`;
+  switch (custom.buttonStyle) {
     case "outline":
-      return "bg-transparent border-2 border-[color:var(--custom-button-bg)] text-[color:var(--custom-button-bg)] font-bold hover:bg-[color:var(--custom-button-bg)]/10";
-    case "shadow":
-      return "bg-[color:var(--custom-button-bg)] text-white font-bold shadow-[0_8px_24px_-4px_var(--custom-button-bg)] hover:brightness-105";
+      return `${base} bg-transparent border-2 border-[color:var(--custom-button-bg)]`;
+    case "glass":
+      return `${base} bg-[color:var(--custom-button-bg)]/20 backdrop-blur border border-[color:var(--custom-button-bg)]/30 hover:bg-[color:var(--custom-button-bg)]/30`;
     case "fill":
     default:
-      return "bg-[color:var(--custom-button-bg)] text-white font-bold hover:brightness-105";
+      return `${base} bg-[color:var(--custom-button-bg)] hover:brightness-105`;
   }
 }
 
 export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageTheme {
   if (theme === "custom" && custom) {
     const fontCssVar = CUSTOM_FONT_OPTIONS.find((f) => f.value === custom.font)?.cssVar ?? "var(--font-body)";
+    // titleFont kosong -> undefined -> nameStyle di bawah ikut kosong ->
+    // <h1> otomatis mewarisi fontFamily halaman dari <main> (custom.font),
+    // sesuai toggle "Alternative title font" yang default MATI di referensi.
+    const titleFontCssVar = custom.titleFont
+      ? CUSTOM_FONT_OPTIONS.find((f) => f.value === custom.titleFont)?.cssVar
+      : undefined;
     const base = PAGE_THEMES.sunrise;
     // "gradient" pakai kelas sama seperti "image" -- background-image CSS
     // menerima baik url(...) maupun linear-gradient(...) lewat properti yang
     // sama, jadi tidak perlu kelas Tailwind terpisah.
     const isImageLike = custom.backgroundType === "image" || custom.backgroundType === "gradient";
+    const buttonClass = buildCustomButtonClass(custom);
     return {
       ...base,
       label: "Custom",
       page: isImageLike ? "bg-[image:var(--custom-bg)] bg-cover bg-center bg-no-repeat" : "bg-[color:var(--custom-bg)]",
-      buyButton: buildCustomButtonClass(custom.buttonStyle ?? "fill"),
+      card: buttonClass,
+      cardTitle: "text-[color:var(--custom-button-text)]",
+      buyButton: buttonClass,
+      // "Fonts" (referensi tangkapan layar): warna judul & warna teks umum
+      // independen -- kosong berarti ikuti default tema sunrise di bawahnya.
+      name: custom.titleColor
+        ? "text-[color:var(--custom-title-color)]"
+        : custom.pageTextColor
+          ? "text-[color:var(--custom-page-text-color)]"
+          : base.name,
+      bio: custom.pageTextColor ? "text-[color:var(--custom-page-text-color)]" : base.bio,
       swatch: custom.buttonColor,
       pageStyle: {
         // Nilai kustom properti CSS (bukan nama properti standar) --
@@ -586,8 +673,12 @@ export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageThe
         // dashboard, dipakai langsung tanpa dibungkus url() (beda dari "image").
         ["--custom-bg" as string]: custom.backgroundType === "image" ? `url(${custom.backgroundValue})` : custom.backgroundValue,
         ["--custom-button-bg" as string]: custom.buttonColor,
+        ["--custom-button-text" as string]: custom.buttonTextColor || "#FFFFFF",
+        ...(custom.pageTextColor ? { ["--custom-page-text-color" as string]: custom.pageTextColor } : {}),
+        ...(custom.titleColor ? { ["--custom-title-color" as string]: custom.titleColor } : {}),
         fontFamily: fontCssVar,
       } as CSSProperties,
+      nameStyle: titleFontCssVar ? ({ fontFamily: titleFontCssVar } as CSSProperties) : undefined,
     };
   }
   return PAGE_THEMES[theme as Exclude<PageThemeName, "custom">] ?? PAGE_THEMES.default;
