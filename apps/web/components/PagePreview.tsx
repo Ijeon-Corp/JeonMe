@@ -395,7 +395,7 @@ export default function PagePreview({
                 )
               ) : interactive ? (
                 (() => {
-                  const { Icon: LinkPlatformIcon, badgeClass } = detectLinkIcon(link.url);
+                  const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
                   return (
                     <TrackedLink
                       key={link.id}
@@ -405,8 +405,8 @@ export default function PagePreview({
                       href={link.url}
                       className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-2.5 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3 w-3" />
+                      <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+                        <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
                       </span>
                       <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </TrackedLink>
@@ -414,7 +414,7 @@ export default function PagePreview({
                 })()
               ) : (
                 (() => {
-                  const { Icon: LinkPlatformIcon, badgeClass } = detectLinkIcon(link.url);
+                  const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
                   return (
                     <a
                       key={link.id}
@@ -423,8 +423,8 @@ export default function PagePreview({
                       rel="noopener noreferrer"
                       className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-2.5 top-1/2 flex h-6 w-6 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3 w-3" />
+                      <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+                        <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
                       </span>
                       <span className="w-full break-words px-6 text-center">{link.title}</span>
                     </a>
@@ -672,8 +672,6 @@ export default function PagePreview({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
@@ -713,11 +711,7 @@ function LandingPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
-        <a href="https://jeonme.com" target="_blank" rel="noopener noreferrer" title="Dibuat dengan Jeonme">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="Jeonme" className="h-9 w-9 rounded-xl shadow-card" />
-        </a>
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
@@ -837,8 +831,6 @@ function LandingPagePreview({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.png" alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded" />
             Buat halaman gratis di Jeonme
           </a>
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
