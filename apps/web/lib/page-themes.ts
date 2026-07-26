@@ -15,6 +15,13 @@ import type { CSSProperties } from "react";
 // (bloom/blaze/cyber/mint/golden/cosmic) supaya galeri lebih variatif,
 // melengkapi 10 preset "Desain 2.0" sebelumnya yang mayoritas latar solid
 // atau gradien lembut.
+// 5 preset FOTO WALLPAPER (permintaan langsung pengguna: "tema yang
+// menggunakan versi gambar... ambil gambar dari internet") -- dusk/marble/
+// nightfall/mist/berry, masing-masing foto asli (Picsum Photos/Unsplash,
+// lisensi Unsplash bebas dipakai tanpa atribusi) disimpan statis di
+// public/wallpapers/*.jpg dengan overlay gelap DIBAKAR langsung ke file
+// (bukan CSS terpisah) supaya teks putih avatar/nama/bio selalu terbaca
+// apa pun foto aslinya -- lihat catatan lengkap di PAGE_THEMES di bawah.
 export type PageThemeName =
   | "default"
   | "midnight"
@@ -32,6 +39,11 @@ export type PageThemeName =
   | "mint"
   | "golden"
   | "cosmic"
+  | "dusk"
+  | "marble"
+  | "nightfall"
+  | "mist"
+  | "berry"
   | "custom";
 
 export type PageTheme = {
@@ -431,6 +443,109 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     footer: "text-white/30 hover:text-violet-300",
     swatch: "#A78BFA",
     previewBg: "linear-gradient(160deg, #0B0B1E 0%, #1B1140 50%, #0B0B1E 100%)",
+    previewIsDark: true,
+  },
+  // 5 preset FOTO WALLPAPER (permintaan langsung pengguna) -- foto asli
+  // (bukan gradien/warna solid) disimpan statis di public/wallpapers/*.jpg,
+  // OVERLAY GELAP SUDAH DIBAKAR LANGSUNG ke tiap file (bukan lewat CSS
+  // terpisah) supaya teks putih avatar/nama/bio SELALU kontras tinggi di
+  // bagian atas halaman, apa pun foto aslinya -- lihat skrip pembuatannya
+  // di riwayat kerja (Picsum Photos, lisensi Unsplash bebas dipakai tanpa
+  // atribusi). previewBg dashboard memakai foto yang SAMA (bukan swatch
+  // warna polos) supaya galeri tema menampilkan pratinjau foto sungguhan.
+  dusk: {
+    label: "Dusk",
+    page: "bg-[url('/wallpapers/senja.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#4B5563",
+    previewBg: "url('/wallpapers/senja.jpg') center/cover",
+    previewIsDark: true,
+  },
+  marble: {
+    label: "Marble",
+    page: "bg-[url('/wallpapers/akuarel.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#1E3A8A",
+    previewBg: "url('/wallpapers/akuarel.jpg') center/cover",
+    previewIsDark: true,
+  },
+  nightfall: {
+    label: "Nightfall",
+    page: "bg-[url('/wallpapers/malam.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#7C3AED",
+    previewBg: "url('/wallpapers/malam.jpg') center/cover",
+    previewIsDark: true,
+  },
+  mist: {
+    label: "Mist",
+    page: "bg-[url('/wallpapers/kabut.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#4B5D3A",
+    previewBg: "url('/wallpapers/kabut.jpg') center/cover",
+    previewIsDark: true,
+  },
+  berry: {
+    label: "Berry",
+    page: "bg-[url('/wallpapers/segar.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#DC2626",
+    previewBg: "url('/wallpapers/segar.jpg') center/cover",
     previewIsDark: true,
   },
 };

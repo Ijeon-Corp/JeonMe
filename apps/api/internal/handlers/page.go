@@ -523,6 +523,7 @@ var availableThemes = map[string]bool{
 	"default": true, "midnight": true, "sunrise": true, "forest": true, "minimal": true,
 	"rose": true, "ocean": true, "lavender": true, "noir": true, "peach": true,
 	"bloom": true, "blaze": true, "cyber": true, "mint": true, "golden": true, "cosmic": true,
+	"dusk": true, "marble": true, "nightfall": true, "mist": true, "berry": true,
 	"custom": true,
 }
 

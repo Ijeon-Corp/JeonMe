@@ -64,7 +64,7 @@ export default function LockedLinkButton({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className={className}>
-        <span className="w-full truncate text-center">🔒 {title}</span>
+        <span className="w-full break-words text-center">🔒 {title}</span>
       </button>
     );
   }

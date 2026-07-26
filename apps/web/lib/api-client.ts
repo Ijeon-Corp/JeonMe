@@ -361,6 +361,11 @@ export const THEME_PRESETS = [
   "mint",
   "golden",
   "cosmic",
+  "dusk",
+  "marble",
+  "nightfall",
+  "mist",
+  "berry",
 ] as const;
 
 export function getMyPage() {

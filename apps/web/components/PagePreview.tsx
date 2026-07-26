@@ -377,7 +377,7 @@ export default function PagePreview({
                     title="Pratinjau -- tombol ini tidak aktif"
                     className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-6 py-4 text-base font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
-                    <span className="w-full truncate text-center">🔒 {link.title}</span>
+                    <span className="w-full break-words text-center">🔒 {link.title}</span>
                   </button>
                 )
               ) : interactive ? (
@@ -392,10 +392,10 @@ export default function PagePreview({
                       href={link.url}
                       className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                      <span className={`absolute left-4 top-1/2 flex h-8 w-8 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
                         <LinkPlatformIcon className="h-4 w-4" />
                       </span>
-                      <span className="w-full truncate text-center">{link.title}</span>
+                      <span className="w-full break-words px-9 text-center">{link.title}</span>
                     </TrackedLink>
                   );
                 })()
@@ -410,10 +410,10 @@ export default function PagePreview({
                       rel="noopener noreferrer"
                       className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                      <span className={`absolute left-4 top-1/2 flex h-8 w-8 flex-shrink-0 -translate-y-1/2 items-center justify-center rounded-full ${badgeClass}`}>
                         <LinkPlatformIcon className="h-4 w-4" />
                       </span>
-                      <span className="w-full truncate text-center">{link.title}</span>
+                      <span className="w-full break-words px-9 text-center">{link.title}</span>
                     </a>
                   );
                 })()
