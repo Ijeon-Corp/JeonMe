@@ -554,6 +554,65 @@ export default function DashboardLinksPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+        {/* Baris profil -- HANYA pratinjau baca-saja (avatar/nama/bio),
+            persis posisi & tampilan di referensi Linktree. Mengubahnya
+            tetap lewat halaman Desain (satu sumber kebenaran), tidak
+            diduplikasi jadi bisa diedit dari sini juga. */}
+        {page && (
+          <div className="mt-4 flex items-center gap-3">
+            {page.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={page.avatar_url} alt={page.username} className="h-14 w-14 flex-shrink-0 rounded-full object-cover ring-2 ring-white shadow-card" />
+            ) : (
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle font-heading text-lg font-bold text-primary">
+                {page.username.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate font-heading text-base font-bold text-ink">{page.username}</p>
+              {page.bio && <p className="truncate text-sm text-muted">{page.bio}</p>}
+            </div>
+          </div>
+        )}
+
+        {/* Baris quick-add -- jalan pintas ke 3 tipe blok nyata yang kami
+            punya (Video/FAQ/Formulir Kontak), plus tombol "+" generik yang
+            membuka modal lengkap yang sama seperti tombol besar di bawah.
+            Ikon media/gambar/koleksi ala referensi SENGAJA tidak ditiru --
+            Jeonme belum punya blok galeri gambar/koleksi di halaman utama. */}
+        <div className="mt-3 flex items-center gap-2">
+          {[
+            { tile: CONTENT_TILES.find((t) => t.key === "video")!, key: "video" },
+            { tile: CONTENT_TILES.find((t) => t.key === "faq")!, key: "faq" },
+            { tile: CONTENT_TILES.find((t) => t.key === "contact_form")!, key: "contact_form" },
+          ].map(({ tile, key }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleSelectContentTile(tile)}
+              title={tile.label}
+              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted hover:border-primary hover:text-primary"
+            >
+              <tile.Icon className="h-4 w-4" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[9px] font-bold text-ink ring-1 ring-border">
+                +
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setAddCategory("disarankan");
+              setAddSearch("");
+              setAddModalOpen(true);
+            }}
+            title="Lihat semua pilihan"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-ink hover:bg-gray-200"
+          >
+            <IconPlus className="h-4 w-4" />
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={() => {
@@ -561,7 +620,7 @@ export default function DashboardLinksPage() {
             setAddSearch("");
             setAddModalOpen(true);
           }}
-          className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+          className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
         >
           <IconPlus className="h-5 w-5" />
           Tambah
