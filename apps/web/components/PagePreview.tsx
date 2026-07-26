@@ -10,6 +10,7 @@ import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import ReportButton from "@/components/ReportButton";
+import ShareButton from "@/components/ShareButton";
 import { RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -242,6 +243,16 @@ export default function PagePreview({
           intervalSeconds={data.socialProof.intervalSeconds}
         />
       )}
+      {/* Topbar ala Linktree (permintaan langsung pengguna, tangkapan layar
+          halaman publik): logo Jeonme kiri (tautan ke jeonme.com, setara
+          logo Linktree yang tautan ke linktree.com), tombol share kanan. */}
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
+        <a href="https://jeonme.com" target="_blank" rel="noopener noreferrer" title="Dibuat dengan Jeonme">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="Jeonme" className="h-9 w-9 rounded-xl shadow-card" />
+        </a>
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+      </div>
       <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
         <div className="relative flex flex-col items-center">
           {theme.glow !== "hidden" && (
@@ -291,7 +302,7 @@ export default function PagePreview({
                     key={link.id}
                     title={link.title}
                     videoUrl={(link.blockData?.video_url as string) ?? ""}
-                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                   />
                 );
@@ -302,7 +313,7 @@ export default function PagePreview({
                     key={link.id}
                     title={link.title}
                     items={(link.blockData?.items as FaqItem[]) ?? []}
-                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                     itemTitleClassName={theme.cardTitle}
                     itemBodyClassName={theme.bio}
@@ -315,13 +326,13 @@ export default function PagePreview({
                     key={link.id}
                     linkId={link.id}
                     title={link.title}
-                    cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                    cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                     titleClassName={theme.productTitle}
                     inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                     buttonClassName={theme.buyButton}
                   />
                 ) : (
-                  <div key={link.id} className={`w-full rounded-2xl p-3.5 text-center ${theme.productCard}`}>
+                  <div key={link.id} className={`w-full rounded-xl p-3.5 text-center ${theme.productCard}`}>
                     <p className={`text-sm font-semibold ${theme.productTitle}`}>{link.title}</p>
                     <button
                       type="button"
@@ -349,7 +360,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -357,7 +368,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full truncate text-center">🔒 {link.title}</span>
                   </button>
@@ -372,7 +383,7 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
                         <LinkPlatformIcon className="h-3.5 w-3.5" />
@@ -390,7 +401,7 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
                         <LinkPlatformIcon className="h-3.5 w-3.5" />
@@ -405,7 +416,7 @@ export default function PagePreview({
         )}
 
         {data.leadCapture && (
-          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-2xl p-4 text-center ${theme.productCard}`}>
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-4 text-center ${theme.productCard}`}>
             <IconMail className={`h-6 w-6 ${theme.chevron}`} />
             <p className={`text-sm font-semibold ${theme.productTitle}`}>{data.leadCapture.title}</p>
             {interactive ? (
@@ -430,7 +441,7 @@ export default function PagePreview({
         )}
 
         {data.loyaltyActive && interactive && (
-          <div className={`mt-8 w-full rounded-2xl p-4 text-left ${theme.productCard}`}>
+          <div className={`mt-8 w-full rounded-xl p-4 text-left ${theme.productCard}`}>
             <LoyaltyPointsWidget
               username={data.username}
               cardClassName=""
@@ -452,7 +463,7 @@ export default function PagePreview({
                 }).format(new Date(event.startsAt));
                 const soldOut = event.spotsLeft !== null && event.spotsLeft <= 0;
                 return (
-                  <div key={event.productId} className={`flex flex-col gap-2 rounded-2xl p-4 ${theme.productCard}`}>
+                  <div key={event.productId} className={`flex flex-col gap-2 rounded-xl p-4 ${theme.productCard}`}>
                     <div className="flex items-center gap-2">
                       <IconCalendar className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
                       <p className={`text-sm font-semibold ${theme.productTitle}`}>{event.name}</p>
@@ -501,7 +512,7 @@ export default function PagePreview({
             <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Booking Konsultasi</p>
             <div className="flex w-full flex-col gap-3">
               {data.bookings.map((booking) => (
-                <div key={booking.productId} className={`flex flex-col gap-2 rounded-2xl p-4 ${theme.productCard}`}>
+                <div key={booking.productId} className={`flex flex-col gap-2 rounded-xl p-4 ${theme.productCard}`}>
                   <div className="flex items-center gap-2">
                     <IconCalendar className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
                     <p className={`text-sm font-semibold ${theme.productTitle}`}>{booking.name}</p>
@@ -532,7 +543,7 @@ export default function PagePreview({
         )}
 
         {data.donation && (
-          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-2xl p-4 text-center ${theme.productCard}`}>
+          <div className={`mt-8 flex w-full flex-col items-center gap-2 rounded-xl p-4 text-center ${theme.productCard}`}>
             <IconHeart className={`h-6 w-6 ${theme.chevron}`} />
             <p className={`text-sm font-semibold ${theme.productTitle}`}>{data.donation.title}</p>
             <p className={`text-xs ${theme.bio}`}>
@@ -567,7 +578,7 @@ export default function PagePreview({
             <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Produk</p>
             <div className="grid w-full grid-cols-2 gap-3">
               {data.products.map((product) => (
-                <div key={product.id} className={`flex flex-col rounded-2xl p-3.5 ${theme.productCard}`}>
+                <div key={product.id} className={`flex flex-col rounded-xl p-3.5 ${theme.productCard}`}>
                   <div className={`mb-2.5 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
                     {product.cover_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -635,13 +646,17 @@ export default function PagePreview({
         )}
 
         <div className="mt-10 flex flex-col items-center gap-3">
-          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
           <a
-            href="https://jeonme.com"
-            className={`font-heading text-xs font-semibold tracking-wide transition-colors ${theme.footer}`}
+            href="https://jeonme.com/register"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
-            Dibuat dengan Jeonme
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
+            Buat halaman gratis di Jeonme
           </a>
+          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
         </div>
       </div>
     </main>
@@ -667,6 +682,13 @@ function LandingPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
+        <a href="https://jeonme.com" target="_blank" rel="noopener noreferrer" title="Dibuat dengan Jeonme">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="Jeonme" className="h-9 w-9 rounded-xl shadow-card" />
+        </a>
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+      </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {data.links.map((block) => {
           switch (block.blockType) {
@@ -689,7 +711,7 @@ function LandingPagePreview({
                   key={block.id}
                   src={(block.blockData?.image_url as string) ?? ""}
                   alt={(block.blockData?.caption as string) || block.title}
-                  className="w-full rounded-2xl object-cover"
+                  className="w-full rounded-xl object-cover"
                 />
               );
             case "button":
@@ -700,7 +722,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full max-w-sm items-center justify-center rounded-2xl px-6 py-4 text-center text-base font-bold transition-all duration-300 ${theme.buyButton}`}
+                  className={`flex w-full max-w-sm items-center justify-center rounded-xl px-6 py-4 text-center text-base font-bold transition-all duration-300 ${theme.buyButton}`}
                 >
                   {block.title}
                 </TrackedLink>
@@ -710,7 +732,7 @@ function LandingPagePreview({
                   type="button"
                   disabled
                   title="Pratinjau -- tombol ini tidak aktif"
-                  className={`w-full max-w-sm cursor-not-allowed rounded-2xl px-6 py-4 text-center text-base font-bold opacity-80 ${theme.buyButton}`}
+                  className={`w-full max-w-sm cursor-not-allowed rounded-xl px-6 py-4 text-center text-base font-bold opacity-80 ${theme.buyButton}`}
                 >
                   {block.title}
                 </button>
@@ -721,7 +743,7 @@ function LandingPagePreview({
                   key={block.id}
                   title={block.title}
                   videoUrl={(block.blockData?.video_url as string) ?? ""}
-                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                 />
               );
@@ -731,7 +753,7 @@ function LandingPagePreview({
                   key={block.id}
                   title={block.title}
                   items={(block.blockData?.items as FaqItem[]) ?? []}
-                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                   itemTitleClassName={theme.cardTitle}
                   itemBodyClassName={theme.bio}
@@ -743,13 +765,13 @@ function LandingPagePreview({
                   key={block.id}
                   linkId={block.id}
                   title={block.title}
-                  cardClassName={`w-full rounded-2xl p-3.5 ${theme.productCard}`}
+                  cardClassName={`w-full rounded-xl p-3.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                   inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                   buttonClassName={theme.buyButton}
                 />
               ) : (
-                <div key={block.id} className={`w-full rounded-2xl p-3.5 text-center ${theme.productCard}`}>
+                <div key={block.id} className={`w-full rounded-xl p-3.5 text-center ${theme.productCard}`}>
                   <p className={`text-sm font-semibold ${theme.productTitle}`}>{block.title}</p>
                 </div>
               );
@@ -761,7 +783,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
@@ -769,7 +791,7 @@ function LandingPagePreview({
               ) : (
                 <div
                   key={block.id}
-                  className={`flex w-full items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                 </div>
@@ -778,13 +800,17 @@ function LandingPagePreview({
         })}
 
         <div className="mt-6 flex flex-col items-center gap-3">
-          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
           <a
-            href="https://jeonme.com"
-            className={`font-heading text-xs font-semibold tracking-wide transition-colors ${theme.footer}`}
+            href="https://jeonme.com/register"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink shadow-card transition-transform hover:scale-105"
           >
-            Dibuat dengan Jeonme
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
+            Buat halaman gratis di Jeonme
           </a>
+          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
         </div>
       </div>
     </main>

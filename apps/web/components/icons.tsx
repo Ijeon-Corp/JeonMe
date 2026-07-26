@@ -585,6 +585,17 @@ export function IconPlayCircle({ className }: IconProps) {
   );
 }
 
+// ---------- Redesain halaman publik ala Linktree (topbar logo/share) ----------
+
+export function IconShare({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M12 14V4m0 0-3.5 3.5M12 4l3.5 3.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconPencil({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
