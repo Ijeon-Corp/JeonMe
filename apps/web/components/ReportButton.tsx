@@ -5,8 +5,20 @@ import { createReport } from "@/lib/api-client";
 import { IconFlag } from "@/components/icons";
 
 // REQ-F-702 (bagian publik): siapa pun bisa melaporkan halaman tanpa akun.
-export default function ReportButton({ pageId, className = "text-muted" }: { pageId: string; className?: string }) {
-  const [open, setOpen] = useState(false);
+// autoOpen -- dipakai saat komponen ini ditampilkan DI DALAM popup lain
+// (mis. baris footer "Report" ala Linktree, lihat PageFooterLinks.tsx) --
+// langsung tampilkan form, lewati trigger "Laporkan halaman ini" yang
+// jadi berlebihan kalau popup-nya sendiri sudah dibuka lewat klik.
+export default function ReportButton({
+  pageId,
+  className = "text-muted",
+  autoOpen = false,
+}: {
+  pageId: string;
+  className?: string;
+  autoOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(autoOpen);
   const [reason, setReason] = useState("");
   const [sent, setSent] = useState(false);
 

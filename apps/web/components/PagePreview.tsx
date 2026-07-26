@@ -9,7 +9,7 @@ import LockedLinkButton from "@/components/LockedLinkButton";
 import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
-import ReportButton from "@/components/ReportButton";
+import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import { RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
@@ -656,7 +656,15 @@ export default function PagePreview({
             <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
             Buat halaman gratis di Jeonme
           </a>
-          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
+          {interactive && (
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          )}
         </div>
       </div>
     </main>
@@ -810,7 +818,15 @@ function LandingPagePreview({
             <img src="/logo-icon.png" alt="" className="h-5 w-5 flex-shrink-0 rounded-md" />
             Buat halaman gratis di Jeonme
           </a>
-          {interactive && data.id && <ReportButton pageId={data.id} className={theme.footer} />}
+          {interactive && (
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          )}
         </div>
       </div>
     </main>
