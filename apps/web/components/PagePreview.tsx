@@ -6,6 +6,7 @@ import FaqBlock, { FaqItem } from "@/components/FaqBlock";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import LoyaltyPointsWidget from "@/components/LoyaltyPointsWidget";
 import LockedLinkButton from "@/components/LockedLinkButton";
+import MapsEmbedBlock from "@/components/MapsEmbedBlock";
 import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
@@ -24,7 +25,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -158,7 +159,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
 }
@@ -343,6 +344,21 @@ export default function PagePreview({
                     titleClassName={theme.productTitle}
                     itemTitleClassName={theme.cardTitle}
                     itemBodyClassName={theme.bio}
+                  />
+                );
+              }
+              if (link.blockType === "maps") {
+                return (
+                  <MapsEmbedBlock
+                    key={link.id}
+                    title={link.title}
+                    url={link.url}
+                    embed={Boolean(link.blockData?.embed)}
+                    embedLat={link.blockData?.embed_lat as number | undefined}
+                    embedLng={link.blockData?.embed_lng as number | undefined}
+                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+                    titleClassName={theme.productTitle}
+                    linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 );
               }
@@ -798,6 +814,20 @@ function LandingPagePreview({
                   titleClassName={theme.productTitle}
                   itemTitleClassName={theme.cardTitle}
                   itemBodyClassName={theme.bio}
+                />
+              );
+            case "maps":
+              return (
+                <MapsEmbedBlock
+                  key={block.id}
+                  title={block.title}
+                  url={block.url}
+                  embed={Boolean(block.blockData?.embed)}
+                  embedLat={block.blockData?.embed_lat as number | undefined}
+                  embedLng={block.blockData?.embed_lng as number | undefined}
+                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+                  titleClassName={theme.productTitle}
+                  linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 />
               );
             case "contact_form":

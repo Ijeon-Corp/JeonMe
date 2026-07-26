@@ -33,6 +33,7 @@ import {
   IconLinkedin,
   IconLock,
   IconMail,
+  IconMapPin,
   IconPencil,
   IconPlayCircle,
   IconPlus,
@@ -54,6 +55,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
   contact_form: "Formulir Kontak",
   faq: "FAQ",
+  maps: "Lokasi",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -176,7 +178,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form";
+  key: "link" | "video" | "faq" | "contact_form" | "maps";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -187,6 +189,10 @@ const CONTENT_TILES: ContentTile[] = [
   { key: "video", label: "Video", description: "Tampilkan video YouTube/TikTok sebagai embed", Icon: IconPlayCircle },
   { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan pengunjung", Icon: IconBook },
   { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan pengunjung", Icon: IconMail },
+  // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
+  // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
+  // sebagai tautan langsung -- lihat "Link behavior" di form.
+  { key: "maps", label: "Lokasi", description: "Tampilkan lokasi di Google Maps (tertanam atau tautan langsung)", Icon: IconMapPin },
 ];
 
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
@@ -253,17 +259,24 @@ export default function DashboardLinksPage() {
 
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
-  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq">("video");
+  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps">("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
   const [blockFaqItems, setBlockFaqItems] = useState<{ question: string; answer: string }[]>([
     { question: "", answer: "" },
   ]);
+  // Permintaan langsung pengguna: blok "Lokasi" (Maps) -- embed default MATI
+  // (radio "Go directly to URL") sampai tautan berhasil diresolusi backend,
+  // supaya kreator tidak mengira embed langsung aktif sebelum tersimpan.
+  const [blockMapsUrl, setBlockMapsUrl] = useState("");
+  const [blockMapsEmbed, setBlockMapsEmbed] = useState(true);
   const [savingBlock, setSavingBlock] = useState(false);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editFaqItems, setEditFaqItems] = useState<{ question: string; answer: string }[]>([]);
+  const [editMapsUrl, setEditMapsUrl] = useState("");
+  const [editMapsEmbed, setEditMapsEmbed] = useState(true);
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
@@ -361,6 +374,16 @@ export default function DashboardLinksPage() {
     setAddModalOpen(false);
   }
 
+  // openMapsFormPrefilled -- tile "Lokasi" (permintaan langsung pengguna).
+  function openMapsFormPrefilled() {
+    setBlockType("maps");
+    setBlockTitle("Lokasi Kami");
+    setBlockMapsUrl("");
+    setBlockMapsEmbed(true);
+    setAddingBlock(true);
+    setAddModalOpen(false);
+  }
+
   function handleSelectPlatform(platform: PlatformQuickAdd) {
     if (platform.kind === "video") {
       openVideoFormPrefilled(`Video ${platform.label}`);
@@ -372,6 +395,7 @@ export default function DashboardLinksPage() {
   function handleSelectContentTile(tile: ContentTile) {
     if (tile.key === "link") openLinkFormPrefilled("", "");
     else if (tile.key === "video") openVideoFormPrefilled("");
+    else if (tile.key === "maps") openMapsFormPrefilled();
     else openBlockFormPrefilled(tile.key, tile.label);
   }
 
@@ -544,6 +568,7 @@ export default function DashboardLinksPage() {
       return;
     }
     let blockData: Record<string, unknown> = {};
+    let blockUrl: string | undefined;
     if (blockType === "video") {
       if (!blockVideoUrl.trim()) {
         setError("Tautan video wajib diisi.");
@@ -557,16 +582,25 @@ export default function DashboardLinksPage() {
         return;
       }
       blockData = { items };
+    } else if (blockType === "maps") {
+      if (!blockMapsUrl.trim()) {
+        setError("Tautan Google Maps wajib diisi.");
+        return;
+      }
+      blockUrl = blockMapsUrl.trim();
+      blockData = { embed: blockMapsEmbed };
     }
     setError(null);
     setSavingBlock(true);
     try {
-      const created = await createBlock({ block_type: blockType, title: blockTitle.trim(), block_data: blockData });
+      const created = await createBlock({ block_type: blockType, title: blockTitle.trim(), url: blockUrl, block_data: blockData });
       setLinks((prev) => [...prev, created]);
       setAddingBlock(false);
       setBlockTitle("");
       setBlockVideoUrl("");
       setBlockFaqItems([{ question: "", answer: "" }]);
+      setBlockMapsUrl("");
+      setBlockMapsEmbed(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat blok.");
     } finally {
@@ -581,17 +615,28 @@ export default function DashboardLinksPage() {
     } else if (link.block_type === "faq") {
       const items = (link.block_data?.items as { question: string; answer: string }[]) ?? [];
       setEditFaqItems(items.length > 0 ? items : [{ question: "", answer: "" }]);
+    } else if (link.block_type === "maps") {
+      setEditMapsUrl(link.url ?? "");
+      setEditMapsEmbed(Boolean(link.block_data?.embed));
     }
   }
 
   async function handleSaveContent(link: LinkItem) {
     let blockData: Record<string, unknown>;
+    let blockUrl: string | undefined;
     if (link.block_type === "video") {
       if (!editVideoUrl.trim()) {
         setError("Tautan video wajib diisi.");
         return;
       }
       blockData = { video_url: editVideoUrl.trim() };
+    } else if (link.block_type === "maps") {
+      if (!editMapsUrl.trim()) {
+        setError("Tautan Google Maps wajib diisi.");
+        return;
+      }
+      blockUrl = editMapsUrl.trim();
+      blockData = { embed: editMapsEmbed };
     } else {
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
@@ -603,7 +648,7 @@ export default function DashboardLinksPage() {
     setError(null);
     setSavingContent(true);
     try {
-      await updateLink(link.id, { block_data: blockData });
+      await updateLink(link.id, { url: blockUrl, block_data: blockData });
       const refreshed = await listLinks();
       setLinks(refreshed);
       setContentEditId(null);
@@ -809,12 +854,13 @@ export default function DashboardLinksPage() {
           <form onSubmit={handleCreateBlock} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
             <select
               value={blockType}
-              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq")}
+              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps")}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
               <option value="video">Video (YouTube/TikTok)</option>
               <option value="contact_form">Formulir Kontak</option>
               <option value="faq">FAQ</option>
+              <option value="maps">Lokasi (Google Maps)</option>
             </select>
             <input
               type="text"
@@ -832,6 +878,38 @@ export default function DashboardLinksPage() {
                 onChange={(e) => setBlockVideoUrl(e.target.value)}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
+            )}
+            {blockType === "maps" && (
+              <div className="flex flex-col gap-2">
+                <input
+                  type="url"
+                  placeholder="Tempel tautan berbagi lokasi Google Maps (mis. https://maps.app.goo.gl/...)"
+                  value={blockMapsUrl}
+                  onChange={(e) => setBlockMapsUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+                <p className="text-[11px] font-semibold text-muted">Saat pengunjung berinteraksi dengan tautan ini:</p>
+                <label className="flex items-start gap-2 text-xs text-ink">
+                  <input
+                    type="radio"
+                    name="blockMapsEmbed"
+                    checked={!blockMapsEmbed}
+                    onChange={() => setBlockMapsEmbed(false)}
+                    className="mt-0.5"
+                  />
+                  Buka tautan Google Maps langsung
+                </label>
+                <label className="flex items-start gap-2 text-xs text-ink">
+                  <input
+                    type="radio"
+                    name="blockMapsEmbed"
+                    checked={blockMapsEmbed}
+                    onChange={() => setBlockMapsEmbed(true)}
+                    className="mt-0.5"
+                  />
+                  Tampilkan peta Google Maps tertanam di profil
+                </label>
+              </div>
             )}
             {blockType === "faq" && (
               <div className="flex flex-col gap-2">
@@ -1026,7 +1104,7 @@ export default function DashboardLinksPage() {
                     )}
                   </>
                 )}
-                {(link.block_type === "video" || link.block_type === "faq") && (
+                {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps") && (
                   <button
                     type="button"
                     onClick={() => openContentEdit(link)}
@@ -1162,7 +1240,7 @@ export default function DashboardLinksPage() {
                   )
                 ))}
 
-              {(link.block_type === "video" || link.block_type === "faq") && contentEditId === link.id && (
+              {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps") && contentEditId === link.id && (
                 <div className="ml-7 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                   {link.block_type === "video" ? (
                     <input
@@ -1172,6 +1250,37 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditVideoUrl(e.target.value)}
                       className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
+                  ) : link.block_type === "maps" ? (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="url"
+                        placeholder="Tempel tautan berbagi lokasi Google Maps"
+                        value={editMapsUrl}
+                        onChange={(e) => setEditMapsUrl(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <p className="text-[10px] font-semibold text-muted">Saat pengunjung berinteraksi dengan tautan ini:</p>
+                      <label className="flex items-start gap-2 text-xs text-ink">
+                        <input
+                          type="radio"
+                          name={`editMapsEmbed-${link.id}`}
+                          checked={!editMapsEmbed}
+                          onChange={() => setEditMapsEmbed(false)}
+                          className="mt-0.5"
+                        />
+                        Buka tautan Google Maps langsung
+                      </label>
+                      <label className="flex items-start gap-2 text-xs text-ink">
+                        <input
+                          type="radio"
+                          name={`editMapsEmbed-${link.id}`}
+                          checked={editMapsEmbed}
+                          onChange={() => setEditMapsEmbed(true)}
+                          className="mt-0.5"
+                        />
+                        Tampilkan peta Google Maps tertanam di profil
+                      </label>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-2">
                       {editFaqItems.map((item, i) => (

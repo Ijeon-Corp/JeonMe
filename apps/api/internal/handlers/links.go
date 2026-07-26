@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -195,6 +197,80 @@ func isValidVideoEmbedURL(raw string) bool {
 	return strings.Contains(host, "youtube.com") || strings.Contains(host, "youtu.be") || strings.Contains(host, "tiktok.com")
 }
 
+// allowedMapsHosts -- permintaan langsung pengguna (referensi tangkapan
+// layar fitur "Maps" Linktree): whitelist KETAT domain Google Maps saja --
+// resolveMapsEmbedCoords melakukan permintaan HTTP KELUAR ke URL yang
+// diberikan pengguna (untuk mengikuti redirect short link), jadi wajib
+// dibatasi ketat supaya tidak jadi celah SSRF (server dipaksa memanggil
+// alamat internal/sembarang). Dicek di URL AWAL maupun SETIAP hop redirect.
+var allowedMapsHosts = map[string]bool{
+	"maps.app.goo.gl": true,
+	"goo.gl":          true,
+	"www.google.com":  true,
+	"google.com":      true,
+	"maps.google.com": true,
+}
+
+func isAllowedMapsHost(host string) bool {
+	return allowedMapsHosts[strings.ToLower(host)]
+}
+
+// mapsCoordPattern -- pola "@<lat>,<lng>,<zoom>z" SELALU ada di URL tempat
+// Google Maps yang sudah selesai (baik hasil resolusi short link maupun
+// ditempel langsung oleh pengguna), lihat komentar resolveMapsEmbedCoords.
+var mapsCoordPattern = regexp.MustCompile(`@(-?\d+\.\d+),(-?\d+\.\d+),(?:\d+(?:\.\d+)?)z`)
+
+// resolveMapsEmbedCoords -- permintaan langsung pengguna: ubah tautan
+// berbagi Google Maps (termasuk short link maps.app.goo.gl) jadi koordinat
+// lat/lng untuk ditanam sebagai peta interaktif di halaman publik TANPA
+// API key berbayar -- trik resmi Google "output=embed" pada query
+// "q=<lat>,<lng>" (dipakai lama sebelum Embed API berbayar ada, TERBUKTI
+// masih berfungsi lewat verifikasi langsung: curl -L ke short link
+// menghasilkan SATU redirect ke URL lengkap berisi "@lat,lng,zoom", & URL
+// itu + "&output=embed" terbukti merespons 200 text/html embeddable).
+// Short link diselesaikan lewat SATU permintaan HTTP mengikuti redirect,
+// bukan parsing HTML apa pun -- lat/lng diambil murni dari pola URL hasil
+// akhir, jadi tetap berfungsi walau Google mengubah isi halaman tempatnya.
+func resolveMapsEmbedCoords(ctx context.Context, rawURL string) (lat, lng float64, err error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !isAllowedMapsHost(u.Hostname()) {
+		return 0, 0, errors.New("tautan harus berupa tautan berbagi Google Maps yang valid")
+	}
+
+	client := &http.Client{
+		Timeout: 8 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if !isAllowedMapsHost(req.URL.Hostname()) {
+				return errors.New("redirect ke domain di luar Google Maps tidak diizinkan")
+			}
+			if len(via) >= 5 {
+				return errors.New("terlalu banyak redirect")
+			}
+			return nil
+		},
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return 0, 0, errors.New("tautan tidak valid")
+	}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return 0, 0, errors.New("gagal membuka tautan Google Maps, coba lagi")
+	}
+	defer resp.Body.Close()
+
+	match := mapsCoordPattern.FindStringSubmatch(resp.Request.URL.String())
+	if match == nil {
+		return 0, 0, errors.New("tidak bisa membaca koordinat dari tautan ini -- pastikan ini tautan berbagi LOKASI (bukan arah/pencarian) dari Google Maps")
+	}
+	lat, errLat := strconv.ParseFloat(match[1], 64)
+	lng, errLng := strconv.ParseFloat(match[2], 64)
+	if errLat != nil || errLng != nil {
+		return 0, 0, errors.New("tidak bisa membaca koordinat dari tautan ini")
+	}
+	return lat, lng, nil
+}
+
 // validateBlockData -- No.77: aturan tiap block_type. contact_form sengaja
 // tidak butuh field apa pun (form kontak selalu sama: nama/email/pesan,
 // tidak ada kustomisasi field untuk versi awal).
@@ -203,6 +279,10 @@ func isValidVideoEmbedURL(raw string) bool {
 // 000030). "button" TIDAK butuh validasi block_data khusus -- memakai ulang
 // kolom title/url yang sudah ada di links, sama seperti tautan biasa, cuma
 // dirender sebagai tombol CTA besar bukan baris daftar.
+// "maps" (permintaan langsung pengguna): resolusi koordinat (kalau embed=
+// true) TERJADI SEBELUM fungsi ini dipanggil (lihat CreateBlock/Update,
+// butuh context untuk permintaan HTTP keluar) -- di sini cuma memastikan
+// strukturnya masuk akal.
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
 	switch blockType {
 	case "video":
@@ -234,12 +314,18 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 			return "image_url wajib diisi dengan URL gambar yang valid", false
 		}
+	case "maps":
+		if embed, ok := data["embed"]; ok {
+			if _, isBool := embed.(bool); !isBool {
+				return "embed wajib berupa true/false", false
+			}
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -264,6 +350,10 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url wajib diisi untuk tombol CTA"})
 		return
 	}
+	if req.BlockType == "maps" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan Google Maps wajib diisi"})
+		return
+	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -271,8 +361,24 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	// Timeout lebih longgar dari handler lain (5s) -- blok "maps" dengan
+	// embed=true melakukan SATU permintaan HTTP KELUAR ke Google Maps
+	// (resolveMapsEmbedCoords) untuk mengikuti redirect short link, di atas
+	// query DB biasa.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
+
+	if req.BlockType == "maps" {
+		if embed, _ := req.BlockData["embed"].(bool); embed {
+			lat, lng, rerr := resolveMapsEmbedCoords(ctx, req.URL)
+			if rerr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+				return
+			}
+			req.BlockData["embed_lat"] = lat
+			req.BlockData["embed_lng"] = lng
+		}
+	}
 
 	var pageID string
 	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
@@ -353,7 +459,10 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	// Timeout lebih longgar dari handler lain (5s) -- menyunting blok "maps"
+	// dengan embed=true melakukan SATU permintaan HTTP KELUAR ke Google Maps
+	// (resolveMapsEmbedCoords), lihat di bawah.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	if !h.ownsLink(ctx, linkID, userID) {
@@ -437,14 +546,33 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	// (endpoint ini tidak bisa mengganti block_type, cuma isinya).
 	var blockDataJSON []byte
 	if req.BlockData != nil {
-		var currentBlockType string
-		if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&currentBlockType); err != nil {
+		var currentBlockType, currentURL string
+		if err := h.DB.QueryRow(ctx, `SELECT block_type, url FROM links WHERE id = $1`, linkID).Scan(&currentBlockType, &currentURL); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
 			return
 		}
 		if msg, ok := validateBlockData(currentBlockType, req.BlockData); !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 			return
+		}
+		// "maps" (permintaan langsung pengguna): resolusi koordinat ulang
+		// kalau embed dinyalakan lewat penyuntingan ini -- pakai URL baru
+		// kalau ikut diubah di request yang sama, kalau tidak pakai URL
+		// yang sudah tersimpan.
+		if currentBlockType == "maps" {
+			if embed, _ := req.BlockData["embed"].(bool); embed {
+				targetURL := currentURL
+				if req.URL != nil && *req.URL != "" {
+					targetURL = *req.URL
+				}
+				lat, lng, rerr := resolveMapsEmbedCoords(ctx, targetURL)
+				if rerr != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+					return
+				}
+				req.BlockData["embed_lat"] = lat
+				req.BlockData["embed_lng"] = lng
+			}
 		}
 		encoded, err := json.Marshal(req.BlockData)
 		if err != nil {
@@ -959,13 +1087,29 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url wajib diisi untuk tombol CTA"})
 		return
 	}
+	if req.BlockType == "maps" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan Google Maps wajib diisi"})
+		return
+	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
+
+	if req.BlockType == "maps" {
+		if embed, _ := req.BlockData["embed"].(bool); embed {
+			lat, lng, rerr := resolveMapsEmbedCoords(ctx, req.URL)
+			if rerr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": rerr.Error()})
+				return
+			}
+			req.BlockData["embed_lat"] = lat
+			req.BlockData["embed_lng"] = lng
+		}
+	}
 
 	if !h.ownsPage(ctx, pageID, userID) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
