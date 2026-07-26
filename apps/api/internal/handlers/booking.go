@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // BookingHandler mengimplementasikan No.92 (Sprint 11): booking konsultasi
@@ -29,11 +30,12 @@ import (
 // jadwal berulang mingguan) -- disederhanakan dari fitur penuh Booking
 // Linktree/Appointment Lynk.id sesuai keterbatasan waktu.
 type BookingHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewBookingHandler(db *pgxpool.Pool) *BookingHandler {
-	return &BookingHandler{DB: db}
+func NewBookingHandler(db *pgxpool.Pool, rdb *redis.Client) *BookingHandler {
+	return &BookingHandler{DB: db, RDB: rdb}
 }
 
 type createBookingRequest struct {
@@ -182,6 +184,7 @@ func (h *BookingHandler) CreateSlots(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "slot ditambahkan", "created_count": created})
 }
 
@@ -260,6 +263,7 @@ func (h *BookingHandler) DeleteSlot(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "slot dihapus"})
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/queue"
 )
@@ -28,10 +29,45 @@ import (
 type LinksHandler struct {
 	DB    *pgxpool.Pool
 	Queue *asynq.Client
+	RDB   *redis.Client
 }
 
-func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client) *LinksHandler {
-	return &LinksHandler{DB: db, Queue: queueClient}
+func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client, rdb *redis.Client) *LinksHandler {
+	return &LinksHandler{DB: db, Queue: queueClient, RDB: rdb}
+}
+
+// invalidatePageCacheByID — sama seperti invalidateUserPageCache (cache.go),
+// tapi tautan bisa berada di halaman UTAMA (cache "page:<username>") ATAU
+// halaman TAMBAHAN No.98 (cache "page-slug:<slug>") -- Update/Delete/Unlock
+// bekerja untuk tautan di halaman MANA PUN milik kreator (lihat komentar
+// ownsLink di bawah), jadi perlu resolusi cache key yang benar dari pageID,
+// tidak boleh asumsi selalu halaman utama.
+func (h *LinksHandler) invalidatePageCacheByID(ctx context.Context, pageID string) {
+	if h.RDB == nil {
+		return
+	}
+	var username string
+	var isPrimary bool
+	var slug *string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT u.username, p.is_primary, p.slug FROM pages p JOIN users u ON u.id = p.user_id WHERE p.id = $1
+	`, pageID).Scan(&username, &isPrimary, &slug); err != nil {
+		return
+	}
+	if isPrimary {
+		h.RDB.Del(ctx, "page:"+username)
+	} else if slug != nil {
+		h.RDB.Del(ctx, "page-slug:"+*slug)
+	}
+}
+
+// invalidateLinkCache — dipakai handler yang cuma punya linkID (Update/
+// Delete), mencari page_id-nya dulu lalu delegasi ke invalidatePageCacheByID.
+func (h *LinksHandler) invalidateLinkCache(ctx context.Context, linkID string) {
+	var pageID string
+	if err := h.DB.QueryRow(ctx, `SELECT page_id FROM links WHERE id = $1`, linkID).Scan(&pageID); err == nil {
+		h.invalidatePageCacheByID(ctx, pageID)
+	}
 }
 
 type linkItem struct {
@@ -134,6 +170,7 @@ func (h *LinksHandler) Create(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
 }
 
@@ -240,6 +277,7 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{
 		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
 		BlockType: req.BlockType, BlockData: blockDataJSON,
@@ -425,6 +463,7 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		return
 	}
 
+	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "tautan diperbarui"})
 }
 
@@ -576,11 +615,20 @@ func (h *LinksHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Ambil page_id SEBELUM menghapus -- setelah DELETE baris ini sudah
+	// tidak ada lagi, jadi invalidateLinkCache (yang query lewat linkID)
+	// tidak akan menemukan apa-apa kalau dipanggil sesudahnya.
+	var pageID string
+	_ = h.DB.QueryRow(ctx, `SELECT page_id FROM links WHERE id = $1`, linkID).Scan(&pageID)
+
 	if _, err := h.DB.Exec(ctx, `DELETE FROM links WHERE id = $1`, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus tautan"})
 		return
 	}
 
+	if pageID != "" {
+		h.invalidatePageCacheByID(ctx, pageID)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "tautan dihapus"})
 }
 
@@ -631,6 +679,7 @@ func (h *LinksHandler) Reorder(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "urutan tautan diperbarui"})
 }
 
@@ -678,6 +727,7 @@ func (h *LinksHandler) ReorderForPage(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusOK, gin.H{"message": "urutan tautan diperbarui"})
 }
 
@@ -778,6 +828,7 @@ func (h *LinksHandler) CreateForPage(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
 }
 
@@ -819,6 +870,7 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 		return
 	}
 
+	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{
 		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
 		BlockType: req.BlockType, BlockData: blockDataJSON,

@@ -62,13 +62,7 @@ func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client, rdb *redis.Client) 
 // kedaluwarsa sendiri. Dipanggil di setiap handler yang mengubah data
 // produk, best-effort (gagal invalidasi cache tidak menggagalkan request).
 func (h *ProductHandler) invalidatePageCache(ctx context.Context, userID string) {
-	if h.RDB == nil {
-		return
-	}
-	var username string
-	if err := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err == nil {
-		h.RDB.Del(ctx, "page:"+username)
-	}
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 }
 
 type createProductRequest struct {

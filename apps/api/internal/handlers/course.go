@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // minCourseChapters -- kursus harus punya minimal 1 bab, kalau tidak bukan
@@ -29,11 +30,12 @@ const minCourseChapters = 1
 // terpisah yang jauh di luar cakupan). Prasyarat (course_prerequisites)
 // cuma teks bebas, bukan validasi terhubung ke kursus lain.
 type CourseHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewCourseHandler(db *pgxpool.Pool) *CourseHandler {
-	return &CourseHandler{DB: db}
+func NewCourseHandler(db *pgxpool.Pool, rdb *redis.Client) *CourseHandler {
+	return &CourseHandler{DB: db, RDB: rdb}
 }
 
 type chapterInput struct {
@@ -257,5 +259,6 @@ func (h *CourseHandler) ReplaceChapters(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "bab kursus diperbarui"})
 }

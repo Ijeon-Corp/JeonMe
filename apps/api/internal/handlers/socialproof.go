@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // SocialProofHandler mengimplementasikan No.76 (Sprint 8): notifikasi
@@ -26,11 +27,12 @@ import (
 // diatur, toggle terpisah halaman produk vs checkout, dan email pembeli
 // SELALU disamarkan sebagian (never ditampilkan penuh).
 type SocialProofHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewSocialProofHandler(db *pgxpool.Pool) *SocialProofHandler {
-	return &SocialProofHandler{DB: db}
+func NewSocialProofHandler(db *pgxpool.Pool, rdb *redis.Client) *SocialProofHandler {
+	return &SocialProofHandler{DB: db, RDB: rdb}
 }
 
 type socialProofSettingsResponse struct {
@@ -94,6 +96,7 @@ func (h *SocialProofHandler) Upsert(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "pengaturan notifikasi disimpan"})
 }
 

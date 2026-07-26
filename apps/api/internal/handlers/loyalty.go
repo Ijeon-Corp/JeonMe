@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // LoyaltyHandler mengimplementasikan No.94 (Sprint 13): program poin
@@ -22,11 +23,12 @@ import (
 // diskon baru sama sekali, cukup membuat satu baris voucher max_uses=1
 // begitu ditukar, dipakai lewat alur checkout+voucher yang sudah teruji.
 type LoyaltyHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewLoyaltyHandler(db *pgxpool.Pool) *LoyaltyHandler {
-	return &LoyaltyHandler{DB: db}
+func NewLoyaltyHandler(db *pgxpool.Pool, rdb *redis.Client) *LoyaltyHandler {
+	return &LoyaltyHandler{DB: db, RDB: rdb}
 }
 
 // awardLoyaltyPoints — dipanggil dari CheckoutHandler.Webhook SETELAH
@@ -143,6 +145,7 @@ func (h *LoyaltyHandler) UpsertSettings(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "pengaturan loyalitas disimpan"})
 }
 

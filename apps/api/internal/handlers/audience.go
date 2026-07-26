@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // AudienceHandler mengimplementasikan No.73 (Sprint 8): blok pengumpulan
@@ -19,11 +20,12 @@ import (
 // terpisah yang lebih besar, dicatat sebagai pekerjaan lanjutan kalau
 // tervalidasi.
 type AudienceHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewAudienceHandler(db *pgxpool.Pool) *AudienceHandler {
-	return &AudienceHandler{DB: db}
+func NewAudienceHandler(db *pgxpool.Pool, rdb *redis.Client) *AudienceHandler {
+	return &AudienceHandler{DB: db, RDB: rdb}
 }
 
 type leadCaptureSettingsResponse struct {
@@ -94,6 +96,7 @@ func (h *AudienceHandler) UpsertLeadCaptureSettings(c *gin.Context) {
 		return
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "pengaturan audiens disimpan"})
 }
 

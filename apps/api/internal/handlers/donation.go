@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // DonationHandler mengimplementasikan No.71 (Sprint 7): blok dukungan/donasi
@@ -23,11 +24,12 @@ import (
 // tampil di grid Produk halaman publik -- ia dapat blok tersendiri (lihat
 // PageHandler.GetPublicPage).
 type DonationHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewDonationHandler(db *pgxpool.Pool) *DonationHandler {
-	return &DonationHandler{DB: db}
+func NewDonationHandler(db *pgxpool.Pool, rdb *redis.Client) *DonationHandler {
+	return &DonationHandler{DB: db, RDB: rdb}
 }
 
 type donationSettingsResponse struct {
@@ -125,5 +127,6 @@ func (h *DonationHandler) Upsert(c *gin.Context) {
 		}
 	}
 
+	invalidateUserPageCache(ctx, h.DB, h.RDB, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "pengaturan dukungan disimpan"})
 }
