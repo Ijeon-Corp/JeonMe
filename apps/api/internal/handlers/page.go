@@ -689,6 +689,82 @@ func (h *PageHandler) UploadAvatar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL, "message": "foto profil berhasil diunggah"})
 }
 
+// maxCustomBackgroundSize -- 8MB, sedikit lebih longgar dari avatar (5MB)
+// karena wallpaper latar penuh biasanya berresolusi lebih tinggi daripada
+// foto profil bulat kecil.
+const maxCustomBackgroundSize = 8 * 1024 * 1024
+
+// UploadCustomBackground -- bug dilaporkan pengguna: "tidak bisa mengupload
+// gambar" -- akar masalah ditemukan lewat investigasi kode: opsi latar
+// "Gambar" di halaman Desain SEBELUMNYA cuma kolom teks URL polos (kreator
+// harus SUDAH punya foto ter-hosting di tempat lain & tahu URL langsungnya,
+// tidak ada cara unggah file sama sekali dari perangkatnya sendiri).
+// Endpoint baru ini mengisi celah itu -- pola SAMA PERSIS seperti
+// UploadAvatar (key SELALU "backgrounds/<userID>" tanpa ekstensi supaya
+// unggah ulang menimpa object lama, bukan menumpuk), langsung menyimpan
+// custom_background_type="image" + custom_background_value=URL dalam satu
+// request supaya frontend tidak perlu panggilan kedua ke UpdateMyPage.
+func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	fileHeader, err := c.FormFile("background")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"background\")"})
+		return
+	}
+
+	if fileHeader.Size > maxCustomBackgroundSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 8MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAvatarExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("backgrounds/%s", userID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah gambar latar"})
+		return
+	}
+
+	backgroundURL := h.Storage.PublicURL(key)
+	var username string
+	err = h.DB.QueryRow(ctx, `
+		UPDATE pages SET custom_background_type = 'image', custom_background_value = $1
+		FROM users u WHERE pages.user_id = $2 AND u.id = pages.user_id AND pages.is_primary = true
+		RETURNING u.username
+	`, backgroundURL, userID).Scan(&username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	if h.RDB != nil {
+		h.RDB.Del(ctx, "page:"+username)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"custom_background_value": backgroundURL, "message": "gambar latar berhasil diunggah"})
+}
+
 // ---------- No.98 (Sprint 14): halaman bio tambahan per akun ----------
 //
 // Ditemukan lewat fitur "Your Pages" Linktree -- satu akun bisa kelola

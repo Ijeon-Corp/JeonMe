@@ -146,6 +146,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				designGroup.GET("/page", page.GetMyPage)
 				designGroup.PATCH("/page", page.UpdateMyPage)
 				designGroup.POST("/page/avatar", page.UploadAvatar)
+				designGroup.POST("/page/background", page.UploadCustomBackground)
 
 				// No.98 (Sprint 14): halaman bio TAMBAHAN (bukan halaman utama
 				// di atas) -- lihat catatan lingkup di PageHandler.

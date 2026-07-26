@@ -418,6 +418,28 @@ export async function uploadAvatar(file: File): Promise<{ avatar_url: string; me
   return body;
 }
 
+// uploadCustomBackground -- bug dilaporkan pengguna ("tidak bisa mengupload
+// gambar"): opsi latar "Gambar" sebelumnya cuma kolom URL polos, tidak ada
+// cara unggah file sungguhan. Endpoint ini otomatis menyimpan
+// custom_background_type="image" + value=URL sekaligus di backend.
+export async function uploadCustomBackground(file: File): Promise<{ custom_background_value: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("background", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/page/background`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
 // ---------- Dashboard: tautan ----------
 
 export interface LinkItem {

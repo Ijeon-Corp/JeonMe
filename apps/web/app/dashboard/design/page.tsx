@@ -12,6 +12,7 @@ import {
   listProducts,
   updateMyPage,
   uploadAvatar,
+  uploadCustomBackground,
 } from "@/lib/api-client";
 import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
 import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconPaintbrush } from "@/components/icons";
@@ -115,6 +116,7 @@ export default function DashboardDesignPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [backgroundUploading, setBackgroundUploading] = useState(false);
   const [gradientStart, setGradientStart] = useState("#667EEA");
   const [gradientEnd, setGradientEnd] = useState("#764BA2");
   const [expandedSection, setExpandedSection] = useState<CustomSection | null>(null);
@@ -178,6 +180,28 @@ export default function DashboardDesignPage() {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
     } finally {
       setAvatarUploading(false);
+    }
+  }
+
+  // handleBackgroundUpload -- bug dilaporkan pengguna ("tidak bisa
+  // mengupload gambar"): opsi latar "Gambar" sebelumnya cuma kolom URL
+  // polos, kreator harus sudah punya foto ter-hosting di tempat lain.
+  // Sekarang unggah file sungguhan lewat uploadCustomBackground (backend
+  // otomatis set custom_background_type="image" + value=URL sekaligus).
+  async function handleBackgroundUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !page) return;
+
+    setBackgroundUploading(true);
+    setError(null);
+    try {
+      const { custom_background_value } = await uploadCustomBackground(file);
+      setPage({ ...page, custom_background_type: "image", custom_background_value });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah gambar latar.");
+    } finally {
+      setBackgroundUploading(false);
     }
   }
 
@@ -441,14 +465,37 @@ export default function DashboardDesignPage() {
               )}
 
               {page.custom_background_type === "image" && (
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={page.custom_background_value}
-                  onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
-                  onBlur={(e) => handleCustomize({ custom_background_value: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {page.custom_background_value && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={page.custom_background_value}
+                        alt="Latar"
+                        className="h-14 w-14 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5"
+                      />
+                    )}
+                    <label className="flex-1 cursor-pointer rounded-lg border border-border bg-white px-3 py-2 text-center text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
+                      {backgroundUploading ? "Mengunggah..." : "Unggah Gambar dari Perangkat"}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        onChange={handleBackgroundUpload}
+                        disabled={backgroundUploading}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-muted">Atau tempel URL gambar yang sudah ada:</p>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={page.custom_background_value}
+                    onChange={(e) => setPage({ ...page, custom_background_value: e.target.value })}
+                    onBlur={(e) => handleCustomize({ custom_background_value: e.target.value })}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
               )}
             </AccordionRow>
 

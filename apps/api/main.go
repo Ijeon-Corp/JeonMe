@@ -84,13 +84,13 @@ func main() {
 		if err := s3Client.EnsureBucket(ensureCtx); err != nil {
 			log.Printf("peringatan: gagal menyiapkan bucket object storage: %v", err)
 		}
-		// REQ-F-205: foto profil & sampul produk harus bisa diakses publik
-		// permanen (bukan presigned URL kedaluwarsa seperti file produk
-		// berbayar) -- lihat komentar storage.Client.EnsurePublicRead. KEDUA
-		// prefix WAJIB dikirim dalam satu panggilan yang sama (SetBucketPolicy
-		// menimpa, bukan menambah).
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul: %v", err)
+		// REQ-F-205: foto profil, sampul produk, & gambar latar halaman harus
+		// bisa diakses publik permanen (bukan presigned URL kedaluwarsa
+		// seperti file produk berbayar) -- lihat komentar
+		// storage.Client.EnsurePublicRead. SEMUA prefix WAJIB dikirim dalam
+		// satu panggilan yang sama (SetBucketPolicy menimpa, bukan menambah).
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar: %v", err)
 		}
 		cancel()
 	}
