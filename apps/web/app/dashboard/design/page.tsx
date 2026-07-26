@@ -40,6 +40,7 @@ type PageSettingsPatch = Partial<
   Pick<
     MyPage,
     | "theme"
+    | "display_name"
     | "bio"
     | "is_published"
     | "seo_title"
@@ -354,6 +355,19 @@ export default function DashboardDesignPage() {
                     />
                   </label>
                 </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-ink">Nama Tampilan</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  placeholder={page.username}
+                  value={page.display_name}
+                  onChange={(e) => setPage({ ...page, display_name: e.target.value })}
+                  onBlur={(e) => handlePageSettingChange({ display_name: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-muted">Tampil sebagai judul profil di halaman publik. Kosongkan untuk memakai username ({page.username}).</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-ink">Bio (maks 160 karakter)</label>

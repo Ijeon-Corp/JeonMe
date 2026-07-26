@@ -90,6 +90,11 @@ export interface PagePreviewSocialProof {
 export interface PagePreviewData {
   id?: string;
   username: string;
+  // displayName -- permintaan langsung pengguna: nama tampilan bebas (mis.
+  // "PIKO"), terpisah dari username. Kosong berarti kreator belum pernah
+  // mengisi -- heading jatuh balik ke username TANPA "@" (lihat render di
+  // bawah), bukan dipaksa isi.
+  displayName?: string;
   // No.98 (Sprint 14): diisi kalau ini halaman bio TAMBAHAN (bukan halaman
   // utama) -- membuat tracking klik/kunjungan lewat slug, bukan username
   // (lihat catatan di PageAnalytics/TrackedLink/LockedLinkButton).
@@ -123,6 +128,7 @@ export interface PagePreviewData {
 
 interface PreviewSourcePage {
   username: string;
+  display_name?: string;
   bio: string;
   avatar_url: string;
   theme: string;
@@ -168,6 +174,7 @@ export function toPreviewData(
 ): PagePreviewData {
   return {
     username: page.username,
+    displayName: page.display_name,
     bio: page.bio,
     avatarUrl: page.avatar_url,
     theme: page.theme,
@@ -279,7 +286,7 @@ export default function PagePreview({
 
           <div className="relative mt-5 text-center">
             <h1 className={`flex items-center justify-center gap-1.5 font-heading text-xl font-bold ${theme.name}`}>
-              @{data.username}
+              {data.displayName || data.username}
               {data.isVerified && (
                 <span title="Kreator terverifikasi">
                   <IconBadgeCheck className="h-[18px] w-[18px] flex-shrink-0 text-primary" />

@@ -198,6 +198,10 @@ export function getAvailableSlots(productId: string) {
 export interface PublicPage {
   id: string;
   username: string;
+  // display_name -- permintaan langsung pengguna: nama tampilan bebas (mis.
+  // "PIKO"), terpisah dari username (identitas URL). Kosong berarti belum
+  // pernah diisi -- jatuh balik ke username TANPA "@" (lihat toPreviewData).
+  display_name: string;
   bio: string;
   avatar_url: string;
   theme: string;
@@ -304,6 +308,7 @@ export function confirmPasswordReset(input: { token: string; new_password: strin
 
 export interface MyPage {
   username: string;
+  display_name: string;
   bio: string;
   avatar_url: string;
   theme: string;
@@ -367,6 +372,7 @@ export function updateMyPage(
     Pick<
       MyPage,
       | "theme"
+      | "display_name"
       | "bio"
       | "is_published"
       | "seo_title"

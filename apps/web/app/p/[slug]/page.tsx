@@ -17,8 +17,9 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     return { title: "Halaman tidak ditemukan — Jeonme" };
   }
 
-  const title = page.seo_title || `${page.username} — Jeonme`;
-  const description = page.seo_description || page.bio || `Lihat semua tautan @${page.username} di Jeonme.`;
+  const displayName = page.display_name || page.username;
+  const title = page.seo_title || `${displayName} — Jeonme`;
+  const description = page.seo_description || page.bio || `Lihat semua tautan ${displayName} di Jeonme.`;
 
   return {
     title,
@@ -55,6 +56,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
         data={{
           id: page.id,
           username: page.username,
+          displayName: page.display_name,
           pageSlug: slug,
           pageType: page.page_type,
           bio: page.bio,

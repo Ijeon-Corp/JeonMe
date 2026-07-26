@@ -22,8 +22,12 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   // No.83 (Sprint 9): judul/deskripsi manual kreator MENGGANTIKAN default
   // kalau diisi -- melengkapi OG tags (No.32) yang sudah ada dengan kontrol
   // eksplisit, bukan cuma turunan otomatis dari username/bio.
-  const title = page.seo_title || `@${page.username} — Jeonme`;
-  const description = page.seo_description || page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`;
+  // displayName (permintaan langsung pengguna) dipakai di fallback kalau
+  // sudah diisi -- supaya judul tab/preview media sosial konsisten dengan
+  // heading yang tampil di halaman (mis. "PIKO" bukan "@username").
+  const displayName = page.display_name || `@${page.username}`;
+  const title = page.seo_title || `${displayName} — Jeonme`;
+  const description = page.seo_description || page.bio || `Lihat semua tautan dan produk ${displayName} di Jeonme.`;
 
   return {
     title,
@@ -68,6 +72,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
         data={{
           id: page.id,
           username: page.username,
+          displayName: page.display_name,
           bio: page.bio,
           avatarUrl: page.avatar_url,
           theme: page.theme,

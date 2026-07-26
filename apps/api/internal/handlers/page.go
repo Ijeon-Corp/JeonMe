@@ -38,8 +38,14 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 const publicPageCacheTTL = 30 * time.Second
 
 type publicPageResponse struct {
-	ID                    string `json:"id"`
-	Username              string `json:"username"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	// DisplayName -- permintaan langsung pengguna: nama tampilan bebas
+	// (mis. "PIKO"), terpisah dari username (identitas URL). Kosong berarti
+	// kreator belum pernah mengisi -- jatuh balik ke username TANPA "@" di
+	// sisi klien (lihat toPreviewData di PagePreview.tsx), bukan dipaksa
+	// isi di backend supaya kreator lama tidak kehilangan apa pun.
+	DisplayName           string `json:"display_name"`
 	Bio                   string `json:"bio"`
 	AvatarURL             string `json:"avatar_url"`
 	Theme                 string `json:"theme"`
@@ -180,13 +186,13 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var userID, pageID string
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
+		SELECT u.id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_primary = true AND p.is_published = true
-	`, username).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+	`, username).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified)
@@ -224,12 +230,12 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	var userID, pageID string
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT p.user_id, p.id, u.username, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
+		SELECT p.user_id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
-	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified, &resp.PageType)
@@ -441,6 +447,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 
 type myPageResponse struct {
 	Username              string             `json:"username"`
+	DisplayName           string             `json:"display_name"`
 	Bio                   string             `json:"bio"`
 	AvatarURL             string             `json:"avatar_url"`
 	Theme                 string             `json:"theme"`
@@ -477,12 +484,12 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 	var resp myPageResponse
 	var emailVerified bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.username, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
+		SELECT u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
-	`, userID).Scan(&resp.Username, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
+	`, userID).Scan(&resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&emailVerified)
@@ -528,6 +535,7 @@ var availableCustomFonts = map[string]bool{
 
 type updatePageRequest struct {
 	Theme                 *string `json:"theme"`
+	DisplayName           *string `json:"display_name" binding:"omitempty,max=100"`
 	Bio                   *string `json:"bio" binding:"omitempty,max=160"`
 	IsPublished           *bool   `json:"is_published"`
 	SeoTitle              *string `json:"seo_title" binding:"omitempty,max=70"`
@@ -573,18 +581,19 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	_, err := h.DB.Exec(ctx, `
 		UPDATE pages SET
 			theme = COALESCE($1, theme),
-			bio = COALESCE($2, bio),
-			is_published = COALESCE($3, is_published),
-			seo_title = COALESCE($4, seo_title),
-			seo_description = COALESCE($5, seo_description),
-			noindex = COALESCE($6, noindex),
-			custom_background_type = COALESCE($7, custom_background_type),
-			custom_background_value = COALESCE($8, custom_background_value),
-			custom_font = COALESCE($9, custom_font),
-			custom_button_color = COALESCE($10, custom_button_color),
-			custom_button_style = COALESCE($11, custom_button_style)
-		WHERE user_id = $12 AND is_primary = true
-	`, req.Theme, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
+			display_name = COALESCE($2, display_name),
+			bio = COALESCE($3, bio),
+			is_published = COALESCE($4, is_published),
+			seo_title = COALESCE($5, seo_title),
+			seo_description = COALESCE($6, seo_description),
+			noindex = COALESCE($7, noindex),
+			custom_background_type = COALESCE($8, custom_background_type),
+			custom_background_value = COALESCE($9, custom_background_value),
+			custom_font = COALESCE($10, custom_font),
+			custom_button_color = COALESCE($11, custom_button_color),
+			custom_button_style = COALESCE($12, custom_button_style)
+		WHERE user_id = $13 AND is_primary = true
+	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, userID)
 	if err != nil {

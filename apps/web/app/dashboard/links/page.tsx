@@ -14,9 +14,12 @@ import {
   listProducts,
   reorderLinks,
   updateLink,
+  updateMyPage,
+  uploadAvatar,
 } from "@/lib/api-client";
 import {
   IconBook,
+  IconCamera,
   IconChart,
   IconChevronRight,
   IconClock,
@@ -203,6 +206,15 @@ export default function DashboardLinksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Profil bisa diedit langsung dari sini (permintaan langsung pengguna) --
+  // sebelumnya baris ini cuma pratinjau baca-saja, mengedit harus lewat
+  // halaman Desain. Nama tampilan & bio disimpan lewat updateMyPage yang
+  // sudah ada (satu sumber kebenaran yang SAMA dengan halaman Desain, cuma
+  // sekarang ada 2 pintu masuk untuk mengeditnya).
+  const [editingProfileField, setEditingProfileField] = useState<"name" | "bio" | null>(null);
+  const [profileEditValue, setProfileEditValue] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
   const [addingLink, setAddingLink] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
@@ -258,6 +270,45 @@ export default function DashboardLinksPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data."))
       .finally(() => setLoading(false));
   }, []);
+
+  function startEditProfileField(field: "name" | "bio") {
+    if (!page) return;
+    setEditingProfileField(field);
+    setProfileEditValue(field === "name" ? page.display_name : page.bio);
+  }
+
+  async function saveEditProfileField() {
+    if (!page || !editingProfileField) return;
+    const field = editingProfileField;
+    const value = profileEditValue.trim();
+    setEditingProfileField(null);
+
+    const previous = page;
+    const patch = field === "name" ? { display_name: value } : { bio: value };
+    setPage({ ...page, ...patch });
+    try {
+      await updateMyPage(patch);
+    } catch (err) {
+      setPage(previous);
+      setError(err instanceof ApiError ? err.message : `Gagal menyimpan ${field === "name" ? "nama tampilan" : "bio"}.`);
+    }
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !page) return;
+
+    setAvatarUploading(true);
+    try {
+      const { avatar_url } = await uploadAvatar(file);
+      setPage({ ...page, avatar_url });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   async function handleCreateLink(e: React.FormEvent) {
     e.preventDefault();
@@ -554,23 +605,82 @@ export default function DashboardLinksPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        {/* Baris profil -- HANYA pratinjau baca-saja (avatar/nama/bio),
-            persis posisi & tampilan di referensi Linktree. Mengubahnya
-            tetap lewat halaman Desain (satu sumber kebenaran), tidak
-            diduplikasi jadi bisa diedit dari sini juga. */}
+        {/* Baris profil -- BISA DIEDIT langsung dari sini (permintaan
+            langsung pengguna): nama tampilan & bio inline-editable (ikon
+            pensil, pola sama seperti edit judul/URL tautan), avatar bisa
+            diganti dengan klik. Tetap satu sumber kebenaran yang SAMA
+            dengan halaman Desain (updateMyPage/uploadAvatar yang sama),
+            cuma sekarang ada 2 pintu masuk untuk mengeditnya. */}
         {page && (
-          <div className="mt-4 flex items-center gap-3">
-            {page.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={page.avatar_url} alt={page.username} className="h-14 w-14 flex-shrink-0 rounded-full object-cover ring-2 ring-white shadow-card" />
-            ) : (
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle font-heading text-lg font-bold text-primary">
-                {page.username.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="truncate font-heading text-base font-bold text-ink">{page.username}</p>
-              {page.bio && <p className="truncate text-sm text-muted">{page.bio}</p>}
+          <div className="mt-4 flex items-start gap-3">
+            <button
+              type="button"
+              disabled={avatarUploading}
+              onClick={() => document.getElementById("links-avatar-input")?.click()}
+              title="Ganti foto profil"
+              className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-card disabled:opacity-60"
+            >
+              {page.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={page.avatar_url} alt={page.username} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-primary-subtle font-heading text-lg font-bold text-primary">
+                  {page.username.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
+                <IconCamera className="h-2.5 w-2.5" />
+              </span>
+            </button>
+            <input
+              id="links-avatar-input"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+
+            <div className="min-w-0 flex-1">
+              {editingProfileField === "name" ? (
+                <input
+                  type="text"
+                  autoFocus
+                  value={profileEditValue}
+                  onChange={(e) => setProfileEditValue(e.target.value)}
+                  onBlur={saveEditProfileField}
+                  onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
+                  placeholder={page.username}
+                  className="w-full rounded-md border border-primary px-2 py-1 font-heading text-base font-bold text-ink focus:outline-none"
+                />
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate font-heading text-base font-bold text-ink">{page.display_name || page.username}</p>
+                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah nama tampilan">
+                    <IconPencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {editingProfileField === "bio" ? (
+                <input
+                  type="text"
+                  autoFocus
+                  value={profileEditValue}
+                  onChange={(e) => setProfileEditValue(e.target.value)}
+                  onBlur={saveEditProfileField}
+                  onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
+                  placeholder="Tambahkan deskripsi singkat"
+                  maxLength={160}
+                  className="mt-1 w-full rounded-md border border-primary px-2 py-1 text-sm text-muted focus:outline-none"
+                />
+              ) : (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <p className="truncate text-sm text-muted">{page.bio || "Tambahkan deskripsi singkat"}</p>
+                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah deskripsi">
+                    <IconPencil className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -1,0 +1,12 @@
+-- Permintaan langsung pengguna: nama tampilan halaman (mis. "PIKO") yang
+-- ditampilkan sebagai judul profil di halaman publik & bisa diedit bebas,
+-- TERPISAH dari username (identitas URL jeonme.com/{username}, dibatasi
+-- aturan penamaan & wajib unik) dan dari bio (deskripsi di bawahnya, sudah
+-- ada sejak awal). Sebelumnya heading halaman publik SELALU menampilkan
+-- "@{username}" apa adanya -- tidak ada satu pun kolom untuk nama tampilan
+-- yang lebih ramah/bisa disesuaikan bebas seperti Linktree/Lynk.id.
+-- Default '' (kosong) -- kalau kosong, tampilan JATUH BALIK ke username
+-- (tanpa @) di semua tempat yang merender, BUKAN dipaksa isi supaya
+-- kreator lama yang belum pernah mengisi tidak tiba-tiba kehilangan nama
+-- tampilan di halaman publiknya.
+ALTER TABLE pages ADD COLUMN display_name VARCHAR(100) NOT NULL DEFAULT '';
