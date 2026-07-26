@@ -367,7 +367,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -375,7 +375,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-6 py-4 text-base font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full truncate text-center">🔒 {link.title}</span>
                   </button>
@@ -390,10 +390,10 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      <span className={`absolute left-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-4 w-4" />
                       </span>
                       <span className="w-full truncate text-center">{link.title}</span>
                     </TrackedLink>
@@ -408,10 +408,10 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
-                      <span className={`absolute left-3 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
-                        <LinkPlatformIcon className="h-3.5 w-3.5" />
+                      <span className={`absolute left-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
+                        <LinkPlatformIcon className="h-4 w-4" />
                       </span>
                       <span className="w-full truncate text-center">{link.title}</span>
                     </a>
@@ -798,7 +798,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
@@ -806,7 +806,7 @@ function LandingPagePreview({
               ) : (
                 <div
                   key={block.id}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-6 py-4 text-base font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                 </div>
