@@ -380,7 +380,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -388,7 +388,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full break-words text-center">🔒 {link.title}</span>
                   </button>
@@ -403,7 +403,7 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
                         <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
@@ -421,7 +421,7 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className="absolute left-3 top-1/2 flex h-5 w-5 flex-shrink-0 -translate-y-1/2 items-center justify-center">
                         <LinkPlatformIcon className={`h-full w-full ${iconColorClass}`} />
@@ -747,7 +747,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full max-w-sm items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
+                  className={`flex w-full max-w-sm items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
                 >
                   {block.title}
                 </TrackedLink>
@@ -757,7 +757,7 @@ function LandingPagePreview({
                   type="button"
                   disabled
                   title="Pratinjau -- tombol ini tidak aktif"
-                  className={`w-full max-w-sm cursor-not-allowed rounded-xl px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
+                  className={`w-full max-w-sm cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
                 >
                   {block.title}
                 </button>
@@ -808,7 +808,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                   <IconChevronRight className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
@@ -816,7 +816,7 @@ function LandingPagePreview({
               ) : (
                 <div
                   key={block.id}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                 </div>

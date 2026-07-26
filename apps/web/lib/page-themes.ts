@@ -94,6 +94,22 @@ export type PageTheme = {
    * yang berlaku ke seluruh halaman lewat elemen <main>.
    */
   nameStyle?: CSSProperties;
+  /**
+   * cardRounded -- bug dilaporkan pengguna: "Kelengkungan Sudut" di panel
+   * Tombol tidak berfungsi. Akar masalah: PagePreview.tsx menulis
+   * `rounded-xl` LANGSUNG di className blok tautan/tombol (bukan lewat
+   * theme), lalu MENAMBAHKAN kelas rounded-none/sm/md/full dari
+   * buildCustomButtonClass di sebelahnya -- dua kelas `rounded-*` yang
+   * bersaing untuk properti CSS yang SAMA dalam satu className, urutan
+   * penulisan di JSX TIDAK menentukan siapa menang (itu ditentukan urutan
+   * Tailwind menghasilkan aturan CSS-nya, bukan urutan string kelas), jadi
+   * `rounded-xl` yang selalu menang apa pun pilihan kreator. Diperbaiki
+   * dengan memindahkan kelengkungan sudut ke SATU sumber kebenaran di sini
+   * -- opsional, default undefined berarti JSX pakai fallback "rounded-xl"
+   * (perilaku lama utuh untuk tema preset), HANYA diisi eksplisit oleh
+   * getPageTheme saat styleOverride aktif.
+   */
+  cardRounded?: string;
 };
 
 export type CustomFontValue =
@@ -629,10 +645,13 @@ const BUTTON_SHADOW_CLASS: Record<CustomButtonShadowLevel, string> = {
 // kartu tautan (card/cardTitle) MAUPUN tombol Beli/Dukung/dst (buyButton) --
 // meniru Linktree yang memperlakukan semua tombol di halaman sebagai satu
 // gaya visual seragam, bukan cuma tombol sekunder seperti sebelumnya.
+// Kelengkungan sudut (cardRounded) SENGAJA TIDAK dimasukkan ke sini lagi --
+// lihat komentar cardRounded di PageTheme, dulu dobel dengan `rounded-xl`
+// yang ditulis langsung di JSX & selalu kalah/menang secara tidak
+// terduga tergantung urutan Tailwind menghasilkan CSS, bukan urutan kelas.
 function buildCustomButtonClass(custom: CustomThemeConfig): string {
-  const rounded = BUTTON_ROUNDED_CLASS[custom.buttonRounded ?? "full"] ?? "rounded-full";
   const shadow = BUTTON_SHADOW_CLASS[custom.buttonShadow ?? "soft"] ?? "";
-  const base = `${rounded} ${shadow} text-[color:var(--custom-button-text)] font-bold transition-all duration-300`;
+  const base = `${shadow} text-[color:var(--custom-button-text)] font-bold transition-all duration-300`;
   switch (custom.buttonStyle) {
     case "outline":
       return `${base} bg-transparent border-2 border-[color:var(--custom-button-bg)]`;
@@ -694,6 +713,7 @@ export function getPageTheme(theme: string, custom?: CustomThemeConfig): PageThe
     result.card = buttonClass;
     result.cardTitle = "text-[color:var(--custom-button-text)]";
     result.buyButton = buttonClass;
+    result.cardRounded = BUTTON_ROUNDED_CLASS[custom.buttonRounded ?? "full"] ?? "rounded-full";
     // "Fonts" (referensi tangkapan layar): warna judul & warna teks umum
     // independen -- kosong berarti ikuti default tema (preset atau sunrise).
     result.name = custom.titleColor
