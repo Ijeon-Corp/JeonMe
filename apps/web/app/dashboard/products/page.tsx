@@ -282,7 +282,7 @@ export default function DashboardProductsPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+    <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className="max-w-3xl">
         <h1 className="font-heading text-2xl font-bold text-ink">Produk</h1>
         <p className="mt-1 text-sm text-muted">
