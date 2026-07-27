@@ -4,6 +4,12 @@ node_modules/
 apps/web/.env
 apps/web/.env.local
 
+# Playwright (No.134) -- laporan HTML/hasil test lokal, bukan bagian dari
+# source, jangan ikut ke repo.
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/blob-report/
+
 # Go
 apps/api/bin/
 apps/api/.env

@@ -1,0 +1,61 @@
+import { Page, expect } from "@playwright/test";
+
+// Helper bersama untuk seluruh test E2E -- membuat akun kreator uji BARU
+// dan SUNGGUHAN (register lewat UI, bukan lewat API langsung) supaya test
+// juga memvalidasi form register itu sendiri sekaligus, lalu dipakai ulang
+// oleh spec lain yang butuh sesi sudah login. Username diberi awalan "e2e"
+// + timestamp supaya tidak pernah bentrok antar-run & mudah dikenali/
+// dibersihkan dari database kalau ada sisa.
+export function uniqueUsername(prefix: string): string {
+  return `e2e${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+// Endpoint auth dibatasi 10 req/menit per IP (middleware.RateLimit, lihat
+// routes.go) -- rangkaian test yang register berkali-kali dengan cepat bisa
+// melewati ambang itu (ditemukan langsung lewat kegagalan run pertama).
+// Retry dengan jeda begitu pesan "terlalu banyak permintaan" muncul, bukan
+// melewatinya -- pola yang sama dipakai sepanjang sesi ini saat verifikasi
+// manual lewat curl.
+export async function registerAndLogin(page: Page, usernamePrefix: string): Promise<{ username: string; email: string }> {
+  const username = uniqueUsername(usernamePrefix);
+  const email = `${username}@example.com`;
+  const password = "Password123!";
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await page.goto("/register");
+    await page.locator('input[placeholder="username-kamu"]').fill(username);
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.locator('input[type="checkbox"]').check();
+    await page.getByRole("button", { name: "Daftar Gratis" }).click();
+
+    const rateLimited = page.getByText("terlalu banyak permintaan");
+    const result = await Promise.race([
+      page.waitForURL("**/dashboard", { timeout: 15000 }).then(() => "ok" as const),
+      rateLimited.waitFor({ timeout: 15000 }).then(() => "rate-limited" as const),
+    ]).catch(() => "timeout" as const);
+
+    if (result === "ok") return { username, email };
+    if (result === "rate-limited") {
+      await page.waitForTimeout(15000);
+      continue;
+    }
+    throw new Error(`registerAndLogin: navigasi ke /dashboard tidak terjadi dan tidak ada pesan rate-limit (percobaan ${attempt + 1})`);
+  }
+  throw new Error("registerAndLogin: tetap kena rate limit setelah beberapa kali percobaan");
+}
+
+// pages.is_published DEFAULT false (migrations/000001_init_schema.up.sql) --
+// akun baru daftar TIDAK otomatis tampil di halaman publik. Test yang
+// memeriksa halaman publik harus menerbitkannya dulu lewat sakelar
+// "Terbitkan halaman publik" di /dashboard/design (ditemukan lewat run
+// pertama test ini sendiri: tautan sudah dibuat & benar tersimpan tapi
+// halaman publik tidak pernah menampilkannya, apa pun lamanya ditunggu).
+export async function publishPage(page: Page): Promise<void> {
+  await page.goto("/dashboard/design");
+  const toggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });
+  if ((await toggle.getAttribute("aria-checked")) !== "true") {
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+  }
+}
