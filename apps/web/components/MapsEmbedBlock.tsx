@@ -40,7 +40,7 @@ export default function MapsEmbedBlock({
     return (
       <>
         <button type="button" onClick={() => setOpen(true)} className={linkClassName}>
-          <IconMapPin className="h-4 w-4 flex-shrink-0" />
+          <IconMapPin className="h-5 w-5 flex-shrink-0" />
           <span className="truncate">{title || "Lokasi"}</span>
         </button>
 
@@ -68,7 +68,7 @@ export default function MapsEmbedBlock({
 
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className={linkClassName}>
-      <IconMapPin className="h-4 w-4 flex-shrink-0" />
+      <IconMapPin className="h-5 w-5 flex-shrink-0" />
       <span className="truncate">{title || "Lokasi"}</span>
     </a>
   );
