@@ -9,19 +9,24 @@ import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
 // Desain sekarang halaman tersendiri (bukan accordion) -- komponen ini
 // dipakai bersama oleh index + 4 sub-halaman (theme/header/tombol/font)
 // supaya grid dua-kolom (konten + pratinjau langsung), tautan "Kembali",
-// dan judul halaman tidak perlu ditulis ulang di 5 tempat. mx-auto max-w-6xl
-// SENGAJA ditambahkan di sini (sebelumnya TIDAK ada -- permintaan langsung
-// pengguna: halaman Desain/Tautan/Produk terlihat "belum rata tengah" di
-// layar lebar karena grid 2 kolomnya cuma nempel kiri tanpa batas lebar).
+// dan judul halaman tidak perlu ditulis ulang di 5 tempat.
 //
 // contentMaxWidth default DIKOSONGKAN (dulu "max-w-2xl") -- bug dilaporkan
-// pengguna (27 Juli 2026, menyertai tangkapan layar Linktree asli): kolom
-// konten seharusnya mengisi PENUH ruang kosong di antara sisi kiri & panel
-// pratinjau (cuma dibatasi wajar oleh mx-auto max-w-6xl di pembungkus luar),
-// bukan dibatasi lagi jadi sempit di dalam kolom 1fr yang sudah fleksibel --
-// itu yang membuat ada jarak kosong mubazir sebelum panel pratinjau di layar
-// lebar, sama sekali bukan tampilan "ruang tengah lebih luas" seperti contoh
-// Linktree asli yang dibagikan.
+// pengguna: kolom konten seharusnya mengisi PENUH ruang kosong di antara
+// sisi kiri & panel pratinjau, bukan dibatasi lagi jadi sempit di dalam
+// kolom 1fr yang sudah fleksibel.
+//
+// "mx-auto max-w-6xl" yang tadinya membungkus grid ini SUDAH DIHAPUS lagi
+// (sempat ditambahkan sebentar untuk perbaikan "belum rata tengah", lalu
+// pengguna mengklarifikasi lebih lanjut dengan tangkapan layar Linktree
+// asli: "buat seluruh bagian pratinjau ke pojok kanan posisi nya" -- Pada
+// Linktree asli, panel pratinjau menempel PERSIS di tepi kanan jendela
+// browser, bukan cuma di tepi kanan sebuah kotak 1152px yang masih
+// dikelilingi jarak kosong simetris kiri-kanan di layar lebar. Grid ini
+// sekarang mengisi PENUH lebar <main className="flex-1"> di dashboard/
+// layout.tsx (satu-satunya batas lebar yang tersisa), sehingga kolom
+// pratinjau (lebar tetap 360px) otomatis mendarat persis di pojok kanan
+// jendela, sesuai contoh yang dibagikan pengguna.
 export default function DesignPageShell({
   page,
   links,
@@ -42,7 +47,7 @@ export default function DesignPageShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className={contentMaxWidth}>
         {backHref && (
           <Link href={backHref} className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-primary">

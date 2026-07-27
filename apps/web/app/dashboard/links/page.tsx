@@ -680,13 +680,12 @@ export default function DashboardLinksPage() {
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
-    // contentMaxWidth "max-w-2xl" DIHAPUS (bug dilaporkan pengguna, 27 Juli
-    // 2026, menyertai tangkapan layar Linktree asli): kolom konten harusnya
-    // mengisi penuh ruang di kolom 1fr yang sudah fleksibel (dibatasi wajar
-    // oleh mx-auto max-w-6xl di pembungkus luar), bukan dipersempit lagi di
-    // dalamnya -- itu yang membuat ada jarak kosong mubazir sebelum panel
-    // pratinjau di layar lebar. Lihat catatan sama persis di DesignPageShell.
-    <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+    // "max-w-2xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
+    // permintaan pengguna: panel pratinjau harus menempel persis di pojok
+    // kanan JENDELA browser (bukan tepi kanan kotak 1152px yang masih
+    // dikelilingi jarak kosong simetris). Lihat catatan lengkap di
+    // DesignPageShell.tsx.
+    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div>
         <h1 className="font-heading text-2xl font-bold text-ink">Tautan</h1>
         <p className="mt-1 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
