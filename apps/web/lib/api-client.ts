@@ -399,6 +399,12 @@ export const THEME_PRESETS = [
   "storm",
   "frost",
   "dew",
+  "air",
+  "lake",
+  "mineral",
+  "blocks",
+  "haven",
+  "grid",
 ] as const;
 
 export function getMyPage() {

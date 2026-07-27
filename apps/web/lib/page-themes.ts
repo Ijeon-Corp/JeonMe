@@ -53,6 +53,12 @@ export type PageThemeName =
   | "storm"
   | "frost"
   | "dew"
+  | "air"
+  | "lake"
+  | "mineral"
+  | "blocks"
+  | "haven"
+  | "grid"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -743,6 +749,136 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#166534",
     previewBg: "url('/wallpapers/embun.jpg') center/cover",
     previewIsDark: true,
+  },
+  // 6 preset WARNA SOLID baru (permintaan langsung pengguna, menyertai
+  // tangkapan layar galeri tema Linktree asli berisi Air/Lake/Mineral/
+  // Blocks/Haven/Grid dkk: "tambahkan warna warna seperti ini bukan hanya
+  // gradient saja") -- SENGAJA warna solid/pola CSS, BUKAN gradien/foto,
+  // supaya galeri tidak didominasi gradien seperti sebelumnya. Tema gradien
+  // lama (rose/ocean/sunrise/dst) TIDAK dihapus (dikonfirmasi ke pengguna --
+  // menghapus preset yang mungkin sudah dipilih kreator akan membuat
+  // halaman publiknya mendadak balik ke Default tanpa peringatan).
+  air: {
+    label: "Air",
+    page: "bg-[#F4F4F2]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-ink/10 bg-white hover:border-ink/25",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-ink/10 bg-white",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-white text-ink border border-ink/15 font-bold hover:border-ink/40",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#F4F4F2",
+    previewBg: "#F4F4F2",
+    previewIsDark: false,
+  },
+  lake: {
+    label: "Lake",
+    page: "bg-[#0B0F19]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/10 shadow-hero",
+    name: "text-white",
+    bio: "text-white/60",
+    card: "border border-white/10 bg-white/[0.05] hover:bg-white/[0.09]",
+    cardTitle: "text-white",
+    chevron: "text-white/40",
+    productCard: "border border-white/10 bg-white/[0.05]",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#0B0F19",
+    previewBg: "#0B0F19",
+    previewIsDark: true,
+  },
+  mineral: {
+    label: "Mineral",
+    page: "bg-[#F5DDCB]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-ink/60",
+    card: "border border-ink/15 bg-white/60 hover:bg-white/80",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-ink/15 bg-white/60",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-transparent border-2 border-ink/70 text-ink font-bold hover:bg-ink/5",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#F5DDCB",
+    previewBg: "#F5DDCB",
+    previewIsDark: false,
+  },
+  blocks: {
+    label: "Blocks",
+    page: "bg-[#7C3AED]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border-2 border-ink bg-[#F472B6] hover:brightness-105",
+    cardTitle: "text-ink",
+    chevron: "text-ink/60",
+    productCard: "border-2 border-ink bg-[#F472B6]",
+    productTitle: "text-ink",
+    productPrice: "text-ink/80",
+    buyButton: "border-2 border-ink bg-[#F472B6] text-ink font-bold hover:brightness-105",
+    footer: "text-white/50 hover:text-white",
+    swatch: "#7C3AED",
+    previewBg: "#7C3AED",
+    previewIsDark: true,
+  },
+  haven: {
+    label: "Haven",
+    page: "bg-[#D9CBB5]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-ink/60",
+    card: "border border-ink/10 bg-white/70 hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-ink/10 bg-white/70",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-white/80 text-ink font-bold hover:bg-white",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#D9CBB5",
+    previewBg: "#D9CBB5",
+    previewIsDark: false,
+  },
+  // "Grid" -- pola garis kotak-kotak ala kertas grafik, dibangun MURNI
+  // lewat CSS (dua linear-gradient tipis 1px berulang), BUKAN gambar --
+  // tidak perlu aset foto sama sekali untuk pola sesederhana ini.
+  grid: {
+    label: "Grid",
+    page: "bg-[#ECF87F]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/15",
+    name: "text-ink",
+    bio: "text-ink/60",
+    card: "border-2 border-ink bg-white hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/60",
+    productCard: "border-2 border-ink bg-white",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "border-2 border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#ECF87F",
+    previewBg: "#ECF87F",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px)",
+      backgroundSize: "28px 28px",
+    },
   },
 };
 

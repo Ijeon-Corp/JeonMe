@@ -562,6 +562,9 @@ var availableThemes = map[string]bool{
 	// 5 wallpaper TAMBAHAN (permintaan langsung pengguna: "tambahkan 5 lagi
 	// pilihan tema menggunakan walpaper").
 	"amber": true, "valley": true, "storm": true, "frost": true, "dew": true,
+	// 6 preset WARNA SOLID baru (permintaan langsung pengguna: "tambahkan
+	// warna warna seperti ini bukan hanya gradient saja").
+	"air": true, "lake": true, "mineral": true, "blocks": true, "haven": true, "grid": true,
 	"custom": true,
 }
 
