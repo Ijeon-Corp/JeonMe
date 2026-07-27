@@ -468,8 +468,17 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewIsDark: true,
   },
   blaze: {
+    // Bug dilaporkan pengguna (27 Juli 2026): "ketika memilih tema yang
+    // warna putih masa font nya tetep putih dan membuat tidak kelihatan" --
+    // stop pertama gradien ini semula "orange-500" (terlalu terang untuk
+    // teks putih: rasio kontras WCAG ~2.85, di bawah ambang 4.5 minimal),
+    // padahal avatar/nama/bio SELALU duduk persis di area stop pertama
+    // (sudut kiri-atas). Digelapkan ke "orange-700" (kontras ~5.2, lolos)
+    // supaya SELALU terbaca apa pun jumlah tautan kreator -- tema lain yang
+    // sejenis (bloom/cyber/cosmic) sudah memakai bobot warna 600-900 sejak
+    // awal, blaze yang tertinggal di 500 adalah satu-satunya penyimpangan.
     label: "Blaze",
-    page: "bg-gradient-to-br from-orange-500 via-pink-600 to-purple-700",
+    page: "bg-gradient-to-br from-orange-700 via-pink-600 to-purple-700",
     glow: "bg-gradient-to-br from-yellow-200/25 via-pink-300/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -482,8 +491,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-orange-100",
     buyButton: "bg-white text-ink font-bold hover:brightness-95",
     footer: "text-white/35 hover:text-white",
-    swatch: "#F97316",
-    previewBg: "linear-gradient(135deg, #F97316 0%, #DB2777 55%, #7E22CE 100%)",
+    swatch: "#C2410C",
+    previewBg: "linear-gradient(135deg, #C2410C 0%, #DB2777 55%, #7E22CE 100%)",
     previewIsDark: true,
   },
   cyber: {
@@ -506,9 +515,18 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(120% 120% at 30% 10%, rgba(34,211,238,0.35) 0%, transparent 45%), linear-gradient(160deg, #0f172a 0%, #1e1b4b 55%, #2e1065 100%)",
     previewIsDark: true,
   },
+  // Bug dilaporkan pengguna (27 Juli 2026): "ketika memilih tema yang warna
+  // putih masa font nya tetep putih dan membuat tidak kelihatan" -- stop
+  // pertama gradien ini semula "emerald-400" (SANGAT terang, rasio kontras
+  // WCAG cuma ~1.9 untuk teks putih, jauh di bawah ambang 4.5), padahal
+  // avatar/nama/bio SELALU duduk persis di area stop pertama. Ketiga stop
+  // digelapkan (400/500/600 -> 600/700/800) supaya kontras lolos di
+  // sepanjang gradien, BUKAN cuma di titik pertama -- nama tema & watak
+  // hijau-teal-cyan-nya TETAP sama, cuma lebih gelap/dalam (mirip "Cosmic"/
+  // "Cyber" yang dari awal sudah memakai bobot warna gelap serupa).
   mint: {
     label: "Mint",
-    page: "bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600",
+    page: "bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800",
     glow: "bg-gradient-to-br from-white/25 via-emerald-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -521,8 +539,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-emerald-100",
     buyButton: "bg-white text-teal-700 font-bold hover:brightness-95",
     footer: "text-white/35 hover:text-white",
-    swatch: "#14B8A6",
-    previewBg: "linear-gradient(135deg, #34D399 0%, #14B8A6 50%, #0891B2 100%)",
+    swatch: "#0F766E",
+    previewBg: "linear-gradient(135deg, #059669 0%, #0F766E 50%, #155E75 100%)",
     previewIsDark: true,
   },
   golden: {
@@ -1181,8 +1199,13 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     // kartu di sini pakai backdrop-blur-2xl (40px, jauh lebih tebal dari
     // backdrop-blur default 8px) + border lebih terang supaya efek "kaca"
     // benar-benar menonjol, bukan sekadar semi-transparan.
+    // Bug dilaporkan pengguna (27 Juli 2026, ditemukan lewat audit
+    // menyeluruh setelah laporan kontras teks): stop "indigo-500" semula
+    // pas-pasan lolos utuh (~4.5) tapi teks bio (opacity 75%, warna efektif
+    // jadi lebih terang lagi karena tercampur dengan latar) jatuh ke ~3.2 --
+    // digelapkan ke indigo-600 supaya ada margin aman.
     label: "Crystal",
-    page: "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500",
+    page: "bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600",
     glow: "bg-gradient-to-br from-white/25 via-fuchsia-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -1195,15 +1218,23 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#A855F7",
-    previewBg: "linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%)",
+    swatch: "#9333EA",
+    previewBg: "linear-gradient(135deg, #4F46E5 0%, #9333EA 50%, #DB2777 100%)",
     previewIsDark: true,
   },
   aqua: {
     // "Glassmorphism Background" varian 2 -- teknik kartu kaca yang sama
     // seperti "crystal", palet teal-emerald.
+    // Bug dilaporkan pengguna (27 Juli 2026): "ketika memilih tema yang
+    // warna putih masa font nya tetep putih dan membuat tidak kelihatan" --
+    // stop asli "cyan-400" SANGAT terang (rasio kontras teks putih ~1.8,
+    // jauh di bawah ambang 4.5), padahal avatar/nama/bio SELALU duduk di
+    // area stop pertama. Digelapkan seluruhnya (400/500/500 -> 700/700/800)
+    // supaya kartu kaca TETAP jelas terlihat "kaca" (perlu latar yang
+    // cukup kontras dengan kartu putih transparan supaya efek blur-nya
+    // kelihatan), sekaligus teks putih tetap terbaca di sepanjang gradien.
     label: "Aqua",
-    page: "bg-gradient-to-br from-cyan-400 via-teal-500 to-emerald-500",
+    page: "bg-gradient-to-br from-cyan-700 via-teal-700 to-emerald-800",
     glow: "bg-gradient-to-br from-white/25 via-cyan-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -1216,8 +1247,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#2DD4BF",
-    previewBg: "linear-gradient(135deg, #22D3EE 0%, #14B8A6 50%, #10B981 100%)",
+    swatch: "#0F766E",
+    previewBg: "linear-gradient(135deg, #0E7490 0%, #0F766E 50%, #065F46 100%)",
     previewIsDark: true,
   },
   nebula: {
