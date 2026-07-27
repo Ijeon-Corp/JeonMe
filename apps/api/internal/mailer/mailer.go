@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"strings"
 )
 
 type Client struct {
@@ -23,6 +24,21 @@ func NewClient(host string, port int, username, password, fromAddr string) *Clie
 	return &Client{Host: host, Port: port, Username: username, Password: password, FromAddr: fromAddr}
 }
 
+// stripCRLF -- audit keamanan (28 Juli 2026, permintaan langsung pengguna
+// sebelum deploy production): "subject" & "to" dulu ditulis apa adanya ke
+// header SMTP mentah di bawah TANPA disaring -- "subject" bisa berasal dari
+// data yang diisi kreator sendiri (mis. nama produk, lihat worker.go), yang
+// BOLEH berisi CR/LF. Kreator jahat bisa menaruh "\r\nBcc: attacker@..." di
+// nama produk supaya SETIAP email notifikasi pembelian produk itu diam-diam
+// mem-BCC alamat pilihannya sendiri (CWE-93, SMTP header injection). CR/LF
+// dibuang di SINI (bukan cuma di titik panggil worker.go) supaya SEMUA
+// pemanggil Send() saat ini & masa depan otomatis terlindungi.
+func stripCRLF(s string) string {
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	return s
+}
+
 // Send -- kalau SMTP_HOST belum diisi, sengaja log-only dan mengembalikan
 // nil (BUKAN error). Ini job asynq: kalau di sini mengembalikan error,
 // asynq akan retry berkali-kali dengan backoff -- percuma diulang selama
@@ -33,6 +49,9 @@ func (c *Client) Send(to, subject, body string) error {
 		log.Printf("mailer: SMTP belum dikonfigurasi, lewati pengiriman ke %s (subjek: %q)", to, subject)
 		return nil
 	}
+
+	to = stripCRLF(to)
+	subject = stripCRLF(subject)
 
 	addr := fmt.Sprintf("%s:%d", c.Host, c.Port)
 	var auth smtp.Auth

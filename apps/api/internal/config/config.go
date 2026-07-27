@@ -65,8 +65,10 @@ func Load() *Config {
 		log.Println("info: file .env tidak ditemukan, menggunakan environment variable sistem")
 	}
 
+	appEnv := getEnv("APP_ENV", "local")
+
 	cfg := &Config{
-		AppEnv:      getEnv("APP_ENV", "local"),
+		AppEnv:      appEnv,
 		AppPort:     getEnv("APP_PORT", "8080"),
 		DatabaseURL: mustGetEnv("DATABASE_URL"),
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
@@ -95,9 +97,21 @@ func Load() *Config {
 		// ("Endpoint url cannot have fully qualified paths"). Skema diatur
 		// lewat S3_USE_SSL, bukan lewat endpoint string. Ketahuan dari log
 		// error nyata saat verifikasi Sprint 2 di staging.
+		//
+		// Audit keamanan (28 Juli 2026, permintaan langsung pengguna sebelum
+		// deploy production): S3_ACCESS_KEY/S3_SECRET_KEY dulu SELALU jatuh
+		// balik ke kredensial default ("jeonme"/"jeonme12345") yang tertulis
+		// LANGSUNG di source ini -- kalau env var itu KELUPAAN diisi saat
+		// deploy production (mis. secret CI belum diset), API tetap START
+		// NORMAL tapi diam-diam memakai kredensial publik yang siapa pun bisa
+		// baca dari repo ini untuk mengambil-alih seluruh object storage
+		// (avatar/produk/dst) kalau endpoint MinIO-nya kebetulan terjangkau.
+		// mustGetEnvInProd() menjaga kenyamanan dev lokal (jalan tanpa setup
+		// lewat default di atas) TAPI gagal-cepat (fail-fast, sama seperti
+		// DATABASE_URL/JWT_SECRET) begitu APP_ENV=production.
 		S3Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
-		S3AccessKey: getEnv("S3_ACCESS_KEY", "jeonme"),
-		S3SecretKey: getEnv("S3_SECRET_KEY", "jeonme12345"),
+		S3AccessKey: mustGetEnvInProd(appEnv, "S3_ACCESS_KEY", "jeonme"),
+		S3SecretKey: mustGetEnvInProd(appEnv, "S3_SECRET_KEY", "jeonme12345"),
 		S3Bucket:    getEnv("S3_BUCKET", "jeonme-products"),
 		S3UseSSL:    getEnv("S3_USE_SSL", "false") == "true",
 
@@ -173,4 +187,17 @@ func mustGetEnv(key string) string {
 		log.Fatalf("environment variable wajib '%s' belum diset", key)
 	}
 	return v
+}
+
+// mustGetEnvInProd -- audit keamanan (28 Juli 2026): sama seperti getEnv
+// (jatuh balik ke devDefault) di local/staging supaya tetap nyaman dipakai
+// tanpa setup tambahan, TAPI gagal-cepat seperti mustGetEnv begitu
+// appEnv=="production" -- mencegah kredensial default yang tertulis di
+// source (mis. S3_ACCESS_KEY/S3_SECRET_KEY) diam-diam terpakai di production
+// hanya karena env var-nya kelupaan diisi saat deploy.
+func mustGetEnvInProd(appEnv, key, devDefault string) string {
+	if appEnv == "production" {
+		return mustGetEnv(key)
+	}
+	return getEnv(key, devDefault)
 }

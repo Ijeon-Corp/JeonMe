@@ -24,10 +24,50 @@ const maxProductFileSize = 100 * 1024 * 1024
 // allowedProductFileExt -- REQ-F-302 (validasi tipe file). Daftar putih
 // (bukan daftar hitam) supaya tipe file berbahaya (.exe, .sh, dst) tertolak
 // secara default alih-alih harus disebutkan satu-satu.
-var allowedProductFileExt = map[string]bool{
-	".pdf": true, ".zip": true, ".epub": true,
-	".mp4": true, ".mp3": true, ".mov": true,
-	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
+//
+// Audit keamanan (28 Juli 2026, permintaan langsung pengguna sebelum deploy
+// production): dulu map[string]bool ini HANYA memvalidasi ekstensi, lalu
+// Content-Type yang DIKIRIM KLIEN dipakai apa adanya saat unggah ke S3/MinIO
+// -- kreator jahat bisa mengunggah file bernama "ebook.pdf" tapi mengirim
+// header Content-Type: text/html, membuat MinIO menyajikannya sebagai HTML
+// ke pembeli yang mengunduh (XSS tersimpan di domain storage). Diubah jadi
+// map[string]string (ekstensi -> Content-Type) yang DIPAKSAKAN dari sisi
+// server, TIDAK PERNAH dipercaya dari klien -- pola yang SAMA seperti
+// allowedCoverExt di bawah & allowedAvatarExt (page.go), yang sejak awal
+// sudah benar untuk unggahan lain.
+var allowedProductFileExt = map[string]string{
+	".pdf":  "application/pdf",
+	".zip":  "application/zip",
+	".epub": "application/epub+zip",
+	".mp4":  "video/mp4",
+	".mp3":  "audio/mpeg",
+	".mov":  "video/quicktime",
+	".jpg":  "image/jpeg", ".jpeg": "image/jpeg",
+	".png": "image/png", ".webp": "image/webp",
+}
+
+// sanitizeFileNameForKey -- audit keamanan (28 Juli 2026): nama file file
+// produk (BUKAN sampul, yang key-nya sudah tetap "covers/<productID>")
+// sengaja tetap menyertakan nama asli di storage key (supaya pembeli
+// mengunduh dengan nama file yang manusiawi, bukan UUID acak), tapi nama
+// itu SEPENUHNYA dikendalikan klien -- tanpa disaring, karakter pemisah
+// jalur ("/", "\\") atau ".." bisa mengubah lokasi object yang sesungguhnya
+// ditulis di storage. Disaring jadi hanya huruf/angka/titik/strip/garis
+// bawah, dan setiap ".." dibuang total.
+func sanitizeFileNameForKey(name string) string {
+	name = strings.ReplaceAll(name, "..", "")
+	name = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '-', r == '_':
+			return r
+		default:
+			return '_'
+		}
+	}, name)
+	if name == "" {
+		name = "file"
+	}
+	return name
 }
 
 // maxCoverImageSize -- 5MB, cukup untuk gambar sampul produk (bukan file
@@ -442,7 +482,8 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 	}
 
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	if !allowedProductFileExt[ext] {
+	contentType, ok := allowedProductFileExt[ext]
+	if !ok {
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan", ext)})
 		return
 	}
@@ -454,8 +495,7 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 	}
 	defer file.Close()
 
-	key := fmt.Sprintf("products/%s/%s", productID, fileHeader.Filename)
-	contentType := fileHeader.Header.Get("Content-Type")
+	key := fmt.Sprintf("products/%s/%s", productID, sanitizeFileNameForKey(fileHeader.Filename))
 	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah file"})
 		return
