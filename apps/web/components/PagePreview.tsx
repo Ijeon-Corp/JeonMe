@@ -356,8 +356,6 @@ export default function PagePreview({
                     embed={Boolean(link.blockData?.embed)}
                     embedLat={link.blockData?.embed_lat as number | undefined}
                     embedLng={link.blockData?.embed_lng as number | undefined}
-                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-                    titleClassName={theme.productTitle}
                     linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 );
@@ -825,8 +823,6 @@ function LandingPagePreview({
                   embed={Boolean(block.blockData?.embed)}
                   embedLat={block.blockData?.embed_lat as number | undefined}
                   embedLng={block.blockData?.embed_lng as number | undefined}
-                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-                  titleClassName={theme.productTitle}
                   linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-3.5 py-2 text-xs font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 />
               );
