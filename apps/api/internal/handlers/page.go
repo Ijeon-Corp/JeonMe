@@ -568,6 +568,15 @@ var availableThemes = map[string]bool{
 	// 2 preset gradien CSS baru (permintaan langsung pengguna): "Mesh
 	// Gradient" & "Aurora Gradient".
 	"mesh": true, "aurora": true,
+	// 12 preset gradien CSS TAMBAHAN (klarifikasi pengguna: "pertema buat 2"
+	// berarti 2 VARIAN per masing-masing 7 konsep yang dibagikan, bukan
+	// pilih 2 dari 7) -- prism/borealis (varian ke-2 Mesh/Aurora), orbit/
+	// halo (Radial Gradient), lava/bubble (Blob Background), canvas/static
+	// (Grain/Noise Background), crystal/aqua (Glassmorphism Background),
+	// nebula/flux (Abstract Blur Background).
+	"prism": true, "borealis": true, "orbit": true, "halo": true,
+	"lava": true, "bubble": true, "canvas": true, "static": true,
+	"crystal": true, "aqua": true, "nebula": true, "flux": true,
 	"custom": true,
 }
 

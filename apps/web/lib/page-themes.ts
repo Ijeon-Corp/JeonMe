@@ -61,6 +61,18 @@ export type PageThemeName =
   | "grid"
   | "mesh"
   | "aurora"
+  | "prism"
+  | "borealis"
+  | "orbit"
+  | "halo"
+  | "lava"
+  | "bubble"
+  | "canvas"
+  | "static"
+  | "crystal"
+  | "aqua"
+  | "nebula"
+  | "flux"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -933,6 +945,336 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     pageStyle: {
       backgroundImage:
         "radial-gradient(at 25% 25%, hsla(165,85%,55%,0.4) 0px, transparent 55%), radial-gradient(at 75% 30%, hsla(280,80%,60%,0.4) 0px, transparent 55%), radial-gradient(at 50% 80%, hsla(200,85%,55%,0.35) 0px, transparent 60%)",
+    },
+  },
+  // Klarifikasi pengguna atas permintaan sebelumnya (7 konsep gaya CSS
+  // background yang dibagikan): "pertema buat 2" -- ARTINYA 2 VARIAN untuk
+  // MASING-MASING dari 7 konsep, bukan "pilih 2 dari 7". Mesh & Aurora di
+  // atas adalah varian pertama dari 2 konsep pertama; 12 preset di bawah
+  // ini melengkapi varian ke-2 Mesh/Aurora plus 2 varian utuh untuk 5
+  // konsep sisanya (Radial/Blob/Grain-Noise/Glassmorphism/Abstract Blur).
+  // SEMUA murni CSS (pageStyle.backgroundImage), TANPA aset gambar --
+  // pola identik dengan Mesh/Aurora/Grid di atas.
+  prism: {
+    // Varian ke-2 "Mesh Gradient" -- palet hangat (oranye/pink/kuning/merah)
+    // sebagai lawan palet ungu-dingin "mesh" yang sudah ada.
+    label: "Prism",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#FB923C",
+    previewBg:
+      "radial-gradient(at 15% 20%, hsla(20,90%,65%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,65%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(45,95%,60%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(0,85%,60%,0.45) 0px, transparent 55%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(at 15% 20%, hsla(20,90%,65%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,65%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(45,95%,60%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(0,85%,60%,0.45) 0px, transparent 55%)",
+    },
+  },
+  borealis: {
+    // Varian ke-2 "Aurora Gradient" -- palet hijau-teal-ungu lebih dingin
+    // di atas dasar nyaris hitam, komposisi titik gradien berbeda dari
+    // "aurora" yang sudah ada.
+    label: "Borealis",
+    page: "bg-[#03060B]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/20 shadow-hero",
+    name: "text-white",
+    bio: "text-white/65",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#34D399",
+    previewBg:
+      "radial-gradient(at 10% 15%, hsla(150,80%,45%,0.4) 0px, transparent 60%), radial-gradient(at 85% 20%, hsla(260,75%,55%,0.35) 0px, transparent 60%), radial-gradient(at 30% 90%, hsla(190,80%,50%,0.3) 0px, transparent 65%), radial-gradient(at 80% 80%, hsla(120,70%,45%,0.3) 0px, transparent 60%), #03060B",
+    previewIsDark: true,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(at 10% 15%, hsla(150,80%,45%,0.4) 0px, transparent 60%), radial-gradient(at 85% 20%, hsla(260,75%,55%,0.35) 0px, transparent 60%), radial-gradient(at 30% 90%, hsla(190,80%,50%,0.3) 0px, transparent 65%), radial-gradient(at 80% 80%, hsla(120,70%,45%,0.3) 0px, transparent 60%)",
+    },
+  },
+  orbit: {
+    // "Radial Gradient" varian 1 -- deskripsi pengguna: gradien lingkaran
+    // dari beberapa titik, versi lebih sederhana dari mesh (cuma 2 lapis,
+    // bukan 4+). Palet biru-ungu.
+    label: "Orbit",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#60A5FA",
+    previewBg:
+      "radial-gradient(circle at 20% 30%, hsla(210,90%,60%,0.45) 0%, transparent 60%), radial-gradient(circle at 80% 70%, hsla(280,80%,65%,0.4) 0%, transparent 60%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(circle at 20% 30%, hsla(210,90%,60%,0.45) 0%, transparent 60%), radial-gradient(circle at 80% 70%, hsla(280,80%,65%,0.4) 0%, transparent 60%)",
+    },
+  },
+  halo: {
+    // "Radial Gradient" varian 2 -- sama sesederhana "orbit" tapi palet
+    // hangat (emas/pink).
+    label: "Halo",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#FBBF24",
+    previewBg:
+      "radial-gradient(circle at 25% 25%, hsla(35,95%,65%,0.5) 0%, transparent 55%), radial-gradient(circle at 75% 75%, hsla(350,85%,65%,0.45) 0%, transparent 55%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(circle at 25% 25%, hsla(35,95%,65%,0.5) 0%, transparent 55%), radial-gradient(circle at 75% 75%, hsla(350,85%,65%,0.45) 0%, transparent 55%)",
+    },
+  },
+  lava: {
+    // "Blob Background" varian 1 -- deskripsi pengguna: bentuk organik
+    // (blob) diblur. Disimulasikan lewat radial-gradient elips lembut
+    // (falloff transparent jauh lebih lebar dari mesh/orbit supaya terasa
+    // "blur", bukan tegas). Palet gelap hangat (lava/magma).
+    label: "Lava",
+    page: "bg-[#1A0F0A]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/20 shadow-hero",
+    name: "text-white",
+    bio: "text-white/65",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-orange-200",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#F97316",
+    previewBg:
+      "radial-gradient(ellipse 60% 50% at 25% 30%, hsla(15,90%,55%,0.55) 0%, transparent 70%), radial-gradient(ellipse 55% 45% at 75% 70%, hsla(350,85%,50%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 50% 90%, hsla(30,90%,50%,0.4) 0%, transparent 70%), #1A0F0A",
+    previewIsDark: true,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(ellipse 60% 50% at 25% 30%, hsla(15,90%,55%,0.55) 0%, transparent 70%), radial-gradient(ellipse 55% 45% at 75% 70%, hsla(350,85%,50%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 50% 90%, hsla(30,90%,50%,0.4) 0%, transparent 70%)",
+    },
+  },
+  bubble: {
+    // "Blob Background" varian 2 -- sama teknik blur elips seperti "lava",
+    // palet pastel terang.
+    label: "Bubble",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#7DD3FC",
+    previewBg:
+      "radial-gradient(ellipse 55% 50% at 20% 25%, hsla(200,90%,75%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 45% at 80% 30%, hsla(320,85%,78%,0.45) 0%, transparent 70%), radial-gradient(ellipse 60% 55% at 50% 85%, hsla(150,70%,75%,0.4) 0%, transparent 70%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(ellipse 55% 50% at 20% 25%, hsla(200,90%,75%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 45% at 80% 30%, hsla(320,85%,78%,0.45) 0%, transparent 70%), radial-gradient(ellipse 60% 55% at 50% 85%, hsla(150,70%,75%,0.4) 0%, transparent 70%)",
+    },
+  },
+  canvas: {
+    // "Grain/Noise Background" varian 1 -- deskripsi pengguna: tekstur
+    // noise tipis DI ATAS gradient (referensi Lynk.id). Dibangun lewat SVG
+    // feTurbulence sebagai data-URI (layer backgroundImage teratas) +
+    // backgroundBlendMode "overlay" supaya noise itu menyatu dengan warna
+    // gradient di baliknya, BUKAN lapisan hitam-putih polos di atasnya --
+    // TANPA aset gambar (SVG-nya inline, bukan file). previewBg (kartu
+    // galeri kecil) sengaja HANYA gradiennya saja tanpa noise -- sama
+    // seperti pola "Grid" (No.124) yang preview-nya juga tidak menampilkan
+    // pola garis aslinya, cukup representasi warna dasarnya.
+    label: "Canvas",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#FB7185",
+    previewBg: "linear-gradient(135deg, #FDBA74 0%, #FB7185 50%, #A78BFA 100%)",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"), linear-gradient(135deg, #FDBA74 0%, #FB7185 50%, #A78BFA 100%)",
+      backgroundBlendMode: "overlay",
+    },
+  },
+  static: {
+    // "Grain/Noise Background" varian 2 -- teknik SVG noise + overlay blend
+    // yang sama seperti "canvas", palet gelap.
+    label: "Static",
+    page: "bg-[#0B0B0F]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/20 shadow-hero",
+    name: "text-white",
+    bio: "text-white/65",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#64748B",
+    previewBg: "linear-gradient(160deg, #0B0B0F 0%, #1E293B 55%, #0B0B0F 100%)",
+    previewIsDark: true,
+    pageStyle: {
+      backgroundImage:
+        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"), linear-gradient(160deg, #0B0B0F 0%, #1E293B 55%, #0B0B0F 100%)",
+      backgroundBlendMode: "overlay",
+    },
+  },
+  crystal: {
+    // "Glassmorphism Background" varian 1 -- deskripsi pengguna: gradient
+    // + kartu transparan blur (backdrop-filter: blur()). Bedanya dari
+    // tema vivid lain (Bloom/Blaze/Mint) yang JUGA pakai backdrop-blur:
+    // kartu di sini pakai backdrop-blur-2xl (40px, jauh lebih tebal dari
+    // backdrop-blur default 8px) + border lebih terang supaya efek "kaca"
+    // benar-benar menonjol, bukan sekadar semi-transparan.
+    label: "Crystal",
+    page: "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500",
+    glow: "bg-gradient-to-br from-white/25 via-fuchsia-200/15 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#A855F7",
+    previewBg: "linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%)",
+    previewIsDark: true,
+  },
+  aqua: {
+    // "Glassmorphism Background" varian 2 -- teknik kartu kaca yang sama
+    // seperti "crystal", palet teal-emerald.
+    label: "Aqua",
+    page: "bg-gradient-to-br from-cyan-400 via-teal-500 to-emerald-500",
+    glow: "bg-gradient-to-br from-white/25 via-cyan-200/15 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#2DD4BF",
+    previewBg: "linear-gradient(135deg, #22D3EE 0%, #14B8A6 50%, #10B981 100%)",
+    previewIsDark: true,
+  },
+  nebula: {
+    // "Abstract Blur Background" varian 1 -- deskripsi pengguna: beberapa
+    // lingkaran warna besar dengan filter: blur(100px+). Disimulasikan
+    // lewat radial-gradient LINGKARAN (bukan elips seperti blob) berukuran
+    // fix besar (circle 340-400px) dengan falloff transparent 75% -- lebih
+    // sedikit titik & lebih besar/tegas dibanding "lava/bubble" supaya
+    // terasa seperti "beberapa lingkaran besar", bukan campuran organik.
+    // Palet gelap vivid (ungu/biru/pink).
+    label: "Nebula",
+    page: "bg-[#05040A]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/20 shadow-hero",
+    name: "text-white",
+    bio: "text-white/65",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#8B5CF6",
+    previewBg:
+      "radial-gradient(circle 380px at 20% 30%, hsla(265,85%,60%,0.55) 0%, transparent 75%), radial-gradient(circle 340px at 80% 25%, hsla(200,90%,55%,0.45) 0%, transparent 75%), radial-gradient(circle 400px at 55% 85%, hsla(320,85%,55%,0.4) 0%, transparent 75%), #05040A",
+    previewIsDark: true,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(circle 380px at 20% 30%, hsla(265,85%,60%,0.55) 0%, transparent 75%), radial-gradient(circle 340px at 80% 25%, hsla(200,90%,55%,0.45) 0%, transparent 75%), radial-gradient(circle 400px at 55% 85%, hsla(320,85%,55%,0.4) 0%, transparent 75%)",
+    },
+  },
+  flux: {
+    // "Abstract Blur Background" varian 2 -- teknik lingkaran besar yang
+    // sama seperti "nebula", palet terang.
+    label: "Flux",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#38BDF8",
+    previewBg:
+      "radial-gradient(circle 360px at 25% 30%, hsla(200,90%,65%,0.45) 0%, transparent 75%), radial-gradient(circle 340px at 75% 25%, hsla(280,80%,70%,0.4) 0%, transparent 75%), radial-gradient(circle 380px at 50% 85%, hsla(340,85%,70%,0.4) 0%, transparent 75%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(circle 360px at 25% 30%, hsla(200,90%,65%,0.45) 0%, transparent 75%), radial-gradient(circle 340px at 75% 25%, hsla(280,80%,70%,0.4) 0%, transparent 75%), radial-gradient(circle 380px at 50% 85%, hsla(340,85%,70%,0.4) 0%, transparent 75%)",
     },
   },
 };

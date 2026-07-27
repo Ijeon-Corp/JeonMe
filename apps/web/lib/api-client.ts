@@ -407,6 +407,18 @@ export const THEME_PRESETS = [
   "grid",
   "mesh",
   "aurora",
+  "prism",
+  "borealis",
+  "orbit",
+  "halo",
+  "lava",
+  "bubble",
+  "canvas",
+  "static",
+  "crystal",
+  "aqua",
+  "nebula",
+  "flux",
 ] as const;
 
 export function getMyPage() {
