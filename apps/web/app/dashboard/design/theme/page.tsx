@@ -105,8 +105,7 @@ export default function DesignThemePage() {
                   Aa
                 </span>
                 <span
-                  className="absolute inset-x-2.5 bottom-2.5 h-6 rounded-full ring-1 ring-black/10"
-                  style={{ backgroundColor: meta.swatch }}
+                  className={`absolute inset-x-2.5 bottom-2.5 h-6 rounded-full ring-1 ring-black/10 ${meta.buyButton}`}
                   aria-hidden
                 />
               </ThemeTile>

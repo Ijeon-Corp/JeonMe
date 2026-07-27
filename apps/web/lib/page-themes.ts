@@ -463,13 +463,21 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
   // 6 preset baru (permintaan langsung pengguna: "tambahkan tema seperti
   // gradient dan sejenisnya") -- latar gradien VIVID multi-warna, beda dari
   // 10 preset di atas yang mayoritas solid gelap atau gradien lembut/pastel.
+  // Audit kontras menyeluruh (27 Juli 2026, setelah laporan pengguna
+  // "masih banyak tema yang font nya bertabrakan"): skrip WCAG mengukur
+  // teks bio (opacity translucent, SELALU lebih rendah kontrasnya dari
+  // nama karena warnanya tercampur ke arah latar saat dirender) di SEMUA
+  // stop gradien -- fuchsia-600 gagal untuk bio (~2.96, ambang 4.5).
+  // Digelapkan ke fuchsia-700 + opacity bio dinaikkan 70->80% (masih jelas
+  // lebih transparan/sekunder dari nama yang solid, cuma cukup pekat untuk
+  // tetap lolos kontras).
   bloom: {
     label: "Bloom",
-    page: "bg-gradient-to-br from-fuchsia-600 via-purple-700 to-indigo-800",
+    page: "bg-gradient-to-br from-fuchsia-700 via-purple-700 to-indigo-600",
     glow: "bg-gradient-to-br from-white/20 via-fuchsia-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/70",
+    bio: "text-white/80",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/50",
@@ -478,8 +486,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-fuchsia-200",
     buyButton: "bg-white text-ink font-bold hover:brightness-95",
     footer: "text-white/35 hover:text-white",
-    swatch: "#C026D3",
-    previewBg: "linear-gradient(135deg, #C026D3 0%, #7E22CE 50%, #3730A3 100%)",
+    swatch: "#A21CAF",
+    previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #4F46E5 100%)",
     previewIsDark: true,
   },
   blaze: {
@@ -492,12 +500,16 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     // supaya SELALU terbaca apa pun jumlah tautan kreator -- tema lain yang
     // sejenis (bloom/cyber/cosmic) sudah memakai bobot warna 600-900 sejak
     // awal, blaze yang tertinggal di 500 adalah satu-satunya penyimpangan.
+    // Audit lanjutan (27 Juli 2026, laporan "masih banyak"): fix pertama
+    // hanya membenahi kontras teks NAMA (opacity 100%), teks BIO (opacity
+    // translucent 70%) masih gagal (~2.89) di stop pink-600/purple-700 --
+    // kedua stop digelapkan ke -800 + opacity bio dinaikkan 70->85%.
     label: "Blaze",
-    page: "bg-gradient-to-br from-orange-700 via-pink-600 to-purple-700",
+    page: "bg-gradient-to-br from-orange-800 via-pink-800 to-purple-800",
     glow: "bg-gradient-to-br from-yellow-200/25 via-pink-300/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/70",
+    bio: "text-white/85",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/50",
@@ -506,8 +518,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-orange-100",
     buyButton: "bg-white text-ink font-bold hover:brightness-95",
     footer: "text-white/35 hover:text-white",
-    swatch: "#C2410C",
-    previewBg: "linear-gradient(135deg, #C2410C 0%, #DB2777 55%, #7E22CE 100%)",
+    swatch: "#9A3412",
+    previewBg: "linear-gradient(135deg, #9A3412 0%, #9D174D 55%, #6B21A8 100%)",
     previewIsDark: true,
   },
   cyber: {
@@ -539,9 +551,13 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
   // sepanjang gradien, BUKAN cuma di titik pertama -- nama tema & watak
   // hijau-teal-cyan-nya TETAP sama, cuma lebih gelap/dalam (mirip "Cosmic"/
   // "Cyber" yang dari awal sudah memakai bobot warna gelap serupa).
+  // Audit lanjutan (27 Juli 2026, laporan "masih banyak"): fix pertama
+  // (emerald-400 -> emerald-600 dkk) sudah cukup untuk teks NAMA (~3.77,
+  // masih di bawah 4.5 -- ternyata BELUM cukup juga), digelapkan lagi
+  // seragam ke -800 di ketiga stop supaya nama & bio SAMA-SAMA lolos.
   mint: {
     label: "Mint",
-    page: "bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800",
+    page: "bg-gradient-to-br from-emerald-800 via-teal-800 to-cyan-800",
     glow: "bg-gradient-to-br from-white/25 via-emerald-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -554,17 +570,20 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-emerald-100",
     buyButton: "bg-white text-teal-700 font-bold hover:brightness-95",
     footer: "text-white/35 hover:text-white",
-    swatch: "#0F766E",
-    previewBg: "linear-gradient(135deg, #059669 0%, #0F766E 50%, #155E75 100%)",
+    swatch: "#115E59",
+    previewBg: "linear-gradient(135deg, #065F46 0%, #115E59 50%, #155E75 100%)",
     previewIsDark: true,
   },
+  // Audit kontras menyeluruh (27 Juli 2026, laporan "masih banyak tema yang
+  // font nya bertabrakan"): teks bio (opacity translucent) marginal (~3.4,
+  // ambang 4.5) di stop rose-400 -- opacity dinaikkan 70->90%.
   golden: {
     label: "Golden",
     page: "bg-gradient-to-br from-amber-300 via-orange-400 to-rose-400",
     glow: "bg-gradient-to-br from-white/30 via-amber-100/20 to-transparent",
     avatarRing: "ring-4 ring-white shadow-hero",
     name: "text-ink",
-    bio: "text-ink/70",
+    bio: "text-ink/90",
     card: "border border-white/40 bg-white/70 backdrop-blur hover:bg-white/80 hover:-translate-y-0.5",
     cardTitle: "text-ink",
     chevron: "text-ink/40",
@@ -843,13 +862,15 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "#0B0F19",
     previewIsDark: true,
   },
+  // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.7) -- opacity
+  // dinaikkan 60->70%.
   mineral: {
     label: "Mineral",
     page: "bg-[#F5DDCB]",
     glow: "hidden",
     avatarRing: "ring-1 ring-ink/10",
     name: "text-ink",
-    bio: "text-ink/60",
+    bio: "text-ink/70",
     card: "border border-ink/15 bg-white/60 hover:bg-white/80",
     cardTitle: "text-ink",
     chevron: "text-ink/40",
@@ -862,13 +883,15 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "#F5DDCB",
     previewIsDark: false,
   },
+  // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.9) -- opacity
+  // dinaikkan 75->85%.
   blocks: {
     label: "Blocks",
     page: "bg-[#7C3AED]",
     glow: "hidden",
     avatarRing: "ring-4 ring-white/70 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border-2 border-ink bg-[#F472B6] hover:brightness-105",
     cardTitle: "text-ink",
     chevron: "text-ink/60",
@@ -881,13 +904,15 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "#7C3AED",
     previewIsDark: true,
   },
+  // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.4) -- opacity
+  // dinaikkan 60->75%.
   haven: {
     label: "Haven",
     page: "bg-[#D9CBB5]",
     glow: "hidden",
     avatarRing: "ring-1 ring-ink/10",
     name: "text-ink",
-    bio: "text-ink/60",
+    bio: "text-ink/75",
     card: "border border-ink/10 bg-white/70 hover:bg-white/90",
     cardTitle: "text-ink",
     chevron: "text-ink/40",
@@ -904,12 +929,14 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
   // lewat CSS (dua linear-gradient tipis 1px berulang), BUKAN gambar --
   // tidak perlu aset foto sama sekali untuk pola sesederhana ini.
   grid: {
+    // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.9) --
+    // opacity dinaikkan 60->70%.
     label: "Grid",
     page: "bg-[#ECF87F]",
     glow: "hidden",
     avatarRing: "ring-1 ring-ink/15",
     name: "text-ink",
-    bio: "text-ink/60",
+    bio: "text-ink/70",
     card: "border-2 border-ink bg-white hover:-translate-y-0.5",
     cardTitle: "text-ink",
     chevron: "text-ink/60",
@@ -1218,13 +1245,15 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     // menyeluruh setelah laporan kontras teks): stop "indigo-500" semula
     // pas-pasan lolos utuh (~4.5) tapi teks bio (opacity 75%, warna efektif
     // jadi lebih terang lagi karena tercampur dengan latar) jatuh ke ~3.2 --
-    // digelapkan ke indigo-600 supaya ada margin aman.
+    // digelapkan ke indigo-600. Audit lanjutan (laporan "masih banyak"):
+    // masih belum cukup untuk bio (~3.13) -- purple/pink ikut digelapkan
+    // ke -700 + opacity bio dinaikkan 75->85%.
     label: "Crystal",
-    page: "bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600",
+    page: "bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-700",
     glow: "bg-gradient-to-br from-white/25 via-fuchsia-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1233,8 +1262,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#9333EA",
-    previewBg: "linear-gradient(135deg, #4F46E5 0%, #9333EA 50%, #DB2777 100%)",
+    swatch: "#7E22CE",
+    previewBg: "linear-gradient(135deg, #4F46E5 0%, #7E22CE 50%, #BE185D 100%)",
     previewIsDark: true,
   },
   aqua: {
@@ -1248,8 +1277,10 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     // supaya kartu kaca TETAP jelas terlihat "kaca" (perlu latar yang
     // cukup kontras dengan kartu putih transparan supaya efek blur-nya
     // kelihatan), sekaligus teks putih tetap terbaca di sepanjang gradien.
+    // Audit lanjutan (laporan "masih banyak"): teks bio (opacity 75%) masih
+    // marginal (~3.75) -- cyan/teal ikut digelapkan ke -800.
     label: "Aqua",
-    page: "bg-gradient-to-br from-cyan-700 via-teal-700 to-emerald-800",
+    page: "bg-gradient-to-br from-cyan-800 via-teal-800 to-emerald-800",
     glow: "bg-gradient-to-br from-white/25 via-cyan-200/15 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
@@ -1262,8 +1293,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#0F766E",
-    previewBg: "linear-gradient(135deg, #0E7490 0%, #0F766E 50%, #065F46 100%)",
+    swatch: "#115E59",
+    previewBg: "linear-gradient(135deg, #155E75 0%, #115E59 50%, #065F46 100%)",
     previewIsDark: true,
   },
   nebula: {
@@ -1329,13 +1360,18 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
   // 400-500 -- pelajaran dari No.127: bobot warna terlalu terang membuat
   // teks putih nyaris tak terlihat di area avatar/nama/bio) + kartu kaca
   // "border border-white/30 bg-white/15 backdrop-blur-2xl".
+  // Audit lanjutan (27 Juli 2026, laporan "masih banyak"): kelima preset di
+  // bawah ini ditulis SEBELUM audit skrip WCAG selesai -- teks bio (opacity
+  // translucent 75%) marginal (~3.5-4.5) di beberapa stop. Semua stop
+  // disesuaikan + opacity bio dinaikkan (80-85%) supaya nama & bio SAMA-SAMA
+  // lolos ambang 4.5 di setiap stop gradien, bukan cuma stop pertama.
   sapphire: {
     label: "Sapphire",
-    page: "bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900",
+    page: "bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-700",
     glow: "bg-gradient-to-br from-white/20 via-blue-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/80",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1345,16 +1381,16 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
     swatch: "#1D4ED8",
-    previewBg: "linear-gradient(135deg, #1D4ED8 0%, #3730A3 50%, #0F172A 100%)",
+    previewBg: "linear-gradient(135deg, #1D4ED8 0%, #4338CA 50%, #334155 100%)",
     previewIsDark: true,
   },
   opal: {
     label: "Opal",
-    page: "bg-gradient-to-br from-fuchsia-700 via-purple-700 to-sky-900",
+    page: "bg-gradient-to-br from-fuchsia-700 via-purple-700 to-sky-700",
     glow: "bg-gradient-to-br from-white/20 via-fuchsia-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1363,17 +1399,17 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#A21CAF",
-    previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #0C4A6E 100%)",
+    swatch: "#7E22CE",
+    previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #0369A1 100%)",
     previewIsDark: true,
   },
   quartz: {
     label: "Quartz",
-    page: "bg-gradient-to-br from-rose-700 via-amber-700 to-orange-900",
+    page: "bg-gradient-to-br from-rose-700 via-amber-800 to-orange-800",
     glow: "bg-gradient-to-br from-white/20 via-rose-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1382,17 +1418,17 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#BE185D",
-    previewBg: "linear-gradient(135deg, #BE185D 0%, #B45309 50%, #7C2D12 100%)",
+    swatch: "#92400E",
+    previewBg: "linear-gradient(135deg, #BE123C 0%, #92400E 50%, #9A3412 100%)",
     previewIsDark: true,
   },
   glacier: {
     label: "Glacier",
-    page: "bg-gradient-to-br from-cyan-700 via-sky-800 to-indigo-900",
+    page: "bg-gradient-to-br from-cyan-800 via-sky-700 to-indigo-700",
     glow: "bg-gradient-to-br from-white/20 via-cyan-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1401,17 +1437,17 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#0E7490",
-    previewBg: "linear-gradient(135deg, #0E7490 0%, #075985 50%, #312E81 100%)",
+    swatch: "#0369A1",
+    previewBg: "linear-gradient(135deg, #155E75 0%, #0369A1 50%, #4338CA 100%)",
     previewIsDark: true,
   },
   mirage: {
     label: "Mirage",
-    page: "bg-gradient-to-br from-amber-700 via-rose-700 to-purple-900",
+    page: "bg-gradient-to-br from-amber-800 via-rose-700 to-purple-700",
     glow: "bg-gradient-to-br from-white/20 via-amber-300/10 to-transparent",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1420,8 +1456,8 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     productPrice: "text-white/90",
     buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
     footer: "text-white/40 hover:text-white",
-    swatch: "#B45309",
-    previewBg: "linear-gradient(135deg, #B45309 0%, #BE123C 50%, #581C87 100%)",
+    swatch: "#BE123C",
+    previewBg: "linear-gradient(135deg, #92400E 0%, #BE123C 50%, #7E22CE 100%)",
     previewIsDark: true,
   },
   // 5 preset FOTO WALLPAPER tambahan (permintaan langsung pengguna:
@@ -1452,13 +1488,16 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "url('/wallpapers/ngarai.jpg') center/cover",
     previewIsDark: true,
   },
+  // Audit kontras menyeluruh (27 Juli 2026): overlay gelap foto ini
+  // diperkuat lagi (lihat proses pembuatan file) + opacity bio dinaikkan
+  // 75->85% supaya lolos ambang 4.5 di area foto paling terang sekalipun.
   highland: {
     label: "Highland",
     page: "bg-[url('/wallpapers/dataran.jpg')] bg-cover bg-center bg-no-repeat",
     glow: "hidden",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1477,7 +1516,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     glow: "hidden",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1496,7 +1535,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     glow: "hidden",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
@@ -1515,7 +1554,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     glow: "hidden",
     avatarRing: "ring-4 ring-white/80 shadow-hero",
     name: "text-white",
-    bio: "text-white/75",
+    bio: "text-white/85",
     card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
     cardTitle: "text-white",
     chevron: "text-white/60",
