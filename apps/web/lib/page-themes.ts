@@ -59,6 +59,8 @@ export type PageThemeName =
   | "blocks"
   | "haven"
   | "grid"
+  | "mesh"
+  | "aurora"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -878,6 +880,59 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       backgroundImage:
         "linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px)",
       backgroundSize: "28px 28px",
+    },
+  },
+  // Permintaan langsung pengguna: "Mesh Gradient" & "Aurora Gradient" --
+  // beberapa gaya latar modern (referensi: Linktree/Figma/Stripe untuk mesh,
+  // website AI modern untuk aurora) dibangun MURNI lewat CSS (beberapa
+  // radial-gradient bertumpuk), TANPA aset gambar sama sekali -- pola sama
+  // seperti "Grid" di atas (pageStyle.backgroundImage).
+  mesh: {
+    label: "Mesh Gradient",
+    page: "bg-white",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#A78BFA",
+    previewBg:
+      "radial-gradient(at 15% 20%, hsla(280,85%,75%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,75%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(195,85%,70%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(45,90%,72%,0.5) 0px, transparent 50%), #FFFFFF",
+    previewIsDark: false,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(at 15% 20%, hsla(280,85%,75%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,75%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(195,85%,70%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(45,90%,72%,0.5) 0px, transparent 50%)",
+    },
+  },
+  aurora: {
+    label: "Aurora Gradient",
+    page: "bg-[#05070D]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/20 shadow-hero",
+    name: "text-white",
+    bio: "text-white/65",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#2DD4BF",
+    previewBg:
+      "radial-gradient(at 25% 25%, hsla(165,85%,55%,0.4) 0px, transparent 55%), radial-gradient(at 75% 30%, hsla(280,80%,60%,0.4) 0px, transparent 55%), radial-gradient(at 50% 80%, hsla(200,85%,55%,0.35) 0px, transparent 60%), #05070D",
+    previewIsDark: true,
+    pageStyle: {
+      backgroundImage:
+        "radial-gradient(at 25% 25%, hsla(165,85%,55%,0.4) 0px, transparent 55%), radial-gradient(at 75% 30%, hsla(280,80%,60%,0.4) 0px, transparent 55%), radial-gradient(at 50% 80%, hsla(200,85%,55%,0.35) 0px, transparent 60%)",
     },
   },
 };

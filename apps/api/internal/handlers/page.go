@@ -565,6 +565,9 @@ var availableThemes = map[string]bool{
 	// 6 preset WARNA SOLID baru (permintaan langsung pengguna: "tambahkan
 	// warna warna seperti ini bukan hanya gradient saja").
 	"air": true, "lake": true, "mineral": true, "blocks": true, "haven": true, "grid": true,
+	// 2 preset gradien CSS baru (permintaan langsung pengguna): "Mesh
+	// Gradient" & "Aurora Gradient".
+	"mesh": true, "aurora": true,
 	"custom": true,
 }
 

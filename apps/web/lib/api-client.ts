@@ -405,6 +405,8 @@ export const THEME_PRESETS = [
   "blocks",
   "haven",
   "grid",
+  "mesh",
+  "aurora",
 ] as const;
 
 export function getMyPage() {
