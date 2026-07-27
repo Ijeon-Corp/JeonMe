@@ -419,6 +419,16 @@ export const THEME_PRESETS = [
   "aqua",
   "nebula",
   "flux",
+  "sapphire",
+  "opal",
+  "quartz",
+  "glacier",
+  "mirage",
+  "canyon",
+  "highland",
+  "cascade",
+  "tide",
+  "skyline",
 ] as const;
 
 export function getMyPage() {

@@ -73,6 +73,16 @@ export type PageThemeName =
   | "aqua"
   | "nebula"
   | "flux"
+  | "sapphire"
+  | "opal"
+  | "quartz"
+  | "glacier"
+  | "mirage"
+  | "canyon"
+  | "highland"
+  | "cascade"
+  | "tide"
+  | "skyline"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -90,6 +100,11 @@ export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "storm",
   "frost",
   "dew",
+  "canyon",
+  "highland",
+  "cascade",
+  "tide",
+  "skyline",
 ];
 
 export type PageTheme = {
@@ -1307,6 +1322,211 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       backgroundImage:
         "radial-gradient(circle 360px at 25% 30%, hsla(200,90%,65%,0.45) 0%, transparent 75%), radial-gradient(circle 340px at 75% 25%, hsla(280,80%,70%,0.4) 0%, transparent 75%), radial-gradient(circle 380px at 50% 85%, hsla(340,85%,70%,0.4) 0%, transparent 75%)",
     },
+  },
+  // 5 preset GLASSMORPHISM tambahan (permintaan langsung pengguna: "tambahkan
+  // 5 tema glassmorphism") -- melengkapi Crystal/Aqua (No.126) jadi 7 total.
+  // Pola SAMA PERSIS: gradien Tailwind vivid (stop 600-700-800/900, BUKAN
+  // 400-500 -- pelajaran dari No.127: bobot warna terlalu terang membuat
+  // teks putih nyaris tak terlihat di area avatar/nama/bio) + kartu kaca
+  // "border border-white/30 bg-white/15 backdrop-blur-2xl".
+  sapphire: {
+    label: "Sapphire",
+    page: "bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900",
+    glow: "bg-gradient-to-br from-white/20 via-blue-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#1D4ED8",
+    previewBg: "linear-gradient(135deg, #1D4ED8 0%, #3730A3 50%, #0F172A 100%)",
+    previewIsDark: true,
+  },
+  opal: {
+    label: "Opal",
+    page: "bg-gradient-to-br from-fuchsia-700 via-purple-700 to-sky-900",
+    glow: "bg-gradient-to-br from-white/20 via-fuchsia-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#A21CAF",
+    previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #0C4A6E 100%)",
+    previewIsDark: true,
+  },
+  quartz: {
+    label: "Quartz",
+    page: "bg-gradient-to-br from-rose-700 via-amber-700 to-orange-900",
+    glow: "bg-gradient-to-br from-white/20 via-rose-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#BE185D",
+    previewBg: "linear-gradient(135deg, #BE185D 0%, #B45309 50%, #7C2D12 100%)",
+    previewIsDark: true,
+  },
+  glacier: {
+    label: "Glacier",
+    page: "bg-gradient-to-br from-cyan-700 via-sky-800 to-indigo-900",
+    glow: "bg-gradient-to-br from-white/20 via-cyan-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#0E7490",
+    previewBg: "linear-gradient(135deg, #0E7490 0%, #075985 50%, #312E81 100%)",
+    previewIsDark: true,
+  },
+  mirage: {
+    label: "Mirage",
+    page: "bg-gradient-to-br from-amber-700 via-rose-700 to-purple-900",
+    glow: "bg-gradient-to-br from-white/20 via-amber-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/30 bg-white/15 backdrop-blur-2xl hover:bg-white/25 hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/30 bg-white/15 backdrop-blur-2xl",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white/90 text-ink font-bold backdrop-blur hover:bg-white",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#B45309",
+    previewBg: "linear-gradient(135deg, #B45309 0%, #BE123C 50%, #581C87 100%)",
+    previewIsDark: true,
+  },
+  // 5 preset FOTO WALLPAPER tambahan (permintaan langsung pengguna:
+  // "tambahkan ... 5 tema walpaper lagi") -- proses sumber & overlay SAMA
+  // PERSIS seperti 10 wallpaper sebelumnya (Picsum Photos, overlay gelap
+  // dua-lapis dibakar ke file: wash seragam ~37-45% + gradien tambahan di
+  // 45-55% tinggi atas yang memudar dari ~51-72% ke 0%, kekuatannya
+  // disesuaikan PER FOTO berdasarkan seberapa terang area atas foto asli
+  // -- ombak/dataran/kota perlu overlay lebih kuat dari resep standar
+  // karena langit/buih ombaknya secara alami lebih terang & lebih rata di
+  // seluruh area atas, bukan cuma titik terang lokal seperti foto lain).
+  canyon: {
+    label: "Canyon",
+    page: "bg-[url('/wallpapers/ngarai.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#9A3412",
+    previewBg: "url('/wallpapers/ngarai.jpg') center/cover",
+    previewIsDark: true,
+  },
+  highland: {
+    label: "Highland",
+    page: "bg-[url('/wallpapers/dataran.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#3F6212",
+    previewBg: "url('/wallpapers/dataran.jpg') center/cover",
+    previewIsDark: true,
+  },
+  cascade: {
+    label: "Cascade",
+    page: "bg-[url('/wallpapers/terjun.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#166534",
+    previewBg: "url('/wallpapers/terjun.jpg') center/cover",
+    previewIsDark: true,
+  },
+  tide: {
+    label: "Tide",
+    page: "bg-[url('/wallpapers/ombak.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#134E4A",
+    previewBg: "url('/wallpapers/ombak.jpg') center/cover",
+    previewIsDark: true,
+  },
+  skyline: {
+    label: "Skyline",
+    page: "bg-[url('/wallpapers/kota.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#78716C",
+    previewBg: "url('/wallpapers/kota.jpg') center/cover",
+    previewIsDark: true,
   },
 };
 

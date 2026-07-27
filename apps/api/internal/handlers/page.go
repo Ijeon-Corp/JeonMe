@@ -577,6 +577,11 @@ var availableThemes = map[string]bool{
 	"prism": true, "borealis": true, "orbit": true, "halo": true,
 	"lava": true, "bubble": true, "canvas": true, "static": true,
 	"crystal": true, "aqua": true, "nebula": true, "flux": true,
+	// 5 preset glassmorphism tambahan + 5 preset wallpaper foto tambahan
+	// (permintaan langsung pengguna: "tambahkan 5 tema glassmorphism dan 5
+	// tema walpaper lagi").
+	"sapphire": true, "opal": true, "quartz": true, "glacier": true, "mirage": true,
+	"canyon": true, "highland": true, "cascade": true, "tide": true, "skyline": true,
 	"custom": true,
 }
 
