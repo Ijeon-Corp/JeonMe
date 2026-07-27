@@ -22,6 +22,10 @@ import type { CSSProperties } from "react";
 // public/wallpapers/*.jpg dengan overlay gelap DIBAKAR langsung ke file
 // (bukan CSS terpisah) supaya teks putih avatar/nama/bio selalu terbaca
 // apa pun foto aslinya -- lihat catatan lengkap di PAGE_THEMES di bawah.
+// 5 preset FOTO WALLPAPER TAMBAHAN (permintaan langsung pengguna: "saya mau
+// tambahkan 5 lagi pilihan tema menggunakan walpaper") -- amber/valley/
+// storm/frost/dew, proses sumber & overlay SAMA PERSIS seperti 5 wallpaper
+// pertama (Picsum Photos, overlay gelap dibakar ke file).
 export type PageThemeName =
   | "default"
   | "midnight"
@@ -44,7 +48,29 @@ export type PageThemeName =
   | "nightfall"
   | "mist"
   | "berry"
+  | "amber"
+  | "valley"
+  | "storm"
+  | "frost"
+  | "dew"
   | "custom";
+
+// WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
+// tema jadi tab "Warna & Gradien" vs "Wallpaper" di halaman Desain -- daftar
+// ini satu-satunya sumber kebenaran untuk pengelompokan itu (dashboard/
+// design/theme/page.tsx TIDAK menduplikasi daftar ini).
+export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
+  "dusk",
+  "marble",
+  "nightfall",
+  "mist",
+  "berry",
+  "amber",
+  "valley",
+  "storm",
+  "frost",
+  "dew",
+];
 
 export type PageTheme = {
   label: string;
@@ -618,6 +644,104 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     footer: "text-white/40 hover:text-white",
     swatch: "#DC2626",
     previewBg: "url('/wallpapers/segar.jpg') center/cover",
+    previewIsDark: true,
+  },
+  // 5 wallpaper TAMBAHAN (permintaan langsung pengguna: "tambahkan 5 lagi
+  // pilihan tema menggunakan walpaper") -- proses sumber & overlay SAMA
+  // PERSIS seperti dusk/marble/nightfall/mist/berry di atas.
+  amber: {
+    label: "Amber",
+    page: "bg-[url('/wallpapers/kilau.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#92400E",
+    previewBg: "url('/wallpapers/kilau.jpg') center/cover",
+    previewIsDark: true,
+  },
+  valley: {
+    label: "Valley",
+    page: "bg-[url('/wallpapers/lembah.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#A16207",
+    previewBg: "url('/wallpapers/lembah.jpg') center/cover",
+    previewIsDark: true,
+  },
+  storm: {
+    label: "Storm",
+    page: "bg-[url('/wallpapers/badai.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#1F2937",
+    previewBg: "url('/wallpapers/badai.jpg') center/cover",
+    previewIsDark: true,
+  },
+  frost: {
+    label: "Frost",
+    page: "bg-[url('/wallpapers/kelabu.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#475569",
+    previewBg: "url('/wallpapers/kelabu.jpg') center/cover",
+    previewIsDark: true,
+  },
+  dew: {
+    label: "Dew",
+    page: "bg-[url('/wallpapers/embun.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#166534",
+    previewBg: "url('/wallpapers/embun.jpg') center/cover",
     previewIsDark: true,
   },
 };

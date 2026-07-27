@@ -394,6 +394,11 @@ export const THEME_PRESETS = [
   "nightfall",
   "mist",
   "berry",
+  "amber",
+  "valley",
+  "storm",
+  "frost",
+  "dew",
 ] as const;
 
 export function getMyPage() {

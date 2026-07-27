@@ -559,6 +559,9 @@ var availableThemes = map[string]bool{
 	"rose": true, "ocean": true, "lavender": true, "noir": true, "peach": true,
 	"bloom": true, "blaze": true, "cyber": true, "mint": true, "golden": true, "cosmic": true,
 	"dusk": true, "marble": true, "nightfall": true, "mist": true, "berry": true,
+	// 5 wallpaper TAMBAHAN (permintaan langsung pengguna: "tambahkan 5 lagi
+	// pilihan tema menggunakan walpaper").
+	"amber": true, "valley": true, "storm": true, "frost": true, "dew": true,
 	"custom": true,
 }
 
