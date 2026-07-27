@@ -13,6 +13,15 @@ import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
 // SENGAJA ditambahkan di sini (sebelumnya TIDAK ada -- permintaan langsung
 // pengguna: halaman Desain/Tautan/Produk terlihat "belum rata tengah" di
 // layar lebar karena grid 2 kolomnya cuma nempel kiri tanpa batas lebar).
+//
+// contentMaxWidth default DIKOSONGKAN (dulu "max-w-2xl") -- bug dilaporkan
+// pengguna (27 Juli 2026, menyertai tangkapan layar Linktree asli): kolom
+// konten seharusnya mengisi PENUH ruang kosong di antara sisi kiri & panel
+// pratinjau (cuma dibatasi wajar oleh mx-auto max-w-6xl di pembungkus luar),
+// bukan dibatasi lagi jadi sempit di dalam kolom 1fr yang sudah fleksibel --
+// itu yang membuat ada jarak kosong mubazir sebelum panel pratinjau di layar
+// lebar, sama sekali bukan tampilan "ruang tengah lebih luas" seperti contoh
+// Linktree asli yang dibagikan.
 export default function DesignPageShell({
   page,
   links,
@@ -20,7 +29,7 @@ export default function DesignPageShell({
   backHref,
   title,
   description,
-  contentMaxWidth = "max-w-2xl",
+  contentMaxWidth = "",
   children,
 }: {
   page: MyPage;
