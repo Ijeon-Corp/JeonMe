@@ -85,9 +85,26 @@ export default function DesignThemePage() {
 
         {/* Kartu galeri portrait ala Linktree: sampel huruf "Aa" di kiri atas
             + pil warna tombol di bawah, bukan sekadar swatch kotak kecil. */}
+        {/* Bug dilaporkan pengguna (27 Juli 2026): "jika pilih tema warna
+            button text button dan juga semua warna font dan tipe font juga
+            ikut disesuaikan berdasarkan tema yang dipilih jadi bukan
+            background nya saja yang berubah" -- akar masalah: custom_style_
+            override (diaktifkan begitu kreator pernah menyentuh panel Tombol/
+            Font) TIDAK pernah direset saat memilih tema baru, jadi warna
+            tombol/font KUSTOM lama tetap "menang" menimpa warna bawaan tema
+            yang baru dipilih (button/nama/bio-nya sendiri sebenarnya SUDAH
+            berbeda per tema di PAGE_THEMES, tapi tertutup override lama).
+            Memilih tema dari galeri ini sekarang SELALU mereset override ke
+            false supaya kombinasi warna & font bawaan tema yang baru dipilih
+            langsung berlaku penuh -- kreator yang mau menyesuaikan lagi
+            secara manual tetap bisa lewat panel Tombol/Font seperti biasa. */}
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
           {tab === "gradien" && (
-            <ThemeTile active={page.theme === "custom"} onClick={() => handlePageSettingChange({ theme: "custom" })} label="Custom">
+            <ThemeTile
+              active={page.theme === "custom"}
+              onClick={() => handlePageSettingChange({ theme: "custom", custom_style_override: false })}
+              label="Custom"
+            >
               <div className="flex h-full w-full items-center justify-center bg-gray-100">
                 <IconPaintbrush className="h-7 w-7 text-muted" />
               </div>
@@ -96,7 +113,12 @@ export default function DesignThemePage() {
           {(tab === "gradien" ? GRADIENT_PRESETS : WALLPAPER_PRESETS).map((theme) => {
             const meta = PAGE_THEMES[theme];
             return (
-              <ThemeTile key={theme} active={page.theme === theme} onClick={() => handlePageSettingChange({ theme })} label={meta.label}>
+              <ThemeTile
+                key={theme}
+                active={page.theme === theme}
+                onClick={() => handlePageSettingChange({ theme, custom_style_override: false })}
+                label={meta.label}
+              >
                 <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
                 <span
                   className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-ink"}`}

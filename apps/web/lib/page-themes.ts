@@ -266,6 +266,30 @@ export const CUSTOM_BUTTON_SHADOW_OPTIONS: { value: CustomButtonShadowLevel; lab
 
 // "custom" SENGAJA tidak masuk daftar ini -- dibangun secara dinamis oleh
 // getPageTheme() dari CustomThemeConfig, bukan preset statis.
+//
+// pageStyle.fontFamily -- permintaan langsung pengguna (27 Juli 2026):
+// "warna font dan tipe font juga ikut disesuaikan berdasarkan tema yang
+// dipilih jadi bukan background nya saja yang berubah". SEBELUM ini, semua
+// 56 preset memakai font body default (--font-body/Inter) apa pun temanya --
+// hanya warna latar/kartu/tombol yang berbeda per tema, tipografi tidak ikut
+// bagian dari "mood" tema. Tiap preset sekarang membawa fontFamily sendiri
+// (salah satu dari 9 pilihan CUSTOM_FONT_OPTIONS -- var CSS-nya sudah
+// dimuat GLOBAL lewat next/font di layout.tsx, jadi aman dipakai preset
+// mana pun tanpa font tambahan perlu di-load), dikurasi per suasana tema
+// (mis. tema gelap elegan seperti Midnight/Noir/Golden -> Playfair Display
+// serif; tema teknologi/futuristik seperti Cyber/Grid -> Roboto Mono; tema
+// vivid playful seperti Bloom/Blocks -> Poppins; dst). Diterapkan lewat
+// pageStyle (SAMA seperti backgroundImage tema CSS-gradien di atas) karena
+// pageStyle SUDAH dipasang unconditional di elemen <main> (lihat
+// PagePreview.tsx) untuk SEMUA tema, preset maupun custom -- tidak perlu
+// ubah logika getPageTheme() sama sekali untuk jalur preset biasa. Kalau
+// kreator mengaktifkan custom_style_override (panel Font), custom.font
+// tetap MENANG menimpa nilai ini (lihat pageStyle.fontFamily = fontCssVar
+// di getPageTheme()) -- pilihan manual kreator selalu didahulukan. Font
+// judul (elemen <h1>, kelas "font-heading") SENGAJA TIDAK ikut berubah di
+// sini -- itu tetap sumbu terpisah ("Alternative title font", default MATI)
+// yang sudah ada sejak No.98, konsisten dengan bagaimana panel Font
+// membedakan "font halaman" vs "font judul" sebagai dua pengaturan berbeda.
 export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = {
   default: {
     label: "Default",
@@ -285,6 +309,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#1B4D3E",
     previewBg: "linear-gradient(160deg, #EAF3EF 0%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-body)" },
   },
   midnight: {
     label: "Midnight",
@@ -304,6 +329,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#0A1512",
     previewBg: "radial-gradient(120% 120% at 30% 15%, #1c332c 0%, #0A1512 60%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   sunrise: {
     label: "Sunrise",
@@ -323,6 +349,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#E0C378",
     previewBg: "linear-gradient(160deg, #FCE8CE 0%, #FBF6E8 55%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   forest: {
     label: "Forest",
@@ -342,6 +369,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#123328",
     previewBg: "linear-gradient(160deg, #123328 0%, #1B4D3E 50%, #123328 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   minimal: {
     label: "Minimal",
@@ -361,6 +389,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#1C2B25",
     previewBg: "#FFFFFF",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-body)" },
   },
   // "Desain 2.0": 5 preset baru di bawah ini SENGAJA pakai palet warna
   // Tailwind standar (rose/sky/violet/amber/stone) yang LEPAS dari identitas
@@ -383,6 +412,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#F43F5E",
     previewBg: "linear-gradient(160deg, #FFF1F2 0%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   ocean: {
     label: "Ocean",
@@ -402,6 +432,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#2563EB",
     previewBg: "linear-gradient(160deg, #F0F9FF 0%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   lavender: {
     label: "Lavender",
@@ -421,6 +452,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#8B5CF6",
     previewBg: "linear-gradient(160deg, #F5F3FF 0%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   noir: {
     label: "Noir",
@@ -440,6 +472,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#D4AF37",
     previewBg: "radial-gradient(120% 120% at 70% 15%, #241d0a 0%, #0B0B0B 60%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   peach: {
     label: "Peach",
@@ -459,6 +492,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#FB923C",
     previewBg: "linear-gradient(160deg, #FFF7ED 0%, #FFFBEB 55%, #FFFFFF 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   // 6 preset baru (permintaan langsung pengguna: "tambahkan tema seperti
   // gradient dan sejenisnya") -- latar gradien VIVID multi-warna, beda dari
@@ -489,6 +523,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#A21CAF",
     previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #4F46E5 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
   blaze: {
     // Bug dilaporkan pengguna (27 Juli 2026): "ketika memilih tema yang
@@ -521,6 +556,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#9A3412",
     previewBg: "linear-gradient(135deg, #9A3412 0%, #9D174D 55%, #6B21A8 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
   },
   cyber: {
     label: "Cyber",
@@ -541,6 +577,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg:
       "radial-gradient(120% 120% at 30% 10%, rgba(34,211,238,0.35) 0%, transparent 45%), linear-gradient(160deg, #0f172a 0%, #1e1b4b 55%, #2e1065 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
   },
   // Bug dilaporkan pengguna (27 Juli 2026): "ketika memilih tema yang warna
   // putih masa font nya tetep putih dan membuat tidak kelihatan" -- stop
@@ -573,6 +610,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#115E59",
     previewBg: "linear-gradient(135deg, #065F46 0%, #115E59 50%, #155E75 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   // Audit kontras menyeluruh (27 Juli 2026, laporan "masih banyak tema yang
   // font nya bertabrakan"): teks bio (opacity translucent) marginal (~3.4,
@@ -595,6 +633,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#FB923C",
     previewBg: "linear-gradient(135deg, #FCD34D 0%, #FB923C 50%, #FB7185 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   cosmic: {
     label: "Cosmic",
@@ -614,6 +653,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#A78BFA",
     previewBg: "linear-gradient(160deg, #0B0B1E 0%, #1B1140 50%, #0B0B1E 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
   },
   // 5 preset FOTO WALLPAPER (permintaan langsung pengguna) -- foto asli
   // (bukan gradien/warna solid) disimpan statis di public/wallpapers/*.jpg,
@@ -641,6 +681,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#4B5563",
     previewBg: "url('/wallpapers/senja.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   marble: {
     label: "Marble",
@@ -660,6 +701,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#1E3A8A",
     previewBg: "url('/wallpapers/akuarel.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   nightfall: {
     label: "Nightfall",
@@ -679,6 +721,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7C3AED",
     previewBg: "url('/wallpapers/malam.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   mist: {
     label: "Mist",
@@ -698,6 +741,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#4B5D3A",
     previewBg: "url('/wallpapers/kabut.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   berry: {
     label: "Berry",
@@ -717,6 +761,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#DC2626",
     previewBg: "url('/wallpapers/segar.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   // 5 wallpaper TAMBAHAN (permintaan langsung pengguna: "tambahkan 5 lagi
   // pilihan tema menggunakan walpaper") -- proses sumber & overlay SAMA
@@ -739,6 +784,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#92400E",
     previewBg: "url('/wallpapers/kilau.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
   },
   valley: {
     label: "Valley",
@@ -758,6 +804,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#A16207",
     previewBg: "url('/wallpapers/lembah.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   storm: {
     label: "Storm",
@@ -777,6 +824,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#1F2937",
     previewBg: "url('/wallpapers/badai.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
   },
   frost: {
     label: "Frost",
@@ -796,6 +844,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#475569",
     previewBg: "url('/wallpapers/kelabu.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   dew: {
     label: "Dew",
@@ -815,6 +864,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#166534",
     previewBg: "url('/wallpapers/embun.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   // 6 preset WARNA SOLID baru (permintaan langsung pengguna, menyertai
   // tangkapan layar galeri tema Linktree asli berisi Air/Lake/Mineral/
@@ -842,6 +892,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#F4F4F2",
     previewBg: "#F4F4F2",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-body)" },
   },
   lake: {
     label: "Lake",
@@ -861,6 +912,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#0B0F19",
     previewBg: "#0B0F19",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.7) -- opacity
   // dinaikkan 60->70%.
@@ -882,6 +934,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#F5DDCB",
     previewBg: "#F5DDCB",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.9) -- opacity
   // dinaikkan 75->85%.
@@ -903,6 +956,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7C3AED",
     previewBg: "#7C3AED",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
   // Audit kontras menyeluruh (27 Juli 2026): bio marginal (~3.4) -- opacity
   // dinaikkan 60->75%.
@@ -924,6 +978,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#D9CBB5",
     previewBg: "#D9CBB5",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   // "Grid" -- pola garis kotak-kotak ala kertas grafik, dibangun MURNI
   // lewat CSS (dua linear-gradient tipis 1px berulang), BUKAN gambar --
@@ -949,6 +1004,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "#ECF87F",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-roboto-mono)",
       backgroundImage:
         "linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px)",
       backgroundSize: "28px 28px",
@@ -979,6 +1035,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(at 15% 20%, hsla(280,85%,75%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,75%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(195,85%,70%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(45,90%,72%,0.5) 0px, transparent 50%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
       backgroundImage:
         "radial-gradient(at 15% 20%, hsla(280,85%,75%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,75%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(195,85%,70%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(45,90%,72%,0.5) 0px, transparent 50%)",
     },
@@ -1003,6 +1060,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(at 25% 25%, hsla(165,85%,55%,0.4) 0px, transparent 55%), radial-gradient(at 75% 30%, hsla(280,80%,60%,0.4) 0px, transparent 55%), radial-gradient(at 50% 80%, hsla(200,85%,55%,0.35) 0px, transparent 60%), #05070D",
     previewIsDark: true,
     pageStyle: {
+      fontFamily: "var(--font-custom-space-grotesk)",
       backgroundImage:
         "radial-gradient(at 25% 25%, hsla(165,85%,55%,0.4) 0px, transparent 55%), radial-gradient(at 75% 30%, hsla(280,80%,60%,0.4) 0px, transparent 55%), radial-gradient(at 50% 80%, hsla(200,85%,55%,0.35) 0px, transparent 60%)",
     },
@@ -1037,6 +1095,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(at 15% 20%, hsla(20,90%,65%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,65%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(45,95%,60%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(0,85%,60%,0.45) 0px, transparent 55%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
       backgroundImage:
         "radial-gradient(at 15% 20%, hsla(20,90%,65%,0.55) 0px, transparent 50%), radial-gradient(at 85% 15%, hsla(340,85%,65%,0.5) 0px, transparent 50%), radial-gradient(at 15% 85%, hsla(45,95%,60%,0.5) 0px, transparent 50%), radial-gradient(at 85% 85%, hsla(0,85%,60%,0.45) 0px, transparent 55%)",
     },
@@ -1064,6 +1123,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(at 10% 15%, hsla(150,80%,45%,0.4) 0px, transparent 60%), radial-gradient(at 85% 20%, hsla(260,75%,55%,0.35) 0px, transparent 60%), radial-gradient(at 30% 90%, hsla(190,80%,50%,0.3) 0px, transparent 65%), radial-gradient(at 80% 80%, hsla(120,70%,45%,0.3) 0px, transparent 60%), #03060B",
     previewIsDark: true,
     pageStyle: {
+      fontFamily: "var(--font-custom-space-grotesk)",
       backgroundImage:
         "radial-gradient(at 10% 15%, hsla(150,80%,45%,0.4) 0px, transparent 60%), radial-gradient(at 85% 20%, hsla(260,75%,55%,0.35) 0px, transparent 60%), radial-gradient(at 30% 90%, hsla(190,80%,50%,0.3) 0px, transparent 65%), radial-gradient(at 80% 80%, hsla(120,70%,45%,0.3) 0px, transparent 60%)",
     },
@@ -1091,6 +1151,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(circle at 20% 30%, hsla(210,90%,60%,0.45) 0%, transparent 60%), radial-gradient(circle at 80% 70%, hsla(280,80%,65%,0.4) 0%, transparent 60%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
       backgroundImage:
         "radial-gradient(circle at 20% 30%, hsla(210,90%,60%,0.45) 0%, transparent 60%), radial-gradient(circle at 80% 70%, hsla(280,80%,65%,0.4) 0%, transparent 60%)",
     },
@@ -1117,6 +1178,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(circle at 25% 25%, hsla(35,95%,65%,0.5) 0%, transparent 55%), radial-gradient(circle at 75% 75%, hsla(350,85%,65%,0.45) 0%, transparent 55%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-quicksand)",
       backgroundImage:
         "radial-gradient(circle at 25% 25%, hsla(35,95%,65%,0.5) 0%, transparent 55%), radial-gradient(circle at 75% 75%, hsla(350,85%,65%,0.45) 0%, transparent 55%)",
     },
@@ -1145,6 +1207,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(ellipse 60% 50% at 25% 30%, hsla(15,90%,55%,0.55) 0%, transparent 70%), radial-gradient(ellipse 55% 45% at 75% 70%, hsla(350,85%,50%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 50% 90%, hsla(30,90%,50%,0.4) 0%, transparent 70%), #1A0F0A",
     previewIsDark: true,
     pageStyle: {
+      fontFamily: "var(--font-custom-space-grotesk)",
       backgroundImage:
         "radial-gradient(ellipse 60% 50% at 25% 30%, hsla(15,90%,55%,0.55) 0%, transparent 70%), radial-gradient(ellipse 55% 45% at 75% 70%, hsla(350,85%,50%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 50% 90%, hsla(30,90%,50%,0.4) 0%, transparent 70%)",
     },
@@ -1171,6 +1234,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(ellipse 55% 50% at 20% 25%, hsla(200,90%,75%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 45% at 80% 30%, hsla(320,85%,78%,0.45) 0%, transparent 70%), radial-gradient(ellipse 60% 55% at 50% 85%, hsla(150,70%,75%,0.4) 0%, transparent 70%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-quicksand)",
       backgroundImage:
         "radial-gradient(ellipse 55% 50% at 20% 25%, hsla(200,90%,75%,0.5) 0%, transparent 70%), radial-gradient(ellipse 50% 45% at 80% 30%, hsla(320,85%,78%,0.45) 0%, transparent 70%), radial-gradient(ellipse 60% 55% at 50% 85%, hsla(150,70%,75%,0.4) 0%, transparent 70%)",
     },
@@ -1203,6 +1267,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "linear-gradient(135deg, #FDBA74 0%, #FB7185 50%, #A78BFA 100%)",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-lora)",
       backgroundImage:
         "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"), linear-gradient(135deg, #FDBA74 0%, #FB7185 50%, #A78BFA 100%)",
       backgroundBlendMode: "overlay",
@@ -1229,6 +1294,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "linear-gradient(160deg, #0B0B0F 0%, #1E293B 55%, #0B0B0F 100%)",
     previewIsDark: true,
     pageStyle: {
+      fontFamily: "var(--font-custom-roboto-mono)",
       backgroundImage:
         "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"), linear-gradient(160deg, #0B0B0F 0%, #1E293B 55%, #0B0B0F 100%)",
       backgroundBlendMode: "overlay",
@@ -1265,6 +1331,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7E22CE",
     previewBg: "linear-gradient(135deg, #4F46E5 0%, #7E22CE 50%, #BE185D 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   aqua: {
     // "Glassmorphism Background" varian 2 -- teknik kartu kaca yang sama
@@ -1296,6 +1363,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#115E59",
     previewBg: "linear-gradient(135deg, #155E75 0%, #115E59 50%, #065F46 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   nebula: {
     // "Abstract Blur Background" varian 1 -- deskripsi pengguna: beberapa
@@ -1324,6 +1392,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(circle 380px at 20% 30%, hsla(265,85%,60%,0.55) 0%, transparent 75%), radial-gradient(circle 340px at 80% 25%, hsla(200,90%,55%,0.45) 0%, transparent 75%), radial-gradient(circle 400px at 55% 85%, hsla(320,85%,55%,0.4) 0%, transparent 75%), #05040A",
     previewIsDark: true,
     pageStyle: {
+      fontFamily: "var(--font-custom-space-grotesk)",
       backgroundImage:
         "radial-gradient(circle 380px at 20% 30%, hsla(265,85%,60%,0.55) 0%, transparent 75%), radial-gradient(circle 340px at 80% 25%, hsla(200,90%,55%,0.45) 0%, transparent 75%), radial-gradient(circle 400px at 55% 85%, hsla(320,85%,55%,0.4) 0%, transparent 75%)",
     },
@@ -1350,6 +1419,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       "radial-gradient(circle 360px at 25% 30%, hsla(200,90%,65%,0.45) 0%, transparent 75%), radial-gradient(circle 340px at 75% 25%, hsla(280,80%,70%,0.4) 0%, transparent 75%), radial-gradient(circle 380px at 50% 85%, hsla(340,85%,70%,0.4) 0%, transparent 75%), #FFFFFF",
     previewIsDark: false,
     pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
       backgroundImage:
         "radial-gradient(circle 360px at 25% 30%, hsla(200,90%,65%,0.45) 0%, transparent 75%), radial-gradient(circle 340px at 75% 25%, hsla(280,80%,70%,0.4) 0%, transparent 75%), radial-gradient(circle 380px at 50% 85%, hsla(340,85%,70%,0.4) 0%, transparent 75%)",
     },
@@ -1383,6 +1453,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#1D4ED8",
     previewBg: "linear-gradient(135deg, #1D4ED8 0%, #4338CA 50%, #334155 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   opal: {
     label: "Opal",
@@ -1402,6 +1473,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7E22CE",
     previewBg: "linear-gradient(135deg, #A21CAF 0%, #7E22CE 50%, #0369A1 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   quartz: {
     label: "Quartz",
@@ -1421,6 +1493,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#92400E",
     previewBg: "linear-gradient(135deg, #BE123C 0%, #92400E 50%, #9A3412 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
   glacier: {
     label: "Glacier",
@@ -1440,6 +1513,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#0369A1",
     previewBg: "linear-gradient(135deg, #155E75 0%, #0369A1 50%, #4338CA 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   mirage: {
     label: "Mirage",
@@ -1459,6 +1533,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#BE123C",
     previewBg: "linear-gradient(135deg, #92400E 0%, #BE123C 50%, #7E22CE 100%)",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
   },
   // 5 preset FOTO WALLPAPER tambahan (permintaan langsung pengguna:
   // "tambahkan ... 5 tema walpaper lagi") -- proses sumber & overlay SAMA
@@ -1487,6 +1562,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#9A3412",
     previewBg: "url('/wallpapers/ngarai.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   // Audit kontras menyeluruh (27 Juli 2026): overlay gelap foto ini
   // diperkuat lagi (lihat proses pembuatan file) + opacity bio dinaikkan
@@ -1509,6 +1585,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#3F6212",
     previewBg: "url('/wallpapers/dataran.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   cascade: {
     label: "Cascade",
@@ -1528,6 +1605,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#166534",
     previewBg: "url('/wallpapers/terjun.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
   },
   tide: {
     label: "Tide",
@@ -1547,6 +1625,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#134E4A",
     previewBg: "url('/wallpapers/ombak.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
   },
   skyline: {
     label: "Skyline",
@@ -1566,6 +1645,7 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#78716C",
     previewBg: "url('/wallpapers/kota.jpg') center/cover",
     previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
   },
 };
 
