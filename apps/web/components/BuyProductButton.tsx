@@ -27,6 +27,7 @@ export default function BuyProductButton({
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buyerAmount, setBuyerAmount] = useState(pwywMinPriceIdr ? String(pwywMinPriceIdr) : "");
@@ -72,6 +73,7 @@ export default function BuyProductButton({
       const { invoice_url } = await createCheckout({
         product_id: productId,
         buyer_email: email,
+        buyer_contact: whatsappNumber.trim() || undefined,
         voucher_code: voucherResult ? voucherCode.trim() : undefined,
         buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
         referral_code: referralCode,
@@ -120,6 +122,25 @@ export default function BuyProductButton({
         onChange={(e) => setEmail(e.target.value)}
         className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
       />
+
+      {/* No.74 (Sprint 8): nomor WhatsApp OPSIONAL -- kolom buyer_contact
+          sudah ada di skema sejak lama tapi TIDAK PERNAH dikumpulkan lewat
+          form manapun sampai sekarang, jadi kanal notifikasi WhatsApp
+          (worker.go) tidak akan pernah punya nomor untuk dikirimi apa pun
+          tanpa ini. Disembunyikan untuk donasi (hideVoucher juga menandai
+          "ini blok dukungan", lihat PagePreview.tsx) -- backend belum
+          mendukung WhatsApp untuk donasi (perlu template Meta terpisah),
+          jadi menampilkannya di situ cuma akan mengumpulkan nomor yang
+          tidak pernah benar-benar dipakai. */}
+      {!hideVoucher && (
+        <input
+          type="tel"
+          placeholder="Nomor WhatsApp (opsional)"
+          value={whatsappNumber}
+          onChange={(e) => setWhatsappNumber(e.target.value)}
+          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+        />
+      )}
 
       {!hideVoucher &&
         (!showVoucher ? (

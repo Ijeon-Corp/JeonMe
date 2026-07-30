@@ -19,6 +19,7 @@ export default function BookSlotButton({
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export default function BookSlotButton({
       const { invoice_url } = await createCheckout({
         product_id: productId,
         buyer_email: email,
+        buyer_contact: whatsappNumber.trim() || undefined,
         slot_id: selectedSlotId,
       });
       window.location.href = invoice_url;
@@ -92,6 +94,16 @@ export default function BookSlotButton({
         placeholder="Email kamu"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+      />
+      {/* No.74 (Sprint 8): sama seperti BuyProductButton -- nomor WhatsApp
+          opsional supaya konfirmasi jadwal juga bisa dikirim lewat kanal
+          WhatsApp, bukan cuma email. */}
+      <input
+        type="tel"
+        placeholder="Nomor WhatsApp (opsional)"
+        value={whatsappNumber}
+        onChange={(e) => setWhatsappNumber(e.target.value)}
         className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
       />
       {error && <p className="text-[10px] text-red-400">{error}</p>}

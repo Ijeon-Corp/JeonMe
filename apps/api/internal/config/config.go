@@ -55,6 +55,19 @@ type Config struct {
 	SMTPUsername string
 	SMTPPassword string
 	SMTPFromAddr string
+
+	// WhatsApp (No.74, Sprint 8) -- kanal notifikasi TAMBAHAN untuk pembeli
+	// (email di atas tetap kanal utama & satu-satunya yang wajib). Dibangun
+	// terhadap WhatsApp Business Cloud API (Meta) -- kosong secara default,
+	// worker akan log-only (SAMA PERSIS pola soft-fail SMTP/S3 di atas)
+	// sampai kredensial sungguhan tersedia (perlu verifikasi bisnis Meta +
+	// nomor terdaftar + template pesan disetujui, KEPUTUSAN BISNIS yang
+	// belum diambil per permintaan pengguna -- lihat No.75 & catatan di
+	// internal/whatsapp/client.go).
+	WhatsAppAPIToken      string
+	WhatsAppPhoneNumberID string
+	WhatsAppTemplateName  string
+	WhatsAppTemplateLang  string
 }
 
 // Load membaca .env (jika ada) lalu environment variable asli.
@@ -128,6 +141,11 @@ func Load() *Config {
 		SMTPUsername: getEnv("SMTP_USER", ""),
 		SMTPPassword: getEnv("SMTP_PASS", ""),
 		SMTPFromAddr: getEnv("SMTP_FROM", "no-reply@jeonme.com"),
+
+		WhatsAppAPIToken:      getEnv("WHATSAPP_API_TOKEN", ""),
+		WhatsAppPhoneNumberID: getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
+		WhatsAppTemplateName:  getEnv("WHATSAPP_TEMPLATE_NAME", "order_confirmation"),
+		WhatsAppTemplateLang:  getEnv("WHATSAPP_TEMPLATE_LANG", "id"),
 	}
 
 	return cfg

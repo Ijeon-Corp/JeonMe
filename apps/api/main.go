@@ -20,6 +20,7 @@ import (
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/routes"
 	"github.com/jeonme/api/internal/storage"
+	"github.com/jeonme/api/internal/whatsapp"
 	"github.com/jeonme/api/internal/worker"
 )
 
@@ -165,7 +166,8 @@ func runWorker() {
 	}
 
 	mailerClient := mailer.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFromAddr)
-	handler := worker.NewHandler(db, mailerClient, cfg.PublicAPIURL)
+	whatsappClient := whatsapp.NewClient(cfg.WhatsAppAPIToken, cfg.WhatsAppPhoneNumberID, cfg.WhatsAppTemplateName, cfg.WhatsAppTemplateLang)
+	handler := worker.NewHandler(db, mailerClient, whatsappClient, cfg.PublicAPIURL)
 
 	srv := asynq.NewServer(redisOpt, asynq.Config{Concurrency: 5})
 

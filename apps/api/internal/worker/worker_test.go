@@ -11,6 +11,7 @@ import (
 	"github.com/jeonme/api/internal/database"
 	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/queue"
+	"github.com/jeonme/api/internal/whatsapp"
 )
 
 func mustEnv(t *testing.T, key string) string {
@@ -32,11 +33,13 @@ func newTestHandler(t *testing.T) *Handler {
 	}
 	t.Cleanup(db.Close)
 
-	// SMTPHost sengaja kosong -- mailer.Send akan log-only (lihat
-	// internal/mailer), test ini membuktikan alur query & kontrol worker,
-	// bukan pengiriman SMTP sungguhan.
+	// SMTPHost & kredensial WhatsApp sengaja kosong -- mailer.Send/
+	// whatsapp.SendOrderConfirmation akan log-only (lihat internal/mailer &
+	// internal/whatsapp), test ini membuktikan alur query & kontrol worker,
+	// bukan pengiriman SMTP/WhatsApp sungguhan.
 	mailerClient := mailer.NewClient("", 587, "", "", "no-reply@jeonme.test")
-	return NewHandler(db, mailerClient, "http://localhost:8080/api/v1")
+	whatsappClient := whatsapp.NewClient("", "", "order_confirmation", "id")
+	return NewHandler(db, mailerClient, whatsappClient, "http://localhost:8080/api/v1")
 }
 
 func newTestTask(t *testing.T, orderID string) *asynq.Task {
@@ -84,6 +87,47 @@ func TestHandleOrderPaidNotification_PaidOrder_Succeeds(t *testing.T) {
 
 	if err := h.HandleOrderPaidNotification(t.Context(), newTestTask(t, orderID)); err != nil {
 		t.Fatalf("HandleOrderPaidNotification: error tidak terduga: %v", err)
+	}
+}
+
+// No.74: order dengan buyer_contact terisi harus TETAP diproses tanpa error
+// walau WhatsApp belum dikonfigurasi (IsConfigured()==false) -- membuktikan
+// jalur WhatsApp best-effort di HandleOrderPaidNotification tidak pernah
+// menggagalkan task walau nomor kontak ada, konsisten dengan kegagalan
+// email yang sengaja TIDAK mempengaruhi task ini (lihat komentar di worker.go).
+func TestHandleOrderPaidNotification_WithBuyerContact_SucceedsWithoutWhatsAppConfigured(t *testing.T) {
+	h := newTestHandler(t)
+
+	userID := uuid.NewString()
+	suffix := uuid.NewString()[:8]
+	_, err := h.DB.Exec(t.Context(), `
+		INSERT INTO users (id, email, username, password_hash, consent_accepted_at)
+		VALUES ($1, $2, $3, 'x', now())
+	`, userID, "worker-"+suffix+"@example.com", "workeruser"+suffix)
+	if err != nil {
+		t.Fatalf("gagal setup user test: %v", err)
+	}
+
+	productID := uuid.NewString()
+	_, err = h.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, file_key, is_active)
+		VALUES ($1, $2, 'Produk Worker Test', 25000, 'products/test/file.pdf', true)
+	`, productID, userID)
+	if err != nil {
+		t.Fatalf("gagal setup produk test: %v", err)
+	}
+
+	orderID := uuid.NewString()
+	_, err = h.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, status, psp_reference)
+		VALUES ($1, $2, 'buyer@example.com', '081234567890', 25000, 'paid', $3)
+	`, orderID, productID, "jeonme-order-"+orderID)
+	if err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	if err := h.HandleOrderPaidNotification(t.Context(), newTestTask(t, orderID)); err != nil {
+		t.Fatalf("HandleOrderPaidNotification: error tidak terduga untuk order dengan buyer_contact: %v", err)
 	}
 }
 
