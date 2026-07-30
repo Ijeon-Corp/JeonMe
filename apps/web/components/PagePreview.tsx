@@ -356,7 +356,7 @@ export default function PagePreview({
                     embed={Boolean(link.blockData?.embed)}
                     embedLat={link.blockData?.embed_lat as number | undefined}
                     embedLng={link.blockData?.embed_lng as number | undefined}
-                    linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 );
               }
@@ -411,6 +411,20 @@ export default function PagePreview({
               // rasio ikon-terhadap-tinggi-blok mendekati referensi --
               // ikon sekarang mengisi hampir seluruh tinggi blok yang lebih
               // pendek, bukan mengambang kecil di tengah blok yang tinggi.
+              //
+              // Koreksi KEDUA (27 Juli 2026): "jadi nya logo malah keluar
+              // dari blok tautan link, saya mau besarkan blok tautan link
+              // nya tapi ukuran teks tetap sama" -- py-2 di atas ternyata
+              // membuat TINGGI BLOK (py-2*2 + tinggi baris text-sm, ~36px)
+              // hampir SAMA PERSIS dengan wadah ikon h-9 w-9 (36px) yang
+              // posisinya absolute+center -- wadah ikon jadi meluber keluar
+              // atas/bawah blok karena blok itu sendiri (auto-height dari
+              // konten flow, TIDAK memperhitungkan elemen absolute di
+              // dalamnya) tidak cukup tinggi untuk membungkusnya. Padding
+              // vertikal blok dibesarkan lagi (py-2 -> py-3.5, blok jadi
+              // ~48px) TANPA mengubah text-sm (ukuran font TETAP, sesuai
+              // permintaan) -- sisa ruang (48-36=12px, 6px di atas & bawah)
+              // sekarang cukup untuk membungkus wadah ikon 36px sepenuhnya.
               return link.lockType ? (
                 interactive ? (
                   <LockedLinkButton
@@ -421,7 +435,7 @@ export default function PagePreview({
                     title={link.title}
                     lockType={link.lockType}
                     lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                    className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                   />
                 ) : (
                   <button
@@ -429,7 +443,7 @@ export default function PagePreview({
                     type="button"
                     disabled
                     title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                    className={`relative flex w-full cursor-not-allowed items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                   >
                     <span className="w-full break-words text-center">🔒 {link.title}</span>
                   </button>
@@ -444,7 +458,7 @@ export default function PagePreview({
                       pageSlug={data.pageSlug}
                       linkId={link.id}
                       href={link.url}
-                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
                         {link.customIconUrl ? (
@@ -467,7 +481,7 @@ export default function PagePreview({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                     >
                       <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
                         {link.customIconUrl ? (
@@ -844,7 +858,7 @@ function LandingPagePreview({
                   embed={Boolean(block.blockData?.embed)}
                   embedLat={block.blockData?.embed_lat as number | undefined}
                   embedLng={block.blockData?.embed_lng as number | undefined}
-                  linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 />
               );
             case "contact_form":
@@ -871,7 +885,7 @@ function LandingPagePreview({
                   pageSlug={data.pageSlug}
                   linkId={block.id}
                   href={block.url}
-                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                   <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
@@ -879,7 +893,7 @@ function LandingPagePreview({
               ) : (
                 <div
                   key={block.id}
-                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-2 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+                  className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-sm font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>
                 </div>
