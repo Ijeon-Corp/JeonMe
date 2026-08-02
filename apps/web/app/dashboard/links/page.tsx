@@ -817,9 +817,9 @@ export default function DashboardLinksPage() {
             setAddSearch("");
             setAddModalOpen(true);
           }}
-          className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+          className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
         >
-          <IconPlus className="h-5 w-5" />
+          <IconPlus className="h-4 w-4" />
           Tambah
         </button>
 

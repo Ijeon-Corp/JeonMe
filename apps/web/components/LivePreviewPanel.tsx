@@ -46,11 +46,25 @@ export default function LivePreviewPanel({
           membuat satu blok setinggi layar penuh di tengah alur. */}
       {page && (
         <div className="mx-auto h-[500px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:h-[calc(100vh-10rem)]">
-          <PagePreview
-            interactive={false}
-            rootClassName="min-h-full"
-            data={toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products)}
-          />
+          {/* Permintaan susulan: font pratinjau masih terasa besar --
+              PagePreview dipakai BERSAMA halaman publik asli, jadi ukuran
+              teksnya sendiri (Tailwind class di PagePreview.tsx) TIDAK boleh
+              diubah dari sini (itu akan ikut mengecilkan halaman publik
+              sungguhan). Solusinya "zoom" CSS di pembungkus ini -- membuat
+              PagePreview merender seolah tersedia lebar lebih besar (persis
+              proporsi halaman publik asli), lalu seluruh hasilnya (teks,
+              ikon, jarak) mengecil bersamaan secara proporsional saat
+              ditampilkan. `zoom` (beda dari `transform: scale`) tetap
+              berpartisipasi dalam tata letak normal -- scrollHeight kotak
+              ini otomatis mengikuti ukuran yang sudah mengecil, tidak perlu
+              hitung tinggi manual. */}
+          <div className="h-full [zoom:0.72]">
+            <PagePreview
+              interactive={false}
+              rootClassName="min-h-full"
+              data={toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products)}
+            />
+          </div>
         </div>
       )}
       <p className="mt-3 text-center text-[11px] text-muted">
