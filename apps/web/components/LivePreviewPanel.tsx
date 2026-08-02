@@ -34,14 +34,18 @@ export default function LivePreviewPanel({
       </div>
       {/* Permintaan langsung pengguna: kecilkan ukuran pratinjau, hilangkan
           bingkai ala HP (notch/bezel) -- cukup tampilan langsung halaman
-          publik apa adanya. Tetap dibatasi tinggi (h-[480px], turun dari
-          640px) + scroll internal untuk halaman panjang, tapi scrollbar-nya
-          disembunyikan (scroll tetap berfungsi lewat mouse wheel/sentuh,
-          cuma indikatornya yang dihilangkan) -- tinggi PASTI (bukan
-          max-height) supaya "min-h-full" di PagePreview tetap valid sebagai
-          dasar persentase, sama seperti alasan PhoneFrame sebelumnya. */}
+          publik apa adanya. Scrollbar internal disembunyikan (scroll tetap
+          berfungsi lewat mouse wheel/sentuh, cuma indikatornya yang
+          dihilangkan) -- tinggi PASTI (bukan max-height) supaya "min-h-full"
+          di PagePreview tetap valid sebagai dasar persentase.
+          Tinggi menyesuaikan layout (permintaan susulan): di layar besar
+          (lg:sticky) memanjang mengikuti sisa tinggi viewport (calc(100vh -
+          ...), dikurangi offset top-6 + label "Pratinjau Langsung" di atas +
+          keterangan di bawah) alih-alih angka tetap kecil -- di mobile
+          (bukan sticky, ikut alur halaman) tetap angka tetap supaya tidak
+          membuat satu blok setinggi layar penuh di tengah alur. */}
       {page && (
-        <div className="mx-auto h-[480px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto h-[500px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:h-[calc(100vh-10rem)]">
           <PagePreview
             interactive={false}
             rootClassName="min-h-full"

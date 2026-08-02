@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
-import QRCodeModal from "@/components/QRCodeModal";
 import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
 import AccountDeletionBanner from "@/components/AccountDeletionBanner";
@@ -37,7 +36,6 @@ import {
   IconLogout,
   IconMenu,
   IconPhone,
-  IconQrCode,
   IconSettings,
   IconShield,
   IconSparkle,
@@ -121,7 +119,6 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
 
@@ -301,40 +298,6 @@ export default function DashboardLayout({
       </div>
 
       <div className="flex flex-col gap-3">
-        {username && (
-          <div className="rounded-xl border border-border bg-primary-subtle/60 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Halaman publikmu</p>
-            <p className="mt-1 truncate text-xs font-semibold text-ink">jeonme.com/{username}</p>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-white py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
-              >
-                <IconCopy className="h-3 w-3" />
-                {copied ? "Tersalin!" : "Salin"}
-              </button>
-              <a
-                href={`https://jeonme.com/${username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-ink/5 py-1.5 text-[11px] font-semibold text-ink hover:bg-ink/10"
-              >
-                <IconExternal className="h-3 w-3" />
-                Lihat
-              </a>
-            </div>
-            <button
-              type="button"
-              onClick={() => setQrOpen(true)}
-              className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-border bg-white py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
-            >
-              <IconQrCode className="h-3 w-3" />
-              Kode QR
-            </button>
-          </div>
-        )}
-
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
@@ -445,10 +408,6 @@ export default function DashboardLayout({
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </div>
         </div>
-
-        {qrOpen && username && (
-          <QRCodeModal url={`https://jeonme.com/${username}`} username={username} onClose={() => setQrOpen(false)} />
-        )}
       </ToastProvider>
     </AuthGuard>
   );
