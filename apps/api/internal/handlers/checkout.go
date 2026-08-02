@@ -431,6 +431,53 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type recentOrderItem struct {
+	OrderID     string `json:"order_id"`
+	ProductName string `json:"product_name"`
+	BuyerEmail  string `json:"buyer_email"`
+	AmountIDR   int64  `json:"amount_idr"`
+	Status      string `json:"status"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// ListRecentOrders -- Modul Statistik (tab "Toko"): daftar transaksi
+// terbaru kreator (ala "New Transactions" pada dashboard toko referensi
+// Linktree/Lynk.id-like). Menampilkan SEMUA status (bukan cuma "paid")
+// supaya kreator juga lihat pesanan yang masih pending/gagal -- beda dari
+// AnalyticsHandler.computeSummary yang sengaja hanya menghitung "paid" untuk
+// metrik pendapatan/produk terlaris.
+func (h *CheckoutHandler) ListRecentOrders(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT o.id, p.name, o.buyer_email, o.amount_idr, o.status, o.created_at
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE p.user_id = $1
+		ORDER BY o.created_at DESC LIMIT 20
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat transaksi terbaru"})
+		return
+	}
+	defer rows.Close()
+
+	items := []recentOrderItem{}
+	for rows.Next() {
+		var it recentOrderItem
+		var createdAt time.Time
+		if err := rows.Scan(&it.OrderID, &it.ProductName, &it.BuyerEmail, &it.AmountIDR, &it.Status, &createdAt); err != nil {
+			continue
+		}
+		it.CreatedAt = createdAt.Format(time.RFC3339)
+		items = append(items, it)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": items})
+}
+
 // Webhook — REQ-F-403 (verifikasi signature WAJIB sebelum diproses) &
 // REQ-F-404 (idempotensi: notifikasi yang di-retry Midtrans tidak boleh
 // diproses dua kali). Selalu membalas 200 kalau payload valid (termasuk saat
@@ -455,6 +502,23 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	// sekali.
 	if !midtrans.VerifySignature(payload.OrderID, payload.StatusCode, payload.GrossAmount, h.MidtransServerKey, payload.SignatureKey) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "signature webhook tidak valid"})
+		return
+	}
+
+	// Modul Langganan Premium: order_id pendaftaran langganan (bukan
+	// pembelian produk) ditangani SEPENUHNYA terpisah -- lihat catatan
+	// lingkup di subscription.go. HARUS dicek sebelum StatusToOrderStatus/
+	// query orders di bawah supaya tidak salah dicari sebagai order produk.
+	webhookCtx, webhookCancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	handledAsSubscription, subErr := maybeHandleSubscriptionEnrollmentPayment(webhookCtx, h.DB, h.Midtrans, payload)
+	webhookCancel()
+	if handledAsSubscription {
+		if subErr != nil {
+			log.Printf("checkout: gagal memproses pembayaran pendaftaran langganan %s: %v", payload.OrderID, subErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memproses pendaftaran langganan"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "pendaftaran langganan diproses"})
 		return
 	}
 

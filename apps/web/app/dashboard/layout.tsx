@@ -7,6 +7,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
 import AccountDeletionBanner from "@/components/AccountDeletionBanner";
+import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/GlobalSearch";
 import {
@@ -37,6 +38,7 @@ import {
   IconLogout,
   IconMenu,
   IconPhone,
+  IconPlayCircle,
   IconSettings,
   IconShield,
   IconSparkle,
@@ -57,12 +59,14 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 // fitur nyata pertama yang mengisinya.
 const NAV_ITEMS: NavEntry[] = [
   { type: "link", href: "/dashboard", label: "Ringkasan", icon: IconChart },
+  { type: "link", href: "/dashboard/tutorial", label: "Tutorial", icon: IconPlayCircle },
   {
     type: "group",
     label: "Halaman Saya",
     items: [
       { href: "/dashboard/links", label: "Link Bio", icon: IconLink },
       { href: "/dashboard/products", label: "Toko", icon: IconBox },
+      { href: "/dashboard/statistik", label: "Statistik", icon: IconChart },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
       { href: "/dashboard/custom-domain", label: "Domain Kustom", icon: IconGlobe },
       { href: "/dashboard/pages", label: "Halaman Tambahan", icon: IconGlobe },
@@ -314,6 +318,7 @@ export default function DashboardLayout({
     <AuthGuard>
       <ToastProvider>
         <AccountDeletionBanner />
+        <OnboardingBanner />
         <TwoFactorPrompt />
         <div className="flex min-h-screen bg-primary-subtle/30">
           {/* Sidebar desktop */}

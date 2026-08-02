@@ -42,6 +42,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
+	subscription := handlers.NewSubscriptionHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PremiumMonthlyPriceIDR, cfg.PremiumYearlyPriceIDR)
 	encryptionKey := []byte(cfg.EncryptionKey)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
 	analytics := handlers.NewAnalyticsHandler(db)
@@ -50,6 +51,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	kyc := handlers.NewKycHandler(db, s3)
 	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
 	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
+	onboarding := handlers.NewOnboardingHandler(db)
 	notification := handlers.NewNotificationHandler(db)
 	security := handlers.NewSecurityHandler(db, rdb)
 	payoutMethod := handlers.NewPayoutMethodHandler(db, encryptionKey, cfg.AppEnv)
@@ -331,12 +333,21 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/payout-schedule", payoutSchedule.Get)
 			dashboard.PUT("/payout-schedule", payoutSchedule.Upsert)
 
+			// Modul Langganan Premium: status + mulai/batalkan langganan.
+			dashboard.GET("/subscription", subscription.GetStatus)
+			dashboard.POST("/subscription/checkout", subscription.Checkout)
+			dashboard.POST("/subscription/cancel", subscription.Cancel)
+
 			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
 			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).
 			dashboard.GET("/kyc", kyc.Get)
 			dashboard.POST("/kyc", kyc.Submit)
 
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
+
+			// Modul Statistik (tab "Toko"): daftar transaksi terbaru -- lihat
+			// catatan lingkup lengkap di CheckoutHandler.ListRecentOrders.
+			dashboard.GET("/orders/recent", checkout.ListRecentOrders)
 			dashboard.GET("/analytics/export", analytics.ExportDailyCSV)
 
 			// No.96 (Sprint 13): asisten analitik TANPA LLM API sungguhan --
@@ -359,6 +370,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// tidak boleh mengubah identitas pemilik).
 			dashboard.GET("/settings/profile", settingsProfile.Get)
 			dashboard.PATCH("/settings/profile", settingsProfile.Update)
+
+			// Modul Onboarding: pita pengingat "Tutorial" -- lihat catatan
+			// lingkup lengkap di OnboardingHandler.
+			dashboard.GET("/onboarding", onboarding.GetStatus)
+			dashboard.POST("/onboarding/dismiss", onboarding.Dismiss)
 
 			// Pusat notifikasi dalam-app (ikon lonceng di top bar dashboard).
 			dashboard.GET("/notifications", notification.List)
@@ -428,5 +444,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi
 		// lewat unique constraint psp_transaction_id).
 		api.POST("/webhooks/midtrans", checkout.Webhook)
+
+		// Modul Langganan Premium: notifikasi siklus penagihan BERULANG --
+		// endpoint TERPISAH dari webhook order biasa di atas (Midtrans
+		// mengirim ke "Recurring Notification URL", field terpisah dari
+		// "Payment Notification URL" di dashboard Midtrans -- WAJIB
+		// didaftarkan manual, lihat catatan lingkup di subscription.go).
+		api.POST("/webhooks/midtrans-subscription", subscription.HandleCycleWebhook)
 	}
 }

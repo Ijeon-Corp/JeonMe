@@ -114,6 +114,9 @@ export interface PagePreviewData {
   // No.88 (Sprint 10): badge terverifikasi -- dihitung backend dari email
   // terverifikasi + profil lengkap + minimal 1 transaksi sukses.
   isVerified?: boolean;
+  // isPremium -- Modul Langganan Premium: kreator Premium tidak menampilkan
+  // watermark "Buat halaman gratis di Jeonme" di bawah halaman publiknya.
+  isPremium?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
@@ -150,6 +153,7 @@ interface PreviewSourcePage {
   custom_title_color?: string;
   custom_style_override?: boolean;
   is_verified?: boolean;
+  is_premium?: boolean;
 }
 
 interface PreviewSourceLink {
@@ -192,6 +196,7 @@ export function toPreviewData(
     avatarUrl: page.avatar_url,
     theme: page.theme,
     isVerified: page.is_verified ?? false,
+    isPremium: page.is_premium ?? false,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -731,14 +736,18 @@ export default function PagePreview({
         )}
 
         <div className="mt-10 flex flex-col items-center gap-3">
-          <a
-            href="https://jeonme.com/register"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-          >
-            Buat halaman gratis di Jeonme
-          </a>
+          {/* Modul Langganan Premium: kreator Premium menghilangkan
+              watermark ini -- lihat isPremiumUser (backend) & PagePreviewData.isPremium. */}
+          {!data.isPremium && (
+            <a
+              href="https://jeonme.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+            >
+              Buat halaman gratis di Jeonme
+            </a>
+          )}
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
               (interactive=false) -- permintaan langsung pengguna: "tampilkan
               seluruh footer privacy dll", sebelumnya sengaja disembunyikan
@@ -902,14 +911,16 @@ function LandingPagePreview({
         })}
 
         <div className="mt-6 flex flex-col items-center gap-3">
-          <a
-            href="https://jeonme.com/register"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-          >
-            Buat halaman gratis di Jeonme
-          </a>
+          {!data.isPremium && (
+            <a
+              href="https://jeonme.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+            >
+              Buat halaman gratis di Jeonme
+            </a>
+          )}
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
               (interactive=false) -- permintaan langsung pengguna: "tampilkan
               seluruh footer privacy dll", sebelumnya sengaja disembunyikan

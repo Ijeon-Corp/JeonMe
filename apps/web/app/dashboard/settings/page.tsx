@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconChevronRight, IconPencil, IconSearch, IconShield, IconTrash, IconUsers, IconWallet } from "@/components/icons";
+import { IconChevronRight, IconPencil, IconSearch, IconShield, IconStar, IconTrash, IconUsers, IconWallet } from "@/components/icons";
 
 // Modul Settings §1: search box di atas daftar menu settings, filter
 // client-side atas label + deskripsi -- fitur yang TIDAK ada di Lynk.id,
@@ -25,6 +25,12 @@ const SETTINGS_SECTIONS = [
     title: "Pembayaran & Penarikan",
     description: "Rekening/e-wallet, verifikasi, jadwal auto-withdraw.",
     icon: IconWallet,
+  },
+  {
+    href: "/dashboard/settings/subscription",
+    title: "Langganan Premium",
+    description: "Hilangkan watermark, latar belakang kustom.",
+    icon: IconStar,
   },
   {
     href: "/dashboard/team",

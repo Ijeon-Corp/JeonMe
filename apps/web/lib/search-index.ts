@@ -14,6 +14,7 @@ import {
   IconPaintbrush,
   IconPencil,
   IconPhone,
+  IconPlayCircle,
   IconSettings,
   IconShield,
   IconSparkle,
@@ -47,6 +48,8 @@ export type SearchEntry = {
 // panjang dari label singkat sidebar.
 export const SEARCH_INDEX: SearchEntry[] = [
   { label: "Ringkasan", href: "/dashboard", description: "Statistik kunjungan, klik, pesanan, dan penjualan.", icon: IconChart, keywords: ["dashboard", "statistik", "analitik"] },
+  { label: "Tutorial", href: "/dashboard/tutorial", description: "Panduan membuat link bio dan produk pertamamu.", icon: IconPlayCircle, keywords: ["tutorial", "panduan", "bantuan", "onboarding", "cara"] },
+  { label: "Statistik", href: "/dashboard/statistik", description: "Jumlah klik tautan dan performa penjualan produk.", icon: IconChart, keywords: ["statistik", "klik", "analitik", "penjualan", "transaksi"] },
   { label: "Link Bio", href: "/dashboard/links", description: "Kelola tautan & blok konten halaman utamamu.", icon: IconLink, keywords: ["tautan", "link", "bio"] },
   { label: "Toko", href: "/dashboard/products", description: "Kelola produk digital yang kamu jual.", icon: IconBox, keywords: ["produk", "toko", "jual"] },
   { label: "Desain", href: "/dashboard/design", description: "Foto profil, bio, tema, dan status terbit halaman publikmu.", icon: IconSparkle, keywords: ["desain", "tampilan"] },
@@ -74,5 +77,6 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { label: "Profil & Akun", href: "/dashboard/settings/profile", description: "Nama tampilan, bio, username, kategori kreator.", icon: IconPencil, keywords: ["profil", "username", "akun"] },
   { label: "Keamanan", href: "/dashboard/settings/security", description: "Ganti password, verifikasi dua langkah (2FA), sesi aktif.", icon: IconShield, keywords: ["keamanan", "password", "2fa", "sesi"] },
   { label: "Pembayaran & Penarikan", href: "/dashboard/settings/payment", description: "Rekening/e-wallet, verifikasi, jadwal auto-withdraw.", icon: IconWallet, keywords: ["rekening", "e-wallet", "auto-withdraw"] },
+  { label: "Langganan Premium", href: "/dashboard/settings/subscription", description: "Hilangkan watermark, latar belakang kustom.", icon: IconStar, keywords: ["premium", "langganan", "upgrade", "watermark", "subscription"] },
   { label: "Zona Berbahaya", href: "/dashboard/settings/danger-zone", description: "Nonaktifkan atau hapus akun.", icon: IconTrash, keywords: ["hapus akun", "nonaktifkan", "danger zone"] },
 ];

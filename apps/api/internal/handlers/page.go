@@ -89,6 +89,10 @@ type publicPageResponse struct {
 	// PageType -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
 	// "landing" (builder blok manual, halaman tambahan No.98 saja).
 	PageType string `json:"page_type"`
+	// IsPremium -- Modul Langganan Premium: status PEMILIK halaman (bukan
+	// pengunjung), dipakai frontend menyembunyikan pil "Buat halaman gratis
+	// di Jeonme" untuk kreator berbayar. Lihat isPremiumUser (subscription.go).
+	IsPremium bool `json:"is_premium"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -352,6 +356,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	`, userID).Scan(&hasPaidOrder)
 	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
 	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
+	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
 
 	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
 	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
@@ -531,6 +536,13 @@ type myPageResponse struct {
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
 	Verification          verificationStatus `json:"verification"`
+	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
+	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
+	// menampilkan status langganan. Sumber kebenaran TUNGGAL: isPremiumUser
+	// (subscription.go) -- BUKAN kolom tersendiri di tabel users/pages,
+	// selalu dihitung ulang dari tabel subscriptions supaya tidak ada dua
+	// sumber kebenaran yang bisa tidak sinkron.
+	IsPremium bool `json:"is_premium"`
 }
 
 // verificationStatus -- No.88 (Sprint 10): rincian syarat badge terverifikasi
@@ -583,6 +595,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		HasPaidOrder:    hasPaidOrder,
 		IsVerified:      emailVerified && profileComplete && hasPaidOrder,
 	}
+	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
 
 	c.JSON(http.StatusOK, resp)
 }
@@ -722,6 +735,18 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Modul Langganan Premium (permintaan langsung pengguna: "custom
+	// background by user premium"): latar bebas (theme="custom" +
+	// custom_background_type/value) HANYA untuk kreator berbayar. Dicek di
+	// SINI (bukan cuma disembunyikan di frontend) supaya penegakannya nyata
+	// -- permintaan API langsung tidak bisa melewatinya.
+	wantsCustomBackground := (req.Theme != nil && *req.Theme == "custom") ||
+		req.CustomBackgroundType != nil || req.CustomBackgroundValue != nil
+	if wantsCustomBackground && !isPremiumUser(ctx, h.DB, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang custom hanya untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
+		return
+	}
 
 	var username string
 	_, err := h.DB.Exec(ctx, `
@@ -865,15 +890,27 @@ const maxCustomBackgroundSize = 8 * 1024 * 1024
 // custom_background_type="image" + custom_background_value=URL dalam satu
 // request supaya frontend tidak perlu panggilan kedua ke UpdateMyPage.
 func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
-	if h.Storage == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
-		return
-	}
-
 	userID := c.GetString("userID")
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+
+	// Modul Langganan Premium: gerbang yang sama seperti UpdateMyPage/
+	// UpdatePage -- tanpa ini, kreator gratis bisa lolos batasan latar
+	// kustom lewat endpoint upload ini langsung (endpoint ini menyimpan
+	// custom_background_type/value sendiri, tidak lewat UpdateMyPage sama
+	// sekali). Dicek DULUAN (sebelum cek storage/parsing file) supaya
+	// kreator gratis tidak buang bandwidth/kuota untuk permintaan yang
+	// bakal ditolak.
+	if !isPremiumUser(ctx, h.DB, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang kustom khusus untuk kreator Premium"})
+		return
+	}
+
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
 
 	fileHeader, err := c.FormFile("background")
 	if err != nil {
@@ -1076,6 +1113,16 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Modul Langganan Premium: gerbang yang SAMA seperti UpdateMyPage --
+	// tanpa ini, kreator gratis bisa lolos batasan latar kustom lewat
+	// halaman TAMBAHAN, padahal halaman utama sudah dijaga.
+	wantsCustomBackground := (req.Theme != nil && *req.Theme == "custom") ||
+		req.CustomBackgroundType != nil || req.CustomBackgroundValue != nil
+	if wantsCustomBackground && !isPremiumUser(ctx, h.DB, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang kustom khusus untuk kreator Premium"})
+		return
+	}
 
 	tag, err := h.DB.Exec(ctx, `
 		UPDATE pages SET

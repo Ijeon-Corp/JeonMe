@@ -46,6 +46,9 @@ type Config struct {
 	PlatformFeePercent float64
 	HoldingPeriodDays  int
 
+	PremiumMonthlyPriceIDR int64
+	PremiumYearlyPriceIDR  int64
+
 	// EncryptionKey (AES-256-GCM, lihat internal/crypto) -- Modul Settings
 	// §3: nomor rekening/e-wallet di payout_methods dienkripsi at rest,
 	// BUKAN plaintext seperti payouts.destination_account/kyc
@@ -144,6 +147,18 @@ func Load() *Config {
 		// perlu ubah kode.
 		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 5.0),
 		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
+
+		// PLACEHOLDER bisnis (Modul Langganan Premium, permintaan langsung
+		// pengguna 3 Agustus 2026: "custom background by user premium",
+		// hilangkan watermark untuk versi berbayar) -- pengguna memilih
+		// siklus "Bulanan + Tahunan (diskon)" tapi TIDAK menyebutkan angka
+		// pastinya, jadi dipilih titik harga umum SaaS kreator Indonesia
+		// (mirip pola PLATFORM_FEE_PERCENT/HOLDING_PERIOD_DAYS di atas)
+		// SAMPAI ada keputusan bisnis final -- ganti lewat env, tidak perlu
+		// ubah kode. Tahunan ~14% lebih murah dari 12x bulanan (pola diskon
+		// umum "hemat ~2 bulan").
+		PremiumMonthlyPriceIDR: int64(getEnvInt("PREMIUM_MONTHLY_PRICE_IDR", 29000)),
+		PremiumYearlyPriceIDR:  int64(getEnvInt("PREMIUM_YEARLY_PRICE_IDR", 299000)),
 
 		// Dev default HANYA untuk kenyamanan lokal (pola sama dengan
 		// S3_ACCESS_KEY di atas) -- 32 byte persis, sengaja diverifikasi di

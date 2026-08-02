@@ -240,6 +240,10 @@ export interface PublicPage {
   // getPageTheme di page-themes.ts.
   custom_style_override: boolean;
   is_verified: boolean;
+  // is_premium -- Modul Langganan Premium: sembunyikan watermark
+  // "Buat halaman gratis di Jeonme" untuk kreator Premium. Lihat
+  // isPremiumUser (backend) & PagePreviewData.isPremium.
+  is_premium: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
   loyalty_active: boolean;
@@ -385,6 +389,10 @@ export interface MyPage {
     has_paid_order: boolean;
     is_verified: boolean;
   };
+  // is_premium -- Modul Langganan Premium: kreator Premium bisa pakai latar
+  // kustom (theme="custom") & watermark halaman publik disembunyikan. Lihat
+  // getSubscriptionStatus untuk detail plan/status/harga.
+  is_premium: boolean;
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
@@ -1663,6 +1671,43 @@ export function updatePayoutSchedule(input: PayoutSchedule) {
   );
 }
 
+// ---------- Dashboard: Langganan Premium ----------
+// Watermark halaman publik & latar kustom (theme="custom") khusus Premium --
+// harga (monthly_price_idr/yearly_price_idr) SELALU dibaca dari sini, tidak
+// pernah di-hardcode di frontend (satu sumber kebenaran, lihat
+// PREMIUM_MONTHLY_PRICE_IDR/PREMIUM_YEARLY_PRICE_IDR di backend).
+
+export interface SubscriptionStatus {
+  plan: "free" | "monthly" | "yearly";
+  status: "none" | "pending_card" | "active" | "past_due" | "canceled";
+  amount_idr: number;
+  current_period_end: string | null;
+  is_premium: boolean;
+  monthly_price_idr: number;
+  yearly_price_idr: number;
+}
+
+export function getSubscriptionStatus() {
+  return apiFetch<SubscriptionStatus>("/dashboard/subscription", { method: "GET" }, { auth: true });
+}
+
+// checkoutSubscription -- mulai pendaftaran, mengembalikan invoice_url
+// (halaman Snap ter-hosting Midtrans) untuk redirect. Kartu yang dipakai di
+// sini tersimpan otomatis untuk penagihan berulang siklus berikutnya.
+export function checkoutSubscription(plan: "monthly" | "yearly") {
+  return apiFetch<{ invoice_url: string }>(
+    "/dashboard/subscription/checkout",
+    { method: "POST", body: JSON.stringify({ plan }) },
+    { auth: true }
+  );
+}
+
+// cancelSubscription -- hentikan penagihan berulang; akses Premium tetap
+// berlaku sampai current_period_end (masa yang sudah dibayar).
+export function cancelSubscription() {
+  return apiFetch<{ message: string }>("/dashboard/subscription/cancel", { method: "POST" }, { auth: true });
+}
+
 // ---------- Dashboard: verifikasi KYC (Sprint 10, No.84) ----------
 // TIDAK memblokir penarikan -- hanya dipakai admin untuk memprioritaskan
 // antrian proses manual (lihat catatan lingkup di KycHandler backend).
@@ -1819,6 +1864,23 @@ export function getAnalyticsSummary(params?: { from?: string; to?: string; range
   return apiFetch<AnalyticsSummary>(`/dashboard/analytics/summary${qs ? `?${qs}` : ""}`, { method: "GET" }, { auth: true });
 }
 
+// Modul Statistik (tab "Toko"): transaksi terbaru -- lihat catatan lingkup
+// lengkap di CheckoutHandler.ListRecentOrders.
+export interface RecentOrder {
+  order_id: string;
+  product_name: string;
+  buyer_email: string;
+  amount_idr: number;
+  status: string;
+  created_at: string;
+}
+
+export function listRecentOrders() {
+  return apiFetch<{ orders: RecentOrder[] }>("/dashboard/orders/recent", { method: "GET" }, { auth: true }).then(
+    (r) => r.orders
+  );
+}
+
 // Ekspor CSV -- TIDAK lewat apiFetch() karena responsnya bukan JSON
 // (text/csv), diunduh langsung sebagai file lewat Blob + anchor sementara.
 export async function exportAnalyticsCSV(params?: { from?: string; to?: string; range_days?: number }): Promise<void> {
@@ -1906,6 +1968,19 @@ export function exportAccountData() {
     { method: "GET" },
     { auth: true }
   );
+}
+
+// ---------- Modul Onboarding ----------
+// Pita "Tutorial" untuk kreator gratis maupun Premium yang belum pernah
+// menutupnya -- lihat OnboardingHandler (backend) untuk kenapa ini bukan
+// murni "user baru".
+
+export function getOnboardingStatus() {
+  return apiFetch<{ dismissed: boolean }>("/dashboard/onboarding", { method: "GET" }, { auth: true });
+}
+
+export function dismissOnboarding() {
+  return apiFetch<{ message: string }>("/dashboard/onboarding/dismiss", { method: "POST" }, { auth: true });
 }
 
 // ---------- Pengaturan: Profil & Akun (Modul Settings §2) ----------

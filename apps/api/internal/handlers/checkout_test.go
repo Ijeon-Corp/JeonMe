@@ -222,6 +222,69 @@ func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	}
 }
 
+// Modul Statistik (tab "Toko"): transaksi terbaru HANYA milik produk
+// kreator yang login -- order produk kreator LAIN tidak boleh bocor,
+// urutan terbaru dulu, dan status non-"paid" (mis. "pending") tetap ikut
+// tampil (beda dari AnalyticsHandler yang cuma menghitung "paid").
+func TestListRecentOrders_ScopedToOwnProductsNewestFirst(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+	otherProductID := createActiveTestProduct(t, checkout, otherUserID, 50000)
+
+	olderOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, created_at)
+		VALUES ($1, $2, 'buyer-old@example.com', 25000, 'pending', now() - interval '1 hour')
+	`, olderOrderID, productID); err != nil {
+		t.Fatalf("gagal setup order lama: %v", err)
+	}
+	newerOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, created_at)
+		VALUES ($1, $2, 'buyer-new@example.com', 25000, 'paid', now())
+	`, newerOrderID, productID); err != nil {
+		t.Fatalf("gagal setup order baru: %v", err)
+	}
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status)
+		VALUES ($1, $2, 'buyer-other@example.com', 50000, 'paid')
+	`, uuid.NewString(), otherProductID); err != nil {
+		t.Fatalf("gagal setup order kreator lain: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/orders/recent", checkout.ListRecentOrders)
+
+	rec := doJSON(t, router, http.MethodGet, "/orders/recent", nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Orders []struct {
+			OrderID string `json:"order_id"`
+			Status  string `json:"status"`
+		} `json:"orders"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(resp.Orders) != 2 {
+		t.Fatalf("len(orders) = %d, ekspektasi 2 (hanya milik kreator ini)", len(resp.Orders))
+	}
+	if resp.Orders[0].OrderID != newerOrderID || resp.Orders[1].OrderID != olderOrderID {
+		t.Errorf("urutan orders = %v, ekspektasi terbaru dulu (%s, %s)", resp.Orders, newerOrderID, olderOrderID)
+	}
+	if resp.Orders[0].Status != "paid" || resp.Orders[1].Status != "pending" {
+		t.Errorf("status tidak sesuai: %+v", resp.Orders)
+	}
+}
+
 // Modul Settings §3 (diferensiasi dari Lynk.id): split kolaborator disimpan
 // sebagai snapshot rupiah ABSOLUT di orders.collaborator_splits_snapshot
 // (lihat CheckoutHandler.Create) -- test ini fokus ke bagian yang paling

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { THEME_PRESETS } from "@/lib/api-client";
 import { PAGE_THEMES, THREE_D_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
-import { IconCheck, IconPaintbrush } from "@/components/icons";
+import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 
 // Permintaan langsung pengguna: galeri tema dipisah 2 tab -- "Warna &
 // Gradien" (preset solid/gradien + tile "Custom") dan "Wallpaper" (preset
@@ -22,11 +23,18 @@ function ThemeTile({
   onClick,
   children,
   label,
+  locked,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   label: string;
+  // locked -- Modul Langganan Premium: latar kustom khusus kreator Premium.
+  // Diblokir DI SISI KLIEN supaya kreator gratis langsung diarahkan ke
+  // halaman langganan, TAPI backend (UpdateMyPage) tetap menolak permintaan
+  // langsung ke API juga -- gerbang ini murni untuk UX, bukan satu-satunya
+  // penjagaan (lihat isPremiumUser di page.go).
+  locked?: boolean;
 }) {
   return (
     <button type="button" onClick={onClick} className="group flex flex-col items-center gap-1.5">
@@ -36,13 +44,21 @@ function ThemeTile({
         }`}
       >
         {children}
-        {active && (
+        {locked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+            <IconLock className="h-5 w-5 text-white" />
+          </div>
+        )}
+        {active && !locked && (
           <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
             <IconCheck className="h-3 w-3" />
           </span>
         )}
       </div>
-      <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-ink"}`}>{label}</span>
+      <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-ink"}`}>
+        {label}
+        {locked && " (Premium)"}
+      </span>
     </button>
   );
 }
@@ -50,6 +66,7 @@ function ThemeTile({
 export default function DesignThemePage() {
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
   const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d">("gradien");
+  const router = useRouter();
 
   if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
 
@@ -114,7 +131,12 @@ export default function DesignThemePage() {
           {tab === "gradien" && (
             <ThemeTile
               active={page.theme === "custom"}
-              onClick={() => handlePageSettingChange({ theme: "custom", custom_style_override: false })}
+              locked={!page.is_premium}
+              onClick={() =>
+                page.is_premium
+                  ? handlePageSettingChange({ theme: "custom", custom_style_override: false })
+                  : router.push("/dashboard/settings/subscription")
+              }
               label="Custom"
             >
               <div className="flex h-full w-full items-center justify-center bg-gray-100">
