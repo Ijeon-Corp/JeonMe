@@ -2223,3 +2223,31 @@ export interface Workspace {
 export function listWorkspaces() {
   return apiFetch<Workspace[]>("/dashboard/workspaces", { method: "GET" }, { auth: true });
 }
+
+// Pusat notifikasi dalam-app (ikon lonceng top bar dashboard, permintaan
+// langsung pengguna berdasar tangkapan layar top bar Linktree).
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  link_url: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export function listNotifications() {
+  return apiFetch<{ notifications: AppNotification[]; unread_count: number }>(
+    "/dashboard/notifications",
+    { method: "GET" },
+    { auth: true }
+  );
+}
+
+export function markNotificationRead(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/notifications/${id}/read`, { method: "POST" }, { auth: true });
+}
+
+export function markAllNotificationsRead() {
+  return apiFetch<{ message: string }>("/dashboard/notifications/read-all", { method: "POST" }, { auth: true });
+}

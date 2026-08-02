@@ -304,13 +304,14 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 		return fmt.Errorf("worker: payload tidak valid: %w", err)
 	}
 
-	var buyerEmail, buyerContact, productName, status string
+	var buyerEmail, buyerContact, productName, status, sellerUserID string
+	var amountIDR int64
 	var isDonation bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.buyer_email, o.buyer_contact, p.name, o.status, p.is_donation
+		SELECT o.buyer_email, o.buyer_contact, p.name, o.status, p.is_donation, p.user_id, o.amount_idr
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, payload.OrderID).Scan(&buyerEmail, &buyerContact, &productName, &status, &isDonation)
+	`, payload.OrderID).Scan(&buyerEmail, &buyerContact, &productName, &status, &isDonation, &sellerUserID, &amountIDR)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			log.Printf("worker: order %s tidak ditemukan, lewati notifikasi", payload.OrderID)
@@ -384,7 +385,44 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 		}
 	}
 
+	// Notifikasi dalam-app untuk KREATOR (ikon lonceng top bar dashboard) --
+	// best-effort SAMA seperti WhatsApp di atas: kegagalan INSERT di sini
+	// tidak boleh membuat asynq retry seluruh task (email pembeli sudah
+	// terkirim sukses). Judul/isi beda untuk donasi vs pembelian biasa,
+	// sama seperti subjek email di atas.
+	var notifTitle, notifBody string
+	if isDonation {
+		notifTitle = "Dukungan baru diterima"
+		notifBody = fmt.Sprintf("Seseorang baru saja mendukungmu lewat %s.", productName)
+	} else {
+		notifTitle = "Pesanan baru diterima"
+		notifBody = fmt.Sprintf("%s terjual seharga Rp%s.", productName, formatRupiah(amountIDR))
+	}
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO notifications (user_id, type, title, body, link_url)
+		VALUES ($1, 'order_paid', $2, $3, '/dashboard/balance')
+	`, sellerUserID, notifTitle, notifBody); err != nil {
+		log.Printf("worker: order %s -- gagal membuat notifikasi dalam-app untuk kreator: %v", payload.OrderID, err)
+	}
+
 	return nil
+}
+
+// formatRupiah -- "25000" -> "25.000" (pemisah ribuan ala format Indonesia),
+// dipakai notifikasi dalam-app di atas. Sengaja fungsi kecil sendiri, bukan
+// import paket format lokal penuh cuma untuk satu pemakaian ini.
+func formatRupiah(amount int64) string {
+	s := fmt.Sprintf("%d", amount)
+	if len(s) <= 3 {
+		return s
+	}
+	var parts []string
+	for len(s) > 3 {
+		parts = append([]string{s[len(s)-3:]}, parts...)
+		s = s[:len(s)-3]
+	}
+	parts = append([]string{s}, parts...)
+	return strings.Join(parts, ".")
 }
 
 // HandleContactFormNotification -- No.77 (Sprint 9): kirim email ke kreator

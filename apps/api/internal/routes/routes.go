@@ -50,6 +50,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	kyc := handlers.NewKycHandler(db, s3)
 	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
 	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
+	notification := handlers.NewNotificationHandler(db)
 	security := handlers.NewSecurityHandler(db, rdb)
 	payoutMethod := handlers.NewPayoutMethodHandler(db, encryptionKey, cfg.AppEnv)
 	payoutSchedule := handlers.NewPayoutScheduleHandler(db)
@@ -358,6 +359,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// tidak boleh mengubah identitas pemilik).
 			dashboard.GET("/settings/profile", settingsProfile.Get)
 			dashboard.PATCH("/settings/profile", settingsProfile.Update)
+
+			// Pusat notifikasi dalam-app (ikon lonceng di top bar dashboard).
+			dashboard.GET("/notifications", notification.List)
+			dashboard.POST("/notifications/:id/read", notification.MarkRead)
+			dashboard.POST("/notifications/read-all", notification.MarkAllRead)
 
 			// Modul Settings §5 (Security) -- sama seperti profile di atas,
 			// TIDAK dipasangi ActAsOwner (kolaborator tidak boleh mengganti

@@ -139,6 +139,58 @@ func TestHandleOrderPaidNotification_WithBuyerContact_SucceedsWithoutWhatsAppCon
 	}
 }
 
+// Notifikasi dalam-app (ikon lonceng top bar dashboard) harus dibuat untuk
+// PEMILIK PRODUK (bukan pembeli) begitu order berstatus "paid" diproses.
+func TestHandleOrderPaidNotification_CreatesInAppNotificationForSeller(t *testing.T) {
+	h := newTestHandler(t)
+
+	userID := uuid.NewString()
+	suffix := uuid.NewString()[:8]
+	_, err := h.DB.Exec(t.Context(), `
+		INSERT INTO users (id, email, username, password_hash, consent_accepted_at)
+		VALUES ($1, $2, $3, 'x', now())
+	`, userID, "worker-"+suffix+"@example.com", "workeruser"+suffix)
+	if err != nil {
+		t.Fatalf("gagal setup user test: %v", err)
+	}
+
+	productID := uuid.NewString()
+	_, err = h.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, file_key, is_active)
+		VALUES ($1, $2, 'Produk Worker Test', 25000, 'products/test/file.pdf', true)
+	`, productID, userID)
+	if err != nil {
+		t.Fatalf("gagal setup produk test: %v", err)
+	}
+
+	orderID := uuid.NewString()
+	_, err = h.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference)
+		VALUES ($1, $2, 'buyer@example.com', 25000, 'paid', $3)
+	`, orderID, productID, "jeonme-order-"+orderID)
+	if err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	if err := h.HandleOrderPaidNotification(t.Context(), newTestTask(t, orderID)); err != nil {
+		t.Fatalf("HandleOrderPaidNotification: error tidak terduga: %v", err)
+	}
+
+	var count int
+	var title string
+	if err := h.DB.QueryRow(t.Context(), `
+		SELECT count(*), coalesce(max(title), '') FROM notifications WHERE user_id = $1 AND type = 'order_paid'
+	`, userID).Scan(&count, &title); err != nil {
+		t.Fatalf("gagal query notifikasi: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("jumlah notifikasi order_paid untuk pemilik produk = %d, ekspektasi 1", count)
+	}
+	if title != "Pesanan baru diterima" {
+		t.Errorf("title = %q, ekspektasi %q", title, "Pesanan baru diterima")
+	}
+}
+
 // Order yang statusnya BUKAN "paid" (mis. race jarang, status berubah lagi
 // sebelum job diproses) harus dilewati tanpa error -- TIDAK retry.
 func TestHandleOrderPaidNotification_NonPaidOrder_SkipsWithoutError(t *testing.T) {

@@ -8,6 +8,7 @@ import QRCodeModal from "@/components/QRCodeModal";
 import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
 import AccountDeletionBanner from "@/components/AccountDeletionBanner";
+import NotificationBell from "@/components/NotificationBell";
 import {
   Workspace,
   clearToken,
@@ -96,6 +97,19 @@ const NAV_ITEMS: NavEntry[] = [
   { type: "link", href: "/dashboard/team", label: "Tim & Kolaborator", icon: IconUsers },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
 ];
+
+// currentPageLabel -- judul top bar desktop (di bawah) mengikuti label item
+// nav yang sedang aktif, termasuk yang berada di dalam grup collapsible.
+function currentPageLabel(pathname: string): string {
+  for (const item of NAV_ITEMS) {
+    if (item.type === "link" && item.href === pathname) return item.label;
+    if (item.type === "group") {
+      const found = item.items.find((sub) => sub.href === pathname);
+      if (found) return found.label;
+    }
+  }
+  return "Dashboard";
+}
 
 export default function DashboardLayout({
   children,
@@ -343,8 +357,15 @@ export default function DashboardLayout({
             {sidebarContent}
           </aside>
 
-          {/* Top bar + drawer mobile */}
-          <div className="flex flex-1 flex-col md:contents">
+          {/* Kolom konten: top bar (mobile & desktop, beda isi) + drawer
+              mobile + main. SEBELUMNYA "md:contents" (menghilangkan kotak
+              div ini di desktop, karena dulu tidak ada top bar desktop --
+              hanya "main" yang perlu jadi flex item lebar penuh di samping
+              sidebar). Sekarang ada top bar desktop juga (permintaan
+              pengguna) -- "contents" dihapus karena membuatnya ikut
+              "terangkat" jadi flex item SEJAJAR (searah baris) dengan aside
+              & main, bukan menumpuk di ATAS main seperti yang dimaksud. */}
+          <div className="flex flex-1 flex-col">
             <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
               <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
                 Jeonme
@@ -375,6 +396,51 @@ export default function DashboardLayout({
                 </aside>
               </div>
             )}
+
+            {/* Top bar desktop -- permintaan langsung pengguna (tangkapan
+                layar top bar Linktree): notifikasi, akses cepat ke halaman
+                publik/Pengaturan, & tautan publik supaya tidak perlu buka
+                sidebar tiap kali. "Enhance" (AI) SENGAJA tidak dibuat --
+                Jeonme belum punya fitur AI enhance apa pun (lihat keputusan
+                yang disepakati). */}
+            <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-border bg-white/90 px-6 py-3 backdrop-blur md:flex">
+              <p className="font-heading text-lg font-bold text-ink">{currentPageLabel(pathname)}</p>
+              <div className="flex items-center gap-2">
+                {username && (
+                  <a
+                    href={`https://jeonme.com/${username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Lihat halaman publik"
+                    aria-label="Lihat halaman publik"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                  >
+                    <IconExternal className="h-[18px] w-[18px]" />
+                  </a>
+                )}
+                <Link
+                  href="/dashboard/settings"
+                  title="Pengaturan"
+                  aria-label="Pengaturan"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                >
+                  <IconSettings className="h-[18px] w-[18px]" />
+                </Link>
+                <NotificationBell />
+                {username && (
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    title="Salin tautan halaman publik"
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                  >
+                    jeonme.com/{username}
+                    <IconCopy className="h-3.5 w-3.5" />
+                    {copied && <span className="text-primary">Tersalin!</span>}
+                  </button>
+                )}
+              </div>
+            </header>
 
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </div>
