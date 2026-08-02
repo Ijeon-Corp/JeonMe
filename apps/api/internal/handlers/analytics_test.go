@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/jeonme/api/internal/database"
 )
@@ -79,6 +80,70 @@ func TestAnalytics_TrackAndSummarize(t *testing.T) {
 	}
 	if len(resp.TopReferrers) != 1 || resp.TopReferrers[0].Referrer != "https://instagram.com" {
 		t.Errorf("TopReferrers = %+v, ekspektasi 1 entri instagram.com", resp.TopReferrers)
+	}
+}
+
+// Kartu ringkasan ala referensi ("Total Order"/"Total Sales", redesain
+// Dashboard) -- total_orders/total_revenue_idr harus menghitung SEMUA
+// pesanan lunas dalam rentang, bukan cuma 5 produk terlaris seperti
+// TopProducts. weekly_revenue harus selalu 7 entri (hari ini termasuk
+// pesanan yang baru dibuat), totalnya cocok dengan jumlah pesanan.
+func TestAnalytics_Summary_IncludesOrderTotalsAndWeeklyRevenue(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	analytics, auth := newTestAnalyticsHandler(t)
+	userID := registerTestUser(t, auth)
+
+	productID := uuid.NewString()
+	if _, err := analytics.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, file_key, is_active)
+		VALUES ($1, $2, 'Produk Analytics Test', 40000, 'products/test/file.pdf', true)
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup produk test: %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		orderID := uuid.NewString()
+		if _, err := analytics.DB.Exec(t.Context(), `
+			INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference)
+			VALUES ($1, $2, 'buyer@example.com', 40000, 'paid', $3)
+		`, orderID, productID, "jeonme-order-"+orderID); err != nil {
+			t.Fatalf("gagal setup order test: %v", err)
+		}
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/analytics/summary", analytics.GetSummary)
+
+	rec := doJSON(t, router, http.MethodGet, "/analytics/summary", nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var resp analyticsSummaryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode summary: %v", err)
+	}
+	if resp.TotalOrders != 2 {
+		t.Errorf("TotalOrders = %d, ekspektasi 2", resp.TotalOrders)
+	}
+	if resp.TotalRevenueIDR != 80000 {
+		t.Errorf("TotalRevenueIDR = %d, ekspektasi 80000", resp.TotalRevenueIDR)
+	}
+	if len(resp.WeeklyRevenue) != 7 {
+		t.Fatalf("WeeklyRevenue punya %d entri, ekspektasi 7", len(resp.WeeklyRevenue))
+	}
+	if resp.WeeklyRevenueTotalIDR != 80000 {
+		t.Errorf("WeeklyRevenueTotalIDR = %d, ekspektasi 80000", resp.WeeklyRevenueTotalIDR)
+	}
+	todayHasOrders := false
+	for _, pt := range resp.WeeklyRevenue {
+		if pt.RevenueIDR == 80000 && pt.OrdersCount == 2 {
+			todayHasOrders = true
+		}
+	}
+	if !todayHasOrders {
+		t.Errorf("WeeklyRevenue = %+v, ekspektasi salah satu hari (hari ini) mencatat 2 pesanan/80000", resp.WeeklyRevenue)
 	}
 }
 

@@ -204,17 +204,37 @@ type deviceBreakdown struct {
 	Count      int64  `json:"count"`
 }
 
+// revenuePoint -- dipakai widget "Ringkasan Pendapatan Minggu Ini" (Modul
+// Dashboard, redesain ala referensi admin template pengguna). SELALU 7 hari
+// terakhir (rolling), TIDAK mengikuti range_days/from-to yang dipilih di
+// bagian lain halaman -- widget ini sengaja mandiri, sama seperti "Income
+// Overview" pada referensi yang independen dari toggle Month/Week grafik
+// pengunjung di sebelahnya.
+type revenuePoint struct {
+	Date        string `json:"date"`
+	OrdersCount int64  `json:"orders_count"`
+	RevenueIDR  int64  `json:"revenue_idr"`
+}
+
 type analyticsSummaryResponse struct {
 	TotalViews      int64             `json:"total_views"`
 	TotalClicks     int64             `json:"total_clicks"`
-	DailySeries     []dailyPoint      `json:"daily_series"`
-	TopLinks        []topLink         `json:"top_links"`
-	TopProducts     []topProduct      `json:"top_products"`
-	TopReferrers    []topReferrer     `json:"top_referrers"`
-	DeviceBreakdown []deviceBreakdown `json:"device_breakdown"`
-	RangeDays       int               `json:"range_days"`
-	FromDate        string            `json:"from_date"`
-	ToDate          string            `json:"to_date"`
+	// TotalOrders/TotalRevenueIDR -- pesanan LUNAS ("paid") dalam rentang yang
+	// sama seperti TotalViews/TotalClicks di atas, dipakai kartu ringkasan ala
+	// referensi ("Total Order"/"Total Sales"). Beda dari TopProducts.RevenueIDR
+	// yang cuma menjumlah 5 produk terlaris -- ini total SEMUA produk.
+	TotalOrders           int64             `json:"total_orders"`
+	TotalRevenueIDR       int64             `json:"total_revenue_idr"`
+	DailySeries           []dailyPoint      `json:"daily_series"`
+	TopLinks              []topLink         `json:"top_links"`
+	TopProducts           []topProduct      `json:"top_products"`
+	TopReferrers          []topReferrer     `json:"top_referrers"`
+	DeviceBreakdown       []deviceBreakdown `json:"device_breakdown"`
+	WeeklyRevenue         []revenuePoint    `json:"weekly_revenue"`
+	WeeklyRevenueTotalIDR int64             `json:"weekly_revenue_total_idr"`
+	RangeDays             int               `json:"range_days"`
+	FromDate              string            `json:"from_date"`
+	ToDate                string            `json:"to_date"`
 }
 
 // GetSummary — REQ-F-602/603 + No.86 (rentang tanggal kustom & breakdown
@@ -357,7 +377,63 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 		}
 	}
 
+	// Kartu ringkasan ala referensi ("Total Order"/"Total Sales") -- pesanan
+	// LUNAS pada rentang [from, to] yang SAMA seperti views/clicks di atas.
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(*), COALESCE(SUM(o.amount_idr), 0)
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE p.user_id = $1 AND o.status = 'paid' AND o.created_at BETWEEN $2 AND $3
+	`, userID, from, to).Scan(&resp.TotalOrders, &resp.TotalRevenueIDR); err != nil {
+		return analyticsSummaryResponse{}, errGagalHitungRingkasan
+	}
+
+	resp.WeeklyRevenue, resp.WeeklyRevenueTotalIDR = h.computeWeeklyRevenue(ctx, userID)
+
 	return resp, nil
+}
+
+// computeWeeklyRevenue -- widget "Ringkasan Pendapatan Minggu Ini", SELALU 7
+// hari terakhir (rolling dari hari ini), lihat catatan lingkup di
+// revenuePoint. Hari tanpa pesanan lunas tetap muncul dengan angka 0 (bukan
+// dilewati) supaya grafik batang selalu tampil 7 batang penuh.
+func (h *AnalyticsHandler) computeWeeklyRevenue(ctx context.Context, userID string) ([]revenuePoint, int64) {
+	to := time.Now()
+	from := to.AddDate(0, 0, -6) // 6 hari lalu s/d hari ini = 7 hari
+	fromDay := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+
+	byDate := map[string]revenuePoint{}
+	for i := 0; i < 7; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		byDate[d] = revenuePoint{Date: d}
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT date_trunc('day', o.created_at)::date AS day, COUNT(*), COALESCE(SUM(o.amount_idr), 0)
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE p.user_id = $1 AND o.status = 'paid' AND o.created_at >= $2
+		GROUP BY day ORDER BY day ASC
+	`, userID, fromDay)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var d time.Time
+			var pt revenuePoint
+			if err := rows.Scan(&d, &pt.OrdersCount, &pt.RevenueIDR); err == nil {
+				pt.Date = d.Format("2006-01-02")
+				byDate[pt.Date] = pt
+			}
+		}
+	}
+
+	series := make([]revenuePoint, 0, 7)
+	var total int64
+	for i := 0; i < 7; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		pt := byDate[d]
+		series = append(series, pt)
+		total += pt.RevenueIDR
+	}
+	return series, total
 }
 
 // ExportDailyCSV — No.86: ekspor rentang tanggal yang sama seperti GetSummary

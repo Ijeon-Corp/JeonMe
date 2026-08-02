@@ -611,6 +611,17 @@ export function IconShare({ className }: IconProps) {
   );
 }
 
+// IconTrendArrow -- badge tren kartu ringkasan Dashboard (redesain ala
+// referensi admin template). Diputar 180 derajat lewat className pemanggil
+// untuk tren turun, bukan path SVG terpisah.
+export function IconTrendArrow({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M5 15 13 7m0 0h-5m5 0v5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconPencil({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

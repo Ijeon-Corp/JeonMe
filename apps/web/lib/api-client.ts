@@ -1770,14 +1770,29 @@ export interface DeviceBreakdown {
   count: number;
 }
 
+export interface RevenuePoint {
+  date: string;
+  orders_count: number;
+  revenue_idr: number;
+}
+
 export interface AnalyticsSummary {
   total_views: number;
   total_clicks: number;
+  // total_orders/total_revenue_idr -- pesanan lunas pada rentang yang sama
+  // seperti total_views/total_clicks (redesain Dashboard ala referensi
+  // admin template, kartu "Total Order"/"Total Sales").
+  total_orders: number;
+  total_revenue_idr: number;
   daily_series: DailyPoint[];
   top_links: TopLink[];
   top_products: TopProduct[];
   top_referrers: TopReferrer[];
   device_breakdown: DeviceBreakdown[];
+  // weekly_revenue -- SELALU 7 hari terakhir (rolling), independen dari
+  // range_days/from-to yang dipilih di bagian lain halaman.
+  weekly_revenue: RevenuePoint[];
+  weekly_revenue_total_idr: number;
   range_days: number;
   from_date: string;
   to_date: string;
