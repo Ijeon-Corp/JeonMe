@@ -248,7 +248,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
@@ -280,9 +280,9 @@ export default function DashboardHomePage() {
                   hari terakhir (lihat catatan lingkup di backend
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
-                <p className="mt-2 font-heading text-2xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+                <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
                   {summary.weekly_revenue.map((d) => (
                     <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
@@ -298,7 +298,7 @@ export default function DashboardHomePage() {
             </section>
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
@@ -311,7 +311,7 @@ export default function DashboardHomePage() {
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
@@ -327,7 +327,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Sumber Trafik Utama</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
@@ -341,7 +341,7 @@ export default function DashboardHomePage() {
               )}
 
               {summary.device_breakdown.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
@@ -380,13 +380,13 @@ export default function DashboardHomePage() {
 
 function StatCard({ icon, label, value, pct }: { icon: React.ReactNode; label: string; value: string; pct: number | null }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}
         {label}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <p className="font-heading text-2xl font-bold text-ink sm:text-3xl">{value}</p>
+        <p className="font-heading text-xl font-bold text-ink">{value}</p>
         <TrendBadge pct={pct} />
       </div>
       <p className="mt-1 text-[11px] text-muted">dibanding periode sebelumnya</p>

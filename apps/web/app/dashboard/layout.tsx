@@ -205,7 +205,7 @@ export default function DashboardLayout({
   const sidebarContent = (
     <>
       <div>
-        <Link href="/dashboard" className="font-heading text-xl font-extrabold text-gradient">
+        <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
           Jeonme
         </Link>
 
@@ -231,7 +231,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <nav className="mt-8 flex flex-col gap-1 text-sm">
+        <nav className="mt-6 flex flex-col gap-1 text-xs">
           {NAV_ITEMS.map((item) => {
             if (item.type === "link") {
               const active = pathname === item.href;
@@ -241,13 +241,13 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
                     active
                       ? "bg-primary text-white shadow-card"
                       : "text-muted hover:bg-primary-subtle hover:text-primary"
                   }`}
                 >
-                  <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                  <Icon className="h-4 w-4 flex-shrink-0" />
                   {item.label}
                 </Link>
               );
@@ -281,13 +281,13 @@ export default function DashboardLayout({
                           key={sub.href}
                           href={sub.href}
                           onClick={() => setMobileOpen(false)}
-                          className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                          className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
                             active
                               ? "bg-primary text-white shadow-card"
                               : "text-muted hover:bg-primary-subtle hover:text-primary"
                           }`}
                         >
-                          <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                          <Icon className="h-4 w-4 flex-shrink-0" />
                           {sub.label}
                         </Link>
                       );
@@ -337,9 +337,9 @@ export default function DashboardLayout({
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
+          className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
         >
-          <IconLogout className="h-[18px] w-[18px]" />
+          <IconLogout className="h-4 w-4" />
           Keluar
         </button>
       </div>
@@ -403,9 +403,9 @@ export default function DashboardLayout({
                 sidebar tiap kali. "Enhance" (AI) SENGAJA tidak dibuat --
                 Jeonme belum punya fitur AI enhance apa pun (lihat keputusan
                 yang disepakati). */}
-            <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-border bg-white/90 px-6 py-3 backdrop-blur md:flex">
-              <p className="font-heading text-lg font-bold text-ink">{currentPageLabel(pathname)}</p>
-              <div className="flex items-center gap-2">
+            <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-border bg-white/90 px-6 py-2.5 backdrop-blur md:flex">
+              <p className="font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
+              <div className="flex items-center gap-1.5">
                 {username && (
                   <a
                     href={`https://jeonme.com/${username}`}
@@ -413,18 +413,18 @@ export default function DashboardLayout({
                     rel="noopener noreferrer"
                     title="Lihat halaman publik"
                     aria-label="Lihat halaman publik"
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
                   >
-                    <IconExternal className="h-[18px] w-[18px]" />
+                    <IconExternal className="h-4 w-4" />
                   </a>
                 )}
                 <Link
                   href="/dashboard/settings"
                   title="Pengaturan"
                   aria-label="Pengaturan"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
                 >
-                  <IconSettings className="h-[18px] w-[18px]" />
+                  <IconSettings className="h-4 w-4" />
                 </Link>
                 <NotificationBell />
                 {username && (
@@ -432,10 +432,10 @@ export default function DashboardLayout({
                     type="button"
                     onClick={handleCopyLink}
                     title="Salin tautan halaman publik"
-                    className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
                   >
                     jeonme.com/{username}
-                    <IconCopy className="h-3.5 w-3.5" />
+                    <IconCopy className="h-3 w-3" />
                     {copied && <span className="text-primary">Tersalin!</span>}
                   </button>
                 )}

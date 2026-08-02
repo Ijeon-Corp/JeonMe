@@ -817,7 +817,7 @@ export default function DashboardLinksPage() {
             setAddSearch("");
             setAddModalOpen(true);
           }}
-          className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
+          className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
         >
           <IconPlus className="h-5 w-5" />
           Tambah
@@ -968,7 +968,7 @@ export default function DashboardLinksPage() {
               onDragStart={() => setDragId(link.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(link.id)}
-              className={`flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-card transition-colors ${
+              className={`flex flex-col gap-2.5 rounded-2xl border bg-white p-3.5 shadow-card transition-colors ${
                 link.is_active ? "border-border" : "border-border opacity-60"
               }`}
             >
@@ -981,14 +981,14 @@ export default function DashboardLinksPage() {
                       src={link.custom_icon_url}
                       alt=""
                       title="Ikon kustom"
-                      className="h-9 w-9 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                      className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
                     />
                   ) : (
                     (() => {
                       const { Icon, label, badgeClass } = detectLinkIcon(link.url);
                       return (
-                        <span title={label} className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
-                          <Icon className="h-4 w-4" />
+                        <span title={label} className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
+                          <Icon className="h-3.5 w-3.5" />
                         </span>
                       );
                     })()
@@ -1002,11 +1002,11 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-base font-bold text-ink focus:outline-none"
+                      className="w-full rounded-md border border-primary px-2 py-1 text-sm font-bold text-ink focus:outline-none"
                     />
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-base font-bold text-ink">{link.title}</p>
+                      <p className="truncate text-sm font-bold text-ink">{link.title}</p>
                       {link.block_type === "link" && (
                         <button
                           type="button"
@@ -1029,14 +1029,14 @@ export default function DashboardLinksPage() {
                   <ShareButton
                     title={link.title}
                     url={link.url}
-                    className="!h-9 !w-9 flex-shrink-0 !rounded-lg !bg-transparent !text-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
+                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
                   />
                 )}
                 <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={`Aktifkan ${link.title}`} />
               </div>
 
               {link.block_type === "link" && (
-                <div className="ml-12 flex items-center gap-1.5">
+                <div className="ml-11 flex items-center gap-1.5">
                   {editingField?.id === link.id && editingField.field === "url" ? (
                     <input
                       type="url"
@@ -1059,14 +1059,14 @@ export default function DashboardLinksPage() {
               )}
 
               {/* Baris ikon aksi -- jadwal/kunci (khusus tautan biasa), jumlah klik, hapus. */}
-              <div className="ml-12 flex items-center gap-2">
+              <div className="ml-11 flex items-center gap-2">
                 {link.block_type === "link" && (
                   <>
                     <button
                       type="button"
                       onClick={() => openScheduleForm(link)}
                       title="Jadwalkan tampil/sembunyi"
-                      className={`flex h-9 w-9 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         link.starts_at && link.ends_at ? "text-primary" : "text-muted"
                       }`}
                     >
@@ -1076,7 +1076,7 @@ export default function DashboardLinksPage() {
                       type="button"
                       onClick={() => openLockForm(link)}
                       title="Kunci tautan"
-                      className={`flex h-9 w-9 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         link.lock_type ? "text-primary" : "text-muted"
                       }`}
                     >
@@ -1087,7 +1087,7 @@ export default function DashboardLinksPage() {
                         publik. */}
                     <label
                       title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
-                      className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         link.custom_icon_url ? "text-primary" : "text-muted"
                       }`}
                     >
@@ -1109,7 +1109,7 @@ export default function DashboardLinksPage() {
                         type="button"
                         onClick={() => handleRemoveIcon(link)}
                         title="Hapus ikon kustom (kembali ke deteksi otomatis)"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
                       >
                         <IconClose className="h-4 w-4" />
                       </button>
@@ -1126,15 +1126,15 @@ export default function DashboardLinksPage() {
                   </button>
                 )}
                 <div className="flex-1" />
-                <span className="flex items-center gap-1.5 text-sm text-muted">
-                  <IconChart className="h-4 w-4" />
+                <span className="flex items-center gap-1.5 text-xs text-muted">
+                  <IconChart className="h-3.5 w-3.5" />
                   {link.click_count.toLocaleString("id-ID")} klik
                 </span>
                 <button
                   type="button"
                   onClick={() => handleDelete(link.id)}
                   title="Hapus tautan"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
                 >
                   <IconTrash className="h-4 w-4" />
                 </button>
@@ -1142,7 +1142,7 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (
-                  <div className="ml-12 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
                       <input
                         type="datetime-local"
@@ -1178,7 +1178,7 @@ export default function DashboardLinksPage() {
                 ) : (
                   link.starts_at &&
                   link.ends_at && (
-                    <div className="ml-12 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
+                    <div className="ml-11 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
                       <span className="text-[11px] font-semibold text-accent-dark">
                         Terjadwal {new Date(link.starts_at).toLocaleString("id-ID")} s/d {new Date(link.ends_at).toLocaleString("id-ID")}
                       </span>
@@ -1191,7 +1191,7 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (lockEditId === link.id ? (
-                  <div className="ml-12 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe")}
@@ -1241,7 +1241,7 @@ export default function DashboardLinksPage() {
                   </div>
                 ) : (
                   link.lock_type && (
-                    <div className="ml-12 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
+                    <div className="ml-11 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
                       <span className="text-[11px] font-semibold text-secondary-dark">
                         Terkunci -- {link.lock_type === "code" ? "kode akses" : link.lock_type === "age" ? `usia ${link.lock_min_age ?? 18}+` : "wajib subscribe"}
                       </span>
@@ -1253,7 +1253,7 @@ export default function DashboardLinksPage() {
                 ))}
 
               {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps") && contentEditId === link.id && (
-                <div className="ml-12 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                   {link.block_type === "video" ? (
                     <input
                       type="url"

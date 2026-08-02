@@ -3,7 +3,6 @@
 import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
 import { IconExternal } from "@/components/icons";
 import PagePreview, { toPreviewData } from "@/components/PagePreview";
-import PhoneFrame from "@/components/PhoneFrame";
 
 // Kolom pratinjau langsung yang dipakai bersama oleh ketiga halaman di bawah
 // "Halaman Saya" (Tautan/Produk/Desain) -- sebelumnya blok ini terduplikasi
@@ -33,14 +32,22 @@ export default function LivePreviewPanel({
           </a>
         )}
       </div>
+      {/* Permintaan langsung pengguna: kecilkan ukuran pratinjau, hilangkan
+          bingkai ala HP (notch/bezel) -- cukup tampilan langsung halaman
+          publik apa adanya. Tetap dibatasi tinggi (h-[480px], turun dari
+          640px) + scroll internal untuk halaman panjang, tapi scrollbar-nya
+          disembunyikan (scroll tetap berfungsi lewat mouse wheel/sentuh,
+          cuma indikatornya yang dihilangkan) -- tinggi PASTI (bukan
+          max-height) supaya "min-h-full" di PagePreview tetap valid sebagai
+          dasar persentase, sama seperti alasan PhoneFrame sebelumnya. */}
       {page && (
-        <PhoneFrame>
+        <div className="mx-auto h-[480px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <PagePreview
             interactive={false}
             rootClassName="min-h-full"
             data={toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products)}
           />
-        </PhoneFrame>
+        </div>
       )}
       <p className="mt-3 text-center text-[11px] text-muted">
         Menampilkan tautan &amp; produk yang aktif, persis seperti yang dilihat pengunjung.

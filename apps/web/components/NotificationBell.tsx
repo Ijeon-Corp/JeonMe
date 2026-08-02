@@ -95,9 +95,9 @@ export default function NotificationBell() {
         onClick={handleToggle}
         title="Notifikasi"
         aria-label="Notifikasi"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
       >
-        <IconBell className="h-[18px] w-[18px]" />
+        <IconBell className="h-4 w-4" />
         {unreadCount > 0 && (
           <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
