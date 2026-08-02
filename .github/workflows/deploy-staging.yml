@@ -127,6 +127,24 @@ jobs:
             cd /opt/jeonme-staging
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            # Modul Settings §3 (commit 4baaad3) memperkenalkan ENCRYPTION_KEY
+            # (wajib PERSIS 32 byte, fail-fast lewat mustGetEnvInProd begitu
+            # APP_ENV=production -- .env VPS ini dibuat dari .env.example yang
+            # APP_ENV-nya memang "production" walau ini staging, lihat
+            # CICD-GUIDE.md §"variabel .env"). Var ini TIDAK PERNAH ada
+            # sebelumnya di .env VPS karena baru diperkenalkan commit ini --
+            # tanpa langkah ini API container crash-loop terus-menerus saat
+            # startup (log.Fatalf "ENCRYPTION_KEY belum diset"), membuat health
+            # check gagal walau migrasi & deploy sendiri "sukses" (compose up
+            # -d tidak menunggu container benar-benar tetap hidup).
+            # Idempotent: hanya digenerate SEKALI, nilai berikutnya dipertahankan
+            # permanen di .env (mengganti key akan membuat payout_methods yang
+            # sudah terenkripsi tidak bisa didekripsi lagi).
+            if ! grep -q '^ENCRYPTION_KEY=' .env; then
+              GENERATED_KEY=$(openssl rand -hex 16)
+              echo "ENCRYPTION_KEY=${GENERATED_KEY}" >> .env
+              echo "::warning::ENCRYPTION_KEY tidak ditemukan di .env staging -- sudah digenerate otomatis (32 byte acak) dan disimpan permanen."
+            fi
             docker compose -f docker-compose.staging.yml pull api
             docker compose -f docker-compose.staging.yml run --rm api migrate up
 

@@ -133,6 +133,19 @@ jobs:
             cd /opt/jeonme-production
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            # Sama seperti deploy-staging.yml: Modul Settings §3 (commit
+            # 4baaad3) memperkenalkan ENCRYPTION_KEY (wajib PERSIS 32 byte,
+            # fail-fast di production lewat mustGetEnvInProd) -- var ini belum
+            # pernah ada di .env VPS manapun sebelum commit ini. Tanpa langkah
+            # ini API container akan crash-loop begitu rilis ini sampai di
+            # production, persis insiden yang terjadi di staging.
+            # Idempotent -- hanya digenerate SEKALI, mengganti key setelahnya
+            # akan membuat payout_methods yang sudah terenkripsi tak terbaca.
+            if ! grep -q '^ENCRYPTION_KEY=' .env; then
+              GENERATED_KEY=$(openssl rand -hex 16)
+              echo "ENCRYPTION_KEY=${GENERATED_KEY}" >> .env
+              echo "::warning::ENCRYPTION_KEY tidak ditemukan di .env production -- sudah digenerate otomatis (32 byte acak) dan disimpan permanen."
+            fi
             docker compose -f docker-compose.prod.yml pull api
             docker compose -f docker-compose.prod.yml run --rm api migrate up
 
