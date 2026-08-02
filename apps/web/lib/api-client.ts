@@ -453,6 +453,9 @@ export const THEME_PRESETS = [
   "cube",
   "relief",
   "facet",
+  "flow",
+  "pulse",
+  "drift",
 ] as const;
 
 export function getMyPage() {

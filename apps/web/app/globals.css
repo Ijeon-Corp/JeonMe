@@ -153,6 +153,58 @@ h1, h2, h3, h4, h5 {
   transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-4px);
 }
 
+/* "Live Wallpaper" -- permintaan langsung pengguna (redesain tab 3D jadi
+   "3D/Live"): latar tema publik yang BERGERAK, bukan cuma gambar/gradien
+   diam -- lihat catatan lingkup penuh di page-themes.ts PAGE_THEMES
+   (flow/pulse/drift). Dipasang lewat className biasa (BUKAN Tailwind,
+   cukup CSS global) di properti `page` PageTheme, aman dipakai bersama
+   className Tailwind lain di elemen yang sama. Otomatis dihentikan oleh
+   blok prefers-reduced-motion di bawah, sama seperti animasi lain di file
+   ini -- tidak perlu penanganan terpisah.
+*/
+.theme-live-flow {
+  background-image: linear-gradient(120deg, #075985, #3730a3, #6b21a8, #075985);
+  background-size: 300% 300%;
+  animation: liveFlowShift 14s ease infinite;
+}
+
+@keyframes liveFlowShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.theme-live-pulse {
+  background-color: #0a0a14;
+  background-image: radial-gradient(circle at 15% 12%, rgba(139, 92, 246, 0.5) 0%, transparent 55%);
+  background-repeat: no-repeat;
+  background-position: 15% 12%;
+  animation: livePulseBreathe 6s ease-in-out infinite;
+}
+
+@keyframes livePulseBreathe {
+  0%, 100% { background-size: 100% 100%; }
+  50% { background-size: 160% 160%; }
+}
+
+.theme-live-drift {
+  background-color: #060a18;
+  background-image:
+    radial-gradient(1.6px 1.6px at 20px 30px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.6px 1.6px at 90px 80px, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.2px 1.2px at 150px 40px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1.2px 1.2px at 60px 130px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.4px 1.4px at 180px 160px, rgba(255, 255, 255, 0.4), transparent);
+  background-repeat: repeat;
+  background-size: 220px 220px;
+  animation: liveDriftMove 45s linear infinite;
+}
+
+@keyframes liveDriftMove {
+  from { background-position: 0 0; }
+  to { background-position: -220px -220px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

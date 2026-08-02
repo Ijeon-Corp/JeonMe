@@ -88,6 +88,9 @@ export type PageThemeName =
   | "cube"
   | "relief"
   | "facet"
+  | "flow"
+  | "pulse"
+  | "drift"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -122,7 +125,25 @@ export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
 // "3D" di sini berarti ILUSI kedalaman lewat teknik CSS (bola mengkilap,
 // logam metalik, kubus isometrik, kartu timbul ala neumorphism, permukaan
 // bersegi), konsisten dengan preset CSS-murni lain (grid/mesh/aurora/dst).
-export const THREE_D_THEME_NAMES: Exclude<PageThemeName, "custom">[] = ["sphere", "chrome", "cube", "relief", "facet"];
+//
+// Permintaan susulan: "tambahkan live walpaper di tab 3d dan ubah nama
+// tab nya jadi 3d/live" -- tab tetap SATU (tidak dipecah tab keempat),
+// cuma labelnya diubah "3D/Live" (lihat design/theme/page.tsx) supaya
+// mencakup 3 preset baru (flow/pulse/drift) yang latarnya BERGERAK
+// (CSS @keyframes, lihat globals.css) -- beda dari 5 preset "3D" murni
+// statis di atas. Otomatis dihentikan oleh prefers-reduced-motion
+// (sudah ada secara global di globals.css, tidak perlu penanganan khusus
+// di sini).
+export const THREE_D_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
+  "sphere",
+  "chrome",
+  "cube",
+  "relief",
+  "facet",
+  "flow",
+  "pulse",
+  "drift",
+];
 
 export type PageTheme = {
   label: string;
@@ -1816,6 +1837,77 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       backgroundImage:
         "linear-gradient(120deg, #1e1b4b 0%, #1e1b4b 20%, #312e81 20%, #312e81 38%, #4c1d95 38%, #4c1d95 55%, #1e3a8a 55%, #1e3a8a 72%, #581c87 72%, #581c87 88%, #0d0d14 88%, #0d0d14 100%)",
     },
+  },
+  // 3 preset "Live Wallpaper" (permintaan susulan: "tambahkan live walpaper
+  // di tab 3d dan ubah nama tab nya jadi 3d/live") -- BEDA dari 5 preset
+  // "3D" di atas: latar BERGERAK lewat CSS @keyframes (lihat globals.css
+  // ".theme-live-*"), bukan gambar statis diam. Kelas animasinya ditaruh
+  // di `page` (digabung className biasa, sama seperti kelas Tailwind lain)
+  // -- TIDAK ada properti PageTheme baru yang perlu ditambahkan, murni
+  // menumpangi mekanisme yang sudah ada. Warna/posisi highlight dipilih
+  // dengan pelajaran sama seperti preset 3D: dasar gelap konsisten +
+  // titik terang di pojok (bukan tengah-atas tempat avatar/nama/bio duduk)
+  // supaya teks putih tetap terbaca SEPANJANG animasi, bukan cuma di satu
+  // frame.
+  flow: {
+    label: "Flow",
+    page: "theme-live-flow",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#3730a3",
+    previewBg: "linear-gradient(120deg, #075985, #3730a3, #6b21a8, #075985)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  pulse: {
+    label: "Pulse",
+    page: "theme-live-pulse",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#8b5cf6",
+    previewBg: "radial-gradient(circle at 15% 12%, rgba(139,92,246,0.5) 0%, transparent 55%), #0a0a14",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+  },
+  drift: {
+    label: "Drift",
+    page: "theme-live-drift",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#060a18",
+    previewBg: "#060a18",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
   },
 };
 

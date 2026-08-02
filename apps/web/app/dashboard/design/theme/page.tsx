@@ -91,7 +91,7 @@ export default function DesignThemePage() {
               tab === "3d" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
-            3D
+            3D/Live
           </button>
         </div>
 
@@ -124,6 +124,12 @@ export default function DesignThemePage() {
           )}
           {(tab === "gradien" ? GRADIENT_PRESETS : tab === "wallpaper" ? WALLPAPER_PRESETS : THREE_D_PRESETS).map((theme) => {
             const meta = PAGE_THEMES[theme];
+            // "Live Wallpaper" (permintaan susulan): 3 preset flow/pulse/drift
+            // pakai kelas CSS animasi (bukan style inline biasa) di properti
+            // `page` -- pakai kelas yang SAMA di kartu galeri ini supaya
+            // kreator lihat pratinjau BERGERAK sungguhan sebelum memilih,
+            // bukan cuma cuplikan diam dari previewBg.
+            const isLiveWallpaper = meta.page.includes("theme-live-");
             return (
               <ThemeTile
                 key={theme}
@@ -131,7 +137,11 @@ export default function DesignThemePage() {
                 onClick={() => handlePageSettingChange({ theme, custom_style_override: false })}
                 label={meta.label}
               >
-                <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
+                <div
+                  className={`absolute inset-0 ${isLiveWallpaper ? meta.page : ""}`}
+                  style={isLiveWallpaper ? undefined : { background: meta.previewBg }}
+                  aria-hidden
+                />
                 <span
                   className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-ink"}`}
                   aria-hidden

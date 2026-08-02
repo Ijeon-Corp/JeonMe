@@ -625,6 +625,9 @@ var availableThemes = map[string]bool{
 	// beberapa tema 3d") -- lihat catatan lingkup di THREE_D_THEME_NAMES
 	// (apps/web/lib/page-themes.ts).
 	"sphere": true, "chrome": true, "cube": true, "relief": true, "facet": true,
+	// 3 preset "Live Wallpaper" (permintaan susulan: "tambahkan live
+	// walpaper di tab 3d") -- latar bergerak lewat CSS @keyframes.
+	"flow": true, "pulse": true, "drift": true,
 	"custom": true,
 }
 
