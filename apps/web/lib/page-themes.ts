@@ -83,6 +83,11 @@ export type PageThemeName =
   | "cascade"
   | "tide"
   | "skyline"
+  | "sphere"
+  | "chrome"
+  | "cube"
+  | "relief"
+  | "facet"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -106,6 +111,18 @@ export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "tide",
   "skyline",
 ];
+
+// THREE_D_THEME_NAMES -- permintaan langsung pengguna: "buatkan beberapa
+// tema 3d tambahkan di tab baru saja disamping tema walpaper" -- tab
+// GALERI ketiga di halaman Desain (dashboard/design/theme/page.tsx),
+// persis di sebelah tab "Wallpaper". Sama seperti WALLPAPER_THEME_NAMES,
+// daftar ini SATU-SATUNYA sumber kebenaran pengelompokan tab -- semuanya
+// MURNI CSS (gradient/box-shadow/pattern), TANPA aset gambar/model 3D
+// sungguhan (tidak ada rendering WebGL/Three.js di proyek ini) --
+// "3D" di sini berarti ILUSI kedalaman lewat teknik CSS (bola mengkilap,
+// logam metalik, kubus isometrik, kartu timbul ala neumorphism, permukaan
+// bersegi), konsisten dengan preset CSS-murni lain (grid/mesh/aurora/dst).
+export const THREE_D_THEME_NAMES: Exclude<PageThemeName, "custom">[] = ["sphere", "chrome", "cube", "relief", "facet"];
 
 export type PageTheme = {
   label: string;
@@ -1646,6 +1663,159 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "url('/wallpapers/kota.jpg') center/cover",
     previewIsDark: true,
     pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  // 5 preset "3D" (permintaan langsung pengguna: "buatkan beberapa tema 3d
+  // tambahkan di tab baru saja disamping tema walpaper") -- lihat catatan
+  // lingkup lengkap di THREE_D_THEME_NAMES: murni CSS, TANPA aset gambar/
+  // render 3D sungguhan. Titik terang/highlight SENGAJA diposisikan di
+  // pojok jauh dari kolom tengah-atas (tempat avatar/nama/bio selalu duduk)
+  // -- pelajaran dari audit kontras menyeluruh sebelumnya (27 Juli 2026)
+  // atas tema gradien vivid lain: stop terlalu terang tepat di area teks
+  // membuat teks putih nyaris tak terbaca.
+  sphere: {
+    // Bola 3D mengkilap -- radial-gradient highlight terang di pojok
+    // kiri-atas (BUKAN tengah, lihat catatan di atas) meniru cahaya
+    // memantul di permukaan bola, meredup cepat ke dasar biru tua gelap.
+    label: "Sphere",
+    page: "bg-[#0a1024]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#1c3f8f",
+    previewBg:
+      "radial-gradient(circle at 22% 18%, #ffffff 0%, #a5c8ff 10%, #4f83e8 32%, #1c3f8f 58%, #0a1024 85%)",
+    previewIsDark: true,
+    pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
+      backgroundImage:
+        "radial-gradient(circle 260px at 8% 6%, rgba(200,225,255,0.55) 0%, rgba(79,131,232,0.22) 40%, transparent 70%)",
+    },
+  },
+  chrome: {
+    // Logam chrome/gunmetal disikat -- pita diagonal berselang gelap-ke-
+    // abu-abu SEDANG (bukan terang/putih) supaya teks putih tetap terbaca
+    // di pita mana pun yang kebetulan jatuh di belakang avatar/nama/bio.
+    label: "Chrome",
+    page: "bg-[#1c1e22]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/70",
+    card: "border border-white/15 bg-white/[0.07] backdrop-blur hover:bg-white/[0.12] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/55",
+    productCard: "border border-white/15 bg-white/[0.07] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#4a4e56",
+    previewBg:
+      "linear-gradient(105deg, #16181c 0%, #3d4148 20%, #1c1e22 35%, #4a4e56 55%, #202226 75%, #34363c 100%)",
+    previewIsDark: true,
+    pageStyle: {
+      fontFamily: "var(--font-custom-roboto-mono)",
+      backgroundImage:
+        "linear-gradient(105deg, #16181c 0%, #3d4148 20%, #1c1e22 35%, #4a4e56 55%, #202226 75%, #34363c 100%)",
+    },
+  },
+  // Kubus isometrik -- pola CSS murni (enam linear-gradient repetitif
+  // bertumpuk pada sudut 30/150/60 derajat) membentuk ilusi susunan kubus
+  // 3D, garis SANGAT tipis (opacity 0.05-0.06) di atas latar terang --
+  // teks tetap text-ink (bukan putih) seperti preset "Grid"/"Air" yang
+  // sudah terbukti aman kontras, pola cuma dekorasi tipis di atasnya.
+  cube: {
+    label: "Cube",
+    page: "bg-[#EDEEF2]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border-2 border-ink bg-white hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/60",
+    productCard: "border-2 border-ink bg-white",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "border-2 border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#EDEEF2",
+    previewBg: "#EDEEF2",
+    previewIsDark: false,
+    pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
+      backgroundImage:
+        "linear-gradient(30deg, rgba(28,43,37,0.06) 12%, transparent 12.5%, transparent 87%, rgba(28,43,37,0.06) 87.5%, rgba(28,43,37,0.06)), linear-gradient(150deg, rgba(28,43,37,0.06) 12%, transparent 12.5%, transparent 87%, rgba(28,43,37,0.06) 87.5%, rgba(28,43,37,0.06)), linear-gradient(30deg, rgba(28,43,37,0.06) 12%, transparent 12.5%, transparent 87%, rgba(28,43,37,0.06) 87.5%, rgba(28,43,37,0.06)), linear-gradient(150deg, rgba(28,43,37,0.06) 12%, transparent 12.5%, transparent 87%, rgba(28,43,37,0.06) 87.5%, rgba(28,43,37,0.06)), linear-gradient(60deg, rgba(28,43,37,0.05) 25%, transparent 25.5%, transparent 75%, rgba(28,43,37,0.05) 75%, rgba(28,43,37,0.05)), linear-gradient(60deg, rgba(28,43,37,0.05) 25%, transparent 25.5%, transparent 75%, rgba(28,43,37,0.05) 75%, rgba(28,43,37,0.05))",
+      backgroundSize: "80px 140px",
+      backgroundPosition: "0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px",
+    },
+  },
+  // Neumorphism/"soft UI" -- kartu terlihat TIMBUL/EMBOSS dari latar lewat
+  // box-shadow berlapis (cahaya terang kiri-atas + bayangan gelap kanan-
+  // bawah, keduanya warna SAMA seperti latar, bukan hitam solid) -- teknik
+  // "3D" yang berbeda dari 4 preset lain (bukan gradient/pola, tapi
+  // bayangan kartu itu sendiri). Latar & warna teks ink/muted sama seperti
+  // preset light lain yang sudah aman kontras (Air/Haven).
+  relief: {
+    label: "Relief",
+    page: "bg-[#E4E9F0]",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border-0 bg-[#E4E9F0] shadow-[6px_6px_14px_rgba(163,177,198,0.55),-6px_-6px_14px_rgba(255,255,255,0.85)] hover:shadow-[8px_8px_18px_rgba(163,177,198,0.55),-8px_-8px_18px_rgba(255,255,255,0.85)] hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-0 bg-[#E4E9F0] shadow-[6px_6px_14px_rgba(163,177,198,0.55),-6px_-6px_14px_rgba(255,255,255,0.85)]",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton:
+      "bg-[#E4E9F0] text-ink font-bold shadow-[4px_4px_10px_rgba(163,177,198,0.55),-4px_-4px_10px_rgba(255,255,255,0.85)] hover:shadow-[6px_6px_14px_rgba(163,177,198,0.55),-6px_-6px_14px_rgba(255,255,255,0.85)]",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#E4E9F0",
+    previewBg: "#E4E9F0",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  // Permukaan bersegi (low-poly/faceted) -- pita diagonal warna keras
+  // (hard-edge, tanpa transisi halus) mensimulasikan bidang-bidang datar
+  // sebuah render 3D low-poly/permata terpotong. Semua warna SENGAJA
+  // tetap gelap (indigo/ungu tua 800-950) supaya teks putih aman di pita
+  // mana pun, tidak seperti gradient halus di tema lain yang perlu diaudit
+  // per-stop -- di sini setiap pita sendiri sudah gelap merata.
+  facet: {
+    label: "Facet",
+    page: "bg-[#0d0d14]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#4c1d95",
+    previewBg:
+      "linear-gradient(120deg, #1e1b4b 0%, #1e1b4b 20%, #312e81 20%, #312e81 38%, #4c1d95 38%, #4c1d95 55%, #1e3a8a 55%, #1e3a8a 72%, #581c87 72%, #581c87 88%, #0d0d14 88%, #0d0d14 100%)",
+    previewIsDark: true,
+    pageStyle: {
+      fontFamily: "var(--font-custom-space-grotesk)",
+      backgroundImage:
+        "linear-gradient(120deg, #1e1b4b 0%, #1e1b4b 20%, #312e81 20%, #312e81 38%, #4c1d95 38%, #4c1d95 55%, #1e3a8a 55%, #1e3a8a 72%, #581c87 72%, #581c87 88%, #0d0d14 88%, #0d0d14 100%)",
+    },
   },
 };
 

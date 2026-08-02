@@ -60,8 +60,8 @@ const NAV_ITEMS: NavEntry[] = [
     type: "group",
     label: "Halaman Saya",
     items: [
-      { href: "/dashboard/links", label: "Tautan", icon: IconLink },
-      { href: "/dashboard/products", label: "Produk", icon: IconBox },
+      { href: "/dashboard/links", label: "Link Bio", icon: IconLink },
+      { href: "/dashboard/products", label: "Toko", icon: IconBox },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
       { href: "/dashboard/custom-domain", label: "Domain Kustom", icon: IconGlobe },
       { href: "/dashboard/pages", label: "Halaman Tambahan", icon: IconGlobe },

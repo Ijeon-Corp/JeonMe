@@ -621,6 +621,10 @@ var availableThemes = map[string]bool{
 	// tema walpaper lagi").
 	"sapphire": true, "opal": true, "quartz": true, "glacier": true, "mirage": true,
 	"canyon": true, "highland": true, "cascade": true, "tide": true, "skyline": true,
+	// 5 preset "3D" murni CSS (permintaan langsung pengguna: "buatkan
+	// beberapa tema 3d") -- lihat catatan lingkup di THREE_D_THEME_NAMES
+	// (apps/web/lib/page-themes.ts).
+	"sphere": true, "chrome": true, "cube": true, "relief": true, "facet": true,
 	"custom": true,
 }
 

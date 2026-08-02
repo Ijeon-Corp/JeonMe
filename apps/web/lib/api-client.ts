@@ -448,6 +448,11 @@ export const THEME_PRESETS = [
   "cascade",
   "tide",
   "skyline",
+  "sphere",
+  "chrome",
+  "cube",
+  "relief",
+  "facet",
 ] as const;
 
 export function getMyPage() {

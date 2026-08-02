@@ -4,15 +4,18 @@ import { useState } from "react";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { THEME_PRESETS } from "@/lib/api-client";
-import { PAGE_THEMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
+import { PAGE_THEMES, THREE_D_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
 import { IconCheck, IconPaintbrush } from "@/components/icons";
 
 // Permintaan langsung pengguna: galeri tema dipisah 2 tab -- "Warna &
 // Gradien" (preset solid/gradien + tile "Custom") dan "Wallpaper" (preset
 // foto asli, lihat WALLPAPER_THEME_NAMES di page-themes.ts, satu-satunya
 // sumber kebenaran pengelompokan supaya tidak dobel daftar di sini).
-const GRADIENT_PRESETS = THEME_PRESETS.filter((t) => !WALLPAPER_THEME_NAMES.includes(t));
+// Tab ketiga "3D" (permintaan susulan, tab baru persis di sebelah
+// "Wallpaper") -- lihat THREE_D_THEME_NAMES untuk catatan lingkup lengkap.
+const GRADIENT_PRESETS = THEME_PRESETS.filter((t) => !WALLPAPER_THEME_NAMES.includes(t) && !THREE_D_THEME_NAMES.includes(t));
 const WALLPAPER_PRESETS = THEME_PRESETS.filter((t) => WALLPAPER_THEME_NAMES.includes(t));
+const THREE_D_PRESETS = THEME_PRESETS.filter((t) => THREE_D_THEME_NAMES.includes(t));
 
 function ThemeTile({
   active,
@@ -46,7 +49,7 @@ function ThemeTile({
 
 export default function DesignThemePage() {
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
-  const [tab, setTab] = useState<"gradien" | "wallpaper">("gradien");
+  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d">("gradien");
 
   if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
 
@@ -81,6 +84,15 @@ export default function DesignThemePage() {
           >
             Wallpaper
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("3d")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "3d" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            3D
+          </button>
         </div>
 
         {/* Kartu galeri portrait ala Linktree: sampel huruf "Aa" di kiri atas
@@ -110,7 +122,7 @@ export default function DesignThemePage() {
               </div>
             </ThemeTile>
           )}
-          {(tab === "gradien" ? GRADIENT_PRESETS : WALLPAPER_PRESETS).map((theme) => {
+          {(tab === "gradien" ? GRADIENT_PRESETS : tab === "wallpaper" ? WALLPAPER_PRESETS : THREE_D_PRESETS).map((theme) => {
             const meta = PAGE_THEMES[theme];
             return (
               <ThemeTile
