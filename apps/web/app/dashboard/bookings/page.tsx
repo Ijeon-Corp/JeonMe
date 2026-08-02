@@ -148,7 +148,6 @@ export default function DashboardBookingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Booking Konsultasi</h1>
       <p className="mt-1 text-sm text-muted">
         Jual sesi konsultasi berbayar dengan slot waktu yang kamu tentukan sendiri -- bentrok jadwal dicegah
         otomatis (slot yang sama tidak bisa dipesan dua orang).

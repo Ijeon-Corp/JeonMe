@@ -93,7 +93,6 @@ export default function DashboardKycPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Verifikasi Rekening (KYC)</h1>
       <p className="mt-1 text-sm text-muted">
         Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeonme. Akun
         yang belum terverifikasi tetap bisa berjualan dan menarik dana -- hanya diproses belakangan.

@@ -688,7 +688,6 @@ export default function DashboardLinksPage() {
     // DesignPageShell.tsx.
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold text-ink">Tautan</h1>
         <p className="mt-1 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

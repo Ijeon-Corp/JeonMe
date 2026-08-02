@@ -93,7 +93,6 @@ export default function DashboardBalancePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Saldo & Penarikan</h1>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

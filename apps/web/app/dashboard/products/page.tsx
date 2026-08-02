@@ -326,7 +326,6 @@ export default function DashboardProductsPage() {
     // lihat catatan lengkap di DesignPageShell.tsx/dashboard/links/page.tsx.
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-bold text-ink">Produk</h1>
         <p className="mt-1 text-sm text-muted">
           Unggah file (pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB) sebelum mengaktifkan produk.
           Tambahkan sampul (jpg/png/webp, maks 5MB) supaya tampil menarik di halaman publik.

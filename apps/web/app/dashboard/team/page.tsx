@@ -151,7 +151,6 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Tim & Kolaborator</h1>
       <p className="mt-1 text-sm text-muted">
         Undang admin/tim kecil untuk membantu kelola tautan, produk, atau desain halamanmu -- mereka TIDAK
         bisa menyentuh saldo, penarikan, verifikasi KYC, atau menghapus akunmu.

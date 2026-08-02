@@ -65,7 +65,6 @@ export default function DashboardBusinessCardPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <h1 className="font-heading text-2xl font-bold text-ink">Kartu Kontak Digital</h1>
       <p className="mt-1 text-sm text-muted">
         Kartu kontak terpisah dari halaman utamamu -- bagikan lewat kode QR, pengunjung bisa langsung menyimpan
         kontakmu ke ponsel (format vCard, kompatibel dengan Kontak iOS &amp; Android) dan (opsional) membagikan

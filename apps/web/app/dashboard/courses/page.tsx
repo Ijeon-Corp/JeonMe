@@ -140,7 +140,6 @@ export default function DashboardCoursesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Kelas & Kursus</h1>
       <p className="mt-1 text-sm text-muted">
         Jual kursus video terstruktur per-bab dengan prasyarat & deskripsi pembelajaran. Video wajib tautan
         YouTube atau TikTok.
