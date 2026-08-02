@@ -2,21 +2,16 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/crypto"
+	"github.com/jeonme/api/internal/payout"
 )
-
-// minPayoutIDR -- PLACEHOLDER bisnis, belum ada keputusan resmi. Rp50.000
-// adalah nilai umum di platform sejenis untuk menghindari biaya transfer
-// bank/e-wallet yang tidak sepadan dengan penarikan nominal kecil.
-const minPayoutIDR = 50_000
 
 // BalanceHandler mengimplementasikan REQ-F-501 (kalkulasi saldo dari
 // ledger_entries), REQ-F-502 (saldo tertahan vs tersedia), REQ-F-503/504
@@ -31,10 +26,11 @@ const minPayoutIDR = 50_000
 type BalanceHandler struct {
 	DB                *pgxpool.Pool
 	HoldingPeriodDays int
+	EncryptionKey     []byte
 }
 
-func NewBalanceHandler(db *pgxpool.Pool, holdingPeriodDays int) *BalanceHandler {
-	return &BalanceHandler{DB: db, HoldingPeriodDays: holdingPeriodDays}
+func NewBalanceHandler(db *pgxpool.Pool, holdingPeriodDays int, encryptionKey []byte) *BalanceHandler {
+	return &BalanceHandler{DB: db, HoldingPeriodDays: holdingPeriodDays, EncryptionKey: encryptionKey}
 }
 
 type balanceResponse struct {
@@ -81,23 +77,22 @@ func (h *BalanceHandler) balanceFor(ctx context.Context, db *pgxpool.Pool, userI
 }
 
 type createPayoutRequest struct {
-	AmountIDR          int64  `json:"amount_idr" binding:"required,min=1"`
-	DestinationAccount string `json:"destination_account" binding:"required"`
+	AmountIDR      int64  `json:"amount_idr" binding:"required,min=1"`
+	PayoutMethodID string `json:"payout_method_id" binding:"required"`
 }
 
-// CreatePayout — REQ-F-503. Rekening/e-wallet tujuan diterima apa adanya
-// dari input pengguna (belum ada validasi bahwa rekening benar-benar milik
-// pemilik akun di luar cross-check nama lewat proses KYC manual, lihat
-// KycHandler No.84) -- status KYC dicatat sebagai snapshot untuk
-// memprioritaskan proses, bukan untuk memvalidasi nomor rekening itu sendiri.
+// CreatePayout — REQ-F-503 + Modul Settings §3 (keputusan pengguna
+// 2026-07-31): penarikan sekarang WAJIB lewat payout_method TERSIMPAN &
+// TERVERIFIKASI (bukan lagi rekening bebas ketik per pengajuan) --
+// nomor rekening didekripsi di sini SEKALI untuk dicatat sebagai snapshot
+// di payouts.destination_account (kolom lama, TIDAK diubah, supaya
+// admin.go & tampilan lain yang membacanya tetap jalan apa adanya), lalu
+// alur inti (kunci saldo, debit ledger, dst) didelegasikan ke
+// internal/payout.Create supaya PERSIS sama dengan jalur auto-withdraw.
 func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 	var req createPayoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if req.AmountIDR < minPayoutIDR {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "minimum penarikan Rp50.000"})
 		return
 	}
 
@@ -106,85 +101,38 @@ func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	tx, err := h.DB.Begin(ctx)
+	var encryptedAccount, accountName string
+	var verified bool
+	err := h.DB.QueryRow(ctx, `
+		SELECT account_number_encrypted, account_name, verified
+		FROM payout_methods WHERE id = $1 AND user_id = $2
+	`, req.PayoutMethodID, userID).Scan(&encryptedAccount, &accountName, &verified)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "metode pembayaran tidak ditemukan"})
 		return
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	// Kunci per-user supaya dua pengajuan penarikan beruntun (atau webhook
-	// pembayaran yang masuk bersamaan) tidak balapan membaca saldo yang sama.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci saldo"})
+	if !verified {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "metode pembayaran ini belum diverifikasi"})
 		return
 	}
 
-	var total, held int64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1`, userID).Scan(&total); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo"})
+	accountNumber, err := crypto.Decrypt(h.EncryptionKey, encryptedAccount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca metode pembayaran"})
 		return
 	}
-	if err := tx.QueryRow(ctx, `
-		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries
-		WHERE user_id = $1 AND type = 'credit' AND created_at > now() - make_interval(days => $2)
-	`, userID, h.HoldingPeriodDays).Scan(&held); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo tertahan"})
-		return
-	}
+	destinationAccount := accountName + " - " + accountNumber
 
-	available := total - held
-	if req.AmountIDR > available {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "saldo tersedia tidak cukup"})
-		return
-	}
-
-	// Snapshot status KYC SAAT pengajuan dibuat (No.84) -- dipakai admin untuk
-	// memprioritaskan antrian proses manual (verified duluan), BUKAN untuk
-	// memblokir penarikan. Default 'unverified' kalau kreator belum pernah
-	// mengajukan KYC sama sekali (belum ada baris di kyc_verifications).
-	var kycStatus string
-	if err := tx.QueryRow(ctx, `
-		SELECT COALESCE((SELECT status FROM kyc_verifications WHERE user_id = $1), 'unverified')
-	`, userID).Scan(&kycStatus); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa status KYC"})
-		return
-	}
-
-	payoutID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO payouts (id, user_id, amount_idr, destination_account, status, requested_at, kyc_status_at_request)
-		VALUES ($1, $2, $3, $4, 'requested', now(), $5)
-	`, payoutID, userID, req.AmountIDR, req.DestinationAccount, kycStatus); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat pengajuan penarikan"})
-		return
-	}
-
-	// Debit langsung dicatat saat PENGAJUAN (bukan saat benar-benar cair) --
-	// supaya saldo yang sama tidak bisa diajukan dua kali sebelum penarikan
-	// pertama selesai diproses. Kalau penarikan gagal, entry ini di-reverse
-	// (lihat TODO di bagian admin/Sprint 6 -- proses disbursement sungguhan
-	// belum ada, jadi status penarikan untuk sekarang tetap "requested"
-	// sampai ditindaklanjuti manual).
-	newBalance := total - req.AmountIDR
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO ledger_entries (id, user_id, type, amount_idr, balance_after, created_at)
-		VALUES ($1, $2, 'debit', $3, $4, now())
-	`, uuid.NewString(), userID, -req.AmountIDR, newBalance); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger penarikan"})
-		return
-	}
-
-	metadata, _ := json.Marshal(gin.H{
-		"amount_idr": req.AmountIDR, "destination_account": req.DestinationAccount, "balance_after": newBalance,
-	})
-	if err := audit.Log(ctx, tx, userID, "payout.requested", "payout", payoutID, metadata); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
-		return
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pengajuan"})
+	payoutID, err := payout.Create(ctx, h.DB, userID, req.AmountIDR, h.HoldingPeriodDays, &req.PayoutMethodID, destinationAccount, "manual")
+	if err != nil {
+		switch {
+		case errors.Is(err, payout.ErrBelowMinimum):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, payout.ErrInsufficientBalance):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat pengajuan penarikan"})
+		}
 		return
 	}
 
@@ -256,7 +204,7 @@ type feeReferenceItem struct {
 }
 
 // feeReferenceTable -- PLACEHOLDER bisnis (belum ada keputusan resmi biaya
-// per kanal Jeonme sendiri, mirip status minPayoutIDR di atas), sumber
+// per kanal Jeonme sendiri, mirip status payout.MinIDR), sumber
 // angka dari riset publik Lynk.id (QRIS ~0.70%, VA flat Rp3-4rb) sebagai
 // estimasi kasar sampai ada kontrak Midtrans/keputusan bisnis resmi.
 // TIDAK dipakai untuk menghitung platform_fee_idr sungguhan di manapun --

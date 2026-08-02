@@ -214,6 +214,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
 		WHERE u.username = $1 AND p.is_primary = true AND p.is_published = true
+			AND u.deactivated_at IS NULL
+			AND NOT EXISTS (SELECT 1 FROM account_deletion_requests d WHERE d.user_id = u.id AND d.status = 'pending')
 	`, username).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
@@ -232,6 +234,41 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	resp.PageType = "bio"
 
 	h.finishPublicPageResponse(c, ctx, "page:"+username, userID, pageID, emailVerified, &resp)
+}
+
+// ResolveUsernameRedirect — Modul Settings §2: dipanggil frontend HANYA
+// setelah GetPublicPage 404, untuk membedakan "benar-benar tidak pernah
+// ada" dari "username lama, pemiliknya sudah ganti nama". Sengaja endpoint
+// TERPISAH (bukan disisipkan ke body 404 GetPublicPage) supaya kontrak
+// respons GetPublicPage yang sudah ada tidak berubah bentuk. Window 90 hari
+// dihitung di query time dari username_history.changed_at, sama seperti
+// checkUsernameAvailable (lihat username.go) yang menegakkan sisi lainnya
+// (anti-squatting) dari aturan yang sama.
+func (h *PageHandler) ResolveUsernameRedirect(c *gin.Context) {
+	oldUsername := c.Param("username")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var newUsername string
+	err := h.DB.QueryRow(ctx, `
+		SELECT u.username
+		FROM username_history h
+		JOIN users u ON u.id = h.user_id
+		WHERE lower(h.old_username) = lower($1) AND h.changed_at > now() - interval '90 days'
+		ORDER BY h.changed_at DESC
+		LIMIT 1
+	`, oldUsername).Scan(&newUsername)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "tidak ada redirect untuk username ini"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa redirect"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"new_username": newUsername})
 }
 
 // GetPublicPageBySlug — No.98 (Sprint 14): diakses tanpa login di
@@ -259,6 +296,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
+			AND u.deactivated_at IS NULL
+			AND NOT EXISTS (SELECT 1 FROM account_deletion_requests d WHERE d.user_id = u.id AND d.status = 'pending')
 	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,

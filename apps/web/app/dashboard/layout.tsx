@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import QRCodeModal from "@/components/QRCodeModal";
+import { ToastProvider } from "@/components/Toast";
+import TwoFactorPrompt from "@/components/TwoFactorPrompt";
+import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import {
   Workspace,
   clearToken,
@@ -331,52 +334,56 @@ export default function DashboardLayout({
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-primary-subtle/30">
-        {/* Sidebar desktop */}
-        <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
-          {sidebarContent}
-        </aside>
+      <ToastProvider>
+        <AccountDeletionBanner />
+        <TwoFactorPrompt />
+        <div className="flex min-h-screen bg-primary-subtle/30">
+          {/* Sidebar desktop */}
+          <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
+            {sidebarContent}
+          </aside>
 
-        {/* Top bar + drawer mobile */}
-        <div className="flex flex-1 flex-col md:contents">
-          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
-            <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
-              Jeonme
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-ink hover:bg-primary-subtle"
-              aria-label="Buka menu"
-            >
-              <IconMenu className="h-5 w-5" />
-            </button>
-          </header>
+          {/* Top bar + drawer mobile */}
+          <div className="flex flex-1 flex-col md:contents">
+            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+              <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
+                Jeonme
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="rounded-lg p-2 text-ink hover:bg-primary-subtle"
+                aria-label="Buka menu"
+              >
+                <IconMenu className="h-5 w-5" />
+              </button>
+            </header>
 
-          {mobileOpen && (
-            <div className="fixed inset-0 z-40 md:hidden">
-              <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-              <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-white p-5 shadow-hero">
-                <button
-                  type="button"
-                  onClick={() => setMobileOpen(false)}
-                  className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
-                  aria-label="Tutup menu"
-                >
-                  <IconClose className="h-5 w-5" />
-                </button>
-                {sidebarContent}
-              </aside>
-            </div>
-          )}
+            {mobileOpen && (
+              <div className="fixed inset-0 z-40 md:hidden">
+                <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
+                <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-white p-5 shadow-hero">
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+                    aria-label="Tutup menu"
+                  >
+                    <IconClose className="h-5 w-5" />
+                  </button>
+                  {sidebarContent}
+                </aside>
+              </div>
+            )}
 
-          <main className="flex-1 p-4 sm:p-6">{children}</main>
+            <main className="flex-1 p-4 sm:p-6">{children}</main>
+          </div>
         </div>
-      </div>
 
-      {qrOpen && username && (
-        <QRCodeModal url={`https://jeonme.com/${username}`} username={username} onClose={() => setQrOpen(false)} />
-      )}
+        {qrOpen && username && (
+          <QRCodeModal url={`https://jeonme.com/${username}`} username={username} onClose={() => setQrOpen(false)} />
+        )}
+      </ToastProvider>
     </AuthGuard>
   );
 }

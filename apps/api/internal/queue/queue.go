@@ -53,6 +53,52 @@ func NewContactFormTask(payload ContactFormPayload) (*asynq.Task, error) {
 	return asynq.NewTask(TypeContactFormNotification, encoded), nil
 }
 
+// TypeAutoWithdrawScan -- Modul Settings §3: auto-withdraw terjadwal.
+// Dijadwalkan HARIAN lewat asynq.Scheduler (lihat main.go runWorker) --
+// task ini sendiri yang memutuskan siapa yang "jatuh tempo" hari ini
+// (weekly/monthly, lihat worker.HandleAutoWithdrawScan), BUKAN cron
+// terpisah per frekuensi, jadi cukup SATU entri scheduler.
+const TypeAutoWithdrawScan = "payout:auto_withdraw_scan"
+
+// NewAutoWithdrawScanTask -- tidak ada payload, task ini scan SEMUA user
+// tiap kali jalan (lihat komentar handler).
+func NewAutoWithdrawScanTask() *asynq.Task {
+	return asynq.NewTask(TypeAutoWithdrawScan, nil)
+}
+
+// TypeAccountPurgeScan -- Modul Settings §6: purge akun yang masa tunggu
+// 14 harinya sudah habis. Dijadwalkan HARIAN lewat asynq.Scheduler (lihat
+// main.go runWorker), pola sama persis dengan TypeAutoWithdrawScan --
+// task ini scan SEMUA account_deletion_requests yang jatuh tempo tiap kali
+// jalan, bukan satu task per permintaan.
+const TypeAccountPurgeScan = "account:purge_scan"
+
+func NewAccountPurgeScanTask() *asynq.Task {
+	return asynq.NewTask(TypeAccountPurgeScan, nil)
+}
+
+// TypeTeamInviteNotification -- Modul Settings §4: kirim email undangan
+// tim. Sengaja ASINKRON (pola sama dengan order.paid/contact_form) supaya
+// lambatnya SMTP tidak pernah membuat CollaboratorHandler.Invite menunggu.
+// Undangan TETAP tercatat & terlihat di "Undangan untuk Saya" (in-app)
+// SEKALIPUN task ini gagal terkirim -- email murni notifikasi tambahan,
+// bukan satu-satunya jalan menemukan undangan (lihat ListInvitesForMe).
+const TypeTeamInviteNotification = "team:invite_notification"
+
+type TeamInvitePayload struct {
+	OwnerUsername     string `json:"owner_username"`
+	CollaboratorEmail string `json:"collaborator_email"`
+	Role              string `json:"role"`
+}
+
+func NewTeamInviteTask(payload TeamInvitePayload) (*asynq.Task, error) {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload undangan tim: %w", err)
+	}
+	return asynq.NewTask(TypeTeamInviteNotification, encoded), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -109,6 +110,9 @@ type createProductRequest struct {
 	Name        string `json:"name" binding:"required,max=200"`
 	Description string `json:"description"`
 	PriceIDR    int64  `json:"price_idr" binding:"required,min=1000"`
+
+	// Modul Settings §3: opsional, lihat collaborator_split.go.
+	CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
 }
 
 // Create — REQ-F-301. Endpoint ini dilindungi middleware.AuthRequired,
@@ -125,11 +129,20 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	splitsJSON := []byte("[]")
+	if len(req.CollaboratorSplits) > 0 {
+		splitsJSON, _ = json.Marshal(req.CollaboratorSplits)
+	}
+
 	id := uuid.NewString()
 	_, err := h.DB.Exec(ctx, `
-		INSERT INTO products (id, user_id, name, description, price_idr, is_active)
-		VALUES ($1, $2, $3, $4, $5, false)
-	`, id, userID, req.Name, req.Description, req.PriceIDR)
+		INSERT INTO products (id, user_id, name, description, price_idr, is_active, collaborator_splits)
+		VALUES ($1, $2, $3, $4, $5, false, $6)
+	`, id, userID, req.Name, req.Description, req.PriceIDR, splitsJSON)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat produk"})
@@ -168,7 +181,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
 			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
-			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf
+			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf, collaborator_splits
 		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false AND is_event = false
 			AND is_course = false AND is_booking = false
 	`, userID)
@@ -179,29 +192,34 @@ func (h *ProductHandler) List(c *gin.Context) {
 	defer rows.Close()
 
 	type item struct {
-		ID                string     `json:"id"`
-		Name              string     `json:"name"`
-		Description       string     `json:"description"`
-		PriceIDR          int64      `json:"price_idr"`
-		IsActive          bool       `json:"is_active"`
-		HasFile           bool       `json:"has_file"`
-		CoverImageURL     string     `json:"cover_image_url"`
-		FlashSalePriceIDR *int64     `json:"flash_sale_price_idr"`
-		FlashSaleStartsAt *time.Time `json:"flash_sale_starts_at"`
-		FlashSaleEndsAt   *time.Time `json:"flash_sale_ends_at"`
-		EffectivePriceIDR int64      `json:"effective_price_idr"`
-		IsFlashSaleActive bool       `json:"is_flash_sale_active"`
-		PwywEnabled       bool       `json:"pwyw_enabled"`
-		PwywMinPriceIDR   *int64     `json:"pwyw_min_price_idr"`
-		WatermarkEnabled  bool       `json:"watermark_enabled"`
-		IsPdf             bool       `json:"is_pdf"`
+		ID                 string              `json:"id"`
+		Name               string              `json:"name"`
+		Description        string              `json:"description"`
+		PriceIDR           int64               `json:"price_idr"`
+		IsActive           bool                `json:"is_active"`
+		HasFile            bool                `json:"has_file"`
+		CoverImageURL      string              `json:"cover_image_url"`
+		FlashSalePriceIDR  *int64              `json:"flash_sale_price_idr"`
+		FlashSaleStartsAt  *time.Time          `json:"flash_sale_starts_at"`
+		FlashSaleEndsAt    *time.Time          `json:"flash_sale_ends_at"`
+		EffectivePriceIDR  int64               `json:"effective_price_idr"`
+		IsFlashSaleActive  bool                `json:"is_flash_sale_active"`
+		PwywEnabled        bool                `json:"pwyw_enabled"`
+		PwywMinPriceIDR    *int64              `json:"pwyw_min_price_idr"`
+		WatermarkEnabled   bool                `json:"watermark_enabled"`
+		IsPdf              bool                `json:"is_pdf"`
+		CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var it item
+		var splitsRaw []byte
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
-			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf); err == nil {
+			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw); err == nil {
+			if len(splitsRaw) > 0 {
+				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
+			}
 			items = append(items, it)
 		}
 	}
@@ -230,6 +248,10 @@ type updateProductRequest struct {
 	EventIsOnline      *bool   `json:"event_is_online"`
 	EventCapacity      *int    `json:"event_capacity" binding:"omitempty,min=1"`
 	ClearEventCapacity bool    `json:"clear_event_capacity"`
+
+	// Modul Settings §3: nil berarti tidak diubah (pola sama dengan field
+	// opsional lain di sini), lihat collaborator_split.go.
+	CollaboratorSplits *[]CollaboratorSplit `json:"collaborator_splits"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -387,6 +409,18 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// Modul Settings §3: divalidasi SEBELUM UPDATE dijalankan -- nil berarti
+	// field ini tidak dikirim sama sekali (tidak diubah), beda dari slice
+	// kosong (`[]`) yang berarti "hapus semua split".
+	var collaboratorSplitsJSON []byte
+	if req.CollaboratorSplits != nil {
+		if err := validateCollaboratorSplits(ctx, h.DB, *req.CollaboratorSplits, userID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		collaboratorSplitsJSON, _ = json.Marshal(*req.CollaboratorSplits)
+	}
+
 	_, err = h.DB.Exec(ctx, `
 		UPDATE products SET
 			name = COALESCE($1, name),
@@ -403,11 +437,12 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			event_ends_at = COALESCE($12, event_ends_at),
 			event_location = COALESCE($13, event_location),
 			event_is_online = COALESCE($14, event_is_online),
-			event_capacity = COALESCE($15, event_capacity)
-		WHERE id = $16
+			event_capacity = COALESCE($15, event_capacity),
+			collaborator_splits = COALESCE($16, collaborator_splits)
+		WHERE id = $17
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
-		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, productID)
+		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ApiError, Balance, FeeBreakdown, Payout, createPayout, getBalance, getFeeBreakdown, listPayouts } from "@/lib/api-client";
+import {
+  ApiError,
+  Balance,
+  FeeBreakdown,
+  Payout,
+  PayoutMethod,
+  createPayout,
+  getBalance,
+  getFeeBreakdown,
+  listPayoutMethods,
+  listPayouts,
+} from "@/lib/api-client";
 import { IconShield, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
   requested: "Diajukan",
@@ -14,21 +26,25 @@ const STATUS_LABEL: Record<Payout["status"], string> = {
 };
 
 export default function DashboardBalancePage() {
+  const { showToast } = useToast();
+
   const [balance, setBalance] = useState<Balance | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
+  const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState("");
-  const [destination, setDestination] = useState("");
+  const [payoutMethodId, setPayoutMethodId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   function reload() {
-    return Promise.all([getBalance(), listPayouts(), getFeeBreakdown()]).then(([b, p, f]) => {
+    return Promise.all([getBalance(), listPayouts(), getFeeBreakdown(), listPayoutMethods()]).then(([b, p, f, m]) => {
       setBalance(b);
       setPayouts(p);
       setFeeBreakdown(f);
+      setPayoutMethods(m);
     });
   }
 
@@ -38,6 +54,16 @@ export default function DashboardBalancePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Modul Settings §3: hanya metode TERVERIFIKASI yang bisa dipakai
+  // menarik dana -- pra-pilih yang is_primary supaya kasus umum (satu
+  // metode, sudah utama) tidak perlu klik tambahan. Dihitung langsung
+  // (bukan disinkronkan lewat effect+setState) supaya tidak memicu
+  // cascading render -- payoutMethodId cuma diisi eksplisit begitu
+  // pengguna mengganti pilihan sendiri di dropdown.
+  const verifiedMethods = payoutMethods.filter((m) => m.verified);
+  const selectedMethodId =
+    payoutMethodId || verifiedMethods.find((m) => m.is_primary)?.id || verifiedMethods[0]?.id || "";
+
   async function handleRequestPayout(e: React.FormEvent) {
     e.preventDefault();
     const amountIDR = Number(amount);
@@ -45,19 +71,19 @@ export default function DashboardBalancePage() {
       setError("Minimum penarikan Rp50.000.");
       return;
     }
-    if (!destination.trim()) {
-      setError("Isi rekening/e-wallet tujuan.");
+    if (!selectedMethodId) {
+      setError("Tambahkan & verifikasi metode pembayaran dulu di Pengaturan > Pembayaran & Penarikan.");
       return;
     }
     setError(null);
     setSubmitting(true);
     try {
-      await createPayout({ amount_idr: amountIDR, destination_account: destination });
+      await createPayout({ amount_idr: amountIDR, payout_method_id: selectedMethodId });
       setAmount("");
-      setDestination("");
       await reload();
+      showToast("Penarikan diajukan.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengajukan penarikan.");
+      showToast(err instanceof ApiError ? err.message : "Gagal mengajukan penarikan.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -135,37 +161,52 @@ export default function DashboardBalancePage() {
       <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
         <p className="mt-1 text-xs text-muted">
-          Minimum Rp50.000. Pastikan nomor rekening/e-wallet tujuan benar.{" "}
+          Minimum Rp50.000.{" "}
           <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
             <IconShield className="h-3 w-3" />
             Verifikasi KYC
           </Link>{" "}
           supaya penarikanmu diprioritaskan diproses.
         </p>
-        <form onSubmit={handleRequestPayout} className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input
-            type="number"
-            min={50000}
-            placeholder="Jumlah (IDR)"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-40 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          <input
-            type="text"
-            placeholder="mis. BCA 1234567890"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-          >
-            {submitting ? "Memproses..." : "Ajukan"}
-          </button>
-        </form>
+
+        {verifiedMethods.length === 0 ? (
+          <p className="mt-3 rounded-lg bg-primary-subtle/50 px-3 py-2 text-xs text-ink">
+            Belum ada metode pembayaran terverifikasi.{" "}
+            <Link href="/dashboard/settings/payment" className="font-semibold text-primary hover:underline">
+              Tambahkan & verifikasi rekening/e-wallet dulu
+            </Link>{" "}
+            sebelum bisa menarik dana.
+          </p>
+        ) : (
+          <form onSubmit={handleRequestPayout} className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="number"
+              min={50000}
+              placeholder="Jumlah (IDR)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-40 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <select
+              value={selectedMethodId}
+              onChange={(e) => setPayoutMethodId(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {verifiedMethods.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.provider} {m.account_number_masked} {m.is_primary ? "(Utama)" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {submitting ? "Memproses..." : "Ajukan"}
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">

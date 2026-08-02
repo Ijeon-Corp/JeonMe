@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Page, expect } from "@playwright/test";
 
 // Helper bersama untuk seluruh test E2E -- membuat akun kreator uji BARU
@@ -51,6 +52,56 @@ export async function registerAndLogin(page: Page, usernamePrefix: string): Prom
 // "Terbitkan halaman publik" di /dashboard/design (ditemukan lewat run
 // pertama test ini sendiri: tautan sudah dibuat & benar tersimpan tapi
 // halaman publik tidak pernah menampilkannya, apa pun lamanya ditunggu).
+// Login ke akun yang SUDAH terdaftar lewat registerAndLogin (password selalu
+// "Password123!", lihat di atas) -- dipakai test yang butuh sesi KEDUA untuk
+// akun yang sama (mis. menguji revoke sesi lain), bukan mendaftarkan akun
+// baru lagi.
+export async function loginAs(page: Page, email: string): Promise<void> {
+  await page.goto("/login");
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill("Password123!");
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await page.waitForURL("**/dashboard", { timeout: 15000 });
+}
+
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+function base32Decode(input: string): Buffer {
+  const clean = input.replace(/=+$/, "").toUpperCase();
+  let bits = "";
+  for (const char of clean) {
+    const val = BASE32_ALPHABET.indexOf(char);
+    if (val === -1) continue;
+    bits += val.toString(2).padStart(5, "0");
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+// Implementasi TOTP (RFC 6238) manual -- SENGAJA tanpa dependency npm baru
+// (mis. otplib) hanya untuk kebutuhan satu test ini, konsisten dengan gaya
+// proyek ini (hand-roll daripada tambah library untuk kebutuhan kecil).
+// Harus SAMA PERSIS dengan default pquerna/otp di backend: SHA1, 30 detik,
+// 6 digit (lihat SecurityHandler.Enable2FA).
+export function generateTotpCode(secret: string, at: Date = new Date()): string {
+  const key = base32Decode(secret);
+  const counter = Math.floor(at.getTime() / 1000 / 30);
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeBigUInt64BE(BigInt(counter));
+
+  const hmac = crypto.createHmac("sha1", key).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const binary =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return (binary % 1_000_000).toString().padStart(6, "0");
+}
+
 export async function publishPage(page: Page): Promise<void> {
   await page.goto("/dashboard/design");
   const toggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });

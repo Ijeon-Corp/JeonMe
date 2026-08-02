@@ -8,25 +8,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
+	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/crypto"
 	"github.com/jeonme/api/internal/mailer"
+	"github.com/jeonme/api/internal/payout"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/whatsapp"
 )
 
 type Handler struct {
-	DB           *pgxpool.Pool
-	Mailer       *mailer.Client
-	WhatsApp     *whatsapp.Client
-	PublicAPIURL string
+	DB                *pgxpool.Pool
+	RDB               *redis.Client
+	Mailer            *mailer.Client
+	WhatsApp          *whatsapp.Client
+	PublicAPIURL      string
+	HoldingPeriodDays int
+	EncryptionKey     []byte
 }
 
-func NewHandler(db *pgxpool.Pool, mailerClient *mailer.Client, whatsappClient *whatsapp.Client, publicAPIURL string) *Handler {
-	return &Handler{DB: db, Mailer: mailerClient, WhatsApp: whatsappClient, PublicAPIURL: publicAPIURL}
+func NewHandler(db *pgxpool.Pool, rdb *redis.Client, mailerClient *mailer.Client, whatsappClient *whatsapp.Client, publicAPIURL string, holdingPeriodDays int, encryptionKey []byte) *Handler {
+	return &Handler{
+		DB: db, RDB: rdb, Mailer: mailerClient, WhatsApp: whatsappClient, PublicAPIURL: publicAPIURL,
+		HoldingPeriodDays: holdingPeriodDays, EncryptionKey: encryptionKey,
+	}
 }
 
 // Mux merakit ServeMux asynq -- dipanggil main.go subcommand `worker`.
@@ -34,7 +46,250 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(queue.TypeOrderPaidNotification, h.HandleOrderPaidNotification)
 	mux.HandleFunc(queue.TypeContactFormNotification, h.HandleContactFormNotification)
+	mux.HandleFunc(queue.TypeAutoWithdrawScan, h.HandleAutoWithdrawScan)
+	mux.HandleFunc(queue.TypeAccountPurgeScan, h.HandleAccountPurgeScan)
+	mux.HandleFunc(queue.TypeTeamInviteNotification, h.HandleTeamInviteNotification)
 	return mux
+}
+
+// teamRoleLabel -- label Indonesia untuk role di email undangan (pola sama
+// dengan paymentMethodLabel di balance.go: pemetaan nilai mentah -> teks
+// ramah manusia).
+func teamRoleLabel(role string) string {
+	switch role {
+	case "content_admin":
+		return "Admin Konten (Tautan & Desain)"
+	case "sales_admin":
+		return "Admin Penjualan (Produk)"
+	case "full_access":
+		return "Akses Penuh"
+	default:
+		return role
+	}
+}
+
+// HandleTeamInviteNotification -- Modul Settings §4: email undangan tim,
+// pola sama persis dengan HandleContactFormNotification (tidak ada status
+// untuk dicek ulang, pesan yang sudah dienqueue selalu relevan untuk
+// dikirim).
+func (h *Handler) HandleTeamInviteNotification(_ context.Context, t *asynq.Task) error {
+	var payload queue.TeamInvitePayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := fmt.Sprintf("Kamu diundang bergabung ke tim @%s di Jeonme", payload.OwnerUsername)
+	body := fmt.Sprintf(
+		"@%s mengundangmu bergabung sebagai kolaborator dengan peran %s.\n\n"+
+			"Masuk ke akun Jeonme-mu (daftar dulu dengan email ini kalau belum punya akun) lalu buka "+
+			"Tim & Kolaborator > Undangan untuk Saya untuk menerima.\n\nSalam,\nTim Jeonme",
+		payload.OwnerUsername, teamRoleLabel(payload.Role),
+	)
+
+	if err := h.Mailer.Send(payload.CollaboratorEmail, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim undangan tim: %w", err)
+	}
+
+	log.Printf("worker: undangan tim untuk @%s terkirim ke %s", payload.OwnerUsername, payload.CollaboratorEmail)
+	return nil
+}
+
+// HandleAccountPurgeScan -- Modul Settings §6: dijalankan HARIAN (lihat
+// asynq.Scheduler di main.go), sama seperti auto-withdraw scan. Idempotent
+// by design: hanya memproses baris status='pending' -- begitu satu baris
+// selesai (status diubah jadi 'completed' DALAM transaksi yang sama dengan
+// anonimisasinya), pemindaian berikutnya (mis. proses sebelumnya crash di
+// tengah jalan) tidak akan memprosesnya lagi.
+func (h *Handler) HandleAccountPurgeScan(ctx context.Context, t *asynq.Task) error {
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, user_id FROM account_deletion_requests WHERE status = 'pending' AND scheduled_purge_at <= now()
+	`)
+	if err != nil {
+		return fmt.Errorf("worker: gagal memuat permintaan hapus akun jatuh tempo: %w", err)
+	}
+	type dueRequest struct {
+		RequestID string
+		UserID    string
+	}
+	var due []dueRequest
+	for rows.Next() {
+		var d dueRequest
+		if err := rows.Scan(&d.RequestID, &d.UserID); err != nil {
+			continue
+		}
+		due = append(due, d)
+	}
+	rows.Close()
+
+	for _, d := range due {
+		if err := h.purgeAccount(ctx, d.RequestID, d.UserID); err != nil {
+			// Sama seperti auto-withdraw: satu akun gagal TIDAK BOLEH
+			// menghentikan purge akun lain -- log & lanjut.
+			log.Printf("worker: gagal purge akun user %s: %v", d.UserID, err)
+		}
+	}
+	return nil
+}
+
+// purgeAccount -- anonimisasi PERMANEN (email/username diacak, password
+// dinonaktifkan, halaman & produk dinonaktifkan). Logika sama persis dengan
+// AccountHandler.DeleteAccount versi lama (instan) yang sudah dihapus --
+// bedanya sekarang dijalankan worker setelah masa tunggu 14 hari, bukan
+// langsung dari HTTP handler.
+func (h *Handler) purgeAccount(ctx context.Context, requestID, userID string) error {
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	anonymizedEmail := "deleted-" + userID + "@deleted.jeonme.invalid"
+	anonymizedUsername := "deleted-" + userID[:8]
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE users SET email = $1, username = $2, password_hash = 'deleted', deleted_at = now(), deactivated_at = NULL
+		WHERE id = $3
+	`, anonymizedEmail, anonymizedUsername, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE pages SET is_published = false WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE products SET is_active = false WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE account_deletion_requests SET status = 'completed', completed_at = now() WHERE id = $1
+	`, requestID); err != nil {
+		return err
+	}
+	if err := audit.Log(ctx, tx, userID, "account.purged", "user", userID, nil); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	// Mencabut SEMUA sesi aktif supaya token lama yang belum kedaluwarsa
+	// (maks 24 jam, lihat AuthHandler.issueToken) tidak bisa dipakai lagi
+	// begitu akun sungguh dianonimkan. Pola sesi disalin kecil dari
+	// handlers/session.go -- package ini SENGAJA tidak mengimpor package
+	// handlers (pemisahan proses/paket sejak awal proyek).
+	if h.RDB != nil {
+		revokeAllSessions(ctx, h.RDB, userID)
+	}
+	return nil
+}
+
+func revokeAllSessions(ctx context.Context, rdb *redis.Client, userID string) {
+	prefix := "session:" + userID + ":"
+	iter := rdb.Scan(ctx, 0, prefix+"*", 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		jti := strings.TrimPrefix(key, prefix)
+
+		data, err := rdb.Get(ctx, key).Bytes()
+		if err != nil {
+			continue
+		}
+		var rec struct {
+			ExpiresAt time.Time `json:"expires_at"`
+		}
+		if err := json.Unmarshal(data, &rec); err != nil {
+			continue
+		}
+		if ttl := time.Until(rec.ExpiresAt); ttl > 0 {
+			_ = rdb.Set(ctx, "revoked_jti:"+jti, "1", ttl).Err()
+		}
+		_ = rdb.Del(ctx, key).Err()
+	}
+}
+
+// HandleAutoWithdrawScan -- Modul Settings §3: dijalankan HARIAN (lihat
+// asynq.Scheduler di main.go). Weekly jatuh tempo tiap Senin, monthly
+// jatuh tempo tiap tanggal 1 -- PLACEHOLDER bisnis sederhana (belum ada
+// keputusan resmi soal hari/tanggal spesifik, sama status dengan
+// payout.MinIDR) -- cukup SATU scan harian yang tahu sendiri frekuensi
+// mana yang "jatuh tempo" hari ini, bukan job terpisah per frekuensi.
+func (h *Handler) HandleAutoWithdrawScan(ctx context.Context, t *asynq.Task) error {
+	now := time.Now()
+	dueWeekly := now.Weekday() == time.Monday
+	dueMonthly := now.Day() == 1
+	if !dueWeekly && !dueMonthly {
+		return nil
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT user_id, frequency, min_threshold_idr FROM payout_schedule WHERE frequency IN ('weekly', 'monthly')
+	`)
+	if err != nil {
+		return fmt.Errorf("worker: gagal memuat jadwal auto-withdraw: %w", err)
+	}
+	type dueSchedule struct {
+		UserID          string
+		Frequency       string
+		MinThresholdIDR int64
+	}
+	var candidates []dueSchedule
+	for rows.Next() {
+		var d dueSchedule
+		if err := rows.Scan(&d.UserID, &d.Frequency, &d.MinThresholdIDR); err != nil {
+			continue
+		}
+		if (d.Frequency == "weekly" && dueWeekly) || (d.Frequency == "monthly" && dueMonthly) {
+			candidates = append(candidates, d)
+		}
+	}
+	rows.Close()
+
+	for _, d := range candidates {
+		if err := h.processAutoWithdraw(ctx, d.UserID, d.MinThresholdIDR); err != nil {
+			// Satu kreator gagal (mis. belum ada metode utama terverifikasi,
+			// saldo di bawah threshold) TIDAK BOLEH menghentikan scan
+			// kreator lain -- log & lanjut, bukan return error (yang akan
+			// membuat asynq me-retry SELURUH scan dari awal).
+			log.Printf("worker: auto-withdraw gagal untuk user %s: %v", d.UserID, err)
+		}
+	}
+	return nil
+}
+
+// processAutoWithdraw -- satu kreator. "Belum jatuh tempo secara saldo"
+// (di bawah threshold) BUKAN error, cuma dilewati diam-diam.
+func (h *Handler) processAutoWithdraw(ctx context.Context, userID string, minThresholdIDR int64) error {
+	var total, held int64
+	if err := h.DB.QueryRow(ctx, `SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1`, userID).Scan(&total); err != nil {
+		return err
+	}
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries
+		WHERE user_id = $1 AND type = 'credit' AND created_at > now() - make_interval(days => $2)
+	`, userID, h.HoldingPeriodDays).Scan(&held); err != nil {
+		return err
+	}
+	available := total - held
+	if available < minThresholdIDR || available < payout.MinIDR {
+		return nil
+	}
+
+	var payoutMethodID, encryptedAccount, accountName string
+	err := h.DB.QueryRow(ctx, `
+		SELECT id, account_number_encrypted, account_name FROM payout_methods
+		WHERE user_id = $1 AND is_primary = true AND verified = true
+	`, userID).Scan(&payoutMethodID, &encryptedAccount, &accountName)
+	if err != nil {
+		return fmt.Errorf("tidak ada metode pembayaran utama terverifikasi: %w", err)
+	}
+
+	accountNumber, err := crypto.Decrypt(h.EncryptionKey, encryptedAccount)
+	if err != nil {
+		return err
+	}
+	destinationAccount := accountName + " - " + accountNumber
+
+	_, err = payout.Create(ctx, h.DB, userID, available, h.HoldingPeriodDays, &payoutMethodID, destinationAccount, "auto")
+	return err
 }
 
 // HandleOrderPaidNotification -- REQ-F-405: kirim email notifikasi + link

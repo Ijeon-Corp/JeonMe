@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -56,6 +57,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 	if !req.ConsentAccepted {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "kamu harus menyetujui pemrosesan data pribadi untuk mendaftar"})
+		return
+	}
+
+	// Modul Settings §2: format sama dengan yang dipakai saat ganti username
+	// di pengaturan, + cegah orang lain langsung mendaftar pakai username
+	// yang baru saja ditinggalkan pemilik lama (masih dalam window redirect).
+	// Race kecil di sini (dicek di luar transaksi insert) dibiarkan --
+	// idx_users_username_lower tetap jadi penjamin akhir keunikan dasar,
+	// pemeriksaan squat memang bukan constraint DB (aturan bisnis lintas
+	// tabel), jadi celah TOCTOU-nya sengaja diterima untuk lingkup ini.
+	if ok, msg := checkUsernameAvailable(c.Request.Context(), h.DB, req.Username, ""); !ok {
+		c.JSON(http.StatusConflict, gin.H{"error": msg})
 		return
 	}
 
@@ -115,8 +128,29 @@ type loginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// issueToken menerbitkan JWT + jti + exp dalam bentuk yang SELALU sama --
+// dipakai Login (jalur tanpa 2FA) MAUPUN VerifyLogin2FA (jalur sesudah kode
+// TOTP benar), supaya kedua jalur menghasilkan token yang identik bentuknya.
+func (h *AuthHandler) issueToken(userID string) (signed, jti string, exp time.Time, err error) {
+	jti = uuid.NewString()
+	exp = time.Now().Add(24 * time.Hour)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": userID,
+		"jti": jti,
+		"exp": exp.Unix(),
+		"iat": time.Now().Unix(),
+	})
+	signed, err = token.SignedString([]byte(h.JWTSecret))
+	return
+}
+
 // Login menghasilkan JWT yang dipakai untuk mengakses endpoint dashboard.
-// Klaim "jti" dipakai untuk mendukung revoke sesi (lihat Logout).
+// Klaim "jti" dipakai untuk mendukung revoke sesi (lihat Logout) & daftar
+// sesi aktif (lihat SecurityHandler.ListSessions, Modul Settings §5). Kalau
+// akun ini sudah mengaktifkan 2FA, JWT TIDAK langsung diterbitkan di sini --
+// mengembalikan mfa_token sementara (5 menit, sekali pakai) yang harus
+// ditukar lewat VerifyLogin2FA dengan kode TOTP yang benar sebelum token
+// sungguhan keluar.
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -128,10 +162,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	defer cancel()
 
 	var id, passwordHash string
-	var suspendedAt *time.Time
+	var suspendedAt, twoFactorEnabledAt *time.Time
 	err := h.DB.QueryRow(ctx,
-		`SELECT id, password_hash, suspended_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
-	).Scan(&id, &passwordHash, &suspendedAt)
+		`SELECT id, password_hash, suspended_at, two_factor_enabled_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
+	).Scan(&id, &passwordHash, &suspendedAt, &twoFactorEnabledAt)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
@@ -150,30 +184,89 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	jti := uuid.NewString()
-	exp := time.Now().Add(24 * time.Hour)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": id,
-		"jti": jti,
-		"exp": exp.Unix(),
-		"iat": time.Now().Unix(),
-	})
+	if twoFactorEnabledAt != nil {
+		mfaToken := uuid.NewString()
+		if h.RDB != nil {
+			if err := h.RDB.Set(ctx, "mfa_pending:"+mfaToken, id, 5*time.Minute).Err(); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai verifikasi 2FA"})
+				return
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"mfa_required": true, "mfa_token": mfaToken})
+		return
+	}
 
-	signed, err := token.SignedString([]byte(h.JWTSecret))
+	signed, jti, exp, err := h.issueToken(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat token"})
 		return
 	}
+	recordSession(ctx, h.RDB, id, jti, exp, c.Request.UserAgent(), c.ClientIP())
+
+	c.JSON(http.StatusOK, gin.H{"token": signed})
+}
+
+type verifyLogin2FARequest struct {
+	MFAToken string `json:"mfa_token" binding:"required"`
+	Code     string `json:"code" binding:"required"`
+}
+
+// VerifyLogin2FA — langkah kedua login untuk akun ber-2FA (lihat Login di
+// atas). mfa_token HANYA dihapus dari Redis begitu kodenya BENAR -- kalau
+// pengguna salah ketik, mfa_token yang sama masih bisa dicoba lagi selama
+// window 5 menitnya belum habis, tidak perlu login ulang dari awal.
+func (h *AuthHandler) VerifyLogin2FA(c *gin.Context) {
+	var req verifyLogin2FARequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if h.RDB == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "verifikasi 2FA tidak tersedia"})
+		return
+	}
+
+	userID, err := h.RDB.Get(ctx, "mfa_pending:"+req.MFAToken).Result()
+	if err != nil || userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "sesi verifikasi 2FA tidak valid atau kedaluwarsa, silakan login ulang"})
+		return
+	}
+
+	var secret string
+	if err := h.DB.QueryRow(ctx,
+		`SELECT two_factor_secret FROM users WHERE id = $1 AND two_factor_enabled_at IS NOT NULL`, userID,
+	).Scan(&secret); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "2FA tidak aktif untuk akun ini"})
+		return
+	}
+
+	if !totp.Validate(req.Code, secret) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "kode 2FA salah"})
+		return
+	}
+
+	h.RDB.Del(ctx, "mfa_pending:"+req.MFAToken)
+
+	signed, jti, exp, err := h.issueToken(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat token"})
+		return
+	}
+	recordSession(ctx, h.RDB, userID, jti, exp, c.Request.UserAgent(), c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{"token": signed})
 }
 
 // Logout — REQ-F-106 (revoke sesi). Menaruh jti token yang sedang dipakai ke
 // denylist Redis sampai token itu sendiri kedaluwarsa (TTL = sisa umur token),
-// supaya denylist tidak menumpuk selamanya. Untuk "logout semua perangkat",
-// klien perlu memanggil ini di tiap token yang tersimpan (tidak ada multi-
-// session tracking terpisah di skema saat ini).
+// supaya denylist tidak menumpuk selamanya, dan menghapus catatan sesinya
+// (lihat session.go) supaya langsung hilang dari daftar device aktif.
 func (h *AuthHandler) Logout(c *gin.Context) {
+	userID := c.GetString("userID")
 	jti, _ := c.Get("jti")
 	expUnix, _ := c.Get("exp")
 
@@ -196,6 +289,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal logout"})
 		return
 	}
+	forgetSession(ctx, h.RDB, userID, jtiStr)
 
 	c.JSON(http.StatusOK, gin.H{"message": "berhasil logout"})
 }

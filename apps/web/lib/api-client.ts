@@ -260,11 +260,20 @@ export function subscribeLead(input: { username: string; email?: string; whatsap
  * adalah kondisi normal, bukan kegagalan sistem.
  */
 export async function getPublicPage(username: string): Promise<PublicPage | null> {
-  const res = await fetch(`${API_BASE_URL}/pages/${username}`, {
-    // Revalidate tiap 60 detik -- sesuaikan dengan kebutuhan kesegaran data
-    // vs beban ke backend (lihat strategi cache di Technical Design Document).
-    next: { revalidate: 60 },
-  });
+  // Bug ditemukan Modul Settings §6 (2026-08-02): dulu next:{revalidate:60}
+  // (ISR) -- ternyata begitu sebuah halaman berpindah dari ADA ke
+  // notFound() (persis yang terjadi saat nonaktifkan/hapus akun, atau
+  // unpublish biasa), cache ISR Next.js MACET selamanya menyajikan versi
+  // lama, TIDAK PERNAH pulih sendiri (dibuktikan lewat polling >80 detik,
+  // padahal perubahan KONTEN biasa -- mis. bio -- tetap ter-refresh normal
+  // di detik ke-60). cache: "no-store" mengorbankan keuntungan performa ISR
+  // di rute publik dengan traffic tertinggi, TAPI itu murni optimisasi,
+  // sementara "halaman nonaktif harus langsung tidak tampil" adalah
+  // jaminan keamanan/privasi eksplisit dari spec -- benar itu yang menang.
+  // Cache backend (Redis, page.go, TTL 30 detik, diinvalidasi eksplisit
+  // tiap mutasi) TETAP ada & TIDAK kena bug ini (bukan ISR/SWR, cuma
+  // GET+TTL biasa) -- jadi endpoint ini masih tidak selalu memukul Postgres.
+  const res = await fetch(`${API_BASE_URL}/pages/${username}`, { cache: "no-store" });
 
   if (res.status === 404) {
     return null;
@@ -291,8 +300,18 @@ export function register(input: {
   });
 }
 
+// Modul Settings §5: kalau akun ini sudah mengaktifkan 2FA, backend TIDAK
+// mengembalikan token di sini -- mengembalikan mfa_required+mfa_token,
+// caller (halaman login) lalu memanggil verifyLogin2FA dengan kode TOTP.
 export function login(input: { email: string; password: string }) {
-  return apiFetch<{ token: string }>("/auth/login", {
+  return apiFetch<{ token?: string; mfa_required?: boolean; mfa_token?: string }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function verifyLogin2FA(input: { mfa_token: string; code: string }) {
+  return apiFetch<{ token: string }>("/auth/2fa/verify-login", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -716,7 +735,9 @@ export function createExtraPageBlock(
  * Mengembalikan null kalau tidak ditemukan (404), sama seperti getPublicPage.
  */
 export async function getPublicPageBySlug(slug: string): Promise<PublicPage | null> {
-  const res = await fetch(`${API_BASE_URL}/p/${slug}`, { next: { revalidate: 60 } });
+  // cache: "no-store", bukan ISR -- lihat catatan panjang di getPublicPage
+  // (bug ISR + notFound() macet permanen).
+  const res = await fetch(`${API_BASE_URL}/p/${slug}`, { cache: "no-store" });
 
   if (res.status === 404) {
     return null;
@@ -729,6 +750,15 @@ export async function getPublicPageBySlug(slug: string): Promise<PublicPage | nu
 }
 
 // ---------- Dashboard: produk ----------
+
+// Modul Settings §3 (diferensiasi dari Lynk.id): revenue share otomatis ke
+// kolaborator saat produk ini terjual. user_id HARUS kolaborator yang
+// sudah diundang & aktif (lihat Collaborator.collaborator_user_id) --
+// bukan UUID sembarang, UI selalu mengisinya dari daftar kolaborator.
+export interface CollaboratorSplit {
+  user_id: string;
+  percent: number;
+}
 
 export interface DashboardProduct {
   id: string;
@@ -747,13 +777,19 @@ export interface DashboardProduct {
   pwyw_min_price_idr: number | null;
   watermark_enabled: boolean;
   is_pdf: boolean;
+  collaborator_splits: CollaboratorSplit[];
 }
 
 export function listProducts() {
   return apiFetch<DashboardProduct[]>("/dashboard/products", { method: "GET" }, { auth: true });
 }
 
-export function createProduct(input: { name: string; description?: string; price_idr: number }) {
+export function createProduct(input: {
+  name: string;
+  description?: string;
+  price_idr: number;
+  collaborator_splits?: CollaboratorSplit[];
+}) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/products",
     { method: "POST", body: JSON.stringify(input) },
@@ -781,6 +817,7 @@ export function updateProduct(
     event_is_online: boolean;
     event_capacity: number;
     clear_event_capacity: boolean;
+    collaborator_splits: CollaboratorSplit[];
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -1102,7 +1139,10 @@ export interface PublicBusinessCard {
 }
 
 export async function getPublicBusinessCard(username: string): Promise<PublicBusinessCard | null> {
-  const res = await fetch(`${API_BASE_URL}/cards/${username}`, { next: { revalidate: 60 } });
+  // cache: "no-store", bukan ISR -- lihat catatan panjang di getPublicPage
+  // (bug ISR + notFound() macet permanen), berlaku sama untuk rute publik
+  // apa pun yang bisa berpindah dari ada ke notFound().
+  const res = await fetch(`${API_BASE_URL}/cards/${username}`, { cache: "no-store" });
 
   if (res.status === 404) {
     return null;
@@ -1506,7 +1546,10 @@ export interface Payout {
   completed_at?: string;
 }
 
-export function createPayout(input: { amount_idr: number; destination_account: string }) {
+// Modul Settings §3 (keputusan pengguna 2026-07-31): penarikan sekarang
+// WAJIB lewat payout_method tersimpan & terverifikasi, bukan lagi rekening
+// bebas ketik per pengajuan.
+export function createPayout(input: { amount_idr: number; payout_method_id: string }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/payouts",
     { method: "POST", body: JSON.stringify(input) },
@@ -1539,6 +1582,77 @@ export interface FeeBreakdown {
 
 export function getFeeBreakdown() {
   return apiFetch<FeeBreakdown>("/dashboard/balance/fee-breakdown", { method: "GET" }, { auth: true });
+}
+
+// ---------- Pengaturan: Payment / Payout (Modul Settings §3) ----------
+
+export interface PayoutMethod {
+  id: string;
+  type: "bank_transfer" | "ewallet";
+  provider: string;
+  account_number_masked: string;
+  account_name: string;
+  is_primary: boolean;
+  verified: boolean;
+  created_at: string;
+}
+
+export function listPayoutMethods() {
+  return apiFetch<PayoutMethod[]>("/dashboard/payout-methods", { method: "GET" }, { auth: true });
+}
+
+export function createPayoutMethod(input: {
+  type: "bank_transfer" | "ewallet";
+  provider: string;
+  account_number: string;
+  account_name: string;
+}) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/payout-methods",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function requestPayoutMethodVerification(id: string) {
+  return apiFetch<{ message: string; dev_otp?: string }>(
+    `/dashboard/payout-methods/${id}/request-verification`,
+    { method: "POST" },
+    { auth: true }
+  );
+}
+
+export function verifyPayoutMethod(id: string, code: string) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/payout-methods/${id}/verify`,
+    { method: "POST", body: JSON.stringify({ code }) },
+    { auth: true }
+  );
+}
+
+export function setPayoutMethodPrimary(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/payout-methods/${id}/primary`, { method: "PATCH" }, { auth: true });
+}
+
+export function deletePayoutMethod(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/payout-methods/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+export interface PayoutSchedule {
+  frequency: "manual" | "weekly" | "monthly";
+  min_threshold_idr: number;
+}
+
+export function getPayoutSchedule() {
+  return apiFetch<PayoutSchedule>("/dashboard/payout-schedule", { method: "GET" }, { auth: true });
+}
+
+export function updatePayoutSchedule(input: PayoutSchedule) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/payout-schedule",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
 }
 
 // ---------- Dashboard: verifikasi KYC (Sprint 10, No.84) ----------
@@ -1724,10 +1838,160 @@ export function askAnalyticsAssistant(question: string) {
   );
 }
 
-// ---------- Akun (NF-09) ----------
+// ---------- Pengaturan: Danger Zone (Modul Settings §6) ----------
+// DeleteAccount instan (NF-09 versi lama) DIHAPUS -- diganti alur
+// nonaktifkan (reversibel kapan saja) + ajukan hapus (masa tunggu 14 hari,
+// bisa dibatalkan), lihat AccountHandler backend.
 
-export function deleteAccount() {
-  return apiFetch<{ message: string }>("/dashboard/account", { method: "DELETE" }, { auth: true });
+export function deactivateAccount(password: string) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/account/deactivate",
+    { method: "POST", body: JSON.stringify({ password }) },
+    { auth: true }
+  );
+}
+
+export function reactivateAccount() {
+  return apiFetch<{ message: string }>("/dashboard/account/reactivate", { method: "POST" }, { auth: true });
+}
+
+export function requestAccountDeletion(input: { username_confirmation: string; password: string }) {
+  return apiFetch<{ message: string; scheduled_purge_at: string }>(
+    "/dashboard/account/request-deletion",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function cancelAccountDeletion() {
+  return apiFetch<{ message: string }>("/dashboard/account/cancel-deletion", { method: "POST" }, { auth: true });
+}
+
+export interface AccountDeletionStatus {
+  pending: boolean;
+  scheduled_purge_at?: string;
+  deactivated: boolean;
+}
+
+export function getAccountDeletionStatus() {
+  return apiFetch<AccountDeletionStatus>("/dashboard/account/deletion-status", { method: "GET" }, { auth: true });
+}
+
+export function exportAccountData() {
+  return apiFetch<{ download_url: string; expires_in_seconds: number }>(
+    "/dashboard/account/export",
+    { method: "GET" },
+    { auth: true }
+  );
+}
+
+// ---------- Pengaturan: Profil & Akun (Modul Settings §2) ----------
+
+export interface SettingsProfile {
+  username: string;
+  category: string;
+  display_name: string;
+  bio: string;
+  avatar_url: string;
+}
+
+export function getSettingsProfile() {
+  return apiFetch<SettingsProfile>("/dashboard/settings/profile", { method: "GET" }, { auth: true });
+}
+
+export function updateSettingsProfile(input: {
+  username?: string;
+  category?: string;
+  display_name?: string;
+  bio?: string;
+}) {
+  return apiFetch<{ message: string; username: string }>(
+    "/dashboard/settings/profile",
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+/**
+ * Dipanggil app/[username]/page.tsx HANYA setelah getPublicPage 404 --
+ * membedakan "username memang tidak pernah ada" dari "sudah diganti,
+ * masih dalam window redirect 90 hari". null berarti tidak ada redirect
+ * (baik karena benar-benar tidak pernah ada, ATAUPUN pemeriksaan gagal --
+ * fail-silent, jatuh ke notFound() seperti biasa, bukan melempar error).
+ */
+export async function resolveUsernameRedirect(username: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/usernames/${username}/redirect`);
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return body?.new_username ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------- Pengaturan: Keamanan (Modul Settings §5) ----------
+
+export function changePassword(input: { old_password: string; new_password: string }) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/security/password",
+    { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function enable2FA() {
+  return apiFetch<{ secret: string; otpauth_url: string }>(
+    "/dashboard/security/2fa/enable",
+    { method: "POST" },
+    { auth: true }
+  );
+}
+
+export function verify2FA(code: string) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/security/2fa/verify",
+    { method: "POST", body: JSON.stringify({ code }) },
+    { auth: true }
+  );
+}
+
+export function disable2FA(password: string) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/security/2fa/disable",
+    { method: "POST", body: JSON.stringify({ password }) },
+    { auth: true }
+  );
+}
+
+export function snooze2FA() {
+  return apiFetch<{ message: string }>("/dashboard/security/2fa/snooze", { method: "POST" }, { auth: true });
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  required: boolean;
+  snoozed_until?: string;
+}
+
+export function get2FAStatus() {
+  return apiFetch<TwoFactorStatus>("/dashboard/security/2fa/status", { method: "GET" }, { auth: true });
+}
+
+export interface ActiveSession {
+  id: string;
+  created_at: string;
+  expires_at: string;
+  user_agent: string;
+  is_current: boolean;
+}
+
+export function listSessions() {
+  return apiFetch<ActiveSession[]>("/dashboard/security/sessions", { method: "GET" }, { auth: true });
+}
+
+export function revokeSession(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/security/sessions/${id}`, { method: "DELETE" }, { auth: true });
 }
 
 // ---------- Laporan konten publik (REQ-F-702) ----------
@@ -1867,30 +2131,47 @@ export function reviewKyc(userId: string, input: { status: "verified" | "rejecte
 // Lihat catatan lingkup di CollaboratorHandler backend -- kolaborator HANYA
 // bisa diberi akses ke tautan/produk/desain, tidak pernah saldo/KYC/domain.
 
+// Modul Settings §4 (Team & Role Management, keputusan pengguna
+// 2026-07-31): role dipetakan ke 3 flag boolean lama di backend
+// (roleToPermissions di collaborator.go) -- keduanya dikembalikan API
+// supaya UI bisa menampilkan ringkasan akses tanpa perlu tabel pemetaan
+// terpisah di frontend.
+export type TeamRole = "content_admin" | "sales_admin" | "full_access";
+
 export interface DashboardCollaborator {
   id: string;
   email: string;
   can_edit_links: boolean;
   can_edit_products: boolean;
   can_edit_design: boolean;
+  role: TeamRole;
   status: "invited" | "active" | "revoked";
   invited_at: string;
   accepted_at?: string;
+  // Modul Settings §3: terisi begitu status="active" -- dipakai UI split
+  // kolaborator per produk supaya kreator memilih dari daftar, bukan
+  // mengetik user_id.
+  collaborator_user_id?: string;
 }
 
 export function listCollaborators() {
   return apiFetch<DashboardCollaborator[]>("/dashboard/collaborators", { method: "GET" }, { auth: true });
 }
 
-export function inviteCollaborator(input: {
-  email: string;
-  can_edit_links: boolean;
-  can_edit_products: boolean;
-  can_edit_design: boolean;
-}) {
+// email_or_username: Modul Settings §4 acceptance criteria -- boleh akun
+// existing (username), tidak mengharuskan email baru seperti Lynk.id.
+export function inviteCollaborator(input: { email_or_username: string; role: TeamRole }) {
   return apiFetch<{ message: string }>(
     "/dashboard/collaborators",
     { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function updateCollaboratorRole(id: string, role: TeamRole) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/collaborators/${id}/role`,
+    { method: "PATCH", body: JSON.stringify({ role }) },
     { auth: true }
   );
 }
@@ -1905,6 +2186,7 @@ export interface PendingCollaborationInvite {
   can_edit_links: boolean;
   can_edit_products: boolean;
   can_edit_design: boolean;
+  role: TeamRole;
   invited_at: string;
 }
 
@@ -1914,6 +2196,19 @@ export function listInvitesForMe() {
 
 export function acceptCollaborationInvite(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/collaboration-invites/${id}/accept`, { method: "POST" }, { auth: true });
+}
+
+// Modul Settings §4 acceptance criteria: pemilik bisa lihat siapa mengubah
+// apa dan kapan dari UI, bukan cuma di database.
+export interface TeamAuditLogEntry {
+  id: string;
+  action: "team.invited" | "team.role_updated" | "team.revoked" | "team.invite_accepted";
+  metadata?: Record<string, string>;
+  created_at: string;
+}
+
+export function listTeamAuditLog() {
+  return apiFetch<TeamAuditLogEntry[]>("/dashboard/team/audit-log", { method: "GET" }, { auth: true });
 }
 
 export interface Workspace {

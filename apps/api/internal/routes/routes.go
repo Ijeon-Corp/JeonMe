@@ -42,12 +42,17 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
-	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays)
+	encryptionKey := []byte(cfg.EncryptionKey)
+	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
 	analytics := handlers.NewAnalyticsHandler(db)
-	account := handlers.NewAccountHandler(db)
+	account := handlers.NewAccountHandler(db, rdb, s3)
 	admin := handlers.NewAdminHandler(db)
 	kyc := handlers.NewKycHandler(db, s3)
-	collaborator := handlers.NewCollaboratorHandler(db)
+	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
+	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
+	security := handlers.NewSecurityHandler(db, rdb)
+	payoutMethod := handlers.NewPayoutMethodHandler(db, encryptionKey, cfg.AppEnv)
+	payoutSchedule := handlers.NewPayoutScheduleHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
 	r.GET("/api/health", health.Check)
@@ -72,6 +77,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		{
 			auth_.POST("/register", authRateLimit, auth.Register)
 			auth_.POST("/login", authRateLimit, auth.Login)
+			// Modul Settings §5: langkah kedua login untuk akun ber-2FA --
+			// publik seperti /login itu sendiri (belum ada JWT di titik ini),
+			// rate limit sama supaya kode TOTP tidak bisa di-brute-force.
+			auth_.POST("/2fa/verify-login", authRateLimit, auth.VerifyLogin2FA)
 			auth_.POST("/logout", authRequired, auth.Logout)
 			auth_.POST("/password-reset/request", auth.RequestPasswordReset)
 			auth_.POST("/password-reset/confirm", auth.ConfirmPasswordReset)
@@ -105,6 +114,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
 		// proxy.ts (bukan browser).
 		api.GET("/domains/:domain/resolve", customDomain.ResolveUsername)
+
+		// Modul Settings §2: dipanggil app/[username]/page.tsx SETELAH
+		// GetPublicPage 404, untuk redirect permanen dari username lama.
+		api.GET("/usernames/:username/redirect", page.ResolveUsernameRedirect)
 
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
@@ -265,10 +278,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// undangan yang ditujukan ke emailnya sendiri.
 			dashboard.POST("/collaborators", collaborator.Invite)
 			dashboard.GET("/collaborators", collaborator.ListMine)
+			dashboard.PATCH("/collaborators/:id/role", collaborator.UpdateRole)
 			dashboard.DELETE("/collaborators/:id", collaborator.Revoke)
 			dashboard.GET("/collaboration-invites", collaborator.ListInvitesForMe)
 			dashboard.POST("/collaboration-invites/:id/accept", collaborator.AcceptInvite)
 			dashboard.GET("/workspaces", collaborator.ListWorkspaces)
+
+			// Modul Settings §4 acceptance criteria: pemilik bisa lihat
+			// siapa mengubah apa dan kapan dari UI.
+			dashboard.GET("/team/audit-log", collaborator.ListAuditLog)
 
 			// No.73 (Sprint 8): blok pengumpulan lead + Manajer Audiens.
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
@@ -298,6 +316,20 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// No.89 (Sprint 10): transparansi biaya per metode pembayaran.
 			dashboard.GET("/balance/fee-breakdown", balance.GetFeeBreakdown)
 
+			// Modul Settings §3 (Payment / Payout) -- sama seperti
+			// settings/profile & security di atas, TIDAK dipasangi
+			// ActAsOwner (kolaborator tidak boleh mengubah metode
+			// pembayaran/jadwal auto-withdraw pemilik).
+			dashboard.GET("/payout-methods", payoutMethod.List)
+			dashboard.POST("/payout-methods", payoutMethod.Create)
+			dashboard.POST("/payout-methods/:id/request-verification", payoutMethod.RequestVerification)
+			dashboard.POST("/payout-methods/:id/verify", payoutMethod.Verify)
+			dashboard.PATCH("/payout-methods/:id/primary", payoutMethod.SetPrimary)
+			dashboard.DELETE("/payout-methods/:id", payoutMethod.Delete)
+
+			dashboard.GET("/payout-schedule", payoutSchedule.Get)
+			dashboard.PUT("/payout-schedule", payoutSchedule.Upsert)
+
 			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
 			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).
 			dashboard.GET("/kyc", kyc.Get)
@@ -310,7 +342,34 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// lihat catatan lingkup di AnalyticsHandler.Ask.
 			dashboard.POST("/analytics/ask", analytics.Ask)
 
-			dashboard.DELETE("/account", account.DeleteAccount)
+			// Modul Settings §6 (Danger Zone): DeleteAccount instan LAMA
+			// dihapus -- diganti alur nonaktifkan (reversibel kapan saja) +
+			// ajukan hapus (masa tunggu 14 hari, lihat AccountHandler).
+			dashboard.POST("/account/deactivate", account.Deactivate)
+			dashboard.POST("/account/reactivate", account.Reactivate)
+			dashboard.POST("/account/request-deletion", account.RequestDeletion)
+			dashboard.POST("/account/cancel-deletion", account.CancelDeletion)
+			dashboard.GET("/account/deletion-status", account.DeletionStatus)
+			dashboard.GET("/account/export", account.Export)
+
+			// Modul Settings §2 (Profile & Account): identitas akun --
+			// TIDAK dipasangi ActAsOwner, sama seperti balance/KYC/domain/
+			// hapus akun di atas (batas keamanan yang sama, kolaborator
+			// tidak boleh mengubah identitas pemilik).
+			dashboard.GET("/settings/profile", settingsProfile.Get)
+			dashboard.PATCH("/settings/profile", settingsProfile.Update)
+
+			// Modul Settings §5 (Security) -- sama seperti profile di atas,
+			// TIDAK dipasangi ActAsOwner (kolaborator tidak boleh mengganti
+			// password/2FA/sesi pemilik).
+			dashboard.PATCH("/security/password", security.ChangePassword)
+			dashboard.POST("/security/2fa/enable", security.Enable2FA)
+			dashboard.POST("/security/2fa/verify", security.Verify2FA)
+			dashboard.POST("/security/2fa/disable", security.Disable2FA)
+			dashboard.POST("/security/2fa/snooze", security.Snooze2FA)
+			dashboard.GET("/security/2fa/status", security.Status2FA)
+			dashboard.GET("/security/sessions", security.ListSessions)
+			dashboard.DELETE("/security/sessions/:jti", security.RevokeSession)
 		}
 
 		// Panel Admin -- REQ-F-701/702/703. Tidak ada jalur self-service untuk

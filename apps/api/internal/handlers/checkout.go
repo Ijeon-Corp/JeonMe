@@ -82,13 +82,14 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var eventEndsAt *time.Time
 	var eventCapacity *int
 	var isBooking bool
+	var collaboratorSplitsRaw []byte
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking
+		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits
 		FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking)
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -181,6 +182,27 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	}
 	finalAmountIDR := priceIDR - discountIDR
 
+	// Modul Settings §3 (diferensiasi dari Lynk.id): resolusi persen ->
+	// rupiah absolut PADA SAAT checkout (pola sama persis dengan
+	// affiliateCommissionIDR di bawah) -- disimpan sebagai snapshot supaya
+	// perubahan collaborator_splits di produk SESUDAHNYA tidak pernah
+	// mempengaruhi order yang sudah terlanjur dibuat.
+	var collaboratorSplits []CollaboratorSplit
+	if len(collaboratorSplitsRaw) > 0 {
+		_ = json.Unmarshal(collaboratorSplitsRaw, &collaboratorSplits)
+	}
+	var collaboratorSplitSnapshots []CollaboratorSplitSnapshot
+	var totalCollaboratorSplitIDR int64
+	for _, s := range collaboratorSplits {
+		amount := int64(float64(finalAmountIDR) * s.Percent / 100)
+		collaboratorSplitSnapshots = append(collaboratorSplitSnapshots, CollaboratorSplitSnapshot{UserID: s.UserID, AmountIDR: amount})
+		totalCollaboratorSplitIDR += amount
+	}
+	collaboratorSplitsSnapshotJSON := []byte("[]")
+	if len(collaboratorSplitSnapshots) > 0 {
+		collaboratorSplitsSnapshotJSON, _ = json.Marshal(collaboratorSplitSnapshots)
+	}
+
 	// No.72 (Sprint 7): komisi afiliasi dihitung dari harga yang BENAR-BENAR
 	// dibayar (setelah voucher), sama seperti platform_fee -- kode referral
 	// yang tidak cocok dengan produk ini (bukan bagian program afiliasi
@@ -208,9 +230,9 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR)
+		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR, collaboratorSplitsSnapshotJSON)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
@@ -450,11 +472,12 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	var orderID, productUserID, buyerEmail string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
+	var collaboratorSplitsSnapshotRaw []byte
 	err = h.DB.QueryRow(ctx, `
-		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email
+		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail)
+	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -515,9 +538,23 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				return
 			}
 
-			// No.72: komisi afiliasi dipotong dari bagian kreator (afiliator
-			// dibayar dari pendapatan kreator, BUKAN biaya tambahan platform).
-			netAmount := amountIDR - platformFeeIDR - affiliateCommissionIDR
+			// Modul Settings §3: snapshot sudah berisi rupiah ABSOLUT per
+			// kolaborator (dihitung sekali saat checkout, lihat
+			// CheckoutHandler.Create) -- di sini cuma dibaca & dijumlah,
+			// tidak ada perhitungan persen apa pun lagi.
+			var collaboratorSplitSnapshots []CollaboratorSplitSnapshot
+			if len(collaboratorSplitsSnapshotRaw) > 0 {
+				_ = json.Unmarshal(collaboratorSplitsSnapshotRaw, &collaboratorSplitSnapshots)
+			}
+			var totalCollaboratorSplitIDR int64
+			for _, s := range collaboratorSplitSnapshots {
+				totalCollaboratorSplitIDR += s.AmountIDR
+			}
+
+			// No.72 & Modul Settings §3: komisi afiliasi DAN split kolaborator
+			// dipotong dari bagian kreator (keduanya dibayar dari pendapatan
+			// kreator, BUKAN biaya tambahan platform).
+			netAmount := amountIDR - platformFeeIDR - affiliateCommissionIDR - totalCollaboratorSplitIDR
 			newBalance := currentBalance + netAmount
 			ledgerID := uuid.NewString()
 			if _, err := tx.Exec(ctx, `
@@ -565,6 +602,42 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				affiliateMetadata, _ := json.Marshal(gin.H{"amount_idr": affiliateCommissionIDR, "balance_after": affiliateNewBalance, "order_id": orderID})
 				if err := audit.Log(ctx, tx, affiliateUserID, "ledger.credit", "ledger_entry", affiliateLedgerID, affiliateMetadata); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log afiliator"})
+					return
+				}
+			}
+
+			// Modul Settings §3: kredit ledger tiap kolaborator, pola sama
+			// PERSIS dengan blok afiliator di atas (lock per user_id, baca
+			// saldo, insert credit, audit log) -- diulang per baris snapshot
+			// karena split BISA lebih dari satu kolaborator sekaligus (beda
+			// dari afiliasi yang maksimal satu per order).
+			for _, split := range collaboratorSplitSnapshots {
+				if split.AmountIDR <= 0 {
+					continue
+				}
+				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, split.UserID); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger kolaborator"})
+					return
+				}
+				var collabCurrentBalance int64
+				if err := tx.QueryRow(ctx, `
+					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
+				`, split.UserID).Scan(&collabCurrentBalance); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo kolaborator"})
+					return
+				}
+				collabNewBalance := collabCurrentBalance + split.AmountIDR
+				collabLedgerID := uuid.NewString()
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
+					VALUES ($1, $2, $3, 'credit', $4, $5, now())
+				`, collabLedgerID, split.UserID, orderID, split.AmountIDR, collabNewBalance); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger kolaborator"})
+					return
+				}
+				collabMetadata, _ := json.Marshal(gin.H{"amount_idr": split.AmountIDR, "balance_after": collabNewBalance, "order_id": orderID})
+				if err := audit.Log(ctx, tx, split.UserID, "ledger.credit", "ledger_entry", collabLedgerID, collabMetadata); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log kolaborator"})
 					return
 				}
 			}

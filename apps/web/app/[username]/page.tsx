@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { getPublicPage } from "@/lib/api-client";
+import { notFound, permanentRedirect } from "next/navigation";
+import { getPublicPage, resolveUsernameRedirect } from "@/lib/api-client";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 
@@ -62,6 +62,13 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
   const page = await getPublicPage(username);
 
   if (!page) {
+    // Modul Settings §2: username ini mungkin sudah diganti kreatornya --
+    // cek window redirect 90 hari SEBELUM menyerah ke notFound() (lihat
+    // PageHandler.ResolveUsernameRedirect di backend).
+    const newUsername = await resolveUsernameRedirect(username);
+    if (newUsername) {
+      permanentRedirect(`/${newUsername}`);
+    }
     notFound();
   }
 

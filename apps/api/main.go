@@ -165,9 +165,40 @@ func runWorker() {
 		log.Fatalf("worker: gagal menyiapkan koneksi Redis: %v", err)
 	}
 
+	// Modul Settings §6: purge akun (HandleAccountPurgeScan) mencabut sesi
+	// aktif lewat Redis -- worker butuh *redis.Client sungguhan untuk itu,
+	// beda dari redisOpt (asynq.RedisClientOpt) di atas yang cuma dipakai
+	// asynq sendiri.
+	rdb, err := database.NewRedisClient(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("worker: gagal konek Redis: %v", err)
+	}
+	defer rdb.Close()
+
 	mailerClient := mailer.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFromAddr)
 	whatsappClient := whatsapp.NewClient(cfg.WhatsAppAPIToken, cfg.WhatsAppPhoneNumberID, cfg.WhatsAppTemplateName, cfg.WhatsAppTemplateLang)
-	handler := worker.NewHandler(db, mailerClient, whatsappClient, cfg.PublicAPIURL)
+	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey))
+
+	// Modul Settings §3: asynq.Scheduler ENQUEUE task ke Redis sesuai jadwal
+	// cron -- task-nya sendiri tetap DIPROSES oleh srv.Run(handler.Mux())
+	// di bawah, sama seperti task on-demand lain (satu antrian Redis yang
+	// sama). Ini scheduler PERTAMA di proyek ini (sebelumnya semua task
+	// on-demand/event-triggered) -- jalan di proses `worker` yang sama,
+	// BUKAN proses terpisah, supaya tidak perlu container/subcommand baru.
+	scheduler := asynq.NewScheduler(redisOpt, nil)
+	if _, err := scheduler.Register("@daily", queue.NewAutoWithdrawScanTask()); err != nil {
+		log.Fatalf("worker: gagal mendaftarkan jadwal auto-withdraw: %v", err)
+	}
+	// Modul Settings §6: purge akun yang masa tunggu 14 harinya sudah habis.
+	if _, err := scheduler.Register("@daily", queue.NewAccountPurgeScanTask()); err != nil {
+		log.Fatalf("worker: gagal mendaftarkan jadwal purge akun: %v", err)
+	}
+	go func() {
+		if err := scheduler.Run(); err != nil {
+			log.Fatalf("worker: scheduler gagal berjalan: %v", err)
+		}
+	}()
+	defer scheduler.Shutdown()
 
 	srv := asynq.NewServer(redisOpt, asynq.Config{Concurrency: 5})
 

@@ -46,6 +46,15 @@ type Config struct {
 	PlatformFeePercent float64
 	HoldingPeriodDays  int
 
+	// EncryptionKey (AES-256-GCM, lihat internal/crypto) -- Modul Settings
+	// §3: nomor rekening/e-wallet di payout_methods dienkripsi at rest,
+	// BUKAN plaintext seperti payouts.destination_account/kyc
+	// bank_account_name yang sudah ada sebelumnya (di luar lingkup revisi
+	// fase ini). HARUS PERSIS 32 byte (AES-256) -- divalidasi fail-fast di
+	// bawah, bukan cuma di production (kunci salah panjang membuat SEMUA
+	// enkripsi/dekripsi gagal, beda dari S3/SMTP yang gagal per-fitur).
+	EncryptionKey string
+
 	// SMTP dipakai worker (subcommand `worker`) untuk mengirim notifikasi
 	// email (REQ-F-405). Kosong secara default -- job pengiriman akan
 	// log-only (bukan gagal/crash) selama belum ada provider SMTP asli,
@@ -136,6 +145,12 @@ func Load() *Config {
 		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 5.0),
 		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
 
+		// Dev default HANYA untuk kenyamanan lokal (pola sama dengan
+		// S3_ACCESS_KEY di atas) -- 32 byte persis, sengaja diverifikasi di
+		// bawah supaya kesalahan panjang ketahuan SAAT STARTUP, bukan saat
+		// kreator pertama kali mencoba simpan rekening.
+		EncryptionKey: mustGetEnvInProd(appEnv, "ENCRYPTION_KEY", "jeonme-dev-encryption-key-32-ok!"),
+
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     getEnvInt("SMTP_PORT", 587),
 		SMTPUsername: getEnv("SMTP_USER", ""),
@@ -146,6 +161,10 @@ func Load() *Config {
 		WhatsAppPhoneNumberID: getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
 		WhatsAppTemplateName:  getEnv("WHATSAPP_TEMPLATE_NAME", "order_confirmation"),
 		WhatsAppTemplateLang:  getEnv("WHATSAPP_TEMPLATE_LANG", "id"),
+	}
+
+	if len(cfg.EncryptionKey) != 32 {
+		log.Fatalf("ENCRYPTION_KEY harus persis 32 byte (AES-256), dapat %d byte", len(cfg.EncryptionKey))
 	}
 
 	return cfg

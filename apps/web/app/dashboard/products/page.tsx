@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
+  CollaboratorSplit,
+  DashboardCollaborator,
   DashboardProduct,
   LinkItem,
   MyPage,
@@ -10,6 +12,7 @@ import {
   deleteProduct,
   getMyPage,
   getProductDownloadURL,
+  listCollaborators,
   listLinks,
   listProducts,
   updateProduct,
@@ -26,6 +29,7 @@ import {
   IconSparkle,
   IconTrash,
   IconUpload,
+  IconUsers,
   IconWallet,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
@@ -56,15 +60,25 @@ export default function DashboardProductsPage() {
   const [pwywMinPrice, setPwywMinPrice] = useState("");
   const [savingPwyw, setSavingPwyw] = useState(false);
 
+  // Modul Settings §3: split kolaborator per produk -- HANYA kolaborator
+  // yang sudah diundang & aktif (collaborator_user_id terisi), lihat
+  // CollaboratorHandler.ListMine backend. Kreator memilih dari daftar,
+  // bukan mengetik user_id.
+  const [activeCollaborators, setActiveCollaborators] = useState<DashboardCollaborator[]>([]);
+  const [splitsEditId, setSplitsEditId] = useState<string | null>(null);
+  const [splitRows, setSplitRows] = useState<CollaboratorSplit[]>([]);
+  const [savingSplits, setSavingSplits] = useState(false);
+
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
-    Promise.all([getMyPage(), listLinks(), listProducts()])
-      .then(([p, l, prod]) => {
+    Promise.all([getMyPage(), listLinks(), listProducts(), listCollaborators()])
+      .then(([p, l, prod, collabs]) => {
         setPage(p);
         setLinks(l);
         setProducts(prod);
+        setActiveCollaborators(collabs.filter((c) => c.status === "active" && c.collaborator_user_id));
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat produk."))
       .finally(() => setLoading(false));
@@ -100,6 +114,7 @@ export default function DashboardProductsPage() {
           pwyw_min_price_idr: null,
           watermark_enabled: false,
           is_pdf: false,
+          collaborator_splits: [],
         },
       ]);
       setName("");
@@ -266,6 +281,31 @@ export default function DashboardProductsPage() {
       setProducts(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menonaktifkan bayar seikhlasnya.");
+    }
+  }
+
+  function openSplitsForm(product: DashboardProduct) {
+    setSplitsEditId(product.id);
+    setSplitRows(product.collaborator_splits.length > 0 ? product.collaborator_splits : [{ user_id: "", percent: 0 }]);
+  }
+
+  function updateSplitRow(index: number, patch: Partial<CollaboratorSplit>) {
+    setSplitRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  async function handleSaveSplits(product: DashboardProduct) {
+    const rows = splitRows.filter((r) => r.user_id && r.percent > 0);
+    setError(null);
+    setSavingSplits(true);
+    try {
+      await updateProduct(product.id, { collaborator_splits: rows });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setSplitsEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan split kolaborator.");
+    } finally {
+      setSavingSplits(false);
     }
   }
 
@@ -487,6 +527,18 @@ export default function DashboardProductsPage() {
                     <IconShield className="h-4 w-4" />
                   </button>
                 )}
+                {activeCollaborators.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openSplitsForm(p)}
+                    title="Split Pendapatan Kolaborator"
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      p.collaborator_splits.length > 0 ? "text-primary" : "text-muted"
+                    }`}
+                  >
+                    <IconUsers className="h-4 w-4" />
+                  </button>
+                )}
                 <div className="flex-1" />
                 <button
                   type="button"
@@ -587,6 +639,83 @@ export default function DashboardProductsPage() {
                     </span>
                     <button type="button" onClick={() => handleClearPwyw(p)} className="text-[11px] font-bold text-red-600 hover:underline">
                       Batalkan
+                    </button>
+                  </div>
+                )
+              )}
+
+              {splitsEditId === p.id ? (
+                <div className="ml-[68px] flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <p className="text-[11px] text-muted">
+                    Bagian pendapatan otomatis ke kolaborator setiap produk ini terjual (dipotong dari bagianmu).
+                  </p>
+                  {splitRows.map((row, i) => (
+                    <div key={i} className="flex gap-1.5">
+                      <select
+                        value={row.user_id}
+                        onChange={(e) => updateSplitRow(i, { user_id: e.target.value })}
+                        className="flex-1 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      >
+                        <option value="">Pilih kolaborator</option>
+                        {activeCollaborators.map((c) => (
+                          <option key={c.collaborator_user_id} value={c.collaborator_user_id}>
+                            {c.email}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        placeholder="%"
+                        value={row.percent || ""}
+                        onChange={(e) => updateSplitRow(i, { percent: Number(e.target.value) })}
+                        className="w-16 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSplitRows((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-red-600 hover:bg-red-50"
+                      >
+                        <IconTrash className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
+                    className="self-start text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    + Tambah kolaborator
+                  </button>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSplitsEditId(null)}
+                      className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingSplits}
+                      onClick={() => handleSaveSplits(p)}
+                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    >
+                      {savingSplits ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                p.collaborator_splits.length > 0 && (
+                  <div className="ml-[68px] flex items-center justify-between rounded-lg bg-primary-subtle px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-primary">
+                      {p.collaborator_splits.length} kolaborator berbagi{" "}
+                      {p.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)}% pendapatan
+                    </span>
+                    <button type="button" onClick={() => openSplitsForm(p)} className="text-[11px] font-bold text-primary hover:underline">
+                      Ubah
                     </button>
                   </div>
                 )

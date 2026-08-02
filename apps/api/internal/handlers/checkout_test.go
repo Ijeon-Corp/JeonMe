@@ -221,3 +221,67 @@ func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 		t.Fatalf("ledgerAmount = %d, ekspektasi 25000", ledgerAmount)
 	}
 }
+
+// Modul Settings §3 (diferensiasi dari Lynk.id): split kolaborator disimpan
+// sebagai snapshot rupiah ABSOLUT di orders.collaborator_splits_snapshot
+// (lihat CheckoutHandler.Create) -- test ini fokus ke bagian yang paling
+// berisiko (Webhook mengkredit ledger dari snapshot itu), bukan resolusi
+// persen->rupiah di Create() yang butuh Midtrans sungguhan untuk diuji
+// end-to-end (sama seperti test lain di file ini, lihat komentar
+// TestCheckoutCreate_NotConfigured_RollsBackOrder).
+func TestCheckoutWebhook_CreditsCollaboratorSplitFromSnapshot(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	collaboratorID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	splitSnapshot, err := json.Marshal([]CollaboratorSplitSnapshot{{UserID: collaboratorID, AmountIDR: 20000}})
+	if err != nil {
+		t.Fatalf("gagal encode split snapshot: %v", err)
+	}
+	_, err = checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference, collaborator_splits_snapshot)
+		VALUES ($1, $2, 'buyer@example.com', 100000, 'pending', $3, $4)
+	`, orderID, productID, externalID, splitSnapshot)
+	if err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/webhook", checkout.Webhook)
+
+	body := webhookPayload(t, serverKey, uuid.NewString(), externalID, "settlement")
+	// webhookPayload selalu memakai grossAmount "25000.00" -- tidak
+	// mempengaruhi test ini (signature cukup valid, amount_idr dibaca dari
+	// order, bukan dari payload notifikasi).
+	rec := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("webhook gagal: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var collabLedgerAmount int64
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1 AND order_id = $2
+	`, collaboratorID, orderID).Scan(&collabLedgerAmount); err != nil {
+		t.Fatalf("gagal query ledger kolaborator: %v", err)
+	}
+	if collabLedgerAmount != 20000 {
+		t.Fatalf("ledger kolaborator = %d, ekspektasi 20000", collabLedgerAmount)
+	}
+
+	// Bagian kreator harus dipotong split kolaborator (100000 - 20000 =
+	// 80000, platform_fee_idr 0 di setup test ini).
+	var creatorLedgerAmount int64
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1 AND order_id = $2
+	`, userID, orderID).Scan(&creatorLedgerAmount); err != nil {
+		t.Fatalf("gagal query ledger kreator: %v", err)
+	}
+	if creatorLedgerAmount != 80000 {
+		t.Fatalf("ledger kreator = %d, ekspektasi 80000 (100000 - 20000 split)", creatorLedgerAmount)
+	}
+}

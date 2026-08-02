@@ -5,13 +5,18 @@ import {
   ApiError,
   DashboardCollaborator,
   PendingCollaborationInvite,
+  TeamAuditLogEntry,
+  TeamRole,
   acceptCollaborationInvite,
   inviteCollaborator,
   listCollaborators,
   listInvitesForMe,
+  listTeamAuditLog,
   revokeCollaborator,
+  updateCollaboratorRole,
 } from "@/lib/api-client";
-import { IconCheck, IconTrash, IconUsers } from "@/components/icons";
+import { useToast } from "@/components/Toast";
+import { IconCheck, IconClock, IconTrash, IconUsers } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 
 const STATUS_LABEL: Record<DashboardCollaborator["status"], string> = {
@@ -20,23 +25,54 @@ const STATUS_LABEL: Record<DashboardCollaborator["status"], string> = {
   revoked: "Dicabut",
 };
 
+// Modul Settings §4 (keputusan pengguna 2026-07-31): role dipetakan ke 3
+// flag boolean lama di backend (roleToPermissions) -- daftar & label di
+// sini HARUS tetap sinkron dengan pemetaan itu.
+const ROLE_LABEL: Record<TeamRole, string> = {
+  content_admin: "Admin Konten (Tautan & Desain)",
+  sales_admin: "Admin Penjualan (Produk)",
+  full_access: "Akses Penuh",
+};
+const ROLE_OPTIONS: TeamRole[] = ["content_admin", "sales_admin", "full_access"];
+
+function formatAuditEntry(entry: TeamAuditLogEntry): string {
+  const m = entry.metadata ?? {};
+  const email = m.collaborator_email ?? "seseorang";
+  switch (entry.action) {
+    case "team.invited":
+      return `Mengundang ${email} sebagai ${ROLE_LABEL[m.role as TeamRole] ?? m.role}`;
+    case "team.role_updated":
+      return `Mengubah role ${email} dari ${ROLE_LABEL[m.old_role as TeamRole] ?? m.old_role} ke ${
+        ROLE_LABEL[m.new_role as TeamRole] ?? m.new_role
+      }`;
+    case "team.revoked":
+      return `Mencabut akses ${email} (sebelumnya ${ROLE_LABEL[m.role as TeamRole] ?? m.role})`;
+    case "team.invite_accepted":
+      return `${email} menerima undangan`;
+    default:
+      return entry.action;
+  }
+}
+
 export default function DashboardTeamPage() {
+  const { showToast } = useToast();
+
   const [collaborators, setCollaborators] = useState<DashboardCollaborator[]>([]);
   const [invitesForMe, setInvitesForMe] = useState<PendingCollaborationInvite[]>([]);
+  const [auditLog, setAuditLog] = useState<TeamAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [canEditLinks, setCanEditLinks] = useState(true);
-  const [canEditProducts, setCanEditProducts] = useState(false);
-  const [canEditDesign, setCanEditDesign] = useState(false);
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [role, setRole] = useState<TeamRole>("content_admin");
   const [inviting, setInviting] = useState(false);
 
   function reload() {
-    return Promise.all([listCollaborators(), listInvitesForMe()]).then(([c, i]) => {
+    return Promise.all([listCollaborators(), listInvitesForMe(), listTeamAuditLog()]).then(([c, i, a]) => {
       setCollaborators(c);
       setInvitesForMe(i);
+      setAuditLog(a);
     });
   }
 
@@ -48,29 +84,37 @@ export default function DashboardTeamPage() {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) {
-      setError("Isi email kolaborator.");
-      return;
-    }
-    if (!canEditLinks && !canEditProducts && !canEditDesign) {
-      setError("Pilih minimal satu akses.");
+    if (!emailOrUsername.trim()) {
+      showToast("Isi email atau username kolaborator.", "error");
       return;
     }
     setError(null);
     setInviting(true);
     try {
-      await inviteCollaborator({
-        email: email.trim(),
-        can_edit_links: canEditLinks,
-        can_edit_products: canEditProducts,
-        can_edit_design: canEditDesign,
-      });
-      setEmail("");
+      await inviteCollaborator({ email_or_username: emailOrUsername.trim(), role });
+      setEmailOrUsername("");
+      setRole("content_admin");
       await reload();
+      showToast("Undangan dikirim.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat undangan.");
+      showToast(err instanceof ApiError ? err.message : "Gagal membuat undangan.", "error");
     } finally {
       setInviting(false);
+    }
+  }
+
+  // Optimistic UI + rollback (requirement UI wajib Modul Settings).
+  async function handleRoleChange(collaborator: DashboardCollaborator, newRole: TeamRole) {
+    const previous = collaborators;
+    setCollaborators(collaborators.map((c) => (c.id === collaborator.id ? { ...c, role: newRole } : c)));
+    try {
+      await updateCollaboratorRole(collaborator.id, newRole);
+      showToast(`Role ${collaborator.email} diperbarui.`);
+      const auditRefresh = await listTeamAuditLog();
+      setAuditLog(auditRefresh);
+    } catch (err) {
+      setCollaborators(previous);
+      showToast(err instanceof ApiError ? err.message : "Gagal mengubah role.", "error");
     }
   }
 
@@ -81,8 +125,9 @@ export default function DashboardTeamPage() {
     try {
       await revokeCollaborator(c.id);
       await reload();
+      showToast("Akses kolaborator dicabut.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mencabut akses.");
+      showToast(err instanceof ApiError ? err.message : "Gagal mencabut akses.", "error");
     } finally {
       setBusyId(null);
     }
@@ -94,8 +139,9 @@ export default function DashboardTeamPage() {
     try {
       await acceptCollaborationInvite(invite.id);
       await reload();
+      showToast("Undangan diterima.");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menerima undangan.");
+      showToast(err instanceof ApiError ? err.message : "Gagal menerima undangan.", "error");
     } finally {
       setBusyId(null);
     }
@@ -121,11 +167,7 @@ export default function DashboardTeamPage() {
               <li key={inv.id} className="flex items-center justify-between rounded-lg border border-border bg-white px-3.5 py-2.5">
                 <div>
                   <p className="text-sm font-semibold text-ink">@{inv.owner_username}</p>
-                  <p className="text-[11px] text-muted">
-                    {[inv.can_edit_links && "Tautan", inv.can_edit_products && "Produk", inv.can_edit_design && "Desain"]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
+                  <p className="text-[11px] text-muted">{ROLE_LABEL[inv.role]}</p>
                 </div>
                 <button
                   type="button"
@@ -146,26 +188,24 @@ export default function DashboardTeamPage() {
         <h2 className="font-heading text-sm font-bold text-ink">Undang Kolaborator</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
-            type="email"
-            placeholder="email@contoh.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="email@contoh.com atau username"
+            value={emailOrUsername}
+            onChange={(e) => setEmailOrUsername(e.target.value)}
             className="rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <div className="flex flex-wrap gap-4 text-xs font-semibold text-ink">
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={canEditLinks} onChange={(e) => setCanEditLinks(e.target.checked)} />
-              Tautan
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={canEditProducts} onChange={(e) => setCanEditProducts(e.target.checked)} />
-              Produk
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={canEditDesign} onChange={(e) => setCanEditDesign(e.target.checked)} />
-              Desain
-            </label>
-          </div>
+          <select
+            aria-label="Role kolaborator baru"
+            value={role}
+            onChange={(e) => setRole(e.target.value as TeamRole)}
+            className="rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+          >
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={inviting}
@@ -180,33 +220,60 @@ export default function DashboardTeamPage() {
         <h2 className="font-heading text-sm font-bold text-ink">Kolaboratorku</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
-            <li key={c.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
-              <div className="flex items-center gap-3">
+            <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                   <IconUsers className="h-[18px] w-[18px]" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink">{c.email}</p>
-                  <p className="text-[11px] text-muted">
-                    {STATUS_LABEL[c.status]} &middot;{" "}
-                    {[c.can_edit_links && "Tautan", c.can_edit_products && "Produk", c.can_edit_design && "Desain"]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{c.email}</p>
+                  <p className="text-[11px] text-muted">{STATUS_LABEL[c.status]}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={busyId === c.id}
-                onClick={() => handleRevoke(c)}
-                title="Cabut akses"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
-              >
-                <IconTrash className="h-4 w-4" />
-              </button>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <select
+                  aria-label={`Role ${c.email}`}
+                  value={c.role}
+                  onChange={(e) => handleRoleChange(c, e.target.value as TeamRole)}
+                  disabled={c.status === "revoked"}
+                  className="rounded-lg border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
+                >
+                  {ROLE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={busyId === c.id}
+                  onClick={() => handleRevoke(c)}
+                  title="Cabut akses"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <IconTrash className="h-4 w-4" />
+                </button>
+              </div>
             </li>
           ))}
           {collaborators.length === 0 && <EmptyState as="li" text="Belum ada kolaborator." />}
+        </ul>
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
+          <IconClock className="h-4 w-4 text-muted" />
+          Riwayat Aktivitas Tim
+        </h2>
+        <p className="mt-1 text-xs text-muted">Siapa mengubah apa dan kapan.</p>
+        <ul className="mt-3 flex flex-col gap-2">
+          {auditLog.map((entry) => (
+            <li key={entry.id} className="rounded-lg border border-border px-3.5 py-2.5">
+              <p className="text-xs text-ink">{formatAuditEntry(entry)}</p>
+              <p className="mt-0.5 text-[11px] text-muted">{new Date(entry.created_at).toLocaleString("id-ID")}</p>
+            </li>
+          ))}
+          {auditLog.length === 0 && <EmptyState as="li" text="Belum ada aktivitas tim." />}
         </ul>
       </section>
     </div>

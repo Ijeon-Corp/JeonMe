@@ -24,9 +24,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({ email, username, password, consent_accepted: consentAccepted });
-      // Langsung login supaya pengguna tidak perlu isi form dua kali.
-      const { token } = await login({ email, password });
-      setToken(token);
+      // Langsung login supaya pengguna tidak perlu isi form dua kali. Akun
+      // yang baru saja dibuat tidak mungkin sudah punya 2FA aktif (Modul
+      // Settings §5), jadi token selalu langsung ada di sini.
+      const res = await login({ email, password });
+      setToken(res.token!);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mendaftar, coba lagi.");
