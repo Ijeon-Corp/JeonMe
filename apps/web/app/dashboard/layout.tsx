@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
 import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import NotificationBell from "@/components/NotificationBell";
+import GlobalSearch from "@/components/GlobalSearch";
 import {
   Workspace,
   clearToken,
@@ -369,6 +370,7 @@ export default function DashboardLayout({
             <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-border bg-white/90 px-6 py-2.5 backdrop-blur md:flex">
               <p className="font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
               <div className="flex items-center gap-1.5">
+                <GlobalSearch />
                 {username && (
                   <a
                     href={`https://jeonme.com/${username}`}
