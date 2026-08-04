@@ -63,6 +63,52 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Statistik/Toko (tab "Manage Items"): sold_count di List harus
+// menghitung HANYA order berstatus "paid" -- order "pending"/"expired" tidak
+// boleh ikut dihitung sebagai "Terjual" (sumber kebenaran sama seperti
+// AnalyticsHandler.computeSummary top_products).
+func TestProductList_SoldCountOnlyCountsPaidOrders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/products", product.List)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Ebook Terjual", "price_idr": 50000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created product: %v", err)
+	}
+
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'buyer1@example.com', 50000, 'paid'),
+			($1, 'buyer2@example.com', 50000, 'paid'),
+			($1, 'buyer3@example.com', 50000, 'pending')
+	`, created.ID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		ID        string `json:"id"`
+		SoldCount int64  `json:"sold_count"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != 1 || items[0].SoldCount != 2 {
+		t.Fatalf("items = %+v, ekspektasi 1 produk dengan sold_count=2 (hanya order paid)", items)
+	}
+}
+
 // Kepemilikan harus ditegakkan untuk update & delete produk, sama seperti tautan.
 func TestProduct_OwnershipEnforced(t *testing.T) {
 	gin.SetMode(gin.TestMode)

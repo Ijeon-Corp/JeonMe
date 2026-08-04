@@ -178,12 +178,21 @@ func (h *ProductHandler) List(c *gin.Context) {
 	// TIDAK ikut tampil di sini -- masing-masing punya halaman dashboard
 	// sendiri (/dashboard/bundles, /dashboard/donation, /dashboard/events,
 	// /dashboard/courses, /dashboard/bookings), sama seperti voucher.
+	// Modul Statistik/Toko (tab "Manage Items"): sold_count -- jumlah order
+	// LUNAS per produk, sumber kebenaran yang SAMA seperti top_products di
+	// AnalyticsHandler ("status = 'paid'" saja) -- ditampilkan sebagai kolom
+	// "Terjual" di tabel, bukan angka rekaan.
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, name, description, price_idr, is_active, file_key != '' AS has_file, cover_image_url,
-			flash_sale_price_idr, flash_sale_starts_at, flash_sale_ends_at, `+effectivePriceExpr+`,
-			pwyw_enabled, pwyw_min_price_idr, watermark_enabled, file_key ILIKE '%.pdf' AS is_pdf, collaborator_splits
-		FROM products WHERE user_id = $1 AND is_bundle = false AND is_donation = false AND is_event = false
-			AND is_course = false AND is_booking = false
+		SELECT p.id, p.name, p.description, p.price_idr, p.is_active, p.file_key != '' AS has_file, p.cover_image_url,
+			p.flash_sale_price_idr, p.flash_sale_starts_at, p.flash_sale_ends_at, `+effectivePriceExpr+`,
+			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
+			COALESCE(o.sold_count, 0) AS sold_count
+		FROM products p
+		LEFT JOIN (
+			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
+		) o ON o.product_id = p.id
+		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
+			AND p.is_course = false AND p.is_booking = false
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -209,6 +218,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		WatermarkEnabled   bool                `json:"watermark_enabled"`
 		IsPdf              bool                `json:"is_pdf"`
 		CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
+		SoldCount          int64               `json:"sold_count"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -216,7 +226,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		var splitsRaw []byte
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
-			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw); err == nil {
+			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}

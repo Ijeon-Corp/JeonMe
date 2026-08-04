@@ -8,7 +8,8 @@ import {
   getAnalyticsSummary,
   listRecentOrders,
 } from "@/lib/api-client";
-import { IconBox, IconChart, IconInbox, IconLink, IconWallet } from "@/components/icons";
+import { IconBox, IconChart, IconInbox, IconLink } from "@/components/icons";
+import ShopOverviewPanel from "@/components/ShopOverviewPanel";
 
 // Modul Statistik (permintaan langsung pengguna: "menu statistik yang
 // berisi data jumlah klik dll pada link bio dan produk toko di halaman
@@ -27,12 +28,6 @@ const DEVICE_LABEL: Record<string, string> = {
   unknown: "Tidak diketahui",
 };
 
-const WEEKDAY_LABEL = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-function formatRupiah(n: number): string {
-  return "Rp" + n.toLocaleString("id-ID");
-}
-
 // buildAreaPath -- grafik area SVG polos, sama seperti di dashboard/page.tsx
 // (Ringkasan). Tidak diekstrak ke lib bersama karena cuma dipakai 2 tempat
 // dan sederhana (murni fungsi tampilan, tanpa state).
@@ -49,13 +44,6 @@ function buildAreaPath(values: number[]): { line: string; area: string } {
   const area = `${line} L${points[points.length - 1][0].toFixed(2)},40 L${points[0][0].toFixed(2)},40 Z`;
   return { line, area };
 }
-
-const ORDER_STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  paid: { label: "Lunas", className: "bg-secondary-subtle text-secondary-dark" },
-  pending: { label: "Menunggu", className: "bg-amber-50 text-amber-700" },
-  expired: { label: "Kedaluwarsa", className: "bg-gray-100 text-muted" },
-  failed: { label: "Gagal", className: "bg-red-50 text-red-600" },
-};
 
 export default function StatistikPage() {
   const [tab, setTab] = useState<"link-bio" | "toko">("link-bio");
@@ -77,7 +65,6 @@ export default function StatistikPage() {
 
   const viewsPath = summary ? buildAreaPath(summary.daily_series.map((d) => d.views)) : { line: "", area: "" };
   const clicksPath = summary ? buildAreaPath(summary.daily_series.map((d) => d.clicks)) : { line: "", area: "" };
-  const weeklyMax = summary ? Math.max(1, ...summary.weekly_revenue.map((d) => d.revenue_idr)) : 1;
   const maxDevice = summary ? Math.max(1, ...summary.device_breakdown.map((d) => d.count)) : 1;
 
   return (
@@ -199,59 +186,9 @@ export default function StatistikPage() {
           </section>
         </>
       ) : (
-        <>
-          <section className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard icon={<IconBox className="h-4 w-4 text-secondary-dark" />} label="Transaksi" value={summary.total_orders.toLocaleString("id-ID")} />
-            <StatCard icon={<IconWallet className="h-4 w-4 text-primary" />} label="Pendapatan" value={formatRupiah(summary.total_revenue_idr)} />
-          </section>
-
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
-            <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
-            <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
-              {summary.weekly_revenue.map((d) => (
-                <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
-                  <div className="w-full rounded-t bg-secondary transition-all" style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }} />
-                  <span className="text-[10px] text-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
-            <ul className="mt-3 flex flex-col gap-2">
-              {summary.top_products.map((p) => (
-                <li key={p.product_id} className="flex justify-between text-xs">
-                  <span className="truncate text-ink">{p.name}</span>
-                  <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">
-                    {p.sold_count} terjual &middot; {formatRupiah(p.revenue_idr)}
-                  </span>
-                </li>
-              ))}
-              {summary.top_products.length === 0 && <EmptyRow text="Belum ada penjualan." />}
-            </ul>
-          </div>
-
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <h2 className="font-heading text-sm font-bold text-ink">Transaksi Terbaru</h2>
-            <ul className="mt-3 flex flex-col gap-2">
-              {(recentOrders ?? []).map((o) => {
-                const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-muted" };
-                return (
-                  <li key={o.order_id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="min-w-0 flex-1 truncate text-ink">{o.product_name}</span>
-                    <span className="flex-shrink-0 font-semibold text-ink">{formatRupiah(o.amount_idr)}</span>
-                    <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusMeta.className}`}>
-                      {statusMeta.label}
-                    </span>
-                  </li>
-                );
-              })}
-              {(recentOrders ?? []).length === 0 && <EmptyRow text="Belum ada transaksi." />}
-            </ul>
-          </div>
-        </>
+        <div className="mt-4">
+          <ShopOverviewPanel summary={summary} recentOrders={recentOrders} />
+        </div>
       )}
     </div>
   );

@@ -794,6 +794,9 @@ export interface DashboardProduct {
   watermark_enabled: boolean;
   is_pdf: boolean;
   collaborator_splits: CollaboratorSplit[];
+  // sold_count -- Modul Toko (tab "Manage Items"): jumlah order LUNAS untuk
+  // produk ini, dipakai kolom "Terjual" di tabel.
+  sold_count: number;
 }
 
 export function listProducts() {
