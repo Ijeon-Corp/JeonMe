@@ -579,6 +579,8 @@ export default function PagePreview({
                         openLabel={soldOut ? "Kuota Penuh" : "Daftar"}
                         submitLabel="Bayar & Daftar"
                         referralCode={data.referralCode}
+                        username={data.username}
+                        pageSlug={data.pageSlug}
                       />
                     ) : (
                       <button
@@ -648,6 +650,8 @@ export default function PagePreview({
                   hideVoucher
                   openLabel="Dukung"
                   submitLabel="Kirim Dukungan"
+                  username={data.username}
+                  pageSlug={data.pageSlug}
                 />
               </div>
             ) : (
@@ -718,6 +722,8 @@ export default function PagePreview({
                       buttonClassName={theme.buyButton}
                       pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
                       referralCode={data.referralCode}
+                      username={data.username}
+                      pageSlug={data.pageSlug}
                     />
                   ) : (
                     <button

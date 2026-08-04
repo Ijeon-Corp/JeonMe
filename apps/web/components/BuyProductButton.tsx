@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, createCheckout, validateVoucher } from "@/lib/api-client";
+import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 
 export default function BuyProductButton({
   productId,
@@ -11,6 +11,8 @@ export default function BuyProductButton({
   openLabel = "Beli",
   submitLabel = "Bayar Sekarang",
   referralCode,
+  username,
+  pageSlug,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -24,6 +26,13 @@ export default function BuyProductButton({
   // No.72: kode ?ref= dari URL halaman publik, diteruskan apa adanya ke
   // checkout -- backend yang memvalidasi & mengabaikan kalau tidak cocok.
   referralCode?: string;
+  // Modul Toko (Fase A, Overview): "Klik Beli" -- dilacak sama seperti klik
+  // tautan (lihat TrackedLink.tsx), dipicu saat tombol INI ditekan pertama
+  // kali (minat nyata terhadap produk), bukan saat form checkout disubmit.
+  // Opsional -- kalau tidak diisi (dipakai di luar PagePreview), tracking
+  // dilewati diam-diam.
+  username?: string;
+  pageSlug?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -85,11 +94,22 @@ export default function BuyProductButton({
     }
   }
 
+  function handleOpen() {
+    setOpen(true);
+    if (username) {
+      if (pageSlug) {
+        trackEventBySlug(pageSlug, { event_type: "product_click", product_id: productId });
+      } else {
+        trackEvent(username, { event_type: "product_click", product_id: productId });
+      }
+    }
+  }
+
   if (!open) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className={`mt-2.5 w-full rounded-lg py-1.5 text-xs transition-all duration-200 ${buttonClassName}`}
       >
         {openLabel}

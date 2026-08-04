@@ -1,5 +1,8 @@
-import { AnalyticsSummary, RecentOrder } from "@/lib/api-client";
-import { IconBox, IconInbox, IconWallet } from "@/components/icons";
+"use client";
+
+import { useEffect, useState } from "react";
+import { AnalyticsSummary, RecentOrder, getBalance } from "@/lib/api-client";
+import { IconBox, IconChart, IconInbox, IconTrendArrow, IconWallet } from "@/components/icons";
 
 // ShopOverviewPanel -- ringkasan performa Toko (Transaksi, Pendapatan,
 // grafik 7 hari, Produk Terlaris, Transaksi Terbaru), dipakai di DUA
@@ -7,6 +10,11 @@ import { IconBox, IconInbox, IconWallet } from "@/components/icons";
 // /dashboard/products (Toko) -- diekstrak ke sini supaya kedua tempat itu
 // selalu menampilkan angka yang identik dari satu sumber logika, bukan dua
 // salinan yang bisa perlahan berbeda.
+//
+// Saldo (Withdrawal Amount pada referensi) diambil SENDIRI lewat
+// getBalance() di sini (bukan prop) -- kedua pemanggil butuh angka yang
+// sama, mengambilnya sendiri sekali di sini lebih sederhana daripada
+// menduplikasi pemanggilan di 2 tempat.
 const WEEKDAY_LABEL = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 const ORDER_STATUS_LABEL: Record<string, { label: string; className: string }> = {
@@ -22,13 +30,40 @@ function formatRupiah(n: number): string {
 
 export default function ShopOverviewPanel({ summary, recentOrders }: { summary: AnalyticsSummary; recentOrders: RecentOrder[] | null }) {
   const weeklyMax = Math.max(1, ...summary.weekly_revenue.map((d) => d.revenue_idr));
+  const [availableIDR, setAvailableIDR] = useState<number | null>(null);
+
+  useEffect(() => {
+    getBalance()
+      .then((b) => setAvailableIDR(b.available_idr))
+      .catch(() => {
+        // Fail-silent -- kartu saldo cukup disembunyikan kalau gagal dimuat,
+        // bukan menggagalkan seluruh panel Overview.
+      });
+  }, []);
+
+  // conversionRate -- total_orders (LUNAS) / total_checkouts (order dibuat,
+  // status apa pun) -- lihat catatan lingkup di AnalyticsSummary.
+  const conversionRate = summary.total_checkouts > 0 ? (summary.total_orders / summary.total_checkouts) * 100 : null;
 
   return (
     <>
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard icon={<IconBox className="h-4 w-4 text-secondary-dark" />} label="Transaksi" value={summary.total_orders.toLocaleString("id-ID")} />
         <StatCard icon={<IconWallet className="h-4 w-4 text-primary" />} label="Pendapatan" value={formatRupiah(summary.total_revenue_idr)} />
+        {availableIDR !== null && (
+          <StatCard icon={<IconWallet className="h-4 w-4 text-secondary-dark" />} label="Saldo Tersedia" value={formatRupiah(availableIDR)} />
+        )}
+        <StatCard icon={<IconChart className="h-4 w-4 text-accent-dark" />} label="Klik Beli" value={summary.total_product_clicks.toLocaleString("id-ID")} />
+        <StatCard icon={<IconBox className="h-4 w-4 text-primary" />} label="Checkout" value={summary.total_checkouts.toLocaleString("id-ID")} />
+        <StatCard
+          icon={<IconTrendArrow className="h-4 w-4 text-secondary-dark" />}
+          label="Tingkat Konversi"
+          value={conversionRate !== null ? `${conversionRate.toFixed(1)}%` : "--"}
+        />
       </section>
+      <p className="mt-2 text-[11px] text-muted">
+        Checkout = pembeli sampai ke proses bayar (lunas atau tidak). Tingkat Konversi = Transaksi lunas &divide; Checkout.
+      </p>
 
       <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>

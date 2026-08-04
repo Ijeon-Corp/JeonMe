@@ -34,8 +34,16 @@ func NewAnalyticsHandler(db *pgxpool.Pool) *AnalyticsHandler {
 }
 
 type trackEventRequest struct {
-	EventType string `json:"event_type" binding:"required,oneof=view click"`
+	// product_click -- Modul Toko (Fase A, Overview): "Klik Beli" per
+	// produk, dilacak SAMA seperti klik tautan biasa (event_type "click" +
+	// link_id) tapi lewat kolom product_id -- lihat BuyProductButton.tsx
+	// (dipicu saat pengunjung menekan "Beli"/"Dukung" PERTAMA kali, sebelum
+	// form checkout terbuka, bukan saat submit -- itu momen minat nyata
+	// terhadap produk, sama seperti klik tautan yang tidak menunggu halaman
+	// tujuan selesai dimuat).
+	EventType string `json:"event_type" binding:"required,oneof=view click product_click"`
 	LinkID    string `json:"link_id"`
+	ProductID string `json:"product_id"`
 	Referrer  string `json:"referrer"`
 }
 
@@ -117,13 +125,17 @@ func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, 
 	if req.LinkID != "" {
 		linkID = &req.LinkID
 	}
+	var productID *string
+	if req.ProductID != "" {
+		productID = &req.ProductID
+	}
 
 	deviceType := classifyDevice(userAgent)
 
 	_, _ = h.DB.Exec(ctx, `
-		INSERT INTO analytics_events (id, page_id, event_type, link_id, referrer, device_type, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
-	`, uuid.NewString(), pageID, req.EventType, linkID, req.Referrer, deviceType)
+		INSERT INTO analytics_events (id, page_id, event_type, link_id, product_id, referrer, device_type, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+	`, uuid.NewString(), pageID, req.EventType, linkID, productID, req.Referrer, deviceType)
 }
 
 // resolveDateRange — No.86: mendukung DUA cara memilih rentang: preset
@@ -217,14 +229,24 @@ type revenuePoint struct {
 }
 
 type analyticsSummaryResponse struct {
-	TotalViews      int64             `json:"total_views"`
-	TotalClicks     int64             `json:"total_clicks"`
+	TotalViews  int64 `json:"total_views"`
+	TotalClicks int64 `json:"total_clicks"`
 	// TotalOrders/TotalRevenueIDR -- pesanan LUNAS ("paid") dalam rentang yang
 	// sama seperti TotalViews/TotalClicks di atas, dipakai kartu ringkasan ala
 	// referensi ("Total Order"/"Total Sales"). Beda dari TopProducts.RevenueIDR
 	// yang cuma menjumlah 5 produk terlaris -- ini total SEMUA produk.
-	TotalOrders           int64             `json:"total_orders"`
-	TotalRevenueIDR       int64             `json:"total_revenue_idr"`
+	TotalOrders     int64 `json:"total_orders"`
+	TotalRevenueIDR int64 `json:"total_revenue_idr"`
+	// TotalProductClicks/TotalCheckouts -- Modul Toko (Fase A, Overview):
+	// pengganti JUJUR untuk "Product View"/"Checkout" pada referensi (lihat
+	// catatan lingkup di trackEventRequest & CheckoutHandler.Create).
+	// TotalCheckouts menghitung SEMUA order yang dibuat pada rentang ini
+	// (bukan cuma "paid") -- "checkout" berarti pembeli SAMPAI ke proses
+	// bayar, terlepas berhasil atau tidak. TotalOrders/TotalCheckouts di
+	// frontend jadi "Tingkat Konversi" yang jujur dari data yang benar-
+	// benar ada, bukan rekayasa.
+	TotalProductClicks    int64             `json:"total_product_clicks"`
+	TotalCheckouts        int64             `json:"total_checkouts"`
 	DailySeries           []dailyPoint      `json:"daily_series"`
 	TopLinks              []topLink         `json:"top_links"`
 	TopProducts           []topProduct      `json:"top_products"`
@@ -280,10 +302,20 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 	if err := h.DB.QueryRow(ctx, `
 		SELECT
 			COUNT(*) FILTER (WHERE event_type = 'view'),
-			COUNT(*) FILTER (WHERE event_type = 'click')
+			COUNT(*) FILTER (WHERE event_type = 'click'),
+			COUNT(*) FILTER (WHERE event_type = 'product_click')
 		FROM analytics_events
 		WHERE page_id = $1 AND created_at BETWEEN $2 AND $3
-	`, pageID, from, to).Scan(&resp.TotalViews, &resp.TotalClicks); err != nil {
+	`, pageID, from, to).Scan(&resp.TotalViews, &resp.TotalClicks, &resp.TotalProductClicks); err != nil {
+		return analyticsSummaryResponse{}, errGagalHitungRingkasan
+	}
+
+	// TotalCheckouts -- Modul Toko (Fase A): SEMUA order (bukan cuma paid)
+	// pada rentang ini, sumber "Tingkat Konversi" yang jujur di frontend.
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(*) FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE p.user_id = $1 AND o.created_at BETWEEN $2 AND $3
+	`, userID, from, to).Scan(&resp.TotalCheckouts); err != nil {
 		return analyticsSummaryResponse{}, errGagalHitungRingkasan
 	}
 

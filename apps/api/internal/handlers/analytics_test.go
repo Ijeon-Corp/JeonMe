@@ -83,6 +83,63 @@ func TestAnalytics_TrackAndSummarize(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase A, Overview): "Klik Beli" (product_click) dihitung
+// terpisah dari klik tautan biasa, dan TotalCheckouts menghitung SEMUA order
+// (bukan cuma paid) -- keduanya jadi dasar "Tingkat Konversi" yang jujur.
+func TestAnalytics_ProductClickAndCheckoutsCounted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	analytics, auth := newTestAnalyticsHandler(t)
+	userID := registerTestUser(t, auth)
+
+	var username string
+	if err := analytics.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
+		t.Fatalf("gagal ambil username: %v", err)
+	}
+
+	productID := uuid.NewString()
+	if _, err := analytics.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active) VALUES ($1, $2, 'Produk Test', 25000, true)
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup produk test: %v", err)
+	}
+	if _, err := analytics.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'a@example.com', 25000, 'paid'),
+			($1, 'b@example.com', 25000, 'pending')
+	`, productID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/pages/:username/track", analytics.Track)
+	g := router.Group("/", fakeAuth())
+	g.GET("/analytics/summary", analytics.GetSummary)
+
+	for i := 0; i < 2; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages/"+username+"/track", map[string]string{
+			"event_type": "product_click", "product_id": productID,
+		}, nil)
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("track product_click: status %d, body %s", rec.Code, rec.Body.String())
+		}
+	}
+
+	sumRec := doJSON(t, router, http.MethodGet, "/analytics/summary", nil, map[string]string{"X-Test-UserID": userID})
+	var resp analyticsSummaryResponse
+	if err := json.Unmarshal(sumRec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode summary: %v", err)
+	}
+	if resp.TotalProductClicks != 2 {
+		t.Errorf("TotalProductClicks = %d, ekspektasi 2", resp.TotalProductClicks)
+	}
+	if resp.TotalCheckouts != 2 {
+		t.Errorf("TotalCheckouts = %d, ekspektasi 2 (paid + pending, BUKAN cuma paid)", resp.TotalCheckouts)
+	}
+	if resp.TotalOrders != 1 {
+		t.Errorf("TotalOrders = %d, ekspektasi 1 (hanya paid)", resp.TotalOrders)
+	}
+}
+
 // Kartu ringkasan ala referensi ("Total Order"/"Total Sales", redesain
 // Dashboard) -- total_orders/total_revenue_idr harus menghitung SEMUA
 // pesanan lunas dalam rentang, bukan cuma 5 produk terlaris seperti

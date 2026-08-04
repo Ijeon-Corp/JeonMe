@@ -1775,7 +1775,10 @@ export async function submitKyc(input: {
 
 // Fire-and-forget: kegagalan tracking TIDAK BOLEH mengganggu pengunjung
 // halaman publik, jadi error diabaikan diam-diam (bukan throw).
-export function trackEvent(username: string, input: { event_type: "view" | "click"; link_id?: string; referrer?: string }) {
+export function trackEvent(
+  username: string,
+  input: { event_type: "view" | "click" | "product_click"; link_id?: string; product_id?: string; referrer?: string }
+) {
   fetch(`${API_BASE_URL}/pages/${username}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1788,7 +1791,10 @@ export function trackEvent(username: string, input: { event_type: "view" | "clic
 // No.98 (Sprint 14): tracking untuk halaman bio TAMBAHAN, diresolusi lewat
 // slug (bukan username) supaya tidak salah tercatat ke halaman utama
 // kreator yang sama -- lihat AnalyticsHandler.TrackBySlug (backend).
-export function trackEventBySlug(slug: string, input: { event_type: "view" | "click"; link_id?: string; referrer?: string }) {
+export function trackEventBySlug(
+  slug: string,
+  input: { event_type: "view" | "click" | "product_click"; link_id?: string; product_id?: string; referrer?: string }
+) {
   fetch(`${API_BASE_URL}/p/${slug}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1840,6 +1846,12 @@ export interface AnalyticsSummary {
   // admin template, kartu "Total Order"/"Total Sales").
   total_orders: number;
   total_revenue_idr: number;
+  // total_product_clicks/total_checkouts -- Modul Toko (Fase A, Overview):
+  // pengganti jujur "Product View"/"Checkout" -- lihat catatan lingkup di
+  // AnalyticsHandler (backend). total_checkouts menghitung SEMUA order
+  // (bukan cuma lunas), jadi total_orders/total_checkouts = tingkat konversi.
+  total_product_clicks: number;
+  total_checkouts: number;
   daily_series: DailyPoint[];
   top_links: TopLink[];
   top_products: TopProduct[];

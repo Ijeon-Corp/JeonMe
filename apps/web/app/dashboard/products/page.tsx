@@ -74,6 +74,7 @@ export default function DashboardProductsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[] | null>(null);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [overviewRangeDays, setOverviewRangeDays] = useState(30);
 
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -122,13 +123,13 @@ export default function DashboardProductsPage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([getAnalyticsSummary({ range_days: 30 }), listRecentOrders()])
+    Promise.all([getAnalyticsSummary({ range_days: overviewRangeDays }), listRecentOrders()])
       .then(([s, orders]) => {
         setSummary(s);
         setRecentOrders(orders);
       })
       .catch((err) => setOverviewError(err instanceof ApiError ? err.message : "Gagal memuat ringkasan toko."));
-  }, []);
+  }, [overviewRangeDays]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -407,8 +408,54 @@ export default function DashboardProductsPage() {
 
         {tab === "overview" ? (
           <div className="mt-4">
-            {overviewError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{overviewError}</p>}
-            {summary ? <ShopOverviewPanel summary={summary} recentOrders={recentOrders} /> : <p className="text-sm text-muted">Memuat...</p>}
+            {/* Identitas Toko -- permintaan referensi gambar: nama & tautan
+                halaman publik selalu terlihat di atas Overview, bukan cuma
+                di panel pratinjau kanan. */}
+            {page && (
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+                {page.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={page.avatar_url} alt={page.username} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
+                ) : (
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-sm font-bold text-primary">
+                    {page.username.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink">{page.display_name || `@${page.username}`}</p>
+                  <a
+                    href={`https://jeonme.com/${page.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-xs text-primary hover:underline"
+                  >
+                    jeonme.com/{page.username}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              {[7, 30, 90].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setOverviewRangeDays(d)}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    overviewRangeDays === d
+                      ? "border-primary bg-primary-subtle text-primary"
+                      : "border-border text-muted hover:border-primary/50"
+                  }`}
+                >
+                  {d} hari
+                </button>
+              ))}
+            </div>
+
+            {overviewError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{overviewError}</p>}
+            <div className="mt-3">
+              {summary ? <ShopOverviewPanel summary={summary} recentOrders={recentOrders} /> : <p className="text-sm text-muted">Memuat...</p>}
+            </div>
           </div>
         ) : (
           <div className="mt-4">
