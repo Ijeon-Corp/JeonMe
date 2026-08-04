@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -202,6 +203,89 @@ func TestUploadCustomBackground_RejectsForFreeUser(t *testing.T) {
 	rec := doJSON(t, router, http.MethodPost, "/page/background", nil, map[string]string{"X-Test-UserID": userID})
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, ekspektasi 403 (ditolak sebelum sempat cek storage/file), body %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Langganan Premium: Halaman Tambahan sekarang eksklusif Premium
+// (sebelumnya bebas untuk semua orang) -- kreator gratis harus ditolak
+// 403 SEBELUM baris pages sempat dibuat sama sekali.
+func TestCreatePage_RejectsForFreeUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Kedua", "slug": uuid.NewString()}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, ekspektasi 403, body %s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := page.DB.QueryRow(t.Context(), `SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false`, userID).Scan(&count); err != nil {
+		t.Fatalf("gagal query halaman: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("halaman tambahan tercipta = %d, ekspektasi 0 -- permintaan seharusnya ditolak sebelum INSERT", count)
+	}
+}
+
+// Kreator Premium boleh membuat sampai batas premiumExtraPageLimit, TAPI
+// ditolak begitu mencapainya -- membuktikan batasnya benar-benar
+// ditegakkan, bukan cuma gerbang premium/gratis biner.
+func TestCreatePage_AllowsPremiumUserUpToLimitThenRejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	for i := 0; i < premiumExtraPageLimit; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman", "slug": uuid.NewString()}, map[string]string{"X-Test-UserID": userID})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("halaman ke-%d: status = %d, ekspektasi 201, body %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Berlebih", "slug": uuid.NewString()}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("halaman ke-%d (melebihi batas): status = %d, ekspektasi 403, body %s", premiumExtraPageLimit+1, rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Langganan Premium: pengguna lama yang SUDAH punya halaman tambahan
+// lebih dari batas baru (dibuat sebelum fitur ini digerbang) TETAP bisa
+// dibaca/dipakai (grandfathered) -- gerbang HANYA menahan pembuatan BARU,
+// tidak menyembunyikan/menghapus data yang sudah ada.
+func TestListMyPages_StillReturnsGrandfatheredPagesOverLimitForFreeUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	for i := 0; i < premiumExtraPageLimit+2; i++ {
+		if _, err := page.DB.Exec(t.Context(), `
+			INSERT INTO pages (user_id, is_primary, name, slug) VALUES ($1, false, 'Halaman Lama', $2)
+		`, userID, uuid.NewString()); err != nil {
+			t.Fatalf("gagal setup halaman lama: %v", err)
+		}
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/pages", page.ListMyPages)
+
+	rec := doJSON(t, router, http.MethodGet, "/pages", nil, map[string]string{"X-Test-UserID": userID})
+	var items []extraPageItem
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != premiumExtraPageLimit+2 {
+		t.Fatalf("items = %d, ekspektasi %d (semua halaman lama tetap tampil, tidak dipotong batas baru)", len(items), premiumExtraPageLimit+2)
 	}
 }
 

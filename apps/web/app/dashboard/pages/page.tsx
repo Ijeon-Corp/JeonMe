@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ApiError,
   ExtraPage,
@@ -11,13 +12,20 @@ import {
   createExtraPageLink,
   deleteExtraPage,
   deleteLink,
+  getSubscriptionStatus,
   listExtraPageLinks,
   listMyExtraPages,
   updateExtraPage,
 } from "@/lib/api-client";
-import { IconChevronRight, IconGlobe, IconPlus, IconTrash } from "@/components/icons";
+import { IconChevronRight, IconGlobe, IconPlus, IconSparkle, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+
+// Modul Langganan Premium: Halaman Tambahan sekarang eksklusif Premium,
+// maksimal PREMIUM_EXTRA_PAGE_LIMIT halaman (lihat premiumExtraPageLimit di
+// backend PageHandler.CreatePage -- SATU sumber kebenaran ANGKA di backend,
+// nilai di sini HANYA untuk teks/progres UI, backend tetap menegakkan ulang).
+const PREMIUM_EXTRA_PAGE_LIMIT = 5;
 
 type LandingBlockType = "heading" | "text" | "image" | "button";
 
@@ -39,9 +47,11 @@ const LANDING_BLOCK_LABEL: Record<LandingBlockType, string> = {
 // -- TANPA tombol "Create with AI" (keputusan eksplisit pengguna), murni
 // blok manual siap pakai.
 export default function DashboardExtraPagesPage() {
+  const router = useRouter();
   const [pages, setPages] = useState<ExtraPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -67,7 +77,7 @@ export default function DashboardExtraPagesPage() {
   }
 
   useEffect(() => {
-    reload()
+    Promise.all([reload(), getSubscriptionStatus().then((s) => setIsPremium(s.is_premium))])
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat halaman."))
       .finally(() => setLoading(false));
   }, []);
@@ -232,15 +242,42 @@ export default function DashboardExtraPagesPage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            Buat Halaman Baru
-          </button>
+        {!isPremium ? (
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
+              <IconSparkle className="h-4 w-4 text-primary" />
+              Halaman Tambahan khusus kreator Premium
+            </div>
+            <p className="text-xs text-muted">
+              Upgrade ke Premium untuk membuat sampai {PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan (Bio atau Landing).
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/settings/subscription")}
+              className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white"
+            >
+              Lihat Langganan Premium
+            </button>
+          </div>
+        ) : pages.length >= PREMIUM_EXTRA_PAGE_LIMIT ? (
+          <p className="text-xs text-muted">
+            Kamu sudah memakai {pages.length}/{PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan (batas maksimal Premium). Hapus salah
+            satu untuk membuat yang baru.
+          </p>
+        ) : !adding ? (
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            >
+              <IconPlus className="h-4 w-4" />
+              Buat Halaman Baru
+            </button>
+            <span className="text-xs text-muted">
+              {pages.length}/{PREMIUM_EXTRA_PAGE_LIMIT} halaman terpakai
+            </span>
+          </div>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <div>
@@ -518,7 +555,15 @@ export default function DashboardExtraPagesPage() {
           </div>
         ))}
 
-        {pages.length === 0 && <EmptyState text='Belum ada halaman tambahan -- klik "Buat Halaman Baru" di atas.' />}
+        {pages.length === 0 && (
+          <EmptyState
+            text={
+              isPremium
+                ? 'Belum ada halaman tambahan -- klik "Buat Halaman Baru" di atas.'
+                : "Belum ada halaman tambahan -- upgrade ke Premium untuk membuatnya."
+            }
+          />
+        )}
       </div>
     </div>
   );

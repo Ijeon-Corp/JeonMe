@@ -1038,6 +1038,14 @@ type createExtraPageRequest struct {
 	PageType string `json:"page_type" binding:"omitempty,oneof=bio landing"`
 }
 
+// premiumExtraPageLimit -- Modul Langganan Premium: batas Halaman Tambahan
+// untuk kreator Premium (kreator gratis TIDAK BISA membuat sama sekali,
+// lihat pengecekan di CreatePage). Fitur ini sebelumnya bebas & tanpa batas
+// untuk semua orang -- pengguna lama yang sudah punya lebih banyak halaman
+// dari batas ini SENGAJA dibiarkan (grandfathered, halamannya tetap aktif
+// & bisa diedit), hanya pembuatan BARU yang ditahan gerbang ini.
+const premiumExtraPageLimit = 5
+
 // CreatePage — membuat halaman bio TAMBAHAN baru (is_primary=false), belum
 // dipublikasikan sampai kreator mengisi & mempublikasikannya lewat UpdatePage.
 func (h *PageHandler) CreatePage(c *gin.Context) {
@@ -1060,6 +1068,20 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	if !isPremiumUser(ctx, h.DB, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Halaman Tambahan khusus untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
+		return
+	}
+	var extraPageCount int
+	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false`, userID).Scan(&extraPageCount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
+		return
+	}
+	if extraPageCount >= premiumExtraPageLimit {
+		c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("kreator Premium maksimal %d halaman tambahan", premiumExtraPageLimit)})
+		return
+	}
 
 	var pageID string
 	err := h.DB.QueryRow(ctx, `
