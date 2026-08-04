@@ -42,6 +42,7 @@ import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShopOverviewPanel from "@/components/ShopOverviewPanel";
+import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -172,6 +173,9 @@ export default function DashboardProductsPage() {
           collaborator_splits: [],
           sold_count: 0,
           category: category.trim(),
+          delivery_method: "download_link",
+          webhook_url: "",
+          unclaimed_code_count: 0,
         },
       ]);
       setName("");
@@ -1044,6 +1048,13 @@ export default function DashboardProductsPage() {
                   </button>
                 ))}
             </div>
+
+            <DeliveryMethodPanel
+              key={manageProduct.id}
+              product={manageProduct}
+              onUpdated={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
+              onError={(message) => setError(message)}
+            />
 
             <button
               type="button"

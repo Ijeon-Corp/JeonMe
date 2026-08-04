@@ -363,6 +363,14 @@ type checkoutStatusResponse struct {
 	IsBooking    bool                 `json:"is_booking"`
 	BookedSlotAt *time.Time           `json:"booked_slot_at,omitempty"`
 	SocialProof  *checkoutSocialProof `json:"social_proof"`
+
+	// DeliveryMethod/FulfilledAt/ClaimedCode -- Modul Toko (Fase C): status
+	// penyerahan produk digital biasa (download_link/manual/random_code/
+	// webhook) -- dikosongkan untuk bundel/donasi/kursus/booking (masing-
+	// masing sudah punya jalur tampilan sendiri di frontend).
+	DeliveryMethod string     `json:"delivery_method,omitempty"`
+	FulfilledAt    *time.Time `json:"fulfilled_at,omitempty"`
+	ClaimedCode    string     `json:"claimed_code,omitempty"`
 }
 
 // checkoutSocialProof -- No.76 (Sprint 8): beda dari publicSocialProof di
@@ -385,12 +393,16 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 
 	var resp checkoutStatusResponse
 	var productID, creatorUserID string
+	var isBundle, isDonation, isEvent, isCourse, isBooking bool
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.user_id FROM orders o
+		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.user_id,
+			p.is_event, p.delivery_method, o.fulfilled_at
+		FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &resp.IsBundle, &resp.IsDonation, &resp.IsCourse, &resp.IsBooking, &creatorUserID)
+	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &isBundle, &isDonation, &isCourse, &isBooking, &creatorUserID,
+		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -398,6 +410,17 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat status order"})
 		return
+	}
+	resp.IsBundle, resp.IsDonation, resp.IsCourse, resp.IsBooking = isBundle, isDonation, isCourse, isBooking
+
+	// Modul Toko (Fase C): status penyerahan HANYA relevan untuk produk
+	// digital biasa -- bundel/donasi/kursus/booking/event sudah punya
+	// jalur tampilan sendiri di frontend (lihat field IsBundle dkk di atas),
+	// jadi delivery_method disembunyikan supaya tidak membingungkan.
+	if isBundle || isDonation || isCourse || isBooking || isEvent {
+		resp.DeliveryMethod = ""
+	} else if resp.Status == "paid" && resp.DeliveryMethod == "random_code" {
+		_ = h.DB.QueryRow(ctx, `SELECT code FROM product_codes WHERE claimed_by_order_id = $1`, orderID).Scan(&resp.ClaimedCode)
 	}
 
 	// No.92: tampilkan waktu slot yang berhasil dipesan (kalau ada) supaya
@@ -478,6 +501,36 @@ func (h *CheckoutHandler) ListRecentOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"orders": items})
 }
 
+// MarkFulfilled -- Modul Toko (Fase C1, metode "manual"): kreator menandai
+// pesanan sudah diproses/dikirim lewat kanal lain (WhatsApp/email manual,
+// dsb). HANYA berlaku untuk order status="paid" milik produk KREATOR yang
+// login, dan HANYA sekali (idempoten -- fulfilled_at yang sudah terisi
+// tidak ditimpa ulang, supaya waktu penyelesaian ASLI tidak berubah kalau
+// tombolnya tertekan lagi).
+func (h *CheckoutHandler) MarkFulfilled(c *gin.Context) {
+	orderID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `
+		UPDATE orders SET fulfilled_at = now()
+		WHERE id = $1 AND status = 'paid' AND fulfilled_at IS NULL
+			AND product_id IN (SELECT id FROM products WHERE user_id = $2 AND delivery_method = 'manual')
+	`, orderID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menandai pesanan selesai"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan, belum lunas, sudah ditandai selesai, atau bukan metode manual"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "pesanan ditandai selesai diproses"})
+}
+
 // Webhook — REQ-F-403 (verifikasi signature WAJIB sebelum diproses) &
 // REQ-F-404 (idempotensi: notifikasi yang di-retry Midtrans tidak boleh
 // diproses dua kali). Selalu membalas 200 kalau payload valid (termasuk saat
@@ -533,15 +586,15 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var orderID, productUserID, buyerEmail string
+	var orderID, productID, productUserID, buyerEmail, deliveryMethod string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
 	var collaboratorSplitsSnapshotRaw []byte
 	err = h.DB.QueryRow(ctx, `
-		SELECT o.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot
+		SELECT o.id, p.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot, p.delivery_method
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw)
+	`, payload.OrderID).Scan(&orderID, &productID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw, &deliveryMethod)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -714,6 +767,29 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				return
 			}
 
+			// Modul Toko (Fase C2): metode penyerahan "random_code" -- klaim
+			// SATU kode ATOMIK dalam transaksi yang SAMA dengan pelunasan
+			// order ini (FOR UPDATE SKIP LOCKED mencegah dua webhook/pembeli
+			// bersamaan merebut kode yang sama). Kehabisan stok TIDAK
+			// menggagalkan webhook ini (uang sudah diterima, tidak bisa
+			// dibatalkan dari sini) -- dibiarkan tanpa kode terklaim, kreator
+			// perlu menambah stok & pembeli hubungi penjual (best-effort,
+			// bukan jaminan penuh, tapi lebih baik daripada menggagalkan
+			// konfirmasi pembayaran yang sudah sah).
+			if deliveryMethod == "random_code" {
+				if _, err := tx.Exec(ctx, `
+					UPDATE product_codes SET claimed_by_order_id = $1, claimed_at = now()
+					WHERE id = (
+						SELECT id FROM product_codes
+						WHERE product_id = $2 AND claimed_by_order_id IS NULL
+						ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED
+					)
+				`, orderID, productID); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengklaim kode produk"})
+					return
+				}
+			}
+
 			shouldNotifyBuyer = true
 		}
 
@@ -743,6 +819,20 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			log.Printf("checkout: gagal membuat task notifikasi order %s: %v", orderID, err)
 		} else if _, err := h.Queue.Enqueue(task); err != nil {
 			log.Printf("checkout: gagal enqueue notifikasi order %s: %v", orderID, err)
+		}
+
+		// Modul Toko (Fase C3): metode penyerahan "webhook" -- enqueue
+		// TERPISAH dari notifikasi email di atas, gated sama (shouldNotifyBuyer)
+		// supaya webhook duplikat PSP tidak memicu POST dua kali ke server
+		// kreator untuk pembayaran yang sama.
+		if deliveryMethod == "webhook" {
+			if h.Queue == nil {
+				log.Printf("checkout: job queue tidak tersedia, lewati webhook produk order %s", orderID)
+			} else if task, err := queue.NewProductWebhookDeliveryTask(orderID); err != nil {
+				log.Printf("checkout: gagal membuat task webhook produk order %s: %v", orderID, err)
+			} else if _, err := h.Queue.Enqueue(task); err != nil {
+				log.Printf("checkout: gagal enqueue webhook produk order %s: %v", orderID, err)
+			}
 		}
 	}
 

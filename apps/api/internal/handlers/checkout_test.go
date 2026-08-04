@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -219,6 +220,162 @@ func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	}
 	if ledgerAmount != 25000 {
 		t.Fatalf("ledgerAmount = %d, ekspektasi 25000", ledgerAmount)
+	}
+}
+
+// Modul Toko (Fase C1): MarkFulfilled hanya berlaku untuk order status=
+// "paid" milik produk delivery_method="manual" milik kreator yang login,
+// dan idempoten (percobaan kedua tidak menimpa fulfilled_at pertama).
+func TestMarkFulfilled_OnlyPaidManualOrdersOwnedByCreator(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "test-server-key")
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+
+	if _, err := checkout.DB.Exec(t.Context(), `UPDATE products SET delivery_method = 'manual' WHERE id = $1`, productID); err != nil {
+		t.Fatalf("gagal set delivery_method: %v", err)
+	}
+
+	orderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status) VALUES ($1, $2, 'buyer@example.com', 25000, 'paid')
+	`, orderID, productID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/orders/:id/fulfill", checkout.MarkFulfilled)
+
+	// Kreator LAIN tidak boleh menandai order ini selesai.
+	forbiddenRec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/fulfill", nil, map[string]string{"X-Test-UserID": otherUserID})
+	if forbiddenRec.Code != http.StatusNotFound {
+		t.Fatalf("status kreator lain = %d, ekspektasi 404", forbiddenRec.Code)
+	}
+
+	firstRec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/fulfill", nil, map[string]string{"X-Test-UserID": userID})
+	if firstRec.Code != http.StatusOK {
+		t.Fatalf("status penandaan pertama = %d, body %s", firstRec.Code, firstRec.Body.String())
+	}
+
+	var firstFulfilledAt time.Time
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT fulfilled_at FROM orders WHERE id = $1`, orderID).Scan(&firstFulfilledAt); err != nil {
+		t.Fatalf("gagal query fulfilled_at: %v", err)
+	}
+
+	// Percobaan kedua -- idempoten, TIDAK menimpa fulfilled_at yang sudah ada.
+	secondRec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/fulfill", nil, map[string]string{"X-Test-UserID": userID})
+	if secondRec.Code != http.StatusNotFound {
+		t.Fatalf("status penandaan kedua = %d, ekspektasi 404 (sudah ditandai selesai)", secondRec.Code)
+	}
+
+	var secondFulfilledAt time.Time
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT fulfilled_at FROM orders WHERE id = $1`, orderID).Scan(&secondFulfilledAt); err != nil {
+		t.Fatalf("gagal query fulfilled_at kedua: %v", err)
+	}
+	if !firstFulfilledAt.Equal(secondFulfilledAt) {
+		t.Errorf("fulfilled_at berubah setelah percobaan kedua (%v -> %v), ekspektasi tetap sama", firstFulfilledAt, secondFulfilledAt)
+	}
+}
+
+// Modul Toko (Fase C2): pesanan lunas untuk produk delivery_method=
+// "random_code" harus mengklaim TEPAT SATU kode dari stok yang belum
+// diklaim -- kode itu terikat ke order ini (claimed_by_order_id) dan tidak
+// lagi dihitung sebagai stok tersedia.
+func TestCheckoutWebhook_ClaimsRandomCodeOnPayment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+
+	if _, err := checkout.DB.Exec(t.Context(), `UPDATE products SET delivery_method = 'random_code' WHERE id = $1`, productID); err != nil {
+		t.Fatalf("gagal set delivery_method: %v", err)
+	}
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO product_codes (id, product_id, code) VALUES ($1, $2, 'KODE-UNIK-1'), ($3, $2, 'KODE-UNIK-2')
+	`, uuid.NewString(), productID, uuid.NewString()); err != nil {
+		t.Fatalf("gagal setup stok kode: %v", err)
+	}
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference)
+		VALUES ($1, $2, 'buyer@example.com', 25000, 'pending', $3)
+	`, orderID, productID, externalID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/webhook", checkout.Webhook)
+
+	body := webhookPayload(t, serverKey, uuid.NewString(), externalID, "settlement")
+	rec := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("webhook: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var claimedCode string
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT code FROM product_codes WHERE claimed_by_order_id = $1
+	`, orderID).Scan(&claimedCode); err != nil {
+		t.Fatalf("gagal query kode terklaim: %v", err)
+	}
+	if claimedCode != "KODE-UNIK-1" && claimedCode != "KODE-UNIK-2" {
+		t.Errorf("claimedCode = %q, ekspektasi salah satu dari stok", claimedCode)
+	}
+
+	var remainingUnclaimed int
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COUNT(*) FROM product_codes WHERE product_id = $1 AND claimed_by_order_id IS NULL
+	`, productID).Scan(&remainingUnclaimed); err != nil {
+		t.Fatalf("gagal query stok tersisa: %v", err)
+	}
+	if remainingUnclaimed != 1 {
+		t.Errorf("remainingUnclaimed = %d, ekspektasi 1 (stok 2 dikurangi 1 yang baru diklaim)", remainingUnclaimed)
+	}
+}
+
+// Modul Toko (Fase C2): kehabisan stok kode TIDAK BOLEH menggagalkan
+// webhook -- pembayaran sudah sah, tidak bisa dibatalkan hanya karena
+// stok kosong. Order tetap berstatus "paid", cuma tidak ada kode terklaim.
+func TestCheckoutWebhook_RandomCodeOutOfStock_StillMarksPaid(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+
+	if _, err := checkout.DB.Exec(t.Context(), `UPDATE products SET delivery_method = 'random_code' WHERE id = $1`, productID); err != nil {
+		t.Fatalf("gagal set delivery_method: %v", err)
+	}
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference)
+		VALUES ($1, $2, 'buyer@example.com', 25000, 'pending', $3)
+	`, orderID, productID, externalID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/webhook", checkout.Webhook)
+
+	body := webhookPayload(t, serverKey, uuid.NewString(), externalID, "settlement")
+	rec := doJSON(t, router, http.MethodPost, "/webhook", json.RawMessage(body), nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("webhook: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var status string
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+		t.Fatalf("gagal query order: %v", err)
+	}
+	if status != "paid" {
+		t.Fatalf("status = %q, ekspektasi paid walau stok kode kosong", status)
 	}
 }
 

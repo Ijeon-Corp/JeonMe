@@ -151,6 +151,43 @@ export default function CheckoutStatusPage() {
                   </div>
                 )}
 
+                {/* Modul Toko (Fase C): status penyerahan untuk produk digital
+                    biasa -- download_link TIDAK ditampilkan di sini (pola
+                    lama: tautan unduhan dikirim lewat email, lihat
+                    worker.HandleOrderPaidNotification), method lain
+                    (manual/random_code) diberi tampilan khusus karena
+                    pembeli butuh tahu APA yang terjadi selanjutnya. */}
+                {status.delivery_method === "manual" && (
+                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Status Pesanan</p>
+                    {status.fulfilled_at ? (
+                      <p className="mt-1 text-sm font-semibold text-secondary-dark">
+                        Sudah diproses penjual pada{" "}
+                        {new Date(status.fulfilled_at).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}.
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-ink">
+                        Pesananmu akan diproses & dikirim langsung oleh penjual (lewat email/WhatsApp). Mohon tunggu.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {status.delivery_method === "random_code" && (
+                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Kode Kamu</p>
+                    {status.claimed_code ? (
+                      <p className="mt-1 select-all rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold text-ink">
+                        {status.claimed_code}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-ink">
+                        Kode sedang disiapkan. Kalau tidak muncul dalam beberapa menit, hubungi penjual.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {status.is_course && (
                   <div className="mt-4 flex flex-col gap-4 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Materi Kursus</p>

@@ -99,6 +99,26 @@ func NewTeamInviteTask(payload TeamInvitePayload) (*asynq.Task, error) {
 	return asynq.NewTask(TypeTeamInviteNotification, encoded), nil
 }
 
+// TypeProductWebhookDelivery -- Modul Toko (Fase C3): metode penyerahan
+// "webhook" -- kirim POST bertanda tangan (HMAC-SHA256, pola sama seperti
+// verifikasi signature Midtrans yang sudah ada) ke webhook_url milik
+// KREATOR saat pesanan produk itu lunas. ASINKRON (sama seperti
+// order.paid) supaya server kreator yang lambat/mati tidak pernah membuat
+// webhook Midtrans kita sendiri timeout.
+const TypeProductWebhookDelivery = "product:webhook_delivery"
+
+type ProductWebhookDeliveryPayload struct {
+	OrderID string `json:"order_id"`
+}
+
+func NewProductWebhookDeliveryTask(orderID string) (*asynq.Task, error) {
+	payload, err := json.Marshal(ProductWebhookDeliveryPayload{OrderID: orderID})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload webhook produk order_id=%s: %w", orderID, err)
+	}
+	return asynq.NewTask(TypeProductWebhookDelivery, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

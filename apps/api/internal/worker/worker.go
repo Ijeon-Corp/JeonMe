@@ -4,13 +4,20 @@
 package worker
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,6 +56,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeAutoWithdrawScan, h.HandleAutoWithdrawScan)
 	mux.HandleFunc(queue.TypeAccountPurgeScan, h.HandleAccountPurgeScan)
 	mux.HandleFunc(queue.TypeTeamInviteNotification, h.HandleTeamInviteNotification)
+	mux.HandleFunc(queue.TypeProductWebhookDelivery, h.HandleProductWebhookDelivery)
 	return mux
 }
 
@@ -406,6 +414,106 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 	}
 
 	return nil
+}
+
+// productWebhookHTTPClient -- timeout PENDEK (bukan default tanpa batas)
+// supaya server kreator yang lambat/mati tidak menahan worker terlalu lama
+// -- ini task best-effort, bukan sesuatu yang boleh memblokir antrian.
+var productWebhookHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+// HandleProductWebhookDelivery -- Modul Toko (Fase C3): metode penyerahan
+// "webhook". SENGAJA TIDAK PERNAH mengembalikan error (selalu nil) --
+// gagal kirim (server kreator mati/URL salah/timeout) dicatat ke
+// webhook_deliveries (lihat tab "Webhook Events", Fase E4) untuk kreator
+// lihat & tindak lanjuti SENDIRI, bukan di-retry otomatis oleh asynq --
+// retry otomatis di sini berisiko duplikat (POST ini BUKAN operasi
+// idempoten di sisi server kreator, beda dari notifikasi email/DB kita
+// sendiri yang aman diulang).
+func (h *Handler) HandleProductWebhookDelivery(ctx context.Context, t *asynq.Task) error {
+	var payload queue.ProductWebhookDeliveryPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		log.Printf("worker: payload webhook produk tidak valid: %v", err)
+		return nil
+	}
+
+	var productID, productName, webhookURL, webhookSecret, buyerEmail, sellerUserID, status string
+	var amountIDR int64
+	err := h.DB.QueryRow(ctx, `
+		SELECT p.id, p.name, p.webhook_url, p.webhook_secret, o.buyer_email, p.user_id, o.status, o.amount_idr
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1
+	`, payload.OrderID).Scan(&productID, &productName, &webhookURL, &webhookSecret, &buyerEmail, &sellerUserID, &status, &amountIDR)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			log.Printf("worker: order %s tidak ditemukan, lewati webhook produk", payload.OrderID)
+			return nil
+		}
+		log.Printf("worker: gagal memuat order %s untuk webhook produk: %v", payload.OrderID, err)
+		return nil
+	}
+	if status != "paid" {
+		log.Printf("worker: order %s statusnya sekarang %q (bukan paid), lewati webhook produk", payload.OrderID, status)
+		return nil
+	}
+	if webhookURL == "" {
+		log.Printf("worker: produk %s tidak (lagi) punya webhook_url, lewati", productID)
+		return nil
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"event":        "order.paid",
+		"order_id":     payload.OrderID,
+		"product_id":   productID,
+		"product_name": productName,
+		"buyer_email":  buyerEmail,
+		"amount_idr":   amountIDR,
+	})
+	if err != nil {
+		log.Printf("worker: gagal encode payload webhook produk order %s: %v", payload.OrderID, err)
+		return nil
+	}
+
+	mac := hmac.New(sha256.New, []byte(webhookSecret))
+	mac.Write(body)
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	deliveryStatus, responseCode, errMessage := deliverProductWebhook(ctx, webhookURL, body, signature)
+
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO webhook_deliveries (id, user_id, product_id, order_id, url, status, response_code, error_message)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, uuid.NewString(), sellerUserID, productID, payload.OrderID, webhookURL, deliveryStatus, responseCode, errMessage); err != nil {
+		log.Printf("worker: gagal mencatat log webhook produk order %s: %v", payload.OrderID, err)
+	}
+
+	log.Printf("worker: webhook produk order %s -> %s: %s", payload.OrderID, webhookURL, deliveryStatus)
+	return nil
+}
+
+// deliverProductWebhook -- POST mentah + tanda tangan HMAC-SHA256 di header
+// X-Jeonme-Signature (hex) supaya server kreator bisa memverifikasi
+// pengirimnya benar-benar Jeonme, sama seperti kita memverifikasi
+// signature_key dari Midtrans, tapi arah terbalik.
+func deliverProductWebhook(ctx context.Context, url string, body []byte, signature string) (status string, responseCode *int, errMessage string) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return "failed", nil, fmt.Sprintf("gagal membuat request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Jeonme-Signature", signature)
+
+	resp, err := productWebhookHTTPClient.Do(req)
+	if err != nil {
+		return "failed", nil, fmt.Sprintf("gagal memanggil webhook: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	code := resp.StatusCode
+	if code >= 200 && code < 300 {
+		return "success", &code, ""
+	}
+	return "failed", &code, fmt.Sprintf("webhook membalas status %d", code)
 }
 
 // formatRupiah -- "25000" -> "25.000" (pemisah ribuan ala format Indonesia),

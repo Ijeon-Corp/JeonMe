@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -189,11 +191,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 		SELECT p.id, p.name, p.description, p.price_idr, p.is_active, p.file_key != '' AS has_file, p.cover_image_url,
 			p.flash_sale_price_idr, p.flash_sale_starts_at, p.flash_sale_ends_at, `+effectivePriceExpr+`,
 			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
-			COALESCE(o.sold_count, 0) AS sold_count, p.category
+			COALESCE(o.sold_count, 0) AS sold_count, p.category,
+			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
 		) o ON o.product_id = p.id
+		LEFT JOIN (
+			SELECT product_id, COUNT(*) AS unclaimed_count FROM product_codes WHERE claimed_by_order_id IS NULL GROUP BY product_id
+		) pc ON pc.product_id = p.id
 		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
 			AND p.is_course = false AND p.is_booking = false
 	`, userID)
@@ -223,6 +229,9 @@ func (h *ProductHandler) List(c *gin.Context) {
 		CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
 		SoldCount          int64               `json:"sold_count"`
 		Category           string              `json:"category"`
+		DeliveryMethod     string              `json:"delivery_method"`
+		WebhookURL         string              `json:"webhook_url"`
+		UnclaimedCodeCount int64               `json:"unclaimed_code_count"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -230,7 +239,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 		var splitsRaw []byte
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
-			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category); err == nil {
+			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
+			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}
@@ -270,6 +280,13 @@ type updateProductRequest struct {
 	// Category -- Modul Toko (Fase B1): lihat catatan lingkup di
 	// createProductRequest.
 	Category *string `json:"category" binding:"omitempty,max=50"`
+
+	// DeliveryMethod/WebhookURL -- Modul Toko (Fase C): lihat migrasi 000047.
+	// webhook_secret TIDAK bisa diisi lewat request ini (dibuat SERVER,
+	// lihat Update di bawah) -- mencegah kreator/pihak lain menebak/
+	// menimpa nilai yang dipakai memverifikasi keaslian pengirim webhook.
+	DeliveryMethod *string `json:"delivery_method" binding:"omitempty,oneof=download_link manual random_code webhook"`
+	WebhookURL     *string `json:"webhook_url" binding:"omitempty,max=500"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -294,10 +311,11 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
 	var isBundle, isDonation, isEvent, isCourse, isBooking bool
+	var currentWebhookSecret string
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
@@ -439,6 +457,21 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		collaboratorSplitsJSON, _ = json.Marshal(*req.CollaboratorSplits)
 	}
 
+	// webhook_secret -- Modul Toko (Fase C3): dibuat SEKALI, hanya saat
+	// kreator PERTAMA kali memilih delivery_method="webhook" dan belum
+	// pernah punya secret (bukan diregenerasi tiap update lain) -- lihat
+	// catatan lingkup di migrasi 000047.
+	var newWebhookSecret *string
+	if req.DeliveryMethod != nil && *req.DeliveryMethod == "webhook" && currentWebhookSecret == "" {
+		secretBytes := make([]byte, 32)
+		if _, err := rand.Read(secretBytes); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kunci webhook"})
+			return
+		}
+		s := hex.EncodeToString(secretBytes)
+		newWebhookSecret = &s
+	}
+
 	_, err = h.DB.Exec(ctx, `
 		UPDATE products SET
 			name = COALESCE($1, name),
@@ -457,11 +490,15 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			event_is_online = COALESCE($14, event_is_online),
 			event_capacity = COALESCE($15, event_capacity),
 			collaborator_splits = COALESCE($16, collaborator_splits),
-			category = COALESCE($17, category)
+			category = COALESCE($17, category),
+			delivery_method = COALESCE($19, delivery_method),
+			webhook_url = COALESCE($20, webhook_url),
+			webhook_secret = COALESCE($21, webhook_secret)
 		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
-		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID)
+		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID,
+		req.DeliveryMethod, req.WebhookURL, newWebhookSecret)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return
@@ -470,6 +507,153 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	h.invalidatePageCache(ctx, userID)
 
 	c.JSON(http.StatusOK, gin.H{"message": "produk diperbarui"})
+}
+
+// GetWebhookSecret -- Modul Toko (Fase C3): endpoint TERPISAH dari List
+// (bukan field biasa di respons produk) supaya secret tidak ikut nongol di
+// setiap pemanggilan daftar produk/log -- kreator sengaja harus buka
+// panel "Kelola" > lihat kunci webhook untuk mengambilnya, mirip pola
+// "reveal API key" pada umumnya.
+func (h *ProductHandler) GetWebhookSecret(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var secret string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT webhook_secret FROM products WHERE id = $1 AND user_id = $2
+	`, productID, userID).Scan(&secret); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"webhook_secret": secret})
+}
+
+type addProductCodesRequest struct {
+	// Codes -- satu baris teks per kode (kreator tempel daftar dari mana
+	// pun, mis. hasil generate lisensi software) -- validasi & dedup
+	// dilakukan di sini, bukan dipaksa format tertentu, supaya kreator
+	// bebas memakai format kode apa pun.
+	Codes []string `json:"codes" binding:"required,min=1,dive,required,max=200"`
+}
+
+// AddCodes -- Modul Toko (Fase C2, metode "random_code"): tambah kode ke
+// "stok". Duplikat (baik sesama kode baru maupun yang sudah ada di
+// database) dilewati diam-diam (ON CONFLICT DO NOTHING, lihat UNIQUE
+// (product_id, code) di migrasi 000047) -- lebih ramah daripada menolak
+// seluruh batch hanya karena satu baris kebetulan sudah pernah diunggah.
+func (h *ProductHandler) AddCodes(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req addProductCodesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var owns bool
+	if err := h.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE id = $1 AND user_id = $2)`, productID, userID).Scan(&owns); err != nil || !owns {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	added := 0
+	for _, code := range req.Codes {
+		code = strings.TrimSpace(code)
+		if code == "" {
+			continue
+		}
+		tag, err := h.DB.Exec(ctx, `
+			INSERT INTO product_codes (id, product_id, code) VALUES ($1, $2, $3)
+			ON CONFLICT (product_id, code) DO NOTHING
+		`, uuid.NewString(), productID, code)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan kode"})
+			return
+		}
+		added += int(tag.RowsAffected())
+	}
+
+	c.JSON(http.StatusOK, gin.H{"added": added, "message": fmt.Sprintf("%d kode baru ditambahkan", added)})
+}
+
+type productCodeItem struct {
+	ID         string     `json:"id"`
+	Code       string     `json:"code"`
+	ClaimedAt  *time.Time `json:"claimed_at"`
+	BuyerEmail string     `json:"buyer_email,omitempty"`
+}
+
+// ListCodes -- Modul Toko (Fase C2): daftar kode + status klaim, dipakai
+// panel "Kelola" (lihat stok tersedia vs yang sudah terpakai).
+func (h *ProductHandler) ListCodes(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var owns bool
+	if err := h.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE id = $1 AND user_id = $2)`, productID, userID).Scan(&owns); err != nil || !owns {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT pc.id, pc.code, pc.claimed_at, COALESCE(o.buyer_email, '')
+		FROM product_codes pc
+		LEFT JOIN orders o ON o.id = pc.claimed_by_order_id
+		WHERE pc.product_id = $1
+		ORDER BY pc.claimed_by_order_id IS NULL DESC, pc.created_at DESC
+	`, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kode"})
+		return
+	}
+	defer rows.Close()
+
+	items := []productCodeItem{}
+	for rows.Next() {
+		var it productCodeItem
+		if err := rows.Scan(&it.ID, &it.Code, &it.ClaimedAt, &it.BuyerEmail); err == nil {
+			items = append(items, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+// DeleteCode -- Modul Toko (Fase C2): hanya kode yang BELUM diklaim boleh
+// dihapus (kode yang sudah terlanjur dikirim ke pembeli harus tetap ada
+// sebagai riwayat, jangan sampai pembeli kehilangan buktinya).
+func (h *ProductHandler) DeleteCode(c *gin.Context) {
+	codeID := c.Param("codeId")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `
+		DELETE FROM product_codes WHERE id = $1 AND claimed_by_order_id IS NULL
+			AND product_id IN (SELECT id FROM products WHERE user_id = $2)
+	`, codeID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus kode"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "kode tidak ditemukan atau sudah diklaim"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "kode dihapus"})
 }
 
 // Delete — REQ-F-301 (lanjutan). Menghapus file di storage juga (best-effort,

@@ -214,6 +214,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.POST("/products/:id/cover", product.UploadCover)
 				productsGroup.GET("/products/:id/download-url", product.GetDownloadURL)
 
+				// Modul Toko (Fase C2/C3): metode penyerahan "random_code" (kelola
+				// stok kode) dan "webhook" (lihat kunci tanda tangan sekali lagi).
+				productsGroup.POST("/products/:id/codes", product.AddCodes)
+				productsGroup.GET("/products/:id/codes", product.ListCodes)
+				productsGroup.DELETE("/products/:id/codes/:codeId", product.DeleteCode)
+				productsGroup.GET("/products/:id/webhook-secret", product.GetWebhookSecret)
+
 				// No.67 (Sprint 7): voucher/diskon per produk, milik kreator
 				// sendiri seperti produk -- pola CRUD & ownership sama persis.
 				productsGroup.GET("/vouchers", voucher.List)
@@ -348,6 +355,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// Modul Statistik (tab "Toko"): daftar transaksi terbaru -- lihat
 			// catatan lingkup lengkap di CheckoutHandler.ListRecentOrders.
 			dashboard.GET("/orders/recent", checkout.ListRecentOrders)
+
+			// Modul Toko (Fase C1): metode penyerahan "manual".
+			dashboard.POST("/orders/:id/fulfill", checkout.MarkFulfilled)
 			dashboard.GET("/analytics/export", analytics.ExportDailyCSV)
 
 			// No.96 (Sprint 13): asisten analitik TANPA LLM API sungguhan --

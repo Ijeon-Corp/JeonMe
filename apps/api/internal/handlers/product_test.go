@@ -63,6 +63,124 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase C3): webhook_secret dibuat SEKALI saat delivery_method
+// pertama kali diubah jadi "webhook", dan TIDAK diregenerasi pada update
+// berikutnya (mis. saat webhook_url diubah lagi) -- integrasi kreator yang
+// sudah pakai secret lama tidak boleh mendadak tidak valid.
+func TestProduct_WebhookSecretGeneratedOnceOnFirstWebhookDeliveryMethod(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
+	g.GET("/products/:id/webhook-secret", product.GetWebhookSecret)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Webhook", "price_idr": 50000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created product: %v", err)
+	}
+
+	doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"delivery_method": "webhook", "webhook_url": "https://example.com/hook",
+	}, map[string]string{"X-Test-UserID": userID})
+
+	secretRec := doJSON(t, router, http.MethodGet, "/products/"+created.ID+"/webhook-secret", nil, map[string]string{"X-Test-UserID": userID})
+	var secretResp struct {
+		WebhookSecret string `json:"webhook_secret"`
+	}
+	if err := json.Unmarshal(secretRec.Body.Bytes(), &secretResp); err != nil {
+		t.Fatalf("gagal decode respons secret: %v", err)
+	}
+	if secretResp.WebhookSecret == "" {
+		t.Fatal("webhook_secret kosong, ekspektasi terisi otomatis setelah delivery_method=webhook")
+	}
+	firstSecret := secretResp.WebhookSecret
+
+	doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"webhook_url": "https://example.com/hook-v2",
+	}, map[string]string{"X-Test-UserID": userID})
+
+	secretRec2 := doJSON(t, router, http.MethodGet, "/products/"+created.ID+"/webhook-secret", nil, map[string]string{"X-Test-UserID": userID})
+	var secretResp2 struct {
+		WebhookSecret string `json:"webhook_secret"`
+	}
+	if err := json.Unmarshal(secretRec2.Body.Bytes(), &secretResp2); err != nil {
+		t.Fatalf("gagal decode respons secret kedua: %v", err)
+	}
+	if secretResp2.WebhookSecret != firstSecret {
+		t.Errorf("webhook_secret berubah setelah update lain (%q -> %q), ekspektasi tetap sama", firstSecret, secretResp2.WebhookSecret)
+	}
+}
+
+// Modul Toko (Fase C2): AddCodes menolak duplikat (ON CONFLICT DO NOTHING)
+// dan ListCodes membedakan kode terklaim vs belum.
+func TestProduct_AddAndListCodes_DedupesAndTracksClaim(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.POST("/products/:id/codes", product.AddCodes)
+	g.GET("/products/:id/codes", product.ListCodes)
+	g.DELETE("/products/:id/codes/:codeId", product.DeleteCode)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Kode", "price_idr": 50000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created product: %v", err)
+	}
+
+	addRec := doJSON(t, router, http.MethodPost, "/products/"+created.ID+"/codes", map[string]any{
+		"codes": []string{"A1", "A2", "A1"},
+	}, map[string]string{"X-Test-UserID": userID})
+	var addResp struct {
+		Added int `json:"added"`
+	}
+	if err := json.Unmarshal(addRec.Body.Bytes(), &addResp); err != nil {
+		t.Fatalf("gagal decode respons add: %v", err)
+	}
+	if addResp.Added != 2 {
+		t.Fatalf("added = %d, ekspektasi 2 (A1 duplikat dalam satu batch harus di-dedup)", addResp.Added)
+	}
+
+	// Kirim ulang A1 di batch TERPISAH -- juga harus di-dedup (ON CONFLICT).
+	doJSON(t, router, http.MethodPost, "/products/"+created.ID+"/codes", map[string]any{
+		"codes": []string{"A1", "A3"},
+	}, map[string]string{"X-Test-UserID": userID})
+
+	listRec := doJSON(t, router, http.MethodGet, "/products/"+created.ID+"/codes", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		ID   string `json:"id"`
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons list: %v", err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("len(items) = %d, ekspektasi 3 (A1, A2, A3 -- semua duplikat A1 di-dedup)", len(items))
+	}
+
+	// Hapus satu kode yang belum diklaim harus berhasil.
+	delRec := doJSON(t, router, http.MethodDelete, "/products/"+created.ID+"/codes/"+items[0].ID, nil, map[string]string{"X-Test-UserID": userID})
+	if delRec.Code != http.StatusOK {
+		t.Fatalf("delete kode: status %d, body %s", delRec.Code, delRec.Body.String())
+	}
+}
+
 // Modul Toko (Fase B1, Manage Items): category disimpan saat pembuatan
 // dan bisa diubah lewat Update -- lihat migrasi 000046.
 func TestProduct_CategorySetAndUpdated(t *testing.T) {

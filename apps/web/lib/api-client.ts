@@ -799,6 +799,12 @@ export interface DashboardProduct {
   sold_count: number;
   // category -- Modul Toko (Fase B1): bebas isi kreator, "" berarti belum diisi.
   category: string;
+  // delivery_method/webhook_url/unclaimed_code_count -- Modul Toko (Fase C):
+  // lihat migrasi 000047. unclaimed_code_count hanya relevan kalau
+  // delivery_method="random_code" (dipakai sebagai "Stok" yang JUJUR).
+  delivery_method: "download_link" | "manual" | "random_code" | "webhook";
+  webhook_url: string;
+  unclaimed_code_count: number;
 }
 
 export function listProducts() {
@@ -841,6 +847,8 @@ export function updateProduct(
     clear_event_capacity: boolean;
     collaborator_splits: CollaboratorSplit[];
     category: string;
+    delivery_method: "download_link" | "manual" | "random_code" | "webhook";
+    webhook_url: string;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -852,6 +860,41 @@ export function updateProduct(
 
 export function deleteProduct(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/products/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+// ---------- Modul Toko (Fase C): metode penyerahan produk ----------
+
+export interface ProductCode {
+  id: string;
+  code: string;
+  claimed_at: string | null;
+  buyer_email?: string;
+}
+
+export function addProductCodes(productId: string, codes: string[]) {
+  return apiFetch<{ added: number; message: string }>(
+    `/dashboard/products/${productId}/codes`,
+    { method: "POST", body: JSON.stringify({ codes }) },
+    { auth: true }
+  );
+}
+
+export function listProductCodes(productId: string) {
+  return apiFetch<ProductCode[]>(`/dashboard/products/${productId}/codes`, { method: "GET" }, { auth: true });
+}
+
+export function deleteProductCode(productId: string, codeId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/products/${productId}/codes/${codeId}`, { method: "DELETE" }, { auth: true });
+}
+
+export function getProductWebhookSecret(productId: string) {
+  return apiFetch<{ webhook_secret: string }>(`/dashboard/products/${productId}/webhook-secret`, { method: "GET" }, { auth: true });
+}
+
+// markOrderFulfilled -- metode "manual": kreator menandai pesanan sudah
+// diproses/dikirim lewat kanal lain.
+export function markOrderFulfilled(orderId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/orders/${orderId}/fulfill`, { method: "POST" }, { auth: true });
 }
 
 // Upload file lewat multipart/form-data -- TIDAK lewat apiFetch() karena
@@ -1517,6 +1560,12 @@ export interface CheckoutStatus {
   is_booking: boolean;
   booked_slot_at?: string;
   social_proof: SocialProofFeed | null;
+  // Modul Toko (Fase C): status penyerahan produk digital biasa -- kosong
+  // untuk bundel/donasi/kursus/booking/event (lihat catatan lingkup di
+  // CheckoutHandler.GetStatus).
+  delivery_method?: "download_link" | "manual" | "random_code" | "webhook";
+  fulfilled_at?: string;
+  claimed_code?: string;
 }
 
 export function getCheckoutStatus(orderId: string) {
