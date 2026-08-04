@@ -846,6 +846,25 @@ export function deleteProductFile(productId: string) {
   return apiFetch<{ message: string }>(`/dashboard/products/${productId}/file`, { method: "DELETE" }, { auth: true });
 }
 
+// ---------- Modul Toko (Fase E4): Webhook Events ----------
+
+export interface WebhookEventItem {
+  id: string;
+  product_id: string;
+  product_name: string;
+  order_id: string;
+  url: string;
+  status: "success" | "failed";
+  response_code: number | null;
+  error_message: string;
+  attempt: number;
+  created_at: string;
+}
+
+export function listWebhookEvents() {
+  return apiFetch<WebhookEventItem[]>("/dashboard/webhook-events", { method: "GET" }, { auth: true });
+}
+
 export function listProducts() {
   return apiFetch<DashboardProduct[]>("/dashboard/products", { method: "GET" }, { auth: true });
 }

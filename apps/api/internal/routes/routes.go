@@ -229,6 +229,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.GET("/storage", product.ListStorage)
 				productsGroup.DELETE("/products/:id/file", product.DeleteFile)
 
+				// Modul Toko (Fase E4): tab Webhook Events.
+				productsGroup.GET("/webhook-events", product.ListWebhookEvents)
+
 				// Modul Toko (Fase E1): moderasi ulasan.
 				productsGroup.GET("/reviews", review.List)
 				productsGroup.PATCH("/reviews/:id", review.SetHidden)

@@ -63,6 +63,65 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase E4, tab Webhook Events): ListWebhookEvents HANYA
+// menampilkan log milik produk kreator yang login, terbaru dulu.
+func TestProductListWebhookEvents_ScopedToOwnProducts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/webhook-events", product.ListWebhookEvents)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Webhook", "price_idr": 25000}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(createRec.Body.Bytes(), &created)
+
+	otherRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Lain", "price_idr": 25000}, map[string]string{"X-Test-UserID": otherUserID})
+	var otherCreated struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(otherRec.Body.Bytes(), &otherCreated)
+
+	var orderID, otherOrderID string
+	product.DB.QueryRow(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'buyer@example.com', 25000, 'paid') RETURNING id
+	`, created.ID).Scan(&orderID)
+	product.DB.QueryRow(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'buyer2@example.com', 25000, 'paid') RETURNING id
+	`, otherCreated.ID).Scan(&otherOrderID)
+
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO webhook_deliveries (id, user_id, product_id, order_id, url, status, response_code, error_message)
+		VALUES (gen_random_uuid(), $1, $2, $3, 'https://example.com/hook', 'success', 200, '')
+	`, userID, created.ID, orderID); err != nil {
+		t.Fatalf("gagal setup webhook_deliveries: %v", err)
+	}
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO webhook_deliveries (id, user_id, product_id, order_id, url, status, response_code, error_message)
+		VALUES (gen_random_uuid(), $1, $2, $3, 'https://example.com/other-hook', 'failed', 500, 'server error')
+	`, otherUserID, otherCreated.ID, otherOrderID); err != nil {
+		t.Fatalf("gagal setup webhook_deliveries kreator lain: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/webhook-events", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		ProductID string `json:"product_id"`
+		Status    string `json:"status"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != 1 || items[0].ProductID != created.ID || items[0].Status != "success" {
+		t.Fatalf("items = %+v, ekspektasi hanya 1 log milik kreator ini", items)
+	}
+}
+
 // Modul Toko (Fase E3, tab Storage & Files): ListStorage hanya menampilkan
 // produk yang PUNYA file, total_bytes menjumlah file_size_bytes yang
 // diketahui.

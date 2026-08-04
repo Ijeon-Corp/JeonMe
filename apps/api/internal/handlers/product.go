@@ -868,6 +868,53 @@ func (h *ProductHandler) ListStorage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"files": items, "total_bytes": totalBytes})
 }
 
+type webhookEventItem struct {
+	ID           string    `json:"id"`
+	ProductID    string    `json:"product_id"`
+	ProductName  string    `json:"product_name"`
+	OrderID      string    `json:"order_id"`
+	URL          string    `json:"url"`
+	Status       string    `json:"status"`
+	ResponseCode *int      `json:"response_code"`
+	ErrorMessage string    `json:"error_message"`
+	Attempt      int       `json:"attempt"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// ListWebhookEvents -- Modul Toko (Fase E4, tab Webhook Events): log
+// pengiriman webhook (lihat worker.HandleProductWebhookDelivery, Fase C3) --
+// murni BACA, tidak ada aksi retry manual di v1 ini (kreator perbaiki
+// URL/server sendiri lalu pesanan BERIKUTNYA otomatis dicoba lagi, bukan
+// retry pengiriman lama yang datanya sudah kedaluwarsa).
+func (h *ProductHandler) ListWebhookEvents(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT wd.id, wd.product_id, p.name, wd.order_id, wd.url, wd.status, wd.response_code, wd.error_message, wd.attempt, wd.created_at
+		FROM webhook_deliveries wd JOIN products p ON p.id = wd.product_id
+		WHERE wd.user_id = $1
+		ORDER BY wd.created_at DESC LIMIT 100
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat log webhook"})
+		return
+	}
+	defer rows.Close()
+
+	items := []webhookEventItem{}
+	for rows.Next() {
+		var it webhookEventItem
+		if err := rows.Scan(&it.ID, &it.ProductID, &it.ProductName, &it.OrderID, &it.URL, &it.Status, &it.ResponseCode, &it.ErrorMessage, &it.Attempt, &it.CreatedAt); err == nil {
+			items = append(items, it)
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
 // DeleteFile -- Modul Toko (Fase E3): hapus file produk TANPA menghapus
 // produknya sendiri (beda dari Delete di atas). Produk otomatis
 // dinonaktifkan kalau sedang aktif -- menegakkan invarian yang sama
