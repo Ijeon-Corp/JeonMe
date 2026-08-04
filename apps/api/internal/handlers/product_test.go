@@ -63,6 +63,103 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase E3, tab Storage & Files): ListStorage hanya menampilkan
+// produk yang PUNYA file, total_bytes menjumlah file_size_bytes yang
+// diketahui.
+func TestProductListStorage_OnlyProductsWithFilesAndTotalsBytes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/storage", product.ListStorage)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Tanpa File", "price_idr": 25000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var noFileProduct struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(createRec.Body.Bytes(), &noFileProduct)
+
+	withFileRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Dengan File", "price_idr": 25000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var withFileProduct struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(withFileRec.Body.Bytes(), &withFileProduct)
+	if _, err := product.DB.Exec(t.Context(), `
+		UPDATE products SET file_key = 'products/test/f.pdf', file_size_bytes = 5242880 WHERE id = $1
+	`, withFileProduct.ID); err != nil {
+		t.Fatalf("gagal setup file test: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/storage", nil, map[string]string{"X-Test-UserID": userID})
+	var resp struct {
+		Files []struct {
+			ProductID string `json:"product_id"`
+		} `json:"files"`
+		TotalBytes int64 `json:"total_bytes"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(resp.Files) != 1 || resp.Files[0].ProductID != withFileProduct.ID {
+		t.Fatalf("Files = %+v, ekspektasi hanya produk yang punya file", resp.Files)
+	}
+	if resp.TotalBytes != 5242880 {
+		t.Errorf("TotalBytes = %d, ekspektasi 5242880", resp.TotalBytes)
+	}
+}
+
+// Modul Toko (Fase E3): DeleteFile menghapus file DAN menonaktifkan produk
+// (invarian "tidak aktif tanpa file" yang sama seperti Update), tapi TIDAK
+// menghapus baris produknya (beda dari Delete).
+func TestProductDeleteFile_ClearsFileAndDeactivates(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.DELETE("/products/:id/file", product.DeleteFile)
+	g.GET("/products", product.List)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Produk Test", "price_idr": 25000,
+	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(createRec.Body.Bytes(), &created)
+	if _, err := product.DB.Exec(t.Context(), `
+		UPDATE products SET file_key = 'products/test/f.pdf', file_size_bytes = 1000, is_active = true WHERE id = $1
+	`, created.ID); err != nil {
+		t.Fatalf("gagal setup file test: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodDelete, "/products/"+created.ID+"/file", nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		HasFile  bool `json:"has_file"`
+		IsActive bool `json:"is_active"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons list: %v", err)
+	}
+	if len(items) != 1 || items[0].HasFile || items[0].IsActive {
+		t.Fatalf("items = %+v, ekspektasi has_file=false is_active=false", items)
+	}
+}
+
 // Modul Toko (Fase E2, tab Listing): Reorder mengubah urutan List (featured
 // selalu di atas, lalu diurutkan position ASC), dan menolak produk yang
 // bukan milik kreator yang login.

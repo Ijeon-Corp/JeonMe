@@ -225,6 +225,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// Modul Toko (Fase E2): tab Listing (urutan & unggulan).
 				productsGroup.PATCH("/products/reorder", product.Reorder)
 
+				// Modul Toko (Fase E3): tab Storage & Files.
+				productsGroup.GET("/storage", product.ListStorage)
+				productsGroup.DELETE("/products/:id/file", product.DeleteFile)
+
 				// Modul Toko (Fase E1): moderasi ulasan.
 				productsGroup.GET("/reviews", review.List)
 				productsGroup.PATCH("/reviews/:id", review.SetHidden)

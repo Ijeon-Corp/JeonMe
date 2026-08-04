@@ -827,6 +827,25 @@ export function reorderProducts(items: { id: string; position: number }[]) {
   );
 }
 
+// ---------- Modul Toko (Fase E3): Storage & Files ----------
+
+export interface StorageFileItem {
+  product_id: string;
+  product_name: string;
+  has_file: boolean;
+  file_size_bytes: number | null;
+  cover_image_url: string;
+  is_active: boolean;
+}
+
+export function listStorage() {
+  return apiFetch<{ files: StorageFileItem[]; total_bytes: number }>("/dashboard/storage", { method: "GET" }, { auth: true });
+}
+
+export function deleteProductFile(productId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/products/${productId}/file`, { method: "DELETE" }, { auth: true });
+}
+
 export function listProducts() {
   return apiFetch<DashboardProduct[]>("/dashboard/products", { method: "GET" }, { auth: true });
 }

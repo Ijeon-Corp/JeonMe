@@ -820,6 +820,93 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "produk dihapus"})
 }
 
+type storageFileItem struct {
+	ProductID     string `json:"product_id"`
+	ProductName   string `json:"product_name"`
+	HasFile       bool   `json:"has_file"`
+	FileSizeBytes *int64 `json:"file_size_bytes"`
+	CoverImageURL string `json:"cover_image_url"`
+	IsActive      bool   `json:"is_active"`
+}
+
+// ListStorage -- Modul Toko (Fase E3, tab Storage & Files): satu baris per
+// produk yang PUNYA file (has_file) -- produk tanpa file (mis. baru
+// dibuat, atau Payment Link) tidak relevan di sini. total_bytes menjumlah
+// HANYA file_size_bytes yang diketahui (bukan NULL) -- lihat catatan
+// lingkup jujur di migrasi 000051 (file lama sebelum kolom ini ada tidak
+// punya ukuran tercatat).
+func (h *ProductHandler) ListStorage(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, name, file_key != '', file_size_bytes, cover_image_url, is_active
+		FROM products
+		WHERE user_id = $1 AND file_key != ''
+		ORDER BY file_size_bytes DESC NULLS LAST
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat data penyimpanan"})
+		return
+	}
+	defer rows.Close()
+
+	items := []storageFileItem{}
+	var totalBytes int64
+	for rows.Next() {
+		var it storageFileItem
+		if err := rows.Scan(&it.ProductID, &it.ProductName, &it.HasFile, &it.FileSizeBytes, &it.CoverImageURL, &it.IsActive); err == nil {
+			items = append(items, it)
+			if it.FileSizeBytes != nil {
+				totalBytes += *it.FileSizeBytes
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"files": items, "total_bytes": totalBytes})
+}
+
+// DeleteFile -- Modul Toko (Fase E3): hapus file produk TANPA menghapus
+// produknya sendiri (beda dari Delete di atas). Produk otomatis
+// dinonaktifkan kalau sedang aktif -- menegakkan invarian yang sama
+// seperti Update (produk tanpa file tidak boleh aktif).
+func (h *ProductHandler) DeleteFile(c *gin.Context) {
+	productID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var fileKey string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT file_key FROM products WHERE id = $1 AND user_id = $2
+	`, productID, userID).Scan(&fileKey); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+	if fileKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "produk ini belum punya file"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `
+		UPDATE products SET file_key = '', file_size_bytes = NULL, is_active = false WHERE id = $1
+	`, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus file"})
+		return
+	}
+
+	if h.Storage != nil {
+		_ = h.Storage.Delete(ctx, fileKey)
+	}
+
+	h.invalidatePageCache(ctx, userID)
+
+	c.JSON(http.StatusOK, gin.H{"message": "file dihapus, produk dinonaktifkan sampai file baru diunggah"})
+}
+
 // UploadFile — REQ-F-302. Validasi ekstensi (daftar putih) dan ukuran
 // sebelum diteruskan ke storage; "pemindaian dasar file berbahaya" untuk MVP
 // berarti menolak ekstensi yang tidak dikenal, BUKAN antivirus/malware
@@ -873,7 +960,9 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.DB.Exec(ctx, `UPDATE products SET file_key = $1 WHERE id = $2`, key, productID); err != nil {
+	if _, err := h.DB.Exec(ctx, `
+		UPDATE products SET file_key = $1, file_size_bytes = $2 WHERE id = $3
+	`, key, fileHeader.Size, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "file terunggah tapi gagal menyimpan referensinya"})
 		return
 	}

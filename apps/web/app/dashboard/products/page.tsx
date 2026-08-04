@@ -45,6 +45,7 @@ import ShopOverviewPanel from "@/components/ShopOverviewPanel";
 import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
 import ReviewsPanel from "@/components/ReviewsPanel";
 import ListingPanel from "@/components/ListingPanel";
+import StorageFilesPanel from "@/components/StorageFilesPanel";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -63,7 +64,7 @@ import ListingPanel from "@/components/ListingPanel";
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
 export default function DashboardProductsPage() {
-  const [tab, setTab] = useState<"overview" | "manage" | "reviews" | "listing">("overview");
+  const [tab, setTab] = useState<"overview" | "manage" | "reviews" | "listing" | "storage">("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -494,12 +495,23 @@ export default function DashboardProductsPage() {
           >
             Listing
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("storage")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "storage" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Storage & Files
+          </button>
         </div>
 
         {tab === "reviews" ? (
           <ReviewsPanel />
         ) : tab === "listing" ? (
           <ListingPanel products={products} setProducts={setProducts} onError={(message) => setError(message)} />
+        ) : tab === "storage" ? (
+          <StorageFilesPanel />
         ) : tab === "overview" ? (
           <div className="mt-4">
             {/* Identitas Toko -- permintaan referensi gambar: nama & tautan
