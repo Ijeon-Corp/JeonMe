@@ -230,7 +230,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
 			COALESCE(o.sold_count, 0) AS sold_count, p.category,
 			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count,
-			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at
+			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at,
+			p.position, p.is_featured
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
@@ -240,6 +241,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		) pc ON pc.product_id = p.id
 		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
 			AND p.is_course = false AND p.is_booking = false
+		ORDER BY p.is_featured DESC, p.position ASC
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
@@ -274,6 +276,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 		SuccessMessage     string              `json:"success_message"`
 		PaymentLimitCount  *int                `json:"payment_limit_count"`
 		LinkExpiresAt      *time.Time          `json:"link_expires_at"`
+		Position           int                 `json:"position"`
+		IsFeatured         bool                `json:"is_featured"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -283,7 +287,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
 			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
 			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount,
-			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt); err == nil {
+			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt,
+			&it.Position, &it.IsFeatured); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}
@@ -338,6 +343,9 @@ type updateProductRequest struct {
 	ClearPaymentLimit   bool    `json:"clear_payment_limit"`
 	LinkExpiresAt       *string `json:"link_expires_at"`
 	ClearLinkExpiration bool    `json:"clear_link_expiration"`
+
+	// IsFeatured -- Modul Toko (Fase E2, tab Listing): lihat migrasi 000050.
+	IsFeatured *bool `json:"is_featured"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -573,13 +581,14 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			webhook_secret = COALESCE($21, webhook_secret),
 			success_message = COALESCE($22, success_message),
 			payment_limit_count = COALESCE($23, payment_limit_count),
-			link_expires_at = COALESCE($24, link_expires_at)
+			link_expires_at = COALESCE($24, link_expires_at),
+			is_featured = COALESCE($25, is_featured)
 		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
 		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID,
 		req.DeliveryMethod, req.WebhookURL, newWebhookSecret,
-		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt)
+		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return
@@ -588,6 +597,50 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	h.invalidatePageCache(ctx, userID)
 
 	c.JSON(http.StatusOK, gin.H{"message": "produk diperbarui"})
+}
+
+// Reorder -- Modul Toko (Fase E2, tab Listing): urutan tampil di halaman
+// publik & tabel Manage Items. Pola SAMA persis dengan LinksHandler.Reorder
+// (reorderItem, transaksi per-item dengan pengecekan kepemilikan).
+func (h *ProductHandler) Reorder(c *gin.Context) {
+	var req []reorderItem
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	for _, item := range req {
+		res, err := tx.Exec(ctx, `UPDATE products SET position = $1 WHERE id = $2 AND user_id = $3`, item.Position, item.ID, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan urutan"})
+			return
+		}
+		if res.RowsAffected() == 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "produk bukan milik akun ini"})
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan urutan"})
+		return
+	}
+
+	h.invalidatePageCache(ctx, userID)
+
+	c.JSON(http.StatusOK, gin.H{"message": "urutan produk disimpan"})
 }
 
 // GetWebhookSecret -- Modul Toko (Fase C3): endpoint TERPISAH dari List

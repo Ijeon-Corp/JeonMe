@@ -399,6 +399,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			p.is_course,
 			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id)
 		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
+		ORDER BY p.is_featured DESC, p.position ASC
 	`, userID)
 	if err == nil {
 		defer productRows.Close()

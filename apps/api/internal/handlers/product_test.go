@@ -63,6 +63,76 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase E2, tab Listing): Reorder mengubah urutan List (featured
+// selalu di atas, lalu diurutkan position ASC), dan menolak produk yang
+// bukan milik kreator yang login.
+func TestProductReorder_UpdatesPositionAndEnforcesOwnership(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
+	g.PATCH("/products/reorder", product.Reorder)
+	g.GET("/products", product.List)
+
+	createOne := func(name string) string {
+		rec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": name, "price_idr": 25000}, map[string]string{"X-Test-UserID": userID})
+		var created struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+			t.Fatalf("gagal decode created product: %v", err)
+		}
+		return created.ID
+	}
+	idA := createOne("Produk A")
+	idB := createOne("Produk B")
+	idC := createOne("Produk C")
+
+	otherProductRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Kreator Lain", "price_idr": 25000}, map[string]string{"X-Test-UserID": otherUserID})
+	var otherProduct struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(otherProductRec.Body.Bytes(), &otherProduct); err != nil {
+		t.Fatalf("gagal decode created product kreator lain: %v", err)
+	}
+
+	// B jadi unggulan -- harus tampil PALING ATAS terlepas dari position.
+	doJSON(t, router, http.MethodPatch, "/products/"+idB, map[string]any{"is_featured": true}, map[string]string{"X-Test-UserID": userID})
+
+	reorderRec := doJSON(t, router, http.MethodPatch, "/products/reorder", []map[string]any{
+		{"id": idC, "position": 0},
+		{"id": idA, "position": 1},
+		{"id": idB, "position": 2},
+	}, map[string]string{"X-Test-UserID": userID})
+	if reorderRec.Code != http.StatusOK {
+		t.Fatalf("status reorder = %d, body %s", reorderRec.Code, reorderRec.Body.String())
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons list: %v", err)
+	}
+	if len(items) != 3 || items[0].ID != idB || items[1].ID != idC || items[2].ID != idA {
+		t.Fatalf("urutan items = %+v, ekspektasi [B(unggulan), C, A]", items)
+	}
+
+	// Mencoba menggeser produk kreator LAIN harus ditolak.
+	forbiddenRec := doJSON(t, router, http.MethodPatch, "/products/reorder", []map[string]any{
+		{"id": otherProduct.ID, "position": 0},
+	}, map[string]string{"X-Test-UserID": userID})
+	if forbiddenRec.Code != http.StatusForbidden {
+		t.Fatalf("status reorder produk kreator lain = %d, ekspektasi 403", forbiddenRec.Code)
+	}
+}
+
 // Modul Toko (Fase D): Payment Link langsung AKTIF begitu dibuat (tidak
 // perlu unggah file dulu, beda dari produk digital biasa).
 func TestProductCreate_PaymentLinkIsActiveImmediately(t *testing.T) {

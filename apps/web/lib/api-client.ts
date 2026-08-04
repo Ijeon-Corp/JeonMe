@@ -812,6 +812,19 @@ export interface DashboardProduct {
   success_message: string;
   payment_limit_count: number | null;
   link_expires_at: string | null;
+  // position/is_featured -- Modul Toko (Fase E2, tab Listing): urutan
+  // tampil di halaman publik. Unggulan (is_featured) selalu di atas,
+  // lalu diurutkan position ASC -- lihat migrasi 000050.
+  position: number;
+  is_featured: boolean;
+}
+
+export function reorderProducts(items: { id: string; position: number }[]) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/products/reorder",
+    { method: "PATCH", body: JSON.stringify(items) },
+    { auth: true }
+  );
 }
 
 export function listProducts() {
@@ -866,6 +879,7 @@ export function updateProduct(
     clear_payment_limit: boolean;
     link_expires_at: string;
     clear_link_expiration: boolean;
+    is_featured: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(
