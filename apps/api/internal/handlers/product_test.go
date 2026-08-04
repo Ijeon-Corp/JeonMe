@@ -81,21 +81,29 @@ func TestProductListWebhookEvents_ScopedToOwnProducts(t *testing.T) {
 	var created struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(createRec.Body.Bytes(), &created)
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
 
 	otherRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Lain", "price_idr": 25000}, map[string]string{"X-Test-UserID": otherUserID})
 	var otherCreated struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(otherRec.Body.Bytes(), &otherCreated)
+	if err := json.Unmarshal(otherRec.Body.Bytes(), &otherCreated); err != nil {
+		t.Fatalf("gagal decode respons create kreator lain: %v", err)
+	}
 
 	var orderID, otherOrderID string
-	product.DB.QueryRow(t.Context(), `
+	if err := product.DB.QueryRow(t.Context(), `
 		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'buyer@example.com', 25000, 'paid') RETURNING id
-	`, created.ID).Scan(&orderID)
-	product.DB.QueryRow(t.Context(), `
+	`, created.ID).Scan(&orderID); err != nil {
+		t.Fatalf("gagal setup order: %v", err)
+	}
+	if err := product.DB.QueryRow(t.Context(), `
 		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'buyer2@example.com', 25000, 'paid') RETURNING id
-	`, otherCreated.ID).Scan(&otherOrderID)
+	`, otherCreated.ID).Scan(&otherOrderID); err != nil {
+		t.Fatalf("gagal setup order kreator lain: %v", err)
+	}
 
 	if _, err := product.DB.Exec(t.Context(), `
 		INSERT INTO webhook_deliveries (id, user_id, product_id, order_id, url, status, response_code, error_message)
@@ -141,7 +149,9 @@ func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
 		ShopPaused        bool   `json:"shop_paused"`
 		ShopPausedMessage string `json:"shop_paused_message"`
 	}
-	json.Unmarshal(getRec.Body.Bytes(), &initial)
+	if err := json.Unmarshal(getRec.Body.Bytes(), &initial); err != nil {
+		t.Fatalf("gagal decode respons GET awal: %v", err)
+	}
 	if initial.ShopPaused {
 		t.Fatalf("toko baru seharusnya belum dijeda")
 	}
@@ -152,7 +162,9 @@ func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
 	}
 
 	var pausedAt1 *time.Time
-	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt1)
+	if err := product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt1); err != nil {
+		t.Fatalf("gagal baca shop_paused_at: %v", err)
+	}
 	if pausedAt1 == nil {
 		t.Fatalf("shop_paused_at seharusnya terisi setelah dijeda")
 	}
@@ -161,7 +173,9 @@ func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
 	// boleh berubah, supaya durasi jeda tetap tercatat dari awal.
 	doJSON(t, router, http.MethodPatch, "/shop-settings", map[string]any{"shop_paused": true, "shop_paused_message": "pesan baru"}, map[string]string{"X-Test-UserID": userID})
 	var pausedAt2 *time.Time
-	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt2)
+	if err := product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt2); err != nil {
+		t.Fatalf("gagal baca shop_paused_at kedua: %v", err)
+	}
 	if pausedAt2 == nil || !pausedAt1.Equal(*pausedAt2) {
 		t.Fatalf("shop_paused_at berubah saat dijeda ulang: sebelum=%v sesudah=%v", pausedAt1, pausedAt2)
 	}
@@ -171,7 +185,9 @@ func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
 		ShopPaused        bool   `json:"shop_paused"`
 		ShopPausedMessage string `json:"shop_paused_message"`
 	}
-	json.Unmarshal(getRec2.Body.Bytes(), &afterPause)
+	if err := json.Unmarshal(getRec2.Body.Bytes(), &afterPause); err != nil {
+		t.Fatalf("gagal decode respons GET kedua: %v", err)
+	}
 	if !afterPause.ShopPaused || afterPause.ShopPausedMessage != "pesan baru" {
 		t.Fatalf("afterPause = %+v", afterPause)
 	}
@@ -179,7 +195,9 @@ func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
 	// Lepas jeda -- shop_paused_at kembali NULL.
 	doJSON(t, router, http.MethodPatch, "/shop-settings", map[string]any{"shop_paused": false, "shop_paused_message": ""}, map[string]string{"X-Test-UserID": userID})
 	var pausedAt3 *time.Time
-	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt3)
+	if err := product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt3); err != nil {
+		t.Fatalf("gagal baca shop_paused_at ketiga: %v", err)
+	}
 	if pausedAt3 != nil {
 		t.Fatalf("shop_paused_at seharusnya NULL setelah dilepas, dapat %v", pausedAt3)
 	}
@@ -204,7 +222,9 @@ func TestProductListStorage_OnlyProductsWithFilesAndTotalsBytes(t *testing.T) {
 	var noFileProduct struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(createRec.Body.Bytes(), &noFileProduct)
+	if err := json.Unmarshal(createRec.Body.Bytes(), &noFileProduct); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
 
 	withFileRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
 		"name": "Produk Dengan File", "price_idr": 25000,
@@ -212,7 +232,9 @@ func TestProductListStorage_OnlyProductsWithFilesAndTotalsBytes(t *testing.T) {
 	var withFileProduct struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(withFileRec.Body.Bytes(), &withFileProduct)
+	if err := json.Unmarshal(withFileRec.Body.Bytes(), &withFileProduct); err != nil {
+		t.Fatalf("gagal decode respons create dengan file: %v", err)
+	}
 	if _, err := product.DB.Exec(t.Context(), `
 		UPDATE products SET file_key = 'products/test/f.pdf', file_size_bytes = 5242880 WHERE id = $1
 	`, withFileProduct.ID); err != nil {
@@ -257,7 +279,9 @@ func TestProductDeleteFile_ClearsFileAndDeactivates(t *testing.T) {
 	var created struct {
 		ID string `json:"id"`
 	}
-	json.Unmarshal(createRec.Body.Bytes(), &created)
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
 	if _, err := product.DB.Exec(t.Context(), `
 		UPDATE products SET file_key = 'products/test/f.pdf', file_size_bytes = 1000, is_active = true WHERE id = $1
 	`, created.ID); err != nil {

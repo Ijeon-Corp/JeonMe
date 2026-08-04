@@ -979,7 +979,7 @@ func (h *ProductHandler) UpdateShopSettings(c *gin.Context) {
 	}
 
 	h.invalidatePageCache(ctx, userID)
-	c.JSON(http.StatusOK, shopSettingsResponse{ShopPaused: req.ShopPaused, ShopPausedMessage: req.ShopPausedMessage})
+	c.JSON(http.StatusOK, shopSettingsResponse(req))
 }
 
 // DeleteFile -- Modul Toko (Fase E3): hapus file produk TANPA menghapus
