@@ -582,6 +582,317 @@ func (h *CheckoutHandler) MarkFulfilled(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "pesanan ditandai selesai diproses"})
 }
 
+type orderListItem struct {
+	OrderID        string  `json:"order_id"`
+	ProductName    string  `json:"product_name"`
+	BuyerEmail     string  `json:"buyer_email"`
+	AmountIDR      int64   `json:"amount_idr"`
+	PlatformFeeIDR int64   `json:"platform_fee_idr"`
+	Status         string  `json:"status"`
+	PaymentMethod  string  `json:"payment_method"`
+	CreatedAt      string  `json:"created_at"`
+	FulfilledAt    *string `json:"fulfilled_at"`
+	RefundedAt     *string `json:"refunded_at"`
+}
+
+// ListOrders -- Modul Toko (tab Transaction): daftar SEMUA transaksi
+// kreator (beda dari ListRecentOrders di atas yang cuma 20 teratas untuk
+// widget Statistik), dengan filter status & pencarian bebas (email pembeli
+// atau nama produk). Mengikuti gaya "search ILIKE + LIMIT tetap" yang sudah
+// dipakai AdminHandler.ListUsers -- kodebase ini sengaja TIDAK punya
+// pagination LIMIT/OFFSET sungguhan di mana pun, jadi tidak diperkenalkan
+// khusus di sini juga.
+func (h *CheckoutHandler) ListOrders(c *gin.Context) {
+	userID := c.GetString("userID")
+	status := c.Query("status")
+	search := "%" + c.Query("search") + "%"
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT o.id, p.name, o.buyer_email, o.amount_idr, o.platform_fee_idr, o.status,
+			COALESCE(pay.method, ''), o.created_at, o.fulfilled_at, o.refunded_at
+		FROM orders o
+		JOIN products p ON p.id = o.product_id
+		LEFT JOIN (
+			SELECT DISTINCT ON (order_id) order_id, method FROM payments ORDER BY order_id, verified_at DESC NULLS LAST
+		) pay ON pay.order_id = o.id
+		WHERE p.user_id = $1
+			AND ($2 = '' OR o.status = $2)
+			AND (o.buyer_email ILIKE $3 OR p.name ILIKE $3)
+		ORDER BY o.created_at DESC LIMIT 200
+	`, userID, status, search)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat transaksi"})
+		return
+	}
+	defer rows.Close()
+
+	items := []orderListItem{}
+	for rows.Next() {
+		var it orderListItem
+		var createdAt time.Time
+		var fulfilledAt, refundedAt *time.Time
+		if err := rows.Scan(&it.OrderID, &it.ProductName, &it.BuyerEmail, &it.AmountIDR, &it.PlatformFeeIDR, &it.Status,
+			&it.PaymentMethod, &createdAt, &fulfilledAt, &refundedAt); err != nil {
+			continue
+		}
+		it.CreatedAt = createdAt.Format(time.RFC3339)
+		if fulfilledAt != nil {
+			s := fulfilledAt.Format(time.RFC3339)
+			it.FulfilledAt = &s
+		}
+		if refundedAt != nil {
+			s := refundedAt.Format(time.RFC3339)
+			it.RefundedAt = &s
+		}
+		items = append(items, it)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": items})
+}
+
+type orderDetailLedgerRow struct {
+	Type      string `json:"type"`
+	AmountIDR int64  `json:"amount_idr"`
+	CreatedAt string `json:"created_at"`
+}
+
+type orderDetailResponse struct {
+	OrderID                string  `json:"order_id"`
+	ProductName            string  `json:"product_name"`
+	BuyerEmail             string  `json:"buyer_email"`
+	BuyerContact           string  `json:"buyer_contact"`
+	AmountIDR              int64   `json:"amount_idr"`
+	PlatformFeeIDR         int64   `json:"platform_fee_idr"`
+	DiscountIDR            int64   `json:"discount_idr"`
+	AffiliateCommissionIDR int64   `json:"affiliate_commission_idr"`
+	Status                 string  `json:"status"`
+	PspReference           string  `json:"psp_reference"`
+	PaymentMethod          string  `json:"payment_method"`
+	CreatedAt              string  `json:"created_at"`
+	FulfilledAt            *string `json:"fulfilled_at"`
+	RefundedAt             *string `json:"refunded_at"`
+	RefundAmountIDR        *int64  `json:"refund_amount_idr"`
+	RefundReason           string  `json:"refund_reason"`
+	// LedgerEntries -- HANYA baris ledger_entries milik KREATOR yang login
+	// (bukan afiliator/kolaborator lain yang mungkin juga dapat bagian dari
+	// order yang sama) -- konsisten dengan balance.go yang juga selalu
+	// menghitung ledger PER user yang login, bukan lintas pihak.
+	LedgerEntries []orderDetailLedgerRow `json:"ledger_entries"`
+}
+
+// GetOrderDetail -- Modul Toko (tab Transaction): tampilan detail/invoice
+// satu pesanan, termasuk rincian ledger (berapa yang benar-benar masuk ke
+// saldo kreator dari order ini, dan pembalikannya kalau sudah direfund).
+func (h *CheckoutHandler) GetOrderDetail(c *gin.Context) {
+	orderID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var resp orderDetailResponse
+	var createdAt time.Time
+	var fulfilledAt, refundedAt *time.Time
+	err := h.DB.QueryRow(ctx, `
+		SELECT o.id, p.name, o.buyer_email, o.buyer_contact, o.amount_idr, o.platform_fee_idr, o.discount_idr,
+			o.affiliate_commission_idr, o.status, o.psp_reference, o.created_at, o.fulfilled_at,
+			o.refunded_at, o.refund_amount_idr, o.refund_reason
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1 AND p.user_id = $2
+	`, orderID, userID).Scan(&resp.OrderID, &resp.ProductName, &resp.BuyerEmail, &resp.BuyerContact, &resp.AmountIDR,
+		&resp.PlatformFeeIDR, &resp.DiscountIDR, &resp.AffiliateCommissionIDR, &resp.Status, &resp.PspReference,
+		&createdAt, &fulfilledAt, &refundedAt, &resp.RefundAmountIDR, &resp.RefundReason)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pesanan"})
+		return
+	}
+	resp.CreatedAt = createdAt.Format(time.RFC3339)
+	if fulfilledAt != nil {
+		s := fulfilledAt.Format(time.RFC3339)
+		resp.FulfilledAt = &s
+	}
+	if refundedAt != nil {
+		s := refundedAt.Format(time.RFC3339)
+		resp.RefundedAt = &s
+	}
+
+	_ = h.DB.QueryRow(ctx, `
+		SELECT COALESCE(method, '') FROM payments WHERE order_id = $1 ORDER BY verified_at DESC NULLS LAST LIMIT 1
+	`, orderID).Scan(&resp.PaymentMethod)
+
+	resp.LedgerEntries = []orderDetailLedgerRow{}
+	ledgerRows, err := h.DB.Query(ctx, `
+		SELECT type, amount_idr, created_at FROM ledger_entries WHERE order_id = $1 AND user_id = $2 ORDER BY created_at ASC
+	`, orderID, userID)
+	if err == nil {
+		defer ledgerRows.Close()
+		for ledgerRows.Next() {
+			var lr orderDetailLedgerRow
+			var t time.Time
+			if err := ledgerRows.Scan(&lr.Type, &lr.AmountIDR, &t); err == nil {
+				lr.CreatedAt = t.Format(time.RFC3339)
+				resp.LedgerEntries = append(resp.LedgerEntries, lr)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+type refundOrderRequest struct {
+	Reason string `json:"reason" binding:"omitempty,max=200"`
+}
+
+// RefundOrder -- Modul Toko (tab Transaction): refund PENUH pesanan yang
+// sudah lunas lewat Midtrans Core API refund (lihat midtrans.Client.Refund),
+// lalu membalikkan SEMUA ledger credit yang tertaut ke order ini (kreator +
+// afiliator + tiap kolaborator -- cerminan PERSIS dari yang ditulis Webhook
+// saat order lunas, lihat catatan di sana) sebagai entri 'refund_debit'
+// bernilai negatif, dalam SATU transaksi DB.
+//
+// SENGAJA TIDAK mencoba menarik kembali barang digital yang sudah terkirim
+// (kode acak yang sudah diklaim, slot booking yang sudah dipesan, poin
+// loyalitas yang sudah didapat pembeli) -- itu keputusan bisnis terpisah di
+// luar cakupan "refund uang" murni yang diminta di sini. Refund SEBAGIAN
+// juga di luar cakupan (butuh pembagian ulang platform fee/afiliasi/
+// kolaborator yang proporsional) -- lihat catatan lingkup di
+// midtrans.Client.Refund.
+//
+// Panggilan ke Midtrans dilakukan SEBELUM transaksi DB dibuka -- uang harus
+// benar-benar berhasil direfund dulu sebelum status lokal berubah. Kalau
+// proses gagal PERSIS di antara refund Midtrans sukses dan commit transaksi
+// ini (mis. server crash), status lokal bisa tertinggal di belakang
+// Midtrans -- kasus langka yang dicatat lewat log di bawah untuk
+// rekonsiliasi manual, bukan sistem rekonsiliasi otomatis penuh (di luar
+// cakupan).
+func (h *CheckoutHandler) RefundOrder(c *gin.Context) {
+	orderID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req refundOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
+	defer cancel()
+
+	var pspReference string
+	var amountIDR int64
+	err := h.DB.QueryRow(ctx, `
+		SELECT o.psp_reference, o.amount_idr
+		FROM orders o JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1 AND p.user_id = $2 AND o.status = 'paid' AND o.refunded_at IS NULL
+	`, orderID, userID).Scan(&pspReference, &amountIDR)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan, belum lunas, atau sudah direfund"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pesanan"})
+		return
+	}
+
+	if _, err := h.Midtrans.Refund(ctx, pspReference, req.Reason); err != nil {
+		if err == midtrans.ErrNotConfigured {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "pembayaran belum dikonfigurasi, hubungi admin"})
+			return
+		}
+		c.JSON(http.StatusBadGateway, gin.H{"error": "refund ditolak Midtrans: " + err.Error()})
+		return
+	}
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		log.Printf("checkout: refund Midtrans sukses untuk order %s tapi gagal memulai transaksi DB -- perlu rekonsiliasi manual: %v", orderID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal menyimpan status -- hubungi admin"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE orders SET status = 'refunded', refunded_at = now(), refund_amount_idr = $1, refund_reason = $2
+		WHERE id = $3 AND status = 'paid' AND refunded_at IS NULL
+			AND product_id IN (SELECT id FROM products WHERE user_id = $4)
+	`, amountIDR, req.Reason, orderID, userID)
+	if err != nil {
+		log.Printf("checkout: refund Midtrans sukses untuk order %s tapi UPDATE orders gagal -- perlu rekonsiliasi manual: %v", orderID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal menyimpan status -- hubungi admin"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		log.Printf("checkout: refund Midtrans sukses untuk order %s tapi order tidak lagi memenuhi syarat saat commit -- perlu rekonsiliasi manual", orderID)
+		c.JSON(http.StatusConflict, gin.H{"error": "pesanan sudah berubah status, tapi refund Midtrans sudah diproses -- hubungi admin untuk rekonsiliasi"})
+		return
+	}
+
+	creditRows, err := tx.Query(ctx, `SELECT id, user_id, amount_idr FROM ledger_entries WHERE order_id = $1 AND type = 'credit'`, orderID)
+	if err != nil {
+		log.Printf("checkout: refund Midtrans sukses untuk order %s tapi gagal membaca ledger credit -- perlu rekonsiliasi manual: %v", orderID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
+		return
+	}
+	type creditRow struct {
+		LedgerID  string
+		UserID    string
+		AmountIDR int64
+	}
+	var credits []creditRow
+	for creditRows.Next() {
+		var cr creditRow
+		if err := creditRows.Scan(&cr.LedgerID, &cr.UserID, &cr.AmountIDR); err == nil {
+			credits = append(credits, cr)
+		}
+	}
+	creditRows.Close()
+
+	for _, cr := range credits {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, cr.UserID); err != nil {
+			log.Printf("checkout: refund order %s gagal mengunci ledger user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
+			return
+		}
+		var currentBalance int64
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1`, cr.UserID).Scan(&currentBalance); err != nil {
+			log.Printf("checkout: refund order %s gagal membaca saldo user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
+			return
+		}
+		newBalance := currentBalance - cr.AmountIDR
+		refundLedgerID := uuid.NewString()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
+			VALUES ($1, $2, $3, 'refund_debit', $4, $5, now())
+		`, refundLedgerID, cr.UserID, orderID, -cr.AmountIDR, newBalance); err != nil {
+			log.Printf("checkout: refund order %s gagal menulis ledger pembalik untuk user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
+			return
+		}
+		metadata, _ := json.Marshal(gin.H{"amount_idr": -cr.AmountIDR, "balance_after": newBalance, "order_id": orderID, "reversed_ledger_id": cr.LedgerID})
+		if err := audit.Log(ctx, tx, cr.UserID, "ledger.refund_debit", "ledger_entry", refundLedgerID, metadata); err != nil {
+			log.Printf("checkout: refund order %s gagal mencatat audit log untuk user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Printf("checkout: refund Midtrans sukses untuk order %s tapi commit gagal -- perlu rekonsiliasi manual: %v", orderID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal menyimpan perubahan -- hubungi admin"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "refund berhasil diproses", "refund_amount_idr": amountIDR})
+}
+
 // Webhook — REQ-F-403 (verifikasi signature WAJIB sebelum diproses) &
 // REQ-F-404 (idempotensi: notifikasi yang di-retry Midtrans tidak boleh
 // diproses dua kali). Selalu membalas 200 kalau payload valid (termasuk saat

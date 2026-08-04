@@ -48,6 +48,7 @@ import ListingPanel from "@/components/ListingPanel";
 import StorageFilesPanel from "@/components/StorageFilesPanel";
 import WebhookEventsPanel from "@/components/WebhookEventsPanel";
 import ShopSettingsPanel from "@/components/ShopSettingsPanel";
+import TransactionPanel from "@/components/TransactionPanel";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -66,7 +67,9 @@ import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
 export default function DashboardProductsPage() {
-  const [tab, setTab] = useState<"overview" | "manage" | "reviews" | "listing" | "storage" | "webhook_events" | "shop_settings">("overview");
+  const [tab, setTab] = useState<
+    "overview" | "manage" | "reviews" | "listing" | "storage" | "webhook_events" | "shop_settings" | "transaction"
+  >("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -524,6 +527,15 @@ export default function DashboardProductsPage() {
           >
             Shop Settings
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("transaction")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "transaction" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Transaction
+          </button>
         </div>
 
         {tab === "reviews" ? (
@@ -536,6 +548,8 @@ export default function DashboardProductsPage() {
           <WebhookEventsPanel />
         ) : tab === "shop_settings" ? (
           <ShopSettingsPanel />
+        ) : tab === "transaction" ? (
+          <TransactionPanel />
         ) : tab === "overview" ? (
           <div className="mt-4">
             {/* Identitas Toko -- permintaan referensi gambar: nama & tautan

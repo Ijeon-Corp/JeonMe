@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -647,5 +648,299 @@ func TestCheckoutWebhook_CreditsCollaboratorSplitFromSnapshot(t *testing.T) {
 	}
 	if creatorLedgerAmount != 80000 {
 		t.Fatalf("ledger kreator = %d, ekspektasi 80000 (100000 - 20000 split)", creatorLedgerAmount)
+	}
+}
+
+// mockMidtransRefundServer -- server HTTP palsu yang menirukan respons
+// sukses Core API refund Midtrans, dipasang lewat field publik
+// checkout.Midtrans.CoreAPIBaseURL (bukan memanggil sandbox Midtrans
+// sungguhan -- test tidak bisa membuat transaksi ter-capture asli di sana
+// tanpa interaksi manusia lewat halaman Snap).
+func mockMidtransRefundServer(t *testing.T, statusCode string) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status_code":"` + statusCode + `","status_message":"mock","transaction_status":"refund","refund_amount":"100000.00"}`))
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// Modul Toko (tab Transaction): refund menolak order yang belum lunas
+// ATAU bukan milik kreator yang login -- pesan 404 generik yang SAMA untuk
+// kedua kasus (tidak membedakan alasan), mengikuti pola MarkFulfilled.
+func TestRefundOrder_NotPaidOrNotOwned_Rejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "test-server-key")
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	pendingOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference) VALUES ($1, $2, 'buyer@example.com', 100000, 'pending', $3)
+	`, pendingOrderID, productID, "jeonme-order-"+pendingOrderID); err != nil {
+		t.Fatalf("gagal setup order pending: %v", err)
+	}
+	paidOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference) VALUES ($1, $2, 'buyer@example.com', 100000, 'paid', $3)
+	`, paidOrderID, productID, "jeonme-order-"+paidOrderID); err != nil {
+		t.Fatalf("gagal setup order lunas: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/orders/:id/refund", checkout.RefundOrder)
+
+	rec1 := doJSON(t, router, http.MethodPost, "/orders/"+pendingOrderID+"/refund", map[string]string{}, map[string]string{"X-Test-UserID": userID})
+	if rec1.Code != http.StatusNotFound {
+		t.Fatalf("order pending: status = %d, ekspektasi 404. Body: %s", rec1.Code, rec1.Body.String())
+	}
+
+	rec2 := doJSON(t, router, http.MethodPost, "/orders/"+paidOrderID+"/refund", map[string]string{}, map[string]string{"X-Test-UserID": otherUserID})
+	if rec2.Code != http.StatusNotFound {
+		t.Fatalf("order milik lain: status = %d, ekspektasi 404. Body: %s", rec2.Code, rec2.Body.String())
+	}
+}
+
+// Modul Toko (tab Transaction): tanpa MIDTRANS_SERVER_KEY, refund harus
+// menolak dengan 503 yang jelas DAN order TIDAK boleh berubah status --
+// mengikuti pola TestCheckoutCreate_NotConfigured_RollsBackOrder.
+func TestRefundOrder_NotConfigured_RejectsWithoutChangingOrder(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "")
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	orderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference) VALUES ($1, $2, 'buyer@example.com', 100000, 'paid', $3)
+	`, orderID, productID, "jeonme-order-"+orderID); err != nil {
+		t.Fatalf("gagal setup order lunas: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/orders/:id/refund", checkout.RefundOrder)
+
+	rec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/refund", map[string]string{}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, ekspektasi 503. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	var status string
+	var refundedAt *time.Time
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT status, refunded_at FROM orders WHERE id = $1`, orderID).Scan(&status, &refundedAt); err != nil {
+		t.Fatalf("gagal query order: %v", err)
+	}
+	if status != "paid" || refundedAt != nil {
+		t.Fatalf("order berubah walau Midtrans belum dikonfigurasi: status=%s refunded_at=%v", status, refundedAt)
+	}
+}
+
+// Modul Toko (tab Transaction): jalur bahagia lengkap -- order lunas dengan
+// split kolaborator (ledger kreator + kolaborator sudah ada via Webhook
+// sungguhan, SAMA seperti TestCheckoutWebhook_CreditsCollaboratorSplitFromSnapshot),
+// lalu RefundOrder dipanggil dengan Midtrans API DIPALSUKAN (httptest) --
+// verifikasi: order berstatus 'refunded', DAN ledger kreator MAUPUN
+// kolaborator sama-sama net ZERO untuk order ini (dibalikkan penuh).
+func TestRefundOrder_Success_ReversesAllLedgerCreditsIncludingCollaborator(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	collaboratorID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	splitSnapshot, err := json.Marshal([]CollaboratorSplitSnapshot{{UserID: collaboratorID, AmountIDR: 20000}})
+	if err != nil {
+		t.Fatalf("gagal encode split snapshot: %v", err)
+	}
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference, collaborator_splits_snapshot)
+		VALUES ($1, $2, 'buyer@example.com', 100000, 'pending', $3, $4)
+	`, orderID, productID, externalID, splitSnapshot); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	webhookRouter := gin.New()
+	webhookRouter.POST("/webhook", checkout.Webhook)
+	body := webhookPayload(t, serverKey, uuid.NewString(), externalID, "settlement")
+	webhookRec := doJSON(t, webhookRouter, http.MethodPost, "/webhook", json.RawMessage(body), nil)
+	if webhookRec.Code != http.StatusOK {
+		t.Fatalf("setup webhook gagal: status %d, body %s", webhookRec.Code, webhookRec.Body.String())
+	}
+
+	mockMidtrans := mockMidtransRefundServer(t, "200")
+	checkout.Midtrans.CoreAPIBaseURL = mockMidtrans.URL
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/orders/:id/refund", checkout.RefundOrder)
+
+	refundRec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/refund", map[string]string{"reason": "pembeli komplain"}, map[string]string{"X-Test-UserID": userID})
+	if refundRec.Code != http.StatusOK {
+		t.Fatalf("refund gagal: status %d, body %s", refundRec.Code, refundRec.Body.String())
+	}
+
+	var status, refundReason string
+	var refundedAt *time.Time
+	var refundAmountIDR *int64
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT status, refunded_at, refund_amount_idr, refund_reason FROM orders WHERE id = $1
+	`, orderID).Scan(&status, &refundedAt, &refundAmountIDR, &refundReason); err != nil {
+		t.Fatalf("gagal query order setelah refund: %v", err)
+	}
+	if status != "refunded" || refundedAt == nil || refundAmountIDR == nil || *refundAmountIDR != 100000 || refundReason != "pembeli komplain" {
+		t.Fatalf("order setelah refund: status=%s refunded_at=%v refund_amount_idr=%v refund_reason=%q", status, refundedAt, refundAmountIDR, refundReason)
+	}
+
+	var creatorNet, collabNet int64
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1 AND order_id = $2
+	`, userID, orderID).Scan(&creatorNet); err != nil {
+		t.Fatalf("gagal query ledger kreator: %v", err)
+	}
+	if err := checkout.DB.QueryRow(t.Context(), `
+		SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1 AND order_id = $2
+	`, collaboratorID, orderID).Scan(&collabNet); err != nil {
+		t.Fatalf("gagal query ledger kolaborator: %v", err)
+	}
+	if creatorNet != 0 {
+		t.Fatalf("net ledger kreator setelah refund = %d, ekspektasi 0 (dibalikkan penuh)", creatorNet)
+	}
+	if collabNet != 0 {
+		t.Fatalf("net ledger kolaborator setelah refund = %d, ekspektasi 0 (dibalikkan penuh)", collabNet)
+	}
+
+	// Refund kedua kalinya harus ditolak (idempotensi -- tidak boleh
+	// membalikkan ledger dua kali untuk order yang sama).
+	refundAgainRec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/refund", map[string]string{}, map[string]string{"X-Test-UserID": userID})
+	if refundAgainRec.Code != http.StatusNotFound {
+		t.Fatalf("refund kedua: status = %d, ekspektasi 404 (sudah direfund)", refundAgainRec.Code)
+	}
+}
+
+// Modul Toko (tab Transaction): kalau Midtrans membalas HTTP 200 tapi
+// status_code fungsional BUKAN "200" (mis. transaksi tidak bisa direfund),
+// RefundOrder harus tetap menolak DAN order tidak boleh berubah -- ini
+// justru skenario paling penting untuk dibedakan dari sukses, karena HTTP
+// status saja tidak cukup dipercaya untuk API Midtrans (lihat catatan di
+// midtrans.Client.Refund).
+func TestRefundOrder_MidtransFunctionalError_RejectsWithoutChangingOrder(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	orderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference) VALUES ($1, $2, 'buyer@example.com', 100000, 'paid', $3)
+	`, orderID, productID, "jeonme-order-"+orderID); err != nil {
+		t.Fatalf("gagal setup order lunas: %v", err)
+	}
+
+	mockMidtrans := mockMidtransRefundServer(t, "412")
+	checkout.Midtrans.CoreAPIBaseURL = mockMidtrans.URL
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/orders/:id/refund", checkout.RefundOrder)
+
+	rec := doJSON(t, router, http.MethodPost, "/orders/"+orderID+"/refund", map[string]string{}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, ekspektasi 502. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	var status string
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+		t.Fatalf("gagal query order: %v", err)
+	}
+	if status != "paid" {
+		t.Fatalf("order berubah status = %s walau Midtrans menolak refund secara fungsional", status)
+	}
+}
+
+// Modul Toko (tab Transaction): ListOrders discope ke produk milik kreator
+// yang login, dan filter status bekerja.
+func TestListOrders_ScopedAndFiltersByStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "test-server-key")
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+	otherProductID := createActiveTestProduct(t, checkout, otherUserID, 100000)
+
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'paid-buyer@example.com', 100000, 'paid'),
+			($1, 'pending-buyer@example.com', 100000, 'pending'),
+			($2, 'other-buyer@example.com', 100000, 'paid')
+	`, productID, otherProductID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/orders", checkout.ListOrders)
+
+	rec := doJSON(t, router, http.MethodGet, "/orders?status=paid", nil, map[string]string{"X-Test-UserID": userID})
+	var resp struct {
+		Orders []orderListItem `json:"orders"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(resp.Orders) != 1 || resp.Orders[0].BuyerEmail != "paid-buyer@example.com" {
+		t.Fatalf("orders = %+v, ekspektasi hanya 1 order lunas milik kreator ini", resp.Orders)
+	}
+}
+
+// Modul Toko (tab Transaction): GetOrderDetail menampilkan rincian ledger
+// milik kreator yang login, dan menolak akses ke order milik kreator lain.
+func TestGetOrderDetail_ScopedToOwner_WithLedgerBreakdown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 100000)
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference)
+		VALUES ($1, $2, 'buyer@example.com', 100000, 'pending', $3)
+	`, orderID, productID, externalID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	webhookRouter := gin.New()
+	webhookRouter.POST("/webhook", checkout.Webhook)
+	body := webhookPayload(t, serverKey, uuid.NewString(), externalID, "settlement")
+	if rec := doJSON(t, webhookRouter, http.MethodPost, "/webhook", json.RawMessage(body), nil); rec.Code != http.StatusOK {
+		t.Fatalf("setup webhook gagal: status %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/orders/:id", checkout.GetOrderDetail)
+
+	rec := doJSON(t, router, http.MethodGet, "/orders/"+orderID, nil, map[string]string{"X-Test-UserID": userID})
+	var detail orderDetailResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(detail.LedgerEntries) != 1 || detail.LedgerEntries[0].AmountIDR != 100000 || detail.LedgerEntries[0].Type != "credit" {
+		t.Fatalf("ledger_entries = %+v, ekspektasi 1 entri credit 100000", detail.LedgerEntries)
+	}
+
+	notOwnerRec := doJSON(t, router, http.MethodGet, "/orders/"+orderID, nil, map[string]string{"X-Test-UserID": otherUserID})
+	if notOwnerRec.Code != http.StatusNotFound {
+		t.Fatalf("akses kreator lain: status = %d, ekspektasi 404", notOwnerRec.Code)
 	}
 }

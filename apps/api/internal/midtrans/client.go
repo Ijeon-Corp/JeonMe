@@ -333,6 +333,45 @@ func (c *Client) CancelSubscription(ctx context.Context, subscriptionID string) 
 	return c.doSubscriptionRequest(ctx, http.MethodPost, "/v1/subscriptions/"+subscriptionID+"/cancel", nil, nil)
 }
 
+// ---------- Modul Toko (Fase Transaction): Refund (Core API) ----------
+
+// RefundResponse — subset field yang kita pakai dari respons refund Midtrans.
+// StatusCode/StatusMessage WAJIB dicek terpisah dari status HTTP: Core API
+// Midtrans kadang membalas HTTP 200 dengan status_code fungsional non-200 di
+// body (mis. transaksi tidak bisa direfund) -- lihat Refund di bawah.
+type RefundResponse struct {
+	StatusCode        string `json:"status_code"`
+	StatusMessage     string `json:"status_message"`
+	TransactionStatus string `json:"transaction_status"`
+	RefundAmount      string `json:"refund_amount"`
+}
+
+// Refund — POST /v2/{order_id}/refund (Core API). orderID di sini adalah
+// order_id EKSTERNAL yang dikirim ke Midtrans saat CreateTransaction (lihat
+// checkout.go: "jeonme-order-"+id, disimpan di orders.psp_reference), BUKAN
+// UUID internal orders.id secara langsung.
+//
+// Modul Toko (tab Transaction) HANYA mendukung refund PENUH (field "amount"
+// sengaja tidak dikirim -- kosong berarti Midtrans merefund jumlah penuh
+// transaksi) -- refund sebagian butuh logika pembagian ulang platform fee/
+// afiliasi/kolaborator yang proporsional, di luar cakupan yang diminta.
+func (c *Client) Refund(ctx context.Context, orderID, reason string) (*RefundResponse, error) {
+	if c.ServerKey == "" {
+		return nil, ErrNotConfigured
+	}
+
+	payload := map[string]any{"reason": reason}
+
+	var out RefundResponse
+	if err := c.doSubscriptionRequest(ctx, http.MethodPost, "/v2/"+orderID+"/refund", payload, &out); err != nil {
+		return nil, err
+	}
+	if out.StatusCode != "" && out.StatusCode != "200" {
+		return nil, fmt.Errorf("midtrans: refund ditolak (status %s): %s", out.StatusCode, out.StatusMessage)
+	}
+	return &out, nil
+}
+
 func (c *Client) doSubscriptionRequest(ctx context.Context, method, path string, payload any, out any) error {
 	var bodyReader io.Reader
 	if payload != nil {

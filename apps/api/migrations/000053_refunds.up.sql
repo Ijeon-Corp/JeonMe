@@ -1,0 +1,3 @@
+ALTER TABLE orders ADD COLUMN refunded_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN refund_amount_idr BIGINT;
+ALTER TABLE orders ADD COLUMN refund_reason VARCHAR(200) NOT NULL DEFAULT '';

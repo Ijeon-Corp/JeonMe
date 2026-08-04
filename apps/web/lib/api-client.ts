@@ -987,6 +987,69 @@ export function markOrderFulfilled(orderId: string) {
   return apiFetch<{ message: string }>(`/dashboard/orders/${orderId}/fulfill`, { method: "POST" }, { auth: true });
 }
 
+// ---------- Modul Toko (tab Transaction) ----------
+
+export interface OrderListItem {
+  order_id: string;
+  product_name: string;
+  buyer_email: string;
+  amount_idr: number;
+  platform_fee_idr: number;
+  status: "pending" | "paid" | "expired" | "failed" | "refunded";
+  payment_method: string;
+  created_at: string;
+  fulfilled_at: string | null;
+  refunded_at: string | null;
+}
+
+export function listOrders(filters?: { status?: string; search?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.search) params.set("search", filters.search);
+  const qs = params.toString();
+  return apiFetch<{ orders: OrderListItem[] }>(`/dashboard/orders${qs ? `?${qs}` : ""}`, { method: "GET" }, { auth: true });
+}
+
+export interface OrderLedgerEntry {
+  type: string;
+  amount_idr: number;
+  created_at: string;
+}
+
+export interface OrderDetail {
+  order_id: string;
+  product_name: string;
+  buyer_email: string;
+  buyer_contact: string;
+  amount_idr: number;
+  platform_fee_idr: number;
+  discount_idr: number;
+  affiliate_commission_idr: number;
+  status: "pending" | "paid" | "expired" | "failed" | "refunded";
+  psp_reference: string;
+  payment_method: string;
+  created_at: string;
+  fulfilled_at: string | null;
+  refunded_at: string | null;
+  refund_amount_idr: number | null;
+  refund_reason: string;
+  ledger_entries: OrderLedgerEntry[];
+}
+
+export function getOrderDetail(orderId: string) {
+  return apiFetch<OrderDetail>(`/dashboard/orders/${orderId}`, { method: "GET" }, { auth: true });
+}
+
+// refundOrder -- refund PENUH lewat Midtrans (lihat catatan lingkup di
+// CheckoutHandler.RefundOrder) -- tidak ada opsi jumlah sebagian.
+export function refundOrder(orderId: string, reason: string) {
+  return apiFetch<{ message: string; refund_amount_idr: number }>(
+    `/dashboard/orders/${orderId}/refund`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+    { auth: true }
+  );
+}
+
 // Upload file lewat multipart/form-data -- TIDAK lewat apiFetch() karena
 // browser wajib menentukan sendiri header Content-Type (dengan boundary)
 // untuk FormData; memaksanya jadi "application/json" akan merusak body.

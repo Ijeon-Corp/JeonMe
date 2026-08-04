@@ -378,6 +378,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 			// Modul Toko (Fase C1): metode penyerahan "manual".
 			dashboard.POST("/orders/:id/fulfill", checkout.MarkFulfilled)
+
+			// Modul Toko (tab Transaction): daftar/detail transaksi + refund.
+			dashboard.GET("/orders", checkout.ListOrders)
+			dashboard.GET("/orders/:id", checkout.GetOrderDetail)
+			dashboard.POST("/orders/:id/refund", checkout.RefundOrder)
 			dashboard.GET("/analytics/export", analytics.ExportDailyCSV)
 
 			// No.96 (Sprint 13): asisten analitik TANPA LLM API sungguhan --
