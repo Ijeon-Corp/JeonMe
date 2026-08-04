@@ -232,6 +232,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// Modul Toko (Fase E4): tab Webhook Events.
 				productsGroup.GET("/webhook-events", product.ListWebhookEvents)
 
+				// Modul Toko (Fase E5): tab Shop Settings.
+				productsGroup.GET("/shop-settings", product.GetShopSettings)
+				productsGroup.PATCH("/shop-settings", product.UpdateShopSettings)
+
 				// Modul Toko (Fase E1): moderasi ulasan.
 				productsGroup.GET("/reviews", review.List)
 				productsGroup.PATCH("/reviews/:id", review.SetHidden)

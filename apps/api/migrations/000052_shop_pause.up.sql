@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN shop_paused_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN shop_paused_message VARCHAR(200) NOT NULL DEFAULT '';

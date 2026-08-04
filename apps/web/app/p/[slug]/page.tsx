@@ -138,6 +138,8 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
               }
             : undefined,
           referralCode: ref,
+          shopPaused: page.shop_paused,
+          shopPausedMessage: page.shop_paused_message,
         }}
         interactive
       />

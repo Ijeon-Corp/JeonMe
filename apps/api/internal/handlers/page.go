@@ -93,6 +93,13 @@ type publicPageResponse struct {
 	// pengunjung), dipakai frontend menyembunyikan pil "Buat halaman gratis
 	// di Jeonme" untuk kreator berbayar. Lihat isPremiumUser (subscription.go).
 	IsPremium bool `json:"is_premium"`
+	// ShopPaused/ShopPausedMessage -- Modul Toko (Fase E5): kreator bisa
+	// menjeda seluruh toko dari tab Shop Settings tanpa menonaktifkan tiap
+	// produk. Frontend menyembunyikan tombol beli & menampilkan pesan ini
+	// kalau true; backend TETAP menolak checkout (lihat checkout.go Create)
+	// supaya tidak bisa dilewati lewat panggilan API langsung.
+	ShopPaused        bool   `json:"shop_paused"`
+	ShopPausedMessage string `json:"shop_paused_message"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -357,6 +364,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
 	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
 	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
+	resp.ShopPaused, resp.ShopPausedMessage = getShopPauseStatus(ctx, h.DB, userID)
 
 	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
 	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS

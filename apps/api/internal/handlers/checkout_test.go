@@ -199,6 +199,37 @@ func TestCheckoutCreate_PaymentLinkLimitReached_Rejects(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase E5): toko yang dijeda pemiliknya (shop_paused_at terisi)
+// harus menolak checkout baru DI BACKEND, bukan cuma disembunyikan di
+// frontend -- mengikuti pola yang sama seperti pengecekan gating premium.
+func TestCheckoutCreate_ShopPaused_Rejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "")
+	userID := registerTestUser(t, auth)
+
+	if _, err := checkout.DB.Exec(t.Context(), `UPDATE users SET shop_paused_at = now(), shop_paused_message = 'sedang libur' WHERE id = $1`, userID); err != nil {
+		t.Fatalf("gagal setup shop_paused_at: %v", err)
+	}
+
+	productID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active)
+		VALUES ($1, $2, 'Produk Toko Dijeda', 50000, true)
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup produk test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/checkout", checkout.Create)
+
+	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
+		"product_id": productID, "buyer_email": "buyer@example.com",
+	}, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, ekspektasi 403. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
 // Modul Toko (Fase D): status checkout untuk Payment Link yang SUDAH lunas
 // menampilkan success_message KUSTOM kreator -- TIDAK ditampilkan kalau
 // belum lunas (supaya pembeli yang belum bayar tidak melihat pesan sukses).

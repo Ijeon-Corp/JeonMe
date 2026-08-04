@@ -47,6 +47,7 @@ import ReviewsPanel from "@/components/ReviewsPanel";
 import ListingPanel from "@/components/ListingPanel";
 import StorageFilesPanel from "@/components/StorageFilesPanel";
 import WebhookEventsPanel from "@/components/WebhookEventsPanel";
+import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -65,7 +66,7 @@ import WebhookEventsPanel from "@/components/WebhookEventsPanel";
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
 export default function DashboardProductsPage() {
-  const [tab, setTab] = useState<"overview" | "manage" | "reviews" | "listing" | "storage" | "webhook_events">("overview");
+  const [tab, setTab] = useState<"overview" | "manage" | "reviews" | "listing" | "storage" | "webhook_events" | "shop_settings">("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -514,6 +515,15 @@ export default function DashboardProductsPage() {
           >
             Webhook Events
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("shop_settings")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Shop Settings
+          </button>
         </div>
 
         {tab === "reviews" ? (
@@ -524,6 +534,8 @@ export default function DashboardProductsPage() {
           <StorageFilesPanel />
         ) : tab === "webhook_events" ? (
           <WebhookEventsPanel />
+        ) : tab === "shop_settings" ? (
+          <ShopSettingsPanel />
         ) : tab === "overview" ? (
           <div className="mt-4">
             {/* Identitas Toko -- permintaan referensi gambar: nama & tautan

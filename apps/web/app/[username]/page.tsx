@@ -166,6 +166,8 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
               }
             : undefined,
           referralCode: ref,
+          shopPaused: page.shop_paused,
+          shopPausedMessage: page.shop_paused_message,
         }}
         interactive
       />

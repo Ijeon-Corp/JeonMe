@@ -915,6 +915,73 @@ func (h *ProductHandler) ListWebhookEvents(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
+// getShopPauseStatus -- dipakai bersama oleh GetShopSettings (dashboard) dan
+// finishPublicPageResponse (page.go, halaman publik) supaya sumber kebenaran
+// status jeda toko cuma satu tempat.
+func getShopPauseStatus(ctx context.Context, db *pgxpool.Pool, userID string) (bool, string) {
+	var pausedAt *time.Time
+	var message string
+	if err := db.QueryRow(ctx, `SELECT shop_paused_at, shop_paused_message FROM users WHERE id = $1`, userID).Scan(&pausedAt, &message); err != nil {
+		return false, ""
+	}
+	return pausedAt != nil, message
+}
+
+type shopSettingsResponse struct {
+	ShopPaused        bool   `json:"shop_paused"`
+	ShopPausedMessage string `json:"shop_paused_message"`
+}
+
+// GetShopSettings -- Modul Toko (Fase E5): tab Shop Settings.
+func (h *ProductHandler) GetShopSettings(c *gin.Context) {
+	userID := c.GetString("userID")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	paused, message := getShopPauseStatus(ctx, h.DB, userID)
+	c.JSON(http.StatusOK, shopSettingsResponse{ShopPaused: paused, ShopPausedMessage: message})
+}
+
+type updateShopSettingsRequest struct {
+	ShopPaused        bool   `json:"shop_paused"`
+	ShopPausedMessage string `json:"shop_paused_message"`
+}
+
+// UpdateShopSettings -- Modul Toko (Fase E5): "Toko Dijeda" menyembunyikan
+// tombol beli di seluruh katalog & menolak checkout baru (lihat pengecekan
+// di checkout.go Create) TANPA menonaktifkan tiap produk satu per satu.
+// shop_paused_at dipertahankan (bukan direset ke now()) kalau toko sudah
+// dijeda sebelumnya, supaya durasi jeda tetap tercatat dari awal.
+func (h *ProductHandler) UpdateShopSettings(c *gin.Context) {
+	userID := c.GetString("userID")
+	var req updateShopSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.ShopPausedMessage) > 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pesan jeda toko maksimal 200 karakter"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	_, err := h.DB.Exec(ctx, `
+		UPDATE users SET
+			shop_paused_at = CASE WHEN $1 THEN COALESCE(shop_paused_at, now()) ELSE NULL END,
+			shop_paused_message = $2
+		WHERE id = $3
+	`, req.ShopPaused, req.ShopPausedMessage, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pengaturan toko"})
+		return
+	}
+
+	h.invalidatePageCache(ctx, userID)
+	c.JSON(http.StatusOK, shopSettingsResponse{ShopPaused: req.ShopPaused, ShopPausedMessage: req.ShopPausedMessage})
+}
+
 // DeleteFile -- Modul Toko (Fase E3): hapus file produk TANPA menghapus
 // produknya sendiri (beda dari Delete di atas). Produk otomatis
 // dinonaktifkan kalau sedang aktif -- menegakkan invarian yang sama

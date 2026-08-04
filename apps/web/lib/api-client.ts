@@ -250,6 +250,12 @@ export interface PublicPage {
   // page_type -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
   // "landing" (halaman tambahan No.98 dengan builder blok manual).
   page_type: "bio" | "landing";
+  // shop_paused/shop_paused_message -- Modul Toko (Fase E5): kreator bisa
+  // menjeda seluruh toko dari tab Shop Settings. Backend TETAP menolak
+  // checkout kalau true (lihat checkout.go Create) -- ini murni untuk
+  // menyembunyikan tombol beli & menampilkan pesannya di frontend.
+  shop_paused: boolean;
+  shop_paused_message: string;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -863,6 +869,21 @@ export interface WebhookEventItem {
 
 export function listWebhookEvents() {
   return apiFetch<WebhookEventItem[]>("/dashboard/webhook-events", { method: "GET" }, { auth: true });
+}
+
+// ---------- Modul Toko (Fase E5): Shop Settings ----------
+
+export interface ShopSettings {
+  shop_paused: boolean;
+  shop_paused_message: string;
+}
+
+export function getShopSettings() {
+  return apiFetch<ShopSettings>("/dashboard/shop-settings", { method: "GET" }, { auth: true });
+}
+
+export function updateShopSettings(input: ShopSettings) {
+  return apiFetch<ShopSettings>("/dashboard/shop-settings", { method: "PATCH", body: JSON.stringify(input) }, { auth: true });
 }
 
 export function listProducts() {

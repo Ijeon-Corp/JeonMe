@@ -132,6 +132,12 @@ export interface PagePreviewData {
   referralCode?: string;
   // No.80 (Sprint 9): hanya dipakai kalau theme === "custom".
   customTheme?: CustomThemeConfig;
+  // Modul Toko (Fase E5): true kalau kreator menjeda tokonya dari tab Shop
+  // Settings -- tombol beli disembunyikan & pesannya ditampilkan sebagai
+  // banner. Backend TETAP menolak checkout walau field ini dilewati/diubah
+  // di klien (lihat checkout.go Create).
+  shopPaused?: boolean;
+  shopPausedMessage?: string;
 }
 
 interface PreviewSourcePage {
@@ -259,11 +265,17 @@ export default function PagePreview({
   rootClassName?: string;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
+  // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar/booking
+  // dinonaktifkan di frontend juga (bukan cuma backend), supaya pengunjung
+  // tidak membuka form checkout yang pasti ditolak.
+  const canBuy = interactive && !data.shopPaused;
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
   // monetisasi, beda dari layout bio biasa di bawah.
   if (data.pageType === "landing") {
+    // Landing page (No.99) tidak punya produk/monetisasi sama sekali --
+    // shop_paused tidak relevan di sini, tetap pakai `interactive` biasa.
     return <LandingPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} />;
   }
 
@@ -321,6 +333,12 @@ export default function PagePreview({
             {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           </div>
         </div>
+
+        {data.shopPaused && (
+          <div className={`mt-6 w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
+            {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
+          </div>
+        )}
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
@@ -572,7 +590,7 @@ export default function PagePreview({
                         </p>
                       )}
                     </div>
-                    {interactive ? (
+                    {canBuy ? (
                       <BuyProductButton
                         productId={event.productId}
                         buttonClassName={theme.buyButton}
@@ -586,7 +604,7 @@ export default function PagePreview({
                       <button
                         type="button"
                         disabled
-                        title="Pratinjau -- tombol ini tidak aktif"
+                        title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
                         className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
                       >
                         Daftar
@@ -616,13 +634,13 @@ export default function PagePreview({
                   <p className={`text-xs font-bold ${theme.productTitle}`}>
                     Rp {booking.priceIdr.toLocaleString("id-ID")}
                   </p>
-                  {interactive ? (
+                  {canBuy ? (
                     <BookSlotButton productId={booking.productId} buttonClassName={theme.buyButton} />
                   ) : (
                     <button
                       type="button"
                       disabled
-                      title="Pratinjau -- tombol ini tidak aktif"
+                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
                       className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
                     >
                       Pilih Jadwal
@@ -641,7 +659,7 @@ export default function PagePreview({
             <p className={`text-xs ${theme.bio}`}>
               Mulai dari Rp {data.donation.minAmountIdr.toLocaleString("id-ID")}
             </p>
-            {interactive ? (
+            {canBuy ? (
               <div className="w-full">
                 <BuyProductButton
                   productId={data.donation.productId}
@@ -658,7 +676,7 @@ export default function PagePreview({
               <button
                 type="button"
                 disabled
-                title="Pratinjau -- tombol ini tidak aktif"
+                title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
                 className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
               >
                 Dukung
@@ -716,7 +734,7 @@ export default function PagePreview({
                       Rp {product.price_idr.toLocaleString("id-ID")}
                     </p>
                   )}
-                  {interactive ? (
+                  {canBuy ? (
                     <BuyProductButton
                       productId={product.id}
                       buttonClassName={theme.buyButton}
@@ -729,7 +747,7 @@ export default function PagePreview({
                     <button
                       type="button"
                       disabled
-                      title="Pratinjau -- tombol ini tidak aktif"
+                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
                       className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
                     >
                       Beli

@@ -86,21 +86,33 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var productKind string
 	var paymentLimitCount *int
 	var linkExpiresAt *time.Time
+	var shopPausedAt *time.Time
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
 		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits,
-			product_kind, payment_limit_count, link_expires_at
-		FROM products WHERE id = $1 AND is_active = true
+			product_kind, payment_limit_count, link_expires_at, u.shop_paused_at
+		FROM products p
+		JOIN users u ON u.id = p.user_id
+		WHERE p.id = $1 AND p.is_active = true
 	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw,
-		&productKind, &paymentLimitCount, &linkExpiresAt)
+		&productKind, &paymentLimitCount, &linkExpiresAt, &shopPausedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
+		return
+	}
+
+	// Modul Toko (Fase E5): Toko Dijeda -- kreator bisa menjeda seluruh
+	// toko tanpa menonaktifkan tiap produk satu per satu. Ditegakkan DI
+	// SINI (bukan cuma disembunyikan di frontend) supaya tidak bisa
+	// dilewati lewat panggilan API langsung.
+	if shopPausedAt != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "toko sedang dijeda oleh pemiliknya, coba lagi nanti"})
 		return
 	}
 

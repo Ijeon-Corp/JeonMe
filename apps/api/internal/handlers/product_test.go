@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -119,6 +120,68 @@ func TestProductListWebhookEvents_ScopedToOwnProducts(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].ProductID != created.ID || items[0].Status != "success" {
 		t.Fatalf("items = %+v, ekspektasi hanya 1 log milik kreator ini", items)
+	}
+}
+
+// Modul Toko (Fase E5, tab Shop Settings): toggle jeda toko tersimpan &
+// terbaca kembali, dan shop_paused_at dipertahankan (bukan direset) kalau
+// toko dijeda lagi tanpa dilepas dulu.
+func TestShopSettings_TogglePausedRoundTrips(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/shop-settings", product.GetShopSettings)
+	g.PATCH("/shop-settings", product.UpdateShopSettings)
+
+	getRec := doJSON(t, router, http.MethodGet, "/shop-settings", nil, map[string]string{"X-Test-UserID": userID})
+	var initial struct {
+		ShopPaused        bool   `json:"shop_paused"`
+		ShopPausedMessage string `json:"shop_paused_message"`
+	}
+	json.Unmarshal(getRec.Body.Bytes(), &initial)
+	if initial.ShopPaused {
+		t.Fatalf("toko baru seharusnya belum dijeda")
+	}
+
+	patchRec := doJSON(t, router, http.MethodPatch, "/shop-settings", map[string]any{"shop_paused": true, "shop_paused_message": "Sedang libur, kembali minggu depan"}, map[string]string{"X-Test-UserID": userID})
+	if patchRec.Code != http.StatusOK {
+		t.Fatalf("PATCH status = %d, body = %s", patchRec.Code, patchRec.Body.String())
+	}
+
+	var pausedAt1 *time.Time
+	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt1)
+	if pausedAt1 == nil {
+		t.Fatalf("shop_paused_at seharusnya terisi setelah dijeda")
+	}
+
+	// Toggle "dijeda" lagi (tanpa dilepas dulu) -- shop_paused_at TIDAK
+	// boleh berubah, supaya durasi jeda tetap tercatat dari awal.
+	doJSON(t, router, http.MethodPatch, "/shop-settings", map[string]any{"shop_paused": true, "shop_paused_message": "pesan baru"}, map[string]string{"X-Test-UserID": userID})
+	var pausedAt2 *time.Time
+	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt2)
+	if pausedAt2 == nil || !pausedAt1.Equal(*pausedAt2) {
+		t.Fatalf("shop_paused_at berubah saat dijeda ulang: sebelum=%v sesudah=%v", pausedAt1, pausedAt2)
+	}
+
+	getRec2 := doJSON(t, router, http.MethodGet, "/shop-settings", nil, map[string]string{"X-Test-UserID": userID})
+	var afterPause struct {
+		ShopPaused        bool   `json:"shop_paused"`
+		ShopPausedMessage string `json:"shop_paused_message"`
+	}
+	json.Unmarshal(getRec2.Body.Bytes(), &afterPause)
+	if !afterPause.ShopPaused || afterPause.ShopPausedMessage != "pesan baru" {
+		t.Fatalf("afterPause = %+v", afterPause)
+	}
+
+	// Lepas jeda -- shop_paused_at kembali NULL.
+	doJSON(t, router, http.MethodPatch, "/shop-settings", map[string]any{"shop_paused": false, "shop_paused_message": ""}, map[string]string{"X-Test-UserID": userID})
+	var pausedAt3 *time.Time
+	product.DB.QueryRow(t.Context(), `SELECT shop_paused_at FROM users WHERE id = $1`, userID).Scan(&pausedAt3)
+	if pausedAt3 != nil {
+		t.Fatalf("shop_paused_at seharusnya NULL setelah dilepas, dapat %v", pausedAt3)
 	}
 }
 
