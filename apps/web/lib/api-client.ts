@@ -797,6 +797,8 @@ export interface DashboardProduct {
   // sold_count -- Modul Toko (tab "Manage Items"): jumlah order LUNAS untuk
   // produk ini, dipakai kolom "Terjual" di tabel.
   sold_count: number;
+  // category -- Modul Toko (Fase B1): bebas isi kreator, "" berarti belum diisi.
+  category: string;
 }
 
 export function listProducts() {
@@ -807,6 +809,7 @@ export function createProduct(input: {
   name: string;
   description?: string;
   price_idr: number;
+  category?: string;
   collaborator_splits?: CollaboratorSplit[];
 }) {
   return apiFetch<{ id: string; message: string }>(
@@ -837,6 +840,7 @@ export function updateProduct(
     event_capacity: number;
     clear_event_capacity: boolean;
     collaborator_splits: CollaboratorSplit[];
+    category: string;
   }>
 ) {
   return apiFetch<{ message: string }>(

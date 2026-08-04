@@ -110,6 +110,9 @@ type createProductRequest struct {
 	Name        string `json:"name" binding:"required,max=200"`
 	Description string `json:"description"`
 	PriceIDR    int64  `json:"price_idr" binding:"required,min=1000"`
+	// Category -- Modul Toko (Fase B1): bebas isi kreator sendiri, lihat
+	// migrasi 000046.
+	Category string `json:"category" binding:"omitempty,max=50"`
 
 	// Modul Settings §3: opsional, lihat collaborator_split.go.
 	CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
@@ -140,9 +143,9 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	id := uuid.NewString()
 	_, err := h.DB.Exec(ctx, `
-		INSERT INTO products (id, user_id, name, description, price_idr, is_active, collaborator_splits)
-		VALUES ($1, $2, $3, $4, $5, false, $6)
-	`, id, userID, req.Name, req.Description, req.PriceIDR, splitsJSON)
+		INSERT INTO products (id, user_id, name, description, price_idr, is_active, collaborator_splits, category)
+		VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+	`, id, userID, req.Name, req.Description, req.PriceIDR, splitsJSON, req.Category)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat produk"})
@@ -186,7 +189,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		SELECT p.id, p.name, p.description, p.price_idr, p.is_active, p.file_key != '' AS has_file, p.cover_image_url,
 			p.flash_sale_price_idr, p.flash_sale_starts_at, p.flash_sale_ends_at, `+effectivePriceExpr+`,
 			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
-			COALESCE(o.sold_count, 0) AS sold_count
+			COALESCE(o.sold_count, 0) AS sold_count, p.category
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
@@ -219,6 +222,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		IsPdf              bool                `json:"is_pdf"`
 		CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
 		SoldCount          int64               `json:"sold_count"`
+		Category           string              `json:"category"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -226,7 +230,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		var splitsRaw []byte
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
-			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount); err == nil {
+			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}
@@ -262,6 +266,10 @@ type updateProductRequest struct {
 	// Modul Settings §3: nil berarti tidak diubah (pola sama dengan field
 	// opsional lain di sini), lihat collaborator_split.go.
 	CollaboratorSplits *[]CollaboratorSplit `json:"collaborator_splits"`
+
+	// Category -- Modul Toko (Fase B1): lihat catatan lingkup di
+	// createProductRequest.
+	Category *string `json:"category" binding:"omitempty,max=50"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -448,11 +456,12 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			event_location = COALESCE($13, event_location),
 			event_is_online = COALESCE($14, event_is_online),
 			event_capacity = COALESCE($15, event_capacity),
-			collaborator_splits = COALESCE($16, collaborator_splits)
-		WHERE id = $17
+			collaborator_splits = COALESCE($16, collaborator_splits),
+			category = COALESCE($17, category)
+		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
-		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, productID)
+		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

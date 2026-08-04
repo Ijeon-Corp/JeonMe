@@ -63,6 +63,57 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase B1, Manage Items): category disimpan saat pembuatan
+// dan bisa diubah lewat Update -- lihat migrasi 000046.
+func TestProduct_CategorySetAndUpdated(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
+	g.GET("/products", product.List)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Ebook Kategori", "price_idr": 50000, "category": "Ebook",
+	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created product: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		ID       string `json:"id"`
+		Category string `json:"category"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != 1 || items[0].Category != "Ebook" {
+		t.Fatalf("items = %+v, ekspektasi 1 produk dengan category=Ebook", items)
+	}
+
+	doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{
+		"category": "Template",
+	}, map[string]string{"X-Test-UserID": userID})
+
+	rec2 := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items2 []struct {
+		Category string `json:"category"`
+	}
+	if err := json.Unmarshal(rec2.Body.Bytes(), &items2); err != nil {
+		t.Fatalf("gagal decode respons kedua: %v", err)
+	}
+	if len(items2) != 1 || items2[0].Category != "Template" {
+		t.Fatalf("items2 = %+v, ekspektasi category=Template setelah update", items2)
+	}
+}
+
 // Modul Statistik/Toko (tab "Manage Items"): sold_count di List harus
 // menghitung HANYA order berstatus "paid" -- order "pending"/"expired" tidak
 // boleh ikut dihitung sebagai "Terjual" (sumber kebenaran sama seperti

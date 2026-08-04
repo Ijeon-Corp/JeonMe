@@ -79,7 +79,15 @@ export default function DashboardProductsPage() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
+  const [category, setCategory] = useState("");
   const [creating, setCreating] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [itemsPage, setItemsPage] = useState(1);
+
+  // categoryEditId -- Modul Toko (Fase B1): edit kategori dari modal Kelola.
+  const [categoryEditId, setCategoryEditId] = useState<string | null>(null);
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
 
   // manageProductId -- Modul Toko: produk yang sedang dibuka di modal
   // "Kelola" (unggah file/sampul, flash sale, bayar seikhlasnya, split
@@ -141,7 +149,7 @@ export default function DashboardProductsPage() {
     setError(null);
     setCreating(true);
     try {
-      const created = await createProduct({ name, price_idr: price });
+      const created = await createProduct({ name, price_idr: price, category: category.trim() || undefined });
       setProducts((prev) => [
         ...prev,
         {
@@ -163,10 +171,12 @@ export default function DashboardProductsPage() {
           is_pdf: false,
           collaborator_splits: [],
           sold_count: 0,
+          category: category.trim(),
         },
       ]);
       setName("");
       setPriceIDR("");
+      setCategory("");
       setAdding(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat produk.");
@@ -237,6 +247,26 @@ export default function DashboardProductsPage() {
     setFlashSaleEditId(null);
     setPwywEditId(null);
     setSplitsEditId(null);
+    setCategoryEditId(null);
+  }
+
+  function openCategoryForm(p: DashboardProduct) {
+    setCategoryEditId(p.id);
+    setCategoryDraft(p.category);
+  }
+
+  async function handleSaveCategory(p: DashboardProduct) {
+    setError(null);
+    setSavingCategory(true);
+    try {
+      await updateProduct(p.id, { category: categoryDraft.trim() });
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, category: categoryDraft.trim() } : x)));
+      setCategoryEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan kategori.");
+    } finally {
+      setSavingCategory(false);
+    }
   }
 
   async function handleDelete(product: DashboardProduct) {
@@ -377,8 +407,22 @@ export default function DashboardProductsPage() {
 
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
-  const filteredProducts = products.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()));
+  // categories -- Modul Toko (Fase B1): daftar kategori UNIK dari produk
+  // yang sudah ada, bukan taksonomi tetap -- filter dropdown ini otomatis
+  // mengikuti apa pun yang kreator isi sendiri.
+  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(query.trim().toLowerCase()) && (categoryFilter === "" || p.category === categoryFilter)
+  );
   const manageProduct = products.find((p) => p.id === manageProductId) ?? null;
+
+  // Pagination (Fase B2) -- client-side, cukup untuk skala jumlah produk
+  // per kreator saat ini (tidak perlu server-side pagination).
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const currentPage = Math.min(itemsPage, totalPages);
+  const pagedProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     // "max-w-3xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
@@ -467,15 +511,37 @@ export default function DashboardProductsPage() {
             {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1 sm:max-w-xs">
-                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Cari produk..."
-                  className="w-full rounded-lg border border-border bg-white py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
-                />
+              <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1 sm:max-w-xs">
+                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setItemsPage(1);
+                    }}
+                    placeholder="Cari produk..."
+                    className="w-full rounded-lg border border-border bg-white py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
+                  />
+                </div>
+                {categories.length > 0 && (
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => {
+                      setCategoryFilter(e.target.value);
+                      setItemsPage(1);
+                    }}
+                    className="rounded-lg border border-border bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none"
+                  >
+                    <option value="">Semua Kategori</option>
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               {!adding && (
                 <button
@@ -509,6 +575,13 @@ export default function DashboardProductsPage() {
                   onChange={(e) => setPriceIDR(e.target.value)}
                   className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
+                <input
+                  type="text"
+                  placeholder="Kategori (opsional)"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
                 <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
                   {creating ? "Membuat..." : "Buat"}
                 </button>
@@ -518,6 +591,7 @@ export default function DashboardProductsPage() {
                     setAdding(false);
                     setName("");
                     setPriceIDR("");
+                    setCategory("");
                   }}
                   className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
                 >
@@ -539,7 +613,7 @@ export default function DashboardProductsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.map((p) => (
+                    {pagedProducts.map((p) => (
                       <tr key={p.id} className="border-b border-border last:border-0">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
@@ -554,6 +628,9 @@ export default function DashboardProductsPage() {
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
+                                {p.category && (
+                                  <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-muted">{p.category}</span>
+                                )}
                                 {p.is_flash_sale_active && (
                                   <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">Flash Sale</span>
                                 )}
@@ -608,10 +685,43 @@ export default function DashboardProductsPage() {
               </div>
             ) : products.length > 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
-                Tidak ada produk yang cocok dengan &quot;{query}&quot;.
+                Tidak ada produk yang cocok dengan pencarian/filter ini.
               </p>
             ) : (
               <EmptyState className="mt-4" text='Belum ada produk -- klik "Tambah Produk" di atas untuk membuat yang pertama.' />
+            )}
+
+            {totalPages > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary disabled:opacity-40"
+                >
+                  Sebelumnya
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setItemsPage(n)}
+                    className={`h-8 w-8 rounded-lg text-xs font-semibold ${
+                      n === currentPage ? "bg-primary text-white" : "text-ink hover:bg-primary-subtle"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setItemsPage((p) => Math.min(totalPages, p + 1))}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary disabled:opacity-40"
+                >
+                  Berikutnya
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -639,6 +749,34 @@ export default function DashboardProductsPage() {
                 <IconClose className="h-4 w-4" />
               </button>
             </div>
+
+            {categoryEditId === manageProduct.id ? (
+              <div className="mt-2 flex gap-1.5">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Kategori"
+                  value={categoryDraft}
+                  onChange={(e) => setCategoryDraft(e.target.value)}
+                  className="flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                />
+                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-border px-2.5 py-1.5 text-[11px] font-bold text-muted">
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={savingCategory}
+                  onClick={() => handleSaveCategory(manageProduct)}
+                  className="btn-primary rounded-md px-2.5 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                >
+                  {savingCategory ? "..." : "Simpan"}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => openCategoryForm(manageProduct)} className="mt-2 text-[11px] font-semibold text-primary hover:underline">
+                {manageProduct.category ? `Kategori: ${manageProduct.category}` : "+ Atur kategori"}
+              </button>
+            )}
 
             <div className="mt-4 flex items-center gap-3">
               <button
