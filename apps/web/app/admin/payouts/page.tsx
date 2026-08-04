@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminPayout, ApiError, listAdminPayouts, updatePayoutStatus } from "@/lib/api-client";
 import { IconInbox, IconWallet } from "@/components/icons";
+import { confirmAction } from "@/lib/confirm";
 
 const STATUS_LABEL: Record<AdminPayout["status"], string> = {
   requested: "Diajukan",
@@ -42,8 +43,9 @@ export default function AdminPayoutsPage() {
 
   async function handleUpdateStatus(payout: AdminPayout, status: "processing" | "completed" | "failed") {
     if (status === "failed") {
-      const confirmed = window.confirm(
-        `Tandai penarikan Rp${payout.amount_idr.toLocaleString("id-ID")} milik @${payout.username} sebagai GAGAL? Saldo akan dikembalikan ke kreator.`
+      const confirmed = await confirmAction(
+        `Tandai penarikan Rp${payout.amount_idr.toLocaleString("id-ID")} milik @${payout.username} sebagai GAGAL? Saldo akan dikembalikan ke kreator.`,
+        { confirmButtonText: "Ya, Tandai Gagal" }
       );
       if (!confirmed) return;
     }

@@ -259,6 +259,86 @@ func TestProductListStorage_OnlyProductsWithFilesAndTotalsBytes(t *testing.T) {
 	}
 }
 
+// Bug ditemukan di staging (5 Agustus 2026): Delete sebelumnya langsung
+// DELETE FROM products tanpa mengecek riwayat order -- orders_product_id_fkey
+// SENGAJA tidak ON DELETE CASCADE (migrasi 000001, melindungi jejak
+// transaksi/ledger/refund), jadi percobaan hapus produk yang sudah pernah
+// ada transaksi gagal kena pelanggaran foreign key dan cuma membalas 500
+// generik. Sekarang dicek lebih dulu & membalas 409 yang jelas, produk TIDAK
+// ikut hilang/berubah.
+func TestProductDelete_RejectsWhenOrderHistoryExists(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.DELETE("/products/:id", product.Delete)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Sudah Laku", "price_idr": 25000}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'buyer@example.com', 25000, 'pending')
+	`, created.ID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodDelete, "/products/"+created.ID, nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, ekspektasi 409, body %s", rec.Code, rec.Body.String())
+	}
+
+	var stillExists bool
+	if err := product.DB.QueryRow(t.Context(), `SELECT EXISTS(SELECT 1 FROM products WHERE id = $1)`, created.ID).Scan(&stillExists); err != nil {
+		t.Fatalf("gagal query produk: %v", err)
+	}
+	if !stillExists {
+		t.Fatal("produk hilang walau seharusnya ditolak sebelum DELETE dijalankan")
+	}
+}
+
+// Produk yang belum pernah punya order sama sekali tetap bisa dihapus
+// permanen seperti biasa -- pengecekan baru di atas tidak boleh menahan
+// kasus normal ini.
+func TestProductDelete_SucceedsWhenNoOrderHistory(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.DELETE("/products/:id", product.Delete)
+
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Belum Laku", "price_idr": 25000}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodDelete, "/products/"+created.ID, nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, ekspektasi 200, body %s", rec.Code, rec.Body.String())
+	}
+
+	var stillExists bool
+	if err := product.DB.QueryRow(t.Context(), `SELECT EXISTS(SELECT 1 FROM products WHERE id = $1)`, created.ID).Scan(&stillExists); err != nil {
+		t.Fatalf("gagal query produk: %v", err)
+	}
+	if stillExists {
+		t.Fatal("produk masih ada walau DELETE seharusnya berhasil")
+	}
+}
+
 // Modul Toko (Fase E3): DeleteFile menghapus file DAN menonaktifkan produk
 // (invarian "tidak aktif tanpa file" yang sama seperti Update), tapi TIDAK
 // menghapus baris produknya (beda dari Delete).

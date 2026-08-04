@@ -17,6 +17,7 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconTrash } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 
 // Modul Settings §3 (Payment / Payout). Rekening baru WAJIB verifikasi
 // (kode OTP) sebelum bisa jadi utama -- lihat PayoutMethodHandler backend.
@@ -121,7 +122,7 @@ export default function SettingsPaymentPage() {
 
   async function handleDelete(id: string) {
     if (!methods) return;
-    if (!window.confirm("Hapus metode pembayaran ini?")) return;
+    if (!(await confirmDelete("Hapus metode pembayaran ini?"))) return;
     const previous = methods;
     setMethods(methods.filter((m) => m.id !== id));
     try {

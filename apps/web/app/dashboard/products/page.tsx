@@ -49,6 +49,7 @@ import StorageFilesPanel from "@/components/StorageFilesPanel";
 import WebhookEventsPanel from "@/components/WebhookEventsPanel";
 import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 import TransactionPanel from "@/components/TransactionPanel";
+import { confirmDelete } from "@/lib/confirm";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -304,7 +305,7 @@ export default function DashboardProductsPage() {
   }
 
   async function handleDelete(product: DashboardProduct) {
-    if (!window.confirm(`Hapus produk "${product.name}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDelete(`Hapus produk "${product.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
     const previous = products;
     setProducts((prev) => prev.filter((p) => p.id !== product.id));
     closeManageModal();

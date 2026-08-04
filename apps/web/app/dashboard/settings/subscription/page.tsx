@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconCheck, IconChevronRight, IconStar } from "@/components/icons";
+import { confirmAction } from "@/lib/confirm";
 
 // Modul Langganan Premium: menghilangkan watermark halaman publik + latar
 // kustom (theme="custom"). Harga BELUM keputusan bisnis final (placeholder,
@@ -51,7 +52,11 @@ export default function SettingsSubscriptionPage() {
   }
 
   async function handleCancel() {
-    if (!window.confirm("Batalkan langganan Premium? Akses Premium tetap berlaku sampai akhir periode yang sudah dibayar.")) {
+    if (
+      !(await confirmAction("Batalkan langganan Premium? Akses Premium tetap berlaku sampai akhir periode yang sudah dibayar.", {
+        confirmButtonText: "Ya, Batalkan",
+      }))
+    ) {
       return;
     }
     setCanceling(true);

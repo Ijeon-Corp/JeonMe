@@ -14,6 +14,7 @@ import {
 import { IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardBundlesPage() {
   const [bundles, setBundles] = useState<DashboardBundle[]>([]);
@@ -82,7 +83,7 @@ export default function DashboardBundlesPage() {
   }
 
   async function handleDelete(bundle: DashboardBundle) {
-    if (!window.confirm(`Hapus bundel "${bundle.name}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDelete(`Hapus bundel "${bundle.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
     const previous = bundles;
     setBundles((prev) => prev.filter((b) => b.id !== bundle.id));
     setBusyId(bundle.id);

@@ -14,6 +14,7 @@ import {
 import { IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 type Mode = "single" | "bulk";
 
@@ -111,7 +112,7 @@ export default function DashboardVouchersPage() {
   }
 
   async function handleDelete(voucher: DashboardVoucher) {
-    if (!window.confirm(`Hapus kode voucher "${voucher.code}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDelete(`Hapus kode voucher "${voucher.code}"? Aksi ini tidak bisa dibatalkan.`))) return;
     const previous = vouchers;
     setVouchers((prev) => prev.filter((v) => v.id !== voucher.id));
     setBusyId(voucher.id);

@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/components/Toast";
 import { IconCheck, IconClock, IconTrash, IconUsers } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import { confirmDelete } from "@/lib/confirm";
 
 const STATUS_LABEL: Record<DashboardCollaborator["status"], string> = {
   invited: "Menunggu diterima",
@@ -119,7 +120,7 @@ export default function DashboardTeamPage() {
   }
 
   async function handleRevoke(c: DashboardCollaborator) {
-    if (!window.confirm(`Cabut akses "${c.email}"?`)) return;
+    if (!(await confirmDelete(`Cabut akses "${c.email}"?`, { confirmButtonText: "Ya, Cabut" }))) return;
     setError(null);
     setBusyId(c.id);
     try {

@@ -15,6 +15,7 @@ import {
 } from "@/lib/api-client";
 import { IconCopy, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardAffiliatesPage() {
   const [affiliates, setAffiliates] = useState<MyAffiliate[]>([]);
@@ -77,7 +78,7 @@ export default function DashboardAffiliatesPage() {
   }
 
   async function handleRevoke(affiliateId: string, email: string) {
-    if (!window.confirm(`Cabut ${email} sebagai afiliator? Tautan referralnya akan berhenti berfungsi.`)) return;
+    if (!(await confirmDelete(`Cabut ${email} sebagai afiliator? Tautan referralnya akan berhenti berfungsi.`, { confirmButtonText: "Ya, Cabut" }))) return;
     try {
       await revokeAffiliate(affiliateId);
       await loadAll();

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, StorageFileItem, deleteProductFile, listStorage } from "@/lib/api-client";
 import { IconInbox, IconTrash } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 
 // Modul Toko (Fase E3): tab Storage & Files -- daftar file produk + total
 // penyimpanan terpakai. file_size_bytes bisa null (file lama sebelum
@@ -26,7 +27,7 @@ export default function StorageFilesPanel() {
   }, []);
 
   async function handleDelete(item: StorageFileItem) {
-    if (!window.confirm(`Hapus file "${item.product_name}"? Produk akan dinonaktifkan sampai file baru diunggah.`)) return;
+    if (!(await confirmDelete(`Hapus file "${item.product_name}"? Produk akan dinonaktifkan sampai file baru diunggah.`))) return;
     setDeletingId(item.product_id);
     try {
       await deleteProductFile(item.product_id);

@@ -10,6 +10,7 @@ import {
   verifyDomainSettings,
 } from "@/lib/api-client";
 import { IconCheck, IconCopy } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardCustomDomainPage() {
   const [settings, setSettings] = useState<DomainSettings | null>(null);
@@ -71,7 +72,8 @@ export default function DashboardCustomDomainPage() {
   }
 
   async function handleRemove() {
-    if (!settings || !window.confirm(`Lepas domain kustom "${settings.domain}"?`)) return;
+    if (!settings) return;
+    if (!(await confirmDelete(`Lepas domain kustom "${settings.domain}"?`, { confirmButtonText: "Ya, Lepas" }))) return;
     setError(null);
     try {
       await deleteDomainSettings();

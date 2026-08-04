@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, ProductReview, deleteReview, listReviews, setReviewHidden } from "@/lib/api-client";
 import { IconInbox, IconStar, IconTrash } from "@/components/icons";
+import { confirmDelete } from "@/lib/confirm";
 
 // Modul Toko (Fase E1): tab Reviews -- semua ulasan lintas produk milik
 // kreator, dengan aksi sembunyikan (reversibel) / hapus (permanen).
@@ -38,7 +39,7 @@ export default function ReviewsPanel() {
   }
 
   async function handleDelete(review: ProductReview) {
-    if (!window.confirm("Hapus ulasan ini permanen?")) return;
+    if (!(await confirmDelete("Hapus ulasan ini permanen?"))) return;
     const previous = reviews;
     setReviews((prev) => prev?.filter((r) => r.id !== review.id) ?? prev);
     try {

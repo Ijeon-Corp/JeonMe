@@ -211,3 +211,48 @@ h1, h2, h3, h4, h5 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Modul UX: dialog konfirmasi SweetAlert2 (pengganti window.confirm() bawaan
+   browser di semua aksi destruktif/penting) -- popup/overlay/animasi tetap
+   pakai CSS bawaan SweetAlert2 (lihat import di layout.tsx), tombolnya SAJA
+   di-restyle (buttonsStyling: false di lib/confirm.ts) supaya konsisten
+   dengan btn-primary/warna brand di atas, bukan tombol biru default. */
+.swal-btn-danger,
+.swal-btn-primary,
+.swal-btn-cancel {
+  margin: 0 0.375rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: filter 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.swal-btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.swal-btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.swal-btn-primary {
+  background: linear-gradient(135deg, #1b4d3e, #1f7a6c);
+  color: #fff;
+}
+
+.swal-btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.swal-btn-cancel {
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.swal-btn-cancel:hover {
+  border-color: #1b4d3e;
+  color: #1b4d3e;
+}

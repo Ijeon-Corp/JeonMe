@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ApiError, SettingsProfile, getSettingsProfile, updateSettingsProfile } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight } from "@/components/icons";
+import { confirmAction } from "@/lib/confirm";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -49,13 +50,12 @@ export default function SettingsProfilePage() {
       setError("Username harus 3-30 karakter, hanya huruf/angka/underscore.");
       return;
     }
-    if (
-      usernameChanged &&
-      !window.confirm(
-        `Ganti username dari @${original.username} ke @${trimmedUsername}? Alamat lama tetap dialihkan otomatis selama 90 hari, tapi tautan yang sudah kamu bagikan sebaiknya tetap diperbarui.`
-      )
-    ) {
-      return;
+    if (usernameChanged) {
+      const confirmed = await confirmAction(
+        `Ganti username dari @${original.username} ke @${trimmedUsername}? Alamat lama tetap dialihkan otomatis selama 90 hari, tapi tautan yang sudah kamu bagikan sebaiknya tetap diperbarui.`,
+        { confirmButtonText: "Ya, Ganti Username" }
+      );
+      if (!confirmed) return;
     }
 
     setError(null);

@@ -16,6 +16,7 @@ import {
 import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_url: "" };
 
@@ -92,7 +93,7 @@ export default function DashboardCoursesPage() {
   }
 
   async function handleDelete(course: DashboardCourse) {
-    if (!window.confirm(`Hapus kursus "${course.name}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDelete(`Hapus kursus "${course.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
     const previous = courses;
     setCourses((prev) => prev.filter((c) => c.id !== course.id));
     setBusyId(course.id);

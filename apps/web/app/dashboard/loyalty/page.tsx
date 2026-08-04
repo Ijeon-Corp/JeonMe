@@ -15,6 +15,7 @@ import {
 import { IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardLoyaltyPage() {
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
@@ -100,7 +101,7 @@ export default function DashboardLoyaltyPage() {
   }
 
   async function handleDeleteReward(reward: LoyaltyReward) {
-    if (!window.confirm(`Hapus reward "${reward.name}"?`)) return;
+    if (!(await confirmDelete(`Hapus reward "${reward.name}"?`))) return;
     const previous = rewards;
     setRewards((prev) => prev.filter((r) => r.id !== reward.id));
     try {

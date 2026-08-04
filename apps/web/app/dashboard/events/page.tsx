@@ -5,6 +5,7 @@ import { ApiError, DashboardEvent, createEvent, deleteProduct, listEvents, updat
 import { IconCalendar, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 // Indonesia TIDAK memakai daylight saving time -- offset per zona waktu
 // TETAP sepanjang tahun, jadi cukup peta statis ke offset UTC tanpa
@@ -110,7 +111,7 @@ export default function DashboardEventsPage() {
   }
 
   async function handleDelete(event: DashboardEvent) {
-    if (!window.confirm(`Hapus event "${event.name}"? Aksi ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDelete(`Hapus event "${event.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
     const previous = events;
     setEvents((prev) => prev.filter((e) => e.id !== event.id));
     setBusyId(event.id);

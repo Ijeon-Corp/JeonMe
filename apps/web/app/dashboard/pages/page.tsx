@@ -20,6 +20,7 @@ import {
 import { IconChevronRight, IconGlobe, IconPlus, IconSparkle, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 
 // Modul Langganan Premium: Halaman Tambahan sekarang eksklusif Premium,
 // maksimal PREMIUM_EXTRA_PAGE_LIMIT halaman (lihat premiumExtraPageLimit di
@@ -117,7 +118,7 @@ export default function DashboardExtraPagesPage() {
   }
 
   async function handleDelete(page: ExtraPage) {
-    if (!window.confirm(`Hapus halaman "${page.name}"? Semua kontennya ikut terhapus.`)) return;
+    if (!(await confirmDelete(`Hapus halaman "${page.name}"? Semua kontennya ikut terhapus.`))) return;
     const previous = pages;
     setPages((prev) => prev.filter((p) => p.id !== page.id));
     try {

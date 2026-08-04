@@ -806,6 +806,23 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Bug ditemukan (staging, 5 Agustus 2026): orders_product_id_fkey SENGAJA
+	// tidak ON DELETE CASCADE (lihat migrasi 000001) -- jejak transaksi/ledger/
+	// refund tidak boleh ikut hilang diam-diam kalau produknya dihapus. Tanpa
+	// pengecekan ini, DELETE di bawah gagal kena pelanggaran foreign key dan
+	// hanya membalas 500 generik. Dicek DI SINI dulu supaya kreator dapat
+	// pesan jelas -- nonaktifkan produknya saja kalau sudah pernah ada
+	// transaksi, bukan hapus permanen.
+	var orderCount int
+	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE product_id = $1`, productID).Scan(&orderCount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa riwayat transaksi produk"})
+		return
+	}
+	if orderCount > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "produk ini sudah pernah ada transaksi, tidak bisa dihapus permanen -- nonaktifkan saja lewat toggle Aktif"})
+		return
+	}
+
 	if _, err := h.DB.Exec(ctx, `DELETE FROM products WHERE id = $1`, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus produk"})
 		return
