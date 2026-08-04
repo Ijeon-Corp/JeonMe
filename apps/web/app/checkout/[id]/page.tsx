@@ -10,9 +10,11 @@ import {
   getBundleItems,
   getCheckoutStatus,
   getCourseChaptersForOrder,
+  submitReview,
 } from "@/lib/api-client";
 import SocialProofToast from "@/components/SocialProofToast";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
+import { IconStar } from "@/components/icons";
 
 // REQ-F-406: pesan gagal bayar yang jelas ke pembeli. Halaman ini adalah
 // callbacks.finish dari Midtrans Snap -- statusnya selalu dicek ulang ke
@@ -208,6 +210,8 @@ export default function CheckoutStatusPage() {
                     ))}
                   </div>
                 )}
+
+                <ReviewForm orderId={params.id} />
               </>
             )}
             {status.status === "pending" && (
@@ -239,5 +243,80 @@ export default function CheckoutStatusPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// ReviewForm -- Modul Toko (Fase E1): ulasan pembeli, ditampilkan setelah
+// pembayaran berhasil untuk SEMUA jenis produk (bukan cuma digital biasa) --
+// backend menegakkan "hanya order lunas, hanya sekali" (lihat ReviewHandler.
+// Submit), jadi form ini boleh optimis menampilkan diri lalu membiarkan
+// backend menolak submit ganda dengan pesan jelas.
+function ReviewForm({ orderId }: { orderId: string }) {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (rating === 0) {
+      setError("Pilih rating bintang dulu.");
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      await submitReview(orderId, { rating, comment: comment.trim() || undefined });
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengirim ulasan.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="mt-4 rounded-xl border border-border bg-secondary-subtle/40 p-3.5 text-left">
+        <p className="text-sm font-semibold text-secondary-dark">Terima kasih atas ulasanmu!</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-primary-subtle/20 p-3.5 text-left">
+      <p className="text-xs font-bold uppercase tracking-wider text-muted">Beri Ulasan</p>
+      <div className="mt-2 flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRating(n)}
+            onMouseEnter={() => setHoverRating(n)}
+            onMouseLeave={() => setHoverRating(0)}
+            aria-label={`${n} bintang`}
+          >
+            <IconStar className={`h-6 w-6 ${n <= (hoverRating || rating) ? "text-amber-500" : "text-border"}`} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Ceritakan pengalamanmu (opsional)"
+        rows={2}
+        className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+      />
+      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="btn-primary mt-2 rounded-lg px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+      >
+        {submitting ? "Mengirim..." : "Kirim Ulasan"}
+      </button>
+    </form>
   );
 }

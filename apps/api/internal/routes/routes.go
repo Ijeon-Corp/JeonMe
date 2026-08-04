@@ -28,6 +28,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	page := handlers.NewPageHandler(db, rdb, s3)
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
+	review := handlers.NewReviewHandler(db)
 	bundle := handlers.NewBundleHandler(db)
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db, rdb)
@@ -220,6 +221,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.GET("/products/:id/codes", product.ListCodes)
 				productsGroup.DELETE("/products/:id/codes/:codeId", product.DeleteCode)
 				productsGroup.GET("/products/:id/webhook-secret", product.GetWebhookSecret)
+
+				// Modul Toko (Fase E1): moderasi ulasan.
+				productsGroup.GET("/reviews", review.List)
+				productsGroup.PATCH("/reviews/:id", review.SetHidden)
+				productsGroup.DELETE("/reviews/:id", review.Delete)
 
 				// No.67 (Sprint 7): voucher/diskon per produk, milik kreator
 				// sendiri seperti produk -- pola CRUD & ownership sama persis.
@@ -435,6 +441,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
 		api.POST("/checkout", checkoutRateLimit, checkout.Create)
 		api.GET("/checkout/:id/status", checkout.GetStatus)
+
+		// Modul Toko (Fase E1): ulasan pembeli -- publik, sama seperti seluruh
+		// alur checkout (pembeli tidak punya akun).
+		api.POST("/checkout/:id/review", checkoutRateLimit, review.Submit)
 
 		// No.67: pratinjau diskon voucher sebelum checkout sungguhan --
 		// rate limit sama dengan checkout supaya kode tidak bisa di-brute-force.

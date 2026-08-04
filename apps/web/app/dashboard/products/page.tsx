@@ -43,6 +43,7 @@ import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShopOverviewPanel from "@/components/ShopOverviewPanel";
 import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
+import ReviewsPanel from "@/components/ReviewsPanel";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -61,7 +62,7 @@ import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
 export default function DashboardProductsPage() {
-  const [tab, setTab] = useState<"overview" | "manage">("overview");
+  const [tab, setTab] = useState<"overview" | "manage" | "reviews">("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -474,9 +475,20 @@ export default function DashboardProductsPage() {
           >
             Manage Items
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("reviews")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "reviews" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Reviews
+          </button>
         </div>
 
-        {tab === "overview" ? (
+        {tab === "reviews" ? (
+          <ReviewsPanel />
+        ) : tab === "overview" ? (
           <div className="mt-4">
             {/* Identitas Toko -- permintaan referensi gambar: nama & tautan
                 halaman publik selalu terlihat di atas Overview, bukan cuma

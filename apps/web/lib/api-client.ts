@@ -1592,6 +1592,39 @@ export function getCheckoutStatus(orderId: string) {
   return apiFetch<CheckoutStatus>(`/checkout/${orderId}/status`, { method: "GET" });
 }
 
+// ---------- Modul Toko (Fase E1): Ulasan ----------
+
+export function submitReview(orderId: string, input: { rating: number; comment?: string }) {
+  return apiFetch<{ message: string }>(`/checkout/${orderId}/review`, { method: "POST", body: JSON.stringify(input) });
+}
+
+export interface ProductReview {
+  id: string;
+  product_id: string;
+  product_name: string;
+  buyer_email: string;
+  rating: number;
+  comment: string;
+  is_hidden: boolean;
+  created_at: string;
+}
+
+export function listReviews() {
+  return apiFetch<ProductReview[]>("/dashboard/reviews", { method: "GET" }, { auth: true });
+}
+
+export function setReviewHidden(reviewId: string, isHidden: boolean) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/reviews/${reviewId}`,
+    { method: "PATCH", body: JSON.stringify({ is_hidden: isHidden }) },
+    { auth: true }
+  );
+}
+
+export function deleteReview(reviewId: string) {
+  return apiFetch<{ message: string }>(`/dashboard/reviews/${reviewId}`, { method: "DELETE" }, { auth: true });
+}
+
 export interface BundleDownloadItem {
   name: string;
   download_url: string;
