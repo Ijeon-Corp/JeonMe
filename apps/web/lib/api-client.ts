@@ -805,6 +805,13 @@ export interface DashboardProduct {
   delivery_method: "download_link" | "manual" | "random_code" | "webhook";
   webhook_url: string;
   unclaimed_code_count: number;
+  // product_kind/success_message/payment_limit_count/link_expires_at --
+  // Modul Toko (Fase D): "payment_link" kumpulkan pembayaran TANPA file
+  // (jasa/konsultasi), lihat migrasi 000048.
+  product_kind: "digital" | "payment_link";
+  success_message: string;
+  payment_limit_count: number | null;
+  link_expires_at: string | null;
 }
 
 export function listProducts() {
@@ -817,6 +824,11 @@ export function createProduct(input: {
   price_idr: number;
   category?: string;
   collaborator_splits?: CollaboratorSplit[];
+  // Modul Toko (Fase D): lihat DashboardProduct.product_kind dkk.
+  product_kind?: "digital" | "payment_link";
+  success_message?: string;
+  payment_limit_count?: number;
+  link_expires_at?: string;
 }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/products",
@@ -849,6 +861,11 @@ export function updateProduct(
     category: string;
     delivery_method: "download_link" | "manual" | "random_code" | "webhook";
     webhook_url: string;
+    success_message: string;
+    payment_limit_count: number;
+    clear_payment_limit: boolean;
+    link_expires_at: string;
+    clear_link_expiration: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -1566,6 +1583,9 @@ export interface CheckoutStatus {
   delivery_method?: "download_link" | "manual" | "random_code" | "webhook";
   fulfilled_at?: string;
   claimed_code?: string;
+  // Modul Toko (Fase D): pesan sukses kustom kreator untuk Payment Link.
+  is_payment_link: boolean;
+  success_message?: string;
 }
 
 export function getCheckoutStatus(orderId: string) {

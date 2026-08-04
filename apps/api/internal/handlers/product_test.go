@@ -63,6 +63,40 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Toko (Fase D): Payment Link langsung AKTIF begitu dibuat (tidak
+// perlu unggah file dulu, beda dari produk digital biasa).
+func TestProductCreate_PaymentLinkIsActiveImmediately(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/products", product.List)
+
+	doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Konsultasi 1 Jam", "price_idr": 150000, "product_kind": "payment_link",
+		"success_message": "Sampai jumpa di sesi konsultasinya!",
+	}, map[string]string{"X-Test-UserID": userID})
+
+	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
+	var items []struct {
+		IsActive       bool   `json:"is_active"`
+		ProductKind    string `json:"product_kind"`
+		SuccessMessage string `json:"success_message"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != 1 || !items[0].IsActive || items[0].ProductKind != "payment_link" {
+		t.Fatalf("items = %+v, ekspektasi 1 payment_link yang langsung aktif", items)
+	}
+	if items[0].SuccessMessage != "Sampai jumpa di sesi konsultasinya!" {
+		t.Errorf("success_message = %q, tidak sesuai yang dikirim", items[0].SuccessMessage)
+	}
+}
+
 // Modul Toko (Fase C3): webhook_secret dibuat SEKALI saat delivery_method
 // pertama kali diubah jadi "webhook", dan TIDAK diregenerasi pada update
 // berikutnya (mis. saat webhook_url diubah lagi) -- integrasi kreator yang

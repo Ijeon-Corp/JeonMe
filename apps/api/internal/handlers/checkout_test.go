@@ -137,6 +137,119 @@ func webhookPayload(t *testing.T, serverKey, transactionID, orderID, transaction
 	return body
 }
 
+// Modul Toko (Fase D): Payment Link yang sudah kedaluwarsa (link_expires_at
+// di masa lalu) harus ditolak SEBELUM sempat memanggil Midtrans -- dibuktikan
+// server key kosong TIDAK memicu 503 "belum dikonfigurasi" (yang berarti
+// baru dicek belakangan), melainkan 410 duluan.
+func TestCheckoutCreate_PaymentLinkExpired_Rejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "")
+	userID := registerTestUser(t, auth)
+
+	productID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active, product_kind, link_expires_at)
+		VALUES ($1, $2, 'Payment Link Kedaluwarsa', 50000, true, 'payment_link', now() - interval '1 hour')
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup payment link test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/checkout", checkout.Create)
+
+	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
+		"product_id": productID, "buyer_email": "buyer@example.com",
+	}, nil)
+	if rec.Code != http.StatusGone {
+		t.Fatalf("status = %d, ekspektasi 410. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Toko (Fase D): batas jumlah pembayaran tercapai (payment_limit_count)
+// harus ditolak, terlepas dari order lain yang statusnya BUKAN "paid" (mis.
+// pending/expired) -- hanya order LUNAS yang dihitung menuju batas.
+func TestCheckoutCreate_PaymentLinkLimitReached_Rejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "")
+	userID := registerTestUser(t, auth)
+
+	productID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active, product_kind, payment_limit_count)
+		VALUES ($1, $2, 'Payment Link Terbatas', 50000, true, 'payment_link', 1)
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup payment link test: %v", err)
+	}
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'sudah-bayar@example.com', 50000, 'paid'),
+			($1, 'belum-bayar@example.com', 50000, 'pending')
+	`, productID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/checkout", checkout.Create)
+
+	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
+		"product_id": productID, "buyer_email": "buyer-baru@example.com",
+	}, nil)
+	if rec.Code != http.StatusGone {
+		t.Fatalf("status = %d, ekspektasi 410. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Toko (Fase D): status checkout untuk Payment Link yang SUDAH lunas
+// menampilkan success_message KUSTOM kreator -- TIDAK ditampilkan kalau
+// belum lunas (supaya pembeli yang belum bayar tidak melihat pesan sukses).
+func TestCheckoutGetStatus_PaymentLinkPaid_ReturnsSuccessMessage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "test-server-key")
+	userID := registerTestUser(t, auth)
+
+	productID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active, product_kind, success_message)
+		VALUES ($1, $2, 'Jasa Konsultasi', 50000, true, 'payment_link', 'Terima kasih, aku akan hubungi kamu lewat email dalam 1x24 jam.')
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup payment link test: %v", err)
+	}
+
+	paidOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status) VALUES ($1, $2, 'buyer@example.com', 50000, 'paid')
+	`, paidOrderID, productID); err != nil {
+		t.Fatalf("gagal setup order lunas: %v", err)
+	}
+	pendingOrderID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status) VALUES ($1, $2, 'buyer2@example.com', 50000, 'pending')
+	`, pendingOrderID, productID); err != nil {
+		t.Fatalf("gagal setup order pending: %v", err)
+	}
+
+	router := gin.New()
+	router.GET("/checkout/:id/status", checkout.GetStatus)
+
+	paidRec := doJSON(t, router, http.MethodGet, "/checkout/"+paidOrderID+"/status", nil, nil)
+	var paidResp checkoutStatusResponse
+	if err := json.Unmarshal(paidRec.Body.Bytes(), &paidResp); err != nil {
+		t.Fatalf("gagal decode respons order lunas: %v", err)
+	}
+	if !paidResp.IsPaymentLink || paidResp.SuccessMessage != "Terima kasih, aku akan hubungi kamu lewat email dalam 1x24 jam." {
+		t.Errorf("respons order lunas = %+v, ekspektasi is_payment_link=true dan success_message terisi", paidResp)
+	}
+
+	pendingRec := doJSON(t, router, http.MethodGet, "/checkout/"+pendingOrderID+"/status", nil, nil)
+	var pendingResp checkoutStatusResponse
+	if err := json.Unmarshal(pendingRec.Body.Bytes(), &pendingResp); err != nil {
+		t.Fatalf("gagal decode respons order pending: %v", err)
+	}
+	if pendingResp.SuccessMessage != "" {
+		t.Errorf("success_message = %q untuk order BELUM lunas, ekspektasi kosong", pendingResp.SuccessMessage)
+	}
+}
+
 // Webhook dengan signature_key salah HARUS ditolak sebelum payload apa pun
 // diproses (REQ-F-403).
 func TestCheckoutWebhook_RejectsWrongSignature(t *testing.T) {

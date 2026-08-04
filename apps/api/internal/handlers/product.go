@@ -116,6 +116,19 @@ type createProductRequest struct {
 	// migrasi 000046.
 	Category string `json:"category" binding:"omitempty,max=50"`
 
+	// ProductKind -- Modul Toko (Fase D): "digital" (default, produk
+	// biasa dengan file) atau "payment_link" (kumpulkan pembayaran TANPA
+	// file, mis. jasa/konsultasi -- lihat migrasi 000048). HANYA bisa
+	// ditentukan saat pembuatan (bukan Update) -- mengubah jenis produk
+	// setelah dibuat berisiko meninggalkan kombinasi data yang aneh (mis.
+	// payment_link yang tiba-tiba dituntut punya file).
+	ProductKind string `json:"product_kind" binding:"omitempty,oneof=digital payment_link"`
+	// SuccessMessage/PaymentLimitCount/LinkExpiresAt -- HANYA relevan untuk
+	// product_kind="payment_link", lihat catatan lingkup di migrasi 000048.
+	SuccessMessage    string  `json:"success_message" binding:"omitempty,max=1000"`
+	PaymentLimitCount *int    `json:"payment_limit_count" binding:"omitempty,min=1"`
+	LinkExpiresAt     *string `json:"link_expires_at"`
+
 	// Modul Settings §3: opsional, lihat collaborator_split.go.
 	CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
 }
@@ -143,11 +156,34 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		splitsJSON, _ = json.Marshal(req.CollaboratorSplits)
 	}
 
+	productKind := req.ProductKind
+	if productKind == "" {
+		productKind = "digital"
+	}
+
+	var linkExpiresAt *time.Time
+	if req.LinkExpiresAt != nil && *req.LinkExpiresAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.LinkExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format link_expires_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		linkExpiresAt = &t
+	}
+
 	id := uuid.NewString()
 	_, err := h.DB.Exec(ctx, `
-		INSERT INTO products (id, user_id, name, description, price_idr, is_active, collaborator_splits, category)
-		VALUES ($1, $2, $3, $4, $5, false, $6, $7)
-	`, id, userID, req.Name, req.Description, req.PriceIDR, splitsJSON, req.Category)
+		INSERT INTO products (
+			id, user_id, name, description, price_idr, is_active, collaborator_splits, category,
+			product_kind, success_message, payment_limit_count, link_expires_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, id, userID, req.Name, req.Description, req.PriceIDR,
+		// Payment Link tidak butuh file -- langsung aktif begitu dibuat,
+		// beda dari produk digital biasa yang wajib unggah file dulu
+		// (lihat pengecekan file_key di Update).
+		productKind == "payment_link",
+		splitsJSON, req.Category, productKind, req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat produk"})
@@ -156,10 +192,11 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	h.invalidatePageCache(ctx, userID)
 
-	c.JSON(http.StatusCreated, gin.H{
-		"id":      id,
-		"message": "produk dibuat, unggah file sebelum mengaktifkan produk",
-	})
+	message := "produk dibuat, unggah file sebelum mengaktifkan produk"
+	if productKind == "payment_link" {
+		message = "payment link dibuat dan langsung aktif"
+	}
+	c.JSON(http.StatusCreated, gin.H{"id": id, "message": message})
 }
 
 // effectivePriceExpr -- No.68: harga flash sale dihitung LIVE dari now(),
@@ -192,7 +229,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 			p.flash_sale_price_idr, p.flash_sale_starts_at, p.flash_sale_ends_at, `+effectivePriceExpr+`,
 			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
 			COALESCE(o.sold_count, 0) AS sold_count, p.category,
-			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count
+			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count,
+			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
@@ -232,6 +270,10 @@ func (h *ProductHandler) List(c *gin.Context) {
 		DeliveryMethod     string              `json:"delivery_method"`
 		WebhookURL         string              `json:"webhook_url"`
 		UnclaimedCodeCount int64               `json:"unclaimed_code_count"`
+		ProductKind        string              `json:"product_kind"`
+		SuccessMessage     string              `json:"success_message"`
+		PaymentLimitCount  *int                `json:"payment_limit_count"`
+		LinkExpiresAt      *time.Time          `json:"link_expires_at"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -240,7 +282,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.HasFile, &it.CoverImageURL,
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
 			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
-			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount); err == nil {
+			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount,
+			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}
@@ -287,6 +330,14 @@ type updateProductRequest struct {
 	// menimpa nilai yang dipakai memverifikasi keaslian pengirim webhook.
 	DeliveryMethod *string `json:"delivery_method" binding:"omitempty,oneof=download_link manual random_code webhook"`
 	WebhookURL     *string `json:"webhook_url" binding:"omitempty,max=500"`
+
+	// SuccessMessage/PaymentLimitCount/LinkExpiresAt -- Modul Toko (Fase D):
+	// hanya efektif untuk product_kind="payment_link", lihat migrasi 000048.
+	SuccessMessage      *string `json:"success_message" binding:"omitempty,max=1000"`
+	PaymentLimitCount   *int    `json:"payment_limit_count" binding:"omitempty,min=1"`
+	ClearPaymentLimit   bool    `json:"clear_payment_limit"`
+	LinkExpiresAt       *string `json:"link_expires_at"`
+	ClearLinkExpiration bool    `json:"clear_link_expiration"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -311,11 +362,11 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
 	var isBundle, isDonation, isEvent, isCourse, isBooking bool
-	var currentWebhookSecret string
+	var currentWebhookSecret, productKind string
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret
+		SELECT file_key, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret, product_kind
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret)
+	`, productID, userID).Scan(&fileKey, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret, &productKind)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
@@ -327,7 +378,9 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	// seikhlasnya; event: yang dijual adalah tiket; kursus: materinya video
 	// per-bab di course_chapters; booking: yang dijual adalah slot waktu),
 	// jadi lewati pengecekan file_key yang berlaku untuk produk biasa.
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && !isBooking {
+	// Modul Toko (Fase D): payment_link JUGA tidak pernah punya file (murni
+	// kumpulkan pembayaran), sudah aktif otomatis sejak dibuat (lihat Create).
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && !isBooking && productKind != "payment_link" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}
@@ -445,6 +498,30 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// Modul Toko (Fase D): link_expires_at -- pola sama seperti flash sale
+	// (nil berarti tidak diubah, Clear* berarti hapus batas).
+	var linkExpiresAt *time.Time
+	if req.LinkExpiresAt != nil && *req.LinkExpiresAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.LinkExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format link_expires_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		linkExpiresAt = &t
+	}
+	if req.ClearLinkExpiration {
+		if _, err := h.DB.Exec(ctx, `UPDATE products SET link_expires_at = NULL WHERE id = $1`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas waktu link"})
+			return
+		}
+	}
+	if req.ClearPaymentLimit {
+		if _, err := h.DB.Exec(ctx, `UPDATE products SET payment_limit_count = NULL WHERE id = $1`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus batas jumlah pembayaran"})
+			return
+		}
+	}
+
 	// Modul Settings §3: divalidasi SEBELUM UPDATE dijalankan -- nil berarti
 	// field ini tidak dikirim sama sekali (tidak diubah), beda dari slice
 	// kosong (`[]`) yang berarti "hapus semua split".
@@ -493,12 +570,16 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			category = COALESCE($17, category),
 			delivery_method = COALESCE($19, delivery_method),
 			webhook_url = COALESCE($20, webhook_url),
-			webhook_secret = COALESCE($21, webhook_secret)
+			webhook_secret = COALESCE($21, webhook_secret),
+			success_message = COALESCE($22, success_message),
+			payment_limit_count = COALESCE($23, payment_limit_count),
+			link_expires_at = COALESCE($24, link_expires_at)
 		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
 		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID,
-		req.DeliveryMethod, req.WebhookURL, newWebhookSecret)
+		req.DeliveryMethod, req.WebhookURL, newWebhookSecret,
+		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

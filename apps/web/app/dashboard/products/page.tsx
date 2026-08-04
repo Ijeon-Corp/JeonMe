@@ -77,13 +77,22 @@ export default function DashboardProductsPage() {
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [overviewRangeDays, setOverviewRangeDays] = useState(30);
 
-  const [adding, setAdding] = useState(false);
+  // addMode -- Modul Toko (Fase B3): "+ Tambah Produk" sekarang membuka
+  // panel pilihan "Add Items" ala referensi (Digital Product vs Payment
+  // Link) alih-alih langsung membuka satu form.
+  const [addMode, setAddMode] = useState<"closed" | "choose" | "digital" | "payment_link">("closed");
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
   const [category, setCategory] = useState("");
   const [creating, setCreating] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
+
+  // Payment Link (Fase D) -- field TAMBAHAN, terpisah dari form Digital
+  // Product di atas (name/priceIDR/category dipakai bersama).
+  const [successMessage, setSuccessMessage] = useState("");
+  const [paymentLimitCount, setPaymentLimitCount] = useState("");
+  const [linkExpiresAt, setLinkExpiresAt] = useState("");
 
   // categoryEditId -- Modul Toko (Fase B1): edit kategori dari modal Kelola.
   const [categoryEditId, setCategoryEditId] = useState<string | null>(null);
@@ -150,40 +159,53 @@ export default function DashboardProductsPage() {
     setError(null);
     setCreating(true);
     try {
-      const created = await createProduct({ name, price_idr: price, category: category.trim() || undefined });
-      setProducts((prev) => [
-        ...prev,
-        {
-          id: created.id,
-          name,
-          description: "",
-          price_idr: price,
-          is_active: false,
-          has_file: false,
-          cover_image_url: "",
-          flash_sale_price_idr: null,
-          flash_sale_starts_at: null,
-          flash_sale_ends_at: null,
-          effective_price_idr: price,
-          is_flash_sale_active: false,
-          pwyw_enabled: false,
-          pwyw_min_price_idr: null,
-          watermark_enabled: false,
-          is_pdf: false,
-          collaborator_splits: [],
-          sold_count: 0,
-          category: category.trim(),
-          delivery_method: "download_link",
-          webhook_url: "",
-          unclaimed_code_count: 0,
-        },
-      ]);
+      await createProduct({ name, price_idr: price, category: category.trim() || undefined });
+      setProducts(await listProducts());
       setName("");
       setPriceIDR("");
       setCategory("");
-      setAdding(false);
+      setAddMode("closed");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat produk.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  // handleCreatePaymentLink -- Modul Toko (Fase D). link_expires_at dikirim
+  // sebagai ISO (RFC3339) dari <input type="datetime-local">, yang TIDAK
+  // menyertakan zona waktu -- new Date(...).toISOString() mengasumsikan
+  // waktu lokal browser, konsisten dengan cara flash sale/event date
+  // dikirim di tempat lain pada file ini.
+  async function handleCreatePaymentLink(e: React.FormEvent) {
+    e.preventDefault();
+    const price = Number(priceIDR);
+    if (!name.trim() || !price || price < 1000) {
+      setError("Nama wajib diisi dan harga minimal Rp1.000.");
+      return;
+    }
+    setError(null);
+    setCreating(true);
+    try {
+      await createProduct({
+        name,
+        price_idr: price,
+        category: category.trim() || undefined,
+        product_kind: "payment_link",
+        success_message: successMessage.trim() || undefined,
+        payment_limit_count: paymentLimitCount ? Number(paymentLimitCount) : undefined,
+        link_expires_at: linkExpiresAt ? new Date(linkExpiresAt).toISOString() : undefined,
+      });
+      setProducts(await listProducts());
+      setName("");
+      setPriceIDR("");
+      setCategory("");
+      setSuccessMessage("");
+      setPaymentLimitCount("");
+      setLinkExpiresAt("");
+      setAddMode("closed");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membuat payment link.");
     } finally {
       setCreating(false);
     }
@@ -547,10 +569,10 @@ export default function DashboardProductsPage() {
                   </select>
                 )}
               </div>
-              {!adding && (
+              {addMode === "closed" && (
                 <button
                   type="button"
-                  onClick={() => setAdding(true)}
+                  onClick={() => setAddMode("choose")}
                   className="btn-primary flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
@@ -559,7 +581,32 @@ export default function DashboardProductsPage() {
               )}
             </div>
 
-            {adding && (
+            {/* Modul Toko (Fase B3): panel "Add Items" ala referensi -- pilih
+                jenis item dulu sebelum masuk ke form spesifiknya. */}
+            {addMode === "choose" && (
+              <div className="mt-3 grid grid-cols-1 gap-2.5 rounded-2xl border border-border bg-white p-4 shadow-card sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setAddMode("digital")}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                >
+                  <IconUpload className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-bold text-ink">Digital Product</span>
+                  <span className="text-[11px] text-muted">Jual produk digital seperti file, e-book, software, template.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddMode("payment_link")}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                >
+                  <IconWallet className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-bold text-ink">Payment Link</span>
+                  <span className="text-[11px] text-muted">Terima pembayaran untuk jasa, donasi, atau tujuan khusus lain.</span>
+                </button>
+              </div>
+            )}
+
+            {addMode === "digital" && (
               <form onSubmit={handleCreate} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
                 <input
                   type="text"
@@ -592,7 +639,7 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAdding(false);
+                    setAddMode("closed");
                     setName("");
                     setPriceIDR("");
                     setCategory("");
@@ -601,6 +648,74 @@ export default function DashboardProductsPage() {
                 >
                   Batal
                 </button>
+              </form>
+            )}
+
+            {addMode === "payment_link" && (
+              <form onSubmit={handleCreatePaymentLink} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    placeholder="Judul (mis. Konsultasi 1 Jam)"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="number"
+                    required
+                    placeholder="Harga (IDR)"
+                    min={1000}
+                    value={priceIDR}
+                    onChange={(e) => setPriceIDR(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <textarea
+                  placeholder="Pesan sukses untuk pembeli (opsional) -- ditampilkan setelah pembayaran berhasil"
+                  value={successMessage}
+                  onChange={(e) => setSuccessMessage(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="Batas jumlah pembayaran (opsional)"
+                    value={paymentLimitCount}
+                    onChange={(e) => setPaymentLimitCount(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={linkExpiresAt}
+                    onChange={(e) => setLinkExpiresAt(e.target.value)}
+                    title="Kedaluwarsa link (opsional)"
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                    {creating ? "Membuat..." : "Buat Payment Link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddMode("closed");
+                      setName("");
+                      setPriceIDR("");
+                      setSuccessMessage("");
+                      setPaymentLimitCount("");
+                      setLinkExpiresAt("");
+                    }}
+                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                  >
+                    Batal
+                  </button>
+                </div>
               </form>
             )}
 
@@ -632,6 +747,9 @@ export default function DashboardProductsPage() {
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
+                                {p.product_kind === "payment_link" && (
+                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Payment Link</span>
+                                )}
                                 {p.category && (
                                   <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-muted">{p.category}</span>
                                 )}
@@ -816,50 +934,54 @@ export default function DashboardProductsPage() {
                 }}
               />
 
-              <input
-                ref={(el) => {
-                  fileInputRefs.current[manageProduct.id] = el;
-                }}
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUpload(manageProduct, file);
-                  e.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                disabled={busyId === manageProduct.id}
-                onClick={() => fileInputRefs.current[manageProduct.id]?.click()}
-                className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${
-                  manageProduct.has_file ? "bg-secondary-subtle text-secondary-dark" : "bg-primary-subtle text-primary"
-                }`}
-              >
-                {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
-                {manageProduct.has_file ? "File terunggah" : "Unggah file"}
-              </button>
-              {manageProduct.has_file && (
-                <button
-                  type="button"
-                  onClick={() => handleGetDownloadLink(manageProduct.id)}
-                  title="Lihat file"
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle"
-                >
-                  <IconExternal className="h-4 w-4" />
-                </button>
-              )}
-              {manageProduct.is_pdf && (
-                <button
-                  type="button"
-                  onClick={() => handleToggleWatermark(manageProduct)}
-                  title="Watermark otomatis (email pembeli + ID pesanan)"
-                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                    manageProduct.watermark_enabled ? "text-primary" : "text-muted"
-                  }`}
-                >
-                  <IconShield className="h-4 w-4" />
-                </button>
+              {manageProduct.product_kind !== "payment_link" && (
+                <>
+                  <input
+                    ref={(el) => {
+                      fileInputRefs.current[manageProduct.id] = el;
+                    }}
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpload(manageProduct, file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={busyId === manageProduct.id}
+                    onClick={() => fileInputRefs.current[manageProduct.id]?.click()}
+                    className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${
+                      manageProduct.has_file ? "bg-secondary-subtle text-secondary-dark" : "bg-primary-subtle text-primary"
+                    }`}
+                  >
+                    {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
+                    {manageProduct.has_file ? "File terunggah" : "Unggah file"}
+                  </button>
+                  {manageProduct.has_file && (
+                    <button
+                      type="button"
+                      onClick={() => handleGetDownloadLink(manageProduct.id)}
+                      title="Lihat file"
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle"
+                    >
+                      <IconExternal className="h-4 w-4" />
+                    </button>
+                  )}
+                  {manageProduct.is_pdf && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWatermark(manageProduct)}
+                      title="Watermark otomatis (email pembeli + ID pesanan)"
+                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        manageProduct.watermark_enabled ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      <IconShield className="h-4 w-4" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -1049,12 +1171,14 @@ export default function DashboardProductsPage() {
                 ))}
             </div>
 
-            <DeliveryMethodPanel
-              key={manageProduct.id}
-              product={manageProduct}
-              onUpdated={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
-              onError={(message) => setError(message)}
-            />
+            {manageProduct.product_kind !== "payment_link" && (
+              <DeliveryMethodPanel
+                key={manageProduct.id}
+                product={manageProduct}
+                onUpdated={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
+                onError={(message) => setError(message)}
+              />
+            )}
 
             <button
               type="button"

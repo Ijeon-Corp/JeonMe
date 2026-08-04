@@ -111,7 +111,9 @@ export default function CheckoutStatusPage() {
               <>
                 <p className="font-heading text-lg font-bold text-secondary-dark">Pembayaran Berhasil</p>
                 <p className="mt-2 text-sm text-muted">
-                  {status.is_donation ? (
+                  {status.is_payment_link && status.success_message ? (
+                    status.success_message
+                  ) : status.is_donation ? (
                     <>
                       Terima kasih atas dukunganmu lewat <b>{status.product_name}</b>! Dukunganmu langsung diteruskan
                       ke kreator.

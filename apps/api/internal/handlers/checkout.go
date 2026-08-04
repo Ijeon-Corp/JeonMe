@@ -83,13 +83,18 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var eventCapacity *int
 	var isBooking bool
 	var collaboratorSplitsRaw []byte
+	var productKind string
+	var paymentLimitCount *int
+	var linkExpiresAt *time.Time
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits
+		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits,
+			product_kind, payment_limit_count, link_expires_at
 		FROM products WHERE id = $1 AND is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw)
+	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw,
+		&productKind, &paymentLimitCount, &linkExpiresAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -97,6 +102,30 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// Modul Toko (Fase D): Payment Link -- tolak checkout kalau link sudah
+	// kedaluwarsa atau batas jumlah pembayaran sudah tercapai. Dicek di
+	// SINI (sebelum order dibuat) supaya pembeli dapat pesan jelas, bukan
+	// baru gagal setelah bayar.
+	if productKind == "payment_link" {
+		if linkExpiresAt != nil && time.Now().After(*linkExpiresAt) {
+			c.JSON(http.StatusGone, gin.H{"error": "payment link ini sudah kedaluwarsa"})
+			return
+		}
+		if paymentLimitCount != nil {
+			var paidCount int
+			if err := h.DB.QueryRow(ctx, `
+				SELECT COUNT(*) FROM orders WHERE product_id = $1 AND status = 'paid'
+			`, req.ProductID).Scan(&paidCount); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa batas pembayaran"})
+				return
+			}
+			if paidCount >= *paymentLimitCount {
+				c.JSON(http.StatusGone, gin.H{"error": "payment link ini sudah mencapai batas jumlah pembayaran"})
+				return
+			}
+		}
 	}
 
 	// No.92: booking wajib menyertakan slot_id -- validasi keberadaan &
@@ -371,6 +400,12 @@ type checkoutStatusResponse struct {
 	DeliveryMethod string     `json:"delivery_method,omitempty"`
 	FulfilledAt    *time.Time `json:"fulfilled_at,omitempty"`
 	ClaimedCode    string     `json:"claimed_code,omitempty"`
+
+	// IsPaymentLink/SuccessMessage -- Modul Toko (Fase D): pesan sukses
+	// KUSTOM kreator, ditampilkan menggantikan pesan generik "pesanan
+	// dikonfirmasi" (lihat migrasi 000048).
+	IsPaymentLink  bool   `json:"is_payment_link"`
+	SuccessMessage string `json:"success_message,omitempty"`
 }
 
 // checkoutSocialProof -- No.76 (Sprint 8): beda dari publicSocialProof di
@@ -392,17 +427,17 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	defer cancel()
 
 	var resp checkoutStatusResponse
-	var productID, creatorUserID string
+	var productID, creatorUserID, productKind string
 	var isBundle, isDonation, isEvent, isCourse, isBooking bool
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
 		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.user_id,
-			p.is_event, p.delivery_method, o.fulfilled_at
+			p.is_event, p.delivery_method, o.fulfilled_at, p.product_kind, p.success_message
 		FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
 	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &isBundle, &isDonation, &isCourse, &isBooking, &creatorUserID,
-		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt)
+		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt, &productKind, &resp.SuccessMessage)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})
@@ -412,12 +447,16 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 		return
 	}
 	resp.IsBundle, resp.IsDonation, resp.IsCourse, resp.IsBooking = isBundle, isDonation, isCourse, isBooking
+	resp.IsPaymentLink = productKind == "payment_link"
+	if !resp.IsPaymentLink || resp.Status != "paid" {
+		resp.SuccessMessage = ""
+	}
 
 	// Modul Toko (Fase C): status penyerahan HANYA relevan untuk produk
 	// digital biasa -- bundel/donasi/kursus/booking/event sudah punya
 	// jalur tampilan sendiri di frontend (lihat field IsBundle dkk di atas),
 	// jadi delivery_method disembunyikan supaya tidak membingungkan.
-	if isBundle || isDonation || isCourse || isBooking || isEvent {
+	if isBundle || isDonation || isCourse || isBooking || isEvent || productKind == "payment_link" {
 		resp.DeliveryMethod = ""
 	} else if resp.Status == "paid" && resp.DeliveryMethod == "random_code" {
 		_ = h.DB.QueryRow(ctx, `SELECT code FROM product_codes WHERE claimed_by_order_id = $1`, orderID).Scan(&resp.ClaimedCode)
