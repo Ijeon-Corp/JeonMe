@@ -112,9 +112,23 @@ jobs:
           node-version: "24"
           cache: "npm"
           cache-dependency-path: apps/web/package-lock.json
+      # Bug ditemukan (5 Agustus 2026): npm ci gagal berulang di CI dengan
+      # error "missing from lock file" yang BERBEDA-BEDA tiap kali (versi
+      # @emnapi/core/runtime/wasi-threads yang berbeda-beda) walau lock file
+      # baru saja diregenerasi bersih & terverifikasi stabil di Windows
+      # MAUPUN WSL Linux -- bahkan setelah dipaksa lewat "overrides" di
+      # package.json. Diduga bug/keterbatasan npm ci sendiri saat overrides
+      # bersinggungan dengan peerDependencies opsional platform wasm32 (paket
+      # yang TIDAK PERNAH benar-benar terpasang di x64 manapun). docker/web/
+      # Dockerfile (build image sungguhan yang di-deploy) SUDAH memakai
+      # `npm install`, bukan `npm ci` -- jadi pipeline deploy sesungguhnya
+      # tidak pernah kena masalah ini, cuma gerbang CI test-frontend ini.
+      # npm install menghormati lock file untuk semua yang benar-benar
+      # terpasang, cuma tidak sekeras npm ci soal validasi entri opsional
+      # yang toh tidak pernah dipakai.
       - name: Install dependencies
         working-directory: apps/web
-        run: npm ci
+        run: npm install
       - name: Lint
         working-directory: apps/web
         run: npm run lint
