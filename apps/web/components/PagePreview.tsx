@@ -106,8 +106,11 @@ export interface PagePreviewData {
   pageSlug?: string;
   // pageType -- No.99 (Sprint 14): "landing" merender blok penuh-lebar
   // (heading/text/image/button/dst) TANPA avatar/produk/monetisasi, beda
-  // dari layout bio biasa. Default "bio" kalau tidak diisi.
-  pageType?: "bio" | "landing";
+  // dari layout bio biasa. Modul Halaman Produk: "produk" merender showcase
+  // katalog Toko saja (avatar/nama/bio + grid produk), TANPA
+  // tautan/donasi/lead-capture/event/booking/loyalty. Default "bio" kalau
+  // tidak diisi.
+  pageType?: "bio" | "landing" | "produk";
   bio: string;
   avatarUrl: string;
   theme: string;
@@ -277,6 +280,13 @@ export default function PagePreview({
     // Landing page (No.99) tidak punya produk/monetisasi sama sekali --
     // shop_paused tidak relevan di sini, tetap pakai `interactive` biasa.
     return <LandingPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} />;
+  }
+
+  // Modul Halaman Produk: showcase katalog Toko saja -- TANPA
+  // tautan/donasi/lead-capture/event/booking/loyalty, beda dari layout bio
+  // biasa & dari layout landing (blok manual) di atas.
+  if (data.pageType === "produk") {
+    return <ProdukPagePreview data={data} rootClassName={rootClassName} theme={theme} canBuy={canBuy} />;
   }
 
   return (
@@ -963,6 +973,173 @@ function LandingPagePreview({
               seluruh footer privacy dll", sebelumnya sengaja disembunyikan
               di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
               pesan "tidak tersedia", lihat PageFooterLinks). */}
+          <PageFooterLinks
+            pageId={data.id}
+            username={data.username}
+            bio={data.bio}
+            isVerified={data.isVerified}
+            footerClassName={theme.footer}
+          />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ProdukPagePreview -- Modul Halaman Produk: kreator gratis dapat 1 halaman
+// tipe ini, Premium sampai 5 (pool TERPISAH dari bio/landing, lihat
+// freeProdukPageLimit/premiumProdukPageLimit di page.go). Showcase katalog
+// Toko yang SAMA dengan halaman utama (produk per-akun, bukan per-halaman --
+// lihat catatan lingkup di CreatePage), header ringkas avatar+nama+bio TANPA
+// tautan/donasi/lead-capture/event/booking/loyalty.
+function ProdukPagePreview({
+  data,
+  rootClassName,
+  theme,
+  canBuy,
+}: {
+  data: PagePreviewData;
+  rootClassName: string;
+  theme: PageTheme;
+  canBuy: boolean;
+}) {
+  return (
+    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+      </div>
+      <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
+        <div className="relative flex flex-col items-center">
+          {theme.glow !== "hidden" && (
+            <div
+              aria-hidden
+              className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
+            />
+          )}
+
+          {data.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.avatarUrl}
+              alt={data.username}
+              className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
+            />
+          ) : (
+            <div
+              className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
+            >
+              {data.username.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+
+          <div className="relative mt-5 text-center">
+            <h1
+              className={`flex items-center justify-center gap-1.5 font-heading text-base font-bold ${theme.name}`}
+              style={theme.nameStyle}
+            >
+              {data.displayName || data.username}
+              {data.isVerified && (
+                <span title="Kreator terverifikasi">
+                  <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+                </span>
+              )}
+            </h1>
+            {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          </div>
+        </div>
+
+        {data.shopPaused && (
+          <div className={`mt-6 w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
+            {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
+          </div>
+        )}
+
+        {data.products.length > 0 ? (
+          <div className="mt-8 w-full">
+            <div className="grid w-full grid-cols-2 gap-3">
+              {data.products.map((product) => (
+                <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
+                  <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
+                    {product.cover_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.cover_image_url}
+                        alt={product.name}
+                        className="h-full w-full rounded-xl object-cover"
+                      />
+                    ) : (
+                      <IconBox className={`h-6 w-6 ${theme.chevron}`} />
+                    )}
+                  </div>
+                  <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+                  {product.isCourse && (
+                    <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
+                  )}
+                  {product.pwywEnabled ? (
+                    <p className={`text-xs font-bold ${theme.productPrice}`}>
+                      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
+                    </p>
+                  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
+                      </p>
+                      <p className={`text-xs font-bold ${theme.productPrice}`}>
+                        Rp {product.price_idr.toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                        Rp {product.price_idr.toLocaleString("id-ID")}
+                      </p>
+                      <p className={`text-xs font-bold ${theme.productPrice}`}>
+                        Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className={`text-xs font-bold ${theme.productPrice}`}>
+                      Rp {product.price_idr.toLocaleString("id-ID")}
+                    </p>
+                  )}
+                  {canBuy ? (
+                    <BuyProductButton
+                      productId={product.id}
+                      buttonClassName={theme.buyButton}
+                      pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+                      referralCode={data.referralCode}
+                      username={data.username}
+                      pageSlug={data.pageSlug}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+                      className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                    >
+                      Beli
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
+        )}
+
+        <div className="mt-10 flex flex-col items-center gap-3">
+          {!data.isPremium && (
+            <a
+              href="https://jeonme.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+            >
+              Buat halaman gratis di Jeonme
+            </a>
+          )}
           <PageFooterLinks
             pageId={data.id}
             username={data.username}

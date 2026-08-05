@@ -258,6 +258,98 @@ func TestCreatePage_AllowsPremiumUserUpToLimitThenRejects(t *testing.T) {
 	}
 }
 
+// Modul Halaman Produk: pool TERPISAH dari bio/landing -- kreator gratis
+// boleh membuat 1 Halaman Produk (beda dari bio/landing yang tetap 0 untuk
+// gratis), lalu ditolak begitu mencapai batas.
+func TestCreatePage_ProdukType_AllowsFreeUserUpToLimitThenRejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	for i := 0; i < freeProdukPageLimit; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("halaman produk ke-%d: status = %d, ekspektasi 201, body %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk Berlebih", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("halaman produk ke-%d (melebihi batas gratis): status = %d, ekspektasi 403, body %s", freeProdukPageLimit+1, rec.Code, rec.Body.String())
+	}
+}
+
+// Kreator Premium juga tetap dibatasi untuk tipe produk, sampai
+// premiumProdukPageLimit.
+func TestCreatePage_ProdukType_AllowsPremiumUserUpToLimitThenRejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	for i := 0; i < premiumProdukPageLimit; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("halaman produk ke-%d: status = %d, ekspektasi 201, body %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk Berlebih", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("halaman produk ke-%d (melebihi batas premium): status = %d, ekspektasi 403, body %s", premiumProdukPageLimit+1, rec.Code, rec.Body.String())
+	}
+}
+
+// Pool produk & pool bio/landing HARUS independen -- kreator gratis yang
+// sudah pakai jatah 1 Halaman Produk-nya tetap ditolak bikin halaman
+// bio/landing (pool itu tetap 0 untuk gratis, tidak terpengaruh sama
+// sekali oleh halaman produk), dan sebaliknya kreator premium yang sudah
+// menghabiskan pool bio/landing tetap bisa bikin halaman produk.
+func TestCreatePage_ProdukAndBioLandingPoolsAreIndependent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("halaman produk gratis pertama: status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Bio", "slug": uuid.NewString(), "page_type": "bio"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("halaman bio untuk kreator gratis (pool terpisah dari produk): status = %d, ekspektasi 403, body %s", rec.Code, rec.Body.String())
+	}
+
+	makeTestUserPremium(t, page, userID)
+	for i := 0; i < premiumExtraPageLimit; i++ {
+		rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Bio", "slug": uuid.NewString(), "page_type": "bio"}, map[string]string{"X-Test-UserID": userID})
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("halaman bio premium ke-%d: status = %d, ekspektasi 201, body %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+	rec = doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Bio Berlebih", "slug": uuid.NewString(), "page_type": "bio"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("halaman bio melebihi batas premium: status = %d, ekspektasi 403, body %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk Kedua", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("halaman produk kedua (pool produk belum penuh meski pool bio/landing penuh): status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+}
+
 // Modul Langganan Premium: pengguna lama yang SUDAH punya halaman tambahan
 // lebih dari batas baru (dibuat sebelum fitur ini digerbang) TETAP bisa
 // dibaca/dipakai (grandfathered) -- gerbang HANYA menahan pembuatan BARU,

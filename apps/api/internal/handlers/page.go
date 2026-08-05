@@ -1034,17 +1034,28 @@ func (h *PageHandler) ListMyPages(c *gin.Context) {
 type createExtraPageRequest struct {
 	Name string `json:"name" binding:"required,max=100"`
 	Slug string `json:"slug" binding:"required,max=50"`
-	// PageType -- No.99: opsional, default "bio" kalau kosong.
-	PageType string `json:"page_type" binding:"omitempty,oneof=bio landing"`
+	// PageType -- No.99: opsional, default "bio" kalau kosong. "produk"
+	// (Modul Halaman Produk) -- showcase katalog Toko, lihat catatan lingkup
+	// di CreatePage.
+	PageType string `json:"page_type" binding:"omitempty,oneof=bio landing produk"`
 }
 
 // premiumExtraPageLimit -- Modul Langganan Premium: batas Halaman Tambahan
-// untuk kreator Premium (kreator gratis TIDAK BISA membuat sama sekali,
-// lihat pengecekan di CreatePage). Fitur ini sebelumnya bebas & tanpa batas
-// untuk semua orang -- pengguna lama yang sudah punya lebih banyak halaman
-// dari batas ini SENGAJA dibiarkan (grandfathered, halamannya tetap aktif
-// & bisa diedit), hanya pembuatan BARU yang ditahan gerbang ini.
+// bertipe bio/landing untuk kreator Premium (kreator gratis TIDAK BISA
+// membuat sama sekali, lihat pengecekan di CreatePage). Fitur ini
+// sebelumnya bebas & tanpa batas untuk semua orang -- pengguna lama yang
+// sudah punya lebih banyak halaman dari batas ini SENGAJA dibiarkan
+// (grandfathered, halamannya tetap aktif & bisa diedit), hanya pembuatan
+// BARU yang ditahan gerbang ini.
 const premiumExtraPageLimit = 5
+
+// freeProdukPageLimit/premiumProdukPageLimit -- Modul Halaman Produk
+// (keputusan langsung pengguna, 5 Agustus 2026): POOL TERPISAH dari
+// premiumExtraPageLimit di atas -- kreator gratis dapat 1 Halaman Produk
+// gratis (beda dari bio/landing yang tetap 0 untuk gratis), Premium tetap
+// 5, sama seperti bio/landing.
+const freeProdukPageLimit = 1
+const premiumProdukPageLimit = 5
 
 // CreatePage — membuat halaman bio TAMBAHAN baru (is_primary=false), belum
 // dipublikasikan sampai kreator mengisi & mempublikasikannya lewat UpdatePage.
@@ -1069,18 +1080,46 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	if !isPremiumUser(ctx, h.DB, userID) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Halaman Tambahan khusus untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
-		return
-	}
-	var extraPageCount int
-	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false`, userID).Scan(&extraPageCount); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
-		return
-	}
-	if extraPageCount >= premiumExtraPageLimit {
-		c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("kreator Premium maksimal %d halaman tambahan", premiumExtraPageLimit)})
-		return
+	premium := isPremiumUser(ctx, h.DB, userID)
+
+	if pageType == "produk" {
+		// Modul Halaman Produk: pool TERPISAH dari bio/landing di bawah --
+		// kreator gratis TETAP boleh, sampai 1 halaman.
+		limit := freeProdukPageLimit
+		if premium {
+			limit = premiumProdukPageLimit
+		}
+		var produkPageCount int
+		if err := h.DB.QueryRow(ctx, `
+			SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false AND page_type = 'produk'
+		`, userID).Scan(&produkPageCount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
+			return
+		}
+		if produkPageCount >= limit {
+			if premium {
+				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("kreator Premium maksimal %d Halaman Produk", limit)})
+			} else {
+				c.JSON(http.StatusForbidden, gin.H{"error": "kreator gratis maksimal 1 Halaman Produk -- upgrade ke Premium untuk lebih banyak"})
+			}
+			return
+		}
+	} else {
+		if !premium {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Halaman Tambahan khusus untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
+			return
+		}
+		var extraPageCount int
+		if err := h.DB.QueryRow(ctx, `
+			SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false AND page_type != 'produk'
+		`, userID).Scan(&extraPageCount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
+			return
+		}
+		if extraPageCount >= premiumExtraPageLimit {
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("kreator Premium maksimal %d halaman tambahan", premiumExtraPageLimit)})
+			return
+		}
 	}
 
 	var pageID string

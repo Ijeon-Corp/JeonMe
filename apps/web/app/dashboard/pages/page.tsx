@@ -22,11 +22,20 @@ import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 
-// Modul Langganan Premium: Halaman Tambahan sekarang eksklusif Premium,
+// Modul Langganan Premium: Halaman Tambahan Bio/Landing eksklusif Premium,
 // maksimal PREMIUM_EXTRA_PAGE_LIMIT halaman (lihat premiumExtraPageLimit di
 // backend PageHandler.CreatePage -- SATU sumber kebenaran ANGKA di backend,
 // nilai di sini HANYA untuk teks/progres UI, backend tetap menegakkan ulang).
 const PREMIUM_EXTRA_PAGE_LIMIT = 5;
+
+// Modul Halaman Produk: pool TERPISAH dari bio/landing di atas -- kreator
+// gratis dapat 1 Halaman Produk gratis (beda dari bio/landing yang tetap 0
+// untuk gratis), Premium tetap 5 (lihat freeProdukPageLimit/
+// premiumProdukPageLimit di backend PageHandler.CreatePage).
+const FREE_PRODUK_PAGE_LIMIT = 1;
+const PREMIUM_PRODUK_PAGE_LIMIT = 5;
+
+type ExtraPageType = "bio" | "landing" | "produk";
 
 type LandingBlockType = "heading" | "text" | "image" | "button";
 
@@ -47,6 +56,12 @@ const LANDING_BLOCK_LABEL: Record<LandingBlockType, string> = {
 // builder BLOK (heading/text/gambar/tombol) alih-alih formulir tautan biasa
 // -- TANPA tombol "Create with AI" (keputusan eksplisit pengguna), murni
 // blok manual siap pakai.
+//
+// Modul Halaman Produk: page_type="produk" -- showcase katalog Toko yang
+// SAMA dengan halaman utama (produk per-akun, bukan per-halaman), jadi
+// "Kelola" TIDAK punya formulir tautan/blok sama sekali, cuma bio/tema +
+// pengingat untuk mengelola produknya lewat menu Produk. Pool gratis/Premium
+// halaman ini TERPISAH dari Bio/Landing (lihat FREE_PRODUK_PAGE_LIMIT).
 export default function DashboardExtraPagesPage() {
   const router = useRouter();
   const [pages, setPages] = useState<ExtraPage[]>([]);
@@ -58,7 +73,7 @@ export default function DashboardExtraPagesPage() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [pageType, setPageType] = useState<"bio" | "landing">("bio");
+  const [pageType, setPageType] = useState<ExtraPageType>("bio");
 
   const [managingId, setManagingId] = useState<string | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -230,53 +245,69 @@ export default function DashboardExtraPagesPage() {
     }
   }
 
+  // Modul Halaman Produk: dua pool INDEPENDEN -- bio/landing (0 gratis / 5
+  // Premium, sama seperti sebelumnya) dan produk (1 gratis / 5 Premium),
+  // persis mengikuti pembagian di backend PageHandler.CreatePage.
+  const bioLandingCount = pages.filter((p) => p.page_type !== "produk").length;
+  const produkCount = pages.filter((p) => p.page_type === "produk").length;
+  const bioLandingLimit = isPremium ? PREMIUM_EXTRA_PAGE_LIMIT : 0;
+  const produkLimit = isPremium ? PREMIUM_PRODUK_PAGE_LIMIT : FREE_PRODUK_PAGE_LIMIT;
+  const canCreateBioLanding = bioLandingCount < bioLandingLimit;
+  const canCreateProduk = produkCount < produkLimit;
+  const canCreateAny = canCreateBioLanding || canCreateProduk;
+
   if (loading) return <p className="text-sm text-muted">Memuat...</p>;
 
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-muted">
         Kelola beberapa halaman terpisah dari satu akun di jeonme.com/p/{"{slug}"}: halaman{" "}
-        <b>Bio</b> (bio/tema/tautan sendiri, produk & monetisasi tetap sama seperti halaman utamamu) atau halaman{" "}
-        <b>Landing</b> (blok penuh-lebar untuk satu kampanye/tujuan tertentu -- heading, teks, gambar, tombol CTA).
+        <b>Bio</b> (bio/tema/tautan sendiri, produk & monetisasi tetap sama seperti halaman utamamu), halaman{" "}
+        <b>Landing</b> (blok penuh-lebar untuk satu kampanye/tujuan tertentu -- heading, teks, gambar, tombol CTA),
+        atau halaman <b>Produk</b> (showcase katalog Toko-mu saja -- kreator gratis dapat {FREE_PRODUK_PAGE_LIMIT}).
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
-        {!isPremium ? (
+        {!canCreateAny ? (
           <div className="flex flex-col items-start gap-2">
             <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
               <IconSparkle className="h-4 w-4 text-primary" />
-              Halaman Tambahan khusus kreator Premium
+              {isPremium ? "Semua jatah halaman tambahan terpakai" : "Jatah Halaman Produk gratis sudah terpakai"}
             </div>
             <p className="text-xs text-muted">
-              Upgrade ke Premium untuk membuat sampai {PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan (Bio atau Landing).
+              {isPremium
+                ? `Kamu sudah memakai ${bioLandingCount}/${bioLandingLimit} Halaman Bio/Landing dan ${produkCount}/${produkLimit} Halaman Produk. Hapus salah satu untuk membuat yang baru.`
+                : `Kamu sudah memakai jatah ${FREE_PRODUK_PAGE_LIMIT} Halaman Produk gratis. Upgrade ke Premium untuk Halaman Bio/Landing dan sampai ${PREMIUM_PRODUK_PAGE_LIMIT} Halaman Produk.`}
             </p>
-            <button
-              type="button"
-              onClick={() => router.push("/dashboard/settings/subscription")}
-              className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white"
-            >
-              Lihat Langganan Premium
-            </button>
+            {!isPremium && (
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/settings/subscription")}
+                className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white"
+              >
+                Lihat Langganan Premium
+              </button>
+            )}
           </div>
-        ) : pages.length >= PREMIUM_EXTRA_PAGE_LIMIT ? (
-          <p className="text-xs text-muted">
-            Kamu sudah memakai {pages.length}/{PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan (batas maksimal Premium). Hapus salah
-            satu untuk membuat yang baru.
-          </p>
         ) : !adding ? (
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => {
+                setPageType(canCreateBioLanding ? "bio" : "produk");
+                setAdding(true);
+              }}
               className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
             >
               <IconPlus className="h-4 w-4" />
               Buat Halaman Baru
             </button>
             <span className="text-xs text-muted">
-              {pages.length}/{PREMIUM_EXTRA_PAGE_LIMIT} halaman terpakai
+              {isPremium
+                ? `${bioLandingCount}/${bioLandingLimit} Bio/Landing · ${produkCount}/${produkLimit} Produk`
+                : `${produkCount}/${FREE_PRODUK_PAGE_LIMIT} Halaman Produk gratis`}
             </span>
           </div>
         ) : (
@@ -286,8 +317,10 @@ export default function DashboardExtraPagesPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setPageType("bio")}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                  onClick={() => canCreateBioLanding && setPageType("bio")}
+                  disabled={!canCreateBioLanding}
+                  title={!canCreateBioLanding ? "Halaman Bio khusus Premium / jatah sudah penuh" : undefined}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                     pageType === "bio" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
                   }`}
                 >
@@ -295,12 +328,25 @@ export default function DashboardExtraPagesPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPageType("landing")}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                  onClick={() => canCreateBioLanding && setPageType("landing")}
+                  disabled={!canCreateBioLanding}
+                  title={!canCreateBioLanding ? "Halaman Landing khusus Premium / jatah sudah penuh" : undefined}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                     pageType === "landing" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
                   }`}
                 >
                   Halaman Landing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => canCreateProduk && setPageType("produk")}
+                  disabled={!canCreateProduk}
+                  title={!canCreateProduk ? "Jatah Halaman Produk sudah penuh" : undefined}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+                    pageType === "produk" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
+                  }`}
+                >
+                  Halaman Produk
                 </button>
               </div>
             </div>
@@ -311,7 +357,7 @@ export default function DashboardExtraPagesPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={pageType === "landing" ? "Promo Lebaran 2026" : "Toko Skincare"}
+                placeholder={pageType === "landing" ? "Promo Lebaran 2026" : pageType === "produk" ? "Katalog Skincare" : "Toko Skincare"}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -356,7 +402,7 @@ export default function DashboardExtraPagesPage() {
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-bold text-ink">{page.name}</p>
                   <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-bold text-muted">
-                    {page.page_type === "landing" ? "Landing" : "Bio"}
+                    {page.page_type === "landing" ? "Landing" : page.page_type === "produk" ? "Produk" : "Bio"}
                   </span>
                 </div>
                 <p className="flex items-center gap-1 text-xs text-muted">
@@ -390,7 +436,7 @@ export default function DashboardExtraPagesPage() {
 
             {managingId === page.id && (
               <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/20 p-3">
-                {page.page_type === "bio" && (
+                {page.page_type !== "landing" && (
                   <>
                     <div>
                       <label className="mb-1 block text-xs font-semibold text-ink">Bio</label>
@@ -419,6 +465,23 @@ export default function DashboardExtraPagesPage() {
                   </>
                 )}
 
+                {page.page_type === "produk" ? (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-ink">Produk</p>
+                    <p className="rounded-lg border border-border bg-white p-3 text-xs text-muted">
+                      Produk yang ditampilkan mengikuti katalog Toko-mu secara otomatis -- sama seperti halaman
+                      utama, tidak perlu diatur ulang di sini. Kelola daftar produknya di menu{" "}
+                      <button
+                        type="button"
+                        onClick={() => router.push("/dashboard/products")}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Produk
+                      </button>
+                      .
+                    </p>
+                  </div>
+                ) : (
                 <div>
                   <p className="mb-1.5 text-xs font-semibold text-ink">
                     {page.page_type === "landing" ? "Blok Halaman" : "Tautan"}
@@ -543,6 +606,7 @@ export default function DashboardExtraPagesPage() {
                     )}
                   </div>
                 </div>
+                )}
 
                 <button
                   type="button"

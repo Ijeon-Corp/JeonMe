@@ -248,8 +248,9 @@ export interface PublicPage {
   bookings: PublicBooking[];
   loyalty_active: boolean;
   // page_type -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
-  // "landing" (halaman tambahan No.98 dengan builder blok manual).
-  page_type: "bio" | "landing";
+  // "landing" (halaman tambahan No.98 dengan builder blok manual). Modul
+  // Halaman Produk: "produk" (showcase katalog Toko saja).
+  page_type: "bio" | "landing" | "produk";
   // shop_paused/shop_paused_message -- Modul Toko (Fase E5): kreator bisa
   // menjeda seluruh toko dari tab Shop Settings. Backend TETAP menolak
   // checkout kalau true (lihat checkout.go Create) -- ini murni untuk
@@ -672,15 +673,17 @@ export interface ExtraPage {
   theme: string;
   is_published: boolean;
   // page_type -- No.99 (Sprint 14): "bio" (default, No.98) atau "landing"
-  // (builder blok manual, lihat catatan lingkup di migrasi 000030).
-  page_type: "bio" | "landing";
+  // (builder blok manual, lihat catatan lingkup di migrasi 000030). Modul
+  // Halaman Produk: "produk" (showcase katalog Toko, batas gratis/Premium
+  // TERPISAH dari pool bio/landing -- lihat migrasi 000054 & page.go).
+  page_type: "bio" | "landing" | "produk";
 }
 
 export function listMyExtraPages() {
   return apiFetch<ExtraPage[]>("/dashboard/pages", { method: "GET" }, { auth: true });
 }
 
-export function createExtraPage(input: { name: string; slug: string; page_type?: "bio" | "landing" }) {
+export function createExtraPage(input: { name: string; slug: string; page_type?: "bio" | "landing" | "produk" }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/pages",
     { method: "POST", body: JSON.stringify(input) },
