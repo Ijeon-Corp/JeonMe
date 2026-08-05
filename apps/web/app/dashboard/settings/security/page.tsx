@@ -287,15 +287,25 @@ export default function SettingsSecurityPage() {
               key={s.id}
               className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
             >
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-ink">
-                  {s.user_agent || "Device tidak dikenal"}
+              {/* Bug ditemukan (5 Agustus 2026, audit responsif): badge
+                  "Sesi ini" sebelumnya ikut ditulis SEBARIS di dalam <p>
+                  yang sama dengan user_agent (bisa sangat panjang & tanpa
+                  spasi) -- truncate saja tidak cukup tanpa flex-1 di
+                  wrapper-nya, badge jadi terdorong keluar viewport alih-alih
+                  ikut terpotong. Sekarang badge jadi SIBLING terpisah
+                  (flex-shrink-0, selalu utuh terlihat), teks panjang yang
+                  truncate di elemennya sendiri. */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 truncate text-xs font-semibold text-ink">
+                    {s.user_agent || "Device tidak dikenal"}
+                  </p>
                   {s.is_current && (
-                    <span className="ml-2 rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="flex-shrink-0 rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
                       Sesi ini
                     </span>
                   )}
-                </p>
+                </div>
                 <p className="mt-0.5 text-[11px] text-muted">
                   Masuk {new Date(s.created_at).toLocaleString("id-ID")}
                 </p>

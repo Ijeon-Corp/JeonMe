@@ -175,7 +175,14 @@ export default function DashboardHomePage() {
             {d} hari
           </button>
         ))}
-        <div className="flex items-center gap-1.5">
+        {/* Bug ditemukan (5 Agustus 2026, audit responsif): 2 input
+            type="date" (lebar render minimum browser tidak bisa menyusut
+            banyak) + span "s/d" + tombol Terapkan di SATU baris tanpa
+            flex-wrap sendiri -- di layar sempit totalnya melebihi lebar
+            layar walau parent-nya sendiri sudah flex-wrap (wrapper ini
+            IKUT terhitung sebagai satu item utuh yang tidak pernah pecah
+            baris di dalam dirinya sendiri). */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <input
             type="date"
             value={customFrom}

@@ -324,11 +324,16 @@ export default function SettingsPaymentPage() {
           Butuh metode pembayaran utama yang sudah terverifikasi. Penarikan otomatis berjalan kalau saldo tersedia
           sudah mencapai jumlah minimum.
         </p>
+        {/* Bug ditemukan (5 Agustus 2026, audit responsif): baris ini jadi
+            flex-row mulai sm: (640px), tapi <select> (lebar minimalnya
+            ditentukan opsi terpanjang "Manual (tidak otomatis)") tidak
+            pernah diberi min-w-0 -- di lebar tablet, total select+input+
+            tombol melebihi lebar layar & memaksa SELURUH halaman melebar. */}
         <form onSubmit={handleSaveSchedule} className="mt-3 flex flex-col gap-2 sm:flex-row">
           <select
             value={frequency}
             onChange={(e) => setFrequency(e.target.value as PayoutSchedule["frequency"])}
-            className="rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="min-w-0 rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
           >
             <option value="manual">Manual (tidak otomatis)</option>
             <option value="weekly">Mingguan</option>
@@ -340,12 +345,12 @@ export default function SettingsPaymentPage() {
             placeholder="Saldo minimum (Rp)"
             value={minThreshold}
             onChange={(e) => setMinThreshold(e.target.value)}
-            className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
           />
           <button
             type="submit"
             disabled={savingSchedule}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {savingSchedule ? "Menyimpan..." : "Simpan"}
           </button>

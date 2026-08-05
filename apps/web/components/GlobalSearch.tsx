@@ -97,8 +97,15 @@ export default function GlobalSearch() {
         className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-muted hover:border-primary hover:text-primary"
       >
         <IconSearch className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Cari menu</span>
-        <span className="hidden rounded border border-border px-1 text-[10px] text-muted/70 sm:inline">Ctrl K</span>
+        {/* Bug ditemukan (5 Agustus 2026, audit responsif): "sm:inline"
+            (>=640px) membuat label ini sudah tampil penuh di lebar tablet
+            (768px) tepat saat topbar desktop (md:flex, >=768px) juga mulai
+            tampil bersama ikon lain + pil username -- gabungannya melebihi
+            lebar layar. Ditunda ke "lg:inline" (>=1024px) supaya tetap
+            ikon-saja selama rentang tablet, sama seperti perilaku di bawah
+            640px sebelumnya. */}
+        <span className="hidden lg:inline">Cari menu</span>
+        <span className="hidden rounded border border-border px-1 text-[10px] text-muted/70 lg:inline">Ctrl K</span>
       </button>
 
       {open && (

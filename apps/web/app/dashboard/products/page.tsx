@@ -464,11 +464,17 @@ export default function DashboardProductsPage() {
     // lihat catatan lengkap di DesignPageShell.tsx/dashboard/links/page.tsx.
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div>
-        <div className="flex gap-2 border-b border-border">
+        {/* Bug ditemukan (5 Agustus 2026, audit responsif): 8 tab tanpa
+            wrapper scroll memaksa SELURUH halaman melebar horizontal di
+            layar sempit (bukan cuma baris tab ini yang terpotong). overflow-
+            x-auto membuat scroll-nya lokal ke baris tab saja, flex-shrink-0
+            + whitespace-nowrap di tiap tombol mencegah teksnya sendiri
+            terpotong/melipat sebelum scroll sempat aktif. */}
+        <div className="flex gap-2 overflow-x-auto border-b border-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setTab("overview")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "overview" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -477,7 +483,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("manage")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "manage" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -486,7 +492,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("reviews")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "reviews" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -495,7 +501,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("listing")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "listing" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -504,7 +510,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("storage")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "storage" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -513,7 +519,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("webhook_events")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "webhook_events" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -522,7 +528,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("shop_settings")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -531,7 +537,7 @@ export default function DashboardProductsPage() {
           <button
             type="button"
             onClick={() => setTab("transaction")}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "transaction" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
             }`}
           >

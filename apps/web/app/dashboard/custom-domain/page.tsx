@@ -106,12 +106,12 @@ export default function DashboardCustomDomainPage() {
             placeholder="toko.namamu.com"
             value={domainInput}
             onChange={(e) => setDomainInput(e.target.value)}
-            className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="min-w-0 flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="submit"
             disabled={saving}
-            className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {saving ? "Menyimpan..." : "Simpan"}
           </button>

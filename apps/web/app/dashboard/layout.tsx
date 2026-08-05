@@ -334,7 +334,15 @@ export default function DashboardLayout({
               pengguna) -- "contents" dihapus karena membuatnya ikut
               "terangkat" jadi flex item SEJAJAR (searah baris) dengan aside
               & main, bukan menumpuk di ATAS main seperti yang dimaksud. */}
-          <div className="flex flex-1 flex-col">
+          {/* Bug ditemukan (5 Agustus 2026, audit responsif): min-w-0 WAJIB
+              di sini -- tanpanya, flex item defaultnya min-width:auto (tidak
+              mau menyusut di bawah lebar konten alaminya). Begitu SATU
+              halaman punya baris yang tidak menyusut (mis. input+tombol
+              sejajar), SELURUH shell (termasuk header & sidebar drawer)
+              ikut melebar mengikuti kolom ini, bukan cuma baris yang
+              bersangkutan -- inilah kenapa overflow ~12px selalu muncul di
+              SEMUA halaman, bukan cuma yang kontennya sendiri "salah". */}
+          <div className="flex min-w-0 flex-1 flex-col">
             <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
               <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
                 Jeonme
@@ -372,9 +380,16 @@ export default function DashboardLayout({
                 sidebar tiap kali. "Enhance" (AI) SENGAJA tidak dibuat --
                 Jeonme belum punya fitur AI enhance apa pun (lihat keputusan
                 yang disepakati). */}
-            <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-border bg-white/90 px-6 py-2.5 backdrop-blur md:flex">
-              <p className="font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
-              <div className="flex items-center gap-1.5">
+            <header className="sticky top-0 z-20 hidden items-center justify-between gap-3 border-b border-border bg-white/90 px-6 py-2.5 backdrop-blur md:flex">
+              {/* Bug ditemukan (5 Agustus 2026, audit responsif): judul
+                  DAN grup ikon di kanan sebelumnya sama-sama tidak bisa
+                  menyusut -- di lebar tablet (768-1023px) totalnya melebihi
+                  lebar layar, memaksa SELURUH halaman melebar horizontal.
+                  min-w-0+truncate di judul membiarkan JUDUL yang mengalah
+                  duluan (konten paling tidak krusial di baris ini) supaya
+                  grup ikon (fungsional) tetap utuh. */}
+              <p className="min-w-0 flex-1 truncate font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
+              <div className="flex flex-shrink-0 items-center gap-1.5">
                 <GlobalSearch />
                 {username && (
                   <a
@@ -402,9 +417,13 @@ export default function DashboardLayout({
                     type="button"
                     onClick={handleCopyLink}
                     title="Salin tautan halaman publik"
-                    className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
                   >
-                    jeonme.com/{username}
+                    {/* Teks domain penuh cuma tampil mulai lg: (>=1024px,
+                        sama seperti label GlobalSearch) -- di rentang
+                        tablet cukup ikon salin saja supaya baris ini tidak
+                        ikut memaksa halaman melebar horizontal. */}
+                    <span className="hidden lg:inline">jeonme.com/{username}</span>
                     <IconCopy className="h-3 w-3" />
                     {copied && <span className="text-primary">Tersalin!</span>}
                   </button>

@@ -38,14 +38,19 @@ export default function LivePreviewPanel({
           berfungsi lewat mouse wheel/sentuh, cuma indikatornya yang
           dihilangkan) -- tinggi PASTI (bukan max-height) supaya "min-h-full"
           di PagePreview tetap valid sebagai dasar persentase.
-          Tinggi menyesuaikan layout (permintaan susulan): di layar besar
-          (lg:sticky) memanjang mengikuti sisa tinggi viewport (calc(100vh -
-          ...), dikurangi offset top-6 + label "Pratinjau Langsung" di atas +
-          keterangan di bawah) alih-alih angka tetap kecil -- di mobile
-          (bukan sticky, ikut alur halaman) tetap angka tetap supaya tidak
-          membuat satu blok setinggi layar penuh di tengah alur. */}
+
+          Permintaan susulan (5 Agustus 2026): ukuran kotak pratinjau dibuat
+          TETAP (280x580, sama persis di mobile MAUPUN desktop) -- sebelumnya
+          tinggi desktop memakai calc(100vh-10rem) yang berubah-ubah
+          mengikuti tinggi jendela browser (mockup jadi tidak proporsional/
+          konsisten dari satu pengguna ke pengguna lain). "Responsif" di sini
+          artinya TATA LETAK-nya (menempel/statis, lebar kolom) yang
+          menyesuaikan breakpoint, BUKAN dimensi kotaknya sendiri -- kotak
+          selalu mempertahankan rasio ala ponsel yang sama. max-w-full+w-full
+          tetap dipertahankan supaya di layar SANGAT sempit (<280px, mis.
+          landscape ponsel kecil) kotak ikut menyusut, bukan meluber. */}
       {page && (
-        <div className="mx-auto h-[500px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:h-[calc(100vh-10rem)]">
+        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Permintaan susulan: font pratinjau masih terasa besar --
               PagePreview dipakai BERSAMA halaman publik asli, jadi ukuran
               teksnya sendiri (Tailwind class di PagePreview.tsx) TIDAK boleh
