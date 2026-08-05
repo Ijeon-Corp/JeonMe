@@ -383,6 +383,19 @@ export default function PagePreview({
                   />
                 );
               }
+              if (link.blockType === "text") {
+                // Benchmark Lynk.id: blok Teks di halaman utama -- paragraf
+                // polos, TANPA judul tampil publik (judulnya cuma label
+                // internal dashboard, sama seperti blok text/heading di
+                // Halaman Tambahan) dan TANPA tautan/klik apa pun.
+                return (
+                  <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
+                    <p className={`whitespace-pre-wrap text-xs leading-relaxed ${theme.bio}`}>
+                      {(link.blockData?.text as string) ?? ""}
+                    </p>
+                  </div>
+                );
+              }
               if (link.blockType === "contact_form") {
                 return interactive ? (
                   <ContactFormBlock

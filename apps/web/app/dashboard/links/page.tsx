@@ -40,6 +40,7 @@ import {
   IconSearch,
   IconSpotify,
   IconTelegram,
+  IconTextLines,
   IconTiktok,
   IconTrash,
   IconWhatsapp,
@@ -57,6 +58,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   contact_form: "Formulir Kontak",
   faq: "FAQ",
   maps: "Lokasi",
+  text: "Teks",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -65,8 +67,8 @@ type IconComponent = (props: { className?: string }) => React.ReactElement;
 // polos jadi galeri pilihan berkategori. Cuma 2 kategori nyata yang bisa
 // diisi jujur dari kapabilitas Jeonme -- "Sosial Media" (tautan cepat ke
 // platform populer, memakai ulang ikon deteksi platform yang sudah ada di
-// link-icons.ts) dan "Konten" (4 tipe blok yang SUDAH direndang di halaman
-// publik utama: link/video/faq/contact_form). "Collection" & "Product" ala
+// link-icons.ts) dan "Konten" (tipe blok yang SUDAH direndang di halaman
+// publik utama: link/video/faq/contact_form/maps/text). "Collection" & "Product" ala
 // Linktree SENGAJA TIDAK dibuatkan tile -- grup tautan carousel belum ada
 // konsepnya, dan Produk sudah punya halaman/tabel sendiri (bukan varian
 // baris links), membuat tile untuk keduanya di sini cuma tiruan tanpa fungsi.
@@ -179,7 +181,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps";
+  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -194,6 +196,11 @@ const CONTENT_TILES: ContentTile[] = [
   // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
   // sebagai tautan langsung -- lihat "Link behavior" di form.
   { key: "maps", label: "Lokasi", description: "Tampilkan lokasi di Google Maps (tertanam atau tautan langsung)", Icon: IconMapPin },
+  // Permintaan langsung pengguna (benchmark Lynk.id -- blok Teks sudah ada
+  // di halaman utama mereka sejak awal, Jeonme sebelumnya cuma punya ini di
+  // Halaman Tambahan). Paragraf polos, TANPA tautan/aksi -- murni konten
+  // (pengumuman, deskripsi singkat, dsb) di antara blok-blok lain.
+  { key: "text", label: "Teks", description: "Tambahkan paragraf teks bebas di antara tautan", Icon: IconTextLines },
 ];
 
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
@@ -260,9 +267,11 @@ export default function DashboardLinksPage() {
 
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
-  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps">("video");
+  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text">("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
+  // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA tautan/aksi.
+  const [blockText, setBlockText] = useState("");
   const [blockFaqItems, setBlockFaqItems] = useState<{ question: string; answer: string }[]>([
     { question: "", answer: "" },
   ]);
@@ -278,6 +287,7 @@ export default function DashboardLinksPage() {
   const [editFaqItems, setEditFaqItems] = useState<{ question: string; answer: string }[]>([]);
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
+  const [editText, setEditText] = useState("");
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
@@ -368,9 +378,10 @@ export default function DashboardLinksPage() {
     setAddModalOpen(false);
   }
 
-  function openBlockFormPrefilled(type: "faq" | "contact_form", title: string) {
+  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text", title: string) {
     setBlockType(type);
     setBlockTitle(title);
+    if (type === "text") setBlockText("");
     setAddingBlock(true);
     setAddModalOpen(false);
   }
@@ -590,6 +601,12 @@ export default function DashboardLinksPage() {
       }
       blockUrl = blockMapsUrl.trim();
       blockData = { embed: blockMapsEmbed };
+    } else if (blockType === "text") {
+      if (!blockText.trim()) {
+        setError("Isi teksnya dulu.");
+        return;
+      }
+      blockData = { text: blockText.trim() };
     }
     setError(null);
     setSavingBlock(true);
@@ -602,6 +619,7 @@ export default function DashboardLinksPage() {
       setBlockFaqItems([{ question: "", answer: "" }]);
       setBlockMapsUrl("");
       setBlockMapsEmbed(true);
+      setBlockText("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat blok.");
     } finally {
@@ -619,6 +637,8 @@ export default function DashboardLinksPage() {
     } else if (link.block_type === "maps") {
       setEditMapsUrl(link.url ?? "");
       setEditMapsEmbed(Boolean(link.block_data?.embed));
+    } else if (link.block_type === "text") {
+      setEditText((link.block_data?.text as string) ?? "");
     }
   }
 
@@ -638,6 +658,12 @@ export default function DashboardLinksPage() {
       }
       blockUrl = editMapsUrl.trim();
       blockData = { embed: editMapsEmbed };
+    } else if (link.block_type === "text") {
+      if (!editText.trim()) {
+        setError("Isi teksnya dulu.");
+        return;
+      }
+      blockData = { text: editText.trim() };
     } else {
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
@@ -859,22 +885,32 @@ export default function DashboardLinksPage() {
           <form onSubmit={handleCreateBlock} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
             <select
               value={blockType}
-              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps")}
+              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text")}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
               <option value="video">Video (YouTube/TikTok)</option>
               <option value="contact_form">Formulir Kontak</option>
               <option value="faq">FAQ</option>
               <option value="maps">Lokasi (Google Maps)</option>
+              <option value="text">Teks</option>
             </select>
             <input
               type="text"
               required
-              placeholder="Judul blok"
+              placeholder={blockType === "text" ? "Judul blok (internal, tidak tampil ke publik)" : "Judul blok"}
               value={blockTitle}
               onChange={(e) => setBlockTitle(e.target.value)}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
+            {blockType === "text" && (
+              <textarea
+                placeholder="Isi teks yang tampil di halaman publik"
+                value={blockText}
+                onChange={(e) => setBlockText(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            )}
             {blockType === "video" && (
               <input
                 type="url"
@@ -1116,7 +1152,7 @@ export default function DashboardLinksPage() {
                     )}
                   </>
                 )}
-                {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps") && (
+                {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && (
                   <button
                     type="button"
                     onClick={() => openContentEdit(link)}
@@ -1252,7 +1288,7 @@ export default function DashboardLinksPage() {
                   )
                 ))}
 
-              {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps") && contentEditId === link.id && (
+              {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                   {link.block_type === "video" ? (
                     <input
@@ -1260,6 +1296,14 @@ export default function DashboardLinksPage() {
                       placeholder="https://youtube.com/... atau https://tiktok.com/..."
                       value={editVideoUrl}
                       onChange={(e) => setEditVideoUrl(e.target.value)}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                  ) : link.block_type === "text" ? (
+                    <textarea
+                      placeholder="Isi teks yang tampil di halaman publik"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={3}
                       className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
                   ) : link.block_type === "maps" ? (
