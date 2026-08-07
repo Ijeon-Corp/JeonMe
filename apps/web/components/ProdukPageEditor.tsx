@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   DashboardProduct,
@@ -19,7 +19,6 @@ import {
   listProducts,
   reorderExtraPageLinks,
   updateExtraPage,
-  updateLink,
   uploadExtraPageAvatar,
   uploadExtraPageBackground,
 } from "@/lib/api-client";
@@ -40,7 +39,6 @@ import {
   IconMail,
   IconMapPin,
   IconPaintbrush,
-  IconPencil,
   IconPlayCircle,
   IconPlus,
   IconSparkle,
@@ -96,39 +94,49 @@ export default function ProdukPageEditor() {
 
   const [section, setSection] = useState<DesignSection>("blok");
 
-  async function reload() {
+  // loadData -- SENGAJA murni mengambil & mengembalikan data, TANPA
+  // memanggil setState sama sekali di dalam dirinya sendiri (aturan lint
+  // react-hooks/set-state-in-effect: setState harus terjadi di callback
+  // yang dirantai LANGSUNG di badan effect/pemanggilnya, bukan tersembunyi
+  // di dalam fungsi terpisah yang dipanggil begitu saja).
+  async function loadData() {
     const profile = await getSettingsProfile();
-    setUsername(profile.username);
     const pages = await listMyExtraPages();
     const canonical = pages.find((p) => p.page_type === "produk" && p.slug === profile.username);
     if (!canonical) {
-      setPage(null);
-      setLinks([]);
-      setProducts([]);
-      return;
+      return { username: profile.username, page: null, links: [] as LinkItem[], products: [] as DashboardProduct[] };
     }
     const [detail, pageLinks, prods] = await Promise.all([
       getExtraPage(canonical.id),
       listExtraPageLinks(canonical.id),
       listProducts(),
     ]);
-    setPage(detail);
-    setLinks(pageLinks);
-    setProducts(prods);
+    return { username: profile.username, page: detail, links: pageLinks, products: prods };
   }
 
+  // useCallback (deps kosong) -- setState setter dari useState DIJAMIN stabil
+  // antar-render, jadi fungsi ini aman dijadikan dependency effect di bawah
+  // tanpa memicu effect jalan ulang tiap render (lihat exhaustive-deps).
+  const applyLoadResult = useCallback((result: Awaited<ReturnType<typeof loadData>>) => {
+    setUsername(result.username);
+    setPage(result.page);
+    setLinks(result.links);
+    setProducts(result.products);
+  }, []);
+
   useEffect(() => {
-    reload()
+    loadData()
+      .then(applyLoadResult)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [applyLoadResult]);
 
   async function handleCreateNow() {
     setError(null);
     setCreating(true);
     try {
       await createExtraPage({ name: `Toko ${username}`, slug: username, page_type: "produk" });
-      await reload();
+      applyLoadResult(await loadData());
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat Halaman Toko.");
     } finally {

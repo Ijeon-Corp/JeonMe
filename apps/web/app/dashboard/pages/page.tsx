@@ -105,19 +105,16 @@ export default function DashboardExtraPagesPage() {
   }, []);
 
   // Modul Halaman Produk: Toko PERTAMA (gratis) selalu dikunci ke username
-  // akun oleh backend (lihat CreatePage di page.go) -- disinkronkan di sini
-  // supaya field slug ikut terisi & jadi read-only, bukan cuma dipaksa
-  // diam-diam sesudah submit. Toko ke-2..5 (Premium) TETAP pakai slug bebas.
+  // akun oleh backend (lihat CreatePage di page.go) -- dihitung di sini
+  // (bukan lewat useEffect+setSlug, supaya tidak melanggar aturan lint
+  // react-hooks/set-state-in-effect untuk state yang sebenarnya murni
+  // turunan/derived) supaya field slug jadi read-only menampilkan username
+  // langsung. Toko ke-2..5 (Premium) TETAP pakai slug bebas dari input.
   const isFirstProdukPage = pageType === "produk" && pages.filter((p) => p.page_type === "produk").length === 0;
-  useEffect(() => {
-    if (isFirstProdukPage && username) {
-      setSlug(username);
-    }
-  }, [isFirstProdukPage, username]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    const cleanSlug = slug.trim().toLowerCase();
+    const cleanSlug = isFirstProdukPage ? username : slug.trim().toLowerCase();
     if (!name.trim() || !cleanSlug) {
       setError("Nama dan slug halaman wajib diisi.");
       return;
