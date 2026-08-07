@@ -64,6 +64,60 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 	}
 }
 
+// Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
+// produk PERTAMA kreator otomatis memicu pembuatan Halaman Toko gratis
+// (page_type='produk'), langsung dipublikasikan, slug = username akun --
+// BUKAN lagi harus dibuat manual lewat dashboard/pages. Produk KEDUA tidak
+// boleh membuat halaman toko duplikat.
+func TestProductCreate_AutoCreatesProdukPageOnFirstProduct(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	var username string
+	if err := product.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
+		t.Fatalf("gagal ambil username test user: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+
+	rec := doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Pertama", "price_idr": 30000}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create produk pertama: status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+
+	var slug string
+	var isPublished bool
+	if err := product.DB.QueryRow(t.Context(), `
+		SELECT slug, is_published FROM pages WHERE user_id = $1 AND page_type = 'produk'
+	`, userID).Scan(&slug, &isPublished); err != nil {
+		t.Fatalf("Halaman Toko tidak otomatis terbuat setelah produk pertama: %v", err)
+	}
+	if slug != username {
+		t.Errorf("slug Halaman Toko = %q, ekspektasi = username akun %q", slug, username)
+	}
+	if !isPublished {
+		t.Errorf("Halaman Toko auto seharusnya langsung published")
+	}
+
+	rec = doJSON(t, router, http.MethodPost, "/products", map[string]any{"name": "Produk Kedua", "price_idr": 30000}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create produk kedua: status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+
+	var produkPageCount int
+	if err := product.DB.QueryRow(t.Context(), `
+		SELECT COUNT(*) FROM pages WHERE user_id = $1 AND page_type = 'produk'
+	`, userID).Scan(&produkPageCount); err != nil {
+		t.Fatalf("gagal hitung Halaman Toko: %v", err)
+	}
+	if produkPageCount != 1 {
+		t.Errorf("jumlah Halaman Toko setelah produk kedua = %d, ekspektasi tetap 1 (tidak boleh duplikat)", produkPageCount)
+	}
+}
+
 // Modul Toko (Fase E4, tab Webhook Events): ListWebhookEvents HANYA
 // menampilkan log milik produk kreator yang login, terbaru dulu.
 func TestProductListWebhookEvents_ScopedToOwnProducts(t *testing.T) {

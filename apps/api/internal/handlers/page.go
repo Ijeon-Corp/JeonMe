@@ -974,6 +974,153 @@ func (h *PageHandler) UploadCustomBackground(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"custom_background_value": backgroundURL, "message": "gambar latar berhasil diunggah"})
 }
 
+// ownsExtraPage — sama seperti LinksHandler.ownsPage, dipakai upload avatar/
+// background halaman TAMBAHAN supaya kreator tidak bisa menimpa file
+// halaman milik akun lain lewat pageID tebakan. SENGAJA "is_primary = false"
+// -- unggahan halaman utama tetap lewat UploadAvatar/UploadCustomBackground.
+func (h *PageHandler) ownsExtraPage(ctx context.Context, pageID, userID string) bool {
+	var exists int
+	err := h.DB.QueryRow(ctx, `
+		SELECT 1 FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
+	`, pageID, userID).Scan(&exists)
+	if err != nil && err != pgx.ErrNoRows {
+		return false
+	}
+	return err == nil
+}
+
+// UploadAvatarForPage — Modul Halaman Toko: sama persis dengan UploadAvatar,
+// tapi untuk halaman TAMBAHAN (Toko/Landing/Bio kedua-dst) -- key storage
+// pakai pageID (bukan userID) supaya tiap halaman tambahan seorang kreator
+// (Premium bisa punya sampai 5) tersimpan sebagai object terpisah, tidak
+// saling menimpa.
+func (h *PageHandler) UploadAvatarForPage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsExtraPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"avatar\")"})
+		return
+	}
+	if fileHeader.Size > maxAvatarSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAvatarExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("avatars/page-%s", pageID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah foto profil"})
+		return
+	}
+
+	// "?v=<timestamp>" -- lihat catatan panjang di UploadAvatar, alasannya sama.
+	avatarURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	var slug string
+	if err := h.DB.QueryRow(ctx, `
+		UPDATE pages SET avatar_url = $1 WHERE id = $2 RETURNING COALESCE(slug, '')
+	`, avatarURL, pageID).Scan(&slug); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+	if h.RDB != nil && slug != "" {
+		h.RDB.Del(ctx, "page-slug:"+slug)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL, "message": "foto profil berhasil diunggah"})
+}
+
+// UploadCustomBackgroundForPage — Modul Halaman Toko: analog
+// UploadCustomBackground untuk halaman TAMBAHAN, gerbang Premium yang sama.
+func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !isPremiumUser(ctx, h.DB, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang kustom khusus untuk kreator Premium"})
+		return
+	}
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+	if !h.ownsExtraPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("background")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"background\")"})
+		return
+	}
+	if fileHeader.Size > maxCustomBackgroundSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 8MB"})
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAvatarExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("backgrounds/page-%s", pageID)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah gambar latar"})
+		return
+	}
+
+	backgroundURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	var slug string
+	if err := h.DB.QueryRow(ctx, `
+		UPDATE pages SET custom_background_type = 'image', custom_background_value = $1
+		WHERE id = $2 RETURNING COALESCE(slug, '')
+	`, backgroundURL, pageID).Scan(&slug); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+	if h.RDB != nil && slug != "" {
+		h.RDB.Del(ctx, "page-slug:"+slug)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"custom_background_value": backgroundURL, "message": "gambar latar berhasil diunggah"})
+}
+
 // ---------- No.98 (Sprint 14): halaman bio tambahan per akun ----------
 //
 // Ditemukan lewat fitur "Your Pages" Linktree -- satu akun bisa kelola
@@ -1057,6 +1204,63 @@ const premiumExtraPageLimit = 5
 const freeProdukPageLimit = 1
 const premiumProdukPageLimit = 5
 
+// ensureProdukPage — Modul Halaman Produk (permintaan langsung pengguna, 7
+// Agustus 2026): setiap kreator gratis berhak atas 1 Halaman Toko gratis,
+// tapi sekarang dibuat OTOMATIS begitu produk pertamanya ada -- bukan lagi
+// langkah manual "+Tambah Halaman" yang gampang terlewat. Dipanggil
+// best-effort (soft-fail, pola yang sama dengan SMTP/S3/WhatsApp di paket
+// ini) dari ProductHandler.Create supaya kegagalan di sini TIDAK PERNAH
+// menggagalkan pembuatan produk itu sendiri -- kreator masih bisa buat
+// manual lewat dashboard/pages kalau ini gagal diam-diam.
+//
+// Slug SELALU = username akun (bukan slug bebas) supaya URL-nya konsisten
+// dengan Halaman Bio (jeonme.com/{username}), bukan slug acak yang harus
+// diketik manual -- lihat aturan sama di CreatePage untuk Toko ke-2..5
+// (Premium, mis. multi-brand) yang tetap pakai slug bebas seperti sebelumnya.
+func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, userID string) {
+	var exists bool
+	if err := db.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM pages WHERE user_id = $1 AND page_type = 'produk')
+	`, userID).Scan(&exists); err != nil || exists {
+		return
+	}
+
+	var username, displayName, bio, avatarURL, theme string
+	if err := db.QueryRow(ctx, `
+		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme
+		FROM users u JOIN pages p ON p.user_id = u.id AND p.is_primary = true
+		WHERE u.id = $1
+	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme); err != nil {
+		return
+	}
+
+	name := "Toko " + displayName
+	if len(name) > 100 {
+		name = name[:100]
+	}
+
+	// Toko baru langsung dipublikasikan (is_published=true) -- beda dari
+	// halaman tambahan lain yang mulai draft -- karena baru muncul saat
+	// produk sungguhan sudah ada, tidak ada alasan menahannya di draft.
+	// Bio/avatar/tema DISALIN dari halaman Bio utama (bukan dibiarkan
+	// kosong/default) supaya tampilannya konsisten sejak pertama kali
+	// live, bukan etalase kosong tanpa identitas -- kreator tetap bebas
+	// mengubahnya sendiri nanti lewat "Kelola" di dashboard/pages.
+	if _, err := db.Exec(ctx, `
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme)
+		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6)
+	`, userID, name, username, bio, avatarURL, theme); err != nil {
+		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
+		// halaman lain, bukan milik kreator ini, kebetulan pakai slug
+		// identik dengan username-nya).
+		return
+	}
+
+	if rdb != nil {
+		rdb.Del(ctx, "page-slug:"+username)
+	}
+}
+
 // CreatePage — membuat halaman bio TAMBAHAN baru (is_primary=false), belum
 // dipublikasikan sampai kreator mengisi & mempublikasikannya lewat UpdatePage.
 func (h *PageHandler) CreatePage(c *gin.Context) {
@@ -1081,6 +1285,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 	defer cancel()
 
 	premium := isPremiumUser(ctx, h.DB, userID)
+	isAutoProdukSlug := false
 
 	if pageType == "produk" {
 		// Modul Halaman Produk: pool TERPISAH dari bio/landing di bawah --
@@ -1104,6 +1309,13 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			}
 			return
 		}
+		// Toko PERTAMA (gratis, produkPageCount==0) selalu dikunci ke
+		// username akun -- permintaan langsung pengguna 7 Agustus 2026,
+		// sama seperti ensureProdukPage di atas. Toko ke-2..5 (Premium,
+		// mis. multi-brand) TETAP pakai slug bebas dari req.Slug.
+		if produkPageCount == 0 {
+			isAutoProdukSlug = true
+		}
 	} else {
 		if !premium {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Halaman Tambahan khusus untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
@@ -1122,10 +1334,38 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		}
 	}
 
+	name := strings.TrimSpace(req.Name)
 	var pageID string
-	err := h.DB.QueryRow(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug, page_type) VALUES ($1, false, $2, $3, $4) RETURNING id
-	`, userID, strings.TrimSpace(req.Name), slug, pageType).Scan(&pageID)
+	var err error
+
+	if isAutoProdukSlug {
+		// Toko pertama (gratis): slug=username, langsung published, DAN
+		// bio/avatar/tema disalin dari halaman Bio utama (bukan dibiarkan
+		// kosong/default) -- sama persis dengan ensureProdukPage, supaya
+		// dibuat manual lewat sini atau otomatis lewat produk pertama
+		// hasilnya konsisten.
+		var username, bio, avatarURL, theme string
+		if scanErr := h.DB.QueryRow(ctx, `
+			SELECT u.username, pg.bio, pg.avatar_url, pg.theme
+			FROM users u JOIN pages pg ON pg.user_id = u.id AND pg.is_primary = true
+			WHERE u.id = $1
+		`, userID).Scan(&username, &bio, &avatarURL, &theme); scanErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
+			return
+		}
+		slug = username
+		if name == "" {
+			name = "Toko " + username
+		}
+		err = h.DB.QueryRow(ctx, `
+			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme)
+			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6) RETURNING id
+		`, userID, name, slug, bio, avatarURL, theme).Scan(&pageID)
+	} else {
+		err = h.DB.QueryRow(ctx, `
+			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
+		`, userID, name, slug, pageType).Scan(&pageID)
+	}
 	if err != nil {
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})
@@ -1138,17 +1378,103 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": pageID, "message": "halaman dibuat, isi & publikasikan lewat pengaturan halaman"})
 }
 
+type extraPageDetailResponse struct {
+	ID                    string `json:"id"`
+	Name                  string `json:"name"`
+	Slug                  string `json:"slug"`
+	PageType              string `json:"page_type"`
+	DisplayName           string `json:"display_name"`
+	Bio                   string `json:"bio"`
+	AvatarURL             string `json:"avatar_url"`
+	Theme                 string `json:"theme"`
+	IsPublished           bool   `json:"is_published"`
+	SeoTitle              string `json:"seo_title"`
+	SeoDescription        string `json:"seo_description"`
+	Noindex               bool   `json:"noindex"`
+	CustomBackgroundType  string `json:"custom_background_type"`
+	CustomBackgroundValue string `json:"custom_background_value"`
+	CustomFont            string `json:"custom_font"`
+	CustomButtonColor     string `json:"custom_button_color"`
+	CustomButtonStyle     string `json:"custom_button_style"`
+	CustomButtonRounded   string `json:"custom_button_rounded"`
+	CustomButtonShadow    string `json:"custom_button_shadow"`
+	CustomButtonTextColor string `json:"custom_button_text_color"`
+	CustomPageTextColor   string `json:"custom_page_text_color"`
+	CustomTitleFont       string `json:"custom_title_font"`
+	CustomTitleColor      string `json:"custom_title_color"`
+	CustomStyleOverride   bool   `json:"custom_style_override"`
+	IsPremium             bool   `json:"is_premium"`
+}
+
+// GetPage — Modul Halaman Toko (permintaan langsung pengguna, 7 Agustus
+// 2026): "semua fitur yang ada di link bio" (builder blok/tautan + 4 panel
+// desain Tema/Header/Tombol/Font) sekarang juga tersedia untuk halaman
+// TAMBAHAN, bukan cuma halaman utama -- endpoint ini mengisi celah yang
+// sebelumnya cuma dipenuhi ListMyPages (field terbatas: id/name/slug/bio/
+// theme/is_published/page_type saja, tidak cukup untuk panel desain penuh).
+// Bentuk respons SENGAJA dibuat mirip GetMyPage supaya frontend bisa
+// memakai ulang pola yang sama (lihat useDesignData.ts) untuk halaman
+// utama MAUPUN halaman tambahan, tinggal beda sumber data.
+func (h *PageHandler) GetPage(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var resp extraPageDetailResponse
+	err := h.DB.QueryRow(ctx, `
+		SELECT id, name, COALESCE(slug, ''), page_type, display_name, bio, avatar_url, theme, is_published,
+			seo_title, seo_description, noindex,
+			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
+			custom_button_rounded, custom_button_shadow, custom_button_text_color,
+			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override
+		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
+	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
+		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
+		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
+		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
+		return
+	}
+	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
+
+	c.JSON(http.StatusOK, resp)
+}
+
 type updateExtraPageRequest struct {
 	Name                  *string `json:"name" binding:"omitempty,max=100"`
 	Slug                  *string `json:"slug" binding:"omitempty,max=50"`
 	Theme                 *string `json:"theme"`
+	DisplayName           *string `json:"display_name" binding:"omitempty,max=100"`
 	Bio                   *string `json:"bio" binding:"omitempty,max=160"`
 	IsPublished           *bool   `json:"is_published"`
+	SeoTitle              *string `json:"seo_title" binding:"omitempty,max=70"`
+	SeoDescription        *string `json:"seo_description" binding:"omitempty,max=160"`
+	Noindex               *bool   `json:"noindex"`
 	CustomBackgroundType  *string `json:"custom_background_type" binding:"omitempty,oneof=solid image gradient"`
 	CustomBackgroundValue *string `json:"custom_background_value" binding:"omitempty,max=500"`
 	CustomFont            *string `json:"custom_font"`
 	CustomButtonColor     *string `json:"custom_button_color" binding:"omitempty,len=7"`
-	CustomButtonStyle     *string `json:"custom_button_style" binding:"omitempty,oneof=fill outline shadow"`
+	// CustomButtonStyle -- "fill outline shadow" (nilai lama) diperbaiki jadi
+	// "fill outline glass" di sini, menyamakan dengan updatePageRequest
+	// (halaman utama) -- "shadow" sudah dilebur ke axis CustomButtonShadow
+	// terpisah sejak migrasi 000034, struct ini sebelumnya tidak ikut
+	// diperbarui karena belum pernah dipakai panel desain penuh.
+	CustomButtonStyle     *string `json:"custom_button_style" binding:"omitempty,oneof=fill outline glass"`
+	CustomButtonRounded   *string `json:"custom_button_rounded" binding:"omitempty,oneof=none sm md full"`
+	CustomButtonShadow    *string `json:"custom_button_shadow" binding:"omitempty,oneof=none soft strong hard"`
+	CustomButtonTextColor *string `json:"custom_button_text_color" binding:"omitempty,len=7"`
+	CustomPageTextColor   *string `json:"custom_page_text_color" binding:"omitempty,max=7"`
+	CustomTitleFont       *string `json:"custom_title_font" binding:"omitempty,max=20"`
+	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
+	CustomStyleOverride   *bool   `json:"custom_style_override"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -1169,6 +1495,21 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	}
 	if req.CustomFont != nil && !availableCustomFonts[*req.CustomFont] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "pilihan font tidak dikenal"})
+		return
+	}
+	// Validasi berikut menyalin PERSIS UpdateMyPage supaya panel desain
+	// halaman tambahan (Modul Halaman Toko) punya jaminan yang sama dengan
+	// halaman utama -- lihat catatan lengkap di updatePageRequest.
+	if req.CustomTitleFont != nil && *req.CustomTitleFont != "" && !availableCustomFonts[*req.CustomTitleFont] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pilihan font judul tidak dikenal"})
+		return
+	}
+	if req.CustomPageTextColor != nil && *req.CustomPageTextColor != "" && len(*req.CustomPageTextColor) != 7 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "warna teks halaman harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
+		return
+	}
+	if req.CustomTitleColor != nil && *req.CustomTitleColor != "" && len(*req.CustomTitleColor) != 7 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "warna judul harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
 		return
 	}
 	var slug *string
@@ -1199,16 +1540,29 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			name = COALESCE($1, name),
 			slug = COALESCE($2, slug),
 			theme = COALESCE($3, theme),
-			bio = COALESCE($4, bio),
-			is_published = COALESCE($5, is_published),
-			custom_background_type = COALESCE($6, custom_background_type),
-			custom_background_value = COALESCE($7, custom_background_value),
-			custom_font = COALESCE($8, custom_font),
-			custom_button_color = COALESCE($9, custom_button_color),
-			custom_button_style = COALESCE($10, custom_button_style)
-		WHERE id = $11 AND user_id = $12 AND is_primary = false
-	`, req.Name, slug, req.Theme, req.Bio, req.IsPublished,
+			display_name = COALESCE($4, display_name),
+			bio = COALESCE($5, bio),
+			is_published = COALESCE($6, is_published),
+			seo_title = COALESCE($7, seo_title),
+			seo_description = COALESCE($8, seo_description),
+			noindex = COALESCE($9, noindex),
+			custom_background_type = COALESCE($10, custom_background_type),
+			custom_background_value = COALESCE($11, custom_background_value),
+			custom_font = COALESCE($12, custom_font),
+			custom_button_color = COALESCE($13, custom_button_color),
+			custom_button_style = COALESCE($14, custom_button_style),
+			custom_button_rounded = COALESCE($15, custom_button_rounded),
+			custom_button_shadow = COALESCE($16, custom_button_shadow),
+			custom_button_text_color = COALESCE($17, custom_button_text_color),
+			custom_page_text_color = COALESCE($18, custom_page_text_color),
+			custom_title_font = COALESCE($19, custom_title_font),
+			custom_title_color = COALESCE($20, custom_title_color),
+			custom_style_override = COALESCE($21, custom_style_override)
+		WHERE id = $22 AND user_id = $23 AND is_primary = false
+	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
+		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {

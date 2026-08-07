@@ -191,6 +191,9 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	}
 
 	h.invalidatePageCache(ctx, userID)
+	// Modul Halaman Produk: pemicu otomatis "Toko" gratis begitu produk
+	// pertama ada -- lihat catatan lengkap di ensureProdukPage (page.go).
+	ensureProdukPage(ctx, h.DB, h.RDB, userID)
 
 	message := "produk dibuat, unggah file sebelum mengaktifkan produk"
 	if productKind == "payment_link" {

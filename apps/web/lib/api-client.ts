@@ -679,6 +679,66 @@ export interface ExtraPage {
   page_type: "bio" | "landing" | "produk";
 }
 
+// ExtraPageDetail -- Modul Halaman Toko (permintaan langsung pengguna, 7
+// Agustus 2026): "semua fitur yang ada di link bio" (builder blok/tautan +
+// 4 panel desain Tema/Header/Tombol/Font) sekarang juga tersedia untuk
+// halaman TAMBAHAN, lewat GetPage (bukan cuma ListMyPages yang field-nya
+// sengaja ringkas untuk daftar). Bentuk field SAMA PERSIS dengan MyPage
+// (plus id/name/slug/page_type) supaya komponen desain bisa dipakai ulang
+// untuk halaman utama maupun tambahan.
+export interface ExtraPageDetail extends Omit<MyPage, "username"> {
+  id: string;
+  name: string;
+  slug: string;
+  page_type: "bio" | "landing" | "produk";
+}
+
+export function getExtraPage(id: string) {
+  return apiFetch<ExtraPageDetail>(`/dashboard/pages/${id}`, { method: "GET" }, { auth: true });
+}
+
+// uploadExtraPageAvatar/uploadExtraPageBackground -- analog uploadAvatar/
+// uploadCustomBackground di atas, untuk halaman TAMBAHAN (pola multipart
+// yang sama, cuma target endpoint beda).
+export async function uploadExtraPageAvatar(id: string, file: File): Promise<{ avatar_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("avatar", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/pages/${id}/avatar`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export async function uploadExtraPageBackground(
+  id: string,
+  file: File
+): Promise<{ custom_background_value: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("background", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/pages/${id}/background`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
 export function listMyExtraPages() {
   return apiFetch<ExtraPage[]>("/dashboard/pages", { method: "GET" }, { auth: true });
 }
@@ -693,18 +753,33 @@ export function createExtraPage(input: { name: string; slug: string; page_type?:
 
 export function updateExtraPage(
   id: string,
-  input: Partial<{
-    name: string;
-    slug: string;
-    theme: string;
-    bio: string;
-    is_published: boolean;
-    custom_background_type: "solid" | "gradient" | "image";
-    custom_background_value: string;
-    custom_font: string;
-    custom_button_color: string;
-    custom_button_style: "fill" | "outline" | "shadow";
-  }>
+  input: Partial<
+    {
+      name: string;
+      slug: string;
+    } & Pick<
+      MyPage,
+      | "theme"
+      | "display_name"
+      | "bio"
+      | "is_published"
+      | "seo_title"
+      | "seo_description"
+      | "noindex"
+      | "custom_background_type"
+      | "custom_background_value"
+      | "custom_font"
+      | "custom_button_color"
+      | "custom_button_style"
+      | "custom_button_rounded"
+      | "custom_button_shadow"
+      | "custom_button_text_color"
+      | "custom_page_text_color"
+      | "custom_title_font"
+      | "custom_title_color"
+      | "custom_style_override"
+    >
+  >
 ) {
   return apiFetch<{ message: string }>(
     `/dashboard/pages/${id}`,

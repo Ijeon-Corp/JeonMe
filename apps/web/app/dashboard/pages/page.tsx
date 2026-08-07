@@ -12,6 +12,7 @@ import {
   createExtraPageLink,
   deleteExtraPage,
   deleteLink,
+  getSettingsProfile,
   getSubscriptionStatus,
   listExtraPageLinks,
   listMyExtraPages,
@@ -68,6 +69,7 @@ export default function DashboardExtraPagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [username, setUsername] = useState("");
 
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -93,10 +95,25 @@ export default function DashboardExtraPagesPage() {
   }
 
   useEffect(() => {
-    Promise.all([reload(), getSubscriptionStatus().then((s) => setIsPremium(s.is_premium))])
+    Promise.all([
+      reload(),
+      getSubscriptionStatus().then((s) => setIsPremium(s.is_premium)),
+      getSettingsProfile().then((p) => setUsername(p.username)),
+    ])
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat halaman."))
       .finally(() => setLoading(false));
   }, []);
+
+  // Modul Halaman Produk: Toko PERTAMA (gratis) selalu dikunci ke username
+  // akun oleh backend (lihat CreatePage di page.go) -- disinkronkan di sini
+  // supaya field slug ikut terisi & jadi read-only, bukan cuma dipaksa
+  // diam-diam sesudah submit. Toko ke-2..5 (Premium) TETAP pakai slug bebas.
+  const isFirstProdukPage = pageType === "produk" && pages.filter((p) => p.page_type === "produk").length === 0;
+  useEffect(() => {
+    if (isFirstProdukPage && username) {
+      setSlug(username);
+    }
+  }, [isFirstProdukPage, username]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -265,6 +282,9 @@ export default function DashboardExtraPagesPage() {
         <b>Bio</b> (bio/tema/tautan sendiri, produk & monetisasi tetap sama seperti halaman utamamu), halaman{" "}
         <b>Landing</b> (blok penuh-lebar untuk satu kampanye/tujuan tertentu -- heading, teks, gambar, tombol CTA),
         atau halaman <b>Produk</b> (showcase katalog Toko-mu saja -- kreator gratis dapat {FREE_PRODUK_PAGE_LIMIT}).
+        Halaman Toko pertamamu otomatis dibuat & dipublikasikan begitu produk pertama ditambahkan di menu Produk, dengan
+        URL mengikuti username akunmu -- form di bawah ini untuk Toko tambahan (Premium) atau kalau kamu mau membuatnya
+        lebih awal secara manual.
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -363,16 +383,30 @@ export default function DashboardExtraPagesPage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-ink">Slug URL (jeonme.com/p/...)</label>
-              <input
-                type="text"
-                required
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                placeholder="toko-skincare"
-                pattern="[a-z0-9][a-z0-9-]{1,48}[a-z0-9]"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <p className="mt-1 text-[11px] text-muted">Huruf kecil, angka, dan tanda hubung saja.</p>
+              {isFirstProdukPage ? (
+                <>
+                  <div className="w-full rounded-lg border border-border bg-ink/5 px-3 py-2 text-sm text-muted">
+                    jeonme.com/p/{username || "..."}
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted">
+                    Toko pertama selalu memakai username akunmu, bukan slug bebas -- ganti nanti lewat Pengaturan &gt;
+                    Profil kalau mau alamatnya ikut berubah.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    required
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                    placeholder="toko-skincare"
+                    pattern="[a-z0-9][a-z0-9-]{1,48}[a-z0-9]"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <p className="mt-1 text-[11px] text-muted">Huruf kecil, angka, dan tanda hubung saja.</p>
+                </>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -436,52 +470,82 @@ export default function DashboardExtraPagesPage() {
 
             {managingId === page.id && (
               <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/20 p-3">
-                {page.page_type !== "landing" && (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-ink">Bio</label>
-                      <textarea
-                        value={page.bio}
-                        onChange={(e) => handleFieldChange(page, "bio", e.target.value)}
-                        rows={2}
-                        maxLength={160}
-                        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-ink">Tema</label>
-                      <select
-                        value={page.theme}
-                        onChange={(e) => handleFieldChange(page, "theme", e.target.value)}
-                        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      >
-                        {THEME_PRESETS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {page.page_type === "produk" ? (
+                {/* Modul Halaman Toko (7 Agustus 2026): Toko KANONIK (slug ===
+                    username, dibuat otomatis begitu produk pertama ada -- lihat
+                    ensureProdukPage) sekarang dikelola PENUH (blok/tautan + 4
+                    panel desain) lewat tab "Halaman Toko" di menu Produk, bukan
+                    lagi bio/tema seadanya di sini. Entri ini tetap ada di
+                    daftar (supaya kreator tahu halamannya eksis & bisa
+                    hapus/lihat status publish), tapi cuma status singkat +
+                    tautan ke tab baru itu. Toko ke-2..5 (Premium, multi-brand,
+                    slug BUKAN username) TETAP pakai editor ringkas di bawah --
+                    itu satu-satunya cara mengelolanya. */}
+                {page.page_type === "produk" && page.slug === username ? (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold text-ink">Produk</p>
+                    <p className="mb-1.5 text-xs font-semibold text-ink">Toko Utamamu</p>
                     <p className="rounded-lg border border-border bg-white p-3 text-xs text-muted">
-                      Produk yang ditampilkan mengikuti katalog Toko-mu secara otomatis -- sama seperti halaman
-                      utama, tidak perlu diatur ulang di sini. Kelola daftar produknya di menu{" "}
+                      Bio, tema, dan blok/tautan halaman Toko ini sekarang dikelola dari satu tempat lengkap --
+                      buka tab{" "}
                       <button
                         type="button"
                         onClick={() => router.push("/dashboard/products")}
                         className="font-semibold text-primary hover:underline"
                       >
-                        Produk
-                      </button>
-                      .
+                        Halaman Toko
+                      </button>{" "}
+                      di menu Produk.
                     </p>
                   </div>
                 ) : (
+                  <>
+                    {page.page_type !== "landing" && (
+                      <>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-ink">Bio</label>
+                          <textarea
+                            value={page.bio}
+                            onChange={(e) => handleFieldChange(page, "bio", e.target.value)}
+                            rows={2}
+                            maxLength={160}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-ink">Tema</label>
+                          <select
+                            value={page.theme}
+                            onChange={(e) => handleFieldChange(page, "theme", e.target.value)}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                          >
+                            {THEME_PRESETS.map((t) => (
+                              <option key={t} value={t}>
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {page.page_type === "produk" && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold text-ink">Produk</p>
+                        <p className="rounded-lg border border-border bg-white p-3 text-xs text-muted">
+                          Produk yang ditampilkan mengikuti katalog Toko-mu secara otomatis -- sama seperti halaman
+                          utama, tidak perlu diatur ulang di sini. Kelola daftar produknya di menu{" "}
+                          <button
+                            type="button"
+                            onClick={() => router.push("/dashboard/products")}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            Produk
+                          </button>
+                          .
+                        </p>
+                      </div>
+                    )}
+
+                    {page.page_type !== "produk" && (
                 <div>
                   <p className="mb-1.5 text-xs font-semibold text-ink">
                     {page.page_type === "landing" ? "Blok Halaman" : "Tautan"}
@@ -606,6 +670,8 @@ export default function DashboardExtraPagesPage() {
                     )}
                   </div>
                 </div>
+                    )}
+                  </>
                 )}
 
                 <button

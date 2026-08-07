@@ -138,6 +138,53 @@ func TestSettingsProfile_UsernameChange_RecordsHistoryAndRedirects(t *testing.T)
 	}
 }
 
+// Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
+// Toko auto (slug = username lama) ikut disinkronkan begitu kreator ganti
+// username, supaya jeonme.com/p/{slug} tetap konsisten dengan identitas
+// akun terbaru -- BUKAN halaman produk custom lain (Premium) yang slug-nya
+// sengaja tidak mengikuti username.
+func TestSettingsProfile_UsernameChange_SyncsAutoProdukPageSlug(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	settings, auth, page := newTestSettingsProfileHandler(t)
+	userID := registerTestUser(t, auth)
+
+	var oldUsername string
+	if err := settings.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&oldUsername); err != nil {
+		t.Fatalf("gagal ambil username lama: %v", err)
+	}
+
+	// Simulasikan Toko auto yang sudah ada (biasanya lewat ensureProdukPage
+	// saat produk pertama dibuat) -- slug = username lama.
+	if _, err := settings.DB.Exec(t.Context(), `
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published)
+		VALUES ($1, false, 'Toko', $2, 'produk', true)
+	`, userID, oldUsername); err != nil {
+		t.Fatalf("gagal setup Halaman Toko test: %v", err)
+	}
+
+	newUsername := "new" + uuid.NewString()[:8]
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.PATCH("/settings/profile", settings.Update)
+
+	rec := doJSON(t, router, http.MethodPatch, "/settings/profile", map[string]any{
+		"username": newUsername,
+	}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var produkSlug string
+	if err := page.DB.QueryRow(t.Context(), `
+		SELECT slug FROM pages WHERE user_id = $1 AND page_type = 'produk'
+	`, userID).Scan(&produkSlug); err != nil {
+		t.Fatalf("gagal ambil slug Halaman Toko setelah ganti username: %v", err)
+	}
+	if produkSlug != newUsername {
+		t.Errorf("slug Halaman Toko = %q, ekspektasi ikut berubah jadi username baru %q", produkSlug, newUsername)
+	}
+}
+
 // Acceptance criteria Modul Settings §2: username yang sudah dipakai user
 // lain tidak bisa direbut selama masih ada di username_history aktif --
 // tapi pemilik ASLI tetap boleh mengambilnya kembali kapan pun.

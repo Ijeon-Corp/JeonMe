@@ -1,0 +1,4 @@
+-- Backfill data, bukan perubahan skema -- sengaja no-op. Menghapus baris
+-- yang dibuat migrasi up berisiko ikut menghapus Toko yang sudah dikelola
+-- ulang kreator (ganti nama/slug/tema) sejak backfill jalan, jadi TIDAK
+-- di-rollback otomatis. Hapus manual lewat dashboard kalau memang perlu.

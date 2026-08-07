@@ -252,6 +252,174 @@ export function toPreviewData(
   };
 }
 
+// renderLinkOrBlock -- dipulas jadi fungsi berdiri sendiri (Modul Halaman
+// Toko, 7 Agustus 2026) supaya bisa dipakai ulang oleh ProdukPagePreview di
+// bawah, bukan cuma layout bio biasa -- sebelumnya JSX ini inline di dalam
+// satu `.map()` di komponen default, sekarang jadi satu sumber kebenaran
+// untuk cara SEMUA tipe halaman merender tautan/blok konten (link/video/
+// faq/contact_form/maps/text -- persis tipe yang bisa ditambahkan lewat
+// dashboard/links).
+function renderLinkOrBlock(
+  link: PagePreviewLink,
+  theme: PageTheme,
+  data: Pick<PagePreviewData, "username" | "pageSlug">,
+  interactive: boolean
+) {
+  // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan
+  // biasa -- tidak ada gerbang kunci/tracking klik untuk tipe ini (di
+  // luar cakupan yang diminta).
+  if (link.blockType === "video") {
+    return (
+      <VideoEmbedBlock
+        key={link.id}
+        title={link.title}
+        videoUrl={(link.blockData?.video_url as string) ?? ""}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+        titleClassName={theme.productTitle}
+      />
+    );
+  }
+  if (link.blockType === "faq") {
+    return (
+      <FaqBlock
+        key={link.id}
+        title={link.title}
+        items={(link.blockData?.items as FaqItem[]) ?? []}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+        titleClassName={theme.productTitle}
+        itemTitleClassName={theme.cardTitle}
+        itemBodyClassName={theme.bio}
+      />
+    );
+  }
+  if (link.blockType === "maps") {
+    return (
+      <MapsEmbedBlock
+        key={link.id}
+        title={link.title}
+        url={link.url}
+        embed={Boolean(link.blockData?.embed)}
+        embedLat={link.blockData?.embed_lat as number | undefined}
+        embedLng={link.blockData?.embed_lng as number | undefined}
+        linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+      />
+    );
+  }
+  if (link.blockType === "text") {
+    // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA judul tampil
+    // publik (judulnya cuma label internal dashboard) dan TANPA tautan/
+    // klik apa pun.
+    return (
+      <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
+        <p className={`whitespace-pre-wrap text-xs leading-relaxed ${theme.bio}`}>
+          {(link.blockData?.text as string) ?? ""}
+        </p>
+      </div>
+    );
+  }
+  if (link.blockType === "contact_form") {
+    return interactive ? (
+      <ContactFormBlock
+        key={link.id}
+        linkId={link.id}
+        title={link.title}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+        titleClassName={theme.productTitle}
+        inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+        buttonClassName={theme.buyButton}
+      />
+    ) : (
+      <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
+        <p className={`text-xs font-semibold ${theme.productTitle}`}>{link.title}</p>
+        <button
+          type="button"
+          disabled
+          title="Pratinjau -- tombol ini tidak aktif"
+          className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+        >
+          Kirim Pesan
+        </button>
+      </div>
+    );
+  }
+
+  // Tautan biasa (block_type default "link") -- gaya ala Linktree: judul
+  // SELALU rata tengah di dalam tombol, ikon platform (kalau ada)
+  // mengambang di kiri absolut supaya tidak menggeser judul dari titik
+  // tengah tombol.
+  return link.lockType ? (
+    interactive ? (
+      <LockedLinkButton
+        key={link.id}
+        username={data.username}
+        pageSlug={data.pageSlug}
+        linkId={link.id}
+        title={link.title}
+        lockType={link.lockType}
+        lockMinAge={link.lockMinAge ?? null}
+        className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+      />
+    ) : (
+      <button
+        key={link.id}
+        type="button"
+        disabled
+        title="Pratinjau -- tombol ini tidak aktif"
+        className={`relative flex w-full cursor-not-allowed items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
+      >
+        <span className="w-full break-words text-center">🔒 {link.title}</span>
+      </button>
+    )
+  ) : interactive ? (
+    (() => {
+      const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+      return (
+        <TrackedLink
+          key={link.id}
+          username={data.username}
+          pageSlug={data.pageSlug}
+          linkId={link.id}
+          href={link.url}
+          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+        >
+          <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+            {link.customIconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : (
+              <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
+            )}
+          </span>
+          <span className="w-full break-words px-8 text-center">{link.title}</span>
+        </TrackedLink>
+      );
+    })()
+  ) : (
+    (() => {
+      const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+      return (
+        <a
+          key={link.id}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+        >
+          <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+            {link.customIconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : (
+              <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
+            )}
+          </span>
+          <span className="w-full break-words px-8 text-center">{link.title}</span>
+        </a>
+      );
+    })()
+  );
+}
+
 // Tampilan halaman publik kreator -- dipakai di DUA tempat: halaman publik
 // sungguhan (app/[username]/page.tsx, interactive=true, tautan bisa
 // diklik & dilacak, tombol Beli memicu checkout sungguhan) dan pratinjau
@@ -286,7 +454,7 @@ export default function PagePreview({
   // tautan/donasi/lead-capture/event/booking/loyalty, beda dari layout bio
   // biasa & dari layout landing (blok manual) di atas.
   if (data.pageType === "produk") {
-    return <ProdukPagePreview data={data} rootClassName={rootClassName} theme={theme} canBuy={canBuy} />;
+    return <ProdukPagePreview data={data} rootClassName={rootClassName} theme={theme} canBuy={canBuy} interactive={interactive} />;
   }
 
   return (
@@ -352,197 +520,7 @@ export default function PagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => {
-              // No.77: blok konten baru dirender sepenuhnya terpisah dari
-              // tautan biasa -- tidak ada gerbang kunci/tracking klik untuk
-              // tipe ini (di luar cakupan yang diminta).
-              if (link.blockType === "video") {
-                return (
-                  <VideoEmbedBlock
-                    key={link.id}
-                    title={link.title}
-                    videoUrl={(link.blockData?.video_url as string) ?? ""}
-                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-                    titleClassName={theme.productTitle}
-                  />
-                );
-              }
-              if (link.blockType === "faq") {
-                return (
-                  <FaqBlock
-                    key={link.id}
-                    title={link.title}
-                    items={(link.blockData?.items as FaqItem[]) ?? []}
-                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-                    titleClassName={theme.productTitle}
-                    itemTitleClassName={theme.cardTitle}
-                    itemBodyClassName={theme.bio}
-                  />
-                );
-              }
-              if (link.blockType === "maps") {
-                return (
-                  <MapsEmbedBlock
-                    key={link.id}
-                    title={link.title}
-                    url={link.url}
-                    embed={Boolean(link.blockData?.embed)}
-                    embedLat={link.blockData?.embed_lat as number | undefined}
-                    embedLng={link.blockData?.embed_lng as number | undefined}
-                    linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                  />
-                );
-              }
-              if (link.blockType === "text") {
-                // Benchmark Lynk.id: blok Teks di halaman utama -- paragraf
-                // polos, TANPA judul tampil publik (judulnya cuma label
-                // internal dashboard, sama seperti blok text/heading di
-                // Halaman Tambahan) dan TANPA tautan/klik apa pun.
-                return (
-                  <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
-                    <p className={`whitespace-pre-wrap text-xs leading-relaxed ${theme.bio}`}>
-                      {(link.blockData?.text as string) ?? ""}
-                    </p>
-                  </div>
-                );
-              }
-              if (link.blockType === "contact_form") {
-                return interactive ? (
-                  <ContactFormBlock
-                    key={link.id}
-                    linkId={link.id}
-                    title={link.title}
-                    cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-                    titleClassName={theme.productTitle}
-                    inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
-                    buttonClassName={theme.buyButton}
-                  />
-                ) : (
-                  <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
-                    <p className={`text-xs font-semibold ${theme.productTitle}`}>{link.title}</p>
-                    <button
-                      type="button"
-                      disabled
-                      title="Pratinjau -- tombol ini tidak aktif"
-                      className={`mt-2 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                    >
-                      Kirim Pesan
-                    </button>
-                  </div>
-                );
-              }
-
-              // Gaya ala Linktree: judul SELALU rata tengah di dalam tombol
-              // (bukan rata kiri+panah kanan seperti daftar menu biasa),
-              // ikon platform (kalau ada) mengambang di kiri absolut supaya
-              // tidak menggeser judul dari titik tengah tombol.
-              //
-              // Permintaan langsung pengguna (27 Juli 2026): "perbesar blok
-              // tautan dan sesuaikan ukuran font nya" -- padding blok
-              // (px-3.5 py-2 -> px-4 py-3) & font (text-xs -> text-sm)
-              // diperbesar di SEMUA varian blok tautan (biasa/terkunci/Maps,
-              // baik di halaman utama maupun halaman tambahan), ikon platform
-              // & pin Maps ikut dibesarkan proporsional (h-5/h-6 -> h-6/h-7).
-              //
-              // Koreksi (27 Juli 2026, menyertai 2 tangkapan layar
-              // perbandingan -- punya sendiri vs Linktree asli untuk brand
-              // yang sama): hasil di atas ternyata blok terlalu TINGGI
-              // dibanding referensi Linktree asli, sementara ikonnya
-              // sendiri terasa "mengambang" kekecilan dengan banyak ruang
-              // kosong di sekitarnya di dalam blok -- beda dari Linktree
-              // yang ikonnya mengisi hampir SELURUH tinggi blok. Padding
-              // vertikal blok dikurangi lagi (py-3 -> py-2, blok jadi lebih
-              // pendek/padat) SEKALIGUS ikon dibesarkan lagi (wadah h-7 w-7
-              // -> h-9 w-9, ikon di dalamnya h-6 w-6 -> h-7 w-7) supaya
-              // rasio ikon-terhadap-tinggi-blok mendekati referensi --
-              // ikon sekarang mengisi hampir seluruh tinggi blok yang lebih
-              // pendek, bukan mengambang kecil di tengah blok yang tinggi.
-              //
-              // Koreksi KEDUA (27 Juli 2026): "jadi nya logo malah keluar
-              // dari blok tautan link, saya mau besarkan blok tautan link
-              // nya tapi ukuran teks tetap sama" -- py-2 di atas ternyata
-              // membuat TINGGI BLOK (py-2*2 + tinggi baris text-sm, ~36px)
-              // hampir SAMA PERSIS dengan wadah ikon h-9 w-9 (36px) yang
-              // posisinya absolute+center -- wadah ikon jadi meluber keluar
-              // atas/bawah blok karena blok itu sendiri (auto-height dari
-              // konten flow, TIDAK memperhitungkan elemen absolute di
-              // dalamnya) tidak cukup tinggi untuk membungkusnya. Padding
-              // vertikal blok dibesarkan lagi (py-2 -> py-3.5, blok jadi
-              // ~48px) TANPA mengubah text-sm (ukuran font TETAP, sesuai
-              // permintaan) -- sisa ruang (48-36=12px, 6px di atas & bawah)
-              // sekarang cukup untuk membungkus wadah ikon 36px sepenuhnya.
-              return link.lockType ? (
-                interactive ? (
-                  <LockedLinkButton
-                    key={link.id}
-                    username={data.username}
-                    pageSlug={data.pageSlug}
-                    linkId={link.id}
-                    title={link.title}
-                    lockType={link.lockType}
-                    lockMinAge={link.lockMinAge ?? null}
-                    className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                  />
-                ) : (
-                  <button
-                    key={link.id}
-                    type="button"
-                    disabled
-                    title="Pratinjau -- tombol ini tidak aktif"
-                    className={`relative flex w-full cursor-not-allowed items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold opacity-80 ${theme.card} ${theme.cardTitle}`}
-                  >
-                    <span className="w-full break-words text-center">🔒 {link.title}</span>
-                  </button>
-                )
-              ) : interactive ? (
-                (() => {
-                  const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
-                  return (
-                    <TrackedLink
-                      key={link.id}
-                      username={data.username}
-                      pageSlug={data.pageSlug}
-                      linkId={link.id}
-                      href={link.url}
-                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                    >
-                      <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-                        {link.customIconUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
-                        )}
-                      </span>
-                      <span className="w-full break-words px-8 text-center">{link.title}</span>
-                    </TrackedLink>
-                  );
-                })()
-              ) : (
-                (() => {
-                  const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
-                  return (
-                    <a
-                      key={link.id}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-                    >
-                      <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-                        {link.customIconUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
-                        )}
-                      </span>
-                      <span className="w-full break-words px-8 text-center">{link.title}</span>
-                    </a>
-                  );
-                })()
-              );
-            })}
+            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive))}
           </div>
         )}
 
@@ -990,18 +968,23 @@ function LandingPagePreview({
 // tipe ini, Premium sampai 5 (pool TERPISAH dari bio/landing, lihat
 // freeProdukPageLimit/premiumProdukPageLimit di page.go). Showcase katalog
 // Toko yang SAMA dengan halaman utama (produk per-akun, bukan per-halaman --
-// lihat catatan lingkup di CreatePage), header ringkas avatar+nama+bio TANPA
-// tautan/donasi/lead-capture/event/booking/loyalty.
+// lihat catatan lingkup di CreatePage), header avatar+nama+bio + (Modul
+// Halaman Toko, 7 Agustus 2026) blok/tautan sendiri (link/video/faq/
+// contact_form/maps/text -- lihat renderLinkOrBlock) TETAP TANPA donasi/
+// lead-capture/event/booking/loyalty, yang account-wide (satu per akun,
+// bukan per-halaman) jadi tidak bisa diduplikasi per halaman tambahan.
 function ProdukPagePreview({
   data,
   rootClassName,
   theme,
   canBuy,
+  interactive,
 }: {
   data: PagePreviewData;
   rootClassName: string;
   theme: PageTheme;
   canBuy: boolean;
+  interactive: boolean;
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
@@ -1051,6 +1034,12 @@ function ProdukPagePreview({
         {data.shopPaused && (
           <div className={`mt-6 w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
             {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
+          </div>
+        )}
+
+        {data.links.length > 0 && (
+          <div className="mt-8 flex w-full flex-col gap-2.5">
+            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive))}
           </div>
         )}
 

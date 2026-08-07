@@ -49,6 +49,7 @@ import StorageFilesPanel from "@/components/StorageFilesPanel";
 import WebhookEventsPanel from "@/components/WebhookEventsPanel";
 import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 import TransactionPanel from "@/components/TransactionPanel";
+import ProdukPageEditor from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
@@ -69,7 +70,15 @@ import { confirmDelete } from "@/lib/confirm";
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
 export default function DashboardProductsPage() {
   const [tab, setTab] = useState<
-    "overview" | "manage" | "reviews" | "listing" | "storage" | "webhook_events" | "shop_settings" | "transaction"
+    | "halaman_toko"
+    | "overview"
+    | "manage"
+    | "reviews"
+    | "listing"
+    | "storage"
+    | "webhook_events"
+    | "shop_settings"
+    | "transaction"
   >("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
@@ -473,6 +482,15 @@ export default function DashboardProductsPage() {
         <div className="flex gap-2 overflow-x-auto border-b border-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
+            onClick={() => setTab("halaman_toko")}
+            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "halaman_toko" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Halaman Toko
+          </button>
+          <button
+            type="button"
             onClick={() => setTab("overview")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "overview" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
@@ -545,7 +563,11 @@ export default function DashboardProductsPage() {
           </button>
         </div>
 
-        {tab === "reviews" ? (
+        {tab === "halaman_toko" ? (
+          <div className="mt-4">
+            <ProdukPageEditor />
+          </div>
+        ) : tab === "reviews" ? (
           <ReviewsPanel />
         ) : tab === "listing" ? (
           <ListingPanel products={products} setProducts={setProducts} onError={(message) => setError(message)} />

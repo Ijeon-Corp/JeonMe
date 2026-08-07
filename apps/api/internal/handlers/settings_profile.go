@@ -173,5 +173,23 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 		h.RDB.Del(ctx, "page:"+newUsername)
 	}
 
+	// Modul Halaman Produk: Toko pertama (auto) pakai slug = username --
+	// kalau username-nya baru saja diganti, ikutkan slug Toko supaya
+	// tetap konsisten (jeonme.com/p/{username baru}). Cek "slug = username
+	// LAMA" sebagai penanda "ini memang Toko auto", bukan Toko ke-2..5
+	// Premium yang sengaja dikustomisasi slugnya sendiri -- best-effort,
+	// gagal diam-diam kalau slug baru kebetulan sudah dipakai halaman lain.
+	if usernameChanged {
+		var newSlug string
+		if err := h.DB.QueryRow(ctx, `
+			UPDATE pages SET slug = $1
+			WHERE user_id = $2 AND page_type = 'produk' AND slug = $3
+			RETURNING slug
+		`, newUsername, userID, oldUsername).Scan(&newSlug); err == nil && h.RDB != nil {
+			h.RDB.Del(ctx, "page-slug:"+oldUsername)
+			h.RDB.Del(ctx, "page-slug:"+newUsername)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "profil diperbarui", "username": newUsername})
 }

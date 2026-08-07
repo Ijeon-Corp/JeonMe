@@ -169,8 +169,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// di atas) -- lihat catatan lingkup di PageHandler.
 				designGroup.GET("/pages", page.ListMyPages)
 				designGroup.POST("/pages", page.CreatePage)
+				designGroup.GET("/pages/:id", page.GetPage)
 				designGroup.PATCH("/pages/:id", page.UpdatePage)
 				designGroup.DELETE("/pages/:id", page.DeletePage)
+				// Modul Halaman Toko: panel desain penuh (Tema/Header/Tombol/
+				// Font) untuk halaman TAMBAHAN, analog /page/avatar & /page/background di atas.
+				designGroup.POST("/pages/:id/avatar", page.UploadAvatarForPage)
+				designGroup.POST("/pages/:id/background", page.UploadCustomBackgroundForPage)
 			}
 
 			linksGroup := dashboard.Group("")

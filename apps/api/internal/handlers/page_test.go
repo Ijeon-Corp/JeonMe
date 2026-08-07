@@ -206,6 +206,107 @@ func TestUploadCustomBackground_RejectsForFreeUser(t *testing.T) {
 	}
 }
 
+// Modul Halaman Toko (permintaan langsung pengguna, 7 Agustus 2026): gerbang
+// Premium untuk latar kustom halaman TAMBAHAN sama seperti halaman utama --
+// dicek SEBELUM storage/file disentuh, sama seperti
+// TestUploadCustomBackground_RejectsForFreeUser di atas.
+func TestUploadCustomBackgroundForPage_RejectsForFreeUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages/:id/background", page.UploadCustomBackgroundForPage)
+
+	rec := doJSON(t, router, http.MethodPost, "/pages/"+uuid.NewString()+"/background", nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, ekspektasi 403 (ditolak sebelum sempat cek kepemilikan/storage/file), body %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Halaman Toko: GetPage mengembalikan SEMUA field desain (bukan cuma
+// subset terbatas seperti ListMyPages) untuk halaman milik kreator yang
+// login, dan UpdatePage benar-benar menyimpan field baru (display_name,
+// custom_title_font, custom_button_rounded, dst) -- bukti panel Header/
+// Tombol/Font sekarang bisa dipakai penuh untuk halaman tambahan, tidak
+// cuma theme+bio seperti sebelumnya.
+func TestGetAndUpdatePage_FullDesignFieldsRoundTrip(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+	g.GET("/pages/:id", page.GetPage)
+	g.PATCH("/pages/:id", page.UpdatePage)
+
+	createRec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko", "slug": "toko-" + uuid.NewString()[:8], "page_type": "landing"}, map[string]string{"X-Test-UserID": userID})
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create halaman: status = %d, body %s", createRec.Code, createRec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	updateRec := doJSON(t, router, http.MethodPatch, "/pages/"+created.ID, map[string]any{
+		"display_name":          "Toko Skincare Kece",
+		"custom_button_rounded": "full",
+		"custom_button_shadow":  "soft",
+		"custom_title_font":     "playfair",
+		"custom_style_override": true,
+	}, map[string]string{"X-Test-UserID": userID})
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("update halaman: status = %d, body %s", updateRec.Code, updateRec.Body.String())
+	}
+
+	getRec := doJSON(t, router, http.MethodGet, "/pages/"+created.ID, nil, map[string]string{"X-Test-UserID": userID})
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("get halaman: status = %d, body %s", getRec.Code, getRec.Body.String())
+	}
+	var detail extraPageDetailResponse
+	if err := json.Unmarshal(getRec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("gagal decode respons get: %v", err)
+	}
+	if detail.DisplayName != "Toko Skincare Kece" || detail.CustomButtonRounded != "full" ||
+		detail.CustomButtonShadow != "soft" || detail.CustomTitleFont != "playfair" || !detail.CustomStyleOverride {
+		t.Errorf("field desain tidak tersimpan/terbaca lengkap, dapat: %+v", detail)
+	}
+}
+
+// GetPage HARUS 404 untuk halaman milik kreator lain -- tidak boleh bocor
+// lewat pageID tebakan.
+func TestGetPage_RejectsOtherUsersPage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	otherUserID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+	g.GET("/pages/:id", page.GetPage)
+
+	createRec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko", "slug": "toko-" + uuid.NewString()[:8], "page_type": "landing"}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/pages/"+created.ID, nil, map[string]string{"X-Test-UserID": otherUserID})
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, ekspektasi 404, body %s", rec.Code, rec.Body.String())
+	}
+}
+
 // Modul Langganan Premium: Halaman Tambahan sekarang eksklusif Premium
 // (sebelumnya bebas untuk semua orang) -- kreator gratis harus ditolak
 // 403 SEBELUM baris pages sempat dibuat sama sekali.
@@ -305,6 +406,56 @@ func TestCreatePage_ProdukType_AllowsPremiumUserUpToLimitThenRejects(t *testing.
 	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Halaman Produk Berlebih", "slug": uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("halaman produk ke-%d (melebihi batas premium): status = %d, ekspektasi 403, body %s", premiumProdukPageLimit+1, rec.Code, rec.Body.String())
+	}
+}
+
+// Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
+// Toko PERTAMA selalu dikunci ke username akun, walau klien kirim slug
+// custom -- beda dari Toko ke-2..5 (Premium) yang tetap pakai slug bebas.
+func TestCreatePage_ProdukType_FirstPageForcesUsernameSlug(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	var username string
+	if err := page.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
+		t.Fatalf("gagal ambil username test user: %v", err)
+	}
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+
+	rec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko Custom", "slug": "slug-bebas-" + uuid.NewString(), "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("halaman produk pertama: status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+
+	var firstSlug string
+	if err := page.DB.QueryRow(t.Context(), `
+		SELECT slug FROM pages WHERE user_id = $1 AND page_type = 'produk' ORDER BY id LIMIT 1
+	`, userID).Scan(&firstSlug); err != nil {
+		t.Fatalf("gagal ambil slug halaman produk pertama: %v", err)
+	}
+	if firstSlug != username {
+		t.Errorf("slug halaman produk pertama = %q, ekspektasi dipaksa jadi username %q (bukan slug custom yang dikirim)", firstSlug, username)
+	}
+
+	// Toko KEDUA (Premium) tetap pakai slug custom yang dikirim klien.
+	customSlug := "slug-bebas-" + uuid.NewString()
+	rec = doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko Custom Kedua", "slug": customSlug, "page_type": "produk"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("halaman produk kedua: status = %d, ekspektasi 201, body %s", rec.Code, rec.Body.String())
+	}
+	var secondSlug string
+	if err := page.DB.QueryRow(t.Context(), `
+		SELECT slug FROM pages WHERE user_id = $1 AND page_type = 'produk' AND slug != $2
+	`, userID, username).Scan(&secondSlug); err != nil {
+		t.Fatalf("gagal ambil slug halaman produk kedua: %v", err)
+	}
+	if secondSlug != customSlug {
+		t.Errorf("slug halaman produk kedua = %q, ekspektasi tetap slug custom %q", secondSlug, customSlug)
 	}
 }
 
