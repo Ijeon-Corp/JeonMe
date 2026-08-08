@@ -87,6 +87,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
           isPremium: page.is_premium,
           hideWatermark: page.hide_watermark,
           loyaltyActive: page.loyalty_active,
+          stickers: page.stickers,
           customTheme: {
             backgroundType: page.custom_background_type,
             backgroundValue: page.custom_background_value,
