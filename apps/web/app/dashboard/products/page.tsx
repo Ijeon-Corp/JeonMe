@@ -471,7 +471,12 @@ export default function DashboardProductsPage() {
   return (
     // "max-w-3xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
     // lihat catatan lengkap di DesignPageShell.tsx/dashboard/links/page.tsx.
-    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+    //
+    // Tab "Halaman Toko" SENGAJA tidak ikut grid+LivePreviewPanel di bawah
+    // (pratinjau halaman Bio utama) -- permintaan langsung pengguna: di tab
+    // itu cukup pratinjau Toko saja (sudah dirender ProdukPageEditor sendiri
+    // lewat pageType="produk"), pratinjau Bio malah membingungkan/dobel.
+    <div className={tab === "halaman_toko" ? "" : "lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6"}>
       <div>
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): 8 tab tanpa
             wrapper scroll memaksa SELURUH halaman melebar horizontal di
@@ -952,7 +957,7 @@ export default function DashboardProductsPage() {
         )}
       </div>
 
-      <LivePreviewPanel page={page} links={links} products={products} />
+      {tab !== "halaman_toko" && <LivePreviewPanel page={page} links={links} products={products} />}
 
       {manageProduct && (
         <div
