@@ -196,6 +196,19 @@ export function getAvailableSlots(productId: string) {
   return apiFetch<AvailableSlot[]>(`/products/${productId}/available-slots`, { method: "GET" });
 }
 
+// PageStickerData -- Modul Desain (koreksi langsung pengguna, 8 Agustus
+// 2026): stiker dekoratif INTERAKTIF, posisi & ukuran sendiri per stiker
+// (bukan satu pilihan tetap dekat avatar). x/y persen (0-100) relatif
+// terhadap kanvas halaman (TITIK TENGAH stiker), scale 0.4-2.5 -- harus
+// sinkron dengan PageSticker & validateStickers di page.go.
+export interface PageStickerData {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  scale: number;
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -239,9 +252,9 @@ export interface PublicPage {
   // di atas DITERAPKAN, independen dari `theme` -- lihat komentar
   // getPageTheme di page-themes.ts.
   custom_style_override: boolean;
-  // sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
-  // tidak ada.
-  sticker: string;
+  // stickers -- Modul Desain: stiker dekoratif interaktif (posisi+ukuran
+  // per stiker, lihat PageStickerData), array kosong = tidak ada.
+  stickers: PageStickerData[];
   is_verified: boolean;
   // is_premium -- Modul Langganan Premium: sembunyikan watermark
   // "Buat halaman gratis di Jeonme" untuk kreator Premium. Lihat
@@ -393,9 +406,7 @@ export interface MyPage {
   // custom_page_text_color/custom_title_* di atas SEKARANG independen dari
   // theme, hanya diterapkan kalau flag ini true.
   custom_style_override: boolean;
-  // sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
-  // tidak ada.
-  sticker: string;
+  stickers: PageStickerData[];
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -506,13 +517,23 @@ export function updateMyPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
-      | "sticker"
     >
   >
 ) {
   return apiFetch<{ message: string }>(
     "/dashboard/page",
     { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// updateMyPageStickers -- Modul Desain: endpoint TERPISAH dari updateMyPage,
+// ganti array stiker UTUH tiap simpan (drag/resize kirim seluruh daftar
+// terbaru sekaligus, bukan di-patch per field seperti tema/warna/dst).
+export function updateMyPageStickers(stickers: PageStickerData[]) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/page/stickers",
+    { method: "PUT", body: JSON.stringify({ stickers }) },
     { auth: true }
   );
 }
@@ -785,13 +806,22 @@ export function updateExtraPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
-      | "sticker"
     >
   >
 ) {
   return apiFetch<{ message: string }>(
     `/dashboard/pages/${id}`,
     { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// updateExtraPageStickers -- analog updateMyPageStickers untuk halaman
+// TAMBAHAN (Toko/Landing/Bio kedua).
+export function updateExtraPageStickers(id: string, stickers: PageStickerData[]) {
+  return apiFetch<{ message: string }>(
+    `/dashboard/pages/${id}/stickers`,
+    { method: "PUT", body: JSON.stringify({ stickers }) },
     { auth: true }
   );
 }

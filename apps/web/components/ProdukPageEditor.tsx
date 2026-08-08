@@ -1,22 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ApiError,
-  DashboardProduct,
   ExtraPageDetail,
   LinkItem,
   MyPage,
+  PageStickerData,
   THEME_PRESETS,
-  createExtraPage,
   createExtraPageBlock,
   createExtraPageLink,
   deleteLink,
-  getExtraPage,
-  getSettingsProfile,
-  listExtraPageLinks,
-  listMyExtraPages,
-  listProducts,
   reorderExtraPageLinks,
   updateExtraPage,
   uploadExtraPageAvatar,
@@ -28,7 +22,6 @@ import {
   CUSTOM_BUTTON_STYLE_OPTIONS,
   CUSTOM_FONT_OPTIONS,
   PAGE_THEMES,
-  STICKER_OPTIONS,
 } from "@/lib/page-themes";
 import {
   IconBook,
@@ -46,7 +39,7 @@ import {
   IconTextLines,
   IconTrash,
 } from "@/components/icons";
-import LivePreviewPanel from "@/components/LivePreviewPanel";
+import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text";
@@ -72,78 +65,54 @@ type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
 
 // ProdukPageEditor -- Modul Halaman Toko (permintaan langsung pengguna, 7
 // Agustus 2026): "semua fitur yang ada di link bio" (builder blok/tautan +
-// 4 panel desain Tema/Header/Tombol/Font) dipakai ulang di SINI untuk
-// halaman Toko auto (page_type="produk", slug=username -- lihat
+// 4 panel desain Tema/Header/Tombol/Font + Stiker) dipakai ulang di SINI
+// untuk halaman Toko auto (page_type="produk", slug=username -- lihat
 // ensureProdukPage di page.go), sebagai tab pertama di menu Toko
 // (dashboard/products). SENGAJA hanya mengelola Toko KANONIK (slug ===
 // username) -- Toko ke-2..5 (Premium, multi-brand) tetap dikelola lewat
-// dashboard/pages seperti sebelumnya, konsisten dengan aturan "Toko pertama
-// selalu terikat ke username" di CreatePage/ensureProdukPage.
+// dashboard/pages seperti sebelumnya.
 //
 // Donasi/Lead Capture/Social Proof/Poin Loyalitas SENGAJA TIDAK ada di sini
 // -- account-wide (satu per akun, dikelola lewat menu masing-masing),
-// bukan per-halaman, jadi tidak bisa "diduplikasi" ke Toko seperti blok/
-// desain yang memang kolom per-baris `pages`.
-export default function ProdukPageEditor() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
-  const [page, setPage] = useState<ExtraPageDetail | null>(null);
-  const [links, setLinks] = useState<LinkItem[]>([]);
-  const [products, setProducts] = useState<DashboardProduct[]>([]);
-  const [creating, setCreating] = useState(false);
-
+// bukan per-halaman.
+//
+// KOMPONEN TERKONTROL (bug ditemukan 8 Agustus 2026, audit responsif):
+// sebelumnya komponen ini mengambil data & merender LivePreviewPanel-nya
+// SENDIRI di dalam grid internal -- selain bikin dobel dengan pratinjau
+// Bio di tab lain (sudah diperbaiki commit sebelumnya dengan menyembunyikan
+// pratinjau Bio khusus tab ini), grid `1fr` di dalamnya juga tidak diberi
+// min-w-0 (akar masalah overflow yang SAMA seperti yang pernah diperbaiki
+// di dashboard/layout.tsx, lihat commit 08c1b78) sehingga bisa memaksa
+// seluruh halaman melebar horizontal. Diperbaiki dengan mengangkat SEMUA
+// pengambilan data & pratinjau ke induk (dashboard/products/page.tsx) --
+// satu pratinjau Toko yang konsisten di SEMUA tab menu Produk, komponen
+// ini sekarang murni konten kolom kiri (terkontrol lewat props).
+export default function ProdukPageEditor({
+  loading,
+  username,
+  page,
+  setPage,
+  links,
+  setLinks,
+  error,
+  setError,
+  creating,
+  onCreateNow,
+  onStickersChange,
+}: {
+  loading: boolean;
+  username: string;
+  page: ExtraPageDetail | null;
+  setPage: (p: ExtraPageDetail) => void;
+  links: LinkItem[];
+  setLinks: (fn: (prev: LinkItem[]) => LinkItem[]) => void;
+  error: string | null;
+  setError: (msg: string | null) => void;
+  creating: boolean;
+  onCreateNow: () => void;
+  onStickersChange: (stickers: PageStickerData[]) => void;
+}) {
   const [section, setSection] = useState<DesignSection>("blok");
-
-  // loadData -- SENGAJA murni mengambil & mengembalikan data, TANPA
-  // memanggil setState sama sekali di dalam dirinya sendiri (aturan lint
-  // react-hooks/set-state-in-effect: setState harus terjadi di callback
-  // yang dirantai LANGSUNG di badan effect/pemanggilnya, bukan tersembunyi
-  // di dalam fungsi terpisah yang dipanggil begitu saja).
-  async function loadData() {
-    const profile = await getSettingsProfile();
-    const pages = await listMyExtraPages();
-    const canonical = pages.find((p) => p.page_type === "produk" && p.slug === profile.username);
-    if (!canonical) {
-      return { username: profile.username, page: null, links: [] as LinkItem[], products: [] as DashboardProduct[] };
-    }
-    const [detail, pageLinks, prods] = await Promise.all([
-      getExtraPage(canonical.id),
-      listExtraPageLinks(canonical.id),
-      listProducts(),
-    ]);
-    return { username: profile.username, page: detail, links: pageLinks, products: prods };
-  }
-
-  // useCallback (deps kosong) -- setState setter dari useState DIJAMIN stabil
-  // antar-render, jadi fungsi ini aman dijadikan dependency effect di bawah
-  // tanpa memicu effect jalan ulang tiap render (lihat exhaustive-deps).
-  const applyLoadResult = useCallback((result: Awaited<ReturnType<typeof loadData>>) => {
-    setUsername(result.username);
-    setPage(result.page);
-    setLinks(result.links);
-    setProducts(result.products);
-  }, []);
-
-  useEffect(() => {
-    loadData()
-      .then(applyLoadResult)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko."))
-      .finally(() => setLoading(false));
-  }, [applyLoadResult]);
-
-  async function handleCreateNow() {
-    setError(null);
-    setCreating(true);
-    try {
-      await createExtraPage({ name: `Toko ${username}`, slug: username, page_type: "produk" });
-      applyLoadResult(await loadData());
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat Halaman Toko.");
-    } finally {
-      setCreating(false);
-    }
-  }
 
   async function handlePatch(patch: Parameters<typeof updateExtraPage>[1]) {
     if (!page) return;
@@ -180,7 +149,7 @@ export default function ProdukPageEditor() {
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button
           type="button"
-          onClick={handleCreateNow}
+          onClick={onCreateNow}
           disabled={creating || !username}
           className="btn-primary mt-5 rounded-lg px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
@@ -190,89 +159,76 @@ export default function ProdukPageEditor() {
     );
   }
 
-  const openUrl = `https://jeonme.com/p/${page.slug}`;
-  // previewPage -- LivePreviewPanel butuh bentuk MyPage (dipakai bersama
-  // halaman utama). "verification" tidak dihitung ulang di sini (murni
-  // kosmetik pratinjau editor, bukan halaman publik sungguhan -- badge
-  // terverifikasi di halaman publik ASLI tetap benar, lihat
-  // finishPublicPageResponse di page.go yang menghitungnya account-wide).
-  const previewPage: MyPage = {
-    ...page,
-    username,
-    verification: { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
-  };
-
   return (
-    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
-      <div>
-        <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-bold text-ink">Halaman Toko</h2>
-            <a
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              <IconExternal className="h-3.5 w-3.5" />
-              jeonme.com/p/{page.slug}
-            </a>
-          </div>
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-            <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
-              {page.is_published ? "Sudah terbit" : "Belum terbit"}
-            </span>
-          </div>
-          <div className="mt-4 flex items-center gap-2">
-            <Toggle checked={page.is_published} onChange={() => handlePatch({ is_published: !page.is_published })} label="Terbitkan halaman Toko" />
-            <span className="text-sm font-semibold text-ink">Terbitkan halaman Toko</span>
-          </div>
-        </section>
-
-        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-
-        <div className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-border bg-white p-1.5 shadow-card">
-          {(
-            [
-              ["blok", "Blok & Tautan"],
-              ["tema", "Tema"],
-              ["header", "Header"],
-              ["tombol", "Tombol"],
-              ["font", "Font"],
-              ["stiker", "Stiker"],
-            ] as [DesignSection, string][]
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSection(key)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
-                section === key ? "bg-primary-subtle text-primary" : "text-muted hover:text-ink"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+    <div className="min-w-0">
+      <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-heading text-lg font-bold text-ink">Halaman Toko</h2>
+          <a
+            href={`https://jeonme.com/p/${page.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            <IconExternal className="h-3.5 w-3.5" />
+            jeonme.com/p/{page.slug}
+          </a>
         </div>
-
-        <div className="mt-4">
-          {section === "blok" && (
-            <BlockSection pageId={page.id} links={links} setLinks={setLinks} setError={setError} />
-          )}
-          {section === "tema" && <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} />}
-          {section === "header" && <HeaderSection page={page} setPage={setPage} onPatch={handlePatch} onError={setError} />}
-          {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
-          {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
-          {section === "stiker" && <StikerSection page={page} onPatch={handlePatch} />}
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
+          <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
+            {page.is_published ? "Sudah terbit" : "Belum terbit"}
+          </span>
         </div>
+        <div className="mt-4 flex items-center gap-2">
+          <Toggle checked={page.is_published} onChange={() => handlePatch({ is_published: !page.is_published })} label="Terbitkan halaman Toko" />
+          <span className="text-sm font-semibold text-ink">Terbitkan halaman Toko</span>
+        </div>
+      </section>
+
+      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+
+      <div className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-border bg-white p-1.5 shadow-card">
+        {(
+          [
+            ["blok", "Blok & Tautan"],
+            ["tema", "Tema"],
+            ["header", "Header"],
+            ["tombol", "Tombol"],
+            ["font", "Font"],
+            ["stiker", "Stiker"],
+          ] as [DesignSection, string][]
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSection(key)}
+            className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
+              section === key ? "bg-primary-subtle text-primary" : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      <LivePreviewPanel page={previewPage} links={links} products={products} pageType="produk" pageSlug={page.slug} openUrl={openUrl} />
+      <div className="mt-4">
+        {section === "blok" && (
+          <BlockSection pageId={page.id} links={links} setLinks={setLinks} setError={setError} />
+        )}
+        {section === "tema" && <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} />}
+        {section === "header" && <HeaderSection page={page} setPage={setPage} onPatch={handlePatch} onError={setError} />}
+        {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
+        {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
+        {section === "stiker" && (
+          <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+            <StickerCanvasEditor stickers={page.stickers} onChange={onStickersChange} />
+          </section>
+        )}
+      </div>
     </div>
   );
 }
-
 // ---------- Blok & Tautan ----------
 
 function BlockSection({
@@ -899,51 +855,3 @@ function FontSection({
   );
 }
 
-// ---------- Stiker ----------
-
-function StikerSection({
-  page,
-  onPatch,
-}: {
-  page: ExtraPageDetail;
-  onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
-}) {
-  return (
-    <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
-      <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-6">
-        <button
-          type="button"
-          onClick={() => onPatch({ sticker: "" })}
-          className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold ${
-            !page.sticker ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
-          }`}
-        >
-          Tanpa stiker
-          {!page.sticker && (
-            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white">
-              <IconCheck className="h-2.5 w-2.5" />
-            </span>
-          )}
-        </button>
-        {STICKER_OPTIONS.map((s) => (
-          <button
-            key={s.value}
-            type="button"
-            onClick={() => onPatch({ sticker: s.value })}
-            title={s.label}
-            className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border text-2xl ${
-              page.sticker === s.value ? "border-primary bg-primary-subtle" : "border-border"
-            }`}
-          >
-            {s.emoji}
-            {page.sticker === s.value && (
-              <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white">
-                <IconCheck className="h-2.5 w-2.5" />
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}

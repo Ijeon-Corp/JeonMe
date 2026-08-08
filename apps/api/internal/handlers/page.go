@@ -39,6 +39,57 @@ func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *Pa
 // terbatas -- cukup untuk endpoint baca-berat seperti ini (NF-01/02).
 const publicPageCacheTTL = 30 * time.Second
 
+// PageSticker -- Modul Desain (koreksi langsung pengguna, 8 Agustus 2026):
+// stiker dekoratif INTERAKTIF -- kreator bisa taruh beberapa, masing-masing
+// dengan posisi & ukuran sendiri (diatur lewat drag/resize di dashboard),
+// bukan cuma satu pilihan tetap dekat avatar (migrasi 000056, diganti
+// migrasi 000057). X/Y persen (0-100) relatif terhadap kanvas halaman,
+// TITIK TENGAH stiker -- bukan piksel, supaya proporsional di layar apa
+// pun. Scale 0.4-2.5 (lihat validateStickers).
+type PageSticker struct {
+	ID    string  `json:"id"`
+	Type  string  `json:"type"`
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	Scale float64 `json:"scale"`
+}
+
+// availableStickerTypes -- daftar bentuk stiker yang dikenal (lihat
+// STICKER_SHAPES di page-themes.ts untuk render SVG-nya di frontend). Nama
+// terinspirasi galeri stiker Pinterest (panah/kursor/dekoratif) -- SENGAJA
+// bentuk garis/flat SVG, bukan tiruan gaya glossy 3D/foto, supaya ringan &
+// tidak butuh aset gambar hosting terpisah.
+var availableStickerTypes = map[string]bool{
+	"arrow-curve": true, "arrow-straight": true, "arrow-sketch": true,
+	"cursor-pixel": true, "cursor-hand": true, "pointing-hand": true,
+	"star-sketch": true, "heart-sketch": true,
+}
+
+// maxStickersPerPage -- batas wajar supaya payload/render tidak membengkak
+// tanpa terkendali, bukan angka yang berarti khusus.
+const maxStickersPerPage = 20
+
+// validateStickers -- dipakai UpdatePageStickers & UpdateExtraPageStickers.
+// Ditolak (bukan cuma dipangkas diam-diam) supaya kreator tahu persis kenapa
+// permintaannya gagal, bukan kehilangan data tanpa penjelasan.
+func validateStickers(stickers []PageSticker) (string, bool) {
+	if len(stickers) > maxStickersPerPage {
+		return fmt.Sprintf("maksimal %d stiker per halaman", maxStickersPerPage), false
+	}
+	for _, s := range stickers {
+		if !availableStickerTypes[s.Type] {
+			return fmt.Sprintf("bentuk stiker %q tidak dikenal", s.Type), false
+		}
+		if s.X < 0 || s.X > 100 || s.Y < 0 || s.Y > 100 {
+			return "posisi stiker harus dalam rentang 0-100 (persen)", false
+		}
+		if s.Scale < 0.4 || s.Scale > 2.5 {
+			return "ukuran stiker harus dalam rentang 0.4-2.5", false
+		}
+	}
+	return "", true
+}
+
 type publicPageResponse struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
@@ -76,9 +127,10 @@ type publicPageResponse struct {
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
-	// Sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
-	// tidak ada. Berlaku sama untuk halaman utama maupun tambahan.
-	Sticker               string             `json:"sticker"`
+	// Stickers -- Modul Desain: stiker dekoratif interaktif (posisi+ukuran
+	// per stiker), array kosong = tidak ada. Berlaku sama untuk halaman
+	// utama maupun tambahan.
+	Stickers              []PageSticker      `json:"stickers"`
 	Links                 []publicLink       `json:"links"`
 	Products              []publicItem       `json:"products"`
 	Donation              *publicDonation    `json:"donation"`
@@ -221,11 +273,12 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	var resp publicPageResponse
 	var userID, pageID string
 	var emailVerified bool
+	var stickersRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -236,8 +289,11 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&emailVerified)
+	if err == nil {
+		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -306,6 +362,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	var resp publicPageResponse
 	var userID, pageID string
 	var emailVerified bool
+	var stickersRaw []byte
 	// Bug ditemukan (8 Agustus 2026, sambil menambah kolom sticker): query
 	// ini SEBELUMNYA tidak pernah menyertakan custom_button_rounded/shadow/
 	// text_color, custom_page_text_color, custom_title_font/color, dan
@@ -319,7 +376,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		SELECT p.user_id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
@@ -329,7 +386,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -339,6 +396,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
 	}
+	_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	resp.ID = pageID
 
 	h.finishPublicPageResponse(c, ctx, "page-slug:"+slug, userID, pageID, emailVerified, &resp)
@@ -562,7 +620,7 @@ type myPageResponse struct {
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
-	Sticker               string             `json:"sticker"`
+	Stickers              []PageSticker      `json:"stickers"`
 	Verification          verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
 	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
@@ -593,11 +651,12 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 
 	var resp myPageResponse
 	var emailVerified bool
+	var stickersRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -605,8 +664,11 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&emailVerified)
+	if err == nil {
+		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
 		return
@@ -679,16 +741,6 @@ var availableCustomFonts = map[string]bool{
 	"poppins": true, "quicksand": true, "merriweather": true, "space-grotesk": true,
 }
 
-// availableStickers -- Modul Desain (permintaan langsung pengguna, 8 Agustus
-// 2026): galeri stiker dekoratif ala Linktree, ditempel dekat avatar di
-// halaman publik. "" (string kosong) SELALU sah -- berarti tidak pakai
-// stiker, TIDAK dimasukkan ke map ini (dicek terpisah seperti pola
-// CustomTitleFont/CustomPageTextColor di UpdateMyPage).
-var availableStickers = map[string]bool{
-	"star": true, "heart": true, "sparkle": true, "fire": true, "crown": true,
-	"rainbow": true, "balloon": true, "ribbon": true, "sun": true, "moon": true,
-}
-
 type updatePageRequest struct {
 	Theme                 *string `json:"theme"`
 	DisplayName           *string `json:"display_name" binding:"omitempty,max=100"`
@@ -729,10 +781,6 @@ type updatePageRequest struct {
 	// getPageTheme (page-themes.ts) untuk cara lapisan ini diterapkan di
 	// atas tema APAPUN.
 	CustomStyleOverride *bool `json:"custom_style_override"`
-	// Sticker -- Modul Desain: "" berarti tidak pakai stiker (SAH, tidak
-	// perlu ada di availableStickers), diisi valid lewat pengecekan manual
-	// di UpdateMyPage (sama pola dengan CustomTitleFont).
-	Sticker *string `json:"sticker" binding:"omitempty,max=20"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -772,13 +820,6 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "warna judul harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
 		return
 	}
-	// Sticker -- "" SAH (tidak pakai stiker), cuma tolak kalau diisi tapi
-	// bukan salah satu preset yang dikenal (sama pola dengan CustomTitleFont).
-	if req.Sticker != nil && *req.Sticker != "" && !availableStickers[*req.Sticker] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "stiker tidak dikenal"})
-		return
-	}
-
 	userID := c.GetString("userID")
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
@@ -817,14 +858,12 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_page_text_color = COALESCE($16, custom_page_text_color),
 			custom_title_font = COALESCE($17, custom_title_font),
 			custom_title_color = COALESCE($18, custom_title_color),
-			custom_style_override = COALESCE($19, custom_style_override),
-			sticker = COALESCE($20, sticker)
-		WHERE user_id = $21 AND is_primary = true
+			custom_style_override = COALESCE($19, custom_style_override)
+		WHERE user_id = $20 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
-		req.Sticker, userID)
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return
@@ -837,6 +876,46 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "halaman diperbarui"})
+}
+
+type updateStickersRequest struct {
+	Stickers []PageSticker `json:"stickers" binding:"required"`
+}
+
+// UpdateMyPageStickers -- Modul Desain (koreksi langsung pengguna, 8
+// Agustus 2026): endpoint TERPISAH dari UpdateMyPage (bukan salah satu
+// field COALESCE) karena array diganti UTUH tiap simpan (drag/resize di
+// dashboard mengirim seluruh daftar stiker terbaru sekaligus), bukan
+// di-patch per field seperti tema/warna/dst.
+func (h *PageHandler) UpdateMyPageStickers(c *gin.Context) {
+	var req updateStickersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if msg, ok := validateStickers(req.Stickers); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	userID := c.GetString("userID")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	stickersJSON, _ := json.Marshal(req.Stickers)
+	var username string
+	err := h.DB.QueryRow(ctx, `
+		UPDATE pages SET stickers = $1 WHERE user_id = $2 AND is_primary = true RETURNING (SELECT username FROM users WHERE id = $2)
+	`, stickersJSON, userID).Scan(&username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan stiker"})
+		return
+	}
+	if h.RDB != nil {
+		h.RDB.Del(ctx, "page:"+username)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "stiker disimpan"})
 }
 
 // maxAvatarSize -- 5MB, cukup untuk foto profil tanpa membebani VPS shared.
@@ -1293,12 +1372,13 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 		return
 	}
 
-	var username, displayName, bio, avatarURL, theme, sticker string
+	var username, displayName, bio, avatarURL, theme string
+	var stickersRaw []byte
 	if err := db.QueryRow(ctx, `
-		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme, p.sticker
+		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme, p.stickers
 		FROM users u JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.id = $1
-	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme, &sticker); err != nil {
+	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme, &stickersRaw); err != nil {
 		return
 	}
 
@@ -1315,9 +1395,9 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	// kali live, bukan etalase kosong tanpa identitas -- kreator tetap
 	// bebas mengubahnya sendiri nanti lewat "Kelola" di dashboard/pages.
 	if _, err := db.Exec(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, sticker)
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers)
 		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7)
-	`, userID, name, username, bio, avatarURL, theme, sticker); err != nil {
+	`, userID, name, username, bio, avatarURL, theme, stickersRaw); err != nil {
 		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
 		// halaman lain, bukan milik kreator ini, kebetulan pakai slug
 		// identik dengan username-nya).
@@ -1412,12 +1492,13 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		// kosong/default) -- sama persis dengan ensureProdukPage, supaya
 		// dibuat manual lewat sini atau otomatis lewat produk pertama
 		// hasilnya konsisten.
-		var username, bio, avatarURL, theme, sticker string
+		var username, bio, avatarURL, theme string
+		var stickersRaw []byte
 		if scanErr := h.DB.QueryRow(ctx, `
-			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.sticker
+			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.stickers
 			FROM users u JOIN pages pg ON pg.user_id = u.id AND pg.is_primary = true
 			WHERE u.id = $1
-		`, userID).Scan(&username, &bio, &avatarURL, &theme, &sticker); scanErr != nil {
+		`, userID).Scan(&username, &bio, &avatarURL, &theme, &stickersRaw); scanErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 			return
 		}
@@ -1426,9 +1507,9 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			name = "Toko " + username
 		}
 		err = h.DB.QueryRow(ctx, `
-			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, sticker)
+			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers)
 			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7) RETURNING id
-		`, userID, name, slug, bio, avatarURL, theme, sticker).Scan(&pageID)
+		`, userID, name, slug, bio, avatarURL, theme, stickersRaw).Scan(&pageID)
 	} else {
 		err = h.DB.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
@@ -1470,9 +1551,9 @@ type extraPageDetailResponse struct {
 	CustomPageTextColor   string `json:"custom_page_text_color"`
 	CustomTitleFont       string `json:"custom_title_font"`
 	CustomTitleColor      string `json:"custom_title_color"`
-	CustomStyleOverride   bool   `json:"custom_style_override"`
-	Sticker               string `json:"sticker"`
-	IsPremium             bool   `json:"is_premium"`
+	CustomStyleOverride   bool          `json:"custom_style_override"`
+	Stickers              []PageSticker `json:"stickers"`
+	IsPremium             bool          `json:"is_premium"`
 }
 
 // GetPage — Modul Halaman Toko (permintaan langsung pengguna, 7 Agustus
@@ -1492,18 +1573,22 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 	defer cancel()
 
 	var resp extraPageDetailResponse
+	var stickersRaw []byte
 	err := h.DB.QueryRow(ctx, `
 		SELECT id, name, COALESCE(slug, ''), page_type, display_name, bio, avatar_url, theme, is_published,
 			seo_title, seo_description, noindex,
 			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
 			custom_button_rounded, custom_button_shadow, custom_button_text_color,
-			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, sticker
+			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker)
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw)
+	if err == nil {
+		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
+	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -1544,7 +1629,6 @@ type updateExtraPageRequest struct {
 	CustomTitleFont       *string `json:"custom_title_font" binding:"omitempty,max=20"`
 	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
 	CustomStyleOverride   *bool   `json:"custom_style_override"`
-	Sticker               *string `json:"sticker" binding:"omitempty,max=20"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -1580,10 +1664,6 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	}
 	if req.CustomTitleColor != nil && *req.CustomTitleColor != "" && len(*req.CustomTitleColor) != 7 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "warna judul harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
-		return
-	}
-	if req.Sticker != nil && *req.Sticker != "" && !availableStickers[*req.Sticker] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "stiker tidak dikenal"})
 		return
 	}
 	var slug *string
@@ -1631,13 +1711,12 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_page_text_color = COALESCE($18, custom_page_text_color),
 			custom_title_font = COALESCE($19, custom_title_font),
 			custom_title_color = COALESCE($20, custom_title_color),
-			custom_style_override = COALESCE($21, custom_style_override),
-			sticker = COALESCE($22, sticker)
-		WHERE id = $23 AND user_id = $24 AND is_primary = false
+			custom_style_override = COALESCE($21, custom_style_override)
+		WHERE id = $22 AND user_id = $23 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, req.Sticker,
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -1660,6 +1739,47 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "halaman diperbarui"})
+}
+
+// UpdatePageStickers -- analog UpdateMyPageStickers untuk halaman TAMBAHAN
+// (Toko/Landing/Bio kedua). Endpoint terpisah dengan alasan yang sama:
+// array diganti utuh, bukan di-patch per field.
+func (h *PageHandler) UpdatePageStickers(c *gin.Context) {
+	pageID := c.Param("id")
+	userID := c.GetString("userID")
+
+	var req updateStickersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if msg, ok := validateStickers(req.Stickers); !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	stickersJSON, _ := json.Marshal(req.Stickers)
+	var slug string
+	if err := h.DB.QueryRow(ctx, `
+		UPDATE pages SET stickers = $1
+		WHERE id = $2 AND user_id = $3 AND is_primary = false
+		RETURNING COALESCE(slug, '')
+	`, stickersJSON, pageID, userID).Scan(&slug); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan stiker"})
+		return
+	}
+	if h.RDB != nil && slug != "" {
+		h.RDB.Del(ctx, "page-slug:"+slug)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "stiker disimpan"})
 }
 
 // DeletePage — menghapus halaman TAMBAHAN beserta seluruh tautannya

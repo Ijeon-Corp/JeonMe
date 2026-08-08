@@ -1,4 +1,4 @@
-import { CustomThemeConfig, PageTheme, STICKER_OPTIONS, getPageTheme } from "@/lib/page-themes";
+import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
@@ -12,7 +12,8 @@ import TrackedLink from "@/components/TrackedLink";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
-import { RecentPurchase } from "@/lib/api-client";
+import StickerIcon from "@/components/StickerIcon";
+import { PageStickerData, RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
 
@@ -141,10 +142,10 @@ export interface PagePreviewData {
   // di klien (lihat checkout.go Create).
   shopPaused?: boolean;
   shopPausedMessage?: string;
-  // sticker -- Modul Desain: stiker dekoratif preset (lihat STICKER_OPTIONS
-  // di page-themes.ts), ditempel dekat avatar. "" atau undefined = tidak
-  // ada.
-  sticker?: string;
+  // stickers -- Modul Desain: stiker dekoratif INTERAKTIF (posisi & ukuran
+  // sendiri per stiker, diatur lewat StickerCanvasEditor di dashboard).
+  // Array kosong/undefined = tidak ada.
+  stickers?: PageStickerData[];
 }
 
 interface PreviewSourcePage {
@@ -153,7 +154,7 @@ interface PreviewSourcePage {
   bio: string;
   avatar_url: string;
   theme: string;
-  sticker?: string;
+  stickers?: PageStickerData[];
   custom_background_type?: CustomThemeConfig["backgroundType"];
   custom_background_value?: string;
   custom_font?: CustomThemeConfig["font"];
@@ -211,7 +212,7 @@ export function toPreviewData(
     theme: page.theme,
     isVerified: page.is_verified ?? false,
     isPremium: page.is_premium ?? false,
-    sticker: page.sticker,
+    stickers: page.stickers,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -265,21 +266,30 @@ export function toPreviewData(
 // untuk cara SEMUA tipe halaman merender tautan/blok konten (link/video/
 // faq/contact_form/maps/text -- persis tipe yang bisa ditambahkan lewat
 // dashboard/links).
-// StickerBadge -- Modul Desain (permintaan langsung pengguna, 8 Agustus
-// 2026): stiker dekoratif preset (lihat STICKER_OPTIONS di page-themes.ts),
-// ditempel di sudut kanan-bawah avatar, murni visual (tidak interaktif,
-// tidak diklik). Dipakai bersama oleh layout bio biasa & ProdukPagePreview
-// -- Landing (No.99, tanpa avatar sama sekali) SENGAJA tidak memakainya.
-function StickerBadge({ sticker }: { sticker?: string }) {
-  const emoji = sticker ? STICKER_OPTIONS.find((s) => s.value === sticker)?.emoji : undefined;
-  if (!emoji) return null;
+// StickerOverlay -- Modul Desain (koreksi langsung pengguna, 8 Agustus
+// 2026): stiker dekoratif INTERAKTIF -- posisi & ukuran sendiri per stiker
+// (diatur lewat StickerCanvasEditor di dashboard), TERSEBAR di seluruh
+// kanvas halaman (bukan lagi satu badge tetap di pojok avatar). Murni
+// visual di sini (tidak interaktif/tidak diklik -- interaksi drag/resize
+// HANYA ada di StickerCanvasEditor saat mengedit, bukan di preview/halaman
+// publik). x/y persen relatif terhadap elemen pembungkus (harus `relative`)
+// -- lihat rumus posisi yang SAMA di StickerCanvasEditor. Dipakai bersama
+// oleh layout bio biasa & ProdukPagePreview -- Landing (No.99, tanpa
+// avatar/header sama sekali) SENGAJA tidak memakainya.
+function StickerOverlay({ stickers }: { stickers?: PageStickerData[] }) {
+  if (!stickers || stickers.length === 0) return null;
   return (
-    <span
-      aria-hidden
-      className="absolute -bottom-1 -right-1 flex h-9 w-9 rotate-12 items-center justify-center rounded-full bg-white text-lg shadow-card ring-2 ring-white"
-    >
-      {emoji}
-    </span>
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+      {stickers.map((s) => (
+        <div
+          key={s.id}
+          style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})` }}
+          className="absolute h-14 w-14 text-ink drop-shadow"
+        >
+          <StickerIcon type={s.type} className="h-full w-full" />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -483,6 +493,7 @@ export default function PagePreview({
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <StickerOverlay stickers={data.stickers} />
       {interactive && data.socialProof && (
         <SocialProofToast
           recent={data.socialProof.recent}
@@ -520,7 +531,6 @@ export default function PagePreview({
                 {data.username.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <StickerBadge sticker={data.sticker} />
           </div>
 
           <div className="relative mt-5 text-center">
@@ -1015,6 +1025,7 @@ function ProdukPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <StickerOverlay stickers={data.stickers} />
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
@@ -1042,7 +1053,6 @@ function ProdukPagePreview({
                 {data.username.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <StickerBadge sticker={data.sticker} />
           </div>
 
           <div className="relative mt-5 text-center">

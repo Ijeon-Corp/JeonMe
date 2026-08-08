@@ -1,24 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnalyticsSummary,
   ApiError,
   CollaboratorSplit,
   DashboardCollaborator,
   DashboardProduct,
+  ExtraPageDetail,
   LinkItem,
   MyPage,
+  PageStickerData,
   RecentOrder,
+  createExtraPage,
   createProduct,
   deleteProduct,
   getAnalyticsSummary,
+  getExtraPage,
   getMyPage,
   getProductDownloadURL,
+  getSettingsProfile,
   listCollaborators,
-  listLinks,
+  listExtraPageLinks,
+  listMyExtraPages,
   listProducts,
   listRecentOrders,
+  updateExtraPageStickers,
   updateProduct,
   uploadProductCover,
   uploadProductFile,
@@ -82,7 +89,6 @@ export default function DashboardProductsPage() {
   >("overview");
 
   const [page, setPage] = useState<MyPage | null>(null);
-  const [links, setLinks] = useState<LinkItem[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,16 +153,93 @@ export default function DashboardProductsPage() {
   const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
-    Promise.all([getMyPage(), listLinks(), listProducts(), listCollaborators()])
-      .then(([p, l, prod, collabs]) => {
+    Promise.all([getMyPage(), listProducts(), listCollaborators()])
+      .then(([p, prod, collabs]) => {
         setPage(p);
-        setLinks(l);
         setProducts(prod);
         setActiveCollaborators(collabs.filter((c) => c.status === "active" && c.collaborator_user_id));
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat produk."))
       .finally(() => setLoading(false));
   }, []);
+
+  // ---------- Modul Halaman Toko: data Toko (BUKAN Bio) untuk pratinjau
+  // yang dipakai di SEMUA tab menu Produk (bukan cuma tab "Halaman Toko"),
+  // dan untuk ProdukPageEditor sendiri -- diangkat ke sini (bukan lagi
+  // diambil sendiri-sendiri oleh ProdukPageEditor) supaya SATU sumber data
+  // dipakai bersama, tidak ada pratinjau Bio yang salah konteks atau
+  // pratinjau dobel. Lihat catatan lengkap di ProdukPageEditor.tsx.
+  const [tokoUsername, setTokoUsername] = useState("");
+  const [tokoPage, setTokoPage] = useState<ExtraPageDetail | null>(null);
+  const [tokoLinks, setTokoLinks] = useState<LinkItem[]>([]);
+  const [tokoLoading, setTokoLoading] = useState(true);
+  const [tokoError, setTokoError] = useState<string | null>(null);
+  const [tokoCreating, setTokoCreating] = useState(false);
+
+  // loadTokoData -- murni ambil & kembalikan data, TANPA setState di
+  // dalamnya (aturan lint react-hooks/set-state-in-effect, lihat catatan
+  // yang sama di commit sebelumnya).
+  async function loadTokoData() {
+    const profile = await getSettingsProfile();
+    const pages = await listMyExtraPages();
+    const canonical = pages.find((p) => p.page_type === "produk" && p.slug === profile.username);
+    if (!canonical) {
+      return { username: profile.username, page: null as ExtraPageDetail | null, links: [] as LinkItem[] };
+    }
+    const [detail, pageLinks] = await Promise.all([getExtraPage(canonical.id), listExtraPageLinks(canonical.id)]);
+    return { username: profile.username, page: detail, links: pageLinks };
+  }
+
+  const applyTokoResult = useCallback((result: Awaited<ReturnType<typeof loadTokoData>>) => {
+    setTokoUsername(result.username);
+    setTokoPage(result.page);
+    setTokoLinks(result.links);
+  }, []);
+
+  useEffect(() => {
+    loadTokoData()
+      .then(applyTokoResult)
+      .catch((err) => setTokoError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko."))
+      .finally(() => setTokoLoading(false));
+  }, [applyTokoResult]);
+
+  async function handleCreateTokoNow() {
+    setTokoError(null);
+    setTokoCreating(true);
+    try {
+      await createExtraPage({ name: `Toko ${tokoUsername}`, slug: tokoUsername, page_type: "produk" });
+      applyTokoResult(await loadTokoData());
+    } catch (err) {
+      setTokoError(err instanceof ApiError ? err.message : "Gagal membuat Halaman Toko.");
+    } finally {
+      setTokoCreating(false);
+    }
+  }
+
+  async function handleTokoStickersChange(stickers: PageStickerData[]) {
+    if (!tokoPage) return;
+    const previous = tokoPage;
+    setTokoPage({ ...tokoPage, stickers });
+    try {
+      await updateExtraPageStickers(tokoPage.id, stickers);
+    } catch (err) {
+      setTokoPage(previous);
+      setTokoError(err instanceof ApiError ? err.message : "Gagal menyimpan stiker.");
+    }
+  }
+
+  // tokoPreviewData -- bentuk MyPage supaya bisa dipakai LivePreviewPanel
+  // yang sama dengan halaman utama (lihat catatan sama di ProdukPageEditor
+  // sebelum diangkat ke sini). "verification" murni kosmetik pratinjau,
+  // BUKAN status sungguhan -- halaman publik asli tetap benar (dihitung
+  // account-wide di finishPublicPageResponse, page.go).
+  const tokoPreviewPage: MyPage | null = tokoPage
+    ? {
+        ...tokoPage,
+        username: tokoUsername,
+        verification: { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
+      }
+    : null;
 
   useEffect(() => {
     Promise.all([getAnalyticsSummary({ range_days: overviewRangeDays }), listRecentOrders()])
@@ -472,12 +555,18 @@ export default function DashboardProductsPage() {
     // "max-w-3xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
     // lihat catatan lengkap di DesignPageShell.tsx/dashboard/links/page.tsx.
     //
-    // Tab "Halaman Toko" SENGAJA tidak ikut grid+LivePreviewPanel di bawah
-    // (pratinjau halaman Bio utama) -- permintaan langsung pengguna: di tab
-    // itu cukup pratinjau Toko saja (sudah dirender ProdukPageEditor sendiri
-    // lewat pageType="produk"), pratinjau Bio malah membingungkan/dobel.
-    <div className={tab === "halaman_toko" ? "" : "lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6"}>
-      <div>
+    // Bug ditemukan (8 Agustus 2026, audit responsif): kolom konten grid
+    // ini TIDAK PERNAH diberi min-w-0 -- grid item defaultnya min-width:auto
+    // (sama seperti flex item, lihat akar masalah yang sama persis di
+    // dashboard/layout.tsx, commit 08c1b78), jadi bisa memaksa SELURUH
+    // halaman melebar horizontal kalau ada konten di kolom kiri yang lebar
+    // alaminya melebihi ruang tersedia (baru benar-benar ketahuan lewat tab
+    // "Halaman Toko" yang kontennya lebih padat). Semua tab SEKARANG
+    // menampilkan pratinjau Toko yang SAMA (bukan pratinjau Bio) --
+    // permintaan langsung pengguna: menu Produk konsisten menunjukkan Toko,
+    // bukan campur-campur Bio/Toko/tidak ada tergantung tab.
+    <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+      <div className="min-w-0">
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): 8 tab tanpa
             wrapper scroll memaksa SELURUH halaman melebar horizontal di
             layar sempit (bukan cuma baris tab ini yang terpotong). overflow-
@@ -570,7 +659,19 @@ export default function DashboardProductsPage() {
 
         {tab === "halaman_toko" ? (
           <div className="mt-4">
-            <ProdukPageEditor />
+            <ProdukPageEditor
+              loading={tokoLoading}
+              username={tokoUsername}
+              page={tokoPage}
+              setPage={setTokoPage}
+              links={tokoLinks}
+              setLinks={setTokoLinks}
+              error={tokoError}
+              setError={setTokoError}
+              creating={tokoCreating}
+              onCreateNow={handleCreateTokoNow}
+              onStickersChange={handleTokoStickersChange}
+            />
           </div>
         ) : tab === "reviews" ? (
           <ReviewsPanel />
@@ -957,7 +1058,14 @@ export default function DashboardProductsPage() {
         )}
       </div>
 
-      {tab !== "halaman_toko" && <LivePreviewPanel page={page} links={links} products={products} />}
+      <LivePreviewPanel
+        page={tokoPreviewPage}
+        links={tokoLinks}
+        products={products}
+        pageType="produk"
+        pageSlug={tokoPage?.slug}
+        openUrl={tokoPage ? `https://jeonme.com/p/${tokoPage.slug}` : undefined}
+      />
 
       {manageProduct && (
         <div

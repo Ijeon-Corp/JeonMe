@@ -260,7 +260,6 @@ func TestGetAndUpdatePage_FullDesignFieldsRoundTrip(t *testing.T) {
 		"custom_button_shadow":  "soft",
 		"custom_title_font":     "playfair",
 		"custom_style_override": true,
-		"sticker":               "star",
 	}, map[string]string{"X-Test-UserID": userID})
 	if updateRec.Code != http.StatusOK {
 		t.Fatalf("update halaman: status = %d, body %s", updateRec.Code, updateRec.Body.String())
@@ -275,16 +274,19 @@ func TestGetAndUpdatePage_FullDesignFieldsRoundTrip(t *testing.T) {
 		t.Fatalf("gagal decode respons get: %v", err)
 	}
 	if detail.DisplayName != "Toko Skincare Kece" || detail.CustomButtonRounded != "full" ||
-		detail.CustomButtonShadow != "soft" || detail.CustomTitleFont != "playfair" || !detail.CustomStyleOverride ||
-		detail.Sticker != "star" {
+		detail.CustomButtonShadow != "soft" || detail.CustomTitleFont != "playfair" || !detail.CustomStyleOverride {
 		t.Errorf("field desain tidak tersimpan/terbaca lengkap, dapat: %+v", detail)
 	}
 }
 
-// Modul Desain (permintaan langsung pengguna, 8 Agustus 2026): stiker yang
-// bukan salah satu preset di availableStickers harus ditolak 400 -- baik
-// untuk halaman utama (UpdateMyPage) maupun halaman tambahan (UpdatePage).
-func TestUpdatePage_RejectsUnknownSticker(t *testing.T) {
+// Modul Desain (koreksi langsung pengguna, 8 Agustus 2026): stiker
+// interaktif -- array diganti UTUH lewat endpoint PUT terpisah (bukan
+// PATCH per field). Bentuk yang bukan salah satu preset di
+// availableStickerTypes, atau posisi/ukuran di luar rentang, harus ditolak
+// 400 -- baik untuk halaman utama (UpdateMyPageStickers) maupun halaman
+// tambahan (UpdatePageStickers). Kombinasi valid harus tersimpan & terbaca
+// balik lewat GetPage/GetMyPage.
+func TestUpdatePageStickers_ValidatesAndRoundTrips(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	page, auth := newTestPageHandler(t)
 	userID := registerTestUser(t, auth)
@@ -293,8 +295,10 @@ func TestUpdatePage_RejectsUnknownSticker(t *testing.T) {
 	router := gin.New()
 	g := router.Group("/", fakeAuth())
 	g.POST("/pages", page.CreatePage)
-	g.PATCH("/pages/:id", page.UpdatePage)
-	g.PATCH("/page", page.UpdateMyPage)
+	g.GET("/pages/:id", page.GetPage)
+	g.PUT("/pages/:id/stickers", page.UpdatePageStickers)
+	g.GET("/page", page.GetMyPage)
+	g.PUT("/page/stickers", page.UpdateMyPageStickers)
 
 	createRec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko", "slug": "toko-" + uuid.NewString()[:8], "page_type": "landing"}, map[string]string{"X-Test-UserID": userID})
 	var created struct {
@@ -304,14 +308,59 @@ func TestUpdatePage_RejectsUnknownSticker(t *testing.T) {
 		t.Fatalf("gagal decode respons create: %v", err)
 	}
 
-	rec := doJSON(t, router, http.MethodPatch, "/pages/"+created.ID, map[string]any{"sticker": "bukan-stiker-valid"}, map[string]string{"X-Test-UserID": userID})
+	// Bentuk tidak dikenal -- ditolak.
+	rec := doJSON(t, router, http.MethodPut, "/pages/"+created.ID+"/stickers", map[string]any{
+		"stickers": []map[string]any{{"id": "s1", "type": "bukan-bentuk-valid", "x": 50, "y": 50, "scale": 1}},
+	}, map[string]string{"X-Test-UserID": userID})
 	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("UpdatePage stiker tidak dikenal: status = %d, ekspektasi 400, body %s", rec.Code, rec.Body.String())
+		t.Fatalf("bentuk tidak dikenal: status = %d, ekspektasi 400, body %s", rec.Code, rec.Body.String())
 	}
 
-	rec2 := doJSON(t, router, http.MethodPatch, "/page", map[string]any{"sticker": "bukan-stiker-valid"}, map[string]string{"X-Test-UserID": userID})
+	// Posisi di luar rentang 0-100 -- ditolak.
+	rec = doJSON(t, router, http.MethodPut, "/pages/"+created.ID+"/stickers", map[string]any{
+		"stickers": []map[string]any{{"id": "s1", "type": "arrow-curve", "x": 150, "y": 50, "scale": 1}},
+	}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("posisi di luar rentang: status = %d, ekspektasi 400, body %s", rec.Code, rec.Body.String())
+	}
+
+	// Kombinasi valid, 2 stiker -- tersimpan & terbaca balik.
+	validPayload := map[string]any{
+		"stickers": []map[string]any{
+			{"id": "s1", "type": "arrow-curve", "x": 20.5, "y": 30, "scale": 1.2},
+			{"id": "s2", "type": "cursor-pixel", "x": 70, "y": 80, "scale": 0.8},
+		},
+	}
+	rec = doJSON(t, router, http.MethodPut, "/pages/"+created.ID+"/stickers", validPayload, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("simpan stiker valid: status = %d, ekspektasi 200, body %s", rec.Code, rec.Body.String())
+	}
+
+	getRec := doJSON(t, router, http.MethodGet, "/pages/"+created.ID, nil, map[string]string{"X-Test-UserID": userID})
+	var detail extraPageDetailResponse
+	if err := json.Unmarshal(getRec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("gagal decode respons get: %v", err)
+	}
+	if len(detail.Stickers) != 2 || detail.Stickers[0].Type != "arrow-curve" || detail.Stickers[1].Type != "cursor-pixel" {
+		t.Errorf("stiker halaman tambahan tidak tersimpan/terbaca lengkap, dapat: %+v", detail.Stickers)
+	}
+
+	// Halaman utama: endpoint terpisah, tetap harus tervalidasi & tersimpan.
+	rec2 := doJSON(t, router, http.MethodPut, "/page/stickers", map[string]any{"stickers": []map[string]any{{"id": "s1", "type": "bukan-bentuk-valid", "x": 50, "y": 50, "scale": 1}}}, map[string]string{"X-Test-UserID": userID})
 	if rec2.Code != http.StatusBadRequest {
-		t.Fatalf("UpdateMyPage stiker tidak dikenal: status = %d, ekspektasi 400, body %s", rec2.Code, rec2.Body.String())
+		t.Fatalf("UpdateMyPageStickers bentuk tidak dikenal: status = %d, ekspektasi 400, body %s", rec2.Code, rec2.Body.String())
+	}
+	rec2 = doJSON(t, router, http.MethodPut, "/page/stickers", validPayload, map[string]string{"X-Test-UserID": userID})
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("UpdateMyPageStickers simpan valid: status = %d, ekspektasi 200, body %s", rec2.Code, rec2.Body.String())
+	}
+	myPageRec := doJSON(t, router, http.MethodGet, "/page", nil, map[string]string{"X-Test-UserID": userID})
+	var myPage myPageResponse
+	if err := json.Unmarshal(myPageRec.Body.Bytes(), &myPage); err != nil {
+		t.Fatalf("gagal decode respons GetMyPage: %v", err)
+	}
+	if len(myPage.Stickers) != 2 {
+		t.Errorf("stiker halaman utama tidak tersimpan/terbaca lengkap, dapat: %+v", myPage.Stickers)
 	}
 }
 

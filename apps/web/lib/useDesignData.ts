@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ApiError, DashboardProduct, LinkItem, MyPage, getMyPage, listLinks, listProducts, updateMyPage } from "@/lib/api-client";
+import {
+  ApiError,
+  DashboardProduct,
+  LinkItem,
+  MyPage,
+  PageStickerData,
+  getMyPage,
+  listLinks,
+  listProducts,
+  updateMyPage,
+  updateMyPageStickers,
+} from "@/lib/api-client";
 
 // useDesignData -- permintaan langsung pengguna: setiap menu di halaman
 // Desain (Tema/Header/Tombol/Font) sekarang jadi HALAMAN TERSENDIRI
@@ -33,7 +44,6 @@ export type PageSettingsPatch = Partial<
     | "custom_title_font"
     | "custom_title_color"
     | "custom_style_override"
-    | "sticker"
   >
 >;
 
@@ -77,5 +87,31 @@ export function useDesignData() {
     return handlePageSettingChange({ ...patch, custom_style_override: true });
   }
 
-  return { page, setPage, links, products, loading, error, setError, handlePageSettingChange, handleStyleOverride };
+  // handleStickersChange -- Modul Desain: array diganti UTUH lewat endpoint
+  // terpisah (bukan salah satu field PageSettingsPatch), sama alasan dengan
+  // catatan di updateMyPageStickers.
+  async function handleStickersChange(stickers: PageStickerData[]) {
+    if (!page) return;
+    const previous = page;
+    setPage({ ...page, stickers });
+    try {
+      await updateMyPageStickers(stickers);
+    } catch (err) {
+      setPage(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan stiker.");
+    }
+  }
+
+  return {
+    page,
+    setPage,
+    links,
+    products,
+    loading,
+    error,
+    setError,
+    handlePageSettingChange,
+    handleStyleOverride,
+    handleStickersChange,
+  };
 }
