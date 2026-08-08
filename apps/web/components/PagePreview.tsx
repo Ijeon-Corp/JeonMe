@@ -649,7 +649,6 @@ export default function PagePreview({
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
       {interactive && data.socialProof && (
         <SocialProofToast
           recent={data.socialProof.recent}
@@ -663,7 +662,22 @@ export default function PagePreview({
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
-      <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
+      {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
+          di pratinjau posisi nya berbeda dengan ketika kita akses linknya
+          langsung" -- akar masalah: StickerOverlay SEBELUMNYA anak langsung
+          <main> (lebar PENUH viewport di halaman publik desktop), padahal
+          kolom konten yang benar-benar terlihat (avatar/tautan/dst) dibatasi
+          max-w-md & di-tengah lewat mx-auto di bawah ini. Persentase x/y
+          jadi dihitung relatif ke lebar yang SALAH -- kebetulan "benar" di
+          kotak pratinjau dashboard (280px, lebih sempit dari max-w-md=448px
+          jadi lebar main & kolom konten kebetulan sama), tapi meleset jauh
+          di halaman publik desktop yang lebar mainnya jauh lebih besar dari
+          kolom kontennya. Overlay dipindah jadi ANAK kolom max-w-md ini
+          (relative ditambahkan di sini) supaya basis persentase SELALU sama
+          persis dengan lebar kolom konten yang terlihat, di pratinjau
+          MAUPUN halaman publik sungguhan, di lebar layar berapa pun. */}
+      <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
+        <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
         <div className="relative flex flex-col items-center">
           {theme.glow !== "hidden" && (
             <div
@@ -1188,11 +1202,14 @@ function ProdukPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
-      <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
+      {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak
+          langsung <main>) -- lihat catatan panjang di preview bio default
+          soal bug "posisi stiker beda antara pratinjau & halaman publik". */}
+      <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
+        <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
         <div className="relative flex flex-col items-center">
           {theme.glow !== "hidden" && (
             <div
