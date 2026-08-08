@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AnalyticsSummary, ApiError, exportAnalyticsCSV, getAnalyticsSummary } from "@/lib/api-client";
-import { IconBox, IconChart, IconDownload, IconInbox, IconLink, IconSparkle, IconTrendArrow, IconWallet } from "@/components/icons";
+import {
+  IconBox,
+  IconChart,
+  IconChevronRight,
+  IconDownload,
+  IconInbox,
+  IconLink,
+  IconSparkle,
+  IconTrendArrow,
+  IconWallet,
+} from "@/components/icons";
 import AnalyticsAssistant from "@/components/AnalyticsAssistant";
 
 const PRESETS = [7, 30, 90];
@@ -140,6 +151,12 @@ export default function DashboardHomePage() {
 
   const viewsPath = summary ? buildAreaPath(summary.daily_series.map((d) => d.views)) : { line: "", area: "" };
   const clicksPath = summary ? buildAreaPath(summary.daily_series.map((d) => d.clicks)) : { line: "", area: "" };
+  // revenuePath -- sparkline mini di kartu "Penjualan" (redesain Card-Based
+  // Layout) memakai deret 7 hari yang SAMA dengan widget "Pendapatan 7 Hari
+  // Terakhir" di bawah (bukan deret baru) -- data yang sudah ada, jujur
+  // apa adanya, bukan dipaksa mengikuti rentang tanggal pilihan pengguna
+  // di atas (lihat catatan lingkup weekly_revenue di AnalyticsHandler).
+  const revenuePath = summary ? buildAreaPath(summary.weekly_revenue.map((d) => d.revenue_idr)) : { line: "", area: "" };
 
   const weeklyMax = summary ? Math.max(1, ...summary.weekly_revenue.map((d) => d.revenue_idr)) : 1;
 
@@ -153,14 +170,48 @@ export default function DashboardHomePage() {
           type="button"
           onClick={handleExport}
           disabled={exporting || loading}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-bold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-card hover:border-primary hover:text-primary disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {exporting ? "Mengekspor..." : "Ekspor CSV"}
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* Menu Cepat -- redesain "Card-Based Layout" (permintaan langsung
+          pengguna, referensi tangkapan layar dashboard SQUARE): pintasan
+          bento ke 3 area yang paling sering dibuka dari Ringkasan, supaya
+          kreator tidak harus balik ke sidebar dulu. Gradien warna beda per
+          kartu (primary/accent/secondary) murni dekoratif -- TIDAK menarik
+          gambar/tema sungguhan milik kreator (itu tugas panel Pratinjau
+          Langsung di halaman masing-masing, di sini cukup penanda visual). */}
+      <section className="mt-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Menu Cepat</h2>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <QuickAccessCard
+            href="/dashboard/links"
+            icon={<IconLink className="h-5 w-5" />}
+            title="Link Bio"
+            description="Kelola tautan & tampilan halaman bio-mu"
+            gradient="linear-gradient(135deg, #123328 0%, #1B4D3E 55%, #3E7C59 100%)"
+          />
+          <QuickAccessCard
+            href="/dashboard/products"
+            icon={<IconBox className="h-5 w-5" />}
+            title="Toko"
+            description="Kelola produk & Halaman Toko-mu"
+            gradient="linear-gradient(135deg, #A9822F 0%, #C9A24B 55%, #E0C378 100%)"
+          />
+          <QuickAccessCard
+            href="/dashboard/design"
+            icon={<IconSparkle className="h-5 w-5" />}
+            title="Desain"
+            description="Tema, header, tombol, font & stiker"
+            gradient="linear-gradient(135deg, #145C52 0%, #1F7A6C 55%, #5FB3A3 100%)"
+          />
+        </div>
+      </section>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-white p-2.5 shadow-card">
         {PRESETS.map((d) => (
           <button
             key={d}
@@ -225,19 +276,27 @@ export default function DashboardHomePage() {
                 "Total Users" di referensi diganti "Klik Tautan" -- Jeonme
                 tidak melacak pengunjung unik per visitor/session, cuma
                 total tayangan, jadi kartu itu jujur dari data yang benar-
-                benar ada, bukan tiruan kosong. */}
+                benar ada, bukan tiruan kosong. Mini-sparkline (redesain
+                Card-Based Layout, referensi SQUARE) HANYA ditambahkan kalau
+                deret harian sungguhan tersedia -- "Pesanan" TIDAK dikasih
+                sparkline karena backend belum menghitung deret harian per
+                pesanan, jujur apa adanya daripada memalsukan data. */}
             <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard
                 icon={<IconChart className="h-4 w-4 text-primary" />}
                 label="Kunjungan"
                 value={summary.total_views.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_views, prevSummary.total_views) : null}
+                sparkline={viewsPath}
+                accentHex="#1B4D3E"
               />
               <StatCard
                 icon={<IconLink className="h-4 w-4 text-accent-dark" />}
                 label="Klik Tautan"
                 value={summary.total_clicks.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_clicks, prevSummary.total_clicks) : null}
+                sparkline={clicksPath}
+                accentHex="#C9A24B"
               />
               <StatCard
                 icon={<IconBox className="h-4 w-4 text-secondary-dark" />}
@@ -250,12 +309,14 @@ export default function DashboardHomePage() {
                 label="Penjualan"
                 value={formatRupiah(summary.total_revenue_idr)}
                 pct={prevSummary ? pctChange(summary.total_revenue_idr, prevSummary.total_revenue_idr) : null}
+                sparkline={revenuePath}
+                accentHex="#1F7A6C"
               />
             </section>
 
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
@@ -287,7 +348,7 @@ export default function DashboardHomePage() {
                   hari terakhir (lihat catatan lingkup di backend
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
                 <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
@@ -305,7 +366,7 @@ export default function DashboardHomePage() {
             </section>
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
@@ -318,7 +379,7 @@ export default function DashboardHomePage() {
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
@@ -334,7 +395,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Sumber Trafik Utama</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
@@ -348,7 +409,7 @@ export default function DashboardHomePage() {
               )}
 
               {summary.device_breakdown.length > 0 && (
-                <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
@@ -371,7 +432,7 @@ export default function DashboardHomePage() {
             </section>
 
             {summary.total_views === 0 && (
-              <section className="mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-white/60 p-5 text-center">
+              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border bg-white/60 p-5 text-center">
                 <IconSparkle className="h-5 w-5 flex-shrink-0 text-accent" />
                 <p className="text-xs text-muted">
                   Belum ada kunjungan. Bagikan tautan halamanmu di bio Instagram/TikTok supaya statistik mulai terisi.
@@ -385,9 +446,27 @@ export default function DashboardHomePage() {
   );
 }
 
-function StatCard({ icon, label, value, pct }: { icon: React.ReactNode; label: string; value: string; pct: number | null }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  pct,
+  sparkline,
+  accentHex = "#1B4D3E",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  pct: number | null;
+  // sparkline/accentHex -- redesain Card-Based Layout (referensi SQUARE):
+  // mini grafik area di dasar kartu, pakai path yang SAMA (buildAreaPath)
+  // dengan grafik besar "Tren Kunjungan & Klik" -- opsional, kartu tanpa
+  // deret harian (mis. Pesanan) tetap tampil rapi tanpa grafik kosong.
+  sparkline?: { line: string; area: string };
+  accentHex?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+    <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}
         {label}
@@ -397,7 +476,50 @@ function StatCard({ icon, label, value, pct }: { icon: React.ReactNode; label: s
         <TrendBadge pct={pct} />
       </div>
       <p className="mt-1 text-[11px] text-muted">dibanding periode sebelumnya</p>
+      {sparkline && sparkline.line && (
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-2 h-10 w-full">
+          <path d={sparkline.area} fill={accentHex} fillOpacity="0.14" />
+          <path d={sparkline.line} fill="none" stroke={accentHex} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+        </svg>
+      )}
     </div>
+  );
+}
+
+// QuickAccessCard -- redesain "Card-Based Layout" (permintaan langsung
+// pengguna, referensi tangkapan layar dashboard SQUARE): kartu gradien
+// besar dengan ikon+judul+deskripsi+panah, dipakai baris "Menu Cepat" di
+// atas halaman ini. Gradien dioper sebagai inline style (bukan kelas
+// Tailwind) supaya tiap kartu bisa punya kombinasi warna brand sendiri
+// tanpa menambah utility class baru ke tailwind.config.ts.
+function QuickAccessCard({
+  href,
+  icon,
+  title,
+  description,
+  gradient,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  gradient: string;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{ background: gradient }}
+      className="group relative overflow-hidden rounded-3xl p-5 text-white shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
+    >
+      <div className="flex items-center justify-between">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">{icon}</span>
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
+          <IconChevronRight className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="mt-6 font-heading text-lg font-bold">{title}</p>
+      <p className="mt-1 text-xs text-white/80">{description}</p>
+    </Link>
   );
 }
 

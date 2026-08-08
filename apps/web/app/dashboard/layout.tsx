@@ -233,6 +233,14 @@ export default function DashboardLayout({
           </div>
         )}
 
+        {/* Redesain "Card-Based Layout" (permintaan langsung pengguna,
+            referensi tangkapan layar dashboard SQUARE): item aktif
+            SEBELUMNYA blok solid bg-primary+teks putih (berat, kontras
+            keras dengan sisa sidebar) -- sekarang pil lembut
+            (bg-primary-subtle+teks primary) dengan garis aksen tipis di
+            sisi kiri (inset shadow, bukan border-l supaya rounded-xl tetap
+            utuh di semua sisi) supaya senada dengan gaya kartu di seluruh
+            dashboard, bukan lagi elemen yang terasa terpisah gayanya. */}
         <nav className="mt-6 flex flex-col gap-1 text-xs">
           {NAV_ITEMS.map((item) => {
             if (item.type === "link") {
@@ -245,8 +253,8 @@ export default function DashboardLayout({
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
                     active
-                      ? "bg-primary text-white shadow-card"
-                      : "text-muted hover:bg-primary-subtle hover:text-primary"
+                      ? "bg-primary-subtle font-bold text-primary shadow-[inset_3px_0_0_0_#1B4D3E]"
+                      : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
                   }`}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
@@ -285,8 +293,8 @@ export default function DashboardLayout({
                           onClick={() => setMobileOpen(false)}
                           className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
                             active
-                              ? "bg-primary text-white shadow-card"
-                              : "text-muted hover:bg-primary-subtle hover:text-primary"
+                              ? "bg-primary-subtle font-bold text-primary shadow-[inset_3px_0_0_0_#1B4D3E]"
+                              : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
                           }`}
                         >
                           <Icon className="h-4 w-4 flex-shrink-0" />
@@ -320,7 +328,7 @@ export default function DashboardLayout({
         <AccountDeletionBanner />
         <OnboardingBanner />
         <TwoFactorPrompt />
-        <div className="flex min-h-screen bg-primary-subtle/30">
+        <div className="flex min-h-screen bg-primary-subtle/50">
           {/* Sidebar desktop */}
           <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
             {sidebarContent}
