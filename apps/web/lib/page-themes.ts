@@ -282,6 +282,26 @@ export const CUSTOM_FONT_OPTIONS: { value: CustomThemeConfig["font"]; label: str
   { value: "space-grotesk", label: "Space Grotesk (Geometris Modern)", cssVar: "var(--font-custom-space-grotesk)" },
 ];
 
+// STICKER_OPTIONS -- Modul Desain (permintaan langsung pengguna, 8 Agustus
+// 2026): galeri stiker dekoratif ala Linktree, ditempel dekat avatar di
+// halaman publik. Pakai emoji (bukan aset gambar/SVG kustom) -- render
+// konsisten di semua perangkat tanpa perlu hosting/unggah file baru, dan
+// tetap terasa "stiker" (playful, bukan ikon UI biasa). "value" dikirim ke
+// backend & disimpan di kolom pages.sticker, harus sinkron dengan
+// availableStickers di page.go.
+export const STICKER_OPTIONS: { value: string; label: string; emoji: string }[] = [
+  { value: "star", label: "Bintang", emoji: "⭐" },
+  { value: "heart", label: "Hati", emoji: "❤️" },
+  { value: "sparkle", label: "Kilau", emoji: "✨" },
+  { value: "fire", label: "Api", emoji: "🔥" },
+  { value: "crown", label: "Mahkota", emoji: "👑" },
+  { value: "rainbow", label: "Pelangi", emoji: "🌈" },
+  { value: "balloon", label: "Balon", emoji: "🎈" },
+  { value: "ribbon", label: "Pita", emoji: "🎀" },
+  { value: "sun", label: "Matahari", emoji: "☀️" },
+  { value: "moon", label: "Bulan", emoji: "🌙" },
+];
+
 export const CUSTOM_BUTTON_STYLE_OPTIONS: { value: CustomThemeConfig["buttonStyle"]; label: string }[] = [
   { value: "fill", label: "Solid" },
   { value: "glass", label: "Glass" },

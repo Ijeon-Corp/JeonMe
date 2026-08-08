@@ -28,6 +28,7 @@ import {
   CUSTOM_BUTTON_STYLE_OPTIONS,
   CUSTOM_FONT_OPTIONS,
   PAGE_THEMES,
+  STICKER_OPTIONS,
 } from "@/lib/page-themes";
 import {
   IconBook,
@@ -67,7 +68,7 @@ const BLOCK_LABEL: Record<string, string> = {
   text: "Teks",
 };
 
-type DesignSection = "blok" | "tema" | "header" | "tombol" | "font";
+type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
 
 // ProdukPageEditor -- Modul Halaman Toko (permintaan langsung pengguna, 7
 // Agustus 2026): "semua fitur yang ada di link bio" (builder blok/tautan +
@@ -239,6 +240,7 @@ export default function ProdukPageEditor() {
               ["header", "Header"],
               ["tombol", "Tombol"],
               ["font", "Font"],
+              ["stiker", "Stiker"],
             ] as [DesignSection, string][]
           ).map(([key, label]) => (
             <button
@@ -262,6 +264,7 @@ export default function ProdukPageEditor() {
           {section === "header" && <HeaderSection page={page} setPage={setPage} onPatch={handlePatch} onError={setError} />}
           {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
           {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
+          {section === "stiker" && <StikerSection page={page} onPatch={handlePatch} />}
         </div>
       </div>
 
@@ -891,6 +894,55 @@ function FontSection({
           onBlur={(e) => onStyleOverride({ custom_title_color: e.target.value })}
           className="h-9 w-full rounded-lg border border-border"
         />
+      </div>
+    </section>
+  );
+}
+
+// ---------- Stiker ----------
+
+function StikerSection({
+  page,
+  onPatch,
+}: {
+  page: ExtraPageDetail;
+  onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-6">
+        <button
+          type="button"
+          onClick={() => onPatch({ sticker: "" })}
+          className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold ${
+            !page.sticker ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
+          }`}
+        >
+          Tanpa stiker
+          {!page.sticker && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white">
+              <IconCheck className="h-2.5 w-2.5" />
+            </span>
+          )}
+        </button>
+        {STICKER_OPTIONS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => onPatch({ sticker: s.value })}
+            title={s.label}
+            className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border text-2xl ${
+              page.sticker === s.value ? "border-primary bg-primary-subtle" : "border-border"
+            }`}
+          >
+            {s.emoji}
+            {page.sticker === s.value && (
+              <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white">
+                <IconCheck className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </button>
+        ))}
       </div>
     </section>
   );

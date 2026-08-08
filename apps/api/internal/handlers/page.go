@@ -74,6 +74,9 @@ type publicPageResponse struct {
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
+	// Sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
+	// tidak ada. Berlaku sama untuk halaman utama maupun tambahan.
+	Sticker               string             `json:"sticker"`
 	Links                 []publicLink       `json:"links"`
 	Products              []publicItem       `json:"products"`
 	Donation              *publicDonation    `json:"donation"`
@@ -220,7 +223,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		SELECT u.id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -231,7 +234,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
 		&emailVerified)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -301,9 +304,20 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	var resp publicPageResponse
 	var userID, pageID string
 	var emailVerified bool
+	// Bug ditemukan (8 Agustus 2026, sambil menambah kolom sticker): query
+	// ini SEBELUMNYA tidak pernah menyertakan custom_button_rounded/shadow/
+	// text_color, custom_page_text_color, custom_title_font/color, dan
+	// custom_style_override -- beda dari GetPublicPage (halaman utama) yang
+	// sudah lengkap. Akibatnya panel Tombol/Font di ProdukPageEditor
+	// (Modul Halaman Toko) BERHASIL tersimpan ke database, tapi TIDAK
+	// PERNAH benar-benar tampil di halaman publik Toko/Landing/Bio kedua --
+	// halaman publiknya diam-diam selalu jatuh balik ke gaya bawaan tema.
+	// Disamakan lengkap dengan GetPublicPage di sini.
 	err := h.DB.QueryRow(ctx, `
 		SELECT p.user_id, p.id, u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
+			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
@@ -312,6 +326,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
+		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -544,6 +560,7 @@ type myPageResponse struct {
 	CustomTitleFont       string             `json:"custom_title_font"`
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
+	Sticker               string             `json:"sticker"`
 	Verification          verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
 	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
@@ -578,7 +595,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		SELECT u.username, p.display_name, p.bio, p.avatar_url, p.theme, p.is_published, p.seo_title, p.seo_description, p.noindex,
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
-			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override,
+			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.sticker,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -586,7 +603,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride,
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker,
 		&emailVerified)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
@@ -660,6 +677,16 @@ var availableCustomFonts = map[string]bool{
 	"poppins": true, "quicksand": true, "merriweather": true, "space-grotesk": true,
 }
 
+// availableStickers -- Modul Desain (permintaan langsung pengguna, 8 Agustus
+// 2026): galeri stiker dekoratif ala Linktree, ditempel dekat avatar di
+// halaman publik. "" (string kosong) SELALU sah -- berarti tidak pakai
+// stiker, TIDAK dimasukkan ke map ini (dicek terpisah seperti pola
+// CustomTitleFont/CustomPageTextColor di UpdateMyPage).
+var availableStickers = map[string]bool{
+	"star": true, "heart": true, "sparkle": true, "fire": true, "crown": true,
+	"rainbow": true, "balloon": true, "ribbon": true, "sun": true, "moon": true,
+}
+
 type updatePageRequest struct {
 	Theme                 *string `json:"theme"`
 	DisplayName           *string `json:"display_name" binding:"omitempty,max=100"`
@@ -700,6 +727,10 @@ type updatePageRequest struct {
 	// getPageTheme (page-themes.ts) untuk cara lapisan ini diterapkan di
 	// atas tema APAPUN.
 	CustomStyleOverride *bool `json:"custom_style_override"`
+	// Sticker -- Modul Desain: "" berarti tidak pakai stiker (SAH, tidak
+	// perlu ada di availableStickers), diisi valid lewat pengecekan manual
+	// di UpdateMyPage (sama pola dengan CustomTitleFont).
+	Sticker *string `json:"sticker" binding:"omitempty,max=20"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -737,6 +768,12 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	}
 	if req.CustomTitleColor != nil && *req.CustomTitleColor != "" && len(*req.CustomTitleColor) != 7 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "warna judul harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
+		return
+	}
+	// Sticker -- "" SAH (tidak pakai stiker), cuma tolak kalau diisi tapi
+	// bukan salah satu preset yang dikenal (sama pola dengan CustomTitleFont).
+	if req.Sticker != nil && *req.Sticker != "" && !availableStickers[*req.Sticker] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "stiker tidak dikenal"})
 		return
 	}
 
@@ -778,12 +815,14 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_page_text_color = COALESCE($16, custom_page_text_color),
 			custom_title_font = COALESCE($17, custom_title_font),
 			custom_title_color = COALESCE($18, custom_title_color),
-			custom_style_override = COALESCE($19, custom_style_override)
-		WHERE user_id = $20 AND is_primary = true
+			custom_style_override = COALESCE($19, custom_style_override),
+			sticker = COALESCE($20, sticker)
+		WHERE user_id = $21 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, userID)
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
+		req.Sticker, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return
@@ -1225,12 +1264,12 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 		return
 	}
 
-	var username, displayName, bio, avatarURL, theme string
+	var username, displayName, bio, avatarURL, theme, sticker string
 	if err := db.QueryRow(ctx, `
-		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme
+		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme, p.sticker
 		FROM users u JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.id = $1
-	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme); err != nil {
+	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme, &sticker); err != nil {
 		return
 	}
 
@@ -1242,14 +1281,14 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	// Toko baru langsung dipublikasikan (is_published=true) -- beda dari
 	// halaman tambahan lain yang mulai draft -- karena baru muncul saat
 	// produk sungguhan sudah ada, tidak ada alasan menahannya di draft.
-	// Bio/avatar/tema DISALIN dari halaman Bio utama (bukan dibiarkan
-	// kosong/default) supaya tampilannya konsisten sejak pertama kali
-	// live, bukan etalase kosong tanpa identitas -- kreator tetap bebas
-	// mengubahnya sendiri nanti lewat "Kelola" di dashboard/pages.
+	// Bio/avatar/tema/stiker DISALIN dari halaman Bio utama (bukan
+	// dibiarkan kosong/default) supaya tampilannya konsisten sejak pertama
+	// kali live, bukan etalase kosong tanpa identitas -- kreator tetap
+	// bebas mengubahnya sendiri nanti lewat "Kelola" di dashboard/pages.
 	if _, err := db.Exec(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme)
-		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6)
-	`, userID, name, username, bio, avatarURL, theme); err != nil {
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, sticker)
+		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7)
+	`, userID, name, username, bio, avatarURL, theme, sticker); err != nil {
 		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
 		// halaman lain, bukan milik kreator ini, kebetulan pakai slug
 		// identik dengan username-nya).
@@ -1344,12 +1383,12 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		// kosong/default) -- sama persis dengan ensureProdukPage, supaya
 		// dibuat manual lewat sini atau otomatis lewat produk pertama
 		// hasilnya konsisten.
-		var username, bio, avatarURL, theme string
+		var username, bio, avatarURL, theme, sticker string
 		if scanErr := h.DB.QueryRow(ctx, `
-			SELECT u.username, pg.bio, pg.avatar_url, pg.theme
+			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.sticker
 			FROM users u JOIN pages pg ON pg.user_id = u.id AND pg.is_primary = true
 			WHERE u.id = $1
-		`, userID).Scan(&username, &bio, &avatarURL, &theme); scanErr != nil {
+		`, userID).Scan(&username, &bio, &avatarURL, &theme, &sticker); scanErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 			return
 		}
@@ -1358,9 +1397,9 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			name = "Toko " + username
 		}
 		err = h.DB.QueryRow(ctx, `
-			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme)
-			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6) RETURNING id
-		`, userID, name, slug, bio, avatarURL, theme).Scan(&pageID)
+			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, sticker)
+			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7) RETURNING id
+		`, userID, name, slug, bio, avatarURL, theme, sticker).Scan(&pageID)
 	} else {
 		err = h.DB.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
@@ -1403,6 +1442,7 @@ type extraPageDetailResponse struct {
 	CustomTitleFont       string `json:"custom_title_font"`
 	CustomTitleColor      string `json:"custom_title_color"`
 	CustomStyleOverride   bool   `json:"custom_style_override"`
+	Sticker               string `json:"sticker"`
 	IsPremium             bool   `json:"is_premium"`
 }
 
@@ -1428,13 +1468,13 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			seo_title, seo_description, noindex,
 			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
 			custom_button_rounded, custom_button_shadow, custom_button_text_color,
-			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override
+			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, sticker
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride)
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &resp.Sticker)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -1475,6 +1515,7 @@ type updateExtraPageRequest struct {
 	CustomTitleFont       *string `json:"custom_title_font" binding:"omitempty,max=20"`
 	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
 	CustomStyleOverride   *bool   `json:"custom_style_override"`
+	Sticker               *string `json:"sticker" binding:"omitempty,max=20"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -1510,6 +1551,10 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	}
 	if req.CustomTitleColor != nil && *req.CustomTitleColor != "" && len(*req.CustomTitleColor) != 7 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "warna judul harus kode hex 7 karakter (mis. #FFFFFF) atau dikosongkan"})
+		return
+	}
+	if req.Sticker != nil && *req.Sticker != "" && !availableStickers[*req.Sticker] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "stiker tidak dikenal"})
 		return
 	}
 	var slug *string
@@ -1557,12 +1602,13 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_page_text_color = COALESCE($18, custom_page_text_color),
 			custom_title_font = COALESCE($19, custom_title_font),
 			custom_title_color = COALESCE($20, custom_title_color),
-			custom_style_override = COALESCE($21, custom_style_override)
-		WHERE id = $22 AND user_id = $23 AND is_primary = false
+			custom_style_override = COALESCE($21, custom_style_override),
+			sticker = COALESCE($22, sticker)
+		WHERE id = $23 AND user_id = $24 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, req.Sticker,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {

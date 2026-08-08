@@ -260,6 +260,7 @@ func TestGetAndUpdatePage_FullDesignFieldsRoundTrip(t *testing.T) {
 		"custom_button_shadow":  "soft",
 		"custom_title_font":     "playfair",
 		"custom_style_override": true,
+		"sticker":               "star",
 	}, map[string]string{"X-Test-UserID": userID})
 	if updateRec.Code != http.StatusOK {
 		t.Fatalf("update halaman: status = %d, body %s", updateRec.Code, updateRec.Body.String())
@@ -274,8 +275,43 @@ func TestGetAndUpdatePage_FullDesignFieldsRoundTrip(t *testing.T) {
 		t.Fatalf("gagal decode respons get: %v", err)
 	}
 	if detail.DisplayName != "Toko Skincare Kece" || detail.CustomButtonRounded != "full" ||
-		detail.CustomButtonShadow != "soft" || detail.CustomTitleFont != "playfair" || !detail.CustomStyleOverride {
+		detail.CustomButtonShadow != "soft" || detail.CustomTitleFont != "playfair" || !detail.CustomStyleOverride ||
+		detail.Sticker != "star" {
 		t.Errorf("field desain tidak tersimpan/terbaca lengkap, dapat: %+v", detail)
+	}
+}
+
+// Modul Desain (permintaan langsung pengguna, 8 Agustus 2026): stiker yang
+// bukan salah satu preset di availableStickers harus ditolak 400 -- baik
+// untuk halaman utama (UpdateMyPage) maupun halaman tambahan (UpdatePage).
+func TestUpdatePage_RejectsUnknownSticker(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+	makeTestUserPremium(t, page, userID)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/pages", page.CreatePage)
+	g.PATCH("/pages/:id", page.UpdatePage)
+	g.PATCH("/page", page.UpdateMyPage)
+
+	createRec := doJSON(t, router, http.MethodPost, "/pages", map[string]string{"name": "Toko", "slug": "toko-" + uuid.NewString()[:8], "page_type": "landing"}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodPatch, "/pages/"+created.ID, map[string]any{"sticker": "bukan-stiker-valid"}, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("UpdatePage stiker tidak dikenal: status = %d, ekspektasi 400, body %s", rec.Code, rec.Body.String())
+	}
+
+	rec2 := doJSON(t, router, http.MethodPatch, "/page", map[string]any{"sticker": "bukan-stiker-valid"}, map[string]string{"X-Test-UserID": userID})
+	if rec2.Code != http.StatusBadRequest {
+		t.Fatalf("UpdateMyPage stiker tidak dikenal: status = %d, ekspektasi 400, body %s", rec2.Code, rec2.Body.String())
 	}
 }
 

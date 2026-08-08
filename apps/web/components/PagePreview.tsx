@@ -1,4 +1,4 @@
-import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
+import { CustomThemeConfig, PageTheme, STICKER_OPTIONS, getPageTheme } from "@/lib/page-themes";
 import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
@@ -141,6 +141,10 @@ export interface PagePreviewData {
   // di klien (lihat checkout.go Create).
   shopPaused?: boolean;
   shopPausedMessage?: string;
+  // sticker -- Modul Desain: stiker dekoratif preset (lihat STICKER_OPTIONS
+  // di page-themes.ts), ditempel dekat avatar. "" atau undefined = tidak
+  // ada.
+  sticker?: string;
 }
 
 interface PreviewSourcePage {
@@ -149,6 +153,7 @@ interface PreviewSourcePage {
   bio: string;
   avatar_url: string;
   theme: string;
+  sticker?: string;
   custom_background_type?: CustomThemeConfig["backgroundType"];
   custom_background_value?: string;
   custom_font?: CustomThemeConfig["font"];
@@ -206,6 +211,7 @@ export function toPreviewData(
     theme: page.theme,
     isVerified: page.is_verified ?? false,
     isPremium: page.is_premium ?? false,
+    sticker: page.sticker,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -259,6 +265,24 @@ export function toPreviewData(
 // untuk cara SEMUA tipe halaman merender tautan/blok konten (link/video/
 // faq/contact_form/maps/text -- persis tipe yang bisa ditambahkan lewat
 // dashboard/links).
+// StickerBadge -- Modul Desain (permintaan langsung pengguna, 8 Agustus
+// 2026): stiker dekoratif preset (lihat STICKER_OPTIONS di page-themes.ts),
+// ditempel di sudut kanan-bawah avatar, murni visual (tidak interaktif,
+// tidak diklik). Dipakai bersama oleh layout bio biasa & ProdukPagePreview
+// -- Landing (No.99, tanpa avatar sama sekali) SENGAJA tidak memakainya.
+function StickerBadge({ sticker }: { sticker?: string }) {
+  const emoji = sticker ? STICKER_OPTIONS.find((s) => s.value === sticker)?.emoji : undefined;
+  if (!emoji) return null;
+  return (
+    <span
+      aria-hidden
+      className="absolute -bottom-1 -right-1 flex h-9 w-9 rotate-12 items-center justify-center rounded-full bg-white text-lg shadow-card ring-2 ring-white"
+    >
+      {emoji}
+    </span>
+  );
+}
+
 function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
@@ -481,20 +505,23 @@ export default function PagePreview({
             />
           )}
 
-          {data.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.avatarUrl}
-              alt={data.username}
-              className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
-            />
-          ) : (
-            <div
-              className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
-            >
-              {data.username.slice(0, 1).toUpperCase()}
-            </div>
-          )}
+          <div className="relative">
+            {data.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.avatarUrl}
+                alt={data.username}
+                className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
+              />
+            ) : (
+              <div
+                className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
+              >
+                {data.username.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <StickerBadge sticker={data.sticker} />
+          </div>
 
           <div className="relative mt-5 text-center">
             <h1
@@ -1000,20 +1027,23 @@ function ProdukPagePreview({
             />
           )}
 
-          {data.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.avatarUrl}
-              alt={data.username}
-              className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
-            />
-          ) : (
-            <div
-              className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
-            >
-              {data.username.slice(0, 1).toUpperCase()}
-            </div>
-          )}
+          <div className="relative">
+            {data.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.avatarUrl}
+                alt={data.username}
+                className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
+              />
+            ) : (
+              <div
+                className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
+              >
+                {data.username.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <StickerBadge sticker={data.sticker} />
+          </div>
 
           <div className="relative mt-5 text-center">
             <h1

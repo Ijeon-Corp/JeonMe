@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useDesignData } from "@/lib/useDesignData";
-import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
+import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES, STICKER_OPTIONS } from "@/lib/page-themes";
 import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
@@ -31,6 +31,7 @@ export default function DashboardDesignPage() {
   const themeLabel = page.theme === "custom" ? "Custom" : (presetMeta?.label ?? "Default");
   const buttonStyleLabel = CUSTOM_BUTTON_STYLE_OPTIONS.find((o) => o.value === page.custom_button_style)?.label;
   const fontLabel = CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label;
+  const stickerMeta = STICKER_OPTIONS.find((s) => s.value === page.sticker);
 
   return (
     <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
@@ -137,6 +138,19 @@ export default function DashboardDesignPage() {
                 <div>
                   <p className="text-sm font-semibold text-ink">Font</p>
                   {fontLabel && <p className="text-xs text-muted">{fontLabel}</p>}
+                </div>
+              </div>
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+            </Link>
+
+            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-lg" aria-hidden>
+                  {stickerMeta?.emoji ?? "✨"}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink">Stiker</p>
+                  <p className="text-xs text-muted">{stickerMeta?.label ?? "Tidak ada"}</p>
                 </div>
               </div>
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />

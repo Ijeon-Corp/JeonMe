@@ -239,6 +239,9 @@ export interface PublicPage {
   // di atas DITERAPKAN, independen dari `theme` -- lihat komentar
   // getPageTheme di page-themes.ts.
   custom_style_override: boolean;
+  // sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
+  // tidak ada.
+  sticker: string;
   is_verified: boolean;
   // is_premium -- Modul Langganan Premium: sembunyikan watermark
   // "Buat halaman gratis di Jeonme" untuk kreator Premium. Lihat
@@ -390,6 +393,9 @@ export interface MyPage {
   // custom_page_text_color/custom_title_* di atas SEKARANG independen dari
   // theme, hanya diterapkan kalau flag ini true.
   custom_style_override: boolean;
+  // sticker -- Modul Desain: stiker dekoratif preset dekat avatar, "" =
+  // tidak ada.
+  sticker: string;
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -500,6 +506,7 @@ export function updateMyPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
+      | "sticker"
     >
   >
 ) {
@@ -778,6 +785,7 @@ export function updateExtraPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
+      | "sticker"
     >
   >
 ) {
