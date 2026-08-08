@@ -3,7 +3,7 @@
 import Link from "next/link";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import { IconChevronRight } from "@/components/icons";
-import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
+import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 
 // DesignPageShell -- permintaan langsung pengguna: setiap menu di halaman
 // Desain sekarang halaman tersendiri (bukan accordion) -- komponen ini
@@ -36,6 +36,8 @@ export default function DesignPageShell({
   description,
   contentMaxWidth = "",
   children,
+  editableStickers,
+  onStickersChange,
 }: {
   page: MyPage;
   links: LinkItem[];
@@ -45,6 +47,12 @@ export default function DesignPageShell({
   description?: string;
   contentMaxWidth?: string;
   children: React.ReactNode;
+  // editableStickers/onStickersChange -- permintaan langsung pengguna:
+  // dipakai KHUSUS oleh /dashboard/design/sticker supaya stiker bisa
+  // diseret/diubah ukuran LANGSUNG di panel pratinjau kanan (lihat
+  // catatan panjang di PagePreview.tsx).
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
@@ -59,7 +67,13 @@ export default function DesignPageShell({
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         {children}
       </div>
-      <LivePreviewPanel page={page} links={links} products={products} />
+      <LivePreviewPanel
+        page={page}
+        links={links}
+        products={products}
+        editableStickers={editableStickers}
+        onStickersChange={onStickersChange}
+      />
     </div>
   );
 }

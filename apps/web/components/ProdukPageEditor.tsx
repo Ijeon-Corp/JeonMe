@@ -62,7 +62,7 @@ const BLOCK_LABEL: Record<string, string> = {
   text: "Teks",
 };
 
-type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
+export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
 
 // ProdukPageEditor -- Modul Halaman Toko (permintaan langsung pengguna, 7
 // Agustus 2026): "semua fitur yang ada di link bio" (builder blok/tautan +
@@ -100,6 +100,8 @@ export default function ProdukPageEditor({
   creating,
   onCreateNow,
   onStickersChange,
+  section,
+  setSection,
 }: {
   loading: boolean;
   username: string;
@@ -112,9 +114,15 @@ export default function ProdukPageEditor({
   creating: boolean;
   onCreateNow: () => void;
   onStickersChange: (stickers: PageStickerData[]) => void;
+  // section/setSection -- diangkat ke induk (dashboard/products/page.tsx,
+  // permintaan langsung pengguna: "langsung edit di bagian pratinjau nya")
+  // supaya induk tahu tab Stiker sedang aktif atau tidak, untuk menyalakan
+  // editableStickers di <LivePreviewPanel> miliknya sendiri -- pratinjau
+  // Toko dirender di INDUK, bukan di komponen terkontrol ini.
+  section: DesignSection;
+  setSection: (s: DesignSection) => void;
 }) {
   const router = useRouter();
-  const [section, setSection] = useState<DesignSection>("blok");
 
   async function handlePatch(patch: Parameters<typeof updateExtraPage>[1]) {
     if (!page) return;

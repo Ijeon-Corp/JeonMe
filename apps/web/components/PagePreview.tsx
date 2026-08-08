@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
@@ -14,7 +17,7 @@ import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
 import { PageStickerData, RecentPurchase } from "@/lib/api-client";
-import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail } from "@/components/icons";
+import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconTrash } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
 
 export interface PagePreviewLink {
@@ -274,30 +277,153 @@ export function toPreviewData(
 // faq/contact_form/maps/text -- persis tipe yang bisa ditambahkan lewat
 // dashboard/links).
 // StickerOverlay -- Modul Desain (koreksi langsung pengguna, 8 Agustus
-// 2026): stiker dekoratif INTERAKTIF -- posisi & ukuran sendiri per stiker
-// (diatur lewat StickerCanvasEditor di dashboard), TERSEBAR di seluruh
-// kanvas halaman (bukan lagi satu badge tetap di pojok avatar). Murni
-// visual di sini (tidak interaktif/tidak diklik -- interaksi drag/resize
-// HANYA ada di StickerCanvasEditor saat mengedit, bukan di preview/halaman
-// publik). x/y persen relatif terhadap elemen pembungkus (harus `relative`)
-// -- lihat rumus posisi yang SAMA di StickerCanvasEditor. Dipakai bersama
-// oleh layout bio biasa & ProdukPagePreview -- Landing (No.99, tanpa
+// 2026, disempurnakan lagi hari yang sama: "harusnya bagian stiker itu
+// langsung edit di bagian pratinjau nya" -- SEBELUMNYA drag/resize cuma
+// tersedia di kanvas mockup terpisah (StickerCanvasEditor), tidak
+// merefleksikan tema/tata letak halaman SUNGGUHAN. Overlay ini SEKARANG
+// bisa jadi dua mode:
+// - editable=false (default, dipakai halaman publik SUNGGUHAN &
+//   pratinjau read-only): murni visual, pointer-events-none, TIDAK
+//   diklik.
+// - editable=true (dipakai LivePreviewPanel saat tab "Stiker" aktif di
+//   dashboard): setiap stiker bisa diseret (posisi) & gagang pojoknya
+//   ditarik (ukuran) LANGSUNG di atas pratinjau asli -- avatar/tema/blok
+//   sungguhan, bukan kanvas kosong terpisah. State lokal disinkronkan
+//   dari prop `stickers` lewat pola "adjust state during render" (BUKAN
+//   useEffect+setState, lihat catatan sama di StickerCanvasEditor
+//   soal react-hooks/set-state-in-effect) supaya tetap responsif saat
+//   drag aktif tapi tetap ikut update kalau data dimuat ulang dari luar.
+// x/y persen relatif terhadap elemen pembungkus (harus `relative`) --
+// rumus posisi SAMA seperti StickerCanvasEditor. Dipakai bersama oleh
+// layout bio biasa & ProdukPagePreview -- Landing (No.99, tanpa
 // avatar/header sama sekali) SENGAJA tidak memakainya.
-function StickerOverlay({ stickers }: { stickers?: PageStickerData[] }) {
-  if (!stickers || stickers.length === 0) return null;
+function StickerOverlay({
+  stickers,
+  editable,
+  onChange,
+}: {
+  stickers?: PageStickerData[];
+  editable?: boolean;
+  onChange?: (stickers: PageStickerData[]) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [local, setLocal] = useState<PageStickerData[]>(stickers ?? []);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const dragState = useRef<{ id: string; mode: "move" | "resize" } | null>(null);
+
+  const [prevStickersProp, setPrevStickersProp] = useState(stickers);
+  if (stickers !== prevStickersProp) {
+    setPrevStickersProp(stickers);
+    setLocal(stickers ?? []);
+  }
+
+  useEffect(() => {
+    if (!editable) return;
+    function handlePointerMove(e: PointerEvent) {
+      const drag = dragState.current;
+      const container = containerRef.current;
+      if (!drag || !container) return;
+      const rect = container.getBoundingClientRect();
+      setLocal((prev) =>
+        prev.map((s) => {
+          if (s.id !== drag.id) return s;
+          if (drag.mode === "move") {
+            const x = clampPercent(((e.clientX - rect.left) / rect.width) * 100);
+            const y = clampPercent(((e.clientY - rect.top) / rect.height) * 100);
+            return { ...s, x, y };
+          }
+          const centerX = rect.left + (s.x / 100) * rect.width;
+          const centerY = rect.top + (s.y / 100) * rect.height;
+          const dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+          const scale = clampScale(dist / (rect.width / 6));
+          return { ...s, scale };
+        })
+      );
+    }
+    function handlePointerUp() {
+      if (dragState.current) {
+        dragState.current = null;
+        setLocal((current) => {
+          onChange?.(current);
+          return current;
+        });
+      }
+    }
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [editable, onChange]);
+
+  if (local.length === 0) return null;
+
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
-      {stickers.map((s) => (
+    <div
+      ref={containerRef}
+      aria-hidden={!editable}
+      onPointerDown={editable ? () => setSelectedId(null) : undefined}
+      className={`absolute inset-0 z-10 overflow-hidden ${editable ? "touch-none" : "pointer-events-none"}`}
+    >
+      {local.map((s) => (
         <div
           key={s.id}
+          onPointerDown={
+            editable
+              ? (e) => {
+                  e.stopPropagation();
+                  (e.target as Element).setPointerCapture(e.pointerId);
+                  dragState.current = { id: s.id, mode: "move" };
+                  setSelectedId(s.id);
+                }
+              : undefined
+          }
           style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})` }}
-          className="absolute h-14 w-14 text-ink drop-shadow"
+          className={`absolute h-14 w-14 text-ink drop-shadow ${
+            editable ? "cursor-grab touch-none active:cursor-grabbing" : ""
+          } ${editable && selectedId === s.id ? "z-10" : ""}`}
         >
           <StickerIcon type={s.type} className="h-full w-full" />
+          {editable && selectedId === s.id && (
+            <>
+              <span className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2" />
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = local.filter((it) => it.id !== s.id);
+                  setLocal(next);
+                  onChange?.(next);
+                  setSelectedId(null);
+                }}
+                className="absolute -right-3 -top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-red-600 shadow-card"
+              >
+                <IconTrash className="h-3 w-3" />
+              </button>
+              <span
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  (e.target as Element).setPointerCapture(e.pointerId);
+                  dragState.current = { id: s.id, mode: "resize" };
+                }}
+                className="absolute -bottom-2 -right-2 flex h-5 w-5 cursor-nwse-resize items-center justify-center rounded-full border-2 border-white bg-primary shadow-card"
+              />
+            </>
+          )}
         </div>
       ))}
     </div>
   );
+}
+
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
+}
+
+function clampScale(value: number) {
+  return Math.min(2.5, Math.max(0.4, value));
 }
 
 function renderLinkOrBlock(
@@ -471,10 +597,21 @@ export default function PagePreview({
   data,
   interactive = true,
   rootClassName = "min-h-screen",
+  editableStickers = false,
+  onStickersChange,
 }: {
   data: PagePreviewData;
   interactive?: boolean;
   rootClassName?: string;
+  // editableStickers/onStickersChange -- permintaan langsung pengguna:
+  // "harusnya bagian stiker itu langsung edit di bagian pratinjau nya" --
+  // dipakai KHUSUS oleh LivePreviewPanel saat tab Stiker aktif di
+  // dashboard, supaya drag/resize terjadi di pratinjau ASLI (tema/avatar/
+  // blok sungguhan), bukan kanvas mockup terpisah. TIDAK PERNAH true di
+  // halaman publik sungguhan (app/[username]/page.tsx tidak mengoper prop
+  // ini sama sekali).
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
   // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar/booking
@@ -484,7 +621,9 @@ export default function PagePreview({
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
-  // monetisasi, beda dari layout bio biasa di bawah.
+  // monetisasi, beda dari layout bio biasa di bawah. Landing TIDAK punya
+  // stiker sama sekali (lihat catatan StickerOverlay), jadi tidak perlu
+  // menerima editableStickers/onStickersChange.
   if (data.pageType === "landing") {
     // Landing page (No.99) tidak punya produk/monetisasi sama sekali --
     // shop_paused tidak relevan di sini, tetap pakai `interactive` biasa.
@@ -495,12 +634,22 @@ export default function PagePreview({
   // tautan/donasi/lead-capture/event/booking/loyalty, beda dari layout bio
   // biasa & dari layout landing (blok manual) di atas.
   if (data.pageType === "produk") {
-    return <ProdukPagePreview data={data} rootClassName={rootClassName} theme={theme} canBuy={canBuy} interactive={interactive} />;
+    return (
+      <ProdukPagePreview
+        data={data}
+        rootClassName={rootClassName}
+        theme={theme}
+        canBuy={canBuy}
+        interactive={interactive}
+        editableStickers={editableStickers}
+        onStickersChange={onStickersChange}
+      />
+    );
   }
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <StickerOverlay stickers={data.stickers} />
+      <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
       {interactive && data.socialProof && (
         <SocialProofToast
           recent={data.socialProof.recent}
@@ -1026,16 +1175,20 @@ function ProdukPagePreview({
   theme,
   canBuy,
   interactive,
+  editableStickers,
+  onStickersChange,
 }: {
   data: PagePreviewData;
   rootClassName: string;
   theme: PageTheme;
   canBuy: boolean;
   interactive: boolean;
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      <StickerOverlay stickers={data.stickers} />
+      <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>

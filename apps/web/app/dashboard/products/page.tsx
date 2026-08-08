@@ -56,7 +56,7 @@ import StorageFilesPanel from "@/components/StorageFilesPanel";
 import WebhookEventsPanel from "@/components/WebhookEventsPanel";
 import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 import TransactionPanel from "@/components/TransactionPanel";
-import ProdukPageEditor from "@/components/ProdukPageEditor";
+import ProdukPageEditor, { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
@@ -175,6 +175,11 @@ export default function DashboardProductsPage() {
   const [tokoLoading, setTokoLoading] = useState(true);
   const [tokoError, setTokoError] = useState<string | null>(null);
   const [tokoCreating, setTokoCreating] = useState(false);
+  // tokoSection -- tab desain internal ProdukPageEditor (Blok/Tema/Header/
+  // Tombol/Font/Stiker), diangkat ke sini (permintaan langsung pengguna:
+  // "langsung edit di bagian pratinjau nya") supaya <LivePreviewPanel> di
+  // bawah tahu kapan harus menyalakan editableStickers (tab Stiker aktif).
+  const [tokoSection, setTokoSection] = useState<DesignSection>("blok");
 
   // loadTokoData -- murni ambil & kembalikan data, TANPA setState di
   // dalamnya (aturan lint react-hooks/set-state-in-effect, lihat catatan
@@ -671,6 +676,8 @@ export default function DashboardProductsPage() {
               creating={tokoCreating}
               onCreateNow={handleCreateTokoNow}
               onStickersChange={handleTokoStickersChange}
+              section={tokoSection}
+              setSection={setTokoSection}
             />
           </div>
         ) : tab === "reviews" ? (
@@ -1065,6 +1072,8 @@ export default function DashboardProductsPage() {
         pageType="produk"
         pageSlug={tokoPage?.slug}
         openUrl={tokoPage ? `https://jeonme.com/p/${tokoPage.slug}` : undefined}
+        editableStickers={tab === "halaman_toko" && tokoSection === "stiker"}
+        onStickersChange={handleTokoStickersChange}
       />
 
       {manageProduct && (

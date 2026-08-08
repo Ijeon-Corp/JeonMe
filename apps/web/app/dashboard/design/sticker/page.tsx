@@ -5,9 +5,12 @@ import { useDesignData } from "@/lib/useDesignData";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 
 // DesignStickerPage -- Modul Desain (koreksi langsung pengguna, 8 Agustus
-// 2026): stiker dekoratif INTERAKTIF -- seret untuk posisi, gagang pojok
-// untuk ukuran, langsung di kanvas (lihat StickerCanvasEditor). Pola halaman
-// tetap sama dengan theme/header/tombol/font (DesignPageShell +
+// 2026, disempurnakan lagi hari yang sama: "langsung edit di bagian
+// pratinjau nya"): seret untuk posisi & tarik gagang pojok untuk ukuran
+// terjadi LANGSUNG di panel Pratinjau Langsung kanan (editableStickers
+// diteruskan ke DesignPageShell -> LivePreviewPanel -> PagePreview), palet
+// "Tambah Stiker" tetap di kolom kiri (lihat StickerCanvasEditor). Pola
+// halaman tetap sama dengan theme/header/tombol/font (DesignPageShell +
 // useDesignData).
 export default function DesignStickerPage() {
   const { page, loading, error, links, products, handleStickersChange } = useDesignData();
@@ -21,7 +24,9 @@ export default function DesignStickerPage() {
       products={products}
       backHref="/dashboard/design"
       title="Stiker"
-      description="Tempel stiker dekoratif di halaman publikmu -- seret untuk pindah, tarik gagang pojok untuk ubah ukuran."
+      description="Tempel stiker dekoratif di halaman publikmu -- seret untuk pindah, tarik gagang pojok untuk ubah ukuran, langsung di panel pratinjau."
+      editableStickers
+      onStickersChange={handleStickersChange}
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

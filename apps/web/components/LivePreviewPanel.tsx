@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
+import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { IconExternal } from "@/components/icons";
 import PagePreview, { toPreviewData } from "@/components/PagePreview";
 
@@ -20,6 +20,8 @@ export default function LivePreviewPanel({
   pageType,
   pageSlug,
   openUrl,
+  editableStickers,
+  onStickersChange,
 }: {
   page: MyPage | null;
   links: LinkItem[];
@@ -27,6 +29,11 @@ export default function LivePreviewPanel({
   pageType?: "bio" | "landing" | "produk";
   pageSlug?: string;
   openUrl?: string;
+  // editableStickers/onStickersChange -- permintaan langsung pengguna:
+  // stiker diedit LANGSUNG di pratinjau ini (drag/resize), bukan lagi di
+  // kanvas mockup terpisah -- lihat catatan panjang di PagePreview.tsx.
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   return (
     <div className="mt-8 lg:sticky lg:top-6 lg:mt-0">
@@ -84,6 +91,8 @@ export default function LivePreviewPanel({
                 pageType,
                 pageSlug,
               }}
+              editableStickers={editableStickers}
+              onStickersChange={onStickersChange}
             />
           </div>
         </div>
