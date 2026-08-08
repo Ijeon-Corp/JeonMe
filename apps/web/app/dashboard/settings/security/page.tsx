@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Skeleton } from "@/components/Skeleton";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   ActiveSession,
@@ -280,7 +281,12 @@ export default function SettingsSecurityPage() {
         <p className="mt-1 text-xs text-muted">Device yang sedang login ke akunmu.</p>
 
         <div className="mt-3 flex flex-col gap-2">
-          {sessions === null && <p className="text-xs text-muted">Memuat...</p>}
+          {sessions === null && (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          )}
           {sessions?.length === 0 && <p className="text-xs text-muted">Tidak ada sesi aktif tercatat.</p>}
           {sessions?.map((s) => (
             <div

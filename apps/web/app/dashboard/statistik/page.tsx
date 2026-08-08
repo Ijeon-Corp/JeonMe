@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   AnalyticsSummary,
@@ -116,7 +117,7 @@ export default function StatistikPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {loading || !summary ? (
-        <p className="mt-6 text-sm text-muted">Memuat...</p>
+        <PageSkeleton />
       ) : tab === "link-bio" ? (
         <>
           <section className="mt-4 grid grid-cols-2 gap-3">
@@ -125,7 +126,7 @@ export default function StatistikPage() {
           </section>
 
           {summary.daily_series.length > 0 && (
-            <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+            <div className="glass mt-3 rounded-2xl p-4 shadow-card">
               <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
@@ -154,7 +155,7 @@ export default function StatistikPage() {
           )}
 
           <section className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+            <div className="glass rounded-2xl p-4 shadow-card">
               <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {summary.top_links.map((l) => (
@@ -168,7 +169,7 @@ export default function StatistikPage() {
             </div>
 
             {summary.device_breakdown.length > 0 && (
-              <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="glass rounded-2xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.device_breakdown.map((d) => (
@@ -196,7 +197,7 @@ export default function StatistikPage() {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+    <div className="glass rounded-2xl p-4 shadow-card">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}
         {label}

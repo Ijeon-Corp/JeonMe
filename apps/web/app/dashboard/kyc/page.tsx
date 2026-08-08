@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, KycStatus, getKycStatus, submitKyc } from "@/lib/api-client";
 import { IconCheck, IconShield, IconUpload } from "@/components/icons";
@@ -87,7 +88,7 @@ export default function DashboardKycPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   const canSubmit = status?.status === "unverified" || status?.status === "rejected";
 
@@ -101,7 +102,7 @@ export default function DashboardKycPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status && (
-        <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <section className="glass mt-4 rounded-2xl p-5 shadow-card">
           <div className="flex items-center gap-2">
             <IconShield className="h-4 w-4 text-primary" />
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[status.status]}`}>
@@ -131,7 +132,7 @@ export default function DashboardKycPage() {
       )}
 
       {canSubmit && (
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <form onSubmit={handleSubmit} className="glass mt-4 flex flex-col gap-3 rounded-2xl p-5 shadow-card">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">
             Syarat: halaman sudah punya minimal 1 produk aktif
           </p>

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -137,7 +138,7 @@ export default function DashboardCoursesPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -148,7 +149,7 @@ export default function DashboardCoursesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -284,7 +285,7 @@ export default function DashboardCoursesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {courses.map((course) => (
-          <div key={course.id} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+          <div key={course.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-ink">{course.name}</p>
               <span className="text-sm font-bold text-secondary-dark">Rp {course.price_idr.toLocaleString("id-ID")}</span>

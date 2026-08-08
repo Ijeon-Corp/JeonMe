@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, ProductReview, deleteReview, listReviews, setReviewHidden } from "@/lib/api-client";
 import { IconInbox, IconStar, IconTrash } from "@/components/icons";
@@ -51,7 +52,7 @@ export default function ReviewsPanel() {
   }
 
   if (reviews === null) {
-    return <p className="mt-4 text-sm text-muted">Memuat...</p>;
+    return <PageSkeleton />;
   }
 
   const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : null;
@@ -61,7 +62,7 @@ export default function ReviewsPanel() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {avgRating !== null && (
-        <div className="mb-3 flex items-center gap-2 rounded-2xl border border-border bg-white p-4 shadow-card">
+        <div className="glass mb-3 flex items-center gap-2 rounded-2xl p-4 shadow-card">
           <StarRow rating={Math.round(avgRating)} />
           <span className="text-sm font-bold text-ink">{avgRating.toFixed(1)}</span>
           <span className="text-xs text-muted">dari {reviews.length} ulasan</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnalyticsSummary,
@@ -537,7 +538,7 @@ export default function DashboardProductsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   // categories -- Modul Toko (Fase B1): daftar kategori UNIK dari produk
   // yang sudah ada, bukan taksonomi tetap -- filter dropdown ini otomatis
@@ -698,7 +699,7 @@ export default function DashboardProductsPage() {
                 halaman publik selalu terlihat di atas Overview, bukan cuma
                 di panel pratinjau kanan. */}
             {page && (
-              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+              <div className="glass mb-4 flex items-center gap-3 rounded-2xl p-4 shadow-card">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={page.avatar_url} alt={page.username} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
@@ -740,7 +741,7 @@ export default function DashboardProductsPage() {
 
             {overviewError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{overviewError}</p>}
             <div className="mt-3">
-              {summary ? <ShopOverviewPanel summary={summary} recentOrders={recentOrders} /> : <p className="text-sm text-muted">Memuat...</p>}
+              {summary ? <ShopOverviewPanel summary={summary} recentOrders={recentOrders} /> : <PageSkeleton />}
             </div>
           </div>
         ) : (
@@ -800,7 +801,7 @@ export default function DashboardProductsPage() {
             {/* Modul Toko (Fase B3): panel "Add Items" ala referensi -- pilih
                 jenis item dulu sebelum masuk ke form spesifiknya. */}
             {addMode === "choose" && (
-              <div className="mt-3 grid grid-cols-1 gap-2.5 rounded-2xl border border-border bg-white p-4 shadow-card sm:grid-cols-2">
+              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-2xl p-4 shadow-card sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
@@ -823,7 +824,7 @@ export default function DashboardProductsPage() {
             )}
 
             {addMode === "digital" && (
-              <form onSubmit={handleCreate} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
+              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-2xl p-4 shadow-card sm:flex-row">
                 <input
                   type="text"
                   autoFocus
@@ -868,7 +869,7 @@ export default function DashboardProductsPage() {
             )}
 
             {addMode === "payment_link" && (
-              <form onSubmit={handleCreatePaymentLink} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card">
+              <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-2xl p-4 shadow-card">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -936,7 +937,7 @@ export default function DashboardProductsPage() {
             )}
 
             {filteredProducts.length > 0 ? (
-              <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-white shadow-card">
+              <div className="glass mt-4 overflow-x-auto rounded-2xl shadow-card">
                 <table className="w-full min-w-[520px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">

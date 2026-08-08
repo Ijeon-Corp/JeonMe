@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useState } from "react";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
@@ -25,7 +26,7 @@ export default function DesignHeaderPage() {
     }
   }
 
-  if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading || !page) return <PageSkeleton />;
 
   return (
     <DesignPageShell
@@ -38,7 +39,7 @@ export default function DesignHeaderPage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-4 flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-ink">Foto Profil</label>
           <div className="flex items-center gap-3">

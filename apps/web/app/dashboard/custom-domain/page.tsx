@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -84,7 +85,7 @@ export default function DashboardCustomDomainPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -99,7 +100,7 @@ export default function DashboardCustomDomainPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
         <form onSubmit={handleSetDomain} className="flex gap-2">
           <input
             type="text"

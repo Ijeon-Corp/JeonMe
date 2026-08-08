@@ -46,7 +46,7 @@ export default function AnalyticsAssistant() {
   }
 
   return (
-    <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+    <section className="glass mt-4 rounded-2xl p-5 shadow-card">
       <div className="flex items-center gap-2">
         <IconSparkle className="h-4 w-4 text-accent" />
         <h2 className="font-heading text-sm font-bold text-ink">Tanya Analitik</h2>

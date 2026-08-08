@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -149,7 +150,7 @@ export default function SettingsPaymentPage() {
   }
 
   if (methods === null || schedule === null) {
-    return <div className="mx-auto max-w-2xl text-sm text-muted">Memuat...</div>;
+    return <PageSkeleton />;
   }
 
   return (

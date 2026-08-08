@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -148,7 +149,7 @@ export default function DashboardTeamPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -184,7 +185,7 @@ export default function DashboardTeamPage() {
         </section>
       )}
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Undang Kolaborator</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
@@ -216,7 +217,7 @@ export default function DashboardTeamPage() {
         </form>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Kolaboratorku</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
@@ -260,7 +261,7 @@ export default function DashboardTeamPage() {
         </ul>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
           <IconClock className="h-4 w-4 text-muted" />
           Riwayat Aktivitas Tim

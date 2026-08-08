@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -96,7 +97,7 @@ export default function DashboardAffiliatesPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -107,7 +108,7 @@ export default function DashboardAffiliatesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -182,7 +183,7 @@ export default function DashboardAffiliatesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {affiliates.map((a) => (
-          <div key={a.id} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+          <div key={a.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-ink">{a.affiliate_email}</p>
               <button
@@ -239,7 +240,7 @@ export default function DashboardAffiliatesPage() {
 
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
-          <div key={p.id} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+          <div key={p.id} className="glass rounded-2xl p-4 shadow-card">
             <p className="text-sm font-bold text-ink">@{p.creator_username}</p>
             <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary-subtle/60 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-ink">{p.referral_url}</p>

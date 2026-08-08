@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, BusinessCard, getBusinessCard, getMyPage, upsertBusinessCard } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
@@ -59,7 +60,7 @@ export default function DashboardBusinessCardPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   const cardURL = username ? `https://jeonme.com/card/${username}` : "";
 
@@ -85,7 +86,7 @@ export default function DashboardBusinessCardPage() {
         </button>
       )}
 
-      <form onSubmit={handleSave} className="mt-4 flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-ink">Aktifkan Kartu Kontak</p>

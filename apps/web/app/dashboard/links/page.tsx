@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -704,7 +705,7 @@ export default function DashboardLinksPage() {
     });
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     // "max-w-2xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
@@ -850,7 +851,7 @@ export default function DashboardLinksPage() {
         </button>
 
         {addingLink && (
-          <form onSubmit={handleCreateLink} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-card sm:flex-row">
+          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-2xl p-4 shadow-card sm:flex-row">
             <input
               type="text"
               required
@@ -882,7 +883,7 @@ export default function DashboardLinksPage() {
         )}
 
         {addingBlock && (
-          <form onSubmit={handleCreateBlock} className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-white p-3.5 shadow-card">
+          <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-2xl p-3.5 shadow-card">
             <select
               value={blockType}
               onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text")}

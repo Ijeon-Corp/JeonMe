@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, ShopSettings, getShopSettings, updateShopSettings } from "@/lib/api-client";
 
@@ -40,7 +41,7 @@ export default function ShopSettingsPanel() {
   }
 
   if (settings === null) {
-    return <p className="mt-4 text-sm text-muted">Memuat...</p>;
+    return <PageSkeleton />;
   }
 
   return (
@@ -48,7 +49,7 @@ export default function ShopSettingsPanel() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mb-3 rounded-lg bg-secondary-subtle px-3 py-2 text-sm text-secondary-dark">Pengaturan tersimpan.</p>}
 
-      <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+      <div className="glass rounded-2xl p-4 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-ink">Jeda Toko Sementara</p>

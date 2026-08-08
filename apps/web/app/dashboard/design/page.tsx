@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDesignData } from "@/lib/useDesignData";
@@ -26,7 +27,7 @@ export default function DashboardDesignPage() {
   const router = useRouter();
   const { page, setPage, links, products, loading, error, handlePageSettingChange } = useDesignData();
 
-  if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading || !page) return <PageSkeleton />;
 
   const presetMeta = PAGE_THEMES[page.theme as keyof typeof PAGE_THEMES] as (typeof PAGE_THEMES)[keyof typeof PAGE_THEMES] | undefined;
   const themeSwatch = page.theme === "custom" ? page.custom_button_color : (presetMeta?.swatch ?? "#1B4D3E");
@@ -41,7 +42,7 @@ export default function DashboardDesignPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <section className="glass mt-6 rounded-2xl p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
             <a
@@ -201,7 +202,7 @@ export default function DashboardDesignPage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <section className="glass mt-4 rounded-2xl p-5 shadow-card">
           <h2 className="font-heading text-lg font-bold text-ink">SEO</h2>
           <p className="mt-1 text-xs text-muted">
             Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan halaman dari mesin pencari.

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
@@ -15,7 +16,7 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 export default function DesignStickerPage() {
   const { page, loading, error, links, products, handleStickersChange } = useDesignData();
 
-  if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading || !page) return <PageSkeleton />;
 
   return (
     <DesignPageShell
@@ -30,7 +31,7 @@ export default function DesignStickerPage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
         <StickerCanvasEditor stickers={page.stickers} onChange={handleStickersChange} />
       </section>
     </DesignPageShell>

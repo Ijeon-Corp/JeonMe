@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, getSocialProofSettings, upsertSocialProofSettings } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
@@ -54,7 +55,7 @@ export default function DashboardSocialProofPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-lg">
@@ -65,7 +66,7 @@ export default function DashboardSocialProofPage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Pengaturan disimpan.</p>}
 
-      <form onSubmit={handleSave} className="mt-6 flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-ink">Aktifkan Notifikasi</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -144,11 +145,11 @@ export default function ProdukPageEditor({
     return handlePatch({ ...patch, custom_style_override: true });
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   if (!page) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-border bg-white p-8 text-center shadow-card">
+      <div className="glass mx-auto max-w-xl rounded-2xl p-8 text-center shadow-card">
         <IconSparkle className="mx-auto h-8 w-8 text-primary" />
         <h2 className="mt-3 font-heading text-lg font-bold text-ink">Halaman Toko belum aktif</h2>
         <p className="mt-2 text-sm text-muted">
@@ -171,7 +172,7 @@ export default function ProdukPageEditor({
 
   return (
     <div className="min-w-0">
-      <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass rounded-2xl p-5 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-lg font-bold text-ink">Halaman Toko</h2>
           <a
@@ -219,7 +220,7 @@ export default function ProdukPageEditor({
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-border bg-white p-1.5 shadow-card">
+      <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-2xl p-1.5 shadow-card">
         {(
           [
             ["blok", "Blok & Tautan"],
@@ -252,7 +253,7 @@ export default function ProdukPageEditor({
         {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
         {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
         {section === "stiker" && (
-          <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+          <section className="glass rounded-2xl p-5 shadow-card">
             <StickerCanvasEditor stickers={page.stickers} onChange={onStickersChange} />
           </section>
         )}
@@ -388,7 +389,7 @@ function BlockSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass rounded-2xl p-5 shadow-card">
         {!adding ? (
           <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
             <IconPlus className="h-4 w-4" />
@@ -582,7 +583,7 @@ function TemaSection({
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 shadow-card">
+    <section className="glass rounded-2xl p-5 shadow-card">
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
         <button type="button" onClick={() => (isPremium ? onPatch({ theme: "custom", custom_style_override: false }) : onError("Latar kustom khusus kreator Premium."))} className="group flex flex-col items-center gap-1.5">
           <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-primary ring-offset-2" : ""}`}>
@@ -688,7 +689,7 @@ function HeaderSection({
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-ink">Foto Profil Toko</label>
         <div className="flex items-center gap-3">
@@ -744,7 +745,7 @@ function TombolSection({
   onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
         <input
@@ -823,7 +824,7 @@ function FontSection({
   onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-ink">Font Halaman</label>
         <select

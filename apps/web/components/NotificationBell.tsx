@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNotification, listNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api-client";
 import { IconBell } from "@/components/icons";
+import { Skeleton } from "@/components/Skeleton";
 
 // Ikon lonceng top bar dashboard (permintaan langsung pengguna berdasar
 // tangkapan layar top bar Linktree) -- panel dropdown ringkas, BUKAN
@@ -117,7 +118,11 @@ export default function NotificationBell() {
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading && notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-muted">Memuat...</p>
+              <div className="flex flex-col gap-2 p-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             ) : notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-xs text-muted">Belum ada notifikasi.</p>
             ) : (

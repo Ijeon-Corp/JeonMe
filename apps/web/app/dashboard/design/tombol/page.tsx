@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_BUTTON_ROUNDED_OPTIONS, CUSTOM_BUTTON_SHADOW_OPTIONS, CUSTOM_BUTTON_STYLE_OPTIONS } from "@/lib/page-themes";
@@ -7,7 +8,7 @@ import { CUSTOM_BUTTON_ROUNDED_OPTIONS, CUSTOM_BUTTON_SHADOW_OPTIONS, CUSTOM_BUT
 export default function DesignTombolPage() {
   const { page, setPage, links, products, loading, error, handleStyleOverride } = useDesignData();
 
-  if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading || !page) return <PageSkeleton />;
 
   return (
     <DesignPageShell
@@ -20,7 +21,7 @@ export default function DesignTombolPage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-4 flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-4 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
           <input

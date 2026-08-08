@@ -76,7 +76,7 @@ export default function ListingPanel({
             onDragStart={() => setDragId(p.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(p.id)}
-            className="flex items-center gap-3 rounded-2xl border border-border bg-white p-3 shadow-card"
+            className="glass flex items-center gap-3 rounded-2xl p-3 shadow-card"
           >
             <span className="cursor-grab text-muted" title="Seret untuk mengatur urutan">
               <IconGripVertical className="h-4 w-4" />

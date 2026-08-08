@@ -65,7 +65,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         Checkout = pembeli sampai ke proses bayar (lunas atau tidak). Tingkat Konversi = Transaksi lunas &divide; Checkout.
       </p>
 
-      <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
         <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
@@ -78,7 +78,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {summary.top_products.map((p) => (
@@ -93,7 +93,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </ul>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
+      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Transaksi Terbaru</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {(recentOrders ?? []).map((o) => {
@@ -115,7 +115,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+    <div className="glass rounded-2xl p-4 shadow-card">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}
         {label}

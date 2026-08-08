@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -270,7 +271,7 @@ export default function DashboardExtraPagesPage() {
   const canCreateProduk = produkCount < produkLimit;
   const canCreateAny = canCreateBioLanding || canCreateProduk;
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -286,7 +287,7 @@ export default function DashboardExtraPagesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
         {!canCreateAny ? (
           <div className="flex flex-col items-start gap-2">
             <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
@@ -427,7 +428,7 @@ export default function DashboardExtraPagesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {pages.map((page) => (
-          <div key={page.id} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+          <div key={page.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -72,7 +73,7 @@ export default function SettingsSubscriptionPage() {
   }
 
   if (status === null) {
-    return <div className="mx-auto max-w-2xl text-sm text-muted">Memuat...</div>;
+    return <PageSkeleton />;
   }
 
   const isLive = status.status === "pending_card" || status.status === "active" || status.status === "past_due";

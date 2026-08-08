@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, DashboardEvent, createEvent, deleteProduct, listEvents, updateProduct } from "@/lib/api-client";
 import { IconCalendar, IconPlus, IconTrash } from "@/components/icons";
@@ -125,7 +126,7 @@ export default function DashboardEventsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -135,7 +136,7 @@ export default function DashboardEventsPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -265,7 +266,7 @@ export default function DashboardEventsPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {events.map((ev) => (
-          <div key={ev.id} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+          <div key={ev.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <IconCalendar className="h-4 w-4 text-primary" />

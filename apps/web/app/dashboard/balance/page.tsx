@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -89,7 +90,7 @@ export default function DashboardBalancePage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -98,21 +99,21 @@ export default function DashboardBalancePage() {
 
       {balance && (
         <section className="mt-6 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+          <div className="glass rounded-2xl p-5 shadow-card">
             <div className="flex items-center gap-2 text-xs font-semibold text-muted">
               <IconWallet className="h-4 w-4 text-secondary-dark" />
               Saldo Tersedia
             </div>
-            <p className="mt-2 font-heading text-2xl font-bold text-secondary-dark sm:text-3xl">
+            <p className="mt-2 font-heading text-2xl font-bold tabular-nums text-secondary-dark sm:text-3xl">
               Rp {balance.available_idr.toLocaleString("id-ID")}
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
+          <div className="glass rounded-2xl p-5 shadow-card">
             <div className="flex items-center gap-2 text-xs font-semibold text-muted">
               <IconWallet className="h-4 w-4 text-ink/50" />
               Saldo Tertahan
             </div>
-            <p className="mt-2 font-heading text-2xl font-bold text-ink sm:text-3xl">
+            <p className="mt-2 font-heading text-2xl font-bold tabular-nums text-ink sm:text-3xl">
               Rp {balance.held_idr.toLocaleString("id-ID")}
             </p>
             <p className="mt-1 text-[11px] text-muted">
@@ -123,7 +124,7 @@ export default function DashboardBalancePage() {
       )}
 
       {feeBreakdown && (
-        <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+        <section className="glass mt-6 rounded-2xl p-5 shadow-card">
           <h2 className="font-heading text-lg font-bold text-ink">Rincian Biaya per Metode Pembayaran</h2>
           <p className="mt-1 text-xs text-muted">
             Estimasi umum potongan platform per kanal (belum termasuk potongan Jeonme sendiri, masih dalam
@@ -157,7 +158,7 @@ export default function DashboardBalancePage() {
         </section>
       )}
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
         <p className="mt-1 text-xs text-muted">
           Minimum Rp50.000.{" "}
@@ -208,7 +209,7 @@ export default function DashboardBalancePage() {
         )}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Riwayat Penarikan</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (

@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -152,7 +153,7 @@ export default function DashboardVouchersPage() {
     return v.discount_type === "percentage" ? `${v.discount_value}%` : `Rp ${v.discount_value.toLocaleString("id-ID")}`;
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -163,7 +164,7 @@ export default function DashboardVouchersPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-card">
+      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -373,7 +374,7 @@ export default function DashboardVouchersPage() {
         {Array.from(grouped.batches.entries()).map(([label, list]) => {
           const usedTotal = list.reduce((sum, v) => sum + v.used_count, 0);
           return (
-            <div key={label} className="rounded-2xl border border-border bg-white p-4 shadow-card">
+            <div key={label} className="glass rounded-2xl p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-ink">{label}</p>
                 <p className="text-xs font-semibold text-muted">

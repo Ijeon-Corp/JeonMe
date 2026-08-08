@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnalyticsSummary, ApiError, exportAnalyticsCSV, getAnalyticsSummary } from "@/lib/api-client";
@@ -266,7 +267,7 @@ export default function DashboardHomePage() {
       <AnalyticsAssistant />
 
       {loading ? (
-        <p className="mt-6 text-sm text-muted">Memuat...</p>
+        <PageSkeleton />
       ) : (
         summary && (
           <>
@@ -350,7 +351,7 @@ export default function DashboardHomePage() {
                   filter rentang tanggal di atas. */}
               <div className="glass rounded-3xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
-                <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+                <p className="mt-2 font-heading text-xl font-bold tabular-nums text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
                   {summary.weekly_revenue.map((d) => (
                     <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
@@ -472,7 +473,7 @@ function StatCard({
         {label}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <p className="font-heading text-xl font-bold text-ink">{value}</p>
+        <p className="font-heading text-xl font-bold tabular-nums text-ink">{value}</p>
         <TrendBadge pct={pct} />
       </div>
       <p className="mt-1 text-[11px] text-muted">dibanding periode sebelumnya</p>
