@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -17,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/jeonme/api/internal/imageconv"
 	"github.com/jeonme/api/internal/storage"
 )
 
@@ -1142,8 +1144,7 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 	}
 
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	contentType, ok := allowedCoverExt[ext]
-	if !ok {
+	if _, ok := allowedCoverExt[ext]; !ok {
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
 		return
 	}
@@ -1155,8 +1156,15 @@ func (h *ProductHandler) UploadCover(c *gin.Context) {
 	}
 	defer file.Close()
 
-	key := fmt.Sprintf("covers/%s", productID)
-	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("covers/%s.webp", productID)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah sampul"})
 		return
 	}

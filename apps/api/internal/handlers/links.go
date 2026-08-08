@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/jeonme/api/internal/imageconv"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/storage"
 )
@@ -645,8 +647,7 @@ func (h *LinksHandler) UploadIcon(c *gin.Context) {
 	}
 
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	contentType, ok := allowedAvatarExt[ext]
-	if !ok {
+	if _, ok := allowedAvatarExt[ext]; !ok {
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
 		return
 	}
@@ -658,8 +659,15 @@ func (h *LinksHandler) UploadIcon(c *gin.Context) {
 	}
 	defer file.Close()
 
-	key := fmt.Sprintf("link-icons/%s", linkID)
-	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+	// Modul Desain: SEMUA gambar diunggah otomatis dikonversi ke WebP.
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("link-icons/%s.webp", linkID)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah ikon"})
 		return
 	}
