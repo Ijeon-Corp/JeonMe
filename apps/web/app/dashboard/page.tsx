@@ -211,7 +211,7 @@ export default function DashboardHomePage() {
         </div>
       </section>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-white p-2.5 shadow-card">
+      <div className="glass mt-4 flex flex-wrap items-center gap-2 rounded-2xl p-2.5 shadow-card">
         {PRESETS.map((d) => (
           <button
             key={d}
@@ -316,7 +316,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
-                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+                <div className="glass rounded-3xl p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
@@ -348,7 +348,7 @@ export default function DashboardHomePage() {
                   hari terakhir (lihat catatan lingkup di backend
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
-              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+              <div className="glass rounded-3xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
                 <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
@@ -366,7 +366,7 @@ export default function DashboardHomePage() {
             </section>
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+              <div className="glass rounded-3xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
@@ -379,7 +379,7 @@ export default function DashboardHomePage() {
                 </ul>
               </div>
 
-              <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+              <div className="glass rounded-3xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
@@ -395,7 +395,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
-                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+                <div className="glass rounded-3xl p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Sumber Trafik Utama</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
@@ -409,7 +409,7 @@ export default function DashboardHomePage() {
               )}
 
               {summary.device_breakdown.length > 0 && (
-                <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+                <div className="glass rounded-3xl p-4 shadow-card">
                   <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
@@ -466,7 +466,7 @@ function StatCard({
   accentHex?: string;
 }) {
   return (
-    <div className="rounded-3xl border border-border bg-white p-4 shadow-card">
+    <div className="glass rounded-3xl p-4 shadow-card">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}
         {label}

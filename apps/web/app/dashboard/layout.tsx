@@ -348,9 +348,27 @@ export default function DashboardLayout({
         <AccountDeletionBanner />
         <OnboardingBanner />
         <TwoFactorPrompt />
-        <div className="flex min-h-screen bg-primary-subtle/50">
-          {/* Sidebar desktop */}
-          <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
+        {/* Latar dekoratif "Soft Glass" (permintaan langsung pengguna, tema
+            dashboard premium -- benchmark glassmorphism): dipisah jadi
+            LAYER TERSENDIRI (fixed, bukan pembungkus shell di bawah) yang
+            SENGAJA punya overflow-hidden sendiri -- overflow-hidden di
+            ANCESTOR mana pun dari elemen `sticky` akan mematikan efek
+            sticky-nya (bug klasik CSS), dan sidebar/top-bar di bawah
+            memang sticky. `.bg-mesh`/`.blob` dipinjam APA ADANYA dari
+            komponen landing (Hero.tsx) supaya bahasa visual app & situs
+            pemasaran konsisten, bukan gaya baru yang dikarang terpisah.
+            pointer-events-none supaya tidak menghalangi klik ke konten. */}
+        <div className="bg-mesh pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div className="blob absolute -left-24 top-0 h-96 w-96 bg-primary/10" />
+          <div className="blob absolute right-[-120px] top-1/3 h-80 w-80 bg-secondary/10" style={{ animationDelay: "2s" }} />
+          <div className="blob absolute bottom-0 left-1/3 h-72 w-72 bg-accent/10" style={{ animationDelay: "4s" }} />
+        </div>
+        <div className="flex min-h-screen">
+          {/* Sidebar desktop -- "glass" (dipinjam dari landing, lihat
+              globals.css) menggantikan border+bg putih polos, supaya
+              sidebar terasa mengambang tipis di atas latar bg-mesh/blob
+              di atas, bukan blok solid buram. */}
+          <aside className="glass sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 md:flex">
             {sidebarContent}
           </aside>
 
@@ -371,7 +389,7 @@ export default function DashboardLayout({
               bersangkutan -- inilah kenapa overflow ~12px selalu muncul di
               SEMUA halaman, bukan cuma yang kontennya sendiri "salah". */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+            <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
               <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
                 Jeonme
               </Link>
@@ -388,7 +406,7 @@ export default function DashboardLayout({
             {mobileOpen && (
               <div className="fixed inset-0 z-40 md:hidden">
                 <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-                <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-white p-5 shadow-hero">
+                <aside className="glass absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
                   <button
                     type="button"
                     onClick={() => setMobileOpen(false)}
@@ -408,7 +426,7 @@ export default function DashboardLayout({
                 sidebar tiap kali. "Enhance" (AI) SENGAJA tidak dibuat --
                 Jeonme belum punya fitur AI enhance apa pun (lihat keputusan
                 yang disepakati). */}
-            <header className="sticky top-0 z-20 hidden items-center justify-between gap-3 border-b border-border bg-white/90 px-6 py-2.5 backdrop-blur md:flex">
+            <header className="nav-glass sticky top-0 z-20 hidden items-center justify-between gap-3 px-6 py-2.5 md:flex">
               {/* Bug ditemukan (5 Agustus 2026, audit responsif): judul
                   DAN grup ikon di kanan sebelumnya sama-sama tidak bisa
                   menyusut -- di lebar tablet (768-1023px) totalnya melebihi
