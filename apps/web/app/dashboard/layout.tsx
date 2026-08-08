@@ -21,18 +21,14 @@ import {
 } from "@/lib/api-client";
 import {
   IconBell,
-  IconBook,
   IconBox,
-  IconCalendar,
   IconChart,
   IconChevronRight,
-  IconClock,
   IconClose,
   IconCopy,
   IconExternal,
   IconGift,
   IconGlobe,
-  IconHeart,
   IconInbox,
   IconLink,
   IconLogout,
@@ -40,26 +36,38 @@ import {
   IconPhone,
   IconPlayCircle,
   IconSettings,
-  IconShield,
   IconSparkle,
-  IconStar,
-  IconTag,
-  IconUsers,
   IconWallet,
 } from "@/components/icons";
 
 type NavLeaf = { href: string; label: string; icon: typeof IconChart };
 type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; items: NavLeaf[] };
 
-// "Halaman Saya" mengelompokkan Tautan/Produk/Desain jadi satu bagian --
-// ketiganya sama-sama menentukan apa yang tampil di halaman publik kreator
-// dan berbagi satu panel pratinjau langsung (lihat LivePreviewPanel).
-// "Produk & Monetisasi" baru ditambahkan mulai No.67 (voucher) -- sengaja
-// tidak dibuat kosong sejak redesain IA (No.97), baru muncul begitu ada
-// fitur nyata pertama yang mengisinya.
+// Konsolidasi sidebar (permintaan langsung pengguna, benchmark vs
+// Linktree/Lynk.id, 8 Agustus 2026): sidebar SEBELUMNYA 23 baris nav --
+// jauh lebih berat dari kompetitor, yang menyamaratakan "Home/Shop/
+// Analytics/Appearance" sebagai satu-satunya menu inti yang SELALU
+// tampil. Akar masalahnya BUKAN jumlah fitur (Jeonme memang lebih
+// lengkap), tapi 8 dari 23 baris itu cuma VARIAN TIPE PRODUK (Voucher/
+// Bundel/Dukungan/Afiliasi/Loyalitas/Event/Kelas/Booking) yang di
+// kompetitor cuma PILIHAN dalam satu alur "Tambah Produk", bukan 8 menu
+// terpisah. Perubahan di sini MURNI kedalaman navigasi -- TIDAK ADA
+// fitur/halaman yang dihapus:
+// - 8 baris "Produk & Monetisasi" -> 1 baris ke hub kartu
+//   /dashboard/monetisasi (pola sama seperti /dashboard/settings).
+// - Verifikasi KYC, Tim & Kolaborator, Domain Kustom -> pindah jadi
+//   kartu di dalam /dashboard/settings (Tim malah SUDAH lama ada di
+//   sana juga, cuma dobel-tampil di sidebar utama sebelumnya).
+// - Tutorial -> bukan lagi baris sidebar permanen, jadi ikon bantuan
+//   bulat di top bar (lihat header desktop di bawah), sejalan dengan
+//   pola Linktree/Lynk.id yang taruh onboarding di ikon "?", bukan slot
+//   menu tetap.
+// Hasil: 23 baris jadi ~14 baris, "Halaman Saya" mengelompokkan
+// Tautan/Produk/Desain jadi satu bagian karena ketiganya sama-sama
+// menentukan apa yang tampil di halaman publik kreator & berbagi satu
+// panel pratinjau langsung (lihat LivePreviewPanel).
 const NAV_ITEMS: NavEntry[] = [
   { type: "link", href: "/dashboard", label: "Ringkasan", icon: IconChart },
-  { type: "link", href: "/dashboard/tutorial", label: "Tutorial", icon: IconPlayCircle },
   {
     type: "group",
     label: "Halaman Saya",
@@ -68,24 +76,10 @@ const NAV_ITEMS: NavEntry[] = [
       { href: "/dashboard/products", label: "Toko", icon: IconBox },
       { href: "/dashboard/statistik", label: "Statistik", icon: IconChart },
       { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
-      { href: "/dashboard/custom-domain", label: "Domain Kustom", icon: IconGlobe },
       { href: "/dashboard/pages", label: "Halaman Tambahan", icon: IconGlobe },
     ],
   },
-  {
-    type: "group",
-    label: "Produk & Monetisasi",
-    items: [
-      { href: "/dashboard/vouchers", label: "Voucher", icon: IconTag },
-      { href: "/dashboard/bundles", label: "Bundel", icon: IconGift },
-      { href: "/dashboard/donation", label: "Dukungan", icon: IconHeart },
-      { href: "/dashboard/affiliates", label: "Afiliasi", icon: IconUsers },
-      { href: "/dashboard/loyalty", label: "Loyalitas", icon: IconStar },
-      { href: "/dashboard/events", label: "Event", icon: IconCalendar },
-      { href: "/dashboard/courses", label: "Kelas & Kursus", icon: IconBook },
-      { href: "/dashboard/bookings", label: "Booking Konsultasi", icon: IconClock },
-    ],
-  },
+  { type: "link", href: "/dashboard/monetisasi", label: "Produk & Monetisasi", icon: IconGift },
   {
     type: "group",
     label: "Audiens & Pemasaran",
@@ -96,13 +90,39 @@ const NAV_ITEMS: NavEntry[] = [
     ],
   },
   { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
-  { type: "link", href: "/dashboard/kyc", label: "Verifikasi KYC", icon: IconShield },
-  { type: "link", href: "/dashboard/team", label: "Tim & Kolaborator", icon: IconUsers },
   { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
 ];
 
+// EXTRA_PAGE_LABELS -- halaman yang TIDAK (lagi) muncul sebagai baris
+// NAV_ITEMS langsung (dipindah ke dalam hub /dashboard/monetisasi atau
+// /dashboard/settings, lihat catatan konsolidasi di atas) tapi rute-nya
+// TETAP ada persis seperti sebelumnya -- didaftar di sini supaya judul
+// top bar desktop tidak jatuh balik ke "Dashboard" generik saat halaman
+// ini dibuka langsung.
+const EXTRA_PAGE_LABELS: Record<string, string> = {
+  "/dashboard/tutorial": "Tutorial",
+  "/dashboard/custom-domain": "Domain Kustom",
+  "/dashboard/kyc": "Verifikasi KYC",
+  "/dashboard/team": "Tim & Kolaborator",
+  "/dashboard/vouchers": "Voucher",
+  "/dashboard/bundles": "Bundel",
+  "/dashboard/donation": "Dukungan",
+  "/dashboard/affiliates": "Afiliasi",
+  "/dashboard/loyalty": "Loyalitas",
+  "/dashboard/events": "Event",
+  "/dashboard/courses": "Kelas & Kursus",
+  "/dashboard/bookings": "Booking Konsultasi",
+  "/dashboard/settings/profile": "Profil & Akun",
+  "/dashboard/settings/security": "Keamanan",
+  "/dashboard/settings/payment": "Pembayaran & Penarikan",
+  "/dashboard/settings/subscription": "Langganan Premium",
+  "/dashboard/settings/danger-zone": "Zona Berbahaya",
+};
+
 // currentPageLabel -- judul top bar desktop (di bawah) mengikuti label item
-// nav yang sedang aktif, termasuk yang berada di dalam grup collapsible.
+// nav yang sedang aktif, termasuk yang berada di dalam grup collapsible,
+// jatuh balik ke EXTRA_PAGE_LABELS untuk halaman yang sengaja tidak lagi
+// muncul di sidebar utama (lihat catatan konsolidasi di atas).
 function currentPageLabel(pathname: string): string {
   for (const item of NAV_ITEMS) {
     if (item.type === "link" && item.href === pathname) return item.label;
@@ -111,7 +131,7 @@ function currentPageLabel(pathname: string): string {
       if (found) return found.label;
     }
   }
-  return "Dashboard";
+  return EXTRA_PAGE_LABELS[pathname] ?? "Dashboard";
 }
 
 export default function DashboardLayout({
@@ -399,6 +419,19 @@ export default function DashboardLayout({
               <p className="min-w-0 flex-1 truncate font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
               <div className="flex flex-shrink-0 items-center gap-1.5">
                 <GlobalSearch />
+                {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
+                    di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
+                    bantuan bulat di sini, pola sama seperti ikon bantuan
+                    "?" di Linktree/Lynk.id -- ada kapan pun dibutuhkan
+                    tanpa merebut tempat di sidebar sepanjang waktu. */}
+                <Link
+                  href="/dashboard/tutorial"
+                  title="Tutorial"
+                  aria-label="Tutorial"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                >
+                  <IconPlayCircle className="h-4 w-4" />
+                </Link>
                 {username && (
                   <a
                     href={`https://jeonme.com/${username}`}

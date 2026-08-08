@@ -2,11 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconChevronRight, IconPencil, IconSearch, IconShield, IconStar, IconTrash, IconUsers, IconWallet } from "@/components/icons";
+import { IconChevronRight, IconGlobe, IconPencil, IconSearch, IconShield, IconStar, IconTrash, IconUsers, IconWallet } from "@/components/icons";
 
 // Modul Settings §1: search box di atas daftar menu settings, filter
 // client-side atas label + deskripsi -- fitur yang TIDAK ada di Lynk.id,
 // jangan dilewati walau daftarnya masih pendek di fase awal ini.
+//
+// Konsolidasi sidebar (permintaan langsung pengguna, benchmark vs
+// Linktree/Lynk.id, 8 Agustus 2026): "Verifikasi KYC" & "Domain Kustom"
+// SEBELUMNYA baris sidebar utama TERSENDIRI -- keduanya termasuk
+// pengaturan akun/teknis yang dibuka jarang (sekali di awal, bukan
+// harian), sama seperti "Tim & Kolaborator" yang MEMANG SUDAH lama ada
+// di sini juga (dulu dobel-tampil, sekarang cuma di sini). Rute
+// masing-masing TIDAK berubah, cuma jalur masuknya lewat hub ini.
 const SETTINGS_SECTIONS = [
   {
     href: "/dashboard/settings/profile",
@@ -27,10 +35,22 @@ const SETTINGS_SECTIONS = [
     icon: IconWallet,
   },
   {
+    href: "/dashboard/kyc",
+    title: "Verifikasi KYC",
+    description: "Upload identitas untuk membuka penarikan dana.",
+    icon: IconShield,
+  },
+  {
     href: "/dashboard/settings/subscription",
     title: "Langganan Premium",
     description: "Hilangkan watermark, latar belakang kustom.",
     icon: IconStar,
+  },
+  {
+    href: "/dashboard/custom-domain",
+    title: "Domain Kustom",
+    description: "Pakai domainmu sendiri untuk halaman publik.",
+    icon: IconGlobe,
   },
   {
     href: "/dashboard/team",
