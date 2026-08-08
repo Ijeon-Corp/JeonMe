@@ -143,6 +143,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
@@ -179,7 +180,10 @@ export default function DashboardLayout({
 
   useEffect(() => {
     getMyPage()
-      .then((p) => setUsername(p.username))
+      .then((p) => {
+        setUsername(p.username);
+        setAvatarUrl(p.avatar_url);
+      })
       .catch(() => {
         // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
         // diamkan saja, jangan ganggu dashboard dengan pesan error.
@@ -485,6 +489,30 @@ export default function DashboardLayout({
                     <IconCopy className="h-3 w-3" />
                     {copied && <span className="text-primary">Tersalin!</span>}
                   </button>
+                )}
+                {/* Avatar akun (redesain premium, permintaan langsung
+                    pengguna): SEBELUMNYA top bar cuma ikon-ikon generik,
+                    tidak ada penanda akun siapa yang sedang login sama
+                    sekali -- foto/inisial kreator di sini, tautan ke
+                    Profil & Akun. Fallback lingkaran inisial (bukan ikon
+                    generik) kalau belum upload foto, pola yang sama
+                    dipakai di dashboard/design/page.tsx. */}
+                {username && (
+                  <Link
+                    href="/dashboard/settings/profile"
+                    title="Profil & Akun"
+                    className="ml-0.5 flex flex-shrink-0 items-center gap-2 rounded-full border border-border bg-white py-1 pl-1 pr-2.5 hover:border-primary"
+                  >
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
+                    ) : (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
+                        {username.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="hidden text-[11px] font-semibold text-ink lg:inline">@{username}</span>
+                  </Link>
                 )}
               </div>
             </header>

@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reskin fokus form premium (permintaan langsung pengguna, "design
+   dashboard ini terlalu biasa"): glow lembut warna brand di SEMUA
+   input/select/textarea saat fokus, menggantikan garis/outline default
+   yang terasa generik. @layer base (BUKAN ditulis lepas di luar layer)
+   supaya sengaja jadi PRIORITAS TERENDAH -- ratusan input yang sudah
+   punya class fokus sendiri per halaman (focus:ring-2 focus:ring-
+   primary/20 di beberapa tempat, mis. courses/vouchers) TETAP menang
+   apa adanya, glow ini cuma lapisan dasar otomatis untuk input yang
+   BELUM punya ring eksplisit -- satu tempat, berlaku ke seluruh
+   dashboard, tanpa perlu menyentuh ratusan file satu per satu. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  select:focus,
+  textarea:focus {
+    box-shadow: 0 0 0 4px rgba(27, 77, 62, 0.12);
+    outline: none;
+  }
+}
+
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   scrollbar-width: thin;
