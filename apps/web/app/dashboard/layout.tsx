@@ -354,20 +354,19 @@ export default function DashboardLayout({
             SENGAJA punya overflow-hidden sendiri -- overflow-hidden di
             ANCESTOR mana pun dari elemen `sticky` akan mematikan efek
             sticky-nya (bug klasik CSS), dan sidebar/top-bar di bawah
-            memang sticky. `.bg-mesh`/`.blob` dipinjam APA ADANYA dari
-            komponen landing (Hero.tsx) supaya bahasa visual app & situs
-            pemasaran konsisten, bukan gaya baru yang dikarang terpisah.
-            pointer-events-none supaya tidak menghalangi klik ke konten. */}
-        <div className="bg-mesh pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-          <div className="blob absolute -left-24 top-0 h-96 w-96 bg-primary/10" />
-          <div className="blob absolute right-[-120px] top-1/3 h-80 w-80 bg-secondary/10" style={{ animationDelay: "2s" }} />
-          <div className="blob absolute bottom-0 left-1/3 h-72 w-72 bg-accent/10" style={{ animationDelay: "4s" }} />
-        </div>
+            memang sticky. `.bg-mesh` dipinjam APA ADANYA dari komponen
+            landing (Hero.tsx) supaya bahasa visual app & situs pemasaran
+            konsisten. Efek "bubble" (`.blob` mengambang beranimasi)
+            SEMPAT ditambahkan lalu diminta dihapus lagi (permintaan
+            langsung pengguna) -- mesh gradient polos saja tanpa
+            bubble/blob. pointer-events-none supaya tidak menghalangi
+            klik ke konten. */}
+        <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
         <div className="flex min-h-screen">
           {/* Sidebar desktop -- "glass" (dipinjam dari landing, lihat
               globals.css) menggantikan border+bg putih polos, supaya
-              sidebar terasa mengambang tipis di atas latar bg-mesh/blob
-              di atas, bukan blok solid buram. */}
+              sidebar terasa mengambang tipis di atas latar bg-mesh di
+              atas, bukan blok solid buram. */}
           <aside className="glass sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 md:flex">
             {sidebarContent}
           </aside>
