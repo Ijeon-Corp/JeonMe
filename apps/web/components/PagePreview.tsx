@@ -121,6 +121,11 @@ export interface PagePreviewData {
   // isPremium -- Modul Langganan Premium: kreator Premium tidak menampilkan
   // watermark "Buat halaman gratis di Jeonme" di bawah halaman publiknya.
   isPremium?: boolean;
+  // hideWatermark -- Modul Langganan Premium (permintaan langsung pengguna,
+  // 8 Agustus 2026): toggle yang bisa diatur SENDIRI oleh kreator Premium
+  // untuk sembunyikan watermark. Watermark tampil kalau BUKAN Premium ATAU
+  // togglenya mati -- lihat kondisi render pil watermark di bawah.
+  hideWatermark?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   events?: PagePreviewEvent[];
@@ -169,6 +174,7 @@ interface PreviewSourcePage {
   custom_style_override?: boolean;
   is_verified?: boolean;
   is_premium?: boolean;
+  hide_watermark?: boolean;
 }
 
 interface PreviewSourceLink {
@@ -212,6 +218,7 @@ export function toPreviewData(
     theme: page.theme,
     isVerified: page.is_verified ?? false,
     isPremium: page.is_premium ?? false,
+    hideWatermark: page.hide_watermark ?? true,
     stickers: page.stickers,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
@@ -798,9 +805,12 @@ export default function PagePreview({
         )}
 
         <div className="mt-10 flex flex-col items-center gap-3">
-          {/* Modul Langganan Premium: kreator Premium menghilangkan
-              watermark ini -- lihat isPremiumUser (backend) & PagePreviewData.isPremium. */}
-          {!data.isPremium && (
+          {/* Modul Langganan Premium (permintaan langsung pengguna, 8
+              Agustus 2026): kreator gratis SELALU tampil watermark ini,
+              apa pun nilai hideWatermark -- kreator Premium bisa
+              menyembunyikannya sendiri lewat toggle di Desain/Halaman Toko
+              (lihat isPremiumUser backend & PagePreviewData.hideWatermark). */}
+          {(!data.isPremium || !data.hideWatermark) && (
             <a
               href="https://jeonme.com/register"
               target="_blank"
@@ -973,7 +983,7 @@ function LandingPagePreview({
         })}
 
         <div className="mt-6 flex flex-col items-center gap-3">
-          {!data.isPremium && (
+          {(!data.isPremium || !data.hideWatermark) && (
             <a
               href="https://jeonme.com/register"
               target="_blank"
@@ -1159,7 +1169,7 @@ function ProdukPagePreview({
         )}
 
         <div className="mt-10 flex flex-col items-center gap-3">
-          {!data.isPremium && (
+          {(!data.isPremium || !data.hideWatermark) && (
             <a
               href="https://jeonme.com/register"
               target="_blank"

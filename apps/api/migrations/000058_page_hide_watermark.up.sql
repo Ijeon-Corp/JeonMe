@@ -1,0 +1,14 @@
+-- Modul Langganan Premium (permintaan langsung pengguna, 8 Agustus 2026):
+-- pil watermark "Buat halaman gratis di Jeonme" di footer halaman publik
+-- SEBELUMNYA otomatis hilang untuk kreator Premium (hardcoded
+-- !data.isPremium di PagePreview.tsx), tanpa kontrol eksplisit. Sekarang
+-- jadi TOGGLE yang bisa dilihat & diatur sendiri oleh kreator Premium --
+-- kreator gratis TETAP selalu menampilkan watermark, apa pun nilai kolom
+-- ini (gerbang premium ditegakkan saat MENAMPILKAN, bukan saat menyimpan,
+-- lihat page.go).
+--
+-- DEFAULT true (bukan false) SENGAJA supaya perilaku kreator Premium yang
+-- SUDAH ADA tidak berubah tiba-tiba begitu migrasi ini jalan -- mereka
+-- sudah terbiasa watermark-nya hilang otomatis, jadi baris lama
+-- diperlakukan seolah sudah menyalakan toggle "sembunyikan" ini.
+ALTER TABLE pages ADD COLUMN hide_watermark BOOLEAN NOT NULL DEFAULT true;

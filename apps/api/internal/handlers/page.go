@@ -131,6 +131,12 @@ type publicPageResponse struct {
 	// per stiker), array kosong = tidak ada. Berlaku sama untuk halaman
 	// utama maupun tambahan.
 	Stickers              []PageSticker      `json:"stickers"`
+	// HideWatermark -- Modul Langganan Premium: toggle "sembunyikan pil
+	// 'Buat halaman gratis di Jeonme' di footer", CUMA berlaku kalau
+	// kreatornya Premium (dicek ulang lewat resp.IsPremium/IsVerified di
+	// frontend, bukan dipercaya sendirian -- lihat catatan di migrasi
+	// 000058). Kreator gratis SELALU tampil watermark apa pun nilai ini.
+	HideWatermark         bool               `json:"hide_watermark"`
 	Links                 []publicLink       `json:"links"`
 	Products              []publicItem       `json:"products"`
 	Donation              *publicDonation    `json:"donation"`
@@ -279,6 +285,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
+			p.hide_watermark,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -290,6 +297,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
+		&resp.HideWatermark,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -377,6 +385,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
+			p.hide_watermark,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
@@ -387,6 +396,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
+		&resp.HideWatermark,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -441,6 +451,12 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
 	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
 	resp.ShopPaused, resp.ShopPausedMessage = getShopPauseStatus(ctx, h.DB, userID)
+	// Gerbang premium ditegakkan DI SINI (bukan cuma dipercaya dari kolom
+	// DB apa adanya) -- kreator gratis yang kolomnya masih true (mis. bekas
+	// Premium yang berakhir masa aktifnya) tetap SELALU tampil watermark.
+	if !resp.IsPremium {
+		resp.HideWatermark = false
+	}
 
 	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
 	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
@@ -621,6 +637,7 @@ type myPageResponse struct {
 	CustomTitleColor      string             `json:"custom_title_color"`
 	CustomStyleOverride   bool               `json:"custom_style_override"`
 	Stickers              []PageSticker      `json:"stickers"`
+	HideWatermark         bool               `json:"hide_watermark"`
 	Verification          verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
 	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
@@ -657,6 +674,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
+			p.hide_watermark,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -665,6 +683,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
+		&resp.HideWatermark,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -781,6 +800,14 @@ type updatePageRequest struct {
 	// getPageTheme (page-themes.ts) untuk cara lapisan ini diterapkan di
 	// atas tema APAPUN.
 	CustomStyleOverride *bool `json:"custom_style_override"`
+	// HideWatermark -- Modul Langganan Premium (permintaan langsung
+	// pengguna, 8 Agustus 2026): toggle "sembunyikan watermark" yang bisa
+	// diatur SENDIRI oleh kreator Premium. Boleh disimpan oleh siapa saja
+	// (tidak ditolak di sini) -- gerbang premium sungguhan ditegakkan saat
+	// MENAMPILKAN halaman publik (lihat resp.HideWatermark di
+	// finishPublicPageResponse), bukan saat menyimpan, supaya kreator yang
+	// baru saja downgrade tidak kehilangan preferensinya kalau upgrade lagi.
+	HideWatermark *bool `json:"hide_watermark"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -858,12 +885,14 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_page_text_color = COALESCE($16, custom_page_text_color),
 			custom_title_font = COALESCE($17, custom_title_font),
 			custom_title_color = COALESCE($18, custom_title_color),
-			custom_style_override = COALESCE($19, custom_style_override)
-		WHERE user_id = $20 AND is_primary = true
+			custom_style_override = COALESCE($19, custom_style_override),
+			hide_watermark = COALESCE($20, hide_watermark)
+		WHERE user_id = $21 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
-		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride, userID)
+		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
+		req.HideWatermark, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return
@@ -1374,11 +1403,12 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 
 	var username, displayName, bio, avatarURL, theme string
 	var stickersRaw []byte
+	var hideWatermark bool
 	if err := db.QueryRow(ctx, `
-		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme, p.stickers
+		SELECT u.username, COALESCE(NULLIF(p.display_name, ''), u.username), p.bio, p.avatar_url, p.theme, p.stickers, p.hide_watermark
 		FROM users u JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.id = $1
-	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme, &stickersRaw); err != nil {
+	`, userID).Scan(&username, &displayName, &bio, &avatarURL, &theme, &stickersRaw, &hideWatermark); err != nil {
 		return
 	}
 
@@ -1390,14 +1420,15 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	// Toko baru langsung dipublikasikan (is_published=true) -- beda dari
 	// halaman tambahan lain yang mulai draft -- karena baru muncul saat
 	// produk sungguhan sudah ada, tidak ada alasan menahannya di draft.
-	// Bio/avatar/tema/stiker DISALIN dari halaman Bio utama (bukan
-	// dibiarkan kosong/default) supaya tampilannya konsisten sejak pertama
-	// kali live, bukan etalase kosong tanpa identitas -- kreator tetap
-	// bebas mengubahnya sendiri nanti lewat "Kelola" di dashboard/pages.
+	// Bio/avatar/tema/stiker/toggle-watermark DISALIN dari halaman Bio
+	// utama (bukan dibiarkan kosong/default) supaya tampilannya konsisten
+	// sejak pertama kali live, bukan etalase kosong tanpa identitas --
+	// kreator tetap bebas mengubahnya sendiri nanti lewat "Kelola" di
+	// dashboard/pages.
 	if _, err := db.Exec(ctx, `
-		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers)
-		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7)
-	`, userID, name, username, bio, avatarURL, theme, stickersRaw); err != nil {
+		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
+		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8)
+	`, userID, name, username, bio, avatarURL, theme, stickersRaw, hideWatermark); err != nil {
 		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
 		// halaman lain, bukan milik kreator ini, kebetulan pakai slug
 		// identik dengan username-nya).
@@ -1494,11 +1525,12 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		// hasilnya konsisten.
 		var username, bio, avatarURL, theme string
 		var stickersRaw []byte
+		var hideWatermark bool
 		if scanErr := h.DB.QueryRow(ctx, `
-			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.stickers
+			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.stickers, pg.hide_watermark
 			FROM users u JOIN pages pg ON pg.user_id = u.id AND pg.is_primary = true
 			WHERE u.id = $1
-		`, userID).Scan(&username, &bio, &avatarURL, &theme, &stickersRaw); scanErr != nil {
+		`, userID).Scan(&username, &bio, &avatarURL, &theme, &stickersRaw, &hideWatermark); scanErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 			return
 		}
@@ -1507,9 +1539,9 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			name = "Toko " + username
 		}
 		err = h.DB.QueryRow(ctx, `
-			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers)
-			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7) RETURNING id
-		`, userID, name, slug, bio, avatarURL, theme, stickersRaw).Scan(&pageID)
+			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
+			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8) RETURNING id
+		`, userID, name, slug, bio, avatarURL, theme, stickersRaw, hideWatermark).Scan(&pageID)
 	} else {
 		err = h.DB.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
@@ -1553,6 +1585,7 @@ type extraPageDetailResponse struct {
 	CustomTitleColor      string `json:"custom_title_color"`
 	CustomStyleOverride   bool          `json:"custom_style_override"`
 	Stickers              []PageSticker `json:"stickers"`
+	HideWatermark         bool          `json:"hide_watermark"`
 	IsPremium             bool          `json:"is_premium"`
 }
 
@@ -1579,13 +1612,15 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			seo_title, seo_description, noindex,
 			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
 			custom_button_rounded, custom_button_shadow, custom_button_text_color,
-			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers
+			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers,
+			hide_watermark
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
-		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw)
+		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
+		&resp.HideWatermark)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	}
@@ -1629,6 +1664,7 @@ type updateExtraPageRequest struct {
 	CustomTitleFont       *string `json:"custom_title_font" binding:"omitempty,max=20"`
 	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
 	CustomStyleOverride   *bool   `json:"custom_style_override"`
+	HideWatermark         *bool   `json:"hide_watermark"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -1711,13 +1747,14 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_page_text_color = COALESCE($18, custom_page_text_color),
 			custom_title_font = COALESCE($19, custom_title_font),
 			custom_title_color = COALESCE($20, custom_title_color),
-			custom_style_override = COALESCE($21, custom_style_override)
-		WHERE id = $22 AND user_id = $23 AND is_primary = false
+			custom_style_override = COALESCE($21, custom_style_override),
+			hide_watermark = COALESCE($22, hide_watermark)
+		WHERE id = $23 AND user_id = $24 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
-		pageID, userID)
+		req.HideWatermark, pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})

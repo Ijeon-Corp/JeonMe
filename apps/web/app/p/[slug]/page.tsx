@@ -64,6 +64,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
           theme: page.theme,
           isVerified: page.is_verified,
           isPremium: page.is_premium,
+          hideWatermark: page.hide_watermark,
           loyaltyActive: page.loyalty_active,
           customTheme: {
             backgroundType: page.custom_background_type,

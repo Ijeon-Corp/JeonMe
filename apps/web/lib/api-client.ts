@@ -260,6 +260,13 @@ export interface PublicPage {
   // "Buat halaman gratis di Jeonme" untuk kreator Premium. Lihat
   // isPremiumUser (backend) & PagePreviewData.isPremium.
   is_premium: boolean;
+  // hide_watermark -- Modul Langganan Premium (permintaan langsung
+  // pengguna, 8 Agustus 2026): toggle yang bisa diatur SENDIRI oleh
+  // kreator Premium untuk sembunyikan pil watermark di footer. Backend
+  // SUDAH menegakkan gerbang premium sebelum field ini dikirim (lihat
+  // finishPublicPageResponse di page.go) -- kreator gratis selalu
+  // menerima false di sini apa pun nilai kolomnya di DB.
+  hide_watermark: boolean;
   events: PublicEvent[];
   bookings: PublicBooking[];
   loyalty_active: boolean;
@@ -407,6 +414,14 @@ export interface MyPage {
   // theme, hanya diterapkan kalau flag ini true.
   custom_style_override: boolean;
   stickers: PageStickerData[];
+  // hide_watermark -- Modul Langganan Premium (permintaan langsung
+  // pengguna, 8 Agustus 2026): nilai TOGGLE apa adanya dari DB (BEDA dari
+  // PublicPage.hide_watermark yang sudah digerbang server-side) -- endpoint
+  // dashboard ini perlu menunjukkan preferensi tersimpan kreator meski
+  // sedang tidak Premium, supaya toggle-nya tidak "lupa" posisi begitu
+  // upgrade lagi. Gerbang premium diterapkan di UI (dikunci/disabled untuk
+  // kreator gratis), bukan disembunyikan nilainya.
+  hide_watermark: boolean;
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -517,6 +532,7 @@ export function updateMyPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
+      | "hide_watermark"
     >
   >
 ) {
@@ -806,6 +822,7 @@ export function updateExtraPage(
       | "custom_title_font"
       | "custom_title_color"
       | "custom_style_override"
+      | "hide_watermark"
     >
   >
 ) {

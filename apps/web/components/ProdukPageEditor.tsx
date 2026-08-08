@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ApiError,
   ExtraPageDetail,
@@ -112,6 +113,7 @@ export default function ProdukPageEditor({
   onCreateNow: () => void;
   onStickersChange: (stickers: PageStickerData[]) => void;
 }) {
+  const router = useRouter();
   const [section, setSection] = useState<DesignSection>("blok");
 
   async function handlePatch(patch: Parameters<typeof updateExtraPage>[1]) {
@@ -183,6 +185,27 @@ export default function ProdukPageEditor({
         <div className="mt-4 flex items-center gap-2">
           <Toggle checked={page.is_published} onChange={() => handlePatch({ is_published: !page.is_published })} label="Terbitkan halaman Toko" />
           <span className="text-sm font-semibold text-ink">Terbitkan halaman Toko</span>
+        </div>
+        {/* Modul Langganan Premium (permintaan langsung pengguna, 8 Agustus
+            2026): toggle watermark yang SAMA seperti halaman Bio utama
+            (lihat dashboard/design/page.tsx) -- kreator gratis dikunci
+            (klik mengarahkan ke halaman upgrade), Premium bebas mengatur
+            sendiri. Gerbang sungguhan tetap di backend. */}
+        <div className="mt-3 flex items-center gap-2">
+          <Toggle
+            checked={page.is_premium && page.hide_watermark}
+            disabled={!page.is_premium}
+            onChange={() => handlePatch({ hide_watermark: !page.hide_watermark })}
+            label="Sembunyikan watermark"
+          />
+          <button
+            type="button"
+            onClick={() => !page.is_premium && router.push("/dashboard/settings/subscription")}
+            className="flex items-center gap-1 text-sm font-semibold text-ink"
+          >
+            Sembunyikan watermark
+            {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-muted" />}
+          </button>
         </div>
       </section>
 

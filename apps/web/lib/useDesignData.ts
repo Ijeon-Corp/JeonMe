@@ -44,6 +44,7 @@ export type PageSettingsPatch = Partial<
     | "custom_title_font"
     | "custom_title_color"
     | "custom_style_override"
+    | "hide_watermark"
   >
 >;
 

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
-import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconSparkle } from "@/components/icons";
+import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconLock, IconSparkle } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 
@@ -22,6 +23,7 @@ import Toggle from "@/components/Toggle";
 // dihapus, cuma UI untuk menyuntingnya yang hilang), tapi tidak ada lagi
 // cara baru mengubahnya dari dashboard.
 export default function DashboardDesignPage() {
+  const router = useRouter();
   const { page, setPage, links, products, loading, error, handlePageSettingChange } = useDesignData();
 
   if (loading || !page) return <p className="text-sm text-muted">Memuat...</p>;
@@ -156,6 +158,41 @@ export default function DashboardDesignPage() {
               </div>
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
             </Link>
+
+            {/* Modul Langganan Premium (permintaan langsung pengguna, 8
+                Agustus 2026): "versi gratis diberi watermark, versi
+                berbayar bisa menghilangkan watermark, ada toggle" -- kreator
+                gratis SELALU tampil watermark (toggle dikunci, klik
+                mengarahkan ke halaman upgrade), kreator Premium bebas
+                menyalakan/mematikan sendiri. Gerbang sungguhan tetap di
+                backend (finishPublicPageResponse, page.go) -- ini murni UI. */}
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={() =>
+                  page.is_premium
+                    ? handlePageSettingChange({ hide_watermark: !page.hide_watermark })
+                    : router.push("/dashboard/settings/subscription")
+                }
+                className="flex min-w-0 items-center gap-3 text-left"
+              >
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-primary" aria-hidden>
+                  {page.is_premium ? <IconSparkle className="h-4 w-4" /> : <IconLock className="h-4 w-4 text-muted" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink">Sembunyikan Watermark</p>
+                  <p className="truncate text-xs text-muted">
+                    {page.is_premium ? "Hilangkan pil “Buat halaman gratis di Jeonme” di footer" : "Khusus kreator Premium -- upgrade dulu"}
+                  </p>
+                </div>
+              </button>
+              <Toggle
+                checked={page.is_premium && page.hide_watermark}
+                disabled={!page.is_premium}
+                onChange={() => handlePageSettingChange({ hide_watermark: !page.hide_watermark })}
+                label="Sembunyikan watermark"
+              />
+            </div>
 
             <div className="flex items-center gap-2">
               <Toggle checked={page.is_published} onChange={() => handlePageSettingChange({ is_published: !page.is_published })} label="Terbitkan halaman publik" />
