@@ -37,7 +37,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	businessCard := handlers.NewBusinessCardHandler(db)
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
-	audience := handlers.NewAudienceHandler(db, rdb)
+	audience := handlers.NewAudienceHandler(db, rdb, queueClient)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	customDomain := handlers.NewCustomDomainHandler(db, cfg.CustomDomainCnameTarget)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
@@ -332,6 +332,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
 			dashboard.PUT("/lead-capture", audience.UpsertLeadCaptureSettings)
 			dashboard.GET("/audience", audience.GetAudience)
+			// Gap #3 benchmark kompetitif (9 Agustus 2026): broadcast email
+			// ke subscriber -- lihat catatan consent di migrations/000059.
+			dashboard.GET("/audience/broadcasts", audience.ListBroadcasts)
+			dashboard.POST("/audience/broadcasts", audience.CreateBroadcast)
 
 			// No.95 (Sprint 13): kartu kontak digital -- lihat catatan lingkup
 			// di BusinessCardHandler (vCard .vcf, TANPA Apple/Google Wallet).

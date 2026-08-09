@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/jeonme/api/internal/queue"
 )
 
 // AudienceHandler mengimplementasikan No.73 (Sprint 8): blok pengumpulan
@@ -20,12 +23,13 @@ import (
 // terpisah yang lebih besar, dicatat sebagai pekerjaan lanjutan kalau
 // tervalidasi.
 type AudienceHandler struct {
-	DB  *pgxpool.Pool
-	RDB *redis.Client
+	DB    *pgxpool.Pool
+	RDB   *redis.Client
+	Queue *asynq.Client
 }
 
-func NewAudienceHandler(db *pgxpool.Pool, rdb *redis.Client) *AudienceHandler {
-	return &AudienceHandler{DB: db, RDB: rdb}
+func NewAudienceHandler(db *pgxpool.Pool, rdb *redis.Client, queueClient *asynq.Client) *AudienceHandler {
+	return &AudienceHandler{DB: db, RDB: rdb, Queue: queueClient}
 }
 
 type leadCaptureSettingsResponse struct {
@@ -235,4 +239,128 @@ func (h *AudienceHandler) GetAudience(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, contacts)
+}
+
+type audienceBroadcastItem struct {
+	ID             string  `json:"id"`
+	Subject        string  `json:"subject"`
+	RecipientCount int     `json:"recipient_count"`
+	SentCount      int     `json:"sent_count"`
+	Status         string  `json:"status"`
+	CreatedAt      string  `json:"created_at"`
+	CompletedAt    *string `json:"completed_at"`
+}
+
+// ListBroadcasts — riwayat broadcast email yang pernah dikirim kreator ini,
+// dipakai halaman Audiens supaya kreator tahu apa yang sudah pernah
+// dikirim & berapa yang benar-benar sampai (sent_count, diisi worker
+// setelah selesai -- lihat HandleAudienceBroadcast).
+func (h *AudienceHandler) ListBroadcasts(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, subject, recipient_count, sent_count, status, created_at, completed_at
+		FROM audience_broadcasts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat riwayat broadcast"})
+		return
+	}
+	defer rows.Close()
+
+	items := []audienceBroadcastItem{}
+	for rows.Next() {
+		var it audienceBroadcastItem
+		var createdAt time.Time
+		var completedAt *time.Time
+		if err := rows.Scan(&it.ID, &it.Subject, &it.RecipientCount, &it.SentCount, &it.Status, &createdAt, &completedAt); err != nil {
+			continue
+		}
+		it.CreatedAt = createdAt.Format(time.RFC3339)
+		if completedAt != nil {
+			s := completedAt.Format(time.RFC3339)
+			it.CompletedAt = &s
+		}
+		items = append(items, it)
+	}
+
+	c.JSON(http.StatusOK, items)
+}
+
+type createBroadcastRequest struct {
+	Subject string `json:"subject" binding:"required,max=200"`
+	Body    string `json:"body" binding:"required,max=5000"`
+}
+
+// CreateBroadcast — Gap #3 benchmark kompetitif (9 Agustus 2026): kirim
+// email ke SEMUA subscriber (bukan pembeli, lihat catatan consent di
+// migrations/000059) sekaligus. Pengiriman sungguhan ASINKRON lewat
+// worker (HandleAudienceBroadcast) -- endpoint ini cuma memvalidasi,
+// mencatat baris, dan enqueue task, supaya request selesai cepat walau
+// subscriber-nya ratusan.
+func (h *AudienceHandler) CreateBroadcast(c *gin.Context) {
+	var req createBroadcastRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	subject := strings.TrimSpace(req.Subject)
+	body := strings.TrimSpace(req.Body)
+	if subject == "" || body == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "subjek dan isi pesan wajib diisi"})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	// Guard anti-double-klik/spam sederhana (MVP -- bukan sistem kuota
+	// bertingkat free/Premium, itu keputusan produk terpisah yang belum
+	// diminta): tolak kalau kreator ini baru saja membuat broadcast dalam
+	// 5 menit terakhir, apa pun statusnya.
+	var recentCount int
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(*) FROM audience_broadcasts WHERE user_id = $1 AND created_at > now() - interval '5 minutes'
+	`, userID).Scan(&recentCount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa riwayat broadcast"})
+		return
+	}
+	if recentCount > 0 {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "tunggu beberapa menit sebelum mengirim broadcast lagi"})
+		return
+	}
+
+	var recipientCount int
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT email) FROM subscribers WHERE creator_user_id = $1 AND email <> ''
+	`, userID).Scan(&recipientCount); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung subscriber"})
+		return
+	}
+	if recipientCount == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "belum ada subscriber dengan email untuk dikirimi -- aktifkan blok pengumpulan lead dulu"})
+		return
+	}
+
+	var broadcastID string
+	if err := h.DB.QueryRow(ctx, `
+		INSERT INTO audience_broadcasts (user_id, subject, body, recipient_count, status)
+		VALUES ($1, $2, $3, $4, 'queued') RETURNING id
+	`, userID, subject, body, recipientCount).Scan(&broadcastID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan broadcast"})
+		return
+	}
+
+	if h.Queue != nil {
+		if task, err := queue.NewAudienceBroadcastTask(broadcastID); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "broadcast diantre untuk dikirim", "id": broadcastID, "recipient_count": recipientCount})
 }

@@ -1733,6 +1733,33 @@ export function getAudience() {
   return apiFetch<AudienceContact[]>("/dashboard/audience", { method: "GET" }, { auth: true });
 }
 
+// ---------- Dashboard: Broadcast Email Audiens (Gap #3 benchmark
+// kompetitif, 9 Agustus 2026) ----------
+// Kirim email ke subscriber (bukan pembeli -- lihat catatan consent di
+// migrations/000059_audience_broadcasts.up.sql).
+
+export interface AudienceBroadcast {
+  id: string;
+  subject: string;
+  recipient_count: number;
+  sent_count: number;
+  status: "queued" | "sending" | "sent" | "failed";
+  created_at: string;
+  completed_at: string | null;
+}
+
+export function listBroadcasts() {
+  return apiFetch<AudienceBroadcast[]>("/dashboard/audience/broadcasts", { method: "GET" }, { auth: true });
+}
+
+export function createBroadcast(input: { subject: string; body: string }) {
+  return apiFetch<{ message: string; id: string; recipient_count: number }>(
+    "/dashboard/audience/broadcasts",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
 // ---------- Dashboard: notifikasi social proof (Sprint 8, No.76) ----------
 
 export interface SocialProofSettings {

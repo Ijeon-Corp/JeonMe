@@ -119,6 +119,25 @@ func NewProductWebhookDeliveryTask(orderID string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeProductWebhookDelivery, payload), nil
 }
 
+// TypeAudienceBroadcast -- Gap #3 benchmark kompetitif (9 Agustus 2026):
+// kirim email broadcast ke subscriber. ASINKRON (pola sama dengan
+// order.paid/team.invite) karena satu broadcast bisa menyasar ratusan
+// subscriber sekaligus -- tidak boleh membuat request HTTP CreateBroadcast
+// menunggu semuanya terkirim satu-satu lewat SMTP.
+const TypeAudienceBroadcast = "audience:broadcast"
+
+type AudienceBroadcastPayload struct {
+	BroadcastID string `json:"broadcast_id"`
+}
+
+func NewAudienceBroadcastTask(broadcastID string) (*asynq.Task, error) {
+	payload, err := json.Marshal(AudienceBroadcastPayload{BroadcastID: broadcastID})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload broadcast_id=%s: %w", broadcastID, err)
+	}
+	return asynq.NewTask(TypeAudienceBroadcast, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

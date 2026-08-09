@@ -57,6 +57,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeAccountPurgeScan, h.HandleAccountPurgeScan)
 	mux.HandleFunc(queue.TypeTeamInviteNotification, h.HandleTeamInviteNotification)
 	mux.HandleFunc(queue.TypeProductWebhookDelivery, h.HandleProductWebhookDelivery)
+	mux.HandleFunc(queue.TypeAudienceBroadcast, h.HandleAudienceBroadcast)
 	return mux
 }
 
@@ -99,6 +100,77 @@ func (h *Handler) HandleTeamInviteNotification(_ context.Context, t *asynq.Task)
 	}
 
 	log.Printf("worker: undangan tim untuk @%s terkirim ke %s", payload.OwnerUsername, payload.CollaboratorEmail)
+	return nil
+}
+
+// HandleAudienceBroadcast -- Gap #3 benchmark kompetitif (9 Agustus 2026).
+// Best-effort PER PENERIMA: satu alamat gagal (mis. mailbox penuh, format
+// aneh yang lolos validasi frontend) TIDAK menggagalkan seluruh broadcast
+// atau memicu asynq retry ulang ke SEMUA subscriber yang sudah berhasil
+// dikirimi -- itu akan mengirim email duplikat ke penerima yang sudah
+// menerima. sent_count dicatat apa adanya (jujur, bukan recipient_count
+// yang cuma niat awal) supaya kreator tahu persis berapa yang benar-benar
+// terkirim kalau ada yang gagal di tengah jalan.
+func (h *Handler) HandleAudienceBroadcast(ctx context.Context, t *asynq.Task) error {
+	var payload queue.AudienceBroadcastPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload broadcast tidak valid: %w", err)
+	}
+
+	var userID, subject, body, status string
+	err := h.DB.QueryRow(ctx, `
+		SELECT user_id, subject, body, status FROM audience_broadcasts WHERE id = $1
+	`, payload.BroadcastID).Scan(&userID, &subject, &body, &status)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			log.Printf("worker: broadcast %s tidak ditemukan, dilewati", payload.BroadcastID)
+			return nil
+		}
+		return fmt.Errorf("worker: gagal memuat broadcast %s: %w", payload.BroadcastID, err)
+	}
+	// Idempotency: task asynq bisa saja di-retry (mis. worker crash di
+	// tengah jalan) -- broadcast yang statusnya SUDAH "sent" tidak boleh
+	// dikirim ulang dari awal ke semua subscriber.
+	if status == "sent" {
+		log.Printf("worker: broadcast %s sudah berstatus sent, dilewati", payload.BroadcastID)
+		return nil
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE audience_broadcasts SET status = 'sending' WHERE id = $1`, payload.BroadcastID); err != nil {
+		return fmt.Errorf("worker: gagal set status sending broadcast %s: %w", payload.BroadcastID, err)
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT DISTINCT email FROM subscribers WHERE creator_user_id = $1 AND email <> ''
+	`, userID)
+	if err != nil {
+		return fmt.Errorf("worker: gagal memuat subscriber broadcast %s: %w", payload.BroadcastID, err)
+	}
+	var emails []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err == nil {
+			emails = append(emails, email)
+		}
+	}
+	rows.Close()
+
+	sentCount := 0
+	for _, email := range emails {
+		if err := h.Mailer.Send(email, subject, body); err != nil {
+			log.Printf("worker: gagal kirim broadcast %s ke %s: %v", payload.BroadcastID, email, err)
+			continue
+		}
+		sentCount++
+	}
+
+	if _, err := h.DB.Exec(ctx, `
+		UPDATE audience_broadcasts SET status = 'sent', sent_count = $2, completed_at = now() WHERE id = $1
+	`, payload.BroadcastID, sentCount); err != nil {
+		return fmt.Errorf("worker: gagal update status sent broadcast %s: %w", payload.BroadcastID, err)
+	}
+
+	log.Printf("worker: broadcast %s terkirim ke %d/%d subscriber", payload.BroadcastID, sentCount, len(emails))
 	return nil
 }
 
