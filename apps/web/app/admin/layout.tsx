@@ -44,11 +44,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       <div>
         <Link href="/admin" className="flex items-center gap-2 font-heading text-xl font-extrabold text-gradient">
-          {/* Titik aksen sama seperti dashboard/layout.tsx (redesain
-              "Playful Creator") -- panel admin dulu satu-satunya shell yang
-              belum ikut, sekarang konsisten satu bahasa visual dengan
-              dashboard kreator. */}
-          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-pop-pink shadow-[0_0_0_4px_rgba(255,90,121,0.15)]" aria-hidden="true" />
           <IconShield className="h-5 w-5 text-primary" />
           Jeonme Admin
         </Link>

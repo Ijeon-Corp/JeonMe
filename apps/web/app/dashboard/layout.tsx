@@ -232,12 +232,6 @@ export default function DashboardLayout({
     <>
       <div>
         <Link href="/dashboard" className="flex items-center gap-2 font-heading text-lg font-extrabold text-gradient">
-          {/* Titik aksen "Playful Creator" (permintaan langsung pengguna,
-              redesain dashboard 9 Agustus 2026) -- satu-satunya sentuhan
-              warna pop di logo, sengaja kecil & tunggal (bukan pelangi di
-              semua ikon nav di bawah) supaya keberanian warna terpusat,
-              bukan tersebar. */}
-          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-pop-pink shadow-[0_0_0_4px_rgba(255,90,121,0.15)]" aria-hidden="true" />
           Jeonme
         </Link>
 
