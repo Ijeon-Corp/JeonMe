@@ -92,7 +92,7 @@ export default function SettingsSubscriptionPage() {
       </Link>
 
       <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-ink">
-        <IconStar className="h-6 w-6 text-amber-500" />
+        <IconStar className="h-6 w-6 text-primary" />
         Langganan Premium
       </h1>
       <p className="mt-1 text-sm text-muted">
@@ -103,9 +103,9 @@ export default function SettingsSubscriptionPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status.is_premium ? (
-        <section className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+        <section className="mt-6 rounded-3xl border border-primary/20 bg-primary-subtle p-5">
           <div className="flex items-center gap-2">
-            <IconStar className="h-5 w-5 text-amber-500" />
+            <IconStar className="h-5 w-5 text-primary" />
             <h2 className="font-heading text-sm font-bold text-ink">
               Kamu Premium ({status.plan === "yearly" ? "Tahunan" : "Bulanan"})
             </h2>

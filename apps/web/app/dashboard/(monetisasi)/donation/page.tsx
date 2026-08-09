@@ -224,7 +224,7 @@ export default function DashboardDonationPage() {
           saat mendukung (lihat DonationForm di halaman publik). */}
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pop-pink-tint text-pop-pink">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
             <IconGift className="h-4 w-4" />
           </span>
           <div>

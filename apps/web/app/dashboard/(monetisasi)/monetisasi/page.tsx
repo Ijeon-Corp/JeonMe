@@ -26,67 +26,58 @@ import {
 // sekarang cuma 1 baris ("Produk & Monetisasi") ke hub kartu ini. Pola
 // SAMA PERSIS dengan /dashboard/settings (search + daftar kartu) supaya
 // konsisten, bukan pola baru.
-// badgeClass -- redesain "Playful Creator": ikon tiap kartu dapat tint pop
-// BERBEDA (bukan lagi primary-subtle seragam) supaya hub 8-kartu ini
-// langsung terasa sebagai satu "galeri tipe produk" yang beragam, konsisten
-// dengan pola badgeClass yang sudah dipakai SUGGESTED_PLATFORMS di links/
-// page.tsx.
+// Semua badge ikon kartu SATU warna hijau tema (bg-primary-subtle
+// text-primary) -- permintaan langsung pengguna, 10 Agustus 2026,
+// menggantikan tint pop warna-warni per kartu era "Playful Creator" yang
+// sudah tidak dipakai lagi sejak redesain "Premium Refined".
 const SECTIONS = [
   {
     href: "/dashboard/vouchers",
     title: "Voucher",
     description: "Kode diskon untuk produkmu.",
     icon: IconTag,
-    badgeClass: "bg-pop-yellow-tint text-accent-dark",
   },
   {
     href: "/dashboard/bundles",
     title: "Bundel",
     description: "Gabungkan beberapa produk jadi satu paket harga.",
     icon: IconGift,
-    badgeClass: "bg-pop-lilac-tint text-pop-lilac",
   },
   {
     href: "/dashboard/donation",
     title: "Dukungan",
     description: "Blok donasi/support di halaman publikmu.",
     icon: IconHeart,
-    badgeClass: "bg-pop-pink-tint text-pop-pink",
   },
   {
     href: "/dashboard/affiliates",
     title: "Afiliasi",
     description: "Ajak orang lain menjualkan produkmu, bagi komisi.",
     icon: IconUsers,
-    badgeClass: "bg-pop-blue-tint text-pop-blue",
   },
   {
     href: "/dashboard/loyalty",
     title: "Loyalitas",
     description: "Program poin untuk pembeli berulang.",
     icon: IconStar,
-    badgeClass: "bg-pop-yellow-tint text-accent-dark",
   },
   {
     href: "/dashboard/events",
     title: "Event",
     description: "Jual tiket acara online maupun offline.",
     icon: IconCalendar,
-    badgeClass: "bg-pop-lilac-tint text-pop-lilac",
   },
   {
     href: "/dashboard/courses",
     title: "Kelas & Kursus",
     description: "Jual kelas online dengan beberapa bab/modul.",
     icon: IconBook,
-    badgeClass: "bg-pop-blue-tint text-pop-blue",
   },
   {
     href: "/dashboard/bookings",
     title: "Booking Konsultasi",
     description: "Jadwal konsultasi berbayar dengan slot waktu.",
     icon: IconClock,
-    badgeClass: "bg-pop-pink-tint text-pop-pink",
   },
 ];
 
@@ -125,7 +116,7 @@ export default function DashboardMonetisasiPage() {
               href={s.href}
               className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4 transition-colors hover:border-primary"
             >
-              <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${s.badgeClass}`}>
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
                 <Icon className="h-5 w-5" />
               </span>
               <span className="flex-1">

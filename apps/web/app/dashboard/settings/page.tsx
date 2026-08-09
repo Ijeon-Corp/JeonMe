@@ -15,59 +15,61 @@ import { IconChevronRight, IconGlobe, IconPencil, IconSearch, IconShield, IconSt
 // harian), sama seperti "Tim & Kolaborator" yang MEMANG SUDAH lama ada
 // di sini juga (dulu dobel-tampil, sekarang cuma di sini). Rute
 // masing-masing TIDAK berubah, cuma jalur masuknya lewat hub ini.
-// badgeClass -- pola yang sama dipakai hub Desain/Monetisasi (redesain
-// "Playful Creator"). "Zona Berbahaya" SENGAJA tetap merah semantik (bukan
-// warna "pop" ceria) -- ini area destruktif (nonaktifkan/hapus akun), warna
-// peringatan harus tetap terpisah dari aksen dekoratif.
+// badgeClass -- SATU warna hijau tema (bg-primary-subtle text-primary) untuk
+// semua kartu (permintaan langsung pengguna, 10 Agustus 2026, menggantikan
+// tint pop warna-warni per kartu era "Playful Creator"). "Zona Berbahaya"
+// SENGAJA DIKECUALIKAN, tetap merah semantik -- ini area destruktif
+// (nonaktifkan/hapus akun), warna peringatan harus tetap terpisah dari
+// warna tema biasa supaya risikonya tetap terasa beda saat dipindai mata.
 const SETTINGS_SECTIONS = [
   {
     href: "/dashboard/settings/profile",
     title: "Profil & Akun",
     description: "Nama tampilan, bio, username, kategori kreator.",
     icon: IconPencil,
-    badgeClass: "bg-pop-blue-tint text-pop-blue",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/settings/security",
     title: "Keamanan",
     description: "Ganti password, verifikasi dua langkah (2FA), sesi aktif.",
     icon: IconShield,
-    badgeClass: "bg-pop-lilac-tint text-pop-lilac",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/settings/payment",
     title: "Pembayaran & Penarikan",
     description: "Rekening/e-wallet, verifikasi, jadwal auto-withdraw.",
     icon: IconWallet,
-    badgeClass: "bg-pop-yellow-tint text-accent-dark",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/kyc",
     title: "Verifikasi KYC",
     description: "Upload identitas untuk membuka penarikan dana.",
     icon: IconShield,
-    badgeClass: "bg-pop-pink-tint text-pop-pink",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/settings/subscription",
     title: "Langganan Premium",
     description: "Hilangkan watermark, latar belakang kustom.",
     icon: IconStar,
-    badgeClass: "bg-pop-yellow-tint text-accent-dark",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/custom-domain",
     title: "Domain Kustom",
     description: "Pakai domainmu sendiri untuk halaman publik.",
     icon: IconGlobe,
-    badgeClass: "bg-pop-blue-tint text-pop-blue",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/team",
     title: "Tim & Kolaborator",
     description: "Undang admin dengan akses tautan/produk/desain.",
     icon: IconUsers,
-    badgeClass: "bg-pop-lilac-tint text-pop-lilac",
+    badgeClass: "bg-primary-subtle text-primary",
   },
   {
     href: "/dashboard/settings/danger-zone",
