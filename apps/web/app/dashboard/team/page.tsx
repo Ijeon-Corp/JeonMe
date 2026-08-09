@@ -161,7 +161,7 @@ export default function DashboardTeamPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {invitesForMe.length > 0 && (
-        <section className="mt-4 rounded-2xl border border-primary/30 bg-primary-subtle/40 p-5">
+        <section className="mt-4 rounded-3xl border border-primary/30 bg-primary-subtle/40 p-5">
           <h2 className="font-heading text-sm font-bold text-ink">Undangan untuk Saya</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
@@ -185,7 +185,7 @@ export default function DashboardTeamPage() {
         </section>
       )}
 
-      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Undang Kolaborator</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
@@ -217,7 +217,7 @@ export default function DashboardTeamPage() {
         </form>
       </section>
 
-      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Kolaboratorku</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
@@ -261,7 +261,7 @@ export default function DashboardTeamPage() {
         </ul>
       </section>
 
-      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
           <IconClock className="h-4 w-4 text-muted" />
           Riwayat Aktivitas Tim
