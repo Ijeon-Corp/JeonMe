@@ -140,12 +140,17 @@ func Load() *Config {
 		S3Bucket:    getEnv("S3_BUCKET", "jeonme-products"),
 		S3UseSSL:    getEnv("S3_USE_SSL", "false") == "true",
 
-		// PLACEHOLDER bisnis (Sprint 4, REQ-F-501/502) -- 5% & 3 hari adalah
-		// nilai umum di platform sejenis (Gumroad/Lemonsqueezy sekitar 5-10%,
-		// holding period anti-fraud beberapa hari), BUKAN keputusan bisnis
-		// resmi Jeonme. Ganti lewat env begitu ada keputusan final, tidak
-		// perlu ubah kode.
-		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 5.0),
+		// Keputusan bisnis RESMI (permintaan langsung pengguna, 9 Agustus
+		// 2026, hasil benchmark kompetitor -- lihat laporan gap kompetitif):
+		// Jeonme TIDAK memotong komisi transaksi sama sekali, cuma
+		// meneruskan biaya prosesor pembayaran (Midtrans) apa adanya --
+		// diferensiasi eksplisit dari Linktree (12%->0%), Beacons (9%->0%),
+		// Lynk.id (~3%). Kreator dapat 100% dari harga jual; Jeonme
+		// monetisasi murni dari langganan Premium. INI BUKAN LAGI
+		// placeholder Sprint 4 -- 0.0 adalah nilai final, bukan sementara.
+		// HoldingPeriodDays (3 hari anti-fraud) TETAP placeholder terpisah,
+		// belum diputuskan lewat keputusan yang sama.
+		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 0.0),
 		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
 
 		// PLACEHOLDER bisnis (Modul Langganan Premium, permintaan langsung

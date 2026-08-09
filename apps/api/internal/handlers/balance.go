@@ -203,13 +203,13 @@ type feeReferenceItem struct {
 	FeeDescription string `json:"fee_description"`
 }
 
-// feeReferenceTable -- PLACEHOLDER bisnis (belum ada keputusan resmi biaya
-// per kanal Jeonme sendiri, mirip status payout.MinIDR), sumber
-// angka dari riset publik Lynk.id (QRIS ~0.70%, VA flat Rp3-4rb) sebagai
-// estimasi kasar sampai ada kontrak Midtrans/keputusan bisnis resmi.
-// TIDAK dipakai untuk menghitung platform_fee_idr sungguhan di manapun --
-// murni referensi/edukasi untuk kreator, angka aktual tetap flat lewat
-// PlatformFeePercent (lihat CreatePayout/CheckoutHandler.Create).
+// feeReferenceTable -- estimasi biaya PROSESOR pembayaran (Midtrans) per
+// kanal, sumber angka dari riset publik Lynk.id (QRIS ~0.70%, VA flat
+// Rp3-4rb) sampai ada kontrak Midtrans resmi dengan angka pasti. BUKAN
+// komisi Jeonme -- komisi Jeonme sendiri 0% (keputusan bisnis resmi 9
+// Agustus 2026, lihat PlatformFeePercent di config.go). TIDAK dipakai
+// untuk menghitung platform_fee_idr -- murni referensi/edukasi untuk
+// kreator soal potongan prosesor yang di luar kendali Jeonme.
 var feeReferenceTable = []feeReferenceItem{
 	{Method: "qris", Label: "QRIS", FeeDescription: "±0,7% dari nilai transaksi"},
 	{Method: "bank_transfer", Label: "Transfer Bank/Virtual Account", FeeDescription: "Flat ±Rp4.000 per transaksi"},

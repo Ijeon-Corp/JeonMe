@@ -15,7 +15,7 @@ import {
   listPayoutMethods,
   listPayouts,
 } from "@/lib/api-client";
-import { IconShield, IconWallet } from "@/components/icons";
+import { IconBadgeCheck, IconShield, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import StatCard from "@/components/StatCard";
@@ -119,11 +119,30 @@ export default function DashboardBalancePage() {
 
       {feeBreakdown && (
         <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-          <h2 className="font-heading text-lg font-bold text-ink">Rincian Biaya per Metode Pembayaran</h2>
-          <p className="mt-1 text-xs text-muted">
-            Estimasi umum potongan platform per kanal (belum termasuk potongan Jeonme sendiri, masih dalam
-            evaluasi bisnis) -- rincian nyata di bawah dihitung dari transaksi lunas milikmu.
-          </p>
+          {/* Keputusan bisnis resmi (permintaan langsung pengguna, 9
+              Agustus 2026, hasil benchmark kompetitor): Jeonme 0% komisi
+              transaksi -- diferensiasi eksplisit dari Linktree/Beacons/
+              Lynk.id yang semua memotong komisi. Baris "Transaksi Nyata
+              Milikmu" (breakdown platform_fee_idr sungguhan per kanal)
+              DIHAPUS dari sini -- sejak PlatformFeePercent=0.0 nilainya
+              SELALU Rp0 untuk order baru, jadi breakdown per-kanal cuma
+              jadi tabel nol yang tidak berguna. Pernyataan tunggal di
+              bawah ini menggantikannya, lebih jujur & tidak berulang. */}
+          <div className="flex items-start gap-3 rounded-2xl bg-secondary-subtle px-4 py-3.5">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-secondary text-white">
+              <IconBadgeCheck className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-bold text-secondary-dark">Jeonme 0% komisi transaksi</p>
+              <p className="mt-0.5 text-xs text-secondary-dark/80">
+                Kamu terima 100% dari harga jual produkmu -- Jeonme tidak memotong apa pun dari penjualan.
+                Satu-satunya potongan adalah biaya prosesor pembayaran (Midtrans) di bawah ini, diteruskan apa adanya.
+              </p>
+            </div>
+          </div>
+
+          <h2 className="mt-5 font-heading text-lg font-bold text-ink">Estimasi Biaya Prosesor per Metode</h2>
+          <p className="mt-1 text-xs text-muted">Ditentukan Midtrans, di luar kendali Jeonme -- bukan komisi platform.</p>
 
           <div className="mt-3 flex flex-col gap-1.5">
             {feeBreakdown.reference.map((r) => (
@@ -133,22 +152,6 @@ export default function DashboardBalancePage() {
               </div>
             ))}
           </div>
-
-          {feeBreakdown.actual.length > 0 && (
-            <>
-              <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted">Transaksi Nyata Milikmu</p>
-              <div className="mt-2 flex flex-col gap-1.5">
-                {feeBreakdown.actual.map((a) => (
-                  <div key={a.method} className="flex items-center justify-between rounded-lg bg-primary-subtle/30 px-3 py-2 text-xs">
-                    <span className="font-semibold text-ink">
-                      {a.label} <span className="font-normal text-muted">({a.transaction_count}x)</span>
-                    </span>
-                    <span className="font-semibold text-primary">Rp {a.total_fee_idr.toLocaleString("id-ID")}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </section>
       )}
 
