@@ -44,6 +44,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       <div>
         <Link href="/admin" className="flex items-center gap-2 font-heading text-xl font-extrabold text-gradient">
+          {/* Titik aksen sama seperti dashboard/layout.tsx (redesain
+              "Playful Creator") -- panel admin dulu satu-satunya shell yang
+              belum ikut, sekarang konsisten satu bahasa visual dengan
+              dashboard kreator. */}
+          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-pop-pink shadow-[0_0_0_4px_rgba(255,90,121,0.15)]" aria-hidden="true" />
           <IconShield className="h-5 w-5 text-primary" />
           Jeonme Admin
         </Link>
@@ -57,13 +62,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold transition-colors ${
+                className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2.5 font-semibold transition-all ${
                   active
                     ? "bg-primary text-white shadow-card"
                     : "text-muted hover:bg-primary-subtle hover:text-primary"
                 }`}
               >
-                <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                <span
+                  className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${
+                    active ? "bg-white/20" : "bg-primary-subtle"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
                 {item.label}
               </Link>
             );
@@ -92,15 +103,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
-      <div className="flex min-h-screen bg-primary-subtle/30">
+      {/* bg-mesh + sidebar "glass" -- sama seperti dashboard/layout.tsx,
+          lihat catatan panjang di sana soal overflow-hidden terpisah
+          supaya tidak mematikan sticky. */}
+      <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
+      <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="sticky top-0 hidden h-screen w-64 flex-col justify-between border-r border-border bg-white p-5 md:flex">
+        <aside className="glass sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 md:flex">
           {sidebarContent}
         </aside>
 
         {/* Top bar + drawer mobile */}
         <div className="flex flex-1 flex-col md:contents">
-          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+          <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
             <Link href="/admin" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-gradient">
               <IconShield className="h-4 w-4 text-primary" />
               Jeonme Admin
@@ -118,7 +133,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {mobileOpen && (
             <div className="fixed inset-0 z-40 md:hidden">
               <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-              <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-white p-5 shadow-hero">
+              <aside className="glass absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
