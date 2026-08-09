@@ -2448,8 +2448,26 @@ export function exportAccountData() {
 // menutupnya -- lihat OnboardingHandler (backend) untuk kenapa ini bukan
 // murni "user baru".
 
+// checklist -- Gap #5 benchmark kompetitif (9 Agustus 2026): pita statis
+// sebelumnya cuma 1 link ke Tutorial, sekarang checklist actionable
+// dihitung SERVER-SIDE (satu titik kebenaran, bukan dihitung ulang di
+// frontend dari beberapa fetch terpisah).
+export interface OnboardingChecklistItem {
+  key: string;
+  label: string;
+  done: boolean;
+  href: string;
+}
+
+export interface OnboardingStatus {
+  dismissed: boolean;
+  checklist: OnboardingChecklistItem[];
+  done_count: number;
+  total: number;
+}
+
 export function getOnboardingStatus() {
-  return apiFetch<{ dismissed: boolean }>("/dashboard/onboarding", { method: "GET" }, { auth: true });
+  return apiFetch<OnboardingStatus>("/dashboard/onboarding", { method: "GET" }, { auth: true });
 }
 
 export function dismissOnboarding() {
