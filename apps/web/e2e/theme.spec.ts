@@ -57,9 +57,22 @@ test.describe("Tema", () => {
       // Pastikan halaman SUNGGUH menampilkan tema Grid (bukan cuma halaman
       // kosong/belum terbit yang trivially "tidak mengandung" apa pun --
       // false-positive yang ditemukan di run pertama test ini) DAN warna
-      // kustom lama benar-benar sudah hilang.
+      // kustom lama benar-benar sudah hilang DARI RENDER-nya.
+      //
+      // Bug test ditemukan (8 Agustus 2026, suite penuh): sebelumnya
+      // `expect(html).not.toContain("ff00ff")` memeriksa SELURUH dokumen,
+      // termasuk payload RSC hydration Next.js yang SELALU menyertakan nilai
+      // mentah customTheme.buttonColor apa adanya (untuk props client
+      // component) TERLEPAS dari dipakai/tidaknya secara visual --
+      // getPageTheme() cuma skip MENERAPKAN-nya sebagai CSS kalau
+      // styleOverride=false (custom_style_override direset saat ganti tema,
+      // lihat handlePageSettingChange di theme/page.tsx), field mentahnya
+      // sendiri TETAP ada di JSON. Assersi lama jadi false-negative permanen
+      // (gagal terus walau reset SUDAH benar) -- yang seharusnya diperiksa
+      // adalah CSS custom property yang BENAR-BENAR dirender, bukan
+      // substring bebas di seluruh HTML.
       expect(html).toContain("ECF87F");
-      expect(html).not.toContain("ff00ff");
+      expect(html).not.toContain("--custom-button-bg:#ff00ff");
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
 });

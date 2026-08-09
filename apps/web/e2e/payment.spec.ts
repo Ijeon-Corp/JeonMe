@@ -116,9 +116,16 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
       await collabPage.getByRole("button", { name: "Terima" }).click();
       await expect(collabPage.getByText(`@${ownerUsername}`)).not.toBeVisible();
 
-      // Pemilik membuat produk lalu mengatur split ke kolaborator.
+      // Pemilik membuat produk lalu mengatur split ke kolaborator. Tombol
+      // "Tambah Produk" & form hanya ada di tab "Manage Items" (bukan
+      // "Overview" yang jadi tab default) -- lihat page.tsx tab === "manage",
+      // dan sejak refactor "Add Items" (Fase B3) "Tambah Produk" membuka
+      // panel pilihan jenis item dulu (Digital Product vs Payment Link)
+      // sebelum form muncul.
       await page.goto("/dashboard/products");
+      await page.getByRole("button", { name: "Manage Items" }).click();
       await page.getByRole("button", { name: "Tambah Produk" }).click();
+      await page.getByRole("button", { name: "Digital Product" }).click();
       await page.getByPlaceholder("Nama produk").fill("Produk Split E2E");
       await page.getByPlaceholder("Harga (IDR)").fill("100000");
       await page.getByRole("button", { name: "Buat" }).click();
