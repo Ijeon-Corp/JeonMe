@@ -47,12 +47,17 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.getByRole("button", { name: "Buat Halaman Baru" }).click();
     await expect(page.getByRole("button", { name: "Halaman Bio" })).toBeEnabled();
     const pageName = "Bio Kedua E2E";
+    // Slug UNIK per run (bukan literal "bio-kedua-e2e") -- slug bersifat
+    // global lintas SEMUA akun (bukan per-user), jadi string tetap akan
+    // bentrok "slug ini sudah dipakai" begitu test ini dijalankan lebih
+    // dari sekali (ditemukan lewat run berulang sesi ini sendiri).
+    const slug = `bio-kedua-${username}`;
     await page.locator('input[type="text"]').first().fill(pageName);
-    await page.getByPlaceholder("toko-skincare").fill("bio-kedua-e2e");
+    await page.getByPlaceholder("toko-skincare").fill(slug);
     await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
 
     await expect(page.getByText(pageName)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("jeonme.com/p/bio-kedua-e2e")).toBeVisible();
+    await expect(page.getByText(`jeonme.com/p/${slug}`)).toBeVisible();
     await expect(page.getByText("1/5 Bio/Landing")).toBeVisible();
   });
 });

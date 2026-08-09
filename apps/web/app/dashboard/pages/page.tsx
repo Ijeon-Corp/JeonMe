@@ -287,7 +287,7 @@ export default function DashboardExtraPagesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <div className="glass mt-6 rounded-3xl p-5 shadow-card">
         {!canCreateAny ? (
           <div className="flex flex-col items-start gap-2">
             <div className="flex items-center gap-1.5 text-sm font-bold text-ink">
@@ -303,7 +303,7 @@ export default function DashboardExtraPagesPage() {
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/settings/subscription")}
-                className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white"
+                className="btn-primary mt-1 rounded-full px-4 py-2 text-xs font-bold text-white"
               >
                 Lihat Langganan Premium
               </button>
@@ -428,7 +428,7 @@ export default function DashboardExtraPagesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {pages.map((page) => (
-          <div key={page.id} className="glass rounded-2xl p-4 shadow-card">
+          <div key={page.id} className="glass rounded-3xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5">

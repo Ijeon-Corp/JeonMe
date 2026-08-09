@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-client";
 import { IconBox, IconChart, IconInbox, IconLink } from "@/components/icons";
 import ShopOverviewPanel from "@/components/ShopOverviewPanel";
+import StatCard from "@/components/StatCard";
 
 // Modul Statistik (permintaan langsung pengguna: "menu statistik yang
 // berisi data jumlah klik dll pada link bio dan produk toko di halaman
@@ -121,12 +122,12 @@ export default function StatistikPage() {
       ) : tab === "link-bio" ? (
         <>
           <section className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard icon={<IconChart className="h-4 w-4 text-primary" />} label="Kunjungan Halaman" value={summary.total_views.toLocaleString("id-ID")} />
-            <StatCard icon={<IconLink className="h-4 w-4 text-accent-dark" />} label="Klik Tautan" value={summary.total_clicks.toLocaleString("id-ID")} />
+            <StatCard tone="blue" icon={<IconChart className="h-4 w-4" />} label="Kunjungan Halaman" value={summary.total_views.toLocaleString("id-ID")} sub="" />
+            <StatCard tone="yellow" icon={<IconLink className="h-4 w-4" />} label="Klik Tautan" value={summary.total_clicks.toLocaleString("id-ID")} sub="" />
           </section>
 
           {summary.daily_series.length > 0 && (
-            <div className="glass mt-3 rounded-2xl p-4 shadow-card">
+            <div className="glass mt-3 rounded-3xl p-4 shadow-card">
               <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
@@ -155,7 +156,7 @@ export default function StatistikPage() {
           )}
 
           <section className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="glass rounded-2xl p-4 shadow-card">
+            <div className="glass rounded-3xl p-4 shadow-card">
               <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {summary.top_links.map((l) => (
@@ -169,7 +170,7 @@ export default function StatistikPage() {
             </div>
 
             {summary.device_breakdown.length > 0 && (
-              <div className="glass rounded-2xl p-4 shadow-card">
+              <div className="glass rounded-3xl p-4 shadow-card">
                 <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.device_breakdown.map((d) => (
@@ -191,18 +192,6 @@ export default function StatistikPage() {
           <ShopOverviewPanel summary={summary} recentOrders={recentOrders} />
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="glass rounded-2xl p-4 shadow-card">
-      <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 font-heading text-xl font-bold text-ink">{value}</p>
     </div>
   );
 }

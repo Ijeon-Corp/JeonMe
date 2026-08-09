@@ -31,7 +31,7 @@ export default function DesignStickerPage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
         <StickerCanvasEditor stickers={page.stickers} onChange={handleStickersChange} />
       </section>
     </DesignPageShell>

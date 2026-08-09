@@ -42,7 +42,7 @@ export default function DashboardDesignPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+        <section className="glass mt-6 rounded-3xl p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
             <a
@@ -134,7 +134,7 @@ export default function DashboardDesignPage() {
 
             <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 font-heading text-sm font-bold text-ink" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-heading text-sm font-bold text-pop-blue" aria-hidden>
                   Aa
                 </span>
                 <div>
@@ -147,7 +147,7 @@ export default function DashboardDesignPage() {
 
             <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-primary" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-pink-tint text-pop-pink" aria-hidden>
                   <IconSparkle className="h-4 w-4" />
                 </span>
                 <div>
@@ -202,7 +202,7 @@ export default function DashboardDesignPage() {
           </div>
         </section>
 
-        <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+        <section className="glass mt-4 rounded-3xl p-5 shadow-card">
           <h2 className="font-heading text-lg font-bold text-ink">SEO</h2>
           <p className="mt-1 text-xs text-muted">
             Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan halaman dari mesin pencari.

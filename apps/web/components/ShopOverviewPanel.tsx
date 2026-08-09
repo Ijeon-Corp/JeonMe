@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnalyticsSummary, RecentOrder, getBalance } from "@/lib/api-client";
 import { IconBox, IconChart, IconInbox, IconTrendArrow, IconWallet } from "@/components/icons";
+import StatCard from "@/components/StatCard";
 
 // ShopOverviewPanel -- ringkasan performa Toko (Transaksi, Pendapatan,
 // grafik 7 hari, Produk Terlaris, Transaksi Terbaru), dipakai di DUA
@@ -48,24 +49,26 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
   return (
     <>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard icon={<IconBox className="h-4 w-4 text-secondary-dark" />} label="Transaksi" value={summary.total_orders.toLocaleString("id-ID")} />
-        <StatCard icon={<IconWallet className="h-4 w-4 text-primary" />} label="Pendapatan" value={formatRupiah(summary.total_revenue_idr)} />
+        <StatCard tone="blue" icon={<IconBox className="h-4 w-4" />} label="Transaksi" value={summary.total_orders.toLocaleString("id-ID")} sub="" />
+        <StatCard tone="brand" icon={<IconWallet className="h-4 w-4" />} label="Pendapatan" value={formatRupiah(summary.total_revenue_idr)} sub="" />
         {availableIDR !== null && (
-          <StatCard icon={<IconWallet className="h-4 w-4 text-secondary-dark" />} label="Saldo Tersedia" value={formatRupiah(availableIDR)} />
+          <StatCard tone="lilac" icon={<IconWallet className="h-4 w-4" />} label="Saldo Tersedia" value={formatRupiah(availableIDR)} sub="" />
         )}
-        <StatCard icon={<IconChart className="h-4 w-4 text-accent-dark" />} label="Klik Beli" value={summary.total_product_clicks.toLocaleString("id-ID")} />
-        <StatCard icon={<IconBox className="h-4 w-4 text-primary" />} label="Checkout" value={summary.total_checkouts.toLocaleString("id-ID")} />
+        <StatCard tone="yellow" icon={<IconChart className="h-4 w-4" />} label="Klik Beli" value={summary.total_product_clicks.toLocaleString("id-ID")} sub="" />
+        <StatCard tone="pink" icon={<IconBox className="h-4 w-4" />} label="Checkout" value={summary.total_checkouts.toLocaleString("id-ID")} sub="" />
         <StatCard
-          icon={<IconTrendArrow className="h-4 w-4 text-secondary-dark" />}
+          tone="blue"
+          icon={<IconTrendArrow className="h-4 w-4" />}
           label="Tingkat Konversi"
           value={conversionRate !== null ? `${conversionRate.toFixed(1)}%` : "--"}
+          sub=""
         />
       </section>
       <p className="mt-2 text-[11px] text-muted">
         Checkout = pembeli sampai ke proses bayar (lunas atau tidak). Tingkat Konversi = Transaksi lunas &divide; Checkout.
       </p>
 
-      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
+      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
         <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
@@ -78,7 +81,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </div>
       </div>
 
-      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
+      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {summary.top_products.map((p) => (
@@ -93,7 +96,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </ul>
       </div>
 
-      <div className="glass mt-3 rounded-2xl p-4 shadow-card">
+      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
         <h2 className="font-heading text-sm font-bold text-ink">Transaksi Terbaru</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {(recentOrders ?? []).map((o) => {
@@ -110,18 +113,6 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </ul>
       </div>
     </>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="glass rounded-2xl p-4 shadow-card">
-      <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 font-heading text-xl font-bold text-ink">{value}</p>
-    </div>
   );
 }
 
