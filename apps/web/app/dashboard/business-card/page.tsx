@@ -86,7 +86,7 @@ export default function DashboardBusinessCardPage() {
         </button>
       )}
 
-      <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-ink">Aktifkan Kartu Kontak</p>

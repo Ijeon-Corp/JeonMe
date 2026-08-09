@@ -105,7 +105,7 @@ export default function DashboardAudiencePage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Pengaturan disimpan.</p>}
 
-      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-2xl p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-ink">Aktifkan Blok Pengumpulan Lead</p>
@@ -158,7 +158,7 @@ export default function DashboardAudiencePage() {
         </button>
       </div>
 
-      <div className="glass mt-3 overflow-x-auto rounded-2xl shadow-card">
+      <div className="glass mt-3 overflow-x-auto rounded-3xl shadow-card">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border text-muted">

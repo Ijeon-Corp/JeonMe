@@ -18,6 +18,7 @@ import {
 import { IconShield, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
+import StatCard from "@/components/StatCard";
 
 const STATUS_LABEL: Record<Payout["status"], string> = {
   requested: "Diajukan",
@@ -99,32 +100,25 @@ export default function DashboardBalancePage() {
 
       {balance && (
         <section className="mt-6 grid grid-cols-2 gap-3">
-          <div className="glass rounded-2xl p-5 shadow-card">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-              <IconWallet className="h-4 w-4 text-secondary-dark" />
-              Saldo Tersedia
-            </div>
-            <p className="mt-2 font-heading text-2xl font-bold tabular-nums text-secondary-dark sm:text-3xl">
-              Rp {balance.available_idr.toLocaleString("id-ID")}
-            </p>
-          </div>
-          <div className="glass rounded-2xl p-5 shadow-card">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-              <IconWallet className="h-4 w-4 text-ink/50" />
-              Saldo Tertahan
-            </div>
-            <p className="mt-2 font-heading text-2xl font-bold tabular-nums text-ink sm:text-3xl">
-              Rp {balance.held_idr.toLocaleString("id-ID")}
-            </p>
-            <p className="mt-1 text-[11px] text-muted">
-              Tertahan {balance.holding_period_days} hari sejak pembayaran (anti-fraud)
-            </p>
-          </div>
+          <StatCard
+            tone="brand"
+            icon={<IconWallet className="h-4 w-4" />}
+            label="Saldo Tersedia"
+            value={`Rp ${balance.available_idr.toLocaleString("id-ID")}`}
+            sub=""
+          />
+          <StatCard
+            tone="lilac"
+            icon={<IconWallet className="h-4 w-4" />}
+            label="Saldo Tertahan"
+            value={`Rp ${balance.held_idr.toLocaleString("id-ID")}`}
+            sub={`Tertahan ${balance.holding_period_days} hari sejak pembayaran (anti-fraud)`}
+          />
         </section>
       )}
 
       {feeBreakdown && (
-        <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+        <section className="glass mt-6 rounded-3xl p-5 shadow-card">
           <h2 className="font-heading text-lg font-bold text-ink">Rincian Biaya per Metode Pembayaran</h2>
           <p className="mt-1 text-xs text-muted">
             Estimasi umum potongan platform per kanal (belum termasuk potongan Jeonme sendiri, masih dalam
@@ -158,7 +152,7 @@ export default function DashboardBalancePage() {
         </section>
       )}
 
-      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
         <p className="mt-1 text-xs text-muted">
           Minimum Rp50.000.{" "}
@@ -209,7 +203,7 @@ export default function DashboardBalancePage() {
         )}
       </section>
 
-      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <h2 className="font-heading text-lg font-bold text-ink">Riwayat Penarikan</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (
