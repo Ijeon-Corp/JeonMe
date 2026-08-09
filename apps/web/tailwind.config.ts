@@ -22,6 +22,20 @@ const config: Config = {
         ink: "#1C2B25",
         muted: "#5B6B63",
         border: "#D8DDD9",
+        // "pop" -- aksen tambahan KHUSUS dashboard (permintaan langsung
+        // pengguna, redesain "Playful Creator" 9 Agustus 2026), sengaja
+        // TERPISAH dari primary/secondary/accent (identitas brand Jeonme
+        // dipakai di situs pemasaran & halaman publik kreator, TIDAK
+        // diubah supaya konsistensi brand di PRD/TDD tetap utuh). Dipakai
+        // untuk kartu statistik/badge berwarna-warni di dalam dashboard
+        // saja -- lihat StatCard di dashboard/page.tsx & sidebar di
+        // dashboard/layout.tsx.
+        pop: {
+          blue: { DEFAULT: "#4C8DFF", tint: "#E7EEFF" },
+          yellow: { DEFAULT: "#FFC63A", tint: "#FFF6DF" },
+          pink: { DEFAULT: "#FF5A79", tint: "#FFE7EC" },
+          lilac: { DEFAULT: "#B98CFF", tint: "#F2E9FF" },
+        },
       },
       animation: {
         "fade-up": "fadeUp 0.7s ease-out forwards",

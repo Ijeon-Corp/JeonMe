@@ -231,7 +231,13 @@ export default function DashboardLayout({
   const sidebarContent = (
     <>
       <div>
-        <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
+        <Link href="/dashboard" className="flex items-center gap-2 font-heading text-lg font-extrabold text-gradient">
+          {/* Titik aksen "Playful Creator" (permintaan langsung pengguna,
+              redesain dashboard 9 Agustus 2026) -- satu-satunya sentuhan
+              warna pop di logo, sengaja kecil & tunggal (bukan pelangi di
+              semua ikon nav di bawah) supaya keberanian warna terpusat,
+              bukan tersebar. */}
+          <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-pop-pink shadow-[0_0_0_4px_rgba(255,90,121,0.15)]" aria-hidden="true" />
           Jeonme
         </Link>
 
@@ -257,14 +263,14 @@ export default function DashboardLayout({
           </div>
         )}
 
-        {/* Redesain "Card-Based Layout" (permintaan langsung pengguna,
-            referensi tangkapan layar dashboard SQUARE): item aktif
-            SEBELUMNYA blok solid bg-primary+teks putih (berat, kontras
-            keras dengan sisa sidebar) -- sekarang pil lembut
-            (bg-primary-subtle+teks primary) dengan garis aksen tipis di
-            sisi kiri (inset shadow, bukan border-l supaya rounded-xl tetap
-            utuh di semua sisi) supaya senada dengan gaya kartu di seluruh
-            dashboard, bukan lagi elemen yang terasa terpisah gayanya. */}
+        {/* Redesain "Playful Creator" (permintaan langsung pengguna, 9
+            Agustus 2026): item aktif sekarang pil SOLID warna brand +
+            ikon dalam badge bulat kontras (bukan lagi tint lembut + garis
+            aksen tipis) -- lebih "sticker-like" & tegas, konsisten dengan
+            bahasa bento/badge di kartu statistik Ringkasan. Ikon tidak
+            aktif SENGAJA tetap netral (bg-primary-subtle/60, bukan warna
+            pop macam-macam) -- keberanian warna dipusatkan ke satu tempat
+            (kartu statistik), bukan tersebar ke semua baris nav. */}
         <nav className="mt-6 flex flex-col gap-1 text-xs">
           {NAV_ITEMS.map((item) => {
             if (item.type === "link") {
@@ -275,13 +281,19 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
+                  className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2 font-semibold transition-all ${
                     active
-                      ? "bg-primary-subtle font-bold text-primary shadow-[inset_3px_0_0_0_#1B4D3E]"
+                      ? "bg-primary font-bold text-white shadow-card"
                       : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
                   }`}
                 >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span
+                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg ${
+                      active ? "bg-white/20" : "bg-primary-subtle"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
                   {item.label}
                 </Link>
               );
@@ -315,13 +327,19 @@ export default function DashboardLayout({
                           key={sub.href}
                           href={sub.href}
                           onClick={() => setMobileOpen(false)}
-                          className={`flex items-center gap-2 rounded-xl px-3 py-2 font-semibold transition-colors ${
+                          className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2 font-semibold transition-all ${
                             active
-                              ? "bg-primary-subtle font-bold text-primary shadow-[inset_3px_0_0_0_#1B4D3E]"
+                              ? "bg-primary font-bold text-white shadow-card"
                               : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
                           }`}
                         >
-                          <Icon className="h-4 w-4 flex-shrink-0" />
+                          <span
+                            className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg ${
+                              active ? "bg-white/20" : "bg-primary-subtle"
+                            }`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                          </span>
                           {sub.label}
                         </Link>
                       );

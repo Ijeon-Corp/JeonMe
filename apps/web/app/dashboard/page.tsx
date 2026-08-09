@@ -50,13 +50,17 @@ function pctChange(current: number, previous: number): number | null {
   return ((current - previous) / previous) * 100;
 }
 
-function TrendBadge({ pct }: { pct: number | null }) {
+// onDark -- kartu StatCard tone="brand" (Penjualan, lihat di bawah) punya
+// latar solid gelap, badge tren perlu varian translucent-putih supaya
+// tetap terbaca alih-alih memakai bg-secondary-subtle/bg-red-50 yang
+// dirancang untuk latar putih/pastel.
+function TrendBadge({ pct, onDark = false }: { pct: number | null; onDark?: boolean }) {
   if (pct === null) return null;
   const positive = pct >= 0;
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-        positive ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
+        onDark ? "bg-white/20 text-white" : positive ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
       }`}
     >
       <IconTrendArrow className={`h-3 w-3 flex-shrink-0 ${positive ? "" : "rotate-180"}`} />
@@ -282,17 +286,28 @@ export default function DashboardHomePage() {
                 deret harian sungguhan tersedia -- "Pesanan" TIDAK dikasih
                 sparkline karena backend belum menghitung deret harian per
                 pesanan, jujur apa adanya daripada memalsukan data. */}
+            {/* Redesain "Playful Creator" (permintaan langsung pengguna, 9
+                Agustus 2026): 4 kartu bento warna-warni menggantikan 4
+                kartu ".glass" putih seragam -- "Penjualan" (metrik paling
+                penting) jadi kartu SOLID warna brand, 3 lainnya dapat tint
+                pastel "pop" berbeda (bukan lagi hanya beda warna sparkline
+                di atas kartu putih polos). Keberanian warna dipusatkan di
+                SINI (satu-satunya baris rainbow di dashboard) -- sidebar &
+                bagian lain tetap netral, lihat catatan di dashboard/
+                layout.tsx. */}
             <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard
-                icon={<IconChart className="h-4 w-4 text-primary" />}
+                tone="blue"
+                icon={<IconChart className="h-4 w-4" />}
                 label="Kunjungan"
                 value={summary.total_views.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_views, prevSummary.total_views) : null}
                 sparkline={viewsPath}
-                accentHex="#1B4D3E"
+                accentHex="#4C8DFF"
               />
               <StatCard
-                icon={<IconLink className="h-4 w-4 text-accent-dark" />}
+                tone="yellow"
+                icon={<IconLink className="h-4 w-4" />}
                 label="Klik Tautan"
                 value={summary.total_clicks.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_clicks, prevSummary.total_clicks) : null}
@@ -300,18 +315,20 @@ export default function DashboardHomePage() {
                 accentHex="#C9A24B"
               />
               <StatCard
-                icon={<IconBox className="h-4 w-4 text-secondary-dark" />}
+                tone="lilac"
+                icon={<IconBox className="h-4 w-4" />}
                 label="Pesanan"
                 value={summary.total_orders.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_orders, prevSummary.total_orders) : null}
               />
               <StatCard
-                icon={<IconWallet className="h-4 w-4 text-primary" />}
+                tone="brand"
+                icon={<IconWallet className="h-4 w-4" />}
                 label="Penjualan"
                 value={formatRupiah(summary.total_revenue_idr)}
                 pct={prevSummary ? pctChange(summary.total_revenue_idr, prevSummary.total_revenue_idr) : null}
                 sparkline={revenuePath}
-                accentHex="#1F7A6C"
+                accentHex="#ffffff"
               />
             </section>
 
@@ -447,6 +464,16 @@ export default function DashboardHomePage() {
   );
 }
 
+// STAT_TONES -- palet "pop" dashboard (lihat catatan tailwind.config.ts),
+// dipakai KHUSUS di 4 kartu ini supaya baris statistik jadi satu-satunya
+// tempat warna-warni di halaman, bukan tersebar ke seluruh dashboard.
+const STAT_TONES = {
+  brand: { card: "bg-primary text-white", icon: "bg-white/20 text-white", label: "text-white/75", value: "text-white", sub: "text-white/60" },
+  blue: { card: "bg-pop-blue-tint text-ink", icon: "bg-white/70 text-pop-blue", label: "text-ink/70", value: "text-ink", sub: "text-muted" },
+  yellow: { card: "bg-pop-yellow-tint text-ink", icon: "bg-white/70 text-accent-dark", label: "text-ink/70", value: "text-ink", sub: "text-muted" },
+  lilac: { card: "bg-pop-lilac-tint text-ink", icon: "bg-white/70 text-pop-lilac", label: "text-ink/70", value: "text-ink", sub: "text-muted" },
+} as const;
+
 function StatCard({
   icon,
   label,
@@ -454,6 +481,7 @@ function StatCard({
   pct,
   sparkline,
   accentHex = "#1B4D3E",
+  tone = "blue",
 }: {
   icon: React.ReactNode;
   label: string;
@@ -465,21 +493,23 @@ function StatCard({
   // deret harian (mis. Pesanan) tetap tampil rapi tanpa grafik kosong.
   sparkline?: { line: string; area: string };
   accentHex?: string;
+  tone?: keyof typeof STAT_TONES;
 }) {
+  const t = STAT_TONES[tone];
   return (
-    <div className="glass rounded-3xl p-4 shadow-card">
-      <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {icon}
+    <div className={`rounded-3xl p-4 shadow-card ${t.card}`}>
+      <div className={`flex items-center gap-2 text-xs font-semibold ${t.label}`}>
+        <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl ${t.icon}`}>{icon}</span>
         {label}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <p className="font-heading text-xl font-bold tabular-nums text-ink">{value}</p>
-        <TrendBadge pct={pct} />
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <p className={`font-heading text-xl font-bold tabular-nums ${t.value}`}>{value}</p>
+        <TrendBadge pct={pct} onDark={tone === "brand"} />
       </div>
-      <p className="mt-1 text-[11px] text-muted">dibanding periode sebelumnya</p>
+      <p className={`mt-1 text-[11px] ${t.sub}`}>dibanding periode sebelumnya</p>
       {sparkline && sparkline.line && (
         <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-2 h-10 w-full">
-          <path d={sparkline.area} fill={accentHex} fillOpacity="0.14" />
+          <path d={sparkline.area} fill={accentHex} fillOpacity={tone === "brand" ? 0.18 : 0.16} />
           <path d={sparkline.line} fill="none" stroke={accentHex} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
