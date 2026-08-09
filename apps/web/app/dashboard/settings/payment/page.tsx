@@ -174,7 +174,7 @@ export default function SettingsPaymentPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Metode Pembayaran</h2>
 
         <div className="mt-3 flex flex-col gap-2">
@@ -319,7 +319,7 @@ export default function SettingsPaymentPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Auto-Withdraw Terjadwal</h2>
         <p className="mt-1 text-xs text-muted">
           Butuh metode pembayaran utama yang sudah terverifikasi. Penarikan otomatis berjalan kalau saldo tersedia

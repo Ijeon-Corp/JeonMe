@@ -127,7 +127,7 @@ export default function DangerZonePage() {
       <h1 className="mt-3 font-heading text-2xl font-bold text-ink">Zona Berbahaya</h1>
       <p className="mt-1 text-sm text-muted">Nonaktifkan atau hapus akunmu, dan unduh data pribadimu.</p>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Nonaktifkan Akun</h2>
         <p className="mt-1 text-xs text-muted">
           Halaman publikmu langsung tidak tampil, tapi semua data & pengaturanmu tetap utuh. Bisa diaktifkan
@@ -167,7 +167,7 @@ export default function DangerZonePage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Ekspor Data</h2>
         <p className="mt-1 text-xs text-muted">
           Unduh salinan data produk, histori transaksi, dan daftar pelanggan sebelum menghapus akun.
@@ -182,7 +182,7 @@ export default function DangerZonePage() {
         </button>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+      <section className="mt-4 rounded-3xl border border-red-200 bg-red-50 p-5">
         <h2 className="font-heading text-sm font-bold text-red-700">Hapus Akun</h2>
 
         {status?.pending ? (

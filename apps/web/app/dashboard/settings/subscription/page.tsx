@@ -103,7 +103,7 @@ export default function SettingsSubscriptionPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status.is_premium ? (
-        <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <section className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
           <div className="flex items-center gap-2">
             <IconStar className="h-5 w-5 text-amber-500" />
             <h2 className="font-heading text-sm font-bold text-ink">

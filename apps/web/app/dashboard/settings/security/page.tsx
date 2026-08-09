@@ -142,7 +142,7 @@ export default function SettingsSecurityPage() {
       <h1 className="mt-3 font-heading text-2xl font-bold text-ink">Keamanan</h1>
       <p className="mt-1 text-sm text-muted">Password, verifikasi dua langkah, dan sesi aktif.</p>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-6 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Ganti Password</h2>
         <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
           <input
@@ -172,7 +172,7 @@ export default function SettingsSecurityPage() {
         </form>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-sm font-bold text-ink">Verifikasi Dua Langkah (2FA)</h2>
           {status && (
@@ -276,7 +276,7 @@ export default function SettingsSecurityPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
         <h2 className="font-heading text-sm font-bold text-ink">Sesi Aktif</h2>
         <p className="mt-1 text-xs text-muted">Device yang sedang login ke akunmu.</p>
 
