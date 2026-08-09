@@ -120,31 +120,31 @@ type publicPageResponse struct {
 	// Theme jadi "custom", ikut membuang latar/mood preset yang sudah
 	// dipilih) -- sekarang bisa jadi lapisan independen di atas tema APAPUN,
 	// lihat komentar getPageTheme di page-themes.ts.
-	CustomButtonRounded   string             `json:"custom_button_rounded"`
-	CustomButtonShadow    string             `json:"custom_button_shadow"`
-	CustomButtonTextColor string             `json:"custom_button_text_color"`
-	CustomPageTextColor   string             `json:"custom_page_text_color"`
-	CustomTitleFont       string             `json:"custom_title_font"`
-	CustomTitleColor      string             `json:"custom_title_color"`
-	CustomStyleOverride   bool               `json:"custom_style_override"`
+	CustomButtonRounded   string `json:"custom_button_rounded"`
+	CustomButtonShadow    string `json:"custom_button_shadow"`
+	CustomButtonTextColor string `json:"custom_button_text_color"`
+	CustomPageTextColor   string `json:"custom_page_text_color"`
+	CustomTitleFont       string `json:"custom_title_font"`
+	CustomTitleColor      string `json:"custom_title_color"`
+	CustomStyleOverride   bool   `json:"custom_style_override"`
 	// Stickers -- Modul Desain: stiker dekoratif interaktif (posisi+ukuran
 	// per stiker), array kosong = tidak ada. Berlaku sama untuk halaman
 	// utama maupun tambahan.
-	Stickers              []PageSticker      `json:"stickers"`
+	Stickers []PageSticker `json:"stickers"`
 	// HideWatermark -- Modul Langganan Premium: toggle "sembunyikan pil
 	// 'Buat halaman gratis di Jeonme' di footer", CUMA berlaku kalau
 	// kreatornya Premium (dicek ulang lewat resp.IsPremium/IsVerified di
 	// frontend, bukan dipercaya sendirian -- lihat catatan di migrasi
 	// 000058). Kreator gratis SELALU tampil watermark apa pun nilai ini.
-	HideWatermark         bool               `json:"hide_watermark"`
-	Links                 []publicLink       `json:"links"`
-	Products              []publicItem       `json:"products"`
-	Donation              *publicDonation    `json:"donation"`
-	LeadCapture           *publicLeadCapture `json:"lead_capture"`
-	SocialProof           *publicSocialProof `json:"social_proof"`
-	IsVerified            bool               `json:"is_verified"`
-	Events                []publicEvent      `json:"events"`
-	Bookings              []publicBooking    `json:"bookings"`
+	HideWatermark bool               `json:"hide_watermark"`
+	Links         []publicLink       `json:"links"`
+	Products      []publicItem       `json:"products"`
+	Donation      *publicDonation    `json:"donation"`
+	LeadCapture   *publicLeadCapture `json:"lead_capture"`
+	SocialProof   *publicSocialProof `json:"social_proof"`
+	IsVerified    bool               `json:"is_verified"`
+	Events        []publicEvent      `json:"events"`
+	Bookings      []publicBooking    `json:"bookings"`
 	// LoyaltyActive -- No.94 (Sprint 13): cuma penanda ada/tidaknya program
 	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
 	// lewat GET /pages/:username/loyalty).
@@ -217,10 +217,27 @@ type publicSocialProof struct {
 // publicDonation -- No.71: blok dukungan/donasi, TIDAK ikut array Products
 // (tampil sebagai blok tersendiri di halaman publik, bukan kartu di grid
 // Produk). nil kalau kreator belum mengaktifkan blok ini.
+//
+// GoalAmountIDR/GoalRaisedIDR/Wishlist -- Gap #4 benchmark kompetitif (9
+// Agustus 2026, ala Saweria/Trakteer). GoalAmountIDR=0 berarti kreator
+// belum memasang target -- frontend publik menyembunyikan progress bar
+// dalam kasus itu, bukan menampilkan 0/0.
 type publicDonation struct {
-	ProductID    string `json:"product_id"`
-	Title        string `json:"title"`
-	MinAmountIDR int64  `json:"min_amount_idr"`
+	ProductID     string               `json:"product_id"`
+	Title         string               `json:"title"`
+	MinAmountIDR  int64                `json:"min_amount_idr"`
+	GoalTitle     string               `json:"goal_title"`
+	GoalAmountIDR int64                `json:"goal_amount_idr"`
+	GoalRaisedIDR int64                `json:"goal_raised_idr"`
+	Wishlist      []publicWishlistItem `json:"wishlist"`
+}
+
+type publicWishlistItem struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	PriceIDR  int64  `json:"price_idr"`
+	Link      string `json:"link"`
+	RaisedIDR int64  `json:"raised_idr"`
 }
 
 // publicLink -- No.79 (Sprint 9): URL SENGAJA dikosongkan kalau LockType
@@ -515,13 +532,40 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 
 	var donation publicDonation
 	var minAmount *int64
+	var goalStartedAt *time.Time
 	if err := h.DB.QueryRow(ctx, `
-		SELECT id, name, pwyw_min_price_idr FROM products
+		SELECT id, name, pwyw_min_price_idr, donation_goal_title, donation_goal_amount_idr, donation_goal_started_at
+		FROM products
 		WHERE user_id = $1 AND is_donation = true AND is_active = true
-	`, userID).Scan(&donation.ProductID, &donation.Title, &minAmount); err == nil {
+	`, userID).Scan(&donation.ProductID, &donation.Title, &minAmount, &donation.GoalTitle, &donation.GoalAmountIDR, &goalStartedAt); err == nil {
 		if minAmount != nil {
 			donation.MinAmountIDR = *minAmount
 		}
+		// GoalRaisedIDR -- SUM sejak goal ini dipasang, sama seperti
+		// DonationHandler.Get (lihat catatan panjang di migrasi 000060).
+		if donation.GoalAmountIDR > 0 && goalStartedAt != nil {
+			_ = h.DB.QueryRow(ctx, `
+				SELECT COALESCE(SUM(amount_idr), 0) FROM orders WHERE product_id = $1 AND status = 'paid' AND created_at >= $2
+			`, donation.ProductID, *goalStartedAt).Scan(&donation.GoalRaisedIDR)
+		}
+
+		// Wishlist (Gap #4 benchmark kompetitif) -- selalu diikutkan kalau
+		// blok Donasi aktif, TERLEPAS dari ada isinya atau tidak (array
+		// kosong, bukan null, supaya frontend tidak perlu nil-check ganda).
+		donation.Wishlist = []publicWishlistItem{}
+		wishlistRows, err := h.DB.Query(ctx, `
+			SELECT id, name, price_idr, link, raised_idr FROM donation_wishlist_items WHERE user_id = $1 ORDER BY created_at DESC
+		`, userID)
+		if err == nil {
+			for wishlistRows.Next() {
+				var w publicWishlistItem
+				if err := wishlistRows.Scan(&w.ID, &w.Name, &w.PriceIDR, &w.Link, &w.RaisedIDR); err == nil {
+					donation.Wishlist = append(donation.Wishlist, w)
+				}
+			}
+			wishlistRows.Close()
+		}
+
 		resp.Donation = &donation
 	}
 
@@ -1560,29 +1604,29 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 }
 
 type extraPageDetailResponse struct {
-	ID                    string `json:"id"`
-	Name                  string `json:"name"`
-	Slug                  string `json:"slug"`
-	PageType              string `json:"page_type"`
-	DisplayName           string `json:"display_name"`
-	Bio                   string `json:"bio"`
-	AvatarURL             string `json:"avatar_url"`
-	Theme                 string `json:"theme"`
-	IsPublished           bool   `json:"is_published"`
-	SeoTitle              string `json:"seo_title"`
-	SeoDescription        string `json:"seo_description"`
-	Noindex               bool   `json:"noindex"`
-	CustomBackgroundType  string `json:"custom_background_type"`
-	CustomBackgroundValue string `json:"custom_background_value"`
-	CustomFont            string `json:"custom_font"`
-	CustomButtonColor     string `json:"custom_button_color"`
-	CustomButtonStyle     string `json:"custom_button_style"`
-	CustomButtonRounded   string `json:"custom_button_rounded"`
-	CustomButtonShadow    string `json:"custom_button_shadow"`
-	CustomButtonTextColor string `json:"custom_button_text_color"`
-	CustomPageTextColor   string `json:"custom_page_text_color"`
-	CustomTitleFont       string `json:"custom_title_font"`
-	CustomTitleColor      string `json:"custom_title_color"`
+	ID                    string        `json:"id"`
+	Name                  string        `json:"name"`
+	Slug                  string        `json:"slug"`
+	PageType              string        `json:"page_type"`
+	DisplayName           string        `json:"display_name"`
+	Bio                   string        `json:"bio"`
+	AvatarURL             string        `json:"avatar_url"`
+	Theme                 string        `json:"theme"`
+	IsPublished           bool          `json:"is_published"`
+	SeoTitle              string        `json:"seo_title"`
+	SeoDescription        string        `json:"seo_description"`
+	Noindex               bool          `json:"noindex"`
+	CustomBackgroundType  string        `json:"custom_background_type"`
+	CustomBackgroundValue string        `json:"custom_background_value"`
+	CustomFont            string        `json:"custom_font"`
+	CustomButtonColor     string        `json:"custom_button_color"`
+	CustomButtonStyle     string        `json:"custom_button_style"`
+	CustomButtonRounded   string        `json:"custom_button_rounded"`
+	CustomButtonShadow    string        `json:"custom_button_shadow"`
+	CustomButtonTextColor string        `json:"custom_button_text_color"`
+	CustomPageTextColor   string        `json:"custom_page_text_color"`
+	CustomTitleFont       string        `json:"custom_title_font"`
+	CustomTitleColor      string        `json:"custom_title_color"`
 	CustomStyleOverride   bool          `json:"custom_style_override"`
 	Stickers              []PageSticker `json:"stickers"`
 	HideWatermark         bool          `json:"hide_watermark"`

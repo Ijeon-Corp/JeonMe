@@ -20,7 +20,11 @@ test.describe("Blok Monetisasi: Donasi, Event, Booking, Loyalitas", () => {
     await page.goto("/dashboard/donation");
     await page.getByRole("switch", { name: "Aktifkan blok dukungan" }).click();
     await page.getByPlaceholder("Traktir aku kopi").fill(donationTitle);
-    await page.locator('input[type="number"]').fill("15000");
+    // .first() -- Gap #4 benchmark kompetitif menambah field target donasi
+    // yang JUGA type="number" (input[placeholder="Target nominal..."]) di
+    // halaman yang sama, jadi selector polos sekarang ambigu. Nominal
+    // Minimum selalu lebih dulu di urutan DOM.
+    await page.locator('input[type="number"]').first().fill("15000");
     await page.getByRole("button", { name: "Simpan" }).click();
     await expect(page.getByText("Pengaturan disimpan.")).toBeVisible({ timeout: 10000 });
 

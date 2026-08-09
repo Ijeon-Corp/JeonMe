@@ -151,6 +151,16 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
                 productId: page.donation.product_id,
                 title: page.donation.title,
                 minAmountIdr: page.donation.min_amount_idr,
+                goalTitle: page.donation.goal_title,
+                goalAmountIdr: page.donation.goal_amount_idr,
+                goalRaisedIdr: page.donation.goal_raised_idr,
+                wishlist: page.donation.wishlist.map((w) => ({
+                  id: w.id,
+                  name: w.name,
+                  priceIdr: w.price_idr,
+                  link: w.link,
+                  raisedIdr: w.raised_idr,
+                })),
               }
             : undefined,
           leadCapture: page.lead_capture

@@ -148,10 +148,24 @@ export interface PublicProduct {
   chapter_count: number;
 }
 
+export interface PublicWishlistItem {
+  id: string;
+  name: string;
+  price_idr: number;
+  link: string;
+  raised_idr: number;
+}
+
 export interface PublicDonation {
   product_id: string;
   title: string;
   min_amount_idr: number;
+  // Gap #4 benchmark kompetitif (9 Agustus 2026) -- goal_amount_idr=0
+  // berarti kreator belum memasang target, sembunyikan progress bar.
+  goal_title: string;
+  goal_amount_idr: number;
+  goal_raised_idr: number;
+  wishlist: PublicWishlistItem[];
 }
 
 // No.90 (Sprint 11): blok event.
@@ -1629,18 +1643,57 @@ export interface DonationSettings {
   enabled: boolean;
   title: string;
   min_amount_idr: number | null;
+  // goal_* -- Gap #4 benchmark kompetitif (9 Agustus 2026, ala Saweria/
+  // Trakteer). goal_amount_idr=0 berarti belum ada target dipasang.
+  goal_title: string;
+  goal_amount_idr: number;
+  goal_raised_idr: number;
 }
 
 export function getDonationSettings() {
   return apiFetch<DonationSettings>("/dashboard/donation", { method: "GET" }, { auth: true });
 }
 
-export function upsertDonationSettings(input: { enabled: boolean; title: string; min_amount_idr: number }) {
+export function upsertDonationSettings(input: {
+  enabled: boolean;
+  title: string;
+  min_amount_idr: number;
+  goal_title: string;
+  goal_amount_idr: number;
+}) {
   return apiFetch<{ message: string }>(
     "/dashboard/donation",
     { method: "PUT", body: JSON.stringify(input) },
     { auth: true }
   );
+}
+
+// ---------- Dashboard: Wishlist Donasi (Gap #4 benchmark kompetitif, 9
+// Agustus 2026) ----------
+
+export interface WishlistItem {
+  id: string;
+  name: string;
+  price_idr: number;
+  link: string;
+  raised_idr: number;
+  created_at: string;
+}
+
+export function listWishlistItems() {
+  return apiFetch<WishlistItem[]>("/dashboard/donation/wishlist", { method: "GET" }, { auth: true });
+}
+
+export function createWishlistItem(input: { name: string; price_idr: number; link: string }) {
+  return apiFetch<{ id: string; message: string }>(
+    "/dashboard/donation/wishlist",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function deleteWishlistItem(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/donation/wishlist/${id}`, { method: "DELETE" }, { auth: true });
 }
 
 // ---------- Dashboard: program afiliasi (Sprint 7, No.72) ----------
@@ -1830,6 +1883,9 @@ export function createCheckout(input: {
   // No.92 (Sprint 11): wajib diisi untuk produk booking konsultasi --
   // slot dipilih lewat getAvailableSlots() sebelum checkout ini dipanggil.
   slot_id?: string;
+  // Gap #4 benchmark kompetitif (9 Agustus 2026) -- opsional, cuma relevan
+  // untuk donasi: pendonor memilih mewujudkan satu item wishlist tertentu.
+  wishlist_item_id?: string;
 }) {
   return apiFetch<{ order_id: string; invoice_url: string }>("/checkout", {
     method: "POST",

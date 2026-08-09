@@ -13,6 +13,7 @@ export default function BuyProductButton({
   referralCode,
   username,
   pageSlug,
+  wishlistItemId,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -33,6 +34,11 @@ export default function BuyProductButton({
   // dilewati diam-diam.
   username?: string;
   pageSlug?: string;
+  // wishlistItemId -- Gap #4 benchmark kompetitif (9 Agustus 2026): cuma
+  // relevan untuk blok Donasi, item wishlist yang dipilih pendukung untuk
+  // "diwujudkan". Dioper apa adanya ke createCheckout, divalidasi di
+  // backend (lihat catatan panjang di CheckoutHandler.Create).
+  wishlistItemId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -86,6 +92,7 @@ export default function BuyProductButton({
         voucher_code: voucherResult ? voucherCode.trim() : undefined,
         buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
         referral_code: referralCode,
+        wishlist_item_id: wishlistItemId,
       });
       window.location.href = invoice_url;
     } catch (err) {

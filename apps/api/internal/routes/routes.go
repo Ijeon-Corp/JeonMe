@@ -270,6 +270,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.GET("/donation", donation.Get)
 				productsGroup.PUT("/donation", donation.Upsert)
 
+				// Gap #4 benchmark kompetitif (9 Agustus 2026): wishlist ala
+				// Saweria/Trakteer -- daftar barang, TIDAK digerbang blok
+				// Donasi aktif/tidak (lihat catatan CreateWishlistItem).
+				productsGroup.GET("/donation/wishlist", donation.ListWishlistItems)
+				productsGroup.POST("/donation/wishlist", donation.CreateWishlistItem)
+				productsGroup.DELETE("/donation/wishlist/:id", donation.DeleteWishlistItem)
+
 				// No.72 (Sprint 7): program afiliasi privat -- kreator undang
 				// afiliator (email) + atur komisi per produk.
 				productsGroup.POST("/affiliates", affiliate.Upsert)

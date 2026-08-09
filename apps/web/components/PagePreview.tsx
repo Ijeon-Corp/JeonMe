@@ -54,10 +54,24 @@ export interface PagePreviewProduct {
   chapterCount?: number;
 }
 
+export interface PagePreviewWishlistItem {
+  id: string;
+  name: string;
+  priceIdr: number;
+  link: string;
+  raisedIdr: number;
+}
+
 export interface PagePreviewDonation {
   productId: string;
   title: string;
   minAmountIdr: number;
+  // Gap #4 benchmark kompetitif (9 Agustus 2026, ala goal/wishlist Saweria/
+  // Trakteer) -- goalAmountIdr 0/undefined berarti tidak ada target.
+  goalTitle?: string;
+  goalAmountIdr?: number;
+  goalRaisedIdr?: number;
+  wishlist?: PagePreviewWishlistItem[];
 }
 
 // No.90 (Sprint 11): blok event.
@@ -618,6 +632,9 @@ export default function PagePreview({
   // dinonaktifkan di frontend juga (bukan cuma backend), supaya pengunjung
   // tidak membuka form checkout yang pasti ditolak.
   const canBuy = interactive && !data.shopPaused;
+  // Gap #4 benchmark kompetitif (9 Agustus 2026): item wishlist yang
+  // dipilih pendukung untuk "diwujudkan" -- undefined berarti donasi umum.
+  const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
@@ -867,6 +884,49 @@ export default function PagePreview({
             <p className={`text-xs ${theme.bio}`}>
               Mulai dari Rp {data.donation.minAmountIdr.toLocaleString("id-ID")}
             </p>
+
+            {/* Target Donasi -- Gap #4 benchmark kompetitif, ala goal
+                Saweria/Trakteer. goalAmountIdr 0/undefined = kreator belum
+                memasang target, sembunyikan seluruh blok progress. */}
+            {!!data.donation.goalAmountIdr && (
+              <div className="w-full text-left">
+                <p className={`text-[11px] font-semibold ${theme.productTitle}`}>{data.donation.goalTitle}</p>
+                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-black/10">
+                  <div
+                    className={`h-full rounded-full bg-current opacity-80 ${theme.productTitle}`}
+                    style={{ width: `${Math.min(100, ((data.donation.goalRaisedIdr ?? 0) / data.donation.goalAmountIdr) * 100)}%` }}
+                  />
+                </div>
+                <p className={`mt-1 text-[10px] ${theme.bio}`}>
+                  Rp {(data.donation.goalRaisedIdr ?? 0).toLocaleString("id-ID")} / Rp{" "}
+                  {data.donation.goalAmountIdr.toLocaleString("id-ID")}
+                </p>
+              </div>
+            )}
+
+            {/* Wishlist -- Gap #4 benchmark kompetitif: pilih item spesifik
+                untuk "diwujudkan", atau biarkan kosong untuk donasi umum. */}
+            {!!data.donation.wishlist?.length && (
+              <div className="flex w-full flex-col gap-1 text-left">
+                <label htmlFor="donation-wishlist-select" className={`text-[10px] font-semibold ${theme.productTitle}`}>
+                  Wujudkan wishlist (opsional)
+                </label>
+                <select
+                  id="donation-wishlist-select"
+                  value={selectedWishlistId ?? ""}
+                  onChange={(e) => setSelectedWishlistId(e.target.value || undefined)}
+                  className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="">Dukungan umum</option>
+                  {data.donation.wishlist.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} (Rp{w.raisedIdr.toLocaleString("id-ID")}/Rp{w.priceIdr.toLocaleString("id-ID")})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {canBuy ? (
               <div className="w-full">
                 <BuyProductButton
@@ -878,6 +938,7 @@ export default function PagePreview({
                   submitLabel="Kirim Dukungan"
                   username={data.username}
                   pageSlug={data.pageSlug}
+                  wishlistItemId={selectedWishlistId}
                 />
               </div>
             ) : (

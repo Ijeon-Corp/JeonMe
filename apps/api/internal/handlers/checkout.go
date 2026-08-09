@@ -59,6 +59,13 @@ type createCheckoutRequest struct {
 	// pembuatan order (lihat di bawah) supaya dua pembeli tidak bisa
 	// merebut slot yang sama.
 	SlotID string `json:"slot_id"`
+	// WishlistItemID -- Gap #4 benchmark kompetitif (9 Agustus 2026):
+	// opsional, cuma relevan kalau ProductID adalah blok Donasi (is_donation
+	// =true) -- pendonor MEMILIH mewujudkan satu item wishlist tertentu,
+	// bukan donasi umum. Divalidasi milik kreator yang sama dengan produk
+	// (lihat di bawah) supaya tidak bisa dipakai menaikkan raised_idr
+	// wishlist kreator LAIN lewat donasi ke kreator ini.
+	WishlistItemID string `json:"wishlist_item_id"`
 }
 
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
@@ -74,6 +81,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	defer cancel()
 
 	var productName string
+	var productUserID string
 	var priceIDR int64
 	var flashSaleActive bool
 	var pwywEnabled bool
@@ -91,12 +99,12 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits,
+		SELECT p.user_id, name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits,
 			product_kind, payment_limit_count, link_expires_at, u.shop_paused_at
 		FROM products p
 		JOIN users u ON u.id = p.user_id
 		WHERE p.id = $1 AND p.is_active = true
-	`, req.ProductID).Scan(&productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw,
+	`, req.ProductID).Scan(&productUserID, &productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw,
 		&productKind, &paymentLimitCount, &linkExpiresAt, &shopPausedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -105,6 +113,25 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
 		return
+	}
+
+	// Gap #4 benchmark kompetitif: WishlistItemID (kalau diisi) HARUS milik
+	// kreator yang SAMA dengan produk donasi ini -- tanpa ini, pendonor ke
+	// kreator A bisa memalsukan wishlist_item_id milik kreator B untuk
+	// menaikkan raised_idr wishlist orang lain pakai uang yang sebenarnya
+	// masuk ke kreator A.
+	var wishlistItemID *string
+	if req.WishlistItemID != "" {
+		var wishlistOwnerID string
+		if err := h.DB.QueryRow(ctx, `SELECT user_id FROM donation_wishlist_items WHERE id = $1`, req.WishlistItemID).Scan(&wishlistOwnerID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "item wishlist tidak ditemukan"})
+			return
+		}
+		if wishlistOwnerID != productUserID {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "item wishlist tidak cocok dengan halaman ini"})
+			return
+		}
+		wishlistItemID = &req.WishlistItemID
 	}
 
 	// Modul Toko (Fase E5): Toko Dijeda -- kreator bisa menjeda seluruh
@@ -271,9 +298,9 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR, collaboratorSplitsSnapshotJSON)
+		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, donation_wishlist_item_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, $13, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR, collaboratorSplitsSnapshotJSON, wishlistItemID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
@@ -951,12 +978,13 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	var orderID, productID, productUserID, buyerEmail, deliveryMethod string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
+	var wishlistItemID *string
 	var collaboratorSplitsSnapshotRaw []byte
 	err = h.DB.QueryRow(ctx, `
-		SELECT o.id, p.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot, p.delivery_method
+		SELECT o.id, p.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot, p.delivery_method, o.donation_wishlist_item_id
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw, &deliveryMethod)
+	`, payload.OrderID).Scan(&orderID, &productID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw, &deliveryMethod, &wishlistItemID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
@@ -1126,6 +1154,15 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			// perhitungan komisi afiliasi) -- lihat awardLoyaltyPoints.
 			if err := awardLoyaltyPoints(ctx, tx, productUserID, buyerEmail, orderID, amountIDR); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat poin loyalitas"})
+				return
+			}
+
+			// Gap #4 benchmark kompetitif (9 Agustus 2026): kredit progress
+			// wishlist ala Saweria/Trakteer -- amountIDR (nilai order penuh
+			// SEBELUM potongan apa pun, sama seperti dasar poin loyalitas di
+			// atas), no-op kalau donasi ini tidak menargetkan item tertentu.
+			if err := creditDonationWishlistItem(ctx, tx, wishlistItemID, amountIDR); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat progres wishlist"})
 				return
 			}
 
