@@ -124,7 +124,7 @@ export default function DashboardLoyaltyPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center gap-2">
           <Toggle
             checked={settings.is_active}
@@ -190,7 +190,7 @@ export default function DashboardLoyaltyPage() {
         </button>
       </section>
 
-      <section className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg font-bold text-ink">Katalog Reward</h2>
           {!adding && (

@@ -156,7 +156,7 @@ export default function DashboardBookingsPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-6 rounded-2xl p-5 shadow-card">
+      <div className="glass mt-6 rounded-3xl p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
