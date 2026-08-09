@@ -47,27 +47,27 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/reports"
-              className="flex items-center gap-3 rounded-3xl border border-border bg-white p-5 shadow-card transition-colors hover:border-red-200"
+              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-white p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
                 <IconFlag className="h-4 w-4" />
               </span>
               <span>
                 <span className="block text-xs font-semibold text-muted">Laporan Tertunda</span>
-                <span className="block font-heading text-2xl font-bold text-red-600">{summary.pending_reports}</span>
+                <span className="block font-serifDisplay text-2xl font-semibold text-red-600">{summary.pending_reports}</span>
               </span>
             </Link>
 
             <Link
               href="/admin/payouts"
-              className="flex items-center gap-3 rounded-3xl border border-border bg-white p-5 shadow-card transition-colors hover:border-accent/40"
+              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-white p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-accent/40"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-accent-dark">
                 <IconWallet className="h-4 w-4" />
               </span>
               <span>
                 <span className="block text-xs font-semibold text-muted">Penarikan Tertunda</span>
-                <span className="block font-heading text-2xl font-bold text-accent-dark">{summary.pending_payouts}</span>
+                <span className="block font-serifDisplay text-2xl font-semibold text-accent-dark">{summary.pending_payouts}</span>
               </span>
             </Link>
           </section>

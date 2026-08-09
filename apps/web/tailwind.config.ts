@@ -13,6 +13,14 @@ const config: Config = {
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
+        // serifDisplay -- redesain "Premium Refined" (permintaan langsung
+        // pengguna, 9 Agustus 2026): angka besar/judul utama di dashboard
+        // pakai serif untuk kontras sengaja dengan Poppins (heading) di
+        // UI/label/tombol -- "laporan tahunan", bukan template SaaS. Pakai
+        // ULANG --font-custom-lora (SUDAH dimuat global di app/layout.tsx
+        // untuk kustomisasi font halaman publik kreator, lihat customLora)
+        // -- TIDAK menambah font baru sama sekali, nol biaya muat tambahan.
+        serifDisplay: ["var(--font-custom-lora)", "Georgia", "serif"],
       },
       colors: {
         // Warna identitas Jeonme, konsisten dengan PRD/TDD & docs/*.pdf.
@@ -52,6 +60,12 @@ const config: Config = {
         "card-hover": "0 16px 44px -8px rgba(27,77,62,0.22)",
         hero: "0 30px 90px -16px rgba(27,77,62,0.35)",
         glow: "0 0 0 1px rgba(255,255,255,0.4) inset, 0 8px 32px -8px rgba(27,77,62,0.25)",
+        // refined/refined-lg -- redesain "Premium Refined": bayangan
+        // BERLAPIS (dua-tiga stop tipis) menggantikan `card` yang satu
+        // lapis datar -- dipakai StatCard & shell, bukan blanket ganti
+        // `card` di seluruh app supaya perubahan tetap tertarget.
+        refined: "0 1px 1px rgba(15,46,36,0.04), 0 6px 16px -8px rgba(15,46,36,0.14)",
+        "refined-lg": "0 1px 1px rgba(15,46,36,0.04), 0 6px 16px -8px rgba(15,46,36,0.14), 0 24px 48px -20px rgba(15,46,36,0.18)",
       },
     },
   },

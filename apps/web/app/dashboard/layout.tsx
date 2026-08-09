@@ -231,13 +231,21 @@ export default function DashboardLayout({
   const sidebarContent = (
     <>
       <div>
-        <Link href="/dashboard" className="flex items-center gap-2 font-heading text-lg font-extrabold text-gradient">
-          Jeonme
+        {/* Redesain "Premium Refined" (permintaan langsung pengguna, 9
+            Agustus 2026, menggantikan arah "Playful Creator" sore
+            harinya): sidebar jadi hijau tua PEKAT (bukan lagi glass
+            terang) -- satu pernyataan warna percaya diri, bukan latar
+            netral. .text-gradient (hijau->emas) TIDAK dipakai di sini --
+            porsi hijau gradiennya nyaris tak kelihatan di atas latar
+            sidebar yang SAMA-SAMA hijau tua, jadi logo diganti putih
+            polos + aksen berlian emas kecil (pola sama seperti mockup). */}
+        <Link href="/dashboard" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-white">
+          Jeonme<span className="text-xs text-accent-light" aria-hidden="true">&#9670;</span>
         </Link>
 
         {workspaces.length > 1 && (
           <div className="mt-4">
-            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
+            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
               Kelola sebagai
             </label>
             <select
@@ -257,15 +265,12 @@ export default function DashboardLayout({
           </div>
         )}
 
-        {/* Redesain "Playful Creator" (permintaan langsung pengguna, 9
-            Agustus 2026): item aktif sekarang pil SOLID warna brand +
-            ikon dalam badge bulat kontras (bukan lagi tint lembut + garis
-            aksen tipis) -- lebih "sticker-like" & tegas, konsisten dengan
-            bahasa bento/badge di kartu statistik Ringkasan. Ikon tidak
-            aktif SENGAJA tetap netral (bg-primary-subtle/60, bukan warna
-            pop macam-macam) -- keberanian warna dipusatkan ke satu tempat
-            (kartu statistik), bukan tersebar ke semua baris nav. */}
-        <nav className="mt-6 flex flex-col gap-1 text-xs">
+        {/* Item aktif: garis emas tipis di kiri (bukan lagi pil solid
+            warna brand -- di atas latar sidebar yang SUDAH hijau tua,
+            pil bg-primary nyaris tidak kontras) + latar putih transparan
+            samar. Ikon TANPA badge bulat lagi -- lebih tenang/quiet,
+            sesuai prinsip "satu aksen berani (emas), sisanya netral". */}
+        <nav className="mt-6 flex flex-col gap-0.5 text-xs">
           {NAV_ITEMS.map((item) => {
             if (item.type === "link") {
               const active = pathname === item.href;
@@ -275,19 +280,13 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2 font-semibold transition-all ${
+                  className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
                     active
-                      ? "bg-primary font-bold text-white shadow-card"
-                      : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
+                      ? "border-accent bg-white/5 text-white"
+                      : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                   }`}
                 >
-                  <span
-                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg ${
-                      active ? "bg-white/20" : "bg-primary-subtle"
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
                   {item.label}
                 </Link>
               );
@@ -300,19 +299,19 @@ export default function DashboardLayout({
                 <button
                   type="button"
                   onClick={() => toggleGroup(item.label)}
-                  className="flex w-full items-center justify-between rounded-lg px-3.5 py-1.5 text-left hover:bg-primary-subtle/50"
+                  className="flex w-full items-center justify-between rounded-lg px-3.5 py-1.5 text-left hover:bg-white/5"
                 >
                   <span
-                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-primary" : "text-muted/70"}`}
+                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-accent-light" : "text-white/35"}`}
                   >
                     {item.label}
                   </span>
                   <IconChevronRight
-                    className={`h-3.5 w-3.5 flex-shrink-0 text-muted/50 transition-transform ${expanded ? "rotate-90" : ""}`}
+                    className={`h-3.5 w-3.5 flex-shrink-0 text-white/30 transition-transform ${expanded ? "rotate-90" : ""}`}
                   />
                 </button>
                 {expanded && (
-                  <div className="mt-1 flex flex-col gap-1">
+                  <div className="mt-1 flex flex-col gap-0.5">
                     {item.items.map((sub) => {
                       const active = pathname === sub.href;
                       const Icon = sub.icon;
@@ -321,19 +320,13 @@ export default function DashboardLayout({
                           key={sub.href}
                           href={sub.href}
                           onClick={() => setMobileOpen(false)}
-                          className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2 font-semibold transition-all ${
+                          className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
                             active
-                              ? "bg-primary font-bold text-white shadow-card"
-                              : "text-muted hover:bg-primary-subtle/60 hover:text-primary"
+                              ? "border-accent bg-white/5 text-white"
+                              : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                           }`}
                         >
-                          <span
-                            className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg ${
-                              active ? "bg-white/20" : "bg-primary-subtle"
-                            }`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                          </span>
+                          <Icon className="h-3.5 w-3.5 flex-shrink-0" />
                           {sub.label}
                         </Link>
                       );
@@ -349,7 +342,7 @@ export default function DashboardLayout({
       <div className="flex flex-col gap-3">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
+          className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-300 hover:bg-white/5"
         >
           <IconLogout className="h-4 w-4" />
           Keluar
@@ -383,7 +376,7 @@ export default function DashboardLayout({
               globals.css) menggantikan border+bg putih polos, supaya
               sidebar terasa mengambang tipis di atas latar bg-mesh di
               atas, bukan blok solid buram. */}
-          <aside className="glass sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 md:flex">
+          <aside className="bg-primary-dark sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 shadow-refined-lg md:flex">
             {sidebarContent}
           </aside>
 
@@ -421,11 +414,11 @@ export default function DashboardLayout({
             {mobileOpen && (
               <div className="fixed inset-0 z-40 md:hidden">
                 <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-                <aside className="glass absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
+                <aside className="bg-primary-dark absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
                   <button
                     type="button"
                     onClick={() => setMobileOpen(false)}
-                    className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+                    className="absolute right-4 top-4 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
                     aria-label="Tutup menu"
                   >
                     <IconClose className="h-5 w-5" />

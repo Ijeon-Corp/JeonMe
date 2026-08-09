@@ -43,12 +43,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebarContent = (
     <>
       <div>
-        <Link href="/admin" className="flex items-center gap-2 font-heading text-xl font-extrabold text-gradient">
-          <IconShield className="h-5 w-5 text-primary" />
+        {/* Redesain "Premium Refined" -- pola sama persis dengan
+            dashboard/layout.tsx: sidebar hijau tua pekat, logo putih
+            polos (text-gradient tidak dipakai, kontrasnya jelek di atas
+            latar sehijau itu juga), item aktif garis emas kiri. */}
+        <Link href="/admin" className="flex items-center gap-2 font-heading text-lg font-extrabold text-white">
+          <IconShield className="h-4 w-4 text-accent-light" />
           Jeonme Admin
         </Link>
 
-        <nav className="mt-8 flex flex-col gap-1 text-sm">
+        <nav className="mt-8 flex flex-col gap-0.5 text-sm">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -57,19 +61,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 rounded-2xl px-2.5 py-2.5 font-semibold transition-all ${
+                className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2.5 font-semibold transition-all ${
                   active
-                    ? "bg-primary text-white shadow-card"
-                    : "text-muted hover:bg-primary-subtle hover:text-primary"
+                    ? "border-accent bg-white/5 text-white"
+                    : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                 }`}
               >
-                <span
-                  className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${
-                    active ? "bg-white/20" : "bg-primary-subtle"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
+                <Icon className="h-4 w-4 flex-shrink-0" />
                 {item.label}
               </Link>
             );
@@ -81,13 +79,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link
           href="/dashboard"
           onClick={() => setMobileOpen(false)}
-          className="rounded-xl px-3.5 py-2.5 text-sm font-semibold text-muted hover:bg-primary-subtle hover:text-primary"
+          className="rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/55 hover:bg-white/5 hover:text-white/85"
         >
           &larr; Kembali ke Dashboard
         </Link>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
+          className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-red-300 hover:bg-white/5"
         >
           <IconLogout className="h-[18px] w-[18px]" />
           Keluar
@@ -104,7 +102,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <div className="flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="glass sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 md:flex">
+        <aside className="bg-primary-dark sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 shadow-refined-lg md:flex">
           {sidebarContent}
         </aside>
 
@@ -128,11 +126,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {mobileOpen && (
             <div className="fixed inset-0 z-40 md:hidden">
               <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-              <aside className="glass absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
+              <aside className="bg-primary-dark absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="absolute right-4 top-4 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+                  className="absolute right-4 top-4 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
                   aria-label="Tutup menu"
                 >
                   <IconClose className="h-5 w-5" />
