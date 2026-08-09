@@ -44,12 +44,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       <div>
         {/* Redesain "Premium Refined" -- pola sama persis dengan
-            dashboard/layout.tsx: sidebar hijau tua pekat, logo putih
-            polos (text-gradient tidak dipakai, kontrasnya jelek di atas
-            latar sehijau itu juga), item aktif garis emas kiri. */}
-        <Link href="/admin" className="flex items-center gap-2 font-heading text-lg font-extrabold text-white">
-          <IconShield className="h-4 w-4 text-accent-light" />
-          Jeonme Admin
+            dashboard/layout.tsx: sidebar hijau tua pekat, item aktif
+            garis emas kiri.
+            Logo -- permintaan langsung pengguna, 10 Agustus 2026:
+            logo-baru.png dibungkus chip putih (warna glyph-nya hijau
+            tua, kontras jelek di atas latar sidebar sehijau ini juga --
+            lihat catatan sama di dashboard/layout.tsx). */}
+        <Link href="/admin" className="flex items-center gap-2">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-baru.png" alt="Jeonme" className="h-full w-full object-contain" />
+          </span>
+          <span className="font-heading text-lg font-extrabold text-white">Admin</span>
         </Link>
 
         <nav className="mt-8 flex flex-col gap-0.5 text-sm">
@@ -109,9 +115,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top bar + drawer mobile */}
         <div className="flex flex-1 flex-col md:contents">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-            <Link href="/admin" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-gradient">
-              <IconShield className="h-4 w-4 text-primary" />
-              Jeonme Admin
+            <Link href="/admin" className="flex items-center gap-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-baru.png" alt="Jeonme" className="h-7 w-auto" />
+              <span className="font-heading text-lg font-extrabold text-ink">Admin</span>
             </Link>
             <button
               type="button"
