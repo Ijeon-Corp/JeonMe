@@ -699,7 +699,7 @@ export default function DashboardProductsPage() {
                 halaman publik selalu terlihat di atas Overview, bukan cuma
                 di panel pratinjau kanan. */}
             {page && (
-              <div className="glass mb-4 flex items-center gap-3 rounded-2xl p-4 shadow-card">
+              <div className="glass mb-4 flex items-center gap-3 rounded-3xl p-4 shadow-card">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={page.avatar_url} alt={page.username} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
@@ -801,7 +801,7 @@ export default function DashboardProductsPage() {
             {/* Modul Toko (Fase B3): panel "Add Items" ala referensi -- pilih
                 jenis item dulu sebelum masuk ke form spesifiknya. */}
             {addMode === "choose" && (
-              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-2xl p-4 shadow-card sm:grid-cols-2">
+              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-3xl p-4 shadow-card sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
@@ -824,7 +824,7 @@ export default function DashboardProductsPage() {
             )}
 
             {addMode === "digital" && (
-              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-2xl p-4 shadow-card sm:flex-row">
+              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-3xl p-4 shadow-card sm:flex-row">
                 <input
                   type="text"
                   autoFocus
@@ -869,7 +869,7 @@ export default function DashboardProductsPage() {
             )}
 
             {addMode === "payment_link" && (
-              <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-2xl p-4 shadow-card">
+              <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -937,7 +937,7 @@ export default function DashboardProductsPage() {
             )}
 
             {filteredProducts.length > 0 ? (
-              <div className="glass mt-4 overflow-x-auto rounded-2xl shadow-card">
+              <div className="glass mt-4 overflow-x-auto rounded-3xl shadow-card">
                 <table className="w-full min-w-[520px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">
@@ -1083,7 +1083,7 @@ export default function DashboardProductsPage() {
           onClick={closeManageModal}
         >
           <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-hero"
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-5 shadow-hero"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">

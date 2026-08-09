@@ -851,7 +851,7 @@ export default function DashboardLinksPage() {
         </button>
 
         {addingLink && (
-          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-2xl p-4 shadow-card sm:flex-row">
+          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card sm:flex-row">
             <input
               type="text"
               required
@@ -883,7 +883,7 @@ export default function DashboardLinksPage() {
         )}
 
         {addingBlock && (
-          <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-2xl p-3.5 shadow-card">
+          <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
             <select
               value={blockType}
               onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text")}
@@ -1470,7 +1470,7 @@ function AddModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-heading text-lg font-bold text-ink">Tambah</h2>
           <button type="button" onClick={onClose} className="text-muted hover:text-ink">
