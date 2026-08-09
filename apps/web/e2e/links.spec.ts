@@ -7,7 +7,12 @@ test.describe("Tautan", () => {
     await publishPage(page);
 
     await page.goto("/dashboard/links");
-    await expect(page.getByRole("heading", { name: "Tautan" })).toBeVisible();
+    // Halaman ini TIDAK punya elemen role="heading" sama sekali (judul top
+    // bar cuma <p>, bukan <h1>) -- sidebar juga sudah lama di-rename jadi
+    // "Link Bio" (konsolidasi sidebar, sebelum sesi ini), jadi "Tautan"
+    // tidak pernah cocok apa pun di sini. Pakai teks instruksi unik
+    // halaman ini sebagai penanda sudah landing di tempat yang benar.
+    await expect(page.getByText("Seret untuk mengubah urutan.")).toBeVisible();
 
     // Buka modal "Tambah" (CTA utama) lalu pilih tile "Tautan" biasa --
     // role="button" membedakannya dari tautan navigasi sidebar "Tautan"

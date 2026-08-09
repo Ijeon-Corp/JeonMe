@@ -35,8 +35,13 @@ test.describe("Pengaturan: Tim & Kolaborator", () => {
       await expect(page.getByRole("status").filter({ hasText: "diperbarui" })).toBeVisible();
       await expect(page.getByText(/Mengubah role .* ke Akses Penuh/)).toBeVisible();
 
-      page.once("dialog", (dialog) => dialog.accept());
+      // Konfirmasi "Cabut akses" sekarang lewat popup SweetAlert2 kustom
+      // (tema "kemenangan cepat"), BUKAN lagi window.confirm() native --
+      // page.once("dialog", ...) tidak akan pernah terpicu, test menunggu
+      // sampai timeout tanpa pesan jelas. Klik tombol "Ya, Cabut" di
+      // popup itu langsung.
       await page.getByTitle("Cabut akses").click();
+      await page.getByRole("button", { name: "Ya, Cabut" }).click();
       await expect(page.getByRole("status").filter({ hasText: "Akses kolaborator dicabut." })).toBeVisible();
       await expect(page.getByText(/Mencabut akses/)).toBeVisible();
     } finally {

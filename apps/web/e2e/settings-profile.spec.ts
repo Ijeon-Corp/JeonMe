@@ -27,12 +27,14 @@ test.describe("Pengaturan: Profil & Akun", () => {
     const { username: oldUsername } = await registerAndLogin(page, "userchange");
     const newUsername = uniqueUsername("moved");
 
-    page.on("dialog", (dialog) => dialog.accept());
-
     await page.goto("/dashboard/settings/profile");
     const usernameInput = page.getByLabel("Username");
     await usernameInput.fill(newUsername);
     await page.getByRole("button", { name: "Simpan Perubahan" }).click();
+    // Konfirmasi ganti username lewat popup SweetAlert2 kustom, BUKAN lagi
+    // window.confirm() native -- page.on("dialog", ...) tidak pernah
+    // terpicu lagi sejak migrasi tema "kemenangan cepat".
+    await page.getByRole("button", { name: "Ya, Ganti Username" }).click();
 
     await expect(page.getByRole("status").filter({ hasText: "Profil berhasil disimpan." })).toBeVisible();
     await expect(usernameInput).toHaveValue(newUsername);
@@ -47,20 +49,20 @@ test.describe("Pengaturan: Profil & Akun", () => {
     const { username: oldUsername } = await registerAndLogin(page, "vacator");
     const newUsername = uniqueUsername("vacated");
 
-    page.on("dialog", (dialog) => dialog.accept());
     await page.goto("/dashboard/settings/profile");
     await page.getByLabel("Username").fill(newUsername);
     await page.getByRole("button", { name: "Simpan Perubahan" }).click();
+    await page.getByRole("button", { name: "Ya, Ganti Username" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Profil berhasil disimpan." })).toBeVisible();
 
     const otherContext = await browser.newContext();
     const otherPage = await otherContext.newPage();
-    otherPage.on("dialog", (dialog) => dialog.accept());
     try {
       await registerAndLogin(otherPage, "squatter");
       await otherPage.goto("/dashboard/settings/profile");
       await otherPage.getByLabel("Username").fill(oldUsername);
       await otherPage.getByRole("button", { name: "Simpan Perubahan" }).click();
+      await otherPage.getByRole("button", { name: "Ya, Ganti Username" }).click();
 
       await expect(
         otherPage.getByRole("status").filter({ hasText: /baru saja ditinggalkan|masih direservasi/ })

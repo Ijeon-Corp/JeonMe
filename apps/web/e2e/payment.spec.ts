@@ -131,7 +131,15 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
       await page.getByRole("button", { name: "Buat" }).click();
       await expect(page.getByText("Produk Split E2E")).toBeVisible();
 
-      await page.getByTitle("Split Pendapatan Kolaborator").click();
+      // Split kolaborator diatur dari DALAM panel "Kelola" produk (bukan
+      // langsung di baris tabel) -- getByTitle("Split Pendapatan
+      // Kolaborator") sebelumnya TIDAK PERNAH cocok dengan UI sungguhan
+      // sama sekali (tidak ada atribut title itu di mana pun di
+      // products/page.tsx), bikin test menunggu sampai timeout 120s tanpa
+      // pesan error yang jelas. Tombolnya sendiri teks biasa "Atur Split
+      // Kolaborator" (belum ada split) -- lihat openSplitsForm di page.tsx.
+      await page.getByRole("button", { name: "Kelola" }).click();
+      await page.getByRole("button", { name: "Atur Split Kolaborator" }).click();
       await page.getByRole("combobox").filter({ hasText: "Pilih kolaborator" }).selectOption({ label: collabEmail });
       await page.locator('input[placeholder="%"]').fill("20");
       await page.getByRole("button", { name: "Simpan" }).click();
