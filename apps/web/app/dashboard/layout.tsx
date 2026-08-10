@@ -235,19 +235,15 @@ export default function DashboardLayout({
             Agustus 2026, menggantikan arah "Playful Creator" sore
             harinya): sidebar jadi hijau tua PEKAT (bukan lagi glass
             terang) -- satu pernyataan warna percaya diri, bukan latar
-            netral.
-            Logo -- permintaan langsung pengguna, 10 Agustus 2026: pakai
-            logo-baru.png. Warna glyph-nya sendiri hijau tua (nyaris sama
-            dengan latar sidebar ini, kontras diukur cuma ~1.4:1, nyaris
-            tak kebaca kalau ditaruh langsung) -- jadi DIBUNGKUS chip
-            putih supaya tetap kebaca di atas latar hijau pekat, BEDA
-            dengan pemasangan di tempat lain (landing/auth, semuanya
-            berlatar putih) yang tidak butuh chip ini. */}
-        <Link href="/dashboard" className="flex items-center gap-1.5">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-baru.png" alt="Jeonme" className="h-full w-full object-contain" />
-          </span>
+            netral. .text-gradient (hijau->emas) TIDAK dipakai di sini --
+            porsi hijau gradiennya nyaris tak kelihatan di atas latar
+            sidebar yang SAMA-SAMA hijau tua, jadi logo diganti putih
+            polos + aksen berlian emas kecil (pola sama seperti mockup).
+            Logo gambar (logo-baru.png) SENGAJA DIKECUALIKAN di dashboard
+            -- permintaan langsung pengguna, 10 Agustus 2026: khusus area
+            dashboard tetap teks "Jeonme" polos, bukan gambar. */}
+        <Link href="/dashboard" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-white">
+          Jeonme<span className="text-xs text-accent-light" aria-hidden="true">&#9670;</span>
         </Link>
 
         {workspaces.length > 1 && (
@@ -405,9 +401,8 @@ export default function DashboardLayout({
               SEMUA halaman, bukan cuma yang kontennya sendiri "salah". */}
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-              <Link href="/dashboard">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo-baru.png" alt="Jeonme" className="h-8 w-auto" />
+              <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
+                Jeonme
               </Link>
               <button
                 type="button"
