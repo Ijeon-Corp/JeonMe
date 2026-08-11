@@ -199,9 +199,10 @@ export default function QuickSetupPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {filtered.map((t) => {
           const themePreset = PAGE_THEMES[t.theme as keyof typeof PAGE_THEMES];
+          const isDark = themePreset?.previewIsDark;
           return (
             <button
               key={t.key}
@@ -209,7 +210,28 @@ export default function QuickSetupPage() {
               onClick={() => setSelected(t)}
               className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
             >
-              <div className={`h-16 w-full ${themePreset?.page ?? "bg-primary-subtle"}`} aria-hidden="true" />
+              {/* Mockup mini -- permintaan langsung pengguna: "yang
+                  ditampilkan itu bentuk nya asli atau langsung terlihat
+                  bukan sekedar begitu saja" (bar warna polos sebelumnya
+                  tidak cukup mewakili). Pola PERSIS sama dengan ThemeTile
+                  di galeri Tema (dashboard/design/theme/page.tsx) --
+                  previewBg/previewIsDark/buyButton yang SAMA, supaya
+                  konsisten satu bahasa visual dengan galeri tema yang
+                  sudah ada, bukan gaya baru lagi. Avatar bulat + 2 pil
+                  tautan ditambahkan di atas pola itu supaya kartu ini
+                  terasa seperti TEMPLATE (tema + konten), bukan cuma
+                  swatch warna. */}
+              <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: themePreset?.previewBg }} aria-hidden="true">
+                <span
+                  className={`absolute left-1/2 top-3 h-7 w-7 -translate-x-1/2 rounded-full ${isDark ? "bg-white/25" : "bg-ink/10"}`}
+                />
+                <span className={`absolute left-1/2 top-[3.1rem] h-1.5 w-10 -translate-x-1/2 rounded-full ${isDark ? "bg-white/70" : "bg-ink/60"}`} />
+                <div className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1.5">
+                  {t.links.slice(0, 3).map((l) => (
+                    <span key={l.title} className={`h-4 rounded-full ring-1 ring-black/10 ${themePreset?.buyButton ?? "bg-primary"}`} />
+                  ))}
+                </div>
+              </div>
               <div className="p-3.5">
                 <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
                 <p className="mt-1 text-xs text-muted">{t.description}</p>
