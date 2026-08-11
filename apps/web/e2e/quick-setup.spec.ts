@@ -101,4 +101,50 @@ test.describe("Quick Setup", () => {
     const kritikY = (await page.getByText("Kritik dan Saran", { exact: true }).first().boundingBox())!.y;
     expect(lokasiY).toBeLessThan(kritikY);
   });
+
+  test("galeri kartu merender mockup PagePreview sungguhan (tanpa nested <button>) & template Company (FAQ + link website) berhasil diterapkan", async ({
+    page,
+  }) => {
+    // Dua bug NYATA ditemukan lewat verifikasi browser sungguhan (bukan
+    // dugaan) setelah permintaan "mockup nya harus... langsung terlihat
+    // bentuknya... tanpa harus diklik dulu":
+    // 1. Kartu galeri merender PagePreview (yang di dalamnya ada
+    //    ShareButton, elemen <button>) di dalam <button> pembungkus kartu
+    //    -- <button> di dalam <button> HTML TIDAK VALID, bikin error
+    //    hydration React. Diperbaiki: pembungkus kartu jadi
+    //    div[role="button"], bukan <button> sungguhan.
+    // 2. PLATFORM_URL.website ("https://" polos, tanpa host) ditolak
+    //    validator URL backend (400 Bad Request) begitu template Company
+    //    (satu-satunya yang kepilih di test ini yang pakai link website)
+    //    coba diterapkan. Diperbaiki: placeholder domain jelas
+    //    ("https://websitekamu.com") yang tetap lolos validasi format URL.
+    await registerAndLogin(page, "quicksetup3");
+
+    const pageErrors: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.message));
+
+    await page.goto("/dashboard/quick-setup");
+    // Mockup tiap kartu galeri (SEBELUM diklik apa pun) sudah menampilkan
+    // konten template sungguhan -- bukan cuma placeholder/bar warna.
+    await expect(page.getByText("Follow di Instagram", { exact: true }).first()).toBeVisible();
+
+    await page.getByPlaceholder(/cari template/i).fill("company");
+    await page.getByText("Company", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    expect(pageErrors).toEqual([]);
+
+    await page.getByRole("button", { name: /buka link bio/i }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/);
+
+    // Tautan website tersimpan dengan URL placeholder yang VALID (bukan
+    // "https://" polos yang dulu ditolak backend).
+    await expect(page.getByText("https://websitekamu.com", { exact: true })).toBeVisible();
+    // Blok FAQ ("Pertanyaan Umum") benar-benar tersimpan sebagai blok
+    // tersendiri, badge "FAQ" membuktikan block_type-nya benar (bukan
+    // salah kepetakan jadi "text" atau "link").
+    const faqRow = page.locator("div", { hasText: "Pertanyaan Umum" }).filter({ hasText: "FAQ" }).first();
+    await expect(faqRow).toBeVisible();
+  });
 });

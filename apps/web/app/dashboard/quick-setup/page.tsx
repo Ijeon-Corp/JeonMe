@@ -9,6 +9,36 @@ import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orde
 import { IconCheck, IconSearch } from "@/components/icons";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
+// buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap
+// kartu galeri MAUPUN modal pratinjau, supaya keduanya selalu identik
+// (bukan dua implementasi terpisah yang bisa tidak sinkron). blockData per
+// blockType dipetakan dari OrderedTemplateItem (lib/quick-setup-templates.ts)
+// -- SATU sumber kebenaran urutan & isi, sama dengan yang dipakai
+// applyTemplate untuk benar-benar membuatnya.
+function buildPreviewData(t: QuickSetupTemplate, username: string, avatarUrl: string): PagePreviewData {
+  return {
+    username,
+    bio: t.bio,
+    avatarUrl,
+    theme: t.theme,
+    links: orderedTemplateItems(t).map((item) => ({
+      id: item.title,
+      title: item.title,
+      url: item.url,
+      blockType: item.blockType,
+      blockData:
+        item.blockType === "maps"
+          ? { embed: false }
+          : item.blockType === "text"
+          ? { text: item.text }
+          : item.blockType === "faq"
+          ? { items: item.faqItems }
+          : {},
+    })),
+    products: [],
+  };
+}
+
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
 // menu saja seperti quick setup dan user disuruh pilih jenis template...
 // template ini bukan hanya visual tapi juga blok layout dll". Lihat catatan
@@ -42,28 +72,7 @@ export default function QuickSetupPage() {
   // memutuskan menerapkan.
   const previewData: PagePreviewData | null = useMemo(() => {
     if (!selected) return null;
-    const mapsBlocks = (selected.blocks ?? []).filter((b) => b.type === "maps");
-    const otherBlocks = (selected.blocks ?? []).filter((b) => b.type !== "maps");
-    return {
-      username: myPage?.username ?? "namamu",
-      bio: selected.bio,
-      avatarUrl: myPage?.avatar_url ?? "",
-      theme: selected.theme,
-      // Urutan SAMA PERSIS dengan applyTemplate (maps di atas, tautan di
-      // tengah, blok lain di bawah) -- lihat orderedTemplateItems.
-      links: [
-        ...mapsBlocks.map((b) => ({ id: b.title, title: b.title, url: b.url ?? "", blockType: "maps" as const, blockData: { embed: false } })),
-        ...selected.links.map((l) => ({ id: l.title, title: l.title, url: l.url, blockType: "link" as const })),
-        ...otherBlocks.map((b) => ({
-          id: b.title,
-          title: b.title,
-          url: "",
-          blockType: b.type,
-          blockData: b.type === "text" ? { text: b.text } : {},
-        })),
-      ],
-      products: [],
-    };
+    return buildPreviewData(selected, myPage?.username ?? "namamu", myPage?.avatar_url ?? "");
   }, [selected, myPage]);
 
   const filtered = useMemo(() => {
@@ -108,26 +117,27 @@ export default function QuickSetupPage() {
       await updateMyPage(page.bio.trim() ? { theme: t.theme } : { theme: t.theme, bio: t.bio });
 
       // Sequential (bukan Promise.all) -- posisi tautan dihitung server-side
-      // dari MAX(position)+1 tiap insert, permintaan paralel berisiko dua
-      // tautan kebetulan dapat posisi yang sama. Urutan pembuatan (maps ->
-      // tautan -> blok lain) SENGAJA mengikuti orderedTemplateItems supaya
-      // "Lokasi Kami" tampil paling atas & formulir kontak paling bawah,
-      // sama seperti referensi Linktree yang diberikan pengguna -- BUKAN
-      // urutan array `blocks` mentah di data template.
-      const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
-      const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
-      for (const b of mapsBlocks) {
-        await createBlock({ block_type: "maps", title: b.title, url: b.url, block_data: { embed: false } });
-      }
-      for (const l of t.links) {
-        await createLink(l);
-      }
-      for (const b of otherBlocks) {
-        await createBlock({
-          block_type: b.type,
-          title: b.title,
-          block_data: b.type === "text" ? { text: b.text } : {},
-        });
+      // dari MAX(position)+1 tiap insert (links & blocks BERBAGI kolom
+      // position yang sama di tabel `links`), permintaan paralel berisiko
+      // dua item kebetulan dapat posisi yang sama. Satu loop mengikuti
+      // orderedTemplateItems APA ADANYA -- SATU sumber kebenaran urutan,
+      // sama persis dengan yang ditampilkan pratinjau (maps di atas,
+      // tautan di tengah, blok lain di bawah, bukan urutan array mentah
+      // di data template).
+      for (const item of orderedTemplateItems(t)) {
+        if (item.blockType === "link") {
+          await createLink({ title: item.title, url: item.url });
+        } else if (item.blockType === "maps") {
+          await createBlock({ block_type: "maps", title: item.title, url: item.url, block_data: { embed: false } });
+        } else if (item.blockType === "faq") {
+          await createBlock({ block_type: "faq", title: item.title, block_data: { items: item.faqItems } });
+        } else {
+          await createBlock({
+            block_type: item.blockType,
+            title: item.title,
+            block_data: item.blockType === "text" ? { text: item.text } : {},
+          });
+        }
       }
 
       setApplied(t);
@@ -214,58 +224,50 @@ export default function QuickSetupPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((t) => {
-          const themePreset = PAGE_THEMES[t.theme as keyof typeof PAGE_THEMES];
-          const isDark = themePreset?.previewIsDark;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setSelected(t)}
-              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
-            >
-              {/* Mockup mini -- permintaan langsung pengguna: "yang
-                  ditampilkan itu bentuk nya asli atau langsung terlihat
-                  bukan sekedar begitu saja" (bar warna polos sebelumnya
-                  tidak cukup mewakili), lalu susulan "mockup nya harus ada
-                  isi datanya juga dummy gapapa" -- bar/pil ABSTRAK tanpa
-                  teks (revisi pertama) masih belum cukup, sekarang label
-                  tautan (dari t.links, data template sungguhan, cuma
-                  belum tautan asli kreator makanya "dummy") ditampilkan
-                  sebagai teks sungguhan di tiap pil, plus nama contoh di
-                  bawah avatar. Pola warna PERSIS sama dengan ThemeTile di
-                  galeri Tema (previewBg/previewIsDark/buyButton) supaya
-                  tetap satu bahasa visual dengan galeri tema yang sudah
-                  ada. */}
-              <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: themePreset?.previewBg }} aria-hidden="true">
-                <span
-                  className={`absolute left-1/2 top-3 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full text-[10px] font-bold ${
-                    isDark ? "bg-white/25 text-white" : "bg-ink/10 text-ink"
-                  }`}
-                >
-                  N
-                </span>
-                <p className={`absolute inset-x-2 top-[3rem] truncate text-center text-[9px] font-bold ${isDark ? "text-white/80" : "text-ink/70"}`}>
-                  Nama Kamu
-                </p>
-                <div className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1.5">
-                  {orderedTemplateItems(t).slice(0, 3).map((item) => (
-                    <span
-                      key={item.title}
-                      className={`truncate rounded-full px-2 py-1 text-center text-[9px] font-semibold leading-none ring-1 ring-black/10 ${themePreset?.buyButton ?? "bg-primary text-white"}`}
-                    >
-                      {item.title}
-                    </span>
-                  ))}
-                </div>
+        {filtered.map((t) => (
+          // div role="button" -- BUKAN <button> sungguhan: PagePreview di
+          // dalamnya merender ShareButton (elemen <button> sendiri), dan
+          // <button> di dalam <button> itu HTML TIDAK VALID (ditemukan
+          // lewat error hydration React sungguhan saat verifikasi) --
+          // browser otomatis "meratakan" nesting itu, event klik jadi
+          // kacau. tabIndex+onKeyDown menjaga tetap bisa diakses keyboard.
+          <div
+            key={t.key}
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelected(t)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setSelected(t);
+              }
+            }}
+            className="flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
+          >
+            {/* Mockup mini -- permintaan langsung pengguna: "yang
+                ditampilkan itu... langsung terlihat bentuknya... tanpa
+                harus diklik dulu" -- SEBELUMNYA cuma pil warna berisi teks
+                (mendekati tapi masih bukan bentuk asli), sekarang komponen
+                PagePreview SUNGGUHAN (sama persis dipakai modal & Pratinjau
+                Langsung dashboard) dirender LANGSUNG di kartu, bukan
+                representasi buatan tangan -- kreator lihat bentuk PERSIS
+                halaman publik SEBELUM klik apa pun, pola zoom+crop sama
+                seperti LivePreviewPanel (cuma lebih kecil & tanpa scroll,
+                overflow-hidden supaya jadi cuplikan bagian atas saja).
+                pointer-events-none -- mockup MURNI visual, semua klik di
+                area ini harus jatuh ke div pembungkus (buka modal), bukan
+                ke tombol ShareButton/tautan sungguhan di dalam PagePreview. */}
+            <div className="relative h-52 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+              <div className="h-full [zoom:0.3]">
+                <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.avatar_url ?? "")} />
               </div>
-              <div className="p-3.5">
-                <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
-                <p className="mt-1 text-xs text-muted">{t.description}</p>
-              </div>
-            </button>
-          );
-        })}
+            </div>
+            <div className="p-3.5">
+              <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
+              <p className="mt-1 text-xs text-muted">{t.description}</p>
+            </div>
+          </div>
+        ))}
         {filtered.length === 0 && (
           <p className="col-span-full rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
             Tidak ada template yang cocok dengan pencarianmu.

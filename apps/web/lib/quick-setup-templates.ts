@@ -60,7 +60,12 @@ const PLATFORM_URL = {
   appleMusic: "https://music.apple.com/",
   applePodcasts: "https://podcasts.apple.com/",
   googleMaps: "https://maps.google.com/",
-  website: "https://",
+  // "https://" polos (cuma skema, tanpa host) DITOLAK validator URL
+  // backend (binding:"url", createLinkRequest.URL, links.go) -- bug
+  // ditemukan lewat error 400 sungguhan saat menerapkan template Company.
+  // Placeholder domain jelas-jelas bukan alamat asli supaya kreator tahu
+  // harus diganti, TAPI tetap lolos validasi format URL.
+  website: "https://websitekamu.com",
 } as const;
 
 type PlatformKey = keyof typeof PLATFORM_URL;
@@ -70,19 +75,30 @@ export interface QuickSetupTemplateLink {
   url: string;
 }
 
+export interface QuickSetupTemplateFaqItem {
+  question: string;
+  answer: string;
+}
+
 export interface QuickSetupTemplateBlock {
-  // maps -- permintaan langsung pengguna (referensi tangkapan layar
-  // halaman Linktree sungguhan "PIKO Carwash & Cafe"): baris "Lokasi
-  // Kami" tampil PALING ATAS (sebelum tautan kontak/sosial), bukan
-  // block_type video/faq/image yang butuh data spesifik pengguna (lihat
-  // catatan cakupan di atas file ini) -- maps AMAN dibuat tanpa alamat
-  // asli karena validateBlockData (links.go) cuma memvalidasi `embed`
-  // (kalau ada) harus bool, TIDAK mewajibkan koordinat/URL nyata selama
-  // embed=false (mode "buka tautan langsung", bukan popup peta).
-  type: "text" | "contact_form" | "maps";
+  // maps -- lihat catatan lengkap di mapsBlock() di bawah: AMAN dibuat
+  // tanpa alamat asli selama embed=false.
+  // faq -- permintaan langsung pengguna: "layout beda per kategori" --
+  // FAQ dipakai untuk membedakan STRUKTUR konten per kategori (portofolio
+  // dapat FAQ soal proyek, toko dapat FAQ soal pembayaran/pengiriman,
+  // edukasi dapat FAQ soal kelas, dst), BUKAN cuma tema/judul beda. AMAN
+  // dibuat dengan Q&A dummy karena validateBlockData (links.go) cuma
+  // butuh question+answer TIDAK KOSONG, tidak ada validasi konten/relevansi.
+  // image/video/heading/button SENGAJA TIDAK dipakai -- image/video butuh
+  // URL media nyata, heading/button cuma valid & tampil benar di halaman
+  // page_type="landing" (builder blok terpisah), BUKAN di halaman bio
+  // (lihat catatan cakupan lengkap di atas file ini & renderLinkOrBlock,
+  // PagePreview.tsx -- tidak ada case untuk keduanya di situ).
+  type: "text" | "contact_form" | "maps" | "faq";
   title: string;
   text?: string;
   url?: string;
+  faqItems?: QuickSetupTemplateFaqItem[];
 }
 
 export interface QuickSetupTemplate {
@@ -137,21 +153,38 @@ function mapsBlock(title = "Lokasi Kami"): QuickSetupTemplateBlock {
   return { type: "maps", title, url: PLATFORM_URL.googleMaps };
 }
 
-// orderedTemplateItems -- SATU sumber kebenaran urutan tampil (dipakai
-// applyTemplate MAUPUN pratinjau kartu/modal di quick-setup/page.tsx):
-// blok "maps" ("Lokasi Kami") tampil PALING ATAS, lalu tautan biasa, lalu
-// blok lain (text/contact_form) PALING BAWAH -- pola yang sama persis
-// dengan referensi Linktree sungguhan (lokasi di atas, kontak/sosial di
-// tengah, formulir "Kritik dan Saran" di bawah).
-export function orderedTemplateItems(
-  t: QuickSetupTemplate
-): { title: string; kind: "link" | "block" }[] {
+// faqBlock -- lihat catatan lengkap di QuickSetupTemplateBlock.type di
+// atas. Judul blok "Pertanyaan Umum" konsisten di semua template (nama
+// generik netral), isi Q&A yang membedakan konteks per kategori.
+function faqBlock(items: QuickSetupTemplateFaqItem[], title = "Pertanyaan Umum"): QuickSetupTemplateBlock {
+  return { type: "faq", title, faqItems: items };
+}
+
+// OrderedTemplateItem -- bentuk SIAP RENDER (dipakai LANGSUNG oleh
+// quick-setup/page.tsx untuk membangun PagePreviewData/payload createLink/
+// createBlock, tidak perlu logika pemetaan block_data terpisah lagi di
+// sana) supaya urutan & isi yang terlihat di pratinjau SELALU sama persis
+// dengan yang benar-benar dibuat applyTemplate.
+export interface OrderedTemplateItem {
+  title: string;
+  blockType: "link" | "text" | "contact_form" | "maps" | "faq";
+  url: string;
+  text?: string;
+  faqItems?: QuickSetupTemplateFaqItem[];
+}
+
+// orderedTemplateItems -- SATU sumber kebenaran urutan tampil: blok
+// "maps" ("Lokasi Kami") PALING ATAS, lalu tautan biasa, lalu blok lain
+// (text/faq/contact_form) PALING BAWAH -- pola yang sama persis dengan
+// referensi Linktree sungguhan yang diberikan pengguna (lokasi di atas,
+// kontak/sosial di tengah, formulir "Kritik dan Saran" di bawah).
+export function orderedTemplateItems(t: QuickSetupTemplate): OrderedTemplateItem[] {
   const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
   const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
   return [
-    ...mapsBlocks.map((b) => ({ title: b.title, kind: "block" as const })),
-    ...t.links.map((l) => ({ title: l.title, kind: "link" as const })),
-    ...otherBlocks.map((b) => ({ title: b.title, kind: "block" as const })),
+    ...mapsBlocks.map((b) => ({ title: b.title, blockType: "maps" as const, url: b.url ?? "" })),
+    ...t.links.map((l) => ({ title: l.title, blockType: "link" as const, url: l.url })),
+    ...otherBlocks.map((b) => ({ title: b.title, blockType: b.type, url: "", text: b.text, faqItems: b.faqItems })),
   ];
 }
 
@@ -228,7 +261,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "ocean",
     bio: "Profil bisnis resmi kami.",
     links: [link("website", "Kunjungi Website Kami"), link("whatsapp", "Chat Admin Kami")],
-    blocks: [mapsBlock(), { type: "contact_form", title: "Kritik dan Saran" }],
+    blocks: [
+      mapsBlock(),
+      faqBlock([{ question: "Bagaimana cara menghubungi kami?", answer: "Chat lewat WhatsApp atau isi formulir di bawah, tim kami akan segera merespons." }]),
+      { type: "contact_form", title: "Kritik dan Saran" },
+    ],
   },
   {
     key: "company",
@@ -241,6 +278,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     blocks: [
       mapsBlock("Kantor Kami"),
       { type: "text", title: "Layanan Kami", text: "Tuliskan daftar layanan perusahaanmu di sini." },
+      faqBlock([{ question: "Bagaimana proses kerja sama dengan kami?", answer: "Mulai dari konsultasi kebutuhan, proposal, sampai eksekusi -- hubungi kami untuk mulai diskusi." }]),
       { type: "contact_form", title: "Hubungi Kami" },
     ],
   },
@@ -251,9 +289,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, layanan, harga, kontak",
     theme: "forest",
     bio: "Freelancer | Siap bantu proyekmu",
-    links: [link("linkedin"), link("instagram")],
+    links: [link("linkedin"), link("instagram", "Lihat Portofolio")],
     blocks: [
       { type: "text", title: "Layanan & Harga", text: "Tuliskan daftar layanan dan harga di sini." },
+      faqBlock([{ question: "Berapa lama waktu pengerjaan?", answer: "Tergantung kompleksitas proyek, biasanya 3-14 hari kerja. Chat dulu buat estimasi lebih pasti." }]),
       { type: "contact_form", title: "Hubungi Saya" },
     ],
   },
@@ -265,7 +304,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "noir",
     bio: "Konsultan | Booking sesi konsultasi",
     links: [link("linkedin")],
-    blocks: [{ type: "contact_form", title: "Hubungi Saya" }],
+    blocks: [
+      faqBlock([{ question: "Bagaimana proses konsultasinya?", answer: "Booking slot yang tersedia, lalu kita diskusi via video call sesuai kebutuhanmu." }]),
+      { type: "contact_form", title: "Hubungi Saya" },
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking Konsultasi -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -276,7 +318,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "midnight",
     bio: "Agency kreatif | Lihat portofolio kami",
     links: [link("website"), link("instagram"), link("linkedin")],
-    blocks: [{ type: "text", title: "Klien Kami", text: "Tuliskan daftar klien/mitra di sini." }],
+    blocks: [
+      { type: "text", title: "Klien Kami", text: "Tuliskan daftar klien/mitra di sini." },
+      faqBlock([{ question: "Bagaimana memulai proyek dengan agency ini?", answer: "Hubungi kami lewat website atau LinkedIn di atas, kita mulai dari sesi diskusi kebutuhanmu." }]),
+    ],
   },
   {
     key: "professional-cv",
@@ -301,6 +346,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "peach",
     bio: "Toko online -- produk terbaik untukmu",
     links: [link("shopee", "Belanja di Shopee Kami"), link("tokopedia", "Belanja di Tokopedia Kami"), link("whatsapp", "Chat Admin Kami")],
+    blocks: [faqBlock([{ question: "Bagaimana cara pembayaran?", answer: "Kami terima transfer bank & e-wallet, konfirmasi pesanan lewat WhatsApp." }])],
     monetizationHint: "Tambahkan produkmu di menu Toko supaya tampil di halaman ini.",
   },
   {
@@ -311,6 +357,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "rose",
     bio: "Fashion store | Koleksi terbaru tiap minggu",
     links: [link("instagram", "Lihat Koleksi Terbaru"), link("shopee"), link("tokopedia")],
+    blocks: [faqBlock([{ question: "Apakah bisa tukar ukuran?", answer: "Bisa, selama barang belum dipakai & masih dalam 3 hari sejak diterima. Hubungi kami via WhatsApp." }])],
   },
   {
     key: "beauty-store",
@@ -320,7 +367,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "peach",
     bio: "Beauty store | Produk kecantikan pilihan",
     links: [link("instagram", "Lihat Produk Kami"), link("whatsapp", "Tanya-Tanya Produk")],
-    blocks: [mapsBlock()],
+    blocks: [
+      mapsBlock(),
+      faqBlock([{ question: "Produk ini aman untuk kulit sensitif?", answer: "Sebagian besar produk kami cocok semua jenis kulit -- tanya detail dulu lewat WhatsApp sebelum order." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -331,7 +381,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "amber",
     bio: "Food & beverage | Order sekarang",
     links: [link("whatsapp", "Pesan via WhatsApp"), link("instagram", "Ikuti Update Kami")],
-    blocks: [mapsBlock(), { type: "text", title: "Menu", text: "Tuliskan daftar menu & harga di sini." }],
+    blocks: [
+      mapsBlock(),
+      { type: "text", title: "Menu", text: "Tuliskan daftar menu & harga di sini." },
+      faqBlock([{ question: "Apakah bisa delivery?", answer: "Bisa, order via WhatsApp dan kami info ongkirnya sesuai lokasimu." }]),
+    ],
   },
   {
     key: "small-business",
@@ -341,7 +395,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "mint",
     bio: "Usaha kecil, kualitas besar.",
     links: [link("whatsapp", "Pesan via WhatsApp"), link("shopee")],
-    blocks: [mapsBlock()],
+    blocks: [mapsBlock(), faqBlock([{ question: "Apakah bisa pesan custom?", answer: "Bisa banget, chat kami dulu buat diskusi kebutuhanmu." }])],
   },
   {
     key: "affiliate-store",
@@ -365,6 +419,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     links: [link("whatsapp")],
     blocks: [
       { type: "text", title: "Info Kelas", text: "Tuliskan jadwal & info kelasmu di sini." },
+      faqBlock([{ question: "Apa saja yang diajarkan?", answer: "Lihat info kelas di atas, atau hubungi saya untuk tanya-tanya lebih detail." }]),
       { type: "contact_form", title: "Hubungi Saya" },
     ],
   },
@@ -375,7 +430,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, jadwal, booking",
     theme: "forest",
     bio: "Tutor privat | Booking jadwal belajar",
-    links: [link("whatsapp")],
+    links: [link("whatsapp", "Booking via WhatsApp")],
+    blocks: [faqBlock([{ question: "Bagaimana jadwal lesnya?", answer: "Fleksibel sesuai kesepakatan -- chat dulu buat atur jadwal yang cocok." }])],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -386,6 +442,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "golden",
     bio: "Kelas online -- belajar bareng aku",
     links: [link("instagram"), link("youtube")],
+    blocks: [faqBlock([{ question: "Apakah ada sertifikat setelah selesai?", answer: "Ada, kamu dapat sertifikat digital setelah menyelesaikan semua modul kelas." }])],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -405,7 +462,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, event, komunitas",
     theme: "ocean",
     bio: "Belajar bareng komunitas kami",
-    links: [link("instagram"), link("whatsapp")],
+    links: [link("instagram"), link("whatsapp", "Gabung Grup WhatsApp")],
+    blocks: [faqBlock([{ question: "Bagaimana cara bergabung?", answer: "Klik salah satu tautan di atas untuk gabung WhatsApp/Instagram, info kelas & event rutin kami bagikan di sana." }])],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus dan Event -- aktifkan di menu Produk & Monetisasi.",
   },
 
@@ -491,7 +549,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "noir",
     bio: "Barbershop | Booking potong rambut",
     links: [link("whatsapp", "Booking via WhatsApp")],
-    blocks: [mapsBlock(), { type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." }],
+    blocks: [
+      mapsBlock(),
+      { type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." },
+      faqBlock([{ question: "Perlu booking dulu atau bisa walk-in?", answer: "Bisa walk-in, tapi disarankan booking dulu via WhatsApp supaya tidak antre lama." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -513,7 +575,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "noir",
     bio: "Fotografer | Booking sesi foto",
     links: [link("instagram", "Lihat Portofolio")],
-    blocks: [mapsBlock("Lokasi Studio"), { type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." }],
+    blocks: [
+      mapsBlock("Lokasi Studio"),
+      { type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." },
+      faqBlock([{ question: "Apakah harga sudah termasuk edit foto?", answer: "Ya, semua paket sudah termasuk edit dasar. Edit lanjutan tersedia dengan biaya tambahan." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -589,6 +655,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     links: [link("linkedin")],
     blocks: [
       { type: "text", title: "Proyek", text: "Tuliskan proyek-proyekmu di sini." },
+      faqBlock([{ question: "Proyek seperti apa yang bisa kamu kerjakan?", answer: "Lihat pengalaman & keahlian di atas, atau hubungi saya langsung untuk diskusi proyekmu." }]),
       { type: "contact_form", title: "Hubungi Saya" },
     ],
   },
@@ -619,8 +686,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "WhatsApp, Discord, Telegram, pendaftaran",
     theme: "ocean",
     bio: "Gabung komunitas kami",
-    links: [link("whatsapp"), link("discord"), link("telegram")],
-    blocks: [{ type: "contact_form", title: "Daftar Sekarang" }],
+    links: [link("whatsapp", "Gabung Grup WhatsApp"), link("discord"), link("telegram")],
+    blocks: [
+      faqBlock([{ question: "Gratis atau berbayar gabung komunitasnya?", answer: "Gratis! Klik salah satu tautan di atas untuk langsung gabung." }]),
+      { type: "contact_form", title: "Daftar Sekarang" },
+    ],
   },
   {
     key: "donation",
