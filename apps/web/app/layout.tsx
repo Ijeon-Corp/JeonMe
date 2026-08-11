@@ -1,26 +1,37 @@
 import type { Metadata } from "next";
-import {
-  Inter,
-  Lora,
-  Merriweather,
-  Montserrat,
-  Playfair_Display,
-  Poppins,
-  Roboto_Mono,
-} from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import "sweetalert2/dist/sweetalert2.min.css";
 
-const body = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// SEMUA font di file ini di-self-host (next/font/local), TIDAK ADA lagi yang
+// pakai next/font/google. Akar masalah: Quicksand lalu Space Grotesk
+// (masing-masing diperbaiki terpisah sebelumnya) sama-sama gagal build --
+// metadata font yang dibundel next/font/google di Next.js 16.3.0 menunjuk
+// ke URL fonts.gstatic.com yang sudah dihapus di sisi Google (rotate hash
+// saat font di-update di sana), next build/Docker CI butuh fetch jaringan
+// ke URL basi itu tepat waktu build lalu gagal keras begitu 404. Karena
+// pola yang SAMA sudah kejadian 2x di font BERBEDA tanpa peringatan
+// (baru ketahuan saat build produksi gagal), 7 font custom lain diamankan
+// SEKALIGUS di sini alih-alih menunggu satu per satu gagal lagi di masa
+// depan. Semua file .woff2 diunduh manual dari fonts.gstatic.com (URL
+// terkini, dicek lewat curl ke fonts.googleapis.com/css2) ke app/fonts/.
+const body = localFont({
+  src: [
+    { path: "./fonts/inter-latin.woff2", weight: "400 700", style: "normal" },
+  ],
+  display: "swap",
   variable: "--font-body",
 });
 
-const heading = Poppins({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
+const heading = localFont({
+  src: [
+    { path: "./fonts/poppins-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/poppins-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/poppins-700.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/poppins-800.woff2", weight: "800", style: "normal" },
+    { path: "./fonts/poppins-900.woff2", weight: "900", style: "normal" },
+  ],
+  display: "swap",
   variable: "--font-heading",
 });
 
@@ -33,23 +44,35 @@ const heading = Poppins({
 // atas, variable CSS beda) supaya font kustom halaman kreator TIDAK terikat
 // ke font UI aplikasi Jeonme sendiri -- keduanya kebetulan sama font, tapi
 // harus bisa berubah independen.
-const customPlayfair = Playfair_Display({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-custom-playfair" });
-const customLora = Lora({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-custom-lora" });
-const customMontserrat = Montserrat({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-custom-montserrat" });
-const customRobotoMono = Roboto_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-custom-roboto-mono" });
-const customPoppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-custom-poppins" });
-// customQuicksand -- di-self-host (next/font/local), BUKAN next/font/google
-// lagi. Metadata font Quicksand yang dibundel Next.js 16.3.0 menunjuk ke URL
-// fonts.gstatic.com yang sudah 404 (file lama, sudah diganti hash baru di
-// sisi Google) -- build production (next build) gagal total di CI karena
-// tergantung fetch jaringan ke URL basi itu, walau tidak reproduce di semua
-// environment (CDN edge yang beda kadang masih punya cache lama). File
-// app/fonts/quicksand-latin.woff2 diunduh manual dari URL Quicksand v37
-// latin subset yang BENAR saat ini (dicek lewat curl ke fonts.googleapis.com
-// css2 API) -- satu file variable-font mencakup weight 500 & 700 sekaligus,
-// sama seperti cara Google sendiri menyajikannya (dua @font-face beda weight,
-// src sama). Self-host menghapus dependensi build-time ke jaringan sama
-// sekali untuk font ini, jadi tidak bisa gagal lagi karena alasan ini.
+const customPlayfair = localFont({
+  src: [{ path: "./fonts/playfair-latin.woff2", weight: "500 700", style: "normal" }],
+  display: "swap",
+  variable: "--font-custom-playfair",
+});
+const customLora = localFont({
+  src: [{ path: "./fonts/lora-latin.woff2", weight: "400 600", style: "normal" }],
+  display: "swap",
+  variable: "--font-custom-lora",
+});
+const customMontserrat = localFont({
+  src: [{ path: "./fonts/montserrat-latin.woff2", weight: "400 700", style: "normal" }],
+  display: "swap",
+  variable: "--font-custom-montserrat",
+});
+const customRobotoMono = localFont({
+  src: [{ path: "./fonts/roboto-mono-latin.woff2", weight: "400 500", style: "normal" }],
+  display: "swap",
+  variable: "--font-custom-roboto-mono",
+});
+const customPoppins = localFont({
+  src: [
+    { path: "./fonts/poppins-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/poppins-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/poppins-700.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-custom-poppins",
+});
 const customQuicksand = localFont({
   src: [
     { path: "./fonts/quicksand-latin.woff2", weight: "500", style: "normal" },
@@ -58,13 +81,11 @@ const customQuicksand = localFont({
   display: "swap",
   variable: "--font-custom-quicksand",
 });
-const customMerriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-custom-merriweather" });
-// customSpaceGrotesk -- di-self-host, akar masalah SAMA PERSIS dengan
-// customQuicksand di atas (metadata Space Grotesk yang dibundel Next.js
-// 16.3.0 juga menunjuk ke URL fonts.gstatic.com yang sudah 404), ditemukan
-// belakangan lewat build Docker CI yang gagal total (bukan cuma warning
-// lokal). File app/fonts/space-grotesk-latin.woff2 diunduh manual dari URL
-// Space Grotesk v22 latin subset yang BENAR saat ini.
+const customMerriweather = localFont({
+  src: [{ path: "./fonts/merriweather-latin.woff2", weight: "400 700", style: "normal" }],
+  display: "swap",
+  variable: "--font-custom-merriweather",
+});
 const customSpaceGrotesk = localFont({
   src: [
     { path: "./fonts/space-grotesk-latin.woff2", weight: "500", style: "normal" },
