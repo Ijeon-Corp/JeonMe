@@ -6,10 +6,10 @@ import {
   Montserrat,
   Playfair_Display,
   Poppins,
-  Quicksand,
   Roboto_Mono,
   Space_Grotesk,
 } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "sweetalert2/dist/sweetalert2.min.css";
 
@@ -39,7 +39,26 @@ const customLora = Lora({ subsets: ["latin"], weight: ["400", "600"], variable: 
 const customMontserrat = Montserrat({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-custom-montserrat" });
 const customRobotoMono = Roboto_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-custom-roboto-mono" });
 const customPoppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-custom-poppins" });
-const customQuicksand = Quicksand({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-custom-quicksand" });
+// customQuicksand -- di-self-host (next/font/local), BUKAN next/font/google
+// lagi. Metadata font Quicksand yang dibundel Next.js 16.3.0 menunjuk ke URL
+// fonts.gstatic.com yang sudah 404 (file lama, sudah diganti hash baru di
+// sisi Google) -- build production (next build) gagal total di CI karena
+// tergantung fetch jaringan ke URL basi itu, walau tidak reproduce di semua
+// environment (CDN edge yang beda kadang masih punya cache lama). File
+// app/fonts/quicksand-latin.woff2 diunduh manual dari URL Quicksand v37
+// latin subset yang BENAR saat ini (dicek lewat curl ke fonts.googleapis.com
+// css2 API) -- satu file variable-font mencakup weight 500 & 700 sekaligus,
+// sama seperti cara Google sendiri menyajikannya (dua @font-face beda weight,
+// src sama). Self-host menghapus dependensi build-time ke jaringan sama
+// sekali untuk font ini, jadi tidak bisa gagal lagi karena alasan ini.
+const customQuicksand = localFont({
+  src: [
+    { path: "./fonts/quicksand-latin.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/quicksand-latin.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-custom-quicksand",
+});
 const customMerriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-custom-merriweather" });
 const customSpaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-custom-space-grotesk" });
 
