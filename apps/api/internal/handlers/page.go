@@ -136,15 +136,31 @@ type publicPageResponse struct {
 	// kreatornya Premium (dicek ulang lewat resp.IsPremium/IsVerified di
 	// frontend, bukan dipercaya sendirian -- lihat catatan di migrasi
 	// 000058). Kreator gratis SELALU tampil watermark apa pun nilai ini.
-	HideWatermark bool               `json:"hide_watermark"`
-	Links         []publicLink       `json:"links"`
-	Products      []publicItem       `json:"products"`
-	Donation      *publicDonation    `json:"donation"`
-	LeadCapture   *publicLeadCapture `json:"lead_capture"`
-	SocialProof   *publicSocialProof `json:"social_proof"`
-	IsVerified    bool               `json:"is_verified"`
-	Events        []publicEvent      `json:"events"`
-	Bookings      []publicBooking    `json:"bookings"`
+	HideWatermark bool `json:"hide_watermark"`
+	// SocialInstagram..SocialEmail -- permintaan langsung pengguna, 11
+	// Agustus 2026: baris ikon kontak sosial di bawah bio halaman publik,
+	// TERPISAH dari daftar Links biasa. String kosong = platform itu belum
+	// diisi, ikonnya tidak dirender (bukan ikon nonaktif). Nilai bisa
+	// berupa handle SAJA atau URL lengkap -- dinormalisasi jadi href final
+	// di frontend (lib/social-links.ts), sama seperti pola urlTemplate
+	// SUGGESTED_PLATFORMS yang sudah ada.
+	SocialInstagram string             `json:"social_instagram"`
+	SocialTiktok    string             `json:"social_tiktok"`
+	SocialFacebook  string             `json:"social_facebook"`
+	SocialWhatsapp  string             `json:"social_whatsapp"`
+	SocialYoutube   string             `json:"social_youtube"`
+	SocialX         string             `json:"social_x"`
+	SocialLinkedin  string             `json:"social_linkedin"`
+	SocialTelegram  string             `json:"social_telegram"`
+	SocialEmail     string             `json:"social_email"`
+	Links           []publicLink       `json:"links"`
+	Products        []publicItem       `json:"products"`
+	Donation        *publicDonation    `json:"donation"`
+	LeadCapture     *publicLeadCapture `json:"lead_capture"`
+	SocialProof     *publicSocialProof `json:"social_proof"`
+	IsVerified      bool               `json:"is_verified"`
+	Events          []publicEvent      `json:"events"`
+	Bookings        []publicBooking    `json:"bookings"`
 	// LoyaltyActive -- No.94 (Sprint 13): cuma penanda ada/tidaknya program
 	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
 	// lewat GET /pages/:username/loyalty).
@@ -303,6 +319,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
+			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -315,6 +333,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
+		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -403,6 +423,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
+			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
@@ -414,6 +436,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
+		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -682,6 +706,15 @@ type myPageResponse struct {
 	CustomStyleOverride   bool               `json:"custom_style_override"`
 	Stickers              []PageSticker      `json:"stickers"`
 	HideWatermark         bool               `json:"hide_watermark"`
+	SocialInstagram       string             `json:"social_instagram"`
+	SocialTiktok          string             `json:"social_tiktok"`
+	SocialFacebook        string             `json:"social_facebook"`
+	SocialWhatsapp        string             `json:"social_whatsapp"`
+	SocialYoutube         string             `json:"social_youtube"`
+	SocialX               string             `json:"social_x"`
+	SocialLinkedin        string             `json:"social_linkedin"`
+	SocialTelegram        string             `json:"social_telegram"`
+	SocialEmail           string             `json:"social_email"`
 	Verification          verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
 	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
@@ -719,6 +752,8 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
+			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -728,6 +763,8 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
+		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -852,6 +889,17 @@ type updatePageRequest struct {
 	// finishPublicPageResponse), bukan saat menyimpan, supaya kreator yang
 	// baru saja downgrade tidak kehilangan preferensinya kalau upgrade lagi.
 	HideWatermark *bool `json:"hide_watermark"`
+	// SocialInstagram..SocialEmail -- lihat catatan lengkap di
+	// publicPageResponse. max=255 cukup untuk handle ATAU URL lengkap.
+	SocialInstagram *string `json:"social_instagram" binding:"omitempty,max=255"`
+	SocialTiktok    *string `json:"social_tiktok" binding:"omitempty,max=255"`
+	SocialFacebook  *string `json:"social_facebook" binding:"omitempty,max=255"`
+	SocialWhatsapp  *string `json:"social_whatsapp" binding:"omitempty,max=255"`
+	SocialYoutube   *string `json:"social_youtube" binding:"omitempty,max=255"`
+	SocialX         *string `json:"social_x" binding:"omitempty,max=255"`
+	SocialLinkedin  *string `json:"social_linkedin" binding:"omitempty,max=255"`
+	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
+	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -930,13 +978,25 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			custom_title_font = COALESCE($17, custom_title_font),
 			custom_title_color = COALESCE($18, custom_title_color),
 			custom_style_override = COALESCE($19, custom_style_override),
-			hide_watermark = COALESCE($20, hide_watermark)
-		WHERE user_id = $21 AND is_primary = true
+			hide_watermark = COALESCE($20, hide_watermark),
+			social_instagram = COALESCE($21, social_instagram),
+			social_tiktok = COALESCE($22, social_tiktok),
+			social_facebook = COALESCE($23, social_facebook),
+			social_whatsapp = COALESCE($24, social_whatsapp),
+			social_youtube = COALESCE($25, social_youtube),
+			social_x = COALESCE($26, social_x),
+			social_linkedin = COALESCE($27, social_linkedin),
+			social_telegram = COALESCE($28, social_telegram),
+			social_email = COALESCE($29, social_email)
+		WHERE user_id = $30 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
-		req.HideWatermark, userID)
+		req.HideWatermark,
+		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
+		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
+		userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
 		return
@@ -1630,6 +1690,15 @@ type extraPageDetailResponse struct {
 	CustomStyleOverride   bool          `json:"custom_style_override"`
 	Stickers              []PageSticker `json:"stickers"`
 	HideWatermark         bool          `json:"hide_watermark"`
+	SocialInstagram       string        `json:"social_instagram"`
+	SocialTiktok          string        `json:"social_tiktok"`
+	SocialFacebook        string        `json:"social_facebook"`
+	SocialWhatsapp        string        `json:"social_whatsapp"`
+	SocialYoutube         string        `json:"social_youtube"`
+	SocialX               string        `json:"social_x"`
+	SocialLinkedin        string        `json:"social_linkedin"`
+	SocialTelegram        string        `json:"social_telegram"`
+	SocialEmail           string        `json:"social_email"`
 	IsPremium             bool          `json:"is_premium"`
 }
 
@@ -1657,14 +1726,18 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
 			custom_button_rounded, custom_button_shadow, custom_button_text_color,
 			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers,
-			hide_watermark
+			hide_watermark,
+			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
+			social_x, social_linkedin, social_telegram, social_email
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
-		&resp.HideWatermark)
+		&resp.HideWatermark,
+		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	}
@@ -1709,6 +1782,15 @@ type updateExtraPageRequest struct {
 	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
 	CustomStyleOverride   *bool   `json:"custom_style_override"`
 	HideWatermark         *bool   `json:"hide_watermark"`
+	SocialInstagram       *string `json:"social_instagram" binding:"omitempty,max=255"`
+	SocialTiktok          *string `json:"social_tiktok" binding:"omitempty,max=255"`
+	SocialFacebook        *string `json:"social_facebook" binding:"omitempty,max=255"`
+	SocialWhatsapp        *string `json:"social_whatsapp" binding:"omitempty,max=255"`
+	SocialYoutube         *string `json:"social_youtube" binding:"omitempty,max=255"`
+	SocialX               *string `json:"social_x" binding:"omitempty,max=255"`
+	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
+	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
+	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -1792,13 +1874,25 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_title_font = COALESCE($19, custom_title_font),
 			custom_title_color = COALESCE($20, custom_title_color),
 			custom_style_override = COALESCE($21, custom_style_override),
-			hide_watermark = COALESCE($22, hide_watermark)
-		WHERE id = $23 AND user_id = $24 AND is_primary = false
+			hide_watermark = COALESCE($22, hide_watermark),
+			social_instagram = COALESCE($23, social_instagram),
+			social_tiktok = COALESCE($24, social_tiktok),
+			social_facebook = COALESCE($25, social_facebook),
+			social_whatsapp = COALESCE($26, social_whatsapp),
+			social_youtube = COALESCE($27, social_youtube),
+			social_x = COALESCE($28, social_x),
+			social_linkedin = COALESCE($29, social_linkedin),
+			social_telegram = COALESCE($30, social_telegram),
+			social_email = COALESCE($31, social_email)
+		WHERE id = $32 AND user_id = $33 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
-		req.HideWatermark, pageID, userID)
+		req.HideWatermark,
+		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
+		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
+		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {
 			c.JSON(http.StatusConflict, gin.H{"error": "slug ini sudah dipakai"})

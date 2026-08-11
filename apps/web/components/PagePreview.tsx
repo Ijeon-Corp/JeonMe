@@ -19,6 +19,7 @@ import StickerIcon from "@/components/StickerIcon";
 import { PageStickerData, RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconTrash } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
+import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 
 export interface PagePreviewLink {
   id: string;
@@ -168,6 +169,10 @@ export interface PagePreviewData {
   // sendiri per stiker, diatur lewat StickerCanvasEditor di dashboard).
   // Array kosong/undefined = tidak ada.
   stickers?: PageStickerData[];
+  // social -- permintaan langsung pengguna, 11 Agustus 2026: baris ikon
+  // kontak sosial di bawah bio. Key kosong/tidak ada = platform itu belum
+  // diisi, ikonnya tidak dirender (lihat buildFilledSocialLinks).
+  social?: Partial<Record<SocialPlatformKey, string>>;
 }
 
 interface PreviewSourcePage {
@@ -438,6 +443,32 @@ function clampPercent(value: number) {
 
 function clampScale(value: number) {
   return Math.min(2.5, Math.max(0.4, value));
+}
+
+// renderSocialRow -- permintaan langsung pengguna, 11 Agustus 2026: baris
+// ikon kontak sosial (Instagram/TikTok/Facebook/WhatsApp/dll) di bawah bio,
+// TERPISAH dari daftar Tautan biasa. Dipakai di layout bio biasa & Toko
+// (ProdukPagePreview) -- TIDAK di LandingPagePreview (tidak punya
+// avatar/bio-header sama sekali, lihat catatan pageType di atas).
+function renderSocialRow(social: PagePreviewData["social"]) {
+  const items = buildFilledSocialLinks(social ?? {});
+  if (items.length === 0) return null;
+  return (
+    <div className="relative mt-3 flex flex-wrap items-center justify-center gap-2">
+      {items.map((item) => (
+        <a
+          key={item.key}
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={item.label}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:-translate-y-0.5 ${item.badgeClass}`}
+        >
+          <item.Icon className="h-3.5 w-3.5" />
+        </a>
+      ))}
+    </div>
+  );
 }
 
 function renderLinkOrBlock(
@@ -733,6 +764,7 @@ export default function PagePreview({
               )}
             </h1>
             {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+            {renderSocialRow(data.social)}
           </div>
         </div>
 
@@ -1309,6 +1341,7 @@ function ProdukPagePreview({
               )}
             </h1>
             {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+            {renderSocialRow(data.social)}
           </div>
         </div>
 

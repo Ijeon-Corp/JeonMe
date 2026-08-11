@@ -294,6 +294,19 @@ export interface PublicPage {
   // menyembunyikan tombol beli & menampilkan pesannya di frontend.
   shop_paused: boolean;
   shop_paused_message: string;
+  // social_instagram..social_email -- permintaan langsung pengguna, 11
+  // Agustus 2026: baris ikon kontak sosial di bawah bio halaman publik.
+  // String kosong = platform itu belum diisi kreator, ikonnya tidak
+  // dirender (lihat buildSocialHref di lib/social-links.ts).
+  social_instagram: string;
+  social_tiktok: string;
+  social_facebook: string;
+  social_whatsapp: string;
+  social_youtube: string;
+  social_x: string;
+  social_linkedin: string;
+  social_telegram: string;
+  social_email: string;
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -454,6 +467,16 @@ export interface MyPage {
   // kustom (theme="custom") & watermark halaman publik disembunyikan. Lihat
   // getSubscriptionStatus untuk detail plan/status/harga.
   is_premium: boolean;
+  // social_instagram..social_email -- lihat catatan lengkap di PublicPage.
+  social_instagram: string;
+  social_tiktok: string;
+  social_facebook: string;
+  social_whatsapp: string;
+  social_youtube: string;
+  social_x: string;
+  social_linkedin: string;
+  social_telegram: string;
+  social_email: string;
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
@@ -555,6 +578,15 @@ export function updateMyPage(
       | "custom_title_color"
       | "custom_style_override"
       | "hide_watermark"
+      | "social_instagram"
+      | "social_tiktok"
+      | "social_facebook"
+      | "social_whatsapp"
+      | "social_youtube"
+      | "social_x"
+      | "social_linkedin"
+      | "social_telegram"
+      | "social_email"
     >
   >
 ) {
@@ -845,6 +877,15 @@ export function updateExtraPage(
       | "custom_title_color"
       | "custom_style_override"
       | "hide_watermark"
+      | "social_instagram"
+      | "social_tiktok"
+      | "social_facebook"
+      | "social_whatsapp"
+      | "social_youtube"
+      | "social_x"
+      | "social_linkedin"
+      | "social_telegram"
+      | "social_email"
     >
   >
 ) {

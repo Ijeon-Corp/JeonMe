@@ -180,6 +180,17 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
           referralCode: ref,
           shopPaused: page.shop_paused,
           shopPausedMessage: page.shop_paused_message,
+          social: {
+            instagram: page.social_instagram,
+            tiktok: page.social_tiktok,
+            facebook: page.social_facebook,
+            whatsapp: page.social_whatsapp,
+            youtube: page.social_youtube,
+            x: page.social_x,
+            linkedin: page.social_linkedin,
+            telegram: page.social_telegram,
+            email: page.social_email,
+          },
         }}
         interactive
       />

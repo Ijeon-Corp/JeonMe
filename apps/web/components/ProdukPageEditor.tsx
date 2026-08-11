@@ -28,6 +28,7 @@ import {
 import {
   IconBook,
   IconCheck,
+  IconChevronRight,
   IconExternal,
   IconGripVertical,
   IconLink,
@@ -43,6 +44,7 @@ import {
 } from "@/components/icons";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
+import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text";
 
@@ -673,6 +675,13 @@ function HeaderSection({
 }) {
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // Kontak sosial -- permintaan langsung pengguna, 11 Agustus 2026, paritas
+  // penuh dengan halaman utama (dashboard/links/page.tsx): platform yang
+  // sama, panel kolaps yang sama, disimpan lewat onPatch (updateExtraPage)
+  // yang SAMA dengan field lain di section ini.
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [socialDraft, setSocialDraft] = useState<Partial<Record<SocialPlatformKey, string>>>({});
+
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -686,6 +695,40 @@ function HeaderSection({
     } finally {
       setAvatarUploading(false);
     }
+  }
+
+  function openSocialPanel() {
+    setSocialDraft({
+      instagram: page.social_instagram,
+      tiktok: page.social_tiktok,
+      facebook: page.social_facebook,
+      whatsapp: page.social_whatsapp,
+      youtube: page.social_youtube,
+      x: page.social_x,
+      linkedin: page.social_linkedin,
+      telegram: page.social_telegram,
+      email: page.social_email,
+    });
+    setSocialOpen(true);
+  }
+
+  function saveSocial() {
+    // onPatch (handlePatch di induk) sudah melakukan optimistic setPage +
+    // try/catch + setError sendiri (pola sama seperti onBlur Nama/Bio di
+    // atas) -- tidak diulang di sini supaya tidak ada dua sumber update
+    // yang saling tabrakan.
+    onPatch({
+      social_instagram: (socialDraft.instagram ?? "").trim(),
+      social_tiktok: (socialDraft.tiktok ?? "").trim(),
+      social_facebook: (socialDraft.facebook ?? "").trim(),
+      social_whatsapp: (socialDraft.whatsapp ?? "").trim(),
+      social_youtube: (socialDraft.youtube ?? "").trim(),
+      social_x: (socialDraft.x ?? "").trim(),
+      social_linkedin: (socialDraft.linkedin ?? "").trim(),
+      social_telegram: (socialDraft.telegram ?? "").trim(),
+      social_email: (socialDraft.email ?? "").trim(),
+    });
+    setSocialOpen(false);
   }
 
   return (
@@ -728,6 +771,51 @@ function HeaderSection({
           onBlur={(e) => onPatch({ bio: e.target.value })}
           className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         />
+      </div>
+
+      {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026,
+          paritas penuh dengan halaman utama (lihat catatan lengkap di
+          dashboard/links/page.tsx). */}
+      <div className="rounded-xl border border-border">
+        <button
+          type="button"
+          onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
+          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-ink"
+        >
+          Kontak Sosial
+          <IconChevronRight className={`h-3.5 w-3.5 text-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
+        </button>
+        {socialOpen && (
+          <div className="border-t border-border p-3">
+            <div className="grid grid-cols-1 gap-2">
+              {SOCIAL_PLATFORMS.map((p) => (
+                <div key={p.key} className="flex items-center gap-2">
+                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${p.badgeClass}`}>
+                    <p.Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <input
+                    type="text"
+                    value={socialDraft[p.key] ?? ""}
+                    onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                    placeholder={`${p.label} · ${p.placeholder}`}
+                    className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted">
+              Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <button type="button" onClick={saveSocial} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white">
+                Simpan
+              </button>
+              <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-muted hover:text-ink">
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

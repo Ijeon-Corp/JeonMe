@@ -20,6 +20,7 @@ import {
   uploadAvatar,
   uploadLinkIcon,
 } from "@/lib/api-client";
+import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import {
   IconBook,
   IconCamera,
@@ -232,6 +233,15 @@ export default function DashboardLinksPage() {
   const [profileEditValue, setProfileEditValue] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // Kontak sosial (Instagram/TikTok/Facebook/WhatsApp/dll) -- permintaan
+  // langsung pengguna, 11 Agustus 2026: panel kolaps di bawah profil, SEMUA
+  // platform diedit sekaligus lalu satu tombol Simpan (beda dari nama/bio
+  // di atas yang inline per-field) karena 9 field sekaligus tidak masuk
+  // akal kalau tiap field simpan sendiri-sendiri begitu blur.
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [socialDraft, setSocialDraft] = useState<Partial<Record<SocialPlatformKey, string>>>({});
+  const [savingSocial, setSavingSocial] = useState(false);
+
   const [addingLink, setAddingLink] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
@@ -322,6 +332,47 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setPage(previous);
       setError(err instanceof ApiError ? err.message : `Gagal menyimpan ${field === "name" ? "nama tampilan" : "bio"}.`);
+    }
+  }
+
+  function openSocialPanel() {
+    if (!page) return;
+    setSocialDraft({
+      instagram: page.social_instagram,
+      tiktok: page.social_tiktok,
+      facebook: page.social_facebook,
+      whatsapp: page.social_whatsapp,
+      youtube: page.social_youtube,
+      x: page.social_x,
+      linkedin: page.social_linkedin,
+      telegram: page.social_telegram,
+      email: page.social_email,
+    });
+    setSocialOpen(true);
+  }
+
+  async function saveSocial() {
+    if (!page) return;
+    setSavingSocial(true);
+    const patch = {
+      social_instagram: (socialDraft.instagram ?? "").trim(),
+      social_tiktok: (socialDraft.tiktok ?? "").trim(),
+      social_facebook: (socialDraft.facebook ?? "").trim(),
+      social_whatsapp: (socialDraft.whatsapp ?? "").trim(),
+      social_youtube: (socialDraft.youtube ?? "").trim(),
+      social_x: (socialDraft.x ?? "").trim(),
+      social_linkedin: (socialDraft.linkedin ?? "").trim(),
+      social_telegram: (socialDraft.telegram ?? "").trim(),
+      social_email: (socialDraft.email ?? "").trim(),
+    };
+    try {
+      await updateMyPage(patch);
+      setPage({ ...page, ...patch });
+      setSocialOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan kontak sosial.");
+    } finally {
+      setSavingSocial(false);
     }
   }
 
@@ -796,6 +847,64 @@ export default function DashboardLinksPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026:
+            "dibagian profile atau menu link bio itu bisa mengisi kontak
+            instagram tiktok facebook whatsapp dll jika mengisi bisa kita
+            tampilkan di bagian bawah deskripsi nya saat akses link dan
+            sudah built in icon nya" -- diisi di sini, dirender sebagai baris
+            ikon bulat di bawah bio halaman publik (lihat renderSocialRow di
+            PagePreview.tsx). Panel kolaps (bukan 9 field selalu terbuka)
+            supaya tidak bikin bagian atas halaman ini penuh buat kreator
+            yang belum butuh fitur ini. */}
+        {page && (
+          <div className="mt-3 rounded-xl border border-border">
+            <button
+              type="button"
+              onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
+              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-ink"
+            >
+              Kontak Sosial
+              <IconChevronRight className={`h-3.5 w-3.5 text-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
+            </button>
+            {socialOpen && (
+              <div className="border-t border-border p-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {SOCIAL_PLATFORMS.map((p) => (
+                    <div key={p.key} className="flex items-center gap-2">
+                      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${p.badgeClass}`}>
+                        <p.Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <input
+                        type="text"
+                        value={socialDraft[p.key] ?? ""}
+                        onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                        placeholder={`${p.label} · ${p.placeholder}`}
+                        className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-muted">
+                  Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={saveSocial}
+                    disabled={savingSocial}
+                    className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                  >
+                    {savingSocial ? "Menyimpan..." : "Simpan"}
+                  </button>
+                  <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-muted hover:text-ink">
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

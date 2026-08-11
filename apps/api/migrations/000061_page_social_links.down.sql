@@ -1,0 +1,9 @@
+ALTER TABLE pages DROP COLUMN social_instagram;
+ALTER TABLE pages DROP COLUMN social_tiktok;
+ALTER TABLE pages DROP COLUMN social_facebook;
+ALTER TABLE pages DROP COLUMN social_whatsapp;
+ALTER TABLE pages DROP COLUMN social_youtube;
+ALTER TABLE pages DROP COLUMN social_x;
+ALTER TABLE pages DROP COLUMN social_linkedin;
+ALTER TABLE pages DROP COLUMN social_telegram;
+ALTER TABLE pages DROP COLUMN social_email;
