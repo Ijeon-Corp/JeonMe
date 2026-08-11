@@ -16,11 +16,14 @@ test.describe("Quick Setup", () => {
     await page.getByText("Streamer", { exact: true }).click();
 
     // Modal pratinjau menampilkan tema + tautan SEBELUM diterapkan --
-    // termasuk mockup visual (PagePreview), jadi "Twitch" muncul dua kali
-    // (chip detail + tombol tautan di mockup), .first() cukup untuk
-    // memastikan setidaknya salah satunya benar-benar tampil.
+    // termasuk mockup visual (PagePreview), jadi "Nonton di Twitch" muncul
+    // dua kali (chip detail + tombol tautan di mockup), .first() cukup
+    // untuk memastikan setidaknya salah satunya benar-benar tampil. Judul
+    // "Nonton di Twitch" (bukan cuma "Twitch") -- permintaan langsung
+    // pengguna: judul tautan starter dibuat CTA/deskriptif ala referensi
+    // Linktree sungguhan, bukan nama platform polos.
     await expect(page.getByText("Cyber")).toBeVisible();
-    await expect(page.getByText("Twitch", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Nonton di Twitch", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: /terapkan template/i }).click();
     await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
@@ -78,12 +81,24 @@ test.describe("Quick Setup", () => {
     await expect(page).toHaveURL(/\/dashboard\/links/);
 
     // Tautan Streamer (Twitch/Discord) sudah HILANG, cuma tautan Restaurant
-    // (WhatsApp/Instagram) + blok "Menu" yang tersisa.
-    await expect(page.getByText("Twitch", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Discord", { exact: true })).toHaveCount(0);
+    // yang tersisa: "Lokasi Kami" (blok maps, PALING ATAS -- lihat
+    // orderedTemplateItems), "Reservasi via WhatsApp", "Ikuti Update Kami",
+    // blok "Menu", dan "Kritik dan Saran" (formulir kontak, PALING BAWAH).
+    await expect(page.getByText("Nonton di Twitch", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Gabung Discord", { exact: true })).toHaveCount(0);
     // .first() -- teks yang sama muncul dua kali (baris daftar Tautan +
     // panel Pratinjau Langsung), sama seperti bio di test sebelumnya.
-    await expect(page.getByText("WhatsApp", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Menu", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Lokasi Kami", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Reservasi via WhatsApp", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Kritik dan Saran", { exact: true }).first()).toBeVisible();
+
+    // Urutan tampil harus "Lokasi Kami" (blok maps) PALING ATAS, "Kritik
+    // dan Saran" (formulir kontak) PALING BAWAH -- lihat
+    // orderedTemplateItems. .first() konsisten memilih baris daftar
+    // Tautan sungguhan (bukan panel Pratinjau), sama seperti assertion
+    // lain di test ini.
+    const lokasiY = (await page.getByText("Lokasi Kami", { exact: true }).first().boundingBox())!.y;
+    const kritikY = (await page.getByText("Kritik dan Saran", { exact: true }).first().boundingBox())!.y;
+    expect(lokasiY).toBeLessThan(kritikY);
   });
 });

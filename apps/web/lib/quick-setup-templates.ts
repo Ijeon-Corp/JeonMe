@@ -71,9 +71,18 @@ export interface QuickSetupTemplateLink {
 }
 
 export interface QuickSetupTemplateBlock {
-  type: "text" | "contact_form";
+  // maps -- permintaan langsung pengguna (referensi tangkapan layar
+  // halaman Linktree sungguhan "PIKO Carwash & Cafe"): baris "Lokasi
+  // Kami" tampil PALING ATAS (sebelum tautan kontak/sosial), bukan
+  // block_type video/faq/image yang butuh data spesifik pengguna (lihat
+  // catatan cakupan di atas file ini) -- maps AMAN dibuat tanpa alamat
+  // asli karena validateBlockData (links.go) cuma memvalidasi `embed`
+  // (kalau ada) harus bool, TIDAK mewajibkan koordinat/URL nyata selama
+  // embed=false (mode "buka tautan langsung", bukan popup peta).
+  type: "text" | "contact_form" | "maps";
   title: string;
   text?: string;
+  url?: string;
 }
 
 export interface QuickSetupTemplate {
@@ -88,28 +97,62 @@ export interface QuickSetupTemplate {
   monetizationHint?: string;
 }
 
+// Judul default per platform -- permintaan langsung pengguna (referensi
+// tangkapan layar halaman Linktree sungguhan): "MAKSUDNYA LANGSUNG DATA
+// SEPERTI INI SAJAA BENTUKNYAA LANGSUNG JADI GITU" -- judul platform
+// polos ("Instagram", "WhatsApp") diganti frasa ajakan (CTA) natural ala
+// referensi ("Ikuti Update Kami", "Chat via WhatsApp"), bukan cuma nama
+// platform. Template masih bisa override lewat argumen kedua `link()`
+// untuk konteks yang lebih spesifik per template (mis. "Pesan Menu" utk
+// F&B, bukan "Chat via WhatsApp" generik).
 function link(platform: PlatformKey, title?: string): QuickSetupTemplateLink {
   const labels: Record<PlatformKey, string> = {
-    instagram: "Instagram",
-    tiktok: "TikTok",
-    youtube: "YouTube",
-    whatsapp: "WhatsApp",
-    spotify: "Spotify",
-    telegram: "Telegram",
-    x: "X (Twitter)",
-    facebook: "Facebook",
-    linkedin: "LinkedIn",
-    email: "Email",
-    twitch: "Twitch",
-    discord: "Discord",
-    shopee: "Shopee",
-    tokopedia: "Tokopedia",
-    appleMusic: "Apple Music",
-    applePodcasts: "Apple Podcasts",
-    googleMaps: "Google Maps",
-    website: "Website",
+    instagram: "Follow di Instagram",
+    tiktok: "Follow di TikTok",
+    youtube: "Tonton di YouTube",
+    whatsapp: "Chat via WhatsApp",
+    spotify: "Dengerin di Spotify",
+    telegram: "Gabung Telegram",
+    x: "Follow di X",
+    facebook: "Kunjungi Facebook",
+    linkedin: "Terhubung di LinkedIn",
+    email: "Kirim Email",
+    twitch: "Nonton di Twitch",
+    discord: "Gabung Discord",
+    shopee: "Belanja di Shopee",
+    tokopedia: "Belanja di Tokopedia",
+    appleMusic: "Dengerin di Apple Music",
+    applePodcasts: "Dengerin di Apple Podcasts",
+    googleMaps: "Lihat Lokasi",
+    website: "Kunjungi Website",
   };
   return { title: title ?? labels[platform], url: PLATFORM_URL[platform] };
+}
+
+// mapsBlock -- lihat catatan lengkap di QuickSetupTemplateBlock.type di
+// atas. embed SENGAJA selalu false (direct link, bukan popup peta) --
+// mode embed butuh koordinat hasil geocoding alamat NYATA (lihat
+// resolveMapsEmbedCoords, links.go), tidak bisa disintesis di sini.
+function mapsBlock(title = "Lokasi Kami"): QuickSetupTemplateBlock {
+  return { type: "maps", title, url: PLATFORM_URL.googleMaps };
+}
+
+// orderedTemplateItems -- SATU sumber kebenaran urutan tampil (dipakai
+// applyTemplate MAUPUN pratinjau kartu/modal di quick-setup/page.tsx):
+// blok "maps" ("Lokasi Kami") tampil PALING ATAS, lalu tautan biasa, lalu
+// blok lain (text/contact_form) PALING BAWAH -- pola yang sama persis
+// dengan referensi Linktree sungguhan (lokasi di atas, kontak/sosial di
+// tengah, formulir "Kritik dan Saran" di bawah).
+export function orderedTemplateItems(
+  t: QuickSetupTemplate
+): { title: string; kind: "link" | "block" }[] {
+  const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
+  const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
+  return [
+    ...mapsBlocks.map((b) => ({ title: b.title, kind: "block" as const })),
+    ...t.links.map((l) => ({ title: l.title, kind: "link" as const })),
+    ...otherBlocks.map((b) => ({ title: b.title, kind: "block" as const })),
+  ];
 }
 
 export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
@@ -184,11 +227,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Website, WhatsApp, lokasi, kontak",
     theme: "ocean",
     bio: "Profil bisnis resmi kami.",
-    links: [link("website"), link("whatsapp")],
-    blocks: [
-      { type: "text", title: "Alamat", text: "Tuliskan alamat lokasi bisnismu di sini." },
-      { type: "contact_form", title: "Hubungi Kami" },
-    ],
+    links: [link("website", "Kunjungi Website Kami"), link("whatsapp", "Chat Admin Kami")],
+    blocks: [mapsBlock(), { type: "contact_form", title: "Kritik dan Saran" }],
   },
   {
     key: "company",
@@ -197,8 +237,9 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Tentang, layanan, portofolio, kontak",
     theme: "minimal",
     bio: "Tentang perusahaan kami.",
-    links: [link("website"), link("linkedin")],
+    links: [link("website", "Kunjungi Website Kami"), link("linkedin")],
     blocks: [
+      mapsBlock("Kantor Kami"),
       { type: "text", title: "Layanan Kami", text: "Tuliskan daftar layanan perusahaanmu di sini." },
       { type: "contact_form", title: "Hubungi Kami" },
     ],
@@ -259,7 +300,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, marketplace, promosi",
     theme: "peach",
     bio: "Toko online -- produk terbaik untukmu",
-    links: [link("shopee"), link("tokopedia"), link("whatsapp")],
+    links: [link("shopee", "Belanja di Shopee Kami"), link("tokopedia", "Belanja di Tokopedia Kami"), link("whatsapp", "Chat Admin Kami")],
     monetizationHint: "Tambahkan produkmu di menu Toko supaya tampil di halaman ini.",
   },
   {
@@ -269,7 +310,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Katalog, Instagram, Shopee/Tokopedia",
     theme: "rose",
     bio: "Fashion store | Koleksi terbaru tiap minggu",
-    links: [link("instagram"), link("shopee"), link("tokopedia")],
+    links: [link("instagram", "Lihat Koleksi Terbaru"), link("shopee"), link("tokopedia")],
   },
   {
     key: "beauty-store",
@@ -278,7 +319,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, katalog, booking",
     theme: "peach",
     bio: "Beauty store | Produk kecantikan pilihan",
-    links: [link("instagram"), link("whatsapp")],
+    links: [link("instagram", "Lihat Produk Kami"), link("whatsapp", "Tanya-Tanya Produk")],
+    blocks: [mapsBlock()],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -288,8 +330,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, pemesanan, lokasi",
     theme: "amber",
     bio: "Food & beverage | Order sekarang",
-    links: [link("whatsapp"), link("instagram")],
-    blocks: [{ type: "text", title: "Menu", text: "Tuliskan daftar menu & harga di sini." }],
+    links: [link("whatsapp", "Pesan via WhatsApp"), link("instagram", "Ikuti Update Kami")],
+    blocks: [mapsBlock(), { type: "text", title: "Menu", text: "Tuliskan daftar menu & harga di sini." }],
   },
   {
     key: "small-business",
@@ -298,7 +340,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, WhatsApp, marketplace",
     theme: "mint",
     bio: "Usaha kecil, kualitas besar.",
-    links: [link("whatsapp"), link("shopee")],
+    links: [link("whatsapp", "Pesan via WhatsApp"), link("shopee")],
+    blocks: [mapsBlock()],
   },
   {
     key: "affiliate-store",
@@ -423,8 +466,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, reservasi, lokasi, WhatsApp",
     theme: "amber",
     bio: "Restoran | Reservasi sekarang",
-    links: [link("whatsapp"), link("instagram")],
-    blocks: [{ type: "text", title: "Menu", text: "Tuliskan menu andalan restoranmu di sini." }],
+    links: [link("whatsapp", "Reservasi via WhatsApp"), link("instagram", "Ikuti Update Kami")],
+    blocks: [
+      mapsBlock(),
+      { type: "text", title: "Menu", text: "Tuliskan menu andalan restoranmu di sini." },
+      { type: "contact_form", title: "Kritik dan Saran" },
+    ],
   },
   {
     key: "cafe",
@@ -433,8 +480,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, Instagram, Google Maps",
     theme: "peach",
     bio: "Cafe | Ngopi santai di sini",
-    links: [link("instagram"), link("googleMaps")],
-    blocks: [{ type: "text", title: "Menu", text: "Tuliskan menu andalan cafemu di sini." }],
+    links: [link("instagram", "Ikuti Update Kami")],
+    blocks: [mapsBlock(), { type: "text", title: "Menu", text: "Tuliskan menu andalan cafemu di sini." }],
   },
   {
     key: "barbershop",
@@ -443,8 +490,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, daftar harga, booking",
     theme: "noir",
     bio: "Barbershop | Booking potong rambut",
-    links: [link("whatsapp")],
-    blocks: [{ type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." }],
+    links: [link("whatsapp", "Booking via WhatsApp")],
+    blocks: [mapsBlock(), { type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." }],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -454,7 +501,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, portofolio, booking",
     theme: "rose",
     bio: "Salon kecantikan | Booking treatment",
-    links: [link("instagram"), link("whatsapp")],
+    links: [link("instagram", "Lihat Hasil Treatment"), link("whatsapp", "Booking via WhatsApp")],
+    blocks: [mapsBlock()],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -464,8 +512,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, harga, booking",
     theme: "noir",
     bio: "Fotografer | Booking sesi foto",
-    links: [link("instagram")],
-    blocks: [{ type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." }],
+    links: [link("instagram", "Lihat Portofolio")],
+    blocks: [mapsBlock("Lokasi Studio"), { type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." }],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -475,7 +523,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Event, portofolio, kontak",
     theme: "golden",
     bio: "Event organizer | Wujudkan acaramu",
-    links: [link("instagram"), link("whatsapp")],
+    links: [link("instagram", "Lihat Portofolio Acara"), link("whatsapp", "Konsultasi via WhatsApp")],
     blocks: [{ type: "contact_form", title: "Hubungi Kami" }],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },

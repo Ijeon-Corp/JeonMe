@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, MyPage, createBlock, createLink, deleteLink, getMyPage, listLinks, updateMyPage } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
-import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate } from "@/lib/quick-setup-templates";
+import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems } from "@/lib/quick-setup-templates";
 import { IconCheck, IconSearch } from "@/components/icons";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
@@ -42,14 +42,19 @@ export default function QuickSetupPage() {
   // memutuskan menerapkan.
   const previewData: PagePreviewData | null = useMemo(() => {
     if (!selected) return null;
+    const mapsBlocks = (selected.blocks ?? []).filter((b) => b.type === "maps");
+    const otherBlocks = (selected.blocks ?? []).filter((b) => b.type !== "maps");
     return {
       username: myPage?.username ?? "namamu",
       bio: selected.bio,
       avatarUrl: myPage?.avatar_url ?? "",
       theme: selected.theme,
+      // Urutan SAMA PERSIS dengan applyTemplate (maps di atas, tautan di
+      // tengah, blok lain di bawah) -- lihat orderedTemplateItems.
       links: [
+        ...mapsBlocks.map((b) => ({ id: b.title, title: b.title, url: b.url ?? "", blockType: "maps" as const, blockData: { embed: false } })),
         ...selected.links.map((l) => ({ id: l.title, title: l.title, url: l.url, blockType: "link" as const })),
-        ...(selected.blocks ?? []).map((b) => ({
+        ...otherBlocks.map((b) => ({
           id: b.title,
           title: b.title,
           url: "",
@@ -104,11 +109,20 @@ export default function QuickSetupPage() {
 
       // Sequential (bukan Promise.all) -- posisi tautan dihitung server-side
       // dari MAX(position)+1 tiap insert, permintaan paralel berisiko dua
-      // tautan kebetulan dapat posisi yang sama.
+      // tautan kebetulan dapat posisi yang sama. Urutan pembuatan (maps ->
+      // tautan -> blok lain) SENGAJA mengikuti orderedTemplateItems supaya
+      // "Lokasi Kami" tampil paling atas & formulir kontak paling bawah,
+      // sama seperti referensi Linktree yang diberikan pengguna -- BUKAN
+      // urutan array `blocks` mentah di data template.
+      const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
+      const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
+      for (const b of mapsBlocks) {
+        await createBlock({ block_type: "maps", title: b.title, url: b.url, block_data: { embed: false } });
+      }
       for (const l of t.links) {
         await createLink(l);
       }
-      for (const b of t.blocks ?? []) {
+      for (const b of otherBlocks) {
         await createBlock({
           block_type: b.type,
           title: b.title,
@@ -235,12 +249,12 @@ export default function QuickSetupPage() {
                   Nama Kamu
                 </p>
                 <div className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1.5">
-                  {t.links.slice(0, 3).map((l) => (
+                  {orderedTemplateItems(t).slice(0, 3).map((item) => (
                     <span
-                      key={l.title}
+                      key={item.title}
                       className={`truncate rounded-full px-2 py-1 text-center text-[9px] font-semibold leading-none ring-1 ring-black/10 ${themePreset?.buyButton ?? "bg-primary text-white"}`}
                     >
-                      {l.title}
+                      {item.title}
                     </span>
                   ))}
                 </div>
