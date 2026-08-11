@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, login, register, setToken } from "@/lib/api-client";
+import { ApiError, checkUsername, login, register, setToken } from "@/lib/api-client";
 import AuthShell from "@/components/AuthShell";
+import { IconCheck, IconClose } from "@/components/icons";
+
+type UsernameCheckState = "idle" | "checking" | "available" | "unavailable";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,6 +17,40 @@ export default function RegisterPage() {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [usernameCheck, setUsernameCheck] = useState<{ username: string; state: UsernameCheckState; message: string }>({
+    username: "",
+    state: "idle",
+    message: "",
+  });
+
+  // Live-check ketersediaan username -- permintaan langsung pengguna, 11
+  // Agustus 2026: begitu berhenti mengetik, langsung tampilkan hasilnya di
+  // bawah field (bukan menunggu submit lalu baru tahu sudah dipakai).
+  // Debounce 500ms supaya tidak nge-hit API tiap huruf. SEMUA setState di
+  // sini (termasuk status "checking") sengaja ditaruh di DALAM callback
+  // setTimeout, bukan di badan efek langsung -- badan efek sendiri cuma
+  // `setTimeout(...)` + return cleanup, tanpa satu pun setState sinkron,
+  // supaya lolos aturan react-hooks/set-state-in-effect (setState sinkron
+  // di badan efek dilarang, tapi setState di dalam callback async seperti
+  // setTimeout/promise boleh -- itu bukan "sinkron selama commit efek").
+  useEffect(() => {
+    const trimmed = username.trim();
+    const timer = setTimeout(() => {
+      if (trimmed.length < 3) {
+        setUsernameCheck({ username: trimmed, state: "idle", message: "" });
+        return;
+      }
+      setUsernameCheck({ username: trimmed, state: "checking", message: "" });
+      checkUsername(trimmed)
+        .then((res) => {
+          setUsernameCheck({ username: trimmed, state: res.available ? "available" : "unavailable", message: res.message });
+        })
+        .catch(() => {
+          setUsernameCheck({ username: trimmed, state: "idle", message: "" });
+        });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [username]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +75,10 @@ export default function RegisterPage() {
     }
   }
 
+  // Abaikan hasil check yang sudah basi (username berubah lagi setelah hasil
+  // sebelumnya datang, sebelum debounce berikutnya sempat jalan).
+  const usernameState: UsernameCheckState = usernameCheck.username === username.trim() ? usernameCheck.state : "idle";
+
   return (
     <AuthShell>
       <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
@@ -53,7 +94,15 @@ export default function RegisterPage() {
           {/* Prefiks "jeonme.com/" MENYATU dengan input (referensi layout
               signup Beacons) -- lebih jelas ini adalah alamat, bukan cuma
               teks bantuan terpisah di bawah field seperti sebelumnya. */}
-          <div className="flex items-center rounded-xl border border-border bg-white pl-3.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <div
+            className={`flex items-center rounded-xl border bg-white pl-3.5 transition-colors focus-within:ring-2 ${
+              usernameState === "available"
+                ? "border-secondary focus-within:border-secondary focus-within:ring-secondary/20"
+                : usernameState === "unavailable"
+                ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
+                : "border-border focus-within:border-primary focus-within:ring-primary/20"
+            }`}
+          >
             <span className="flex-shrink-0 text-sm font-semibold text-muted">jeonme.com/</span>
             <input
               type="text"
@@ -66,6 +115,29 @@ export default function RegisterPage() {
               className="w-full min-w-0 bg-transparent py-3 pl-0.5 pr-3.5 text-sm text-ink focus:outline-none"
             />
           </div>
+          {usernameState !== "idle" && (
+            <p
+              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${
+                usernameState === "available"
+                  ? "text-secondary-dark"
+                  : usernameState === "unavailable"
+                  ? "text-red-600"
+                  : "text-muted"
+              }`}
+            >
+              {usernameState === "checking" && "Memeriksa ketersediaan..."}
+              {usernameState === "available" && (
+                <>
+                  <IconCheck className="h-3.5 w-3.5 flex-shrink-0" /> Username tersedia
+                </>
+              )}
+              {usernameState === "unavailable" && (
+                <>
+                  <IconClose className="h-3.5 w-3.5 flex-shrink-0" /> {usernameCheck.message}
+                </>
+              )}
+            </p>
+          )}
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Email</label>
@@ -105,7 +177,7 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || usernameState === "checking" || usernameState === "unavailable"}
           className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memproses..." : "Daftar Gratis"}

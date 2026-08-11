@@ -123,6 +123,21 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": id, "username": req.Username})
 }
 
+// CheckUsername -- permintaan langsung pengguna, 11 Agustus 2026: cek
+// ketersediaan username secara live saat mengetik di /register (bukan
+// menunggu submit lalu gagal). Publik (belum ada akun/JWT di titik ini,
+// sama seperti Register sendiri), dibatasi rate limit tersendiri karena
+// dipanggil berkali-kali per sesi pengisian form. Pakai helper yang SAMA
+// (checkUsernameAvailable) dengan Register supaya hasil live-check dan
+// hasil submit akhir tidak pernah berbeda logika.
+func (h *AuthHandler) CheckUsername(c *gin.Context) {
+	username := c.Query("username")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	available, msg := checkUsernameAvailable(ctx, h.DB, username, "")
+	c.JSON(http.StatusOK, gin.H{"available": available, "message": msg})
+}
+
 type loginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`

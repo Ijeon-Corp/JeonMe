@@ -76,10 +76,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		linkUnlockRateLimit := middleware.RateLimit(rdb, "link-unlock", 15, time.Minute)
 		// No.77: batasi spam formulir kontak.
 		contactFormRateLimit := middleware.RateLimit(rdb, "contact-form", 10, time.Minute)
+		// Live-check username /register -- lebih longgar dari authRateLimit
+		// (10/menit) karena dipanggil tiap kali pengguna berhenti mengetik,
+		// bukan cuma sekali per submit.
+		checkUsernameRateLimit := middleware.RateLimit(rdb, "check-username", 30, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
 			auth_.POST("/register", authRateLimit, auth.Register)
+			auth_.GET("/check-username", checkUsernameRateLimit, auth.CheckUsername)
 			auth_.POST("/login", authRateLimit, auth.Login)
 			// Modul Settings §5: langkah kedua login untuk akun ber-2FA --
 			// publik seperti /login itu sendiri (belum ada JWT di titik ini),

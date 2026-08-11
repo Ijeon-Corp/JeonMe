@@ -348,6 +348,14 @@ export function register(input: {
   });
 }
 
+// checkUsername -- live-check ketersediaan username di /register (permintaan
+// langsung pengguna, 11 Agustus 2026). Publik, tidak butuh auth: true.
+export function checkUsername(username: string) {
+  return apiFetch<{ available: boolean; message: string }>(
+    `/auth/check-username?username=${encodeURIComponent(username)}`
+  );
+}
+
 // Modul Settings §5: kalau akun ini sudah mengaktifkan 2FA, backend TIDAK
 // mengembalikan token di sini -- mengembalikan mfa_required+mfa_token,
 // caller (halaman login) lalu memanggil verifyLogin2FA dengan kode TOTP.
