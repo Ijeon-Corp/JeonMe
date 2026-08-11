@@ -561,7 +561,19 @@ function renderBioHeader(
   }
 
   return (
-    <div className="relative">
+    // flex flex-col items-center di SINI (bukan cuma dipercaya ke pembungkus
+    // grandparent) -- bug dilaporkan pengguna (12 Agustus 2026, screenshot
+    // galeri Quick Setup): avatar bergeser ke kiri, tidak simetris, padahal
+    // nama/bio di bawahnya terlihat center. Akar masalah: div "relative" ini
+    // adalah flex item shrink-to-fit di grandparent (lebarnya ditentukan
+    // anak TERLEBAR, yaitu blok nama/bio yang bisa lebih lebar dari avatar),
+    // lalu avatar (anak block biasa, width:auto) otomatis melebar 100% ke
+    // lebar itu dan nempel kiri karena tidak ada text-center/justify-center
+    // di pembungkusnya sendiri -- beda dari blok nama/bio yang punya
+    // text-center eksplisit. items-center di sini memaksa SETIAP anak
+    // (avatar maupun blok nama/bio) benar-benar center secara individual,
+    // bukan cuma lebar penuh lalu nempel kiri.
+    <div className="relative flex flex-col items-center">
       <div className="relative">{avatar}</div>
       <div className="relative mt-5 text-center">
         {nameHeading}
