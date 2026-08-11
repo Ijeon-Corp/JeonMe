@@ -213,22 +213,35 @@ export default function QuickSetupPage() {
               {/* Mockup mini -- permintaan langsung pengguna: "yang
                   ditampilkan itu bentuk nya asli atau langsung terlihat
                   bukan sekedar begitu saja" (bar warna polos sebelumnya
-                  tidak cukup mewakili). Pola PERSIS sama dengan ThemeTile
-                  di galeri Tema (dashboard/design/theme/page.tsx) --
-                  previewBg/previewIsDark/buyButton yang SAMA, supaya
-                  konsisten satu bahasa visual dengan galeri tema yang
-                  sudah ada, bukan gaya baru lagi. Avatar bulat + 2 pil
-                  tautan ditambahkan di atas pola itu supaya kartu ini
-                  terasa seperti TEMPLATE (tema + konten), bukan cuma
-                  swatch warna. */}
+                  tidak cukup mewakili), lalu susulan "mockup nya harus ada
+                  isi datanya juga dummy gapapa" -- bar/pil ABSTRAK tanpa
+                  teks (revisi pertama) masih belum cukup, sekarang label
+                  tautan (dari t.links, data template sungguhan, cuma
+                  belum tautan asli kreator makanya "dummy") ditampilkan
+                  sebagai teks sungguhan di tiap pil, plus nama contoh di
+                  bawah avatar. Pola warna PERSIS sama dengan ThemeTile di
+                  galeri Tema (previewBg/previewIsDark/buyButton) supaya
+                  tetap satu bahasa visual dengan galeri tema yang sudah
+                  ada. */}
               <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: themePreset?.previewBg }} aria-hidden="true">
                 <span
-                  className={`absolute left-1/2 top-3 h-7 w-7 -translate-x-1/2 rounded-full ${isDark ? "bg-white/25" : "bg-ink/10"}`}
-                />
-                <span className={`absolute left-1/2 top-[3.1rem] h-1.5 w-10 -translate-x-1/2 rounded-full ${isDark ? "bg-white/70" : "bg-ink/60"}`} />
+                  className={`absolute left-1/2 top-3 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full text-[10px] font-bold ${
+                    isDark ? "bg-white/25 text-white" : "bg-ink/10 text-ink"
+                  }`}
+                >
+                  N
+                </span>
+                <p className={`absolute inset-x-2 top-[3rem] truncate text-center text-[9px] font-bold ${isDark ? "text-white/80" : "text-ink/70"}`}>
+                  Nama Kamu
+                </p>
                 <div className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1.5">
                   {t.links.slice(0, 3).map((l) => (
-                    <span key={l.title} className={`h-4 rounded-full ring-1 ring-black/10 ${themePreset?.buyButton ?? "bg-primary"}`} />
+                    <span
+                      key={l.title}
+                      className={`truncate rounded-full px-2 py-1 text-center text-[9px] font-semibold leading-none ring-1 ring-black/10 ${themePreset?.buyButton ?? "bg-primary text-white"}`}
+                    >
+                      {l.title}
+                    </span>
                   ))}
                 </div>
               </div>
