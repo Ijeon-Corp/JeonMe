@@ -7,7 +7,6 @@ import {
   Playfair_Display,
   Poppins,
   Roboto_Mono,
-  Space_Grotesk,
 } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -60,7 +59,20 @@ const customQuicksand = localFont({
   variable: "--font-custom-quicksand",
 });
 const customMerriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-custom-merriweather" });
-const customSpaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-custom-space-grotesk" });
+// customSpaceGrotesk -- di-self-host, akar masalah SAMA PERSIS dengan
+// customQuicksand di atas (metadata Space Grotesk yang dibundel Next.js
+// 16.3.0 juga menunjuk ke URL fonts.gstatic.com yang sudah 404), ditemukan
+// belakangan lewat build Docker CI yang gagal total (bukan cuma warning
+// lokal). File app/fonts/space-grotesk-latin.woff2 diunduh manual dari URL
+// Space Grotesk v22 latin subset yang BENAR saat ini.
+const customSpaceGrotesk = localFont({
+  src: [
+    { path: "./fonts/space-grotesk-latin.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/space-grotesk-latin.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-custom-space-grotesk",
+});
 
 export const metadata: Metadata = {
   title: "Jeonme — Satu Link, Peluang Tanpa Batas",
