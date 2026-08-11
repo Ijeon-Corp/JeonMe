@@ -191,6 +191,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             telegram: page.social_telegram,
             email: page.social_email,
           },
+          layoutVariant: page.layout_variant,
         }}
         interactive
       />

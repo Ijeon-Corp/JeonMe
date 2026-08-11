@@ -163,6 +163,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             telegram: page.social_telegram,
             email: page.social_email,
           },
+          layoutVariant: page.layout_variant,
         }}
         interactive
       />

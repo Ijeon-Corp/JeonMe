@@ -1,0 +1,14 @@
+-- Varian layout header halaman bio (permintaan langsung pengguna, 11
+-- Agustus 2026, susulan fitur Quick Setup): "yang saya minta layouting
+-- nya juga berbeda" -- template Quick Setup SEBELUMNYA cuma beda tema
+-- warna & isi blok, susunan visual (avatar+nama+bio+tautan) selalu SAMA
+-- PERSIS (satu kolom, avatar bulat di tengah). Dikonfirmasi ke pengguna
+-- dulu (dampaknya ke SEMUA halaman bio Jeonme, bukan cuma Quick Setup,
+-- karena PagePreview dipakai bersama halaman publik sungguhan) sebelum
+-- menambah kolom ini.
+--
+-- DEFAULT 'centered' SENGAJA supaya SEMUA halaman yang sudah ada (baik
+-- dibuat manual maupun lewat Quick Setup versi sebelumnya) tetap tampil
+-- PERSIS SAMA seperti sebelum migrasi ini -- tidak ada perubahan visual
+-- diam-diam untuk halaman yang sudah dipublikasikan.
+ALTER TABLE pages ADD COLUMN layout_variant VARCHAR(20) NOT NULL DEFAULT 'centered';

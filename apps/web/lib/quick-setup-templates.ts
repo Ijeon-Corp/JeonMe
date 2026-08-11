@@ -111,6 +111,15 @@ export interface QuickSetupTemplate {
   links: QuickSetupTemplateLink[];
   blocks?: QuickSetupTemplateBlock[];
   monetizationHint?: string;
+  // layoutVariant -- permintaan langsung pengguna: "yang saya minta
+  // layouting nya juga berbeda" -- template SEBELUMNYA cuma beda tema
+  // warna & isi blok, susunan avatar+nama+bio SELALU sama (bulat besar di
+  // tengah). Kosong/undefined = "centered" (bawaan). "banner" (avatar
+  // lebih kecil rata kiri sebaris ala kartu profil bisnis) dipakai untuk
+  // kategori business/shop/education/local/portfolio yang secara alami
+  // terasa lebih "profesional/formal" -- creator/entertainment/lifestyle
+  // SENGAJA dibiarkan "centered" (gaya Linktree kreator klasik).
+  layoutVariant?: "centered" | "banner";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -256,6 +265,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "business-profile",
     category: "business",
+    layoutVariant: "banner",
     label: "Business Profile",
     description: "Website, WhatsApp, lokasi, kontak",
     theme: "ocean",
@@ -270,6 +280,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "company",
     category: "business",
+    layoutVariant: "banner",
     label: "Company",
     description: "Tentang, layanan, portofolio, kontak",
     theme: "minimal",
@@ -285,6 +296,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "freelancer",
     category: "business",
+    layoutVariant: "banner",
     label: "Freelancer",
     description: "Portofolio, layanan, harga, kontak",
     theme: "forest",
@@ -299,6 +311,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "consultant",
     category: "business",
+    layoutVariant: "banner",
     label: "Consultant",
     description: "Layanan, booking, testimoni",
     theme: "noir",
@@ -313,6 +326,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "agency",
     category: "business",
+    layoutVariant: "banner",
     label: "Agency",
     description: "Layanan, portofolio, daftar klien",
     theme: "midnight",
@@ -326,6 +340,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "professional-cv",
     category: "business",
+    layoutVariant: "banner",
     label: "Professional CV",
     description: "Pengalaman, keahlian, pendidikan, kontak",
     theme: "minimal",
@@ -341,6 +356,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "online-store",
     category: "shop",
+    layoutVariant: "banner",
     label: "Online Store",
     description: "Produk, marketplace, promosi",
     theme: "peach",
@@ -352,6 +368,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fashion-store",
     category: "shop",
+    layoutVariant: "banner",
     label: "Fashion Store",
     description: "Katalog, Instagram, Shopee/Tokopedia",
     theme: "rose",
@@ -362,6 +379,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "beauty-store",
     category: "shop",
+    layoutVariant: "banner",
     label: "Beauty Store",
     description: "Produk, katalog, booking",
     theme: "peach",
@@ -376,6 +394,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "food-beverage",
     category: "shop",
+    layoutVariant: "banner",
     label: "Food & Beverage",
     description: "Menu, pemesanan, lokasi",
     theme: "amber",
@@ -390,6 +409,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "small-business",
     category: "shop",
+    layoutVariant: "banner",
     label: "Small Business",
     description: "Produk, WhatsApp, marketplace",
     theme: "mint",
@@ -400,6 +420,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "affiliate-store",
     category: "shop",
+    layoutVariant: "banner",
     label: "Affiliate Store",
     description: "Rekomendasi produk + tautan afiliasi",
     theme: "bloom",
@@ -412,6 +433,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "teacher",
     category: "education",
+    layoutVariant: "banner",
     label: "Teacher",
     description: "Info kelas, materi, kontak",
     theme: "ocean",
@@ -426,6 +448,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "tutor",
     category: "education",
+    layoutVariant: "banner",
     label: "Tutor",
     description: "Kelas, jadwal, booking",
     theme: "forest",
@@ -437,6 +460,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "course-creator",
     category: "education",
+    layoutVariant: "banner",
     label: "Course Creator",
     description: "Kelas, testimoni, pendaftaran",
     theme: "golden",
@@ -448,6 +472,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "student",
     category: "education",
+    layoutVariant: "banner",
     label: "Student",
     description: "Portofolio, proyek, media sosial",
     theme: "minimal",
@@ -458,6 +483,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "education-brand",
     category: "education",
+    layoutVariant: "banner",
     label: "Education Brand",
     description: "Kelas, event, komunitas",
     theme: "ocean",
@@ -520,6 +546,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "restaurant",
     category: "local",
+    layoutVariant: "banner",
     label: "Restaurant",
     description: "Menu, reservasi, lokasi, WhatsApp",
     theme: "amber",
@@ -534,6 +561,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "cafe",
     category: "local",
+    layoutVariant: "banner",
     label: "Cafe",
     description: "Menu, Instagram, Google Maps",
     theme: "peach",
@@ -544,6 +572,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "barbershop",
     category: "local",
+    layoutVariant: "banner",
     label: "Barbershop",
     description: "Layanan, daftar harga, booking",
     theme: "noir",
@@ -559,6 +588,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "salon",
     category: "local",
+    layoutVariant: "banner",
     label: "Salon",
     description: "Layanan, portofolio, booking",
     theme: "rose",
@@ -570,6 +600,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "photographer",
     category: "local",
+    layoutVariant: "banner",
     label: "Photographer",
     description: "Portofolio, harga, booking",
     theme: "noir",
@@ -585,6 +616,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "event-organizer",
     category: "local",
+    layoutVariant: "banner",
     label: "Event Organizer",
     description: "Event, portofolio, kontak",
     theme: "golden",
@@ -648,6 +680,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "portfolio",
     category: "special",
+    layoutVariant: "banner",
     label: "Portfolio",
     description: "Proyek + keahlian + kontak",
     theme: "minimal",

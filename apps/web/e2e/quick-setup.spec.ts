@@ -147,4 +147,41 @@ test.describe("Quick Setup", () => {
     const faqRow = page.locator("div", { hasText: "Pertanyaan Umum" }).filter({ hasText: "FAQ" }).first();
     await expect(faqRow).toBeVisible();
   });
+
+  test("varian layout Banner (avatar rata kiri) sungguhan tampil beda dari Centered di halaman publik", async ({ page }) => {
+    // Susulan: "layout nya itu dibuat beda jangan monoton sama semua" --
+    // ini mengubah komponen PagePreview yang dipakai halaman publik
+    // SUNGGUHAN semua pengguna (dikonfirmasi dulu ke pengguna sebelum
+    // dikerjakan, bukan cuma preview dashboard) + kolom database baru
+    // (layout_variant), jadi WAJIB diverifikasi sampai ke halaman publik
+    // asli, bukan cuma dashboard -- perbandingan posisi avatar (kiri vs
+    // tengah) dicek lewat bounding box, bukan nama kelas CSS (supaya
+    // tidak rapuh kalau susunan class Tailwind berubah).
+    const { username } = await registerAndLogin(page, "quicksetup4");
+    await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("company");
+    await page.getByText("Company", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      // Avatar placeholder (tanpa foto) SATU-satunya elemen dengan
+      // kombinasi kelas rounded-full + text-2xl (ikon sosial/tautan lain
+      // rounded-full juga tapi tidak text-2xl) -- lebih spesifik daripada
+      // cocok teks huruf awal username yang gampang tabrakan.
+      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
+      const viewportWidth = page.viewportSize()!.width;
+      // Banner: avatar nempel ke sisi kiri kolom konten (jauh dari
+      // tengah viewport). Centered (bawaan/pola lama): avatar ada persis
+      // di tengah viewport. max-w-md kolom konten ada di tengah viewport
+      // (mx-auto), jadi avatar kiri (banner) posisinya jelas TIDAK di
+      // tengah viewport secara horizontal.
+      expect(avatarBox).not.toBeNull();
+      const avatarCenterX = avatarBox!.x + avatarBox!.width / 2;
+      expect(Math.abs(avatarCenterX - viewportWidth / 2)).toBeGreaterThan(60);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
 });

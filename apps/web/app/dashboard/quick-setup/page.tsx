@@ -21,6 +21,7 @@ function buildPreviewData(t: QuickSetupTemplate, username: string, avatarUrl: st
     bio: t.bio,
     avatarUrl,
     theme: t.theme,
+    layoutVariant: t.layoutVariant ?? "centered",
     links: orderedTemplateItems(t).map((item) => ({
       id: item.title,
       title: item.title,
@@ -113,8 +114,13 @@ export default function QuickSetupPage() {
 
       // Bio kreator yang SUDAH diisi tidak boleh ditimpa diam-diam --
       // saran bio template cuma dipakai kalau bio masih kosong.
+      // layout_variant SELALU ikut diterapkan (bukan cuma kalau bio
+      // kosong) -- ini bagian dari "bentuk" template, sama seperti tema.
       const page = await getMyPage();
-      await updateMyPage(page.bio.trim() ? { theme: t.theme } : { theme: t.theme, bio: t.bio });
+      const layoutVariant = t.layoutVariant ?? "centered";
+      await updateMyPage(
+        page.bio.trim() ? { theme: t.theme, layout_variant: layoutVariant } : { theme: t.theme, bio: t.bio, layout_variant: layoutVariant }
+      );
 
       // Sequential (bukan Promise.all) -- posisi tautan dihitung server-side
       // dari MAX(position)+1 tiap insert (links & blocks BERBAGI kolom
@@ -257,8 +263,14 @@ export default function QuickSetupPage() {
                 pointer-events-none -- mockup MURNI visual, semua klik di
                 area ini harus jatuh ke div pembungkus (buka modal), bukan
                 ke tombol ShareButton/tautan sungguhan di dalam PagePreview. */}
-            <div className="relative h-52 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-              <div className="h-full [zoom:0.3]">
+            {/* Permintaan langsung pengguna: "dibuat card lebih tinggi"
+                supaya bentuknya lebih mirip pratinjau sungguhan (bukan
+                cuma cuplikan sempit) -- tinggi & zoom dinaikkan supaya
+                lebih banyak konten (avatar+bio+beberapa tautan) terlihat
+                proporsional, pola sama seperti kotak pratinjau modal/
+                LivePreviewPanel, cuma disesuaikan untuk kartu galeri. */}
+            <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+              <div className="h-full [zoom:0.42]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.avatar_url ?? "")} />
               </div>
             </div>
@@ -300,6 +312,12 @@ export default function QuickSetupPage() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Tema</p>
                   <p className="mt-0.5 text-ink">{PAGE_THEMES[selected.theme as keyof typeof PAGE_THEMES]?.label ?? selected.theme}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
+                  <p className="mt-0.5 text-ink">
+                    {selected.layoutVariant === "banner" ? "Banner (rata kiri sebaris)" : "Centered (di tengah)"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Saran Bio</p>

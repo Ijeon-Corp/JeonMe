@@ -173,6 +173,13 @@ export interface PagePreviewData {
   // kontak sosial di bawah bio. Key kosong/tidak ada = platform itu belum
   // diisi, ikonnya tidak dirender (lihat buildFilledSocialLinks).
   social?: Partial<Record<SocialPlatformKey, string>>;
+  // layoutVariant -- permintaan langsung pengguna, 11 Agustus 2026
+  // (susulan Quick Setup, "layouting nya juga berbeda"): "centered"
+  // (bawaan, TIDAK BERUBAH dari sebelumnya -- undefined juga jatuh balik
+  // ke ini) atau "banner" (avatar+nama+bio rata kiri sebaris ala kartu
+  // profil bisnis). Cuma berlaku di layout bio biasa & Toko
+  // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
+  layoutVariant?: "centered" | "banner";
 }
 
 interface PreviewSourcePage {
@@ -212,6 +219,7 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
+  layout_variant?: "centered" | "banner";
 }
 
 interface PreviewSourceLink {
@@ -268,6 +276,7 @@ export function toPreviewData(
       telegram: page.social_telegram,
       email: page.social_email,
     },
+    layoutVariant: page.layout_variant,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -476,11 +485,11 @@ function clampScale(value: number) {
 // TERPISAH dari daftar Tautan biasa. Dipakai di layout bio biasa & Toko
 // (ProdukPagePreview) -- TIDAK di LandingPagePreview (tidak punya
 // avatar/bio-header sama sekali, lihat catatan pageType di atas).
-function renderSocialRow(social: PagePreviewData["social"]) {
+function renderSocialRow(social: PagePreviewData["social"], align: "center" | "left" = "center") {
   const items = buildFilledSocialLinks(social ?? {});
   if (items.length === 0) return null;
   return (
-    <div className="relative mt-3 flex flex-wrap items-center justify-center gap-2">
+    <div className={`relative mt-3 flex flex-wrap items-center gap-2 ${align === "center" ? "justify-center" : "justify-start"}`}>
       {items.map((item) => (
         <a
           key={item.key}
@@ -493,6 +502,72 @@ function renderSocialRow(social: PagePreviewData["social"]) {
           <item.Icon className="h-3.5 w-3.5" />
         </a>
       ))}
+    </div>
+  );
+}
+
+// renderBioHeader -- permintaan langsung pengguna, 11 Agustus 2026
+// (susulan Quick Setup, "layouting nya juga berbeda"): dua susunan
+// avatar+nama+bio -- "centered" (bawaan, TIDAK BERUBAH dari sebelumnya,
+// avatar besar di tengah) atau "banner" (avatar lebih kecil rata kiri
+// sebaris dengan nama+bio, ala kartu profil bisnis). Diekstrak jadi SATU
+// fungsi (sebelumnya JSX identik terduplikasi persis di layout bio biasa
+// & ProdukPagePreview) supaya kedua tempat itu otomatis dapat varian
+// banner tanpa implementasi ganda -- konsisten dengan prinsip paritas
+// halaman utama/Toko di proyek ini.
+function renderBioHeader(
+  data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
+  theme: PageTheme
+) {
+  const isBanner = data.layoutVariant === "banner";
+  const avatarSize = isBanner ? "h-16 w-16" : "h-24 w-24";
+
+  const avatar = data.avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={data.avatarUrl} alt={data.username} className={`relative ${avatarSize} flex-shrink-0 rounded-full object-cover ${theme.avatarRing}`} />
+  ) : (
+    <div
+      className={`relative flex ${avatarSize} flex-shrink-0 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
+    >
+      {data.username.slice(0, 1).toUpperCase()}
+    </div>
+  );
+
+  const nameHeading = (
+    <h1
+      className={`flex items-center gap-1.5 font-heading text-base font-bold ${isBanner ? "" : "justify-center"} ${theme.name}`}
+      style={theme.nameStyle}
+    >
+      {data.displayName || data.username}
+      {data.isVerified && (
+        <span title="Kreator terverifikasi">
+          <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+        </span>
+      )}
+    </h1>
+  );
+
+  if (isBanner) {
+    return (
+      <div className="relative flex w-full items-center gap-4 text-left">
+        {avatar}
+        <div className="relative min-w-0 flex-1">
+          {nameHeading}
+          {data.bio && <p className={`mt-1 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social, "left")}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative">{avatar}</div>
+      <div className="relative mt-5 text-center">
+        {nameHeading}
+        {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+        {renderSocialRow(data.social)}
+      </div>
     </div>
   );
 }
@@ -752,45 +827,15 @@ export default function PagePreview({
           MAUPUN halaman publik sungguhan, di lebar layar berapa pun. */}
       <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
         <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
-        <div className="relative flex flex-col items-center">
+        <div className="relative w-full">
           {theme.glow !== "hidden" && (
             <div
               aria-hidden
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-
-          <div className="relative">
-            {data.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={data.avatarUrl}
-                alt={data.username}
-                className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
-              />
-            ) : (
-              <div
-                className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
-              >
-                {data.username.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <div className="relative mt-5 text-center">
-            <h1
-              className={`flex items-center justify-center gap-1.5 font-heading text-base font-bold ${theme.name}`}
-              style={theme.nameStyle}
-            >
-              {data.displayName || data.username}
-              {data.isVerified && (
-                <span title="Kreator terverifikasi">
-                  <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
-                </span>
-              )}
-            </h1>
-            {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
-            {renderSocialRow(data.social)}
+          <div className={`relative ${data.layoutVariant === "banner" ? "" : "flex flex-col items-center"}`}>
+            {renderBioHeader(data, theme)}
           </div>
         </div>
 
@@ -1329,45 +1374,15 @@ function ProdukPagePreview({
           soal bug "posisi stiker beda antara pratinjau & halaman publik". */}
       <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-14">
         <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
-        <div className="relative flex flex-col items-center">
+        <div className="relative w-full">
           {theme.glow !== "hidden" && (
             <div
               aria-hidden
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-
-          <div className="relative">
-            {data.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={data.avatarUrl}
-                alt={data.username}
-                className={`relative h-24 w-24 rounded-full object-cover ${theme.avatarRing}`}
-              />
-            ) : (
-              <div
-                className={`relative flex h-24 w-24 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
-              >
-                {data.username.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <div className="relative mt-5 text-center">
-            <h1
-              className={`flex items-center justify-center gap-1.5 font-heading text-base font-bold ${theme.name}`}
-              style={theme.nameStyle}
-            >
-              {data.displayName || data.username}
-              {data.isVerified && (
-                <span title="Kreator terverifikasi">
-                  <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
-                </span>
-              )}
-            </h1>
-            {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
-            {renderSocialRow(data.social)}
+          <div className={`relative ${data.layoutVariant === "banner" ? "" : "flex flex-col items-center"}`}>
+            {renderBioHeader(data, theme)}
           </div>
         </div>
 
