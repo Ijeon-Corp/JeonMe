@@ -33,6 +33,7 @@ import {
   IconLink,
   IconLogout,
   IconMenu,
+  IconPaintbrush,
   IconPhone,
   IconPlayCircle,
   IconSettings,
@@ -72,10 +73,16 @@ const NAV_ITEMS: NavEntry[] = [
     type: "group",
     label: "Halaman Saya",
     items: [
+      // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026:
+      // menu template siap-pakai (tema+bio+tautan starter sekaligus),
+      // ditaruh PALING ATAS grup ini karena sifatnya titik awal/wizard
+      // (dipakai sesekali di awal, beda dari Link Bio/Toko/Desain yang
+      // dikelola terus-menerus).
+      { href: "/dashboard/quick-setup", label: "Quick Setup", icon: IconSparkle },
       { href: "/dashboard/links", label: "Link Bio", icon: IconLink },
       { href: "/dashboard/products", label: "Toko", icon: IconBox },
       { href: "/dashboard/statistik", label: "Statistik", icon: IconChart },
-      { href: "/dashboard/design", label: "Desain", icon: IconSparkle },
+      { href: "/dashboard/design", label: "Desain", icon: IconPaintbrush },
       { href: "/dashboard/pages", label: "Halaman Tambahan", icon: IconGlobe },
     ],
   },
