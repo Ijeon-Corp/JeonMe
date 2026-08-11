@@ -197,6 +197,21 @@ interface PreviewSourcePage {
   is_verified?: boolean;
   is_premium?: boolean;
   hide_watermark?: boolean;
+  // social_instagram..social_email -- permintaan langsung pengguna, 11
+  // Agustus 2026: sumber untuk field `social` PagePreviewData, supaya
+  // Pratinjau Langsung di dashboard (dibangun lewat toPreviewData ini, BEDA
+  // dari mapping halaman publik sungguhan di app/[username]/page.tsx &
+  // app/p/[slug]/page.tsx) ikut menampilkan ikon kontak sosial, bukan cuma
+  // halaman publik setelah diterbitkan.
+  social_instagram?: string;
+  social_tiktok?: string;
+  social_facebook?: string;
+  social_whatsapp?: string;
+  social_youtube?: string;
+  social_x?: string;
+  social_linkedin?: string;
+  social_telegram?: string;
+  social_email?: string;
 }
 
 interface PreviewSourceLink {
@@ -242,6 +257,17 @@ export function toPreviewData(
     isPremium: page.is_premium ?? false,
     hideWatermark: page.hide_watermark ?? true,
     stickers: page.stickers,
+    social: {
+      instagram: page.social_instagram,
+      tiktok: page.social_tiktok,
+      facebook: page.social_facebook,
+      whatsapp: page.social_whatsapp,
+      youtube: page.social_youtube,
+      x: page.social_x,
+      linkedin: page.social_linkedin,
+      telegram: page.social_telegram,
+      email: page.social_email,
+    },
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
