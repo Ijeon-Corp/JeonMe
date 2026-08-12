@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPublicPageBySlug } from "@/lib/api-client";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
+import PublicPageFrame from "@/components/PublicPageFrame";
 
 type PageParams = {
   params: Promise<{ slug: string }>;
@@ -50,9 +51,10 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
   }
 
   return (
-    <>
+    <PublicPageFrame>
       <PageAnalytics username={page.username} slug={slug} />
       <PagePreview
+        rootClassName="min-h-screen sm:min-h-0"
         data={{
           id: page.id,
           username: page.username,
@@ -167,6 +169,6 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
         }}
         interactive
       />
-    </>
+    </PublicPageFrame>
   );
 }

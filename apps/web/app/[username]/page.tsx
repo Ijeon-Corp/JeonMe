@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getPublicPage, resolveUsernameRedirect } from "@/lib/api-client";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
+import PublicPageFrame from "@/components/PublicPageFrame";
 
 type PageParams = {
   params: Promise<{ username: string }>;
@@ -73,9 +74,10 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
   }
 
   return (
-    <>
+    <PublicPageFrame>
       <PageAnalytics username={page.username} />
       <PagePreview
+        rootClassName="min-h-screen sm:min-h-0"
         data={{
           id: page.id,
           username: page.username,
@@ -195,6 +197,6 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
         }}
         interactive
       />
-    </>
+    </PublicPageFrame>
   );
 }
