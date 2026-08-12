@@ -238,6 +238,12 @@ export interface PublicPage {
   donation: PublicDonation | null;
   lead_capture: PublicLeadCapture | null;
   social_proof: SocialProofFeed | null;
+  // analytics -- Modul Analitik Pihak Ketiga (permintaan langsung
+  // pengguna, 12 Agustus 2026): null kalau kreator belum mengisi Pixel
+  // ID/GA Measurement ID SAMA SEKALI, ATAU bukan Premium (gerbang
+  // ditegakkan backend, lihat publicAnalytics di page.go) -- TIDAK ADA
+  // access token di sini, itu SECRET yang cuma dipakai server-side.
+  analytics: PublicAnalytics | null;
   seo_title: string;
   seo_description: string;
   noindex: boolean;
@@ -1888,6 +1894,51 @@ export function getSocialProofSettings() {
 export function upsertSocialProofSettings(input: SocialProofSettings) {
   return apiFetch<{ message: string }>(
     "/dashboard/social-proof",
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// ---------- Dashboard: Analitik Pihak Ketiga (permintaan langsung
+// pengguna, 12 Agustus 2026, referensi tangkapan layar panel "Analytics"
+// Linktree) ----------
+
+// PublicAnalytics -- versi PUBLIK (dikirim ke halaman jeonme.com/{username}
+// milik siapa pun yang mengunjunginya), TANPA fb_access_token -- itu
+// SECRET, cuma dipakai server (analytics.go, Conversions API). Beda dari
+// AnalyticsSettings di bawah (versi DASHBOARD, cuma kreator pemilik akun
+// yang bisa memuatnya, dan fb_access_token TETAP tidak pernah dikirim
+// utuh -- cuma fb_access_token_set).
+export interface PublicAnalytics {
+  fb_pixel_id: string;
+  ga_measurement_id: string;
+  utm_enabled: boolean;
+}
+
+export interface AnalyticsSettings {
+  fb_pixel_id: string;
+  fb_access_token_set: boolean;
+  ga_measurement_id: string;
+  utm_enabled: boolean;
+  is_premium: boolean;
+}
+
+export function getAnalyticsSettings() {
+  return apiFetch<AnalyticsSettings>("/dashboard/analytics-settings", { method: "GET" }, { auth: true });
+}
+
+// upsertAnalyticsSettings -- fb_access_token: undefined = TIDAK disentuh
+// (kreator cuma ganti field lain), "" = SENGAJA dihapus, string berisi =
+// diisi/diganti. Lihat catatan sama di backend (upsertAnalyticsSettingsRequest,
+// analytics_settings.go).
+export function upsertAnalyticsSettings(input: {
+  fb_pixel_id: string;
+  fb_access_token?: string;
+  ga_measurement_id: string;
+  utm_enabled: boolean;
+}) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/analytics-settings",
     { method: "PUT", body: JSON.stringify(input) },
     { auth: true }
   );

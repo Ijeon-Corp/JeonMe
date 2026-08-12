@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getPublicPage, resolveUsernameRedirect } from "@/lib/api-client";
+import AnalyticsScripts from "@/components/AnalyticsScripts";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
@@ -75,6 +76,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
 
   return (
     <PublicPageFrame>
+      <AnalyticsScripts analytics={page.analytics} />
       <PageAnalytics username={page.username} />
       <PagePreview
         rootClassName="min-h-screen sm:min-h-0"
@@ -194,6 +196,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             email: page.social_email,
           },
           layoutVariant: page.layout_variant,
+          utmEnabled: page.analytics?.utm_enabled ?? false,
         }}
         interactive
       />

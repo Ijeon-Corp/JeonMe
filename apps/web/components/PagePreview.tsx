@@ -183,6 +183,33 @@ export interface PagePreviewData {
   // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
   layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  // utmEnabled -- Modul Analitik Pihak Ketiga (permintaan langsung
+  // pengguna, 12 Agustus 2026): kalau true, SETIAP tautan keluar
+  // (TrackedLink) ditandai utm_source=jeonme&utm_medium=social&
+  // utm_campaign=<judul tautan> sebelum dibuka pengunjung -- lihat
+  // buildUtmHref. Cuma dikirim backend kalau kreator Premium (gerbang di
+  // publicAnalytics, page.go) -- undefined/false di sini berarti "tidak
+  // menandai apa pun", TIDAK ADA bedanya secara perilaku.
+  utmEnabled?: boolean;
+}
+
+// buildUtmHref -- permintaan langsung pengguna: "Parameter kampanye
+// diatur otomatis dari judul tiap tautan" (referensi Linktree). Dilewati
+// diam-diam (kembalikan url apa adanya) untuk URL yang bukan http/https
+// (mailto:, tel:, javascript:, dst) ATAU yang gagal di-parse -- UTM cuma
+// masuk akal untuk kunjungan halaman web sungguhan.
+function buildUtmHref(url: string, title: string, utmEnabled: boolean | undefined): string {
+  if (!utmEnabled) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return url;
+    parsed.searchParams.set("utm_source", "jeonme");
+    parsed.searchParams.set("utm_medium", "social");
+    parsed.searchParams.set("utm_campaign", title);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 interface PreviewSourcePage {
@@ -690,7 +717,7 @@ function renderBioHeader(
 function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
-  data: Pick<PagePreviewData, "username" | "pageSlug">,
+  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled">,
   interactive: boolean
 ) {
   // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan
@@ -828,7 +855,7 @@ function renderLinkOrBlock(
           username={data.username}
           pageSlug={data.pageSlug}
           linkId={link.id}
-          href={link.url}
+          href={buildUtmHref(link.url, link.title, data.utmEnabled)}
           className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
         >
           <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
@@ -1355,7 +1382,7 @@ function LandingPagePreview({
                   username={data.username}
                   pageSlug={data.pageSlug}
                   linkId={block.id}
-                  href={block.url}
+                  href={buildUtmHref(block.url, block.title, data.utmEnabled)}
                   className={`flex w-full max-w-sm items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
                 >
                   {block.title}
@@ -1442,7 +1469,7 @@ function LandingPagePreview({
                   username={data.username}
                   pageSlug={data.pageSlug}
                   linkId={block.id}
-                  href={block.url}
+                  href={buildUtmHref(block.url, block.title, data.utmEnabled)}
                   className={`flex w-full items-center justify-between gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 >
                   <span className="truncate">{block.title}</span>

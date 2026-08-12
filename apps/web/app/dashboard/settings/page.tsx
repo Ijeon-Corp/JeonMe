@@ -2,7 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconChevronRight, IconGlobe, IconPencil, IconSearch, IconShield, IconStar, IconTrash, IconUsers, IconWallet } from "@/components/icons";
+import {
+  IconChart,
+  IconChevronRight,
+  IconGlobe,
+  IconPencil,
+  IconSearch,
+  IconShield,
+  IconStar,
+  IconTrash,
+  IconUsers,
+  IconWallet,
+} from "@/components/icons";
 
 // Modul Settings §1: search box di atas daftar menu settings, filter
 // client-side atas label + deskripsi -- fitur yang TIDAK ada di Lynk.id,
@@ -96,6 +107,13 @@ const SETTINGS_GROUPS: { label: string; items: SettingsItem[] }[] = [
         title: "Tim & Kolaborator",
         description: "Undang admin dengan akses tautan/produk/desain.",
         icon: IconUsers,
+        badgeClass: "bg-primary-subtle text-primary",
+      },
+      {
+        href: "/dashboard/analytics",
+        title: "Analitik",
+        description: "Facebook Pixel, Google Analytics, parameter UTM.",
+        icon: IconChart,
         badgeClass: "bg-primary-subtle text-primary",
       },
     ],

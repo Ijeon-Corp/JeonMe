@@ -11,6 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jeonme/api/internal/crypto"
+	"github.com/jeonme/api/internal/metaconversions"
 )
 
 // AnalyticsHandler mengimplementasikan REQ-F-601 (pencatatan klik/kunjungan),
@@ -27,10 +30,16 @@ import (
 // User-Agent yang SUDAH ada di tiap request, tanpa dependensi eksternal baru.
 type AnalyticsHandler struct {
 	DB *pgxpool.Pool
+	// EncryptionKey -- Modul Analitik Pihak Ketiga (permintaan langsung
+	// pengguna, 12 Agustus 2026): dipakai mendekripsi fb_access_token_encrypted
+	// (analytics_settings) sebelum memanggil Conversions API server-side
+	// (lihat maybeSendConversionsEvent) -- token TIDAK PERNAH disimpan
+	// plaintext, sama seperti account_number_encrypted (payout_methods).
+	EncryptionKey []byte
 }
 
-func NewAnalyticsHandler(db *pgxpool.Pool) *AnalyticsHandler {
-	return &AnalyticsHandler{DB: db}
+func NewAnalyticsHandler(db *pgxpool.Pool, encryptionKey []byte) *AnalyticsHandler {
+	return &AnalyticsHandler{DB: db, EncryptionKey: encryptionKey}
 }
 
 type trackEventRequest struct {
@@ -90,7 +99,7 @@ func (h *AnalyticsHandler) Track(c *gin.Context) {
 		return
 	}
 
-	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent())
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), "https://jeonme.com/"+username)
 	c.Status(http.StatusNoContent)
 }
 
@@ -116,11 +125,11 @@ func (h *AnalyticsHandler) TrackBySlug(c *gin.Context) {
 		return
 	}
 
-	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent())
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), "https://jeonme.com/p/"+slug)
 	c.Status(http.StatusNoContent)
 }
 
-func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, req trackEventRequest, userAgent string) {
+func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, req trackEventRequest, userAgent, clientIP, sourceURL string) {
 	var linkID *string
 	if req.LinkID != "" {
 		linkID = &req.LinkID
@@ -136,6 +145,54 @@ func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, 
 		INSERT INTO analytics_events (id, page_id, event_type, link_id, product_id, referrer, device_type, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 	`, uuid.NewString(), pageID, req.EventType, linkID, productID, req.Referrer, deviceType)
+
+	go h.maybeSendConversionsEvent(pageID, req.EventType, sourceURL, clientIP, userAgent)
+}
+
+// maybeSendConversionsEvent -- Modul Analitik Pihak Ketiga (permintaan
+// langsung pengguna, 12 Agustus 2026): kirim event server-side ke
+// Facebook Conversions API kalau kreator SUDAH mengisi Pixel ID + Access
+// Token DAN Premium (gerbang sama seperti publicAnalytics di page.go).
+// SELALU jalan di goroutine terpisah dengan context BARU (bukan context
+// permintaan HTTP asal, yang sudah di-cancel begitu Track/TrackBySlug
+// selesai membalas 204 -- Conversions API ke graph.facebook.com bisa
+// lebih lambat dari itu) -- kegagalan APA PUN di sini (belum
+// dikonfigurasi, token salah, Meta API down) diam-diam diabaikan, sama
+// seperti insertTrackEvent di atas: analytics tidak boleh pernah
+// mengganggu pengalaman pengunjung halaman publik.
+func (h *AnalyticsHandler) maybeSendConversionsEvent(pageID, eventType, sourceURL, clientIP, userAgent string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	var userID, pixelID, encryptedToken string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT pg.user_id, a.fb_pixel_id, a.fb_access_token_encrypted
+		FROM pages pg JOIN analytics_settings a ON a.user_id = pg.user_id
+		WHERE pg.id = $1 AND a.fb_pixel_id != '' AND a.fb_access_token_encrypted IS NOT NULL AND a.fb_access_token_encrypted != ''
+	`, pageID).Scan(&userID, &pixelID, &encryptedToken); err != nil {
+		return
+	}
+	if !isPremiumUser(ctx, h.DB, userID) {
+		return
+	}
+	token, err := crypto.Decrypt(h.EncryptionKey, encryptedToken)
+	if err != nil {
+		return
+	}
+
+	metaEventName := "PageView"
+	switch eventType {
+	case "click":
+		metaEventName = "LinkClick"
+	case "product_click":
+		metaEventName = "ViewContent"
+	}
+
+	client := metaconversions.NewClient(pixelID, token)
+	_ = client.SendEvent(ctx, metaEventName, sourceURL, metaconversions.UserData{
+		ClientIPAddress: clientIP,
+		ClientUserAgent: userAgent,
+	})
 }
 
 // resolveDateRange — No.86: mendukung DUA cara memilih rentang: preset

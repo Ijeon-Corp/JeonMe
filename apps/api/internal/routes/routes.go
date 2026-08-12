@@ -46,7 +46,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	subscription := handlers.NewSubscriptionHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PremiumMonthlyPriceIDR, cfg.PremiumYearlyPriceIDR)
 	encryptionKey := []byte(cfg.EncryptionKey)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
-	analytics := handlers.NewAnalyticsHandler(db)
+	analytics := handlers.NewAnalyticsHandler(db, encryptionKey)
+	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
 	account := handlers.NewAccountHandler(db, rdb, s3)
 	admin := handlers.NewAdminHandler(db)
 	kyc := handlers.NewKycHandler(db, s3)
@@ -357,6 +358,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// No.76 (Sprint 8): notifikasi social proof "X baru saja membeli".
 			dashboard.GET("/social-proof", socialProof.Get)
 			dashboard.PUT("/social-proof", socialProof.Upsert)
+
+			// Modul Analitik Pihak Ketiga (permintaan langsung pengguna, 12
+			// Agustus 2026): Facebook Pixel + Conversions API, Google Analytics
+			// (GA4), toggle UTM.
+			dashboard.GET("/analytics-settings", analyticsSettings.Get)
+			dashboard.PUT("/analytics-settings", analyticsSettings.Upsert)
 
 			// No.81 (Sprint 9): domain kustom -- lihat catatan lingkup di
 			// CustomDomainHandler (bagian aplikasi saja, belum wiring infra).

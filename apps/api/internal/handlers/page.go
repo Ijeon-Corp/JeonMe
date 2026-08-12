@@ -170,6 +170,7 @@ type publicPageResponse struct {
 	Donation      *publicDonation    `json:"donation"`
 	LeadCapture   *publicLeadCapture `json:"lead_capture"`
 	SocialProof   *publicSocialProof `json:"social_proof"`
+	Analytics     *publicAnalytics   `json:"analytics"`
 	IsVerified    bool               `json:"is_verified"`
 	Events        []publicEvent      `json:"events"`
 	Bookings      []publicBooking    `json:"bookings"`
@@ -240,6 +241,21 @@ type publicSocialProof struct {
 	DisplaySeconds  int              `json:"display_seconds"`
 	IntervalSeconds int              `json:"interval_seconds"`
 	Recent          []recentPurchase `json:"recent"`
+}
+
+// publicAnalytics -- Modul Analitik Pihak Ketiga (permintaan langsung
+// pengguna, 12 Agustus 2026): fb_access_token_encrypted SENGAJA TIDAK ADA
+// di sini -- itu SECRET, cuma dipakai server-side (analytics.go, kirim
+// event Conversions API), TIDAK PERNAH boleh sampai ke browser pengunjung.
+// Cuma FbPixelID/GaMeasurementID yang memang publik (dipakai browser
+// menjalankan skrip fbq()/gtag.js sendiri). nil kalau kreator belum
+// mengisi SATU PUN dari keduanya, ATAU bukan Premium (gerbang premium
+// ditegakkan di sini, sama seperti hideWatermark -- lihat
+// finishPublicPageResponse).
+type publicAnalytics struct {
+	FbPixelID       string `json:"fb_pixel_id"`
+	GaMeasurementID string `json:"ga_measurement_id"`
+	UtmEnabled      bool   `json:"utm_enabled"`
 }
 
 // publicDonation -- No.71: blok dukungan/donasi, TIDAK ikut array Products
@@ -681,6 +697,21 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		`, userID)
 		if len(recent) > 0 {
 			resp.SocialProof = &publicSocialProof{DisplaySeconds: spDisplaySeconds, IntervalSeconds: spIntervalSeconds, Recent: recent}
+		}
+	}
+
+	// Modul Analitik Pihak Ketiga -- resp.IsPremium SUDAH dihitung di atas
+	// (baris awal fungsi ini), tinggal dipakai ulang sebagai gerbang, TIDAK
+	// query isPremiumUser dua kali. fb_access_token_encrypted SENGAJA TIDAK
+	// di-SELECT sama sekali di sini (bukan cuma tidak dikirim) -- query ini
+	// murni untuk payload publik, tidak ada alasan menyentuh kolom secret.
+	if resp.IsPremium {
+		var pixelID, gaID string
+		var utmEnabled bool
+		if err := h.DB.QueryRow(ctx, `
+			SELECT fb_pixel_id, ga_measurement_id, utm_enabled FROM analytics_settings WHERE user_id = $1
+		`, userID).Scan(&pixelID, &gaID, &utmEnabled); err == nil && (pixelID != "" || gaID != "") {
+			resp.Analytics = &publicAnalytics{FbPixelID: pixelID, GaMeasurementID: gaID, UtmEnabled: utmEnabled}
 		}
 	}
 
