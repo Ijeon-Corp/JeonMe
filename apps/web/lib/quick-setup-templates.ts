@@ -220,6 +220,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "bloom",
     bio: "Content creator | Berbagi konten setiap hari ✨",
     links: [link("instagram"), link("tiktok"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Tentang Aku", text: "Tuliskan cerita singkat tentangmu & jenis konten yang kamu buat di sini." },
+      faqBlock([{ question: "Terbuka untuk kerja sama brand?", answer: "Terbuka banget! DM lewat Instagram untuk diskusi kolaborasi & rate card." }]),
+    ],
   },
   {
     key: "influencer",
@@ -230,6 +234,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "blaze",
     bio: "Influencer & Content Creator",
     links: [link("instagram"), link("tiktok"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Rate Card & Kerja Sama", text: "Tuliskan jenis konten & rate endorse/kerja sama yang kamu tawarkan di sini." },
+      faqBlock([{ question: "Bagaimana cara kerja sama endorse/promosi?", answer: "Kirim proposal kerja sama lewat DM Instagram, aku balas secepatnya dengan rate card & ketentuan." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi & Toko -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -255,6 +263,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "golden",
     bio: "Figur publik | Info kegiatan & kolaborasi",
     links: [link("instagram"), link("x"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Kegiatan Mendatang", text: "Tuliskan jadwal kegiatan, kolaborasi, atau kemunculan publik terbarumu di sini." },
+      faqBlock([{ question: "Bagaimana cara mengundang untuk acara/kolaborasi?", answer: "Kirim detail acara & undangan lewat DM Instagram, tim kami akan meninjau & menghubungi balik." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -266,6 +278,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "cyber",
     bio: "Live streaming rutin -- mabar yuk!",
     links: [link("twitch"), link("youtube"), link("discord")],
+    blocks: [
+      { type: "text", title: "Jadwal Live", text: "Tuliskan jadwal live streaming mingguanmu di sini." },
+      faqBlock([{ question: "Ada perk khusus buat subscriber/donatur?", answer: "Ada! Emote khusus, shoutout, dan akses channel Discord eksklusif -- info lengkap ada di stream." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -277,6 +293,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "cyber",
     bio: "Gamer | Main bareng di sini",
     links: [link("discord"), link("youtube"), link("twitch")],
+    blocks: [{ type: "text", title: "Game yang Dimainkan", text: "Tuliskan game favorit yang sering kamu mainkan & rank/level saat ini di sini." }],
   },
 
   // ---------- Business & Professional ----------
@@ -444,6 +461,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "bloom",
     bio: "Rekomendasi produk pilihanku",
     links: [link("instagram"), link("tiktok")],
+    blocks: [
+      { type: "text", title: "Rekomendasi Produk", text: "Tuliskan kategori produk yang kamu rekomendasikan & kenapa kamu pakai/suka di sini." },
+      faqBlock([{ question: "Apakah ada kode diskon?", answer: "Cek deskripsi tautan produk di atas -- kode diskon (kalau ada) selalu aku cantumkan di sana." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
 
@@ -521,6 +542,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "midnight",
     bio: "Musisi | Dengerin lagu terbaruku",
     links: [link("spotify"), link("youtube"), link("appleMusic"), link("instagram")],
+    blocks: [
+      { type: "text", title: "Rilisan Terbaru", text: "Tuliskan single/album terbarumu, plus jadwal tur/manggung kalau ada, di sini." },
+      faqBlock([{ question: "Bisa booking untuk manggung?", answer: "Bisa, DM lewat Instagram untuk diskusi jadwal & rate manggung." }]),
+    ],
   },
   {
     key: "artist",
@@ -531,7 +556,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "lavender",
     bio: "Seniman | Open commission",
     links: [link("instagram")],
-    blocks: [{ type: "text", title: "Open Commission", text: "Tuliskan info & harga commission di sini." }],
+    blocks: [
+      { type: "text", title: "Open Commission", text: "Tuliskan info & harga commission di sini." },
+      faqBlock([{ question: "Berapa lama proses pengerjaan commission?", answer: "Tergantung kompleksitas, biasanya 3-10 hari kerja. DM dulu buat estimasi lebih pasti." }]),
+    ],
   },
   {
     key: "dj",
@@ -542,6 +570,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "cyber",
     bio: "DJ | Booking untuk acara kamu",
     links: [link("spotify"), link("instagram")],
+    blocks: [faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }])],
     monetizationHint: "Cocok dipasangkan dengan Booking dan Event -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -553,6 +582,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "noir",
     bio: "Podcast baru tiap minggu -- dengerin sekarang",
     links: [link("spotify"), link("applePodcasts"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Episode Terbaru", text: "Tuliskan judul & topik episode terbarumu di sini." },
+      faqBlock([{ question: "Bagaimana cara jadi bintang tamu?", answer: "Kirim DM lewat salah satu kanal di atas dengan topik yang ingin kamu bahas." }]),
+    ],
   },
   {
     key: "content-creator",
@@ -563,6 +596,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "bloom",
     bio: "Konten terbaru setiap hari",
     links: [link("instagram"), link("tiktok"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Konten Terbaru", text: "Tuliskan konten atau series terbarumu di sini." },
+      faqBlock([{ question: "Terbuka untuk kolaborasi/sponsorship?", answer: "Terbuka! DM lewat Instagram untuk diskusi kolaborasi & rate kerja sama." }]),
+    ],
   },
 
   // ---------- Local Business ----------
@@ -658,6 +695,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "sunrise",
     bio: "Travel blogger | Cerita dari berbagai destinasi",
     links: [link("instagram"), link("youtube"), link("tiktok")],
+    blocks: [
+      { type: "text", title: "Destinasi Terbaru", text: "Tuliskan destinasi yang baru kamu kunjungi & tips perjalanannya di sini." },
+      faqBlock([{ question: "Bisa minta rekomendasi itinerary?", answer: "Bisa, DM lewat Instagram sebutkan destinasi & budgetmu, aku bantu kasih rekomendasi." }]),
+    ],
   },
   {
     key: "fitness-coach",
@@ -667,6 +708,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "blaze",
     bio: "Fitness coach | Program latihan bareng aku",
     links: [link("instagram"), link("whatsapp")],
+    blocks: [
+      { type: "text", title: "Program Latihan", text: "Tuliskan jenis program latihan yang kamu tawarkan (durasi, target, harga) di sini." },
+      faqBlock([{ question: "Program cocok untuk pemula?", answer: "Cocok banget, program disesuaikan dengan level & tujuanmu -- chat WhatsApp dulu buat konsultasi." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus atau Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -677,6 +722,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "rose",
     bio: "Beauty creator | Tutorial makeup & skincare",
     links: [link("instagram"), link("tiktok"), link("youtube")],
+    blocks: [
+      { type: "text", title: "Produk Favorit", text: "Tuliskan produk makeup/skincare favoritmu yang sering direkomendasikan di sini." },
+      faqBlock([{ question: "Bisa minta rekomendasi sesuai jenis kulit?", answer: "Bisa, DM lewat Instagram sebutkan jenis kulit & masalahmu, aku bantu rekomendasikan." }]),
+    ],
   },
   {
     key: "lifestyle-creator",
@@ -686,6 +735,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "peach",
     bio: "Lifestyle creator | Rekomendasi favoritku",
     links: [link("instagram"), link("tiktok")],
+    blocks: [
+      { type: "text", title: "Rekomendasi Favorit", text: "Tuliskan produk, tempat, atau kebiasaan favorit yang sering kamu bagikan di sini." },
+      faqBlock([{ question: "Terbuka untuk kolaborasi brand?", answer: "Terbuka! DM lewat Instagram untuk diskusi kolaborasi & rate kerja sama." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -696,6 +749,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "rose",
     bio: "Fashion creator | Inspirasi outfit harian",
     links: [link("instagram"), link("tiktok")],
+    blocks: [
+      { type: "text", title: "Outfit Guide", text: "Tuliskan gaya/kategori outfit yang sering kamu bagikan (kasual, kerja, formal, dst) di sini." },
+      faqBlock([{ question: "Baju di outfit kamu beli di mana?", answer: "Cek deskripsi tautan produk di atas -- link belanja selalu aku cantumkan di sana." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
 
@@ -756,6 +813,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "mint",
     bio: "Dukung perjuanganku",
     links: [link("instagram")],
+    blocks: [
+      { type: "text", title: "Tentang Perjuangan Ini", text: "Ceritakan kenapa kamu butuh dukungan & untuk apa dana yang terkumpul dipakai di sini." },
+      faqBlock([{ question: "Dana yang terkumpul dipakai untuk apa?", answer: "Lihat cerita di atas untuk rinciannya -- setiap dukungan sangat berarti, terima kasih!" }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -776,6 +837,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     theme: "blaze",
     bio: "Produk baru sudah hadir!",
     links: [link("instagram")],
+    blocks: [
+      { type: "text", title: "Tentang Produk Ini", text: "Tuliskan keunggulan & alasan kenapa produk ini wajib dicoba di sini." },
+      faqBlock([{ question: "Kapan produk ini bisa dibeli?", answer: "Cek tombol beli di Toko halaman ini, atau pantau Instagram kami untuk info stok terbaru." }]),
+    ],
     monetizationHint: "Tambahkan produkmu di menu Toko supaya tampil di halaman ini. Aktifkan juga Social Proof di menu Audiens & Pemasaran.",
   },
 ];
