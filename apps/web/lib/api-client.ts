@@ -308,10 +308,11 @@ export interface PublicPage {
   social_telegram: string;
   social_email: string;
   // layout_variant -- permintaan langsung pengguna, 11 Agustus 2026
-  // (susulan Quick Setup): "centered" (bawaan, avatar+nama+bio di
-  // tengah) atau "banner" (avatar+nama+bio rata kiri sebaris). Lihat
-  // renderBioHeader di PagePreview.tsx.
-  layout_variant: "centered" | "banner";
+  // (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026:
+  // "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
+  // sebaris), "card" (dibungkus kartu bertema), "spotlight" (avatar
+  // besar + badge nama). Lihat renderBioHeader di PagePreview.tsx.
+  layout_variant: "centered" | "banner" | "card" | "spotlight";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -482,7 +483,7 @@ export interface MyPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
-  layout_variant: "centered" | "banner";
+  layout_variant: "centered" | "banner" | "card" | "spotlight";
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/

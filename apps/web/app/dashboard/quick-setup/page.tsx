@@ -9,6 +9,16 @@ import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orde
 import { IconCheck, IconSearch } from "@/components/icons";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
+// LAYOUT_VARIANT_LABELS -- label deskriptif per varian untuk modal
+// pratinjau (lihat renderBioHeader, PagePreview.tsx, untuk detail visual
+// tiap varian).
+const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight", string> = {
+  centered: "Centered (di tengah)",
+  banner: "Banner (rata kiri sebaris)",
+  card: "Card (dibungkus kartu, avatar menonjol)",
+  spotlight: "Spotlight (avatar besar + badge nama)",
+};
+
 // buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap
 // kartu galeri MAUPUN modal pratinjau, supaya keduanya selalu identik
 // (bukan dua implementasi terpisah yang bisa tidak sinkron). blockData per
@@ -315,9 +325,7 @@ export default function QuickSetupPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
-                  <p className="mt-0.5 text-ink">
-                    {selected.layoutVariant === "banner" ? "Banner (rata kiri sebaris)" : "Centered (di tengah)"}
-                  </p>
+                  <p className="mt-0.5 text-ink">{LAYOUT_VARIANT_LABELS[selected.layoutVariant ?? "centered"]}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Saran Bio</p>

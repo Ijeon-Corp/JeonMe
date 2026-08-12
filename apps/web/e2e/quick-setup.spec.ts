@@ -184,4 +184,34 @@ test.describe("Quick Setup", () => {
       expect(Math.abs(avatarCenterX - viewportWidth / 2)).toBeGreaterThan(60);
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
+
+  test("varian layout Spotlight (avatar besar + badge nama) sungguhan tampil beda dari Centered/Banner di halaman publik", async ({
+    page,
+  }) => {
+    // Susulan: "tambahkan jenis model layout selain 2 yang sudah ada,
+    // coba buat layout itu yang cocok dengan kategori nya" -- dua varian
+    // baru ditambah ("card" & "spotlight", lihat renderBioHeader di
+    // PagePreview.tsx), lalu dipetakan SATU varian utama per kategori
+    // Quick Setup (creator/entertainment -> spotlight, shop/education ->
+    // card). Test ini memverifikasi Spotlight sungguhan tersimpan &
+    // tampil di halaman publik ASLI (bukan cuma mockup dashboard) -- avatar
+    // Spotlight (h-28 = 112px) jelas lebih besar dari avatar
+    // Centered/Card/Banner (h-24 = 96px / h-16 = 64px), dicek lewat
+    // bounding box tinggi avatar, bukan nama kelas CSS.
+    const { username } = await registerAndLogin(page, "quicksetup5");
+    await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("creator profile");
+    await page.getByText("Creator Profile", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
+      expect(avatarBox).not.toBeNull();
+      expect(avatarBox!.height).toBeGreaterThan(100);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
 });

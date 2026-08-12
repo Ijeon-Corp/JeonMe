@@ -174,12 +174,15 @@ export interface PagePreviewData {
   // diisi, ikonnya tidak dirender (lihat buildFilledSocialLinks).
   social?: Partial<Record<SocialPlatformKey, string>>;
   // layoutVariant -- permintaan langsung pengguna, 11 Agustus 2026
-  // (susulan Quick Setup, "layouting nya juga berbeda"): "centered"
-  // (bawaan, TIDAK BERUBAH dari sebelumnya -- undefined juga jatuh balik
-  // ke ini) atau "banner" (avatar+nama+bio rata kiri sebaris ala kartu
-  // profil bisnis). Cuma berlaku di layout bio biasa & Toko
+  // (susulan Quick Setup, "layouting nya juga berbeda"), "card" & "spotlight"
+  // ditambah 12 Agustus 2026 (susulan lagi, "tambahkan jenis model layout
+  // selain 2 yang sudah ada"): "centered" (bawaan, undefined jatuh balik ke
+  // ini), "banner" (avatar+nama+bio rata kiri sebaris ala kartu profil
+  // bisnis), "card" (identitas dibungkus kartu bertema, avatar menonjol di
+  // tepi atas), "spotlight" (avatar besar, nama dalam badge bulat, ikon
+  // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
-  layoutVariant?: "centered" | "banner";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight";
 }
 
 interface PreviewSourcePage {
@@ -219,7 +222,7 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
-  layout_variant?: "centered" | "banner";
+  layout_variant?: "centered" | "banner" | "card" | "spotlight";
 }
 
 interface PreviewSourceLink {
@@ -519,8 +522,19 @@ function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
-  const isBanner = data.layoutVariant === "banner";
-  const avatarSize = isBanner ? "h-16 w-16" : "h-24 w-24";
+  // Empat varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
+  // "layouting nya juga berbeda"): "centered" & "banner" (bawaan, TIDAK
+  // BERUBAH), plus "card" (identitas dibungkus kartu bertema, avatar
+  // menonjol di tepi atas -- kesan "kartu profil resmi") & "spotlight"
+  // (avatar lebih besar, nama dalam badge bulat, ikon sosial lebih
+  // menonjol -- kesan "panggung/showcase"). Dipetakan ke kategori Quick
+  // Setup yang cocok di quick-setup-templates.ts (card untuk Toko/
+  // Edukasi, spotlight untuk Creator/Entertainment), TAPI bisa dipakai
+  // manual di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak
+  // dibatasi cuma dari Quick Setup.
+  const variant = data.layoutVariant ?? "centered";
+  const isBanner = variant === "banner";
+  const avatarSize = isBanner ? "h-16 w-16" : variant === "spotlight" ? "h-28 w-28" : "h-24 w-24";
 
   const avatar = data.avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -556,6 +570,44 @@ function renderBioHeader(
           {data.bio && <p className={`mt-1 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           {renderSocialRow(data.social, "left")}
         </div>
+      </div>
+    );
+  }
+
+  // "card" -- avatar menonjol setengah di atas kartu bertema (theme.
+  // productCard, dipakai bersama box produk di tempat lain supaya gaya
+  // konsisten per-tema), nama/bio/sosial di DALAM kartu. -mt-12 (setengah
+  // tinggi avatar h-24=96px) menarik kartu naik supaya avatar pas
+  // menindih tepi atasnya; pt-14 menyisakan jarak 8px di bawah avatar
+  // supaya teks tidak menempel.
+  if (variant === "card") {
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        <div className="relative z-10">{avatar}</div>
+        <div className={`relative -mt-12 w-full rounded-2xl px-5 pb-5 pt-14 text-center ${theme.productCard}`}>
+          {nameHeading}
+          {data.bio && <p className={`mt-2 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social)}
+        </div>
+      </div>
+    );
+  }
+
+  // "spotlight" -- avatar lebih besar (h-28, lihat avatarSize), nama
+  // dibungkus badge bulat (bukan teks polos) supaya terasa seperti
+  // "nameplate" panggung, ikon sosial ditaruh SEBELUM bio (bio jadi
+  // keterangan penutup yang lebih kalem) -- beda urutan dari "centered"
+  // (bio dulu baru ikon sosial) supaya sosok/identitas lebih menonjol
+  // daripada deskripsi teks.
+  if (variant === "spotlight") {
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        {avatar}
+        <div className={`relative mt-4 inline-flex max-w-full items-center rounded-full px-4 py-1.5 ${theme.productCard}`}>
+          {nameHeading}
+        </div>
+        {renderSocialRow(data.social)}
+        {data.bio && <p className={`mt-3 max-w-xs text-center text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
       </div>
     );
   }

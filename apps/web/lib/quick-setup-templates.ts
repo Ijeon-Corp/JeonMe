@@ -111,14 +111,22 @@ export interface QuickSetupTemplate {
   blocks?: QuickSetupTemplateBlock[];
   monetizationHint?: string;
   // layoutVariant -- permintaan langsung pengguna: "yang saya minta
-  // layouting nya juga berbeda" -- template SEBELUMNYA cuma beda tema
-  // warna & isi blok, susunan avatar+nama+bio SELALU sama (bulat besar di
-  // tengah). Kosong/undefined = "centered" (bawaan). "banner" (avatar
-  // lebih kecil rata kiri sebaris ala kartu profil bisnis) dipakai untuk
-  // kategori business/shop/education/local/portfolio yang secara alami
-  // terasa lebih "profesional/formal" -- creator/entertainment/lifestyle
-  // SENGAJA dibiarkan "centered" (gaya Linktree kreator klasik).
-  layoutVariant?: "centered" | "banner";
+  // layouting nya juga berbeda", lalu susulan "tambahkan jenis model
+  // layout selain 2 yang sudah ada, buat layout itu yang cocok dengan
+  // kategori nya" (12 Agustus 2026) -- SATU varian utama per kategori
+  // (bukan campur-campur dalam satu kategori) supaya tiap kategori punya
+  // "signature look" sendiri yang jelas beda satu sama lain:
+  //   - business, local        -> "banner" (rata kiri sebaris, kartu profil bisnis)
+  //   - shop, education        -> "card" (identitas dibungkus kartu bertema,
+  //                                avatar menonjol -- kesan "kartu resmi/toko")
+  //   - creator, entertainment -> "spotlight" (avatar besar, nama dalam badge
+  //                                bulat -- kesan panggung/showcase personal)
+  //   - lifestyle, special     -> "centered" (bawaan, gaya Linktree klasik),
+  //                                KECUALI "portfolio" (tetap "banner", sudah
+  //                                dipilih di sesi sebelumnya -- CV/portofolio
+  //                                secara alami lebih pas gaya profesional)
+  // Kosong/undefined = "centered".
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -201,6 +209,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "creator-profile",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Creator Profile",
     description: "Foto profil, bio, media sosial, YouTube, TikTok",
     theme: "bloom",
@@ -210,6 +219,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "influencer",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Influencer",
     description: "Media sosial + afiliasi + produk",
     theme: "blaze",
@@ -220,6 +230,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "personal-branding",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Personal Branding",
     description: "Portofolio, pencapaian, kontak",
     theme: "minimal",
@@ -233,6 +244,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "public-figure",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Public Figure",
     description: "Media sosial, event, merchandise",
     theme: "golden",
@@ -243,6 +255,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "streamer",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Streamer",
     description: "Twitch, YouTube, Discord, donasi",
     theme: "cyber",
@@ -253,6 +266,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "gamer",
     category: "creator",
+    layoutVariant: "spotlight",
     label: "Gamer",
     description: "Profil game, Discord, YouTube, Twitch",
     theme: "cyber",
@@ -355,7 +369,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "online-store",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Online Store",
     description: "Produk, marketplace, promosi",
     theme: "peach",
@@ -367,7 +381,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fashion-store",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Fashion Store",
     description: "Katalog, Instagram, Shopee/Tokopedia",
     theme: "rose",
@@ -378,7 +392,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "beauty-store",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Beauty Store",
     description: "Produk, katalog, booking",
     theme: "peach",
@@ -393,7 +407,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "food-beverage",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Food & Beverage",
     description: "Menu, pemesanan, lokasi",
     theme: "amber",
@@ -408,7 +422,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "small-business",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Small Business",
     description: "Produk, WhatsApp, marketplace",
     theme: "mint",
@@ -419,7 +433,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "affiliate-store",
     category: "shop",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Affiliate Store",
     description: "Rekomendasi produk + tautan afiliasi",
     theme: "bloom",
@@ -432,7 +446,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "teacher",
     category: "education",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Teacher",
     description: "Info kelas, materi, kontak",
     theme: "ocean",
@@ -447,7 +461,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "tutor",
     category: "education",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Tutor",
     description: "Kelas, jadwal, booking",
     theme: "forest",
@@ -459,7 +473,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "course-creator",
     category: "education",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Course Creator",
     description: "Kelas, testimoni, pendaftaran",
     theme: "golden",
@@ -471,7 +485,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "student",
     category: "education",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Student",
     description: "Portofolio, proyek, media sosial",
     theme: "minimal",
@@ -482,7 +496,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "education-brand",
     category: "education",
-    layoutVariant: "banner",
+    layoutVariant: "card",
     label: "Education Brand",
     description: "Kelas, event, komunitas",
     theme: "ocean",
@@ -496,6 +510,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "musician",
     category: "entertainment",
+    layoutVariant: "spotlight",
     label: "Musician",
     description: "Spotify, YouTube, Apple Music, media sosial",
     theme: "midnight",
@@ -505,6 +520,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "artist",
     category: "entertainment",
+    layoutVariant: "spotlight",
     label: "Artist",
     description: "Portofolio, commission, media sosial",
     theme: "lavender",
@@ -515,6 +531,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "dj",
     category: "entertainment",
+    layoutVariant: "spotlight",
     label: "DJ",
     description: "Mix, event, booking",
     theme: "cyber",
@@ -525,6 +542,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "podcaster",
     category: "entertainment",
+    layoutVariant: "spotlight",
     label: "Podcaster",
     description: "Episode, platform, media sosial",
     theme: "noir",
@@ -534,6 +552,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "content-creator",
     category: "entertainment",
+    layoutVariant: "spotlight",
     label: "Content Creator",
     description: "Konten terbaru + media sosial",
     theme: "bloom",
