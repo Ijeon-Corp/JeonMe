@@ -626,7 +626,7 @@ function renderLinkOrBlock(
         embed={Boolean(link.blockData?.embed)}
         embedLat={link.blockData?.embed_lat as number | undefined}
         embedLng={link.blockData?.embed_lng as number | undefined}
-        linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+        linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
       />
     );
   }
@@ -1278,7 +1278,7 @@ function LandingPagePreview({
                   embed={Boolean(block.blockData?.embed)}
                   embedLat={block.blockData?.embed_lat as number | undefined}
                   embedLng={block.blockData?.embed_lng as number | undefined}
-                  linkClassName={`group relative flex w-full items-center justify-center gap-2 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+                  linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
                 />
               );
             case "contact_form":

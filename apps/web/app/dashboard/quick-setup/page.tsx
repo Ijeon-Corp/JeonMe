@@ -222,7 +222,7 @@ export default function QuickSetupPage() {
               category === c.key ? "bg-primary text-white" : "bg-primary-subtle text-primary hover:bg-primary/15"
             }`}
           >
-            {c.emoji} {c.label}
+            {c.label}
           </button>
         ))}
       </div>

@@ -22,18 +22,17 @@
 export interface QuickSetupCategory {
   key: string;
   label: string;
-  emoji: string;
 }
 
 export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
-  { key: "creator", label: "Creator & Personal Brand", emoji: "✨" },
-  { key: "business", label: "Business & Professional", emoji: "💼" },
-  { key: "shop", label: "Online Shop", emoji: "🛍️" },
-  { key: "education", label: "Education", emoji: "🎓" },
-  { key: "entertainment", label: "Entertainment", emoji: "🎵" },
-  { key: "local", label: "Local Business", emoji: "🍔" },
-  { key: "lifestyle", label: "Lifestyle", emoji: "❤️" },
-  { key: "special", label: "Special Purpose", emoji: "🚀" },
+  { key: "creator", label: "Creator & Personal Brand" },
+  { key: "business", label: "Business & Professional" },
+  { key: "shop", label: "Online Shop" },
+  { key: "education", label: "Education" },
+  { key: "entertainment", label: "Entertainment" },
+  { key: "local", label: "Local Business" },
+  { key: "lifestyle", label: "Lifestyle" },
+  { key: "special", label: "Special Purpose" },
 ];
 
 // PLATFORM_URL -- URL dasar starter per platform (pola sama seperti
