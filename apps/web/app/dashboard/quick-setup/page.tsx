@@ -27,9 +27,18 @@ const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight"
 // blockType dipetakan dari OrderedTemplateItem (lib/quick-setup-templates.ts)
 // -- SATU sumber kebenaran urutan & isi, sama dengan yang dipakai
 // applyTemplate untuk benar-benar membuatnya.
-function buildPreviewData(t: QuickSetupTemplate, username: string, avatarUrl: string): PagePreviewData {
+function buildPreviewData(t: QuickSetupTemplate, username: string, displayName: string, avatarUrl: string): PagePreviewData {
   return {
     username,
+    // displayName -- permintaan langsung pengguna: "yang tampil di mockup
+    // itu bukan username tapi display name" -- renderBioHeader
+    // (PagePreview.tsx) merender `displayName || username`, jadi SEBELUM
+    // ini nama akun (mis. "namamu") ikut tampil apa adanya di mockup kalau
+    // kreator belum mengisi nama tampilan. displayName di sini SELALU
+    // truthy (myPage?.display_name atau placeholder "Nama Kamu" dari
+    // pemanggil) supaya username mentah tidak pernah lagi jadi yang
+    // tampil di judul nama mockup.
+    displayName,
     bio: t.bio,
     avatarUrl,
     theme: t.theme,
@@ -66,9 +75,13 @@ export default function QuickSetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState<QuickSetupTemplate | null>(null);
   // myPage -- dipakai HANYA supaya mockup pratinjau template pakai
-  // username/avatar akun sendiri (bukan placeholder generik), tidak dipakai
-  // untuk apa pun selain itu di halaman ini (pengecekan bio-kosong saat
-  // menerapkan tetap fetch ulang di applyTemplate supaya datanya terbaru).
+  // username/nama tampilan/avatar akun sendiri (bukan placeholder generik),
+  // tidak dipakai untuk apa pun selain itu di halaman ini (pengecekan
+  // bio-kosong saat menerapkan tetap fetch ulang di applyTemplate supaya
+  // datanya terbaru). display_name -- permintaan langsung pengguna: "yang
+  // tampil di mockup itu bukan username tapi display name" -- kalau
+  // kreator belum mengisi nama tampilan, jatuh ke placeholder "Nama Kamu"
+  // (lihat buildPreviewData), BUKAN ke username seperti sebelumnya.
   const [myPage, setMyPage] = useState<MyPage | null>(null);
 
   useEffect(() => {
@@ -85,7 +98,7 @@ export default function QuickSetupPage() {
   // memutuskan menerapkan.
   const previewData: PagePreviewData | null = useMemo(() => {
     if (!selected) return null;
-    return buildPreviewData(selected, myPage?.username ?? "namamu", myPage?.avatar_url ?? "");
+    return buildPreviewData(selected, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "");
   }, [selected, myPage]);
 
   const filtered = useMemo(() => {
@@ -283,7 +296,7 @@ export default function QuickSetupPage() {
                 LivePreviewPanel, cuma disesuaikan untuk kartu galeri. */}
             <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
               <div className="h-full [zoom:0.42]">
-                <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.avatar_url ?? "")} />
+                <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")} />
               </div>
             </div>
             <div className="p-3.5">
