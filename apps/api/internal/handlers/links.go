@@ -285,6 +285,16 @@ func resolveMapsEmbedCoords(ctx context.Context, rawURL string) (lat, lng float6
 // true) TERJADI SEBELUM fungsi ini dipanggil (lihat CreateBlock/Update,
 // butuh context untuk permintaan HTTP keluar) -- di sini cuma memastikan
 // strukturnya masuk akal.
+// "accordion" (permintaan langsung pengguna, 12 Agustus 2026: "kalau saat
+// menambahkan layout perlu menambahkan tipe blok baru... terutama blok
+// yang bisa diklik lalu keluar text bukan hanya untuk faq saja") --
+// interaksi klik-untuk-buka SATU item (bukan daftar tanya-jawab seperti
+// "faq"), judulnya pakai kolom title yang sudah ada di links (sama seperti
+// tautan biasa), block_data cuma butuh `text` (isi yang muncul saat
+// diklik) -- makanya bentuknya SAMA PERSIS dengan "heading"/"text" di
+// case ini, cuma beda block_type supaya frontend tahu harus dirender
+// sebagai accordion (lihat renderLinkOrBlock, PagePreview.tsx -- dipakai
+// ulang lewat FaqBlock dengan array 1 item, title kosong).
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
 	switch blockType {
 	case "video":
@@ -305,7 +315,7 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
 			}
 		}
-	case "heading", "text":
+	case "heading", "text", "accordion":
 		text, _ := data["text"].(string)
 		if strings.TrimSpace(text) == "" {
 			return "isi teks blok ini", false
@@ -327,7 +337,7 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
 	BlockData map[string]any `json:"block_data"`

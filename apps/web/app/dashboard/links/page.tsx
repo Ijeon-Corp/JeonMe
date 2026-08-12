@@ -61,6 +61,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   faq: "FAQ",
   maps: "Lokasi",
   text: "Teks",
+  accordion: "Accordion",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -183,7 +184,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text";
+  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -193,6 +194,11 @@ const CONTENT_TILES: ContentTile[] = [
   { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
   { key: "video", label: "Video", description: "Tampilkan video YouTube/TikTok sebagai embed", Icon: IconPlayCircle },
   { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan pengunjung", Icon: IconBook },
+  // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+  // lalu keluar text, bukan hanya untuk faq saja" -- SATU judul klik-untuk-
+  // buka bebas dari framing tanya-jawab (beda dari FAQ yang daftar Q&A),
+  // cocok untuk kebijakan/detail/catatan tambahan apa pun.
+  { key: "accordion", label: "Accordion", description: "Satu judul yang bisa diklik untuk membuka isi teksnya", Icon: IconChevronRight },
   { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan pengunjung", Icon: IconMail },
   // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
   // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
@@ -278,11 +284,17 @@ export default function DashboardLinksPage() {
 
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
-  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text">("video");
+  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text" | "accordion">("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
   // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA tautan/aksi.
   const [blockText, setBlockText] = useState("");
+  // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+  // lalu keluar text, bukan hanya untuk faq saja" -- state TERPISAH dari
+  // blockText (walau block_data-nya sama-sama {text}) supaya isian tidak
+  // ikut kebawa nyasar kalau kreator ganti-ganti pilihan tipe blok di form
+  // yang sama sebelum submit.
+  const [blockAccordionText, setBlockAccordionText] = useState("");
   const [blockFaqItems, setBlockFaqItems] = useState<{ question: string; answer: string }[]>([
     { question: "", answer: "" },
   ]);
@@ -299,6 +311,7 @@ export default function DashboardLinksPage() {
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
   const [editText, setEditText] = useState("");
+  const [editAccordionText, setEditAccordionText] = useState("");
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
@@ -430,10 +443,11 @@ export default function DashboardLinksPage() {
     setAddModalOpen(false);
   }
 
-  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text", title: string) {
+  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text" | "accordion", title: string) {
     setBlockType(type);
     setBlockTitle(title);
     if (type === "text") setBlockText("");
+    if (type === "accordion") setBlockAccordionText("");
     setAddingBlock(true);
     setAddModalOpen(false);
   }
@@ -659,6 +673,12 @@ export default function DashboardLinksPage() {
         return;
       }
       blockData = { text: blockText.trim() };
+    } else if (blockType === "accordion") {
+      if (!blockAccordionText.trim()) {
+        setError("Isi teks yang muncul saat diklik.");
+        return;
+      }
+      blockData = { text: blockAccordionText.trim() };
     }
     setError(null);
     setSavingBlock(true);
@@ -669,6 +689,7 @@ export default function DashboardLinksPage() {
       setBlockTitle("");
       setBlockVideoUrl("");
       setBlockFaqItems([{ question: "", answer: "" }]);
+      setBlockAccordionText("");
       setBlockMapsUrl("");
       setBlockMapsEmbed(true);
       setBlockText("");
@@ -691,6 +712,8 @@ export default function DashboardLinksPage() {
       setEditMapsEmbed(Boolean(link.block_data?.embed));
     } else if (link.block_type === "text") {
       setEditText((link.block_data?.text as string) ?? "");
+    } else if (link.block_type === "accordion") {
+      setEditAccordionText((link.block_data?.text as string) ?? "");
     }
   }
 
@@ -716,6 +739,12 @@ export default function DashboardLinksPage() {
         return;
       }
       blockData = { text: editText.trim() };
+    } else if (link.block_type === "accordion") {
+      if (!editAccordionText.trim()) {
+        setError("Isi teks yang muncul saat diklik.");
+        return;
+      }
+      blockData = { text: editAccordionText.trim() };
     } else {
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
@@ -995,19 +1024,26 @@ export default function DashboardLinksPage() {
           <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
             <select
               value={blockType}
-              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text")}
+              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text" | "accordion")}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
               <option value="video">Video (YouTube/TikTok)</option>
               <option value="contact_form">Formulir Kontak</option>
               <option value="faq">FAQ</option>
+              <option value="accordion">Accordion (satu judul, klik untuk buka)</option>
               <option value="maps">Lokasi (Google Maps)</option>
               <option value="text">Teks</option>
             </select>
             <input
               type="text"
               required
-              placeholder={blockType === "text" ? "Judul blok (internal, tidak tampil ke publik)" : "Judul blok"}
+              placeholder={
+                blockType === "text"
+                  ? "Judul blok (internal, tidak tampil ke publik)"
+                  : blockType === "accordion"
+                  ? "Judul yang tampil & diklik pengunjung"
+                  : "Judul blok"
+              }
               value={blockTitle}
               onChange={(e) => setBlockTitle(e.target.value)}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -1017,6 +1053,15 @@ export default function DashboardLinksPage() {
                 placeholder="Isi teks yang tampil di halaman publik"
                 value={blockText}
                 onChange={(e) => setBlockText(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            )}
+            {blockType === "accordion" && (
+              <textarea
+                placeholder="Isi teks yang muncul saat judul di atas diklik"
+                value={blockAccordionText}
+                onChange={(e) => setBlockAccordionText(e.target.value)}
                 rows={3}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
@@ -1398,7 +1443,12 @@ export default function DashboardLinksPage() {
                   )
                 ))}
 
-              {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && contentEditId === link.id && (
+              {(link.block_type === "video" ||
+                link.block_type === "faq" ||
+                link.block_type === "maps" ||
+                link.block_type === "text" ||
+                link.block_type === "accordion") &&
+                contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                   {link.block_type === "video" ? (
                     <input
@@ -1413,6 +1463,14 @@ export default function DashboardLinksPage() {
                       placeholder="Isi teks yang tampil di halaman publik"
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                  ) : link.block_type === "accordion" ? (
+                    <textarea
+                      placeholder="Isi teks yang muncul saat judul diklik"
+                      value={editAccordionText}
+                      onChange={(e) => setEditAccordionText(e.target.value)}
                       rows={3}
                       className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />

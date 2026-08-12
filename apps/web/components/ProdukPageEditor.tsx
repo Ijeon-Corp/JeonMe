@@ -46,12 +46,17 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 
-type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text";
+type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion";
 
 const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
   { key: "video", label: "Video", description: "Embed video YouTube/TikTok", Icon: IconPlayCircle },
   { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan", Icon: IconBook },
+  // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+  // lalu keluar text, bukan hanya untuk faq saja" -- lihat catatan lengkap
+  // di dashboard/links/page.tsx (pola sama persis, dipakai ulang di sini
+  // untuk paritas halaman utama/Toko).
+  { key: "accordion", label: "Accordion", description: "Satu judul yang bisa diklik untuk membuka isi teksnya", Icon: IconChevronRight },
   { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan", Icon: IconMail },
   { key: "maps", label: "Lokasi", description: "Google Maps (tertanam atau tautan)", Icon: IconMapPin },
   { key: "text", label: "Teks", description: "Paragraf bebas", Icon: IconTextLines },
@@ -63,6 +68,7 @@ const BLOCK_LABEL: Record<string, string> = {
   contact_form: "Formulir Kontak",
   maps: "Lokasi",
   text: "Teks",
+  accordion: "Accordion",
 };
 
 export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
@@ -284,6 +290,10 @@ function BlockSection({
   const [mapsUrl, setMapsUrl] = useState("");
   const [mapsEmbed, setMapsEmbed] = useState(true);
   const [text, setText] = useState("");
+  // accordionText -- state TERPISAH dari `text` (walau block_data-nya sama
+  // {text}) sama seperti dashboard/links/page.tsx: hindari isian nyasar
+  // saat kreator ganti-ganti pilihan tipe blok sebelum submit.
+  const [accordionText, setAccordionText] = useState("");
   const [faqItems, setFaqItems] = useState<{ question: string; answer: string }[]>([{ question: "", answer: "" }]);
   const [saving, setSaving] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -295,6 +305,7 @@ function BlockSection({
     setMapsUrl("");
     setMapsEmbed(true);
     setText("");
+    setAccordionText("");
     setFaqItems([{ question: "", answer: "" }]);
   }
 
@@ -348,6 +359,13 @@ function BlockSection({
             return;
           }
           blockData = { text: text.trim() };
+        } else if (blockType === "accordion") {
+          if (!accordionText.trim()) {
+            setError("Isi teks yang muncul saat diklik.");
+            setSaving(false);
+            return;
+          }
+          blockData = { text: accordionText.trim() };
         }
         const created = await createExtraPageBlock(pageId, { block_type: blockType, title: title.trim(), url, block_data: blockData });
         setLinks((prev) => [...prev, created]);
@@ -468,6 +486,16 @@ function BlockSection({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Isi teks..."
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            )}
+            {blockType === "accordion" && (
+              <textarea
+                required
+                rows={3}
+                value={accordionText}
+                onChange={(e) => setAccordionText(e.target.value)}
+                placeholder="Isi teks yang muncul saat judul di atas diklik..."
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
             )}

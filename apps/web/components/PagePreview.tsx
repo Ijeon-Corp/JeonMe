@@ -30,7 +30,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -232,7 +232,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
 }
@@ -730,6 +730,27 @@ function renderLinkOrBlock(
         embedLat={link.blockData?.embed_lat as number | undefined}
         embedLng={link.blockData?.embed_lng as number | undefined}
         linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+      />
+    );
+  }
+  if (link.blockType === "accordion") {
+    // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+    // lalu keluar text, bukan hanya untuk faq saja" -- SATU item klik-untuk-
+    // buka, bebas dari framing tanya-jawab (bukan daftar Q&A seperti
+    // "faq"). Dipakai ulang lewat FaqBlock APA ADANYA (title="" supaya
+    // heading "Pertanyaan Umum"-style tidak ikut tampil -- lihat
+    // `{title && <p>...}` di FaqBlock.tsx, array 1 item) -- interaksi klik
+    // + rotasi chevron + tampilan sudah persis yang dibutuhkan, tidak perlu
+    // komponen baru.
+    return (
+      <FaqBlock
+        key={link.id}
+        title=""
+        items={[{ question: link.title, answer: (link.blockData?.text as string) ?? "" }]}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+        titleClassName={theme.productTitle}
+        itemTitleClassName={theme.cardTitle}
+        itemBodyClassName={theme.bio}
       />
     );
   }
@@ -1366,6 +1387,20 @@ function LandingPagePreview({
                   key={block.id}
                   title={block.title}
                   items={(block.blockData?.items as FaqItem[]) ?? []}
+                  cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
+                  titleClassName={theme.productTitle}
+                  itemTitleClassName={theme.cardTitle}
+                  itemBodyClassName={theme.bio}
+                />
+              );
+            case "accordion":
+              // Sama seperti renderLinkOrBlock (layout bio biasa) -- lihat
+              // catatan lengkap di sana.
+              return (
+                <FaqBlock
+                  key={block.id}
+                  title=""
+                  items={[{ question: block.title, answer: (block.blockData?.text as string) ?? "" }]}
                   cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
                   titleClassName={theme.productTitle}
                   itemTitleClassName={theme.cardTitle}
