@@ -64,6 +64,13 @@ const SETTINGS_GROUPS: { label: string; items: SettingsItem[] }[] = [
         icon: IconShield,
         badgeClass: "bg-primary-subtle text-primary",
       },
+      {
+        href: "/dashboard/settings/seo",
+        title: "SEO",
+        description: "Judul/deskripsi pencarian, sembunyikan dari mesin pencari.",
+        icon: IconSearch,
+        badgeClass: "bg-primary-subtle text-primary",
+      },
     ],
   },
   {

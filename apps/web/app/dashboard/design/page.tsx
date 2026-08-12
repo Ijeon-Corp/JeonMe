@@ -23,9 +23,17 @@ import Toggle from "@/components/Toggle";
 // halaman publik (kolom custom_background_type/value di database TIDAK
 // dihapus, cuma UI untuk menyuntingnya yang hilang), tapi tidak ada lagi
 // cara baru mengubahnya dari dashboard.
+//
+// Section "SEO" (Judul/Deskripsi SEO + noindex) DIPINDAH ke
+// /dashboard/settings/seo (permintaan langsung pengguna, 12 Agustus
+// 2026, referensi tangkapan layar panel "SEO and discoverability"
+// Linktree -- fitur itu memang tergolong pengaturan akun di sana, bukan
+// bagian desain visual). Kolom seo_title/seo_description/noindex di
+// database TIDAK berubah, cuma UI-nya pindah rute -- lihat catatan
+// lengkap di halaman baru itu.
 export default function DashboardDesignPage() {
   const router = useRouter();
-  const { page, setPage, links, products, loading, error, handlePageSettingChange } = useDesignData();
+  const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
 
   if (loading || !page) return <PageSkeleton />;
 
@@ -198,46 +206,6 @@ export default function DashboardDesignPage() {
             <div className="flex items-center gap-2">
               <Toggle checked={page.is_published} onChange={() => handlePageSettingChange({ is_published: !page.is_published })} label="Terbitkan halaman publik" />
               <span className="text-sm font-semibold text-ink">Terbitkan halaman publik</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-          <h2 className="font-heading text-lg font-bold text-ink">SEO</h2>
-          <p className="mt-1 text-xs text-muted">
-            Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan halaman dari mesin pencari.
-          </p>
-
-          <div className="mt-4 flex flex-col gap-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-ink">Judul SEO (maks 70 karakter)</label>
-              <input
-                type="text"
-                maxLength={70}
-                value={page.seo_title}
-                placeholder={`@${page.username} — Jeonme`}
-                onChange={(e) => setPage({ ...page, seo_title: e.target.value })}
-                onBlur={(e) => handlePageSettingChange({ seo_title: e.target.value })}
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-ink">Deskripsi SEO (maks 160 karakter)</label>
-              <textarea
-                maxLength={160}
-                value={page.seo_description}
-                placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`}
-                onChange={(e) => setPage({ ...page, seo_description: e.target.value })}
-                onBlur={(e) => handlePageSettingChange({ seo_description: e.target.value })}
-                rows={2}
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Toggle checked={page.noindex} onChange={() => handlePageSettingChange({ noindex: !page.noindex })} label="Sembunyikan dari mesin pencari" />
-              <span className="text-sm font-semibold text-ink">Sembunyikan dari mesin pencari (noindex)</span>
             </div>
           </div>
         </section>
