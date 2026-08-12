@@ -192,10 +192,11 @@ test.describe("Quick Setup", () => {
     // coba buat layout itu yang cocok dengan kategori nya" -- dua varian
     // baru ditambah ("card" & "spotlight", lihat renderBioHeader di
     // PagePreview.tsx), lalu dipetakan SATU varian utama per kategori
-    // Quick Setup (creator/entertainment -> spotlight, shop/education ->
-    // card). Test ini memverifikasi Spotlight sungguhan tersimpan &
-    // tampil di halaman publik ASLI (bukan cuma mockup dashboard) -- avatar
-    // Spotlight (h-28 = 112px) jelas lebih besar dari avatar
+    // Quick Setup (creator/entertainment -> spotlight, shop -> card --
+    // education pindah lagi ke "minimal" di susulan berikutnya, lihat
+    // test di bawah). Test ini memverifikasi Spotlight sungguhan tersimpan
+    // & tampil di halaman publik ASLI (bukan cuma mockup dashboard) --
+    // avatar Spotlight (h-28 = 112px) jelas lebih besar dari avatar
     // Centered/Card/Banner (h-24 = 96px / h-16 = 64px), dicek lewat
     // bounding box tinggi avatar, bukan nama kelas CSS.
     const { username } = await registerAndLogin(page, "quicksetup5");
@@ -212,6 +213,66 @@ test.describe("Quick Setup", () => {
       const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
       expect(avatarBox).not.toBeNull();
       expect(avatarBox!.height).toBeGreaterThan(100);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Cover (pita sampul + avatar menindih tepi bawah) sungguhan tampil tanpa overflow horizontal di halaman publik", async ({
+    page,
+  }) => {
+    // Susulan lagi: "tambahkan lagi 2 bentuk layout lain nya" -- "cover" &
+    // "minimal" ditambah (lihat renderBioHeader, PagePreview.tsx), local
+    // -> cover, education -> minimal. "cover" secara teknis paling
+    // berisiko dari semua varian (satu-satunya yang pakai margin negatif
+    // -mx-6 -mt-14 + w-[calc(100%+3rem)] untuk membatalkan padding kolom
+    // konten supaya pita sampulnya mentok ke tepi) -- WAJIB dicek tidak
+    // bocor keluar bingkai halaman (PublicPageFrame, rounded overflow-
+    // hidden) ataupun memicu scrollbar horizontal di halaman publik asli,
+    // bukan cuma mockup dashboard yang sudah dizoom/dipotong duluan.
+    const { username } = await registerAndLogin(page, "quicksetup6");
+    await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("restaurant");
+    await page.getByText("Restaurant", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const overflowX = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(overflowX).toBe(false);
+      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
+      expect(avatarBox).not.toBeNull();
+      // Cover: h-20 = 80px -- di antara Banner (h-16=64px) & Centered/Card
+      // (h-24=96px), rentang cukup sempit supaya tidak sengaja cocok
+      // dengan varian lain.
+      expect(avatarBox!.height).toBeGreaterThan(70);
+      expect(avatarBox!.height).toBeLessThan(90);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Minimal (avatar kecil sebaris nama) sungguhan tampil di halaman publik", async ({ page }) => {
+    // Susulan lagi: "tambahkan lagi 2 bentuk layout lain nya" -- lihat
+    // catatan lengkap di test Cover di atas. Minimal (education) avatar
+    // paling kecil dari SEMUA varian (h-10=40px) -- cek lewat bounding box,
+    // bukan nama kelas CSS, sama seperti test varian lain.
+    const { username } = await registerAndLogin(page, "quicksetup7");
+    await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("teacher");
+    await page.getByText("Teacher", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
+      expect(avatarBox).not.toBeNull();
+      expect(avatarBox!.height).toBeLessThan(50);
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
 });

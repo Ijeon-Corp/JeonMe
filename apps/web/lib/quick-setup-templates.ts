@@ -112,13 +112,18 @@ export interface QuickSetupTemplate {
   monetizationHint?: string;
   // layoutVariant -- permintaan langsung pengguna: "yang saya minta
   // layouting nya juga berbeda", lalu susulan "tambahkan jenis model
-  // layout selain 2 yang sudah ada, buat layout itu yang cocok dengan
-  // kategori nya" (12 Agustus 2026) -- SATU varian utama per kategori
-  // (bukan campur-campur dalam satu kategori) supaya tiap kategori punya
-  // "signature look" sendiri yang jelas beda satu sama lain:
-  //   - business, local        -> "banner" (rata kiri sebaris, kartu profil bisnis)
-  //   - shop, education        -> "card" (identitas dibungkus kartu bertema,
-  //                                avatar menonjol -- kesan "kartu resmi/toko")
+  // layout selain 2 yang sudah ada" (jadi 4), lalu susulan lagi "tambahkan
+  // lagi 2 bentuk layout lain nya" (jadi 6, semua di hari yang sama, 12
+  // Agustus 2026) -- SATU varian utama per kategori (bukan campur-campur
+  // dalam satu kategori) supaya tiap kategori punya "signature look"
+  // sendiri yang jelas beda satu sama lain:
+  //   - business    -> "banner" (rata kiri sebaris, kartu profil bisnis)
+  //   - local       -> "cover" (pita warna ala foto sampul di atas, avatar
+  //                     menindih tepi bawahnya -- kesan "official page" toko)
+  //   - shop        -> "card" (identitas dibungkus kartu bertema, avatar
+  //                     menonjol -- kesan "kartu resmi/toko")
+  //   - education   -> "minimal" (avatar kecil sebaris nama ala header
+  //                     aplikasi/dokumen -- konten lebih menonjol dari foto)
   //   - creator, entertainment -> "spotlight" (avatar besar, nama dalam badge
   //                                bulat -- kesan panggung/showcase personal)
   //   - lifestyle, special     -> "centered" (bawaan, gaya Linktree klasik),
@@ -126,7 +131,7 @@ export interface QuickSetupTemplate {
   //                                dipilih di sesi sebelumnya -- CV/portofolio
   //                                secara alami lebih pas gaya profesional)
   // Kosong/undefined = "centered".
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -446,7 +451,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "teacher",
     category: "education",
-    layoutVariant: "card",
+    layoutVariant: "minimal",
     label: "Teacher",
     description: "Info kelas, materi, kontak",
     theme: "ocean",
@@ -461,7 +466,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "tutor",
     category: "education",
-    layoutVariant: "card",
+    layoutVariant: "minimal",
     label: "Tutor",
     description: "Kelas, jadwal, booking",
     theme: "forest",
@@ -473,7 +478,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "course-creator",
     category: "education",
-    layoutVariant: "card",
+    layoutVariant: "minimal",
     label: "Course Creator",
     description: "Kelas, testimoni, pendaftaran",
     theme: "golden",
@@ -485,7 +490,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "student",
     category: "education",
-    layoutVariant: "card",
+    layoutVariant: "minimal",
     label: "Student",
     description: "Portofolio, proyek, media sosial",
     theme: "minimal",
@@ -496,7 +501,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "education-brand",
     category: "education",
-    layoutVariant: "card",
+    layoutVariant: "minimal",
     label: "Education Brand",
     description: "Kelas, event, komunitas",
     theme: "ocean",
@@ -564,7 +569,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "restaurant",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Restaurant",
     description: "Menu, reservasi, lokasi, WhatsApp",
     theme: "amber",
@@ -579,7 +584,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "cafe",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Cafe",
     description: "Menu, Instagram, Google Maps",
     theme: "peach",
@@ -590,7 +595,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "barbershop",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Barbershop",
     description: "Layanan, daftar harga, booking",
     theme: "noir",
@@ -606,7 +611,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "salon",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Salon",
     description: "Layanan, portofolio, booking",
     theme: "rose",
@@ -618,7 +623,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "photographer",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Photographer",
     description: "Portofolio, harga, booking",
     theme: "noir",
@@ -634,7 +639,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "event-organizer",
     category: "local",
-    layoutVariant: "banner",
+    layoutVariant: "cover",
     label: "Event Organizer",
     description: "Event, portofolio, kontak",
     theme: "golden",

@@ -12,11 +12,13 @@ import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 // LAYOUT_VARIANT_LABELS -- label deskriptif per varian untuk modal
 // pratinjau (lihat renderBioHeader, PagePreview.tsx, untuk detail visual
 // tiap varian).
-const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight", string> = {
+const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight" | "cover" | "minimal", string> = {
   centered: "Centered (di tengah)",
   banner: "Banner (rata kiri sebaris)",
   card: "Card (dibungkus kartu, avatar menonjol)",
   spotlight: "Spotlight (avatar besar + badge nama)",
+  cover: "Cover (pita sampul, avatar menindih tepi bawah)",
+  minimal: "Minimal (avatar kecil sebaris nama)",
 };
 
 // buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap

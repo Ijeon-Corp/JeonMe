@@ -182,7 +182,7 @@ export interface PagePreviewData {
   // tepi atas), "spotlight" (avatar besar, nama dalam badge bulat, ikon
   // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
 }
 
 interface PreviewSourcePage {
@@ -222,7 +222,7 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
-  layout_variant?: "centered" | "banner" | "card" | "spotlight";
+  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
 }
 
 interface PreviewSourceLink {
@@ -522,19 +522,30 @@ function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
-  // Empat varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
-  // "layouting nya juga berbeda"): "centered" & "banner" (bawaan, TIDAK
-  // BERUBAH), plus "card" (identitas dibungkus kartu bertema, avatar
-  // menonjol di tepi atas -- kesan "kartu profil resmi") & "spotlight"
-  // (avatar lebih besar, nama dalam badge bulat, ikon sosial lebih
-  // menonjol -- kesan "panggung/showcase"). Dipetakan ke kategori Quick
-  // Setup yang cocok di quick-setup-templates.ts (card untuk Toko/
-  // Edukasi, spotlight untuk Creator/Entertainment), TAPI bisa dipakai
-  // manual di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak
-  // dibatasi cuma dari Quick Setup.
+  // Enam varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
+  // "layouting nya juga berbeda" lalu "tambahkan lagi 2 bentuk layout
+  // lain nya"): "centered" & "banner" (bawaan, TIDAK BERUBAH), "card"
+  // (identitas dibungkus kartu bertema, avatar menonjol di tepi atas --
+  // kesan "kartu profil resmi"), "spotlight" (avatar lebih besar, nama
+  // dalam badge bulat -- kesan "panggung/showcase"), "cover" (pita warna
+  // di atas ala foto sampul, avatar menindih tepi BAWAHnya -- kesan
+  // "official page"), "minimal" (avatar kecil sebaris dengan nama ala
+  // header aplikasi/dokumen, konten jadi pusat perhatian bukan fotonya).
+  // Dipetakan ke kategori Quick Setup yang cocok di quick-setup-templates.ts,
+  // TAPI bisa dipakai manual di halaman mana pun -- field DB cuma
+  // VARCHAR(20) polos, tidak dibatasi cuma dari Quick Setup.
   const variant = data.layoutVariant ?? "centered";
   const isBanner = variant === "banner";
-  const avatarSize = isBanner ? "h-16 w-16" : variant === "spotlight" ? "h-28 w-28" : "h-24 w-24";
+  const isMinimal = variant === "minimal";
+  const avatarSize = isMinimal
+    ? "h-10 w-10"
+    : isBanner
+    ? "h-16 w-16"
+    : variant === "cover"
+    ? "h-20 w-20"
+    : variant === "spotlight"
+    ? "h-28 w-28"
+    : "h-24 w-24";
 
   const avatar = data.avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -549,7 +560,7 @@ function renderBioHeader(
 
   const nameHeading = (
     <h1
-      className={`flex items-center gap-1.5 font-heading text-base font-bold ${isBanner ? "" : "justify-center"} ${theme.name}`}
+      className={`flex items-center gap-1.5 font-heading text-base font-bold ${isBanner || isMinimal ? "" : "justify-center"} ${theme.name}`}
       style={theme.nameStyle}
     >
       {data.displayName || data.username}
@@ -570,6 +581,25 @@ function renderBioHeader(
           {data.bio && <p className={`mt-1 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           {renderSocialRow(data.social, "left")}
         </div>
+      </div>
+    );
+  }
+
+  // "minimal" -- avatar KECIL (h-10, lihat avatarSize) sebaris dengan
+  // nama, ala header aplikasi/dokumen -- bio & ikon sosial di BAWAH,
+  // rata kiri, lebar penuh (bukan di dalam kolom sempit di samping
+  // avatar seperti "banner"). Fotonya sengaja tidak jadi pusat
+  // perhatian -- konten/tautan di bawahnya yang lebih menonjol, cocok
+  // untuk halaman yang sifatnya institusional/informasional.
+  if (isMinimal) {
+    return (
+      <div className="relative flex w-full flex-col items-start gap-3 text-left">
+        <div className="relative flex w-full items-center gap-3">
+          {avatar}
+          {nameHeading}
+        </div>
+        {data.bio && <p className={`text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+        {renderSocialRow(data.social, "left")}
       </div>
     );
   }
@@ -608,6 +638,27 @@ function renderBioHeader(
         </div>
         {renderSocialRow(data.social)}
         {data.bio && <p className={`mt-3 max-w-xs text-center text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+      </div>
+    );
+  }
+
+  // "cover" -- pita gelap tipis (vignette hitam->transparan, netral supaya
+  // aman di tema apa pun, tidak butuh warna khusus per-tema) melebar penuh
+  // ala foto sampul, avatar menindih tepi BAWAHnya (-mt-10, setengah dari
+  // h-20=80px). -mx-6 -mt-14 + w-[calc(100%+3rem)] MEMBATALKAN padding
+  // px-6 py-14 milik kolom konten (bukan cuma nilai sembarang) supaya
+  // pita ini benar-benar mentok ke tepi kartu/bingkai halaman, bukan
+  // berhenti di batas kolom max-w-md.
+  if (variant === "cover") {
+    return (
+      <div className="relative -mx-6 -mt-14 flex w-[calc(100%+3rem)] flex-col items-center">
+        <div className="h-24 w-full bg-gradient-to-b from-black/25 via-black/5 to-transparent" />
+        <div className="relative -mt-10 z-10">{avatar}</div>
+        <div className="relative mt-3 w-full px-6 text-center">
+          {nameHeading}
+          {data.bio && <p className={`mt-2 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social)}
+        </div>
       </div>
     );
   }
@@ -898,7 +949,7 @@ export default function PagePreview({
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-          <div className={`relative ${data.layoutVariant === "banner" ? "" : "flex flex-col items-center"}`}>
+          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" ? "" : "flex flex-col items-center"}`}>
             {renderBioHeader(data, theme)}
           </div>
         </div>
@@ -1445,7 +1496,7 @@ function ProdukPagePreview({
               className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`}
             />
           )}
-          <div className={`relative ${data.layoutVariant === "banner" ? "" : "flex flex-col items-center"}`}>
+          <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" ? "" : "flex flex-col items-center"}`}>
             {renderBioHeader(data, theme)}
           </div>
         </div>

@@ -155,11 +155,15 @@ type publicPageResponse struct {
 	SocialEmail     string `json:"social_email"`
 	// LayoutVariant -- permintaan langsung pengguna, 11 Agustus 2026
 	// (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026
-	// ("tambahkan jenis model layout selain 2 yang sudah ada"): "centered"
-	// (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri sebaris ala
-	// kartu profil bisnis), "card" (identitas dibungkus kartu bertema,
-	// avatar menonjol di tepi atas), "spotlight" (avatar besar, nama dalam
-	// badge bulat). Lihat renderBioHeader di PagePreview.tsx untuk keempatnya.
+	// ("tambahkan jenis model layout selain 2 yang sudah ada"), "cover"/
+	// "minimal" ditambah lagi hari yang sama ("tambahkan lagi 2 bentuk
+	// layout lain nya"): "centered" (bawaan, avatar+nama+bio di tengah),
+	// "banner" (rata kiri sebaris ala kartu profil bisnis), "card"
+	// (identitas dibungkus kartu bertema, avatar menonjol di tepi atas),
+	// "spotlight" (avatar besar, nama dalam badge bulat), "cover" (pita
+	// warna di atas ala foto sampul, avatar menindih tepi bawahnya),
+	// "minimal" (avatar kecil sebaris nama ala header aplikasi/dokumen).
+	// Lihat renderBioHeader di PagePreview.tsx untuk keenamnya.
 	LayoutVariant string             `json:"layout_variant"`
 	Links         []publicLink       `json:"links"`
 	Products      []publicItem       `json:"products"`
@@ -910,7 +914,7 @@ type updatePageRequest struct {
 	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -1804,7 +1808,7 @@ type updateExtraPageRequest struct {
 	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
-	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight"`
+	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
