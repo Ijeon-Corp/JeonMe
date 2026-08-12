@@ -112,7 +112,21 @@ export default function RegisterPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="username-kamu"
-              className="w-full min-w-0 bg-transparent py-3 pl-0.5 pr-3.5 text-sm text-ink focus:outline-none"
+              // focus:!shadow-none (BUKAN cuma focus:shadow-none, `!` wajib)
+              // -- input INI menyatu di tengah pil "jeonme.com/[input]",
+              // bukan kotak fokus berdiri sendiri; glow fokus global
+              // (globals.css, `input:not([type=checkbox]):not([type=radio])
+              // :focus`) selektornya justru LEBIH spesifik daripada utility
+              // Tailwind biasa (tiap :not() ikut menyumbang specificity),
+              // jadi focus:shadow-none polos KALAH & glow tetap muncul
+              // sebagai "blok" abu-abu melayang persis di batas kiri input
+              // (bukan ngikutin bentuk pil bulat pembungkusnya) -- dilaporkan
+              // pengguna via screenshot, dikonfirmasi lewat inspeksi
+              // getComputedStyle sebelum akhirnya ketahuan butuh `!important`.
+              // Pembungkus <div> di atas sudah menampilkan highlight fokus
+              // sendiri lewat focus-within:ring, jadi glow bawaan pada
+              // <input> mentahnya harus benar-benar dimatikan.
+              className="w-full min-w-0 bg-transparent py-3 pl-0.5 pr-3.5 text-sm text-ink focus:!shadow-none focus:outline-none"
             />
           </div>
           {usernameState !== "idle" && (
