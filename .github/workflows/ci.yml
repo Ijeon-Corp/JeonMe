@@ -210,6 +210,18 @@ jobs:
           context: .
           file: docker/web/Dockerfile
           push: true
+          # NEXT_PUBLIC_GOOGLE_CLIENT_ID -- lihat catatan lengkap di
+          # docker/web/Dockerfile: TANPA build-arg ini tombol "Lanjutkan
+          # dengan Google" tidak pernah muncul di staging/production sama
+          # sekali (bug ditemukan pengguna), walau lokal (npm run dev,
+          # baca .env.local langsung) tidak kena. Diambil dari repository
+          # VARIABLE (bukan secret) -- Client ID OAuth memang publik by
+          # design, cuma Client Secret yang rahasia (lihat
+          # apps/web/.env.example). ISI di Settings > Secrets and
+          # variables > Actions > Variables > NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          # nilai SAMA PERSIS dengan GOOGLE_CLIENT_ID di secret backend.
+          build-args: |
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.lower }}/web:${{ github.sha }}
             ${{ steps.extra_tag.outputs.value != '' && format('ghcr.io/{0}/web:{1}', steps.repo.outputs.lower, steps.extra_tag.outputs.value) || '' }}
