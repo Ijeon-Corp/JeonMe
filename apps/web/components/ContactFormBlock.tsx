@@ -13,6 +13,7 @@ export default function ContactFormBlock({
   titleClassName,
   inputClassName,
   buttonClassName,
+  icon,
 }: {
   linkId: string;
   title: string;
@@ -20,6 +21,9 @@ export default function ContactFormBlock({
   titleClassName: string;
   inputClassName: string;
   buttonClassName: string;
+  // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
+  // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
+  icon?: React.ReactNode;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -52,7 +56,12 @@ export default function ContactFormBlock({
 
   return (
     <form onSubmit={handleSubmit} className={cardClassName}>
-      {title && <p className={`mb-2 truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
+      {title && (
+        <p className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
+          {icon}
+          <span className="truncate">{title}</span>
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         <input
           type="text"

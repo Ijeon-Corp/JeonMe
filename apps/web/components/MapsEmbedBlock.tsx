@@ -21,6 +21,7 @@ export default function MapsEmbedBlock({
   embedLat,
   embedLng,
   linkClassName,
+  icon,
 }: {
   title: string;
   url: string;
@@ -28,6 +29,10 @@ export default function MapsEmbedBlock({
   embedLat?: number;
   embedLng?: number;
   linkClassName: string;
+  // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
+  // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx),
+  // fallback ke IconMapPin bawaan kalau belum dipilih apa pun.
+  icon?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const canEmbed = embed && typeof embedLat === "number" && typeof embedLng === "number";
@@ -41,7 +46,7 @@ export default function MapsEmbedBlock({
       <>
         <button type="button" onClick={() => setOpen(true)} className={linkClassName}>
           <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-            <IconMapPin className="h-6 w-6" />
+            {icon ?? <IconMapPin className="h-6 w-6" />}
           </span>
           <span className="w-full truncate px-8 text-center">{title || "Lokasi"}</span>
         </button>
@@ -71,7 +76,7 @@ export default function MapsEmbedBlock({
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className={linkClassName}>
       <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
-        <IconMapPin className="h-6 w-6" />
+        {icon ?? <IconMapPin className="h-6 w-6" />}
       </span>
       <span className="w-full truncate px-8 text-center">{title || "Lokasi"}</span>
     </a>

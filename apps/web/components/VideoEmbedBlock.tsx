@@ -33,17 +33,26 @@ export default function VideoEmbedBlock({
   videoUrl,
   cardClassName,
   titleClassName,
+  icon,
 }: {
   title: string;
   videoUrl: string;
   cardClassName: string;
   titleClassName: string;
+  // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
+  // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
+  icon?: React.ReactNode;
 }) {
   const embedUrl = toEmbedUrl(videoUrl);
 
   return (
     <div className={cardClassName}>
-      {title && <p className={`mb-2 truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
+      {title && (
+        <p className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
+          {icon}
+          <span className="truncate">{title}</span>
+        </p>
+      )}
       {embedUrl ? (
         <div className="aspect-video w-full overflow-hidden rounded-xl">
           <iframe

@@ -59,7 +59,7 @@ import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, TriangleAlert } from "lucide-react";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -217,6 +217,14 @@ const CONTENT_TILES: ContentTile[] = [
   { key: "text", label: "Teks", description: "Tambahkan paragraf teks bebas di antara tautan", Icon: IconTextLines },
 ];
 
+// Permintaan langsung pengguna, 14 Agustus 2026: "harusnya semua tipe ini
+// [judul bisa diedit, ganti ikon, dst]" -- ikon default per block_type utk
+// badge di kartu daftar, dipakai ULANG dari CONTENT_TILES di atas (sama
+// persis dengan ikon tile "Tambah") supaya konsisten, bukan set ikon baru.
+const BLOCK_TYPE_ICON: Record<string, IconComponent> = Object.fromEntries(
+  CONTENT_TILES.filter((t) => t.key !== "link").map((t) => [t.key, t.Icon])
+);
+
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
 // Linktree sungguhan yang dikirim pengguna: tombol "+ Add" besar & mencolok
 // (bukan trigger teks kecil), tiap kartu tautan punya baris ikon aksi
@@ -272,6 +280,12 @@ export default function DashboardLinksPage() {
   // "sediakan banyak icon yang bisa digunakan dan dipilih user") -- id
   // tautan yang sedang membuka IconPickerModal, null berarti modal tertutup.
   const [iconPickerLinkId, setIconPickerLinkId] = useState<string | null>(null);
+
+  // Permintaan langsung pengguna, 14 Agustus 2026: "kalau mau hapus
+  // tampilkan toast peringatan dulu" -- id item yang minta dihapus, tampil
+  // dulu di dialog peringatan sebelum benar-benar memanggil handleDelete.
+  // null berarti dialog tertutup.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Modal "Tambah" ala Linktree.
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -1261,37 +1275,53 @@ export default function DashboardLinksPage() {
             >
               <div className="flex items-center gap-3">
                 <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
-                {link.block_type === "link" &&
-                  (link.custom_icon_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={link.custom_icon_url}
-                      alt=""
-                      title="Ikon kustom"
-                      className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
-                    />
-                  ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
-                    (() => {
-                      const libraryIcon = getLibraryIcon(link.icon_key)!;
-                      return (
-                        <span
-                          title={libraryIcon.label}
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
-                        >
-                          <libraryIcon.Icon className="h-4 w-4" />
-                        </span>
-                      );
-                    })()
-                  ) : (
-                    (() => {
-                      const { Icon, label, badgeClass } = detectLinkIcon(link.url);
-                      return (
-                        <span title={label} className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
-                          <Icon className="h-3.5 w-3.5" />
-                        </span>
-                      );
-                    })()
-                  ))}
+                {/* Badge ikon -- permintaan langsung pengguna, 14 Agustus 2026:
+                    "harusnya semua tipe ini... bisa ubah icon" -- urutan resolusi
+                    SAMA PERSIS dgn tautan biasa (custom_icon_url > icon_key galeri
+                    > deteksi platform dari URL [khusus tautan biasa] > ikon default
+                    per block_type), berlaku utk SEMUA block_type. */}
+                {link.custom_icon_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={link.custom_icon_url}
+                    alt=""
+                    title="Ikon kustom"
+                    className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                  />
+                ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
+                  (() => {
+                    const libraryIcon = getLibraryIcon(link.icon_key)!;
+                    return (
+                      <span
+                        title={libraryIcon.label}
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
+                      >
+                        <libraryIcon.Icon className="h-4 w-4" />
+                      </span>
+                    );
+                  })()
+                ) : link.block_type === "link" ? (
+                  (() => {
+                    const { Icon, label, badgeClass } = detectLinkIcon(link.url);
+                    return (
+                      <span title={label} className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                    );
+                  })()
+                ) : (
+                  (() => {
+                    const DefaultIcon = BLOCK_TYPE_ICON[link.block_type];
+                    return (
+                      <span
+                        title={BLOCK_TYPE_LABEL[link.block_type]}
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
+                      >
+                        <DefaultIcon className="h-4 w-4" />
+                      </span>
+                    );
+                  })()
+                )}
                 <div className="min-w-0 flex-1">
                   {editingField?.id === link.id && editingField.field === "title" ? (
                     <input
@@ -1306,16 +1336,18 @@ export default function DashboardLinksPage() {
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <p className="truncate text-sm font-bold text-ink">{link.title}</p>
-                      {link.block_type === "link" && (
-                        <button
-                          type="button"
-                          onClick={() => startEditField(link, "title")}
-                          className="flex-shrink-0 text-muted hover:text-primary"
-                          title="Ubah judul"
-                        >
-                          <IconPencil className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                      {/* Permintaan langsung pengguna, 14 Agustus 2026: "judul nya
+                          bisa diedit juga sama seperti yang lain" -- sebelumnya
+                          cuma tautan biasa yang bisa ubah judul inline, sekarang
+                          berlaku utk SEMUA block_type (updateLink sudah generik). */}
+                      <button
+                        type="button"
+                        onClick={() => startEditField(link, "title")}
+                        className="flex-shrink-0 text-muted hover:text-primary"
+                        title="Ubah judul"
+                      >
+                        <IconPencil className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   )}
                   {link.block_type !== "link" && (
@@ -1357,7 +1389,9 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {/* Baris ikon aksi -- jadwal/kunci (khusus tautan biasa), jumlah klik, hapus. */}
+              {/* Baris ikon aksi -- jadwal/kunci/featured (khusus tautan biasa),
+                  kontrol ikon (SEMUA block_type, lihat komentar 14 Agustus 2026
+                  di bawah), jumlah klik, hapus. */}
               <div className="ml-11 flex items-center gap-2">
                 {link.block_type === "link" && (
                   <>
@@ -1381,69 +1415,71 @@ export default function DashboardLinksPage() {
                     >
                       <IconLock className="h-4 w-4" />
                     </button>
-                    {/* Permintaan langsung pengguna: unggah gambar kustom per
-                        tautan, menggantikan ikon platform otomatis di halaman
-                        publik. */}
-                    <label
-                      title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
-                      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.custom_icon_url ? "text-primary" : "text-muted"
-                      }`}
-                    >
-                      {iconUploadingId === link.id ? (
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                      ) : (
-                        <IconCamera className="h-4 w-4" />
-                      )}
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                        onChange={(e) => handleIconUpload(e, link)}
-                        disabled={iconUploadingId === link.id}
-                        className="hidden"
-                      />
-                    </label>
-                    {/* Permintaan langsung pengguna, 13 Agustus 2026: "memilih
-                        icon untuk blok yang sudah disediakan dari web ini...
-                        supaya user tidak perlu mendownload icon sendiri" --
-                        alternatif dari unggah gambar, buka IconPickerModal
-                        (galeri ~210 ikon lucide-react). */}
-                    <button
-                      type="button"
-                      onClick={() => setIconPickerLinkId(link.id)}
-                      title="Pilih dari galeri ikon"
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.icon_key ? "text-primary" : "text-muted"
-                      }`}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </button>
-                    {(link.custom_icon_url || link.icon_key) && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIcon(link)}
-                        title="Hapus ikon (kembali ke deteksi otomatis)"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
-                      >
-                        <IconClose className="h-4 w-4" />
-                      </button>
-                    )}
-                    {/* Modul "Featured Link" (permintaan langsung pengguna,
-                        referensi "Featured Layout" Linktree sungguhan):
-                        tampil sebagai kartu thumbnail 16:9, bukan baris
-                        klasik -- lihat panel unggah thumbnail di bawah
-                        yang muncul begitu status ini menyala. */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleFeatured(link)}
-                      title={link.is_featured ? "Matikan Featured (kembali ke baris klasik)" : "Jadikan Featured (kartu thumbnail besar)"}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.is_featured ? "text-primary" : "text-muted"
-                      }`}
-                    >
-                      <IconStar className="h-4 w-4" />
-                    </button>
                   </>
+                )}
+                {/* Kontrol ikon -- permintaan langsung pengguna, 14 Agustus 2026:
+                    "harusnya semua tipe ini... bisa ubah icon" -- sebelumnya
+                    unggah/galeri/hapus ikon cuma tersedia utk tautan biasa,
+                    sekarang berlaku utk SEMUA block_type (UploadIcon/DeleteIcon
+                    backend & updateLink icon_key sudah generik per-row, tidak
+                    peduli block_type). */}
+                <label
+                  title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
+                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                    link.custom_icon_url ? "text-primary" : "text-muted"
+                  }`}
+                >
+                  {iconUploadingId === link.id ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                  ) : (
+                    <IconCamera className="h-4 w-4" />
+                  )}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleIconUpload(e, link)}
+                    disabled={iconUploadingId === link.id}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIconPickerLinkId(link.id)}
+                  title="Pilih dari galeri ikon"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                    link.icon_key ? "text-primary" : "text-muted"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                {(link.custom_icon_url || link.icon_key) && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveIcon(link)}
+                    title="Hapus ikon (kembali ke deteksi/ikon default)"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                )}
+                {/* Modul "Featured Link" (permintaan langsung pengguna,
+                    referensi "Featured Layout" Linktree sungguhan): tampil
+                    sebagai kartu thumbnail 16:9, bukan baris klasik -- lihat
+                    panel unggah thumbnail di bawah yang muncul begitu status
+                    ini menyala. Khusus tautan biasa (thumbnail 16:9 tidak
+                    relevan utk blok video/faq/maps/text yang punya rendering
+                    sendiri). */}
+                {link.block_type === "link" && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeatured(link)}
+                    title={link.is_featured ? "Matikan Featured (kembali ke baris klasik)" : "Jadikan Featured (kartu thumbnail besar)"}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      link.is_featured ? "text-primary" : "text-muted"
+                    }`}
+                  >
+                    <IconStar className="h-4 w-4" />
+                  </button>
                 )}
                 {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && (
                   <button
@@ -1455,10 +1491,15 @@ export default function DashboardLinksPage() {
                   </button>
                 )}
                 <div className="flex-1" />
+                {/* Permintaan langsung pengguna, 14 Agustus 2026: "kalau mau
+                    hapus tampilkan toast peringatan dulu" -- sebelumnya hapus
+                    langsung tanpa konfirmasi apa pun (link maupun blok
+                    lainnya), sekarang buka dialog peringatan dulu (lihat
+                    confirmDeleteId & modalnya di bawah <ul>). */}
                 <button
                   type="button"
-                  onClick={() => handleDelete(link.id)}
-                  title="Hapus tautan"
+                  onClick={() => setConfirmDeleteId(link.id)}
+                  title="Hapus"
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -1773,6 +1814,59 @@ export default function DashboardLinksPage() {
               onSelect={(icon) => handleSelectLibraryIcon(target, icon.key)}
               onClose={() => setIconPickerLinkId(null)}
             />
+          );
+        })()}
+
+      {/* Dialog konfirmasi hapus -- permintaan langsung pengguna, 14 Agustus
+          2026: "kalau mau hapus tampilkan toast peringatan dulu". Berlaku
+          utk SEMUA block_type (tautan biasa maupun video/faq/maps/text/dst),
+          trigger-nya satu tombol sampah yang sama di setiap kartu. */}
+      {confirmDeleteId &&
+        (() => {
+          const target = links.find((l) => l.id === confirmDeleteId);
+          if (!target) return null;
+          const noun = target.block_type === "link" ? "tautan" : BLOCK_TYPE_LABEL[target.block_type]?.toLowerCase() ?? "blok";
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+              onClick={() => setConfirmDeleteId(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                    <TriangleAlert className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-heading text-sm font-bold text-ink">Hapus {noun} ini?</h2>
+                    <p className="mt-1 text-xs text-muted">
+                      &ldquo;{target.title || "(tanpa judul)"}&rdquo; akan hilang dari halaman publikmu. Tindakan ini tidak bisa dibatalkan.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDelete(confirmDeleteId);
+                      setConfirmDeleteId(null);
+                    }}
+                    className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700"
+                  >
+                    Ya, Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
           );
         })()}
 

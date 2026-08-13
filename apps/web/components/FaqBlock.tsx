@@ -17,6 +17,7 @@ export default function FaqBlock({
   titleClassName,
   itemTitleClassName,
   itemBodyClassName,
+  icon,
 }: {
   title: string;
   items: FaqItem[];
@@ -24,12 +25,22 @@ export default function FaqBlock({
   titleClassName: string;
   itemTitleClassName: string;
   itemBodyClassName: string;
+  // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
+  // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
+  // Tidak tampil utk "accordion" (dipakai ulang lewat komponen ini dengan
+  // title="") -- item accordion memang sengaja tanpa header terpisah.
+  icon?: React.ReactNode;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <div className={cardClassName}>
-      {title && <p className={`mb-2 truncate text-sm font-semibold ${titleClassName}`}>{title}</p>}
+      {title && (
+        <p className={`mb-2 flex items-center gap-1.5 truncate text-sm font-semibold ${titleClassName}`}>
+          {icon}
+          <span className="truncate">{title}</span>
+        </p>
+      )}
       <div className="flex flex-col divide-y divide-current/10">
         {items.map((item, i) => (
           <div key={i}>

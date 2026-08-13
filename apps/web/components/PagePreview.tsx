@@ -17,10 +17,11 @@ import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
 import { PageStickerData, RecentPurchase } from "@/lib/api-client";
-import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconTrash } from "@/components/icons";
+import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconMapPin, IconTrash } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
+import { HelpCircle, Video as VideoIcon } from "lucide-react";
 
 export interface PagePreviewLink {
   id: string;
@@ -843,6 +844,25 @@ function renderBioHeader(
   );
 }
 
+// resolveBlockIcon -- permintaan langsung pengguna, 14 Agustus 2026:
+// "harusnya semua tipe ini... bisa ubah icon" -- urutan resolusi SAMA
+// PERSIS dengan tautan biasa (customIconUrl > iconKey galeri > ikon default),
+// dipakai utk blok video/faq/accordion/maps/contact_form yang sebelumnya
+// TIDAK punya slot ikon sama sekali di halaman publik.
+function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentType<{ className?: string }>, sizeClass: string) {
+  if (link.customIconUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={link.customIconUrl} alt="" className={`${sizeClass} flex-shrink-0 rounded-full object-cover`} />
+    );
+  }
+  const libraryIcon = getLibraryIcon(link.iconKey);
+  if (libraryIcon) {
+    return <libraryIcon.Icon className={`${sizeClass} flex-shrink-0`} />;
+  }
+  return <DefaultIcon className={`${sizeClass} flex-shrink-0`} />;
+}
+
 function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
@@ -860,6 +880,7 @@ function renderLinkOrBlock(
         videoUrl={(link.blockData?.video_url as string) ?? ""}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
         titleClassName={theme.productTitle}
+        icon={resolveBlockIcon(link, VideoIcon, "h-4 w-4")}
       />
     );
   }
@@ -873,6 +894,7 @@ function renderLinkOrBlock(
         titleClassName={theme.productTitle}
         itemTitleClassName={theme.cardTitle}
         itemBodyClassName={theme.bio}
+        icon={resolveBlockIcon(link, HelpCircle, "h-4 w-4")}
       />
     );
   }
@@ -886,6 +908,7 @@ function renderLinkOrBlock(
         embedLat={link.blockData?.embed_lat as number | undefined}
         embedLng={link.blockData?.embed_lng as number | undefined}
         linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+        icon={resolveBlockIcon(link, IconMapPin, "h-6 w-6")}
       />
     );
   }
@@ -932,6 +955,7 @@ function renderLinkOrBlock(
         titleClassName={theme.productTitle}
         inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
         buttonClassName={theme.buyButton}
+        icon={resolveBlockIcon(link, IconMail, "h-4 w-4")}
       />
     ) : (
       <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
