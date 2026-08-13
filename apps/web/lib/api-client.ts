@@ -324,7 +324,7 @@ export interface PublicPage {
   // "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
   // sebaris), "card" (dibungkus kartu bertema), "spotlight" (avatar
   // besar + badge nama). Lihat renderBioHeader di PagePreview.tsx.
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
+  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -495,7 +495,7 @@ export interface MyPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
+  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/

@@ -26,6 +26,7 @@ const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; descript
   { value: "cover", label: "Cover", description: "Pita warna di atas ala foto sampul." },
   { value: "minimal", label: "Minimal", description: "Avatar kecil sebaris nama, konten jadi fokus." },
   { value: "hero", label: "Hero", description: "Foto profil tampil besar edge-to-edge sebagai latar. Isi Foto Profil dulu supaya efeknya terlihat." },
+  { value: "polaroid", label: "Polaroid", description: "Avatar kotak dibingkai putih & dimiringkan ala foto polaroid." },
 ];
 
 export default function DesignHeaderPage() {

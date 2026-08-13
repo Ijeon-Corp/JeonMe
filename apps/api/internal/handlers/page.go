@@ -160,16 +160,25 @@ type publicPageResponse struct {
 	// layout lain nya"), "hero" ditambah 13 Agustus 2026 (hasil analisa
 	// benchmark Linktree/Lynk.id -- "Hero" Linktree BUKAN foto sampul
 	// terpisah, cuma foto profil yang SAMA ditampilkan besar edge-to-edge,
-	// jadi TIDAK butuh kolom/upload baru): "centered" (bawaan, avatar+
-	// nama+bio di tengah), "banner" (rata kiri sebaris ala kartu profil
-	// bisnis), "card" (identitas dibungkus kartu bertema, avatar menonjol
-	// di tepi atas), "spotlight" (avatar besar, nama dalam badge bulat),
-	// "cover" (pita warna di atas ala foto sampul, avatar menindih tepi
-	// bawahnya), "minimal" (avatar kecil sebaris nama ala header aplikasi/
-	// dokumen), "hero" (avatar_url YANG SAMA dirender besar edge-to-edge
-	// sebagai header, bukan bulat kecil -- fallback ke "centered" kalau
-	// avatar_url masih kosong, lihat renderBioHeader).
-	// Lihat renderBioHeader di PagePreview.tsx untuk ketujuhnya.
+	// jadi TIDAK butuh kolom/upload baru), "polaroid" ditambah hari yang
+	// sama lagi (permintaan langsung pengguna: template Quick Setup per
+	// kategori harus punya STRUKTUR layout berbeda-beda, bukan cuma tema/
+	// isi blok -- dengan 8 kategori tapi baru 7 varian, kategori Lifestyle
+	// kebagian jatah "centered" yang sama dengan kategori Special, jadi
+	// varian ke-8 ini dibuat khusus supaya SEMUA 8 kategori akhirnya unik):
+	// "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
+	// sebaris ala kartu profil bisnis), "card" (identitas dibungkus kartu
+	// bertema, avatar menonjol di tepi atas), "spotlight" (avatar besar,
+	// nama dalam badge bulat), "cover" (pita warna di atas ala foto
+	// sampul, avatar menindih tepi bawahnya), "minimal" (avatar kecil
+	// sebaris nama ala header aplikasi/dokumen), "hero" (avatar_url YANG
+	// SAMA dirender besar edge-to-edge sebagai header, bukan bulat kecil
+	// -- fallback ke "centered" kalau avatar_url masih kosong), "polaroid"
+	// (avatar KOTAK dibingkai putih ala foto polaroid, dimiringkan sedikit
+	// -- referensi estetika Pinterest/VSCO board cover, cocok utk kategori
+	// yang kontennya visual/aesthetic-driven seperti lifestyle/travel/
+	// fashion blogger, lihat renderBioHeader).
+	// Lihat renderBioHeader di PagePreview.tsx untuk kedelapannya.
 	LayoutVariant string             `json:"layout_variant"`
 	Links         []publicLink       `json:"links"`
 	Products      []publicItem       `json:"products"`
@@ -960,7 +969,7 @@ type updatePageRequest struct {
 	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -1854,7 +1863,7 @@ type updateExtraPageRequest struct {
 	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
-	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero"`
+	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap

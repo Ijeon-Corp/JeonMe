@@ -190,7 +190,7 @@ export interface PagePreviewData {
   // tepi atas), "spotlight" (avatar besar, nama dalam badge bulat, ikon
   // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
   // utmEnabled -- Modul Analitik Pihak Ketiga (permintaan langsung
   // pengguna, 12 Agustus 2026): kalau true, SETIAP tautan keluar
   // (TrackedLink) ditandai utm_source=jeonme&utm_medium=social&
@@ -257,7 +257,7 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
-  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
+  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
 }
 
 interface PreviewSourceLink {
@@ -561,19 +561,24 @@ function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
-  // Tujuh varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
+  // Delapan varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
   // "layouting nya juga berbeda" lalu "tambahkan lagi 2 bentuk layout
   // lain nya", "hero" ditambah 13 Agustus 2026 hasil analisa benchmark
-  // Linktree/Lynk.id): "centered" & "banner" (bawaan, TIDAK BERUBAH),
-  // "card" (identitas dibungkus kartu bertema, avatar menonjol di tepi
-  // atas -- kesan "kartu profil resmi"), "spotlight" (avatar lebih
-  // besar, nama dalam badge bulat -- kesan "panggung/showcase"), "cover"
-  // (pita warna di atas ala foto sampul, avatar menindih tepi BAWAHnya
-  // -- kesan "official page"), "minimal" (avatar kecil sebaris dengan
-  // nama ala header aplikasi/dokumen, konten jadi pusat perhatian bukan
-  // fotonya), "hero" (avatarUrl yang sama ditampilkan besar edge-to-edge
-  // sebagai latar, nama/bio ditumpuk di atasnya -- lihat catatan lengkap
-  // di percabangannya sendiri di bawah). Dipetakan ke kategori Quick
+  // Linktree/Lynk.id, "polaroid" ditambah hari yang sama lagi supaya
+  // KEDELAPAN kategori Quick Setup punya struktur unik masing-masing --
+  // lihat catatan lengkap & pemetaan kategori->varian di
+  // QuickSetupTemplate.layoutVariant, quick-setup-templates.ts):
+  // "centered" & "banner" (bawaan, TIDAK BERUBAH), "card" (identitas
+  // dibungkus kartu bertema, avatar menonjol di tepi atas -- kesan "kartu
+  // profil resmi"), "spotlight" (avatar lebih besar, nama dalam badge
+  // bulat -- kesan "panggung/showcase"), "cover" (pita warna di atas ala
+  // foto sampul, avatar menindih tepi BAWAHnya -- kesan "official page"),
+  // "minimal" (avatar kecil sebaris dengan nama ala header aplikasi/
+  // dokumen, konten jadi pusat perhatian bukan fotonya), "hero" (avatarUrl
+  // yang sama ditampilkan besar edge-to-edge sebagai latar, nama/bio
+  // ditumpuk di atasnya), "polaroid" (avatar KOTAK dibingkai putih &
+  // dimiringkan ala foto polaroid/board Pinterest -- lihat catatan lengkap
+  // di percabangan masing-masing di bawah). Dipetakan ke kategori Quick
   // Setup yang cocok di quick-setup-templates.ts, TAPI bisa dipakai
   // manual di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak
   // dibatasi cuma dari Quick Setup.
@@ -738,6 +743,40 @@ function renderBioHeader(
           </div>
         </div>
         <div className="relative mt-3 w-full px-6">{renderSocialRow(data.social)}</div>
+      </div>
+    );
+  }
+
+  // "polaroid" -- ditambah 13 Agustus 2026 (permintaan langsung pengguna:
+  // "layout template mockup di tiap kategori itu dibedakan jangan ada
+  // yang sama... bukan hanya mengubah tema... tapi juga struktur
+  // layoutnya, ambil referensi dari web lain nya"): avatar KOTAK (bukan
+  // lingkaran seperti 7 varian lain) dibingkai putih tebal di sisi bawah
+  // (p-2 pb-6, bukan padding seragam) ala cetakan foto polaroid fisik,
+  // dimiringkan sedikit (-rotate-3) supaya terasa "ditempel di papan"
+  // -- referensi estetika cover board Pinterest / feed VSCO, dipetakan
+  // ke kategori Lifestyle (travel/fashion/beauty) di quick-setup-
+  // templates.ts karena kontennya secara alami visual/aesthetic-driven.
+  // Bingkainya SELALU putih solid (bukan ikut theme.card) -- itu justru
+  // ciri khas polaroid asli, harus tetap putih di tema apa pun (gelap
+  // maupun terang) supaya fotonya tetap "menonjol" dari latar.
+  if (variant === "polaroid") {
+    const polaroidPhoto = data.avatarUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={data.avatarUrl} alt={data.username} className="h-28 w-28 object-cover" />
+    ) : (
+      <div className="flex h-28 w-28 items-center justify-center bg-primary-subtle font-heading text-2xl font-bold text-primary">
+        {data.username.slice(0, 1).toUpperCase()}
+      </div>
+    );
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        <div className="relative -rotate-3 rounded-sm bg-white p-2 pb-6 shadow-xl">{polaroidPhoto}</div>
+        <div className="relative mt-5 text-center">
+          {nameHeading}
+          {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social)}
+        </div>
       </div>
     );
   }

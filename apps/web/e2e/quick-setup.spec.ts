@@ -1,6 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { publishPage, registerAndLogin } from "./fixtures";
 
+// PNG 64x64 valid minimal (bukan file fixture terpisah di disk -- pola sama
+// dengan buffer inline di products-checkout.spec.ts) -- avatar butuh gambar
+// yang benar-benar bisa didekode (backend mengonversi ke WebP lewat
+// imageconv, byte sembarang akan ditolak), jadi tidak bisa dummy string
+// polos seperti file produk digital.
+const TEST_AVATAR_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAABA0lEQVR4nNXCkbYQAAAFwQtBEARBEARBEARBEDwIgiAIgiAIgiAIFoIgeBAEQRAEQRAEC0EQBEEQBEEQBEEQBEHQd+yc2bD9CKbvKKbvGKbvOKbvBKbvJKbvFKbvNKbvDKbvLKbvHKbvPKbvAqbvIqbvEqbvANN3GdN3BdN3FdN3DdN3HdN3A9N3E9N3C9N3G9N3B9N3F9N3D9N3H9MHpu8Bpu8hpu8Rpu8Q0/cY0/cE0/cU0/cM0/cc0/cC0/cS0/cK0/ca0/cG0yem7y2m7x2m7z2m7wOm7yOm7xOm7zOm7wum7yum7xum7zum7wem7yem7xem7zem7w+m7y+m7x+m/wdgL6GHQTG2qQAAAABJRU5ErkJggg==";
+
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
 // menu saja seperti quick setup dan user disuruh pilih jenis template...
 // template ini bukan hanya visual tapi juga blok layout dll". Satu klik
@@ -192,16 +200,52 @@ test.describe("Quick Setup", () => {
     // Susulan: "tambahkan jenis model layout selain 2 yang sudah ada,
     // coba buat layout itu yang cocok dengan kategori nya" -- dua varian
     // baru ditambah ("card" & "spotlight", lihat renderBioHeader di
-    // PagePreview.tsx), lalu dipetakan SATU varian utama per kategori
-    // Quick Setup (creator/entertainment -> spotlight, shop -> card --
-    // education pindah lagi ke "minimal" di susulan berikutnya, lihat
-    // test di bawah). Test ini memverifikasi Spotlight sungguhan tersimpan
-    // & tampil di halaman publik ASLI (bukan cuma mockup dashboard) --
-    // avatar Spotlight (h-28 = 112px) jelas lebih besar dari avatar
-    // Centered/Card/Banner (h-24 = 96px / h-16 = 64px), dicek lewat
-    // bounding box tinggi avatar, bukan nama kelas CSS.
+    // PagePreview.tsx), awalnya dipetakan ke creator & entertainment
+    // sekaligus. Revisi 13 Agustus 2026 ("layout template mockup di tiap
+    // kategori itu dibedakan jangan ada yang sama") memisahkan keduanya --
+    // creator pindah ke "hero" (avatar penuh edge-to-edge, ref: Linktree
+    // Hero), entertainment TETAP "spotlight" (avatar dalam badge bulat,
+    // ref: artwork bulat Spotify/Apple Podcasts) -- makanya test ini
+    // sekarang pakai "Content Creator" (kategori Entertainment), BUKAN
+    // "Creator Profile" (kategori Creator, sekarang hero) lagi. Test ini
+    // memverifikasi Spotlight sungguhan tersimpan & tampil di halaman
+    // publik ASLI (bukan cuma mockup dashboard) -- avatar Spotlight
+    // (h-28 = 112px) jelas lebih besar dari avatar Centered/Card/Banner
+    // (h-24 = 96px / h-16 = 64px), dicek lewat bounding box tinggi
+    // avatar, bukan nama kelas CSS.
     const { username } = await registerAndLogin(page, "quicksetup5");
     await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("content creator");
+    await page.getByText("Content Creator", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
+      expect(avatarBox).not.toBeNull();
+      expect(avatarBox!.height).toBeGreaterThan(100);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Hero (avatar penuh edge-to-edge) sungguhan tampil di halaman publik", async ({ page }) => {
+    // Kategori Creator dipindah dari "spotlight" ke "hero" 13 Agustus
+    // 2026 (lihat catatan test Spotlight di atas). Tanpa avatar terisi,
+    // "hero" jatuh balik ke "centered" (lihat renderBioHeader,
+    // PagePreview.tsx) -- test ini SENGAJA mengunggah avatar dulu supaya
+    // benar-benar menguji rendering hero yang sesungguhnya (foto besar
+    // edge-to-edge), bukan cuma fallback-nya.
+    const { username } = await registerAndLogin(page, "quicksetup8");
+    await publishPage(page);
+
+    await page.goto("/dashboard/design/header");
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_AVATAR_PNG_BASE64, "base64") });
+    await expect(page.getByText("Mengunggah...")).toHaveCount(0, { timeout: 15000 });
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("creator profile");
@@ -211,9 +255,39 @@ test.describe("Quick Setup", () => {
 
     await expect(async () => {
       await page.goto(`/${username}`);
-      const avatarBox = await page.locator("div.rounded-full.text-2xl").first().boundingBox();
-      expect(avatarBox).not.toBeNull();
-      expect(avatarBox!.height).toBeGreaterThan(100);
+      // Hero merender <img alt={username}> besar (bukan div avatar bulat
+      // placeholder) -- lihat renderBioHeader varian "hero".
+      const heroImg = page.locator(`img[alt='${username}']`);
+      await expect(heroImg).toBeVisible({ timeout: 3000 });
+      const box = await heroImg.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThan(200);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Polaroid (avatar kotak dibingkai & dimiringkan) sungguhan tampil di halaman publik", async ({ page }) => {
+    // Kategori Lifestyle -- SEBELUMNYA jatuh ke default "centered" (sama
+    // dengan kategori Special, tabrakan) -- 13 Agustus 2026 dipetakan ke
+    // varian baru "polaroid" (avatar kotak, bukan bulat, dibingkai putih
+    // & dimiringkan -- ref estetika Pinterest/VSCO) supaya benar-benar
+    // beda dari 7 kategori lain. Dicek lewat ROTASI CSS (-rotate-3, satu-
+    // satunya varian yang memiringkan elemen) -- penanda paling spesifik
+    // untuk varian ini, bukan nama kelas yang gampang berubah.
+    const { username } = await registerAndLogin(page, "quicksetup9");
+    await publishPage(page);
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("travel blogger");
+    await page.getByText("Travel Blogger", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const frame = page.locator("div.bg-white.shadow-xl").first();
+      await expect(frame).toBeVisible({ timeout: 3000 });
+      const transform = await frame.evaluate((el) => getComputedStyle(el).transform);
+      expect(transform).not.toBe("none");
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
 

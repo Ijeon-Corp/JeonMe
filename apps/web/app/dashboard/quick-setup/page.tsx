@@ -11,14 +11,19 @@ import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
 // LAYOUT_VARIANT_LABELS -- label deskriptif per varian untuk modal
 // pratinjau (lihat renderBioHeader, PagePreview.tsx, untuk detail visual
-// tiap varian).
-const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight" | "cover" | "minimal", string> = {
+// tiap varian). "hero"/"polaroid" sempat KETINGGALAN di sini (ditambah ke
+// renderBioHeader/QuickSetupTemplate.layoutVariant tapi lupa disusulkan ke
+// map ini) -- ditemukan & diperbaiki 13 Agustus 2026 saat memberi tiap
+// kategori Quick Setup varian layout unik.
+const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid", string> = {
   centered: "Centered (di tengah)",
   banner: "Banner (rata kiri sebaris)",
   card: "Card (dibungkus kartu, avatar menonjol)",
   spotlight: "Spotlight (avatar besar + badge nama)",
   cover: "Cover (pita sampul, avatar menindih tepi bawah)",
   minimal: "Minimal (avatar kecil sebaris nama)",
+  hero: "Hero (foto profil besar edge-to-edge)",
+  polaroid: "Polaroid (avatar kotak dibingkai & dimiringkan)",
 };
 
 // buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap

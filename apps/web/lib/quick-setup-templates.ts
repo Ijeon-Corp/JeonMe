@@ -113,25 +113,45 @@ export interface QuickSetupTemplate {
   // layoutVariant -- permintaan langsung pengguna: "yang saya minta
   // layouting nya juga berbeda", lalu susulan "tambahkan jenis model
   // layout selain 2 yang sudah ada" (jadi 4), lalu susulan lagi "tambahkan
-  // lagi 2 bentuk layout lain nya" (jadi 6, semua di hari yang sama, 12
-  // Agustus 2026) -- SATU varian utama per kategori (bukan campur-campur
-  // dalam satu kategori) supaya tiap kategori punya "signature look"
-  // sendiri yang jelas beda satu sama lain:
-  //   - business    -> "banner" (rata kiri sebaris, kartu profil bisnis)
-  //   - local       -> "cover" (pita warna ala foto sampul di atas, avatar
-  //                     menindih tepi bawahnya -- kesan "official page" toko)
-  //   - shop        -> "card" (identitas dibungkus kartu bertema, avatar
-  //                     menonjol -- kesan "kartu resmi/toko")
-  //   - education   -> "minimal" (avatar kecil sebaris nama ala header
-  //                     aplikasi/dokumen -- konten lebih menonjol dari foto)
-  //   - creator, entertainment -> "spotlight" (avatar besar, nama dalam badge
-  //                                bulat -- kesan panggung/showcase personal)
-  //   - lifestyle, special     -> "centered" (bawaan, gaya Linktree klasik),
-  //                                KECUALI "portfolio" (tetap "banner", sudah
-  //                                dipilih di sesi sebelumnya -- CV/portofolio
-  //                                secara alami lebih pas gaya profesional)
+  // lagi 2 bentuk layout lain nya" (jadi 6, semua 12 Agustus 2026).
+  //
+  // Revisi 13 Agustus 2026 (permintaan langsung pengguna): "saya mau
+  // bentuk layout template mockup di tiap kategori itu dibedakan jangan
+  // ada yang sama di tiap kategori... bukan hanya mengubah tema ataupun
+  // isi blok di dalam nya tapi juga struktur layoutnya, ambil referensi
+  // dari web lain nya sesuai dengan kategori yang ada" -- SEBELUMNYA
+  // creator & entertainment sama-sama "spotlight", lifestyle & special
+  // sama-sama jatuh ke default "centered" (2 tabrakan). Sekarang KEDELAPAN
+  // kategori dapat varian STRUKTUR unik masing-masing (tidak ada dua
+  // kategori yang sama), varian ke-8 "polaroid" ditambah khusus supaya
+  // muat. SATU varian per kategori (bukan campur dalam satu kategori)
+  // supaya tiap kategori punya "signature look" sendiri:
+  //   - creator      -> "hero" (avatar penuh edge-to-edge -- ref: Linktree
+  //                      Hero / bio Instagram, personal brand tampil besar)
+  //   - business     -> "banner" (avatar kecil rata kiri sebaris nama+bio
+  //                      -- ref: header profil LinkedIn / kartu nama digital)
+  //   - shop         -> "card" (identitas dibungkus kartu bertema, avatar
+  //                      menonjol -- ref: header toko Shopify, kesan "kartu
+  //                      resmi/etalase brand")
+  //   - education    -> "minimal" (avatar kecil sebaris nama, konten jadi
+  //                      pusat perhatian -- ref: header dokumen Notion /
+  //                      halaman instruktur Coursera, daftar kelas > foto)
+  //   - entertainment -> "spotlight" (avatar besar dalam badge bulat --
+  //                      ref: artwork bulat artis Spotify / cover circle
+  //                      podcast Apple Podcasts)
+  //   - local        -> "cover" (pita warna ala foto sampul, avatar
+  //                      menindih tepi bawahnya -- ref: cover photo halaman
+  //                      Facebook Page / Google Business Profile toko lokal)
+  //   - lifestyle    -> "polaroid" (avatar KOTAK dibingkai putih & sedikit
+  //                      dimiringkan ala foto polaroid -- ref: cover board
+  //                      Pinterest / estetika feed VSCO, cocok utk konten
+  //                      visual travel/fashion/beauty)
+  //   - special      -> "centered" (bawaan, gaya Linktree klasik -- ref:
+  //                      Linktree default, paling pas utk kategori hub/
+  //                      serba-guna seperti "Link Hub"/"Coming Soon" yang
+  //                      memang tidak butuh identitas visual berat)
   // Kosong/undefined = "centered".
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -214,7 +234,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "creator-profile",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Creator Profile",
     description: "Foto profil, bio, media sosial, YouTube, TikTok",
     theme: "bloom",
@@ -228,7 +248,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "influencer",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Influencer",
     description: "Media sosial + afiliasi + produk",
     theme: "blaze",
@@ -243,7 +263,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "personal-branding",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Personal Branding",
     description: "Portofolio, pencapaian, kontak",
     theme: "minimal",
@@ -257,7 +277,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "public-figure",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Public Figure",
     description: "Media sosial, event, merchandise",
     theme: "golden",
@@ -272,7 +292,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "streamer",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Streamer",
     description: "Twitch, YouTube, Discord, donasi",
     theme: "cyber",
@@ -287,7 +307,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "gamer",
     category: "creator",
-    layoutVariant: "spotlight",
+    layoutVariant: "hero",
     label: "Gamer",
     description: "Profil game, Discord, YouTube, Twitch",
     theme: "cyber",
@@ -690,6 +710,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "travel-blogger",
     category: "lifestyle",
+    layoutVariant: "polaroid",
     label: "Travel Blogger",
     description: "Destinasi, panduan perjalanan, media sosial",
     theme: "sunrise",
@@ -703,6 +724,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fitness-coach",
     category: "lifestyle",
+    layoutVariant: "polaroid",
     label: "Fitness Coach",
     description: "Latihan, program, booking",
     theme: "blaze",
@@ -717,6 +739,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "beauty-creator",
     category: "lifestyle",
+    layoutVariant: "polaroid",
     label: "Beauty Creator",
     description: "Tutorial, produk, media sosial",
     theme: "rose",
@@ -730,6 +753,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "lifestyle-creator",
     category: "lifestyle",
+    layoutVariant: "polaroid",
     label: "Lifestyle Creator",
     description: "Konten, rekomendasi, afiliasi",
     theme: "peach",
@@ -744,6 +768,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fashion-creator",
     category: "lifestyle",
+    layoutVariant: "polaroid",
     label: "Fashion Creator",
     description: "Outfit, tautan belanja, media sosial",
     theme: "rose",
@@ -760,7 +785,6 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "portfolio",
     category: "special",
-    layoutVariant: "banner",
     label: "Portfolio",
     description: "Proyek + keahlian + kontak",
     theme: "minimal",
