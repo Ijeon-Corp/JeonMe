@@ -19,6 +19,7 @@ import StickerIcon from "@/components/StickerIcon";
 import { PageStickerData, RecentPurchase } from "@/lib/api-client";
 import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconTrash } from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
+import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 
 export interface PagePreviewLink {
@@ -36,6 +37,10 @@ export interface PagePreviewLink {
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
   // (lihat lib/link-icons.ts). Kosong berarti tetap pakai deteksi otomatis.
   customIconUrl?: string;
+  // iconKey -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
+  // dari galeri siap-pakai (lib/icon-library.ts). Prioritas render:
+  // customIconUrl > iconKey > deteksi otomatis dari URL > ikon generik.
+  iconKey?: string;
   // isFeatured/thumbnailUrl -- Modul "Featured Link" (permintaan langsung
   // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
   // isFeatured true DAN thumbnailUrl terisi, tautan dirender sebagai kartu
@@ -270,6 +275,7 @@ interface PreviewSourceLink {
   block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
+  icon_key?: string;
   is_featured?: boolean;
   thumbnail_url?: string;
 }
@@ -345,6 +351,7 @@ export function toPreviewData(
         blockType: l.block_type,
         blockData: l.block_data,
         customIconUrl: l.custom_icon_url || undefined,
+        iconKey: l.icon_key || undefined,
         isFeatured: l.is_featured,
         thumbnailUrl: l.thumbnail_url || undefined,
       })),
@@ -952,6 +959,7 @@ function renderLinkOrBlock(
   // diketahui sebelum gerbang terlewati, di luar cakupan permintaan ini.
   if (!link.lockType && link.isFeatured && link.thumbnailUrl) {
     const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+    const libraryIcon = getLibraryIcon(link.iconKey);
     const cardClassName = `group block w-full overflow-hidden ${theme.cardRounded ?? "rounded-xl"} ${theme.card} transition-all duration-300`;
     const cardInner = (
       <>
@@ -966,6 +974,8 @@ function renderLinkOrBlock(
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : libraryIcon ? (
+              <libraryIcon.Icon className="h-3.5 w-3.5 text-white" />
             ) : (
               <LinkPlatformIcon className={`h-3.5 w-3.5 ${iconColorClass}`} />
             )}
@@ -1022,6 +1032,7 @@ function renderLinkOrBlock(
   ) : interactive ? (
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+      const libraryIcon = getLibraryIcon(link.iconKey);
       return (
         <TrackedLink
           key={link.id}
@@ -1035,6 +1046,8 @@ function renderLinkOrBlock(
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : libraryIcon ? (
+              <libraryIcon.Icon className="h-6 w-6" />
             ) : (
               <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
             )}
@@ -1046,6 +1059,7 @@ function renderLinkOrBlock(
   ) : (
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+      const libraryIcon = getLibraryIcon(link.iconKey);
       return (
         <a
           key={link.id}
@@ -1058,6 +1072,8 @@ function renderLinkOrBlock(
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : libraryIcon ? (
+              <libraryIcon.Icon className="h-6 w-6" />
             ) : (
               <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
             )}

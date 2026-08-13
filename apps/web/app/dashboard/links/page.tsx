@@ -53,10 +53,13 @@ import {
   IconYoutube,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import IconPickerModal from "@/components/IconPickerModal";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
 import { detectLinkIcon } from "@/lib/link-icons";
+import { getLibraryIcon } from "@/lib/icon-library";
+import { LayoutGrid } from "lucide-react";
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -264,6 +267,11 @@ export default function DashboardLinksPage() {
   // "Featured Layout" Linktree sungguhan): tautan tampil sebagai kartu
   // thumbnail 16:9, lihat catatan lengkap di handleToggleFeatured.
   const [thumbnailUploadingId, setThumbnailUploadingId] = useState<string | null>(null);
+
+  // Galeri ikon siap-pakai (permintaan langsung pengguna, 13 Agustus 2026:
+  // "sediakan banyak icon yang bisa digunakan dan dipilih user") -- id
+  // tautan yang sedang membuka IconPickerModal, null berarti modal tertutup.
+  const [iconPickerLinkId, setIconPickerLinkId] = useState<string | null>(null);
 
   // Modal "Tambah" ala Linktree.
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -527,14 +535,41 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // handleRemoveIcon -- menghapus KEDUANYA sekaligus (custom_icon_url
+  // upload MAUPUN icon_key galeri) supaya "Hapus" selalu benar-benar
+  // kembali ke deteksi otomatis, bukan diam-diam menyingkap salah satu
+  // yang tadinya tertutup oleh yang lain (custom_icon_url menang lebih
+  // dulu dari icon_key, lihat prioritas render di PagePreview.tsx) --
+  // kalau cuma satu yang dihapus, kreator akan bingung melihat ikon lain
+  // muncul tiba-tiba padahal baru saja menekan "Hapus".
   async function handleRemoveIcon(link: LinkItem) {
     const previous = links;
-    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url: "" } : l)));
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url: "", icon_key: "" } : l)));
     try {
-      await deleteLinkIcon(link.id);
+      await Promise.all([deleteLinkIcon(link.id), updateLink(link.id, { icon_key: "" })]);
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
+    }
+  }
+
+  // handleSelectLibraryIcon -- juga menghapus custom_icon_url yang mungkin
+  // sudah ada (kalau tidak, ikon yang baru dipilih tidak akan pernah
+  // terlihat -- custom_icon_url selalu menang lebih dulu di prioritas
+  // render, lihat PagePreview.tsx) supaya ikon yang baru saja dipilih
+  // langsung terlihat.
+  async function handleSelectLibraryIcon(link: LinkItem, key: string) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_key: key, custom_icon_url: "" } : l)));
+    setIconPickerLinkId(null);
+    try {
+      await updateLink(link.id, { icon_key: key });
+      if (link.custom_icon_url) {
+        await deleteLinkIcon(link.id);
+      }
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal memilih ikon.");
     }
   }
 
@@ -1235,6 +1270,18 @@ export default function DashboardLinksPage() {
                       title="Ikon kustom"
                       className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
                     />
+                  ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
+                    (() => {
+                      const libraryIcon = getLibraryIcon(link.icon_key)!;
+                      return (
+                        <span
+                          title={libraryIcon.label}
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
+                        >
+                          <libraryIcon.Icon className="h-4 w-4" />
+                        </span>
+                      );
+                    })()
                   ) : (
                     (() => {
                       const { Icon, label, badgeClass } = detectLinkIcon(link.url);
@@ -1356,11 +1403,26 @@ export default function DashboardLinksPage() {
                         className="hidden"
                       />
                     </label>
-                    {link.custom_icon_url && (
+                    {/* Permintaan langsung pengguna, 13 Agustus 2026: "memilih
+                        icon untuk blok yang sudah disediakan dari web ini...
+                        supaya user tidak perlu mendownload icon sendiri" --
+                        alternatif dari unggah gambar, buka IconPickerModal
+                        (galeri ~210 ikon lucide-react). */}
+                    <button
+                      type="button"
+                      onClick={() => setIconPickerLinkId(link.id)}
+                      title="Pilih dari galeri ikon"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        link.icon_key ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    {(link.custom_icon_url || link.icon_key) && (
                       <button
                         type="button"
                         onClick={() => handleRemoveIcon(link)}
-                        title="Hapus ikon kustom (kembali ke deteksi otomatis)"
+                        title="Hapus ikon (kembali ke deteksi otomatis)"
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
                       >
                         <IconClose className="h-4 w-4" />
@@ -1393,10 +1455,6 @@ export default function DashboardLinksPage() {
                   </button>
                 )}
                 <div className="flex-1" />
-                <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <IconChart className="h-3.5 w-3.5" />
-                  {link.click_count.toLocaleString("id-ID")} klik
-                </span>
                 <button
                   type="button"
                   onClick={() => handleDelete(link.id)}
@@ -1673,6 +1731,18 @@ export default function DashboardLinksPage() {
                   </div>
                 </div>
               )}
+
+              {/* Statistik klik -- permintaan langsung pengguna, 13 Agustus
+                  2026: "di link bio dan juga product tambahkan dibagian
+                  bawah statistik berapa kali jumlah klik per bloknya".
+                  SENGAJA jadi footer TERPISAH & PALING BAWAH kartu (bukan
+                  lagi menumpang di baris ikon aksi seperti sebelumnya) --
+                  berlaku utk SEMUA block_type (link/video/faq/dst, click_count
+                  sudah dihitung backend untuk semuanya), bukan cuma tautan biasa. */}
+              <div className="ml-11 flex items-center gap-1.5 border-t border-border/70 pt-2 text-xs text-muted">
+                <IconChart className="h-3.5 w-3.5" />
+                {link.click_count.toLocaleString("id-ID")} klik
+              </div>
             </li>
           ))}
           {links.length === 0 && <EmptyState as="li" text='Belum ada tautan -- klik "Tambah" di atas.' />}
@@ -1692,6 +1762,19 @@ export default function DashboardLinksPage() {
           onQuickPasteLink={(url) => openLinkFormPrefilled("", url)}
         />
       )}
+
+      {iconPickerLinkId &&
+        (() => {
+          const target = links.find((l) => l.id === iconPickerLinkId);
+          if (!target) return null;
+          return (
+            <IconPickerModal
+              currentKey={target.icon_key}
+              onSelect={(icon) => handleSelectLibraryIcon(target, icon.key)}
+              onClose={() => setIconPickerLinkId(null)}
+            />
+          );
+        })()}
 
       <LivePreviewPanel page={page} links={links} products={products} />
     </div>

@@ -236,7 +236,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 			COALESCE(o.sold_count, 0) AS sold_count, p.category,
 			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count,
 			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at,
-			p.position, p.is_featured
+			p.position, p.is_featured, COALESCE(pcl.click_count, 0) AS click_count
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
@@ -244,6 +244,15 @@ func (h *ProductHandler) List(c *gin.Context) {
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS unclaimed_count FROM product_codes WHERE claimed_by_order_id IS NULL GROUP BY product_id
 		) pc ON pc.product_id = p.id
+		-- click_count -- permintaan langsung pengguna, 13 Agustus 2026: "di
+		-- link bio dan juga product tambahkan dibagian bawah statistik
+		-- berapa kali jumlah klik per bloknya". Sumber SAMA persis dengan
+		-- TotalProductClicks (analytics.go) -- analytics_events tipe
+		-- "product_click" -- sebelumnya cuma dihitung sebagai TOTAL
+		-- gabungan, sekarang juga per-produk di sini.
+		LEFT JOIN (
+			SELECT product_id, COUNT(*) AS click_count FROM analytics_events WHERE event_type = 'product_click' GROUP BY product_id
+		) pcl ON pcl.product_id = p.id
 		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
 			AND p.is_course = false AND p.is_booking = false
 		ORDER BY p.is_featured DESC, p.position ASC
@@ -283,6 +292,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 		LinkExpiresAt      *time.Time          `json:"link_expires_at"`
 		Position           int                 `json:"position"`
 		IsFeatured         bool                `json:"is_featured"`
+		// ClickCount -- lihat catatan lengkap di query SELECT di atas.
+		ClickCount int64 `json:"click_count"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -293,7 +304,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
 			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount,
 			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt,
-			&it.Position, &it.IsFeatured); err == nil {
+			&it.Position, &it.IsFeatured, &it.ClickCount); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}

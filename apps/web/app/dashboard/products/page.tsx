@@ -944,6 +944,14 @@ export default function DashboardProductsPage() {
                       <th className="px-4 py-3">Item</th>
                       <th className="px-4 py-3">Harga</th>
                       <th className="px-4 py-3">Terjual</th>
+                      {/* Diklik -- permintaan langsung pengguna, 13 Agustus
+                          2026: "di link bio dan juga product tambahkan
+                          dibagian bawah statistik berapa kali jumlah klik
+                          per bloknya" -- jumlah klik NYATA dari
+                          analytics_events (event_type="product_click"),
+                          kolom baru di sebelah "Terjual", pola sama persis
+                          (dihitung backend, bukan angka rekaan). */}
+                      <th className="px-4 py-3">Diklik</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3" />
                     </tr>
@@ -1000,6 +1008,7 @@ export default function DashboardProductsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 align-top text-ink">{p.sold_count.toLocaleString("id-ID")}</td>
+                        <td className="px-4 py-3 align-top text-muted">{p.click_count.toLocaleString("id-ID")}</td>
                         <td className="px-4 py-3 align-top">
                           <Toggle
                             checked={p.is_active}

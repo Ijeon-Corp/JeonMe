@@ -1,0 +1,13 @@
+-- Ikon galeri siap-pakai per tautan -- permintaan langsung pengguna, 13
+-- Agustus 2026: "saya mau tambahkan untuk memilih icon untuk blok yang
+-- sudah disediakan dari web ini... supaya user tidak perlu mendownload
+-- icon sendiri dan mengupload ke web ini". Kolom TERPISAH dari
+-- custom_icon_url (gambar hasil UPLOAD, URL storage) -- ini cuma string
+-- KEY pendek yang menunjuk ke satu entri di lib/icon-library.ts (frontend,
+-- ratusan ikon lucide-react), bukan file media, jadi tidak butuh pipeline
+-- upload/storage sama sekali. Validasi terhadap daftar key yang valid
+-- SENGAJA tidak dilakukan di backend (beda dari availableThemes di
+-- page.go) -- ikon murni kosmetik, kunci tak dikenal cukup jatuh balik ke
+-- deteksi ikon otomatis di sisi klien, tidak ada dampak keamanan/integritas
+-- data kalau API disalahgunakan langsung dengan key sembarang.
+ALTER TABLE links ADD COLUMN icon_key VARCHAR(50) NOT NULL DEFAULT '';

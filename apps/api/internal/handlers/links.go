@@ -101,6 +101,13 @@ type linkItem struct {
 	// (lihat lib/link-icons.ts sisi klien). Kosong berarti tetap pakai
 	// deteksi otomatis seperti sebelumnya.
 	CustomIconURL string `json:"custom_icon_url"`
+	// IconKey -- permintaan langsung pengguna, 13 Agustus 2026: "memilih
+	// icon untuk blok yang sudah disediakan dari web ini" -- kunci ke satu
+	// entri lib/icon-library.ts (frontend, ratusan ikon lucide-react),
+	// TERPISAH dari CustomIconURL (gambar hasil upload). Prioritas render
+	// (lihat PagePreview.tsx): CustomIconURL > IconKey > deteksi otomatis
+	// dari URL > ikon generik. Kosong berarti belum dipilih.
+	IconKey string `json:"icon_key"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): tautan
 	// tampil sebagai kartu thumbnail 16:9, bukan baris teks. ThumbnailURL
@@ -124,7 +131,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
-			l.is_featured, l.thumbnail_url,
+			l.icon_key, l.is_featured, l.thumbnail_url,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -142,7 +149,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
 			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
-			&it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
+			&it.IconKey, &it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -518,6 +525,14 @@ type updateLinkRequest struct {
 	// lihat deriveYoutubeThumbnail di bawah) atau lewat UploadLinkThumbnail
 	// terpisah, sama seperti CustomIconURL yang juga upload-only.
 	IsFeatured *bool `json:"is_featured"`
+	// IconKey -- permintaan langsung pengguna, 13 Agustus 2026: pilih ikon
+	// dari galeri siap-pakai (lib/icon-library.ts, frontend), BUKAN upload
+	// file, jadi cukup lewat PATCH JSON biasa seperti Title/URL (beda dari
+	// CustomIconURL yang upload-only lewat UploadIcon). String kosong ("")
+	// dikirim eksplisit untuk membatalkan pilihan (kembali ke deteksi
+	// otomatis) -- *string biasa cukup, tidak perlu flag Clear* terpisah
+	// seperti jadwal/kunci karena tidak ada field lain yang saling terkait.
+	IconKey *string `json:"icon_key" binding:"omitempty,max=50"`
 }
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
@@ -690,10 +705,11 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			lock_min_age = COALESCE($8, lock_min_age),
 			block_data = COALESCE($9, block_data),
 			is_featured = COALESCE($10, is_featured),
-			thumbnail_url = COALESCE($11, thumbnail_url)
-		WHERE id = $12
+			thumbnail_url = COALESCE($11, thumbnail_url),
+			icon_key = COALESCE($12, icon_key)
+		WHERE id = $13
 	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON,
-		req.IsFeatured, autoThumbnail, linkID)
+		req.IsFeatured, autoThumbnail, req.IconKey, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return

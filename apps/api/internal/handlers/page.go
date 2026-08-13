@@ -316,6 +316,11 @@ type publicLink struct {
 	// di sisi klien (lihat lib/link-icons.ts). Kosong berarti tetap pakai
 	// deteksi otomatis.
 	CustomIconURL string `json:"custom_icon_url"`
+	// IconKey -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
+	// dari galeri siap-pakai (lib/icon-library.ts, frontend), lihat catatan
+	// lengkap di linkItem.IconKey (links.go). Prioritas render sama:
+	// CustomIconURL > IconKey > deteksi otomatis dari URL > generik.
+	IconKey string `json:"icon_key"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): kalau true
 	// DAN ThumbnailURL terisi, tautan dirender sebagai kartu thumbnail 16:9
@@ -554,7 +559,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
 		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
-			is_featured, thumbnail_url
+			icon_key, is_featured, thumbnail_url
 		FROM links
 		WHERE page_id = $1
 		AND is_active = true
@@ -567,7 +572,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		for rows.Next() {
 			var l publicLink
 			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
-				&l.IsFeatured, &l.ThumbnailURL); err == nil {
+				&l.IconKey, &l.IsFeatured, &l.ThumbnailURL); err == nil {
 				// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 				// komentar di definisi struct publicLink.
 				if l.LockType != "" {
