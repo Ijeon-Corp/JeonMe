@@ -899,6 +899,14 @@ var availableThemes = map[string]bool{
 	// 3 preset "Live Wallpaper" (permintaan susulan: "tambahkan live
 	// walpaper di tab 3d") -- latar bergerak lewat CSS @keyframes.
 	"flow": true, "pulse": true, "drift": true,
+	// 6 preset wallpaper foto TAMBAHAN + 6 preset VIDEO (permintaan langsung
+	// pengguna, 13 Agustus 2026: "perbanyak tema dan layout di quick setup...
+	// background menggunakan wallpaper dan juga background yang bergerak
+	// seperti mov/gif") -- video di sini berarti <video> sungguhan (lihat
+	// VIDEO_THEME_NAMES, apps/web/lib/page-themes.ts), bukan animasi CSS
+	// seperti flow/pulse/drift di atas.
+	"brew": true, "lagoon": true, "dune": true, "sakura": true, "nova": true, "maple": true,
+	"electric": true, "surge": true, "downtown": true, "polaris": true, "atmos": true, "ember": true,
 	"custom": true,
 }
 

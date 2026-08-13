@@ -522,6 +522,37 @@ function clampScale(value: number) {
   return Math.min(2.5, Math.max(0.4, value));
 }
 
+// renderVideoBackground -- permintaan langsung pengguna, 13 Agustus 2026:
+// "background yang bergerak seperti menggunakan mov atau gif" -- preset
+// "Video" (lihat VIDEO_THEME_NAMES, page-themes.ts) TIDAK bisa dijadikan
+// className CSS biasa seperti wallpaper foto/gradien lain (<video> bukan
+// background-image), jadi dirender sebagai elemen SUNGGUHAN di sini,
+// dipanggil sebagai ANAK PERTAMA di ketiga <main> (bio biasa, landing,
+// Toko) supaya videonya mengisi seluruh latar sebelum konten lain di atas.
+// Scrim gelap seragam (bukan overlay dibakar ke file seperti wallpaper
+// foto) -- menjamin teks putih tetap kontras apa pun kecerahan klip
+// videonya (mis. "Atmos"/awan aslinya terang). autoPlay+muted+playsInline
+// WAJIB bertiga supaya browser mobile mengizinkan autoplay tanpa interaksi
+// pengguna; loop membuat klip pendek (~8 detik) terasa berkelanjutan.
+function renderVideoBackground(theme: PageTheme) {
+  if (!theme.videoSrc) return null;
+  return (
+    <>
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src={theme.videoSrc}
+        poster={theme.posterSrc}
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden
+      />
+      <div aria-hidden className="absolute inset-0 bg-black/35" />
+    </>
+  );
+}
+
 // renderSocialRow -- permintaan langsung pengguna, 11 Agustus 2026: baris
 // ikon kontak sosial (Instagram/TikTok/Facebook/WhatsApp/dll) di bawah bio,
 // TERPISAH dari daftar Tautan biasa. Dipakai di layout bio biasa & Toko
@@ -1103,6 +1134,7 @@ export default function PagePreview({
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      {renderVideoBackground(theme)}
       {interactive && data.socialProof && (
         <SocialProofToast
           recent={data.socialProof.recent}
@@ -1489,6 +1521,7 @@ function LandingPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      {renderVideoBackground(theme)}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>
@@ -1720,6 +1753,7 @@ function ProdukPagePreview({
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      {renderVideoBackground(theme)}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
       </div>

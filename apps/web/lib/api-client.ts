@@ -582,6 +582,18 @@ export const THEME_PRESETS = [
   "flow",
   "pulse",
   "drift",
+  "brew",
+  "lagoon",
+  "dune",
+  "sakura",
+  "nova",
+  "maple",
+  "electric",
+  "surge",
+  "downtown",
+  "polaris",
+  "atmos",
+  "ember",
 ] as const;
 
 export function getMyPage() {

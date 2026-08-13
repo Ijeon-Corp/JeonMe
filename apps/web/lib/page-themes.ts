@@ -91,12 +91,31 @@ export type PageThemeName =
   | "flow"
   | "pulse"
   | "drift"
+  | "brew"
+  | "lagoon"
+  | "dune"
+  | "sakura"
+  | "nova"
+  | "maple"
+  | "electric"
+  | "surge"
+  | "downtown"
+  | "polaris"
+  | "atmos"
+  | "ember"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
 // tema jadi tab "Warna & Gradien" vs "Wallpaper" di halaman Desain -- daftar
 // ini satu-satunya sumber kebenaran untuk pengelompokan itu (dashboard/
 // design/theme/page.tsx TIDAK menduplikasi daftar ini).
+// 6 preset FOTO WALLPAPER TAMBAHAN (permintaan langsung pengguna, 13
+// Agustus 2026: "saya masih ingin perbanyakk tema dan layout di quick
+// setup lebih banyak terutama background menggunakan wallpaper... download
+// saja asset gratis yang tersedia di internet") -- brew/lagoon/dune/
+// sakura/nova/maple, foto Pexels (lisensi Pexels, bebas dipakai tanpa
+// atribusi), proses SAMA PERSIS (crop portrait 1080x1920 + overlay gelap
+// dibakar ke file) seperti 15 wallpaper sebelumnya.
 export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "dusk",
   "marble",
@@ -113,6 +132,32 @@ export const WALLPAPER_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "cascade",
   "tide",
   "skyline",
+  "brew",
+  "lagoon",
+  "dune",
+  "sakura",
+  "nova",
+  "maple",
+];
+
+// VIDEO_THEME_NAMES -- permintaan langsung pengguna, 13 Agustus 2026: "juga
+// background yang bergerak seperti menggunakan mov atau gif" -- BEDA dari
+// THREE_D_THEME_NAMES punya "Live Wallpaper" (flow/pulse/drift, animasi CSS
+// murni): ini video loop SUNGGUHAN (file .mp4, self-hosted di
+// public/videos/, sumber Mixkit -- lisensi Mixkit, bebas dipakai tanpa
+// atribusi), dirender lewat elemen <video autoPlay loop muted playsInline>
+// SUNGGUHAN (lihat PageTheme.videoSrc & renderBioHeader/PagePreview.tsx),
+// bukan sekadar kelas CSS di `page`. Tab galeri SENDIRI ("Video", lihat
+// design/theme/page.tsx) -- terpisah dari tab "3D/Live" supaya kreator
+// paham ini video sungguhan (ukuran file lebih besar, butuh koneksi lebih
+// stabil), bukan animasi CSS ringan.
+export const VIDEO_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
+  "electric",
+  "surge",
+  "downtown",
+  "polaris",
+  "atmos",
+  "ember",
 ];
 
 // THREE_D_THEME_NAMES -- permintaan langsung pengguna: "buatkan beberapa
@@ -209,6 +254,19 @@ export type PageTheme = {
    * getPageTheme saat styleOverride aktif.
    */
   cardRounded?: string;
+  /**
+   * videoSrc/posterSrc -- HANYA terisi untuk preset "Video" (lihat
+   * VIDEO_THEME_NAMES). `page` untuk preset ini tetap kelas warna dasar
+   * gelap polos (fallback kalau video gagal/lambat dimuat) -- video
+   * sungguhan dirender sebagai elemen <video> TERPISAH oleh
+   * renderBioHeader (PagePreview.tsx), bukan lewat className seperti
+   * gambar/gradien lain, karena <video> bukan sesuatu yang bisa jadi
+   * background-image CSS. posterSrc dipasang di atribut `poster` <video>
+   * (potongan gambar diam supaya tidak ada kedipan/hitam kosong sebelum
+   * video sungguhan siap diputar).
+   */
+  videoSrc?: string;
+  posterSrc?: string;
 };
 
 export type CustomFontValue =
@@ -1912,6 +1970,270 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "#060a18",
     previewIsDark: true,
     pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
+  },
+  // 6 preset FOTO WALLPAPER TAMBAHAN -- lihat catatan lengkap di
+  // WALLPAPER_THEME_NAMES di atas file ini.
+  brew: {
+    label: "Brew",
+    page: "bg-[url('/wallpapers/cafe.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#8B5E34",
+    previewBg: "url('/wallpapers/cafe.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
+  },
+  lagoon: {
+    label: "Lagoon",
+    page: "bg-[url('/wallpapers/beach.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#14B8A6",
+    previewBg: "url('/wallpapers/beach.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  dune: {
+    label: "Dune",
+    page: "bg-[url('/wallpapers/desert.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#C2703D",
+    previewBg: "url('/wallpapers/desert.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  sakura: {
+    label: "Sakura",
+    page: "bg-[url('/wallpapers/blossom.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#E8A0B4",
+    previewBg: "url('/wallpapers/blossom.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+  },
+  nova: {
+    label: "Nova",
+    page: "bg-[url('/wallpapers/stars.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#1E3A5F",
+    previewBg: "url('/wallpapers/stars.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  maple: {
+    label: "Maple",
+    page: "bg-[url('/wallpapers/autumn.jpg')] bg-cover bg-center bg-no-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#B45309",
+    previewBg: "url('/wallpapers/autumn.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  // 6 preset VIDEO (permintaan langsung pengguna, 13 Agustus 2026: "juga
+  // background yang bergerak seperti menggunakan mov atau gif") -- lihat
+  // catatan lengkap di VIDEO_THEME_NAMES di atas file ini soal kenapa ini
+  // <video> sungguhan, bukan animasi CSS seperti flow/pulse/drift. `page`
+  // di sini HANYA warna dasar gelap polos (fallback sebelum video siap
+  // atau kalau videonya gagal dimuat) -- overlay gelap TIDAK dibakar ke
+  // video (beda dari wallpaper foto) karena scrim-nya diterapkan hidup
+  // lewat CSS langsung di atas elemen <video> (lihat renderBioHeader),
+  // supaya kontras teks terjamin apa pun kecerahan klip videonya (klip
+  // "atmos"/awan misalnya aslinya terang).
+  electric: {
+    label: "Electric",
+    page: "bg-[#05070D]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#22D3EE",
+    previewBg: "url('/videos/neon-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+    videoSrc: "/videos/neon.mp4",
+    posterSrc: "/videos/neon-poster.jpg",
+  },
+  surge: {
+    label: "Surge",
+    page: "bg-[#031B2E]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#0EA5E9",
+    previewBg: "url('/videos/ocean-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+    videoSrc: "/videos/ocean.mp4",
+    posterSrc: "/videos/ocean-poster.jpg",
+  },
+  downtown: {
+    label: "Downtown",
+    page: "bg-[#0A0E14]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#0F172A",
+    previewBg: "url('/videos/citynight-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+    videoSrc: "/videos/citynight.mp4",
+    posterSrc: "/videos/citynight-poster.jpg",
+  },
+  polaris: {
+    label: "Polaris",
+    page: "bg-[#050A0B]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#34D399",
+    previewBg: "url('/videos/aurora-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+    videoSrc: "/videos/aurora.mp4",
+    posterSrc: "/videos/aurora-poster.jpg",
+  },
+  atmos: {
+    label: "Atmos",
+    page: "bg-[#0B1622]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#7DD3FC",
+    previewBg: "url('/videos/clouds-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-body)" },
+    videoSrc: "/videos/clouds.mp4",
+    posterSrc: "/videos/clouds-poster.jpg",
+  },
+  ember: {
+    label: "Ember",
+    page: "bg-[#180B04]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/60",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#F97316",
+    previewBg: "url('/videos/fireplace-poster.jpg') center/cover",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
+    videoSrc: "/videos/fireplace.mp4",
+    posterSrc: "/videos/fireplace-poster.jpg",
   },
 };
 

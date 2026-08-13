@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { THEME_PRESETS } from "@/lib/api-client";
-import { PAGE_THEMES, THREE_D_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
+import { PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
 import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 
 // Permintaan langsung pengguna: galeri tema dipisah 2 tab -- "Warna &
@@ -15,9 +15,16 @@ import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 // sumber kebenaran pengelompokan supaya tidak dobel daftar di sini).
 // Tab ketiga "3D" (permintaan susulan, tab baru persis di sebelah
 // "Wallpaper") -- lihat THREE_D_THEME_NAMES untuk catatan lingkup lengkap.
-const GRADIENT_PRESETS = THEME_PRESETS.filter((t) => !WALLPAPER_THEME_NAMES.includes(t) && !THREE_D_THEME_NAMES.includes(t));
+// Tab keempat "Video" (permintaan langsung pengguna, 13 Agustus 2026:
+// "background yang bergerak seperti menggunakan mov atau gif") -- TERPISAH
+// dari "3D/Live" karena ini <video> sungguhan (file .mp4, ukuran jauh
+// lebih besar dari animasi CSS flow/pulse/drift), lihat VIDEO_THEME_NAMES.
+const GRADIENT_PRESETS = THEME_PRESETS.filter(
+  (t) => !WALLPAPER_THEME_NAMES.includes(t) && !THREE_D_THEME_NAMES.includes(t) && !VIDEO_THEME_NAMES.includes(t)
+);
 const WALLPAPER_PRESETS = THEME_PRESETS.filter((t) => WALLPAPER_THEME_NAMES.includes(t));
 const THREE_D_PRESETS = THEME_PRESETS.filter((t) => THREE_D_THEME_NAMES.includes(t));
+const VIDEO_PRESETS = THEME_PRESETS.filter((t) => VIDEO_THEME_NAMES.includes(t));
 
 function ThemeTile({
   active,
@@ -66,7 +73,7 @@ function ThemeTile({
 
 export default function DesignThemePage() {
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
-  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d">("gradien");
+  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video">("gradien");
   const router = useRouter();
 
   if (loading || !page) return <PageSkeleton />;
@@ -111,6 +118,15 @@ export default function DesignThemePage() {
           >
             3D/Live
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("video")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "video" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Video
+          </button>
         </div>
 
         {/* Kartu galeri portrait ala Linktree: sampel huruf "Aa" di kiri atas
@@ -145,7 +161,14 @@ export default function DesignThemePage() {
               </div>
             </ThemeTile>
           )}
-          {(tab === "gradien" ? GRADIENT_PRESETS : tab === "wallpaper" ? WALLPAPER_PRESETS : THREE_D_PRESETS).map((theme) => {
+          {(tab === "gradien"
+            ? GRADIENT_PRESETS
+            : tab === "wallpaper"
+            ? WALLPAPER_PRESETS
+            : tab === "3d"
+            ? THREE_D_PRESETS
+            : VIDEO_PRESETS
+          ).map((theme) => {
             const meta = PAGE_THEMES[theme];
             // "Live Wallpaper" (permintaan susulan): 3 preset flow/pulse/drift
             // pakai kelas CSS animasi (bukan style inline biasa) di properti
@@ -153,6 +176,12 @@ export default function DesignThemePage() {
             // kreator lihat pratinjau BERGERAK sungguhan sebelum memilih,
             // bukan cuma cuplikan diam dari previewBg.
             const isLiveWallpaper = meta.page.includes("theme-live-");
+            // Preset "Video" (permintaan langsung pengguna, 13 Agustus
+            // 2026): sama alasannya seperti live wallpaper di atas --
+            // tampilkan <video> BERPUTAR sungguhan di kartu galeri, bukan
+            // cuma poster diam, supaya kreator benar-benar lihat hasil
+            // sebelum memilih.
+            const isVideoTheme = !!meta.videoSrc;
             return (
               <ThemeTile
                 key={theme}
@@ -160,11 +189,24 @@ export default function DesignThemePage() {
                 onClick={() => handlePageSettingChange({ theme, custom_style_override: false })}
                 label={meta.label}
               >
-                <div
-                  className={`absolute inset-0 ${isLiveWallpaper ? meta.page : ""}`}
-                  style={isLiveWallpaper ? undefined : { background: meta.previewBg }}
-                  aria-hidden
-                />
+                {isVideoTheme ? (
+                  <video
+                    className="absolute inset-0 h-full w-full object-cover"
+                    src={meta.videoSrc}
+                    poster={meta.posterSrc}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    aria-hidden
+                  />
+                ) : (
+                  <div
+                    className={`absolute inset-0 ${isLiveWallpaper ? meta.page : ""}`}
+                    style={isLiveWallpaper ? undefined : { background: meta.previewBg }}
+                    aria-hidden
+                  />
+                )}
                 <span
                   className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-ink"}`}
                   aria-hidden

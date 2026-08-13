@@ -18,6 +18,17 @@
 // maps butuh alamat nyata, jadi keempatnya TIDAK dipakai di sini).
 // monetizationHint (kalau ada) cuma teks saran, ditampilkan setelah
 // template diterapkan -- BUKAN baris/fitur yang dibuat diam-diam.
+//
+// Revisi 13 Agustus 2026 (permintaan langsung pengguna): "saya masih ingin
+// perbanyakk tema dan layout di quick setup lebih banyak terutama
+// background menggunakan wallpaper dan juga background yang bergerak" --
+// 12 template dipindah dari tema gradien/warna solid ke 12 preset baru
+// (6 wallpaper foto + 6 video, lihat WALLPAPER_THEME_NAMES/
+// VIDEO_THEME_NAMES di page-themes.ts) yang cocok konteksnya: mis. "Cafe"
+// -> "brew" (foto cafe sungguhan), "Gamer" -> "electric" (video neon),
+// "DJ" -> "downtown" (video kota malam). Satu template per tema baru --
+// showcase variasi tanpa mengubah SEMUA template sekaligus (46 template
+// lainnya tetap gradien/warna solid seperti sebelumnya).
 
 export interface QuickSetupCategory {
   key: string;
@@ -310,7 +321,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "hero",
     label: "Gamer",
     description: "Profil game, Discord, YouTube, Twitch",
-    theme: "cyber",
+    theme: "electric",
     bio: "Gamer | Main bareng di sini",
     links: [link("discord"), link("youtube"), link("twitch")],
     blocks: [{ type: "text", title: "Game yang Dimainkan", text: "Tuliskan game favorit yang sering kamu mainkan & rank/level saat ini di sini." }],
@@ -510,7 +521,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "minimal",
     label: "Tutor",
     description: "Kelas, jadwal, booking",
-    theme: "forest",
+    theme: "maple",
     bio: "Tutor privat | Booking jadwal belajar",
     links: [link("whatsapp", "Booking via WhatsApp")],
     blocks: [faqBlock([{ question: "Bagaimana jadwal lesnya?", answer: "Fleksibel sesuai kesepakatan -- chat dulu buat atur jadwal yang cocok." }])],
@@ -545,7 +556,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "minimal",
     label: "Education Brand",
     description: "Kelas, event, komunitas",
-    theme: "ocean",
+    theme: "atmos",
     bio: "Belajar bareng komunitas kami",
     links: [link("instagram"), link("whatsapp", "Gabung Grup WhatsApp")],
     blocks: [faqBlock([{ question: "Bagaimana cara bergabung?", answer: "Klik salah satu tautan di atas untuk gabung WhatsApp/Instagram, info kelas & event rutin kami bagikan di sana." }])],
@@ -559,7 +570,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "spotlight",
     label: "Musician",
     description: "Spotify, YouTube, Apple Music, media sosial",
-    theme: "midnight",
+    theme: "ember",
     bio: "Musisi | Dengerin lagu terbaruku",
     links: [link("spotify"), link("youtube"), link("appleMusic"), link("instagram")],
     blocks: [
@@ -573,7 +584,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "spotlight",
     label: "Artist",
     description: "Portofolio, commission, media sosial",
-    theme: "lavender",
+    theme: "sakura",
     bio: "Seniman | Open commission",
     links: [link("instagram")],
     blocks: [
@@ -587,7 +598,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "spotlight",
     label: "DJ",
     description: "Mix, event, booking",
-    theme: "cyber",
+    theme: "downtown",
     bio: "DJ | Booking untuk acara kamu",
     links: [link("spotify"), link("instagram")],
     blocks: [faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }])],
@@ -644,7 +655,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "cover",
     label: "Cafe",
     description: "Menu, Instagram, Google Maps",
-    theme: "peach",
+    theme: "brew",
     bio: "Cafe | Ngopi santai di sini",
     links: [link("instagram", "Ikuti Update Kami")],
     blocks: [mapsBlock(), { type: "text", title: "Menu", text: "Tuliskan menu andalan cafemu di sini." }],
@@ -671,7 +682,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "cover",
     label: "Salon",
     description: "Layanan, portofolio, booking",
-    theme: "rose",
+    theme: "surge",
     bio: "Salon kecantikan | Booking treatment",
     links: [link("instagram", "Lihat Hasil Treatment"), link("whatsapp", "Booking via WhatsApp")],
     blocks: [mapsBlock()],
@@ -683,7 +694,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "cover",
     label: "Photographer",
     description: "Portofolio, harga, booking",
-    theme: "noir",
+    theme: "nova",
     bio: "Fotografer | Booking sesi foto",
     links: [link("instagram", "Lihat Portofolio")],
     blocks: [
@@ -713,7 +724,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "polaroid",
     label: "Travel Blogger",
     description: "Destinasi, panduan perjalanan, media sosial",
-    theme: "sunrise",
+    theme: "lagoon",
     bio: "Travel blogger | Cerita dari berbagai destinasi",
     links: [link("instagram"), link("youtube"), link("tiktok")],
     blocks: [
@@ -727,7 +738,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "polaroid",
     label: "Fitness Coach",
     description: "Latihan, program, booking",
-    theme: "blaze",
+    theme: "dune",
     bio: "Fitness coach | Program latihan bareng aku",
     links: [link("instagram"), link("whatsapp")],
     blocks: [
@@ -848,7 +859,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     category: "special",
     label: "Coming Soon",
     description: "Teaser + email/WhatsApp",
-    theme: "midnight",
+    theme: "polaris",
     bio: "Sesuatu yang seru segera hadir. Nantikan!",
     links: [link("whatsapp")],
     blocks: [{ type: "contact_form", title: "Beri Tahu Aku" }],
