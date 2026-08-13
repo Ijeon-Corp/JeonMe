@@ -115,6 +115,8 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             blockType: l.block_type,
             blockData: l.block_data,
             customIconUrl: l.custom_icon_url || undefined,
+            isFeatured: l.is_featured,
+            thumbnailUrl: l.thumbnail_url || undefined,
           })),
           events: page.events.map((e) => ({
             productId: e.product_id,

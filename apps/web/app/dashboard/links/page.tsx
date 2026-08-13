@@ -11,6 +11,7 @@ import {
   createLink,
   deleteLink,
   deleteLinkIcon,
+  deleteLinkThumbnail,
   getMyPage,
   listLinks,
   listProducts,
@@ -19,6 +20,7 @@ import {
   updateMyPage,
   uploadAvatar,
   uploadLinkIcon,
+  uploadLinkThumbnail,
 } from "@/lib/api-client";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import {
@@ -41,6 +43,7 @@ import {
   IconPlus,
   IconSearch,
   IconSpotify,
+  IconStar,
   IconTelegram,
   IconTextLines,
   IconTiktok,
@@ -256,6 +259,11 @@ export default function DashboardLinksPage() {
   // Permintaan langsung pengguna: unggah gambar kustom per tautan
   // (menggantikan ikon platform otomatis di halaman publik).
   const [iconUploadingId, setIconUploadingId] = useState<string | null>(null);
+
+  // Modul "Featured Link" (permintaan langsung pengguna, referensi
+  // "Featured Layout" Linktree sungguhan): tautan tampil sebagai kartu
+  // thumbnail 16:9, lihat catatan lengkap di handleToggleFeatured.
+  const [thumbnailUploadingId, setThumbnailUploadingId] = useState<string | null>(null);
 
   // Modal "Tambah" ala Linktree.
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -527,6 +535,59 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
+    }
+  }
+
+  // handleToggleFeatured -- Modul "Featured Link" (permintaan langsung
+  // pengguna, referensi "Featured Layout" Linktree sungguhan): tandai
+  // tautan tampil sebagai kartu thumbnail 16:9. listLinks() dipanggil
+  // ULANG setelah sukses (bukan cuma optimistic update biasa) -- backend
+  // bisa MENURUNKAN thumbnail otomatis dari URL YouTube saat ini juga
+  // (lihat deriveYoutubeThumbnail, links.go), respons PATCH sendiri cuma
+  // {message}, jadi satu-satunya cara melihat hasilnya tanpa reload
+  // manual adalah memuat ulang daftar.
+  async function handleToggleFeatured(link: LinkItem) {
+    const nextFeatured = !link.is_featured;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: nextFeatured } : l)));
+    try {
+      await updateLink(link.id, { is_featured: nextFeatured });
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: link.is_featured } : l)));
+      setError(err instanceof ApiError ? err.message : "Gagal memperbarui tautan.");
+    }
+  }
+
+  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setThumbnailUploadingId(link.id);
+    setError(null);
+    try {
+      const { thumbnail_url } = await uploadLinkThumbnail(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, thumbnail_url, is_featured: true } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah thumbnail tautan.");
+    } finally {
+      setThumbnailUploadingId(null);
+    }
+  }
+
+  // handleRemoveThumbnail -- ikut mematikan is_featured (kartu Featured
+  // tanpa thumbnail tidak masuk akal, lihat renderLinkOrBlock di
+  // PagePreview.tsx) -- mengembalikan tautan ke baris klasik, bukan
+  // cuma menghapus gambarnya sambil status Featured tetap menyala.
+  async function handleRemoveThumbnail(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, thumbnail_url: "", is_featured: false } : l)));
+    try {
+      await deleteLinkThumbnail(link.id);
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus thumbnail tautan.");
     }
   }
 
@@ -1305,6 +1366,21 @@ export default function DashboardLinksPage() {
                         <IconClose className="h-4 w-4" />
                       </button>
                     )}
+                    {/* Modul "Featured Link" (permintaan langsung pengguna,
+                        referensi "Featured Layout" Linktree sungguhan):
+                        tampil sebagai kartu thumbnail 16:9, bukan baris
+                        klasik -- lihat panel unggah thumbnail di bawah
+                        yang muncul begitu status ini menyala. */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFeatured(link)}
+                      title={link.is_featured ? "Matikan Featured (kembali ke baris klasik)" : "Jadikan Featured (kartu thumbnail besar)"}
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                        link.is_featured ? "text-primary" : "text-muted"
+                      }`}
+                    >
+                      <IconStar className="h-4 w-4" />
+                    </button>
                   </>
                 )}
                 {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && (
@@ -1330,6 +1406,47 @@ export default function DashboardLinksPage() {
                   <IconTrash className="h-4 w-4" />
                 </button>
               </div>
+
+              {link.block_type === "link" && link.is_featured && (
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  {link.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                  ) : (
+                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted">
+                      Belum ada
+                    </div>
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="text-[11px] text-muted">
+                      {link.thumbnail_url
+                        ? "Thumbnail kartu Featured."
+                        : "Belum ada thumbnail -- untuk tautan YouTube akan otomatis terisi, tautan lain unggah manual di bawah."}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                        {thumbnailUploadingId === link.id ? "Mengunggah..." : link.thumbnail_url ? "Ganti Thumbnail" : "Unggah Thumbnail"}
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                          onChange={(e) => handleThumbnailUpload(e, link)}
+                          disabled={thumbnailUploadingId === link.id}
+                          className="hidden"
+                        />
+                      </label>
+                      {link.thumbnail_url && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveThumbnail(link)}
+                          className="text-[11px] font-semibold text-red-600 hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (

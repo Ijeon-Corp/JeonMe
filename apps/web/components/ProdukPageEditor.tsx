@@ -48,6 +48,21 @@ import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion";
 
+// LAYOUT_OPTIONS -- paritas penuh dengan dashboard/design/header/page.tsx
+// (lihat catatan lengkap di sana) -- daftarnya SENGAJA disalin apa adanya
+// di sini (bukan diimpor dari satu sumber), konsisten dengan pola "dua
+// jalur kode berbeda" yang sudah dipakai proyek ini untuk paritas
+// halaman utama/Toko (CONTENT_TILES/BLOCK_LABEL di atas juga begitu).
+const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; description: string }[] = [
+  { value: "centered", label: "Centered", description: "Avatar besar di tengah -- gaya klasik, bawaan." },
+  { value: "banner", label: "Banner", description: "Avatar kecil rata kiri, sebaris dengan nama." },
+  { value: "card", label: "Card", description: "Identitas dibungkus kartu, avatar menonjol di tepi atas." },
+  { value: "spotlight", label: "Spotlight", description: "Avatar besar, nama di dalam badge bulat." },
+  { value: "cover", label: "Cover", description: "Pita warna di atas ala foto sampul." },
+  { value: "minimal", label: "Minimal", description: "Avatar kecil sebaris nama, konten jadi fokus." },
+  { value: "hero", label: "Hero", description: "Foto profil tampil besar edge-to-edge sebagai latar. Isi Foto Profil dulu." },
+];
+
 const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
   { key: "video", label: "Video", description: "Embed video YouTube/TikTok", Icon: IconPlayCircle },
@@ -799,6 +814,31 @@ function HeaderSection({
           onBlur={(e) => onPatch({ bio: e.target.value })}
           className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         />
+      </div>
+
+      {/* Layout -- paritas penuh dengan halaman utama (dashboard/design/
+          header/page.tsx), lihat catatan lengkap di sana soal kenapa
+          pemilih manual ini perlu ada. */}
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-ink">Layout</label>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {LAYOUT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                setPage({ ...page, layout_variant: opt.value });
+                onPatch({ layout_variant: opt.value });
+              }}
+              className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-colors ${
+                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-border bg-white hover:border-primary/50"
+              }`}
+            >
+              <span className="text-[11px] font-bold text-ink">{opt.label}</span>
+              <span className="text-[9px] leading-snug text-muted">{opt.description}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026,

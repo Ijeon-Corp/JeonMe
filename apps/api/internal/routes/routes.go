@@ -201,6 +201,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// (menggantikan ikon platform otomatis di halaman publik).
 				linksGroup.POST("/links/:id/icon", links.UploadIcon)
 				linksGroup.DELETE("/links/:id/icon", links.DeleteIcon)
+				// Modul "Featured Link" (permintaan langsung pengguna, referensi
+				// "Featured Layout" Linktree sungguhan): thumbnail 16:9 manual --
+				// pelengkap deriveYoutubeThumbnail otomatis (dipicu dari PATCH
+				// /links/:id biasa, bukan endpoint terpisah) untuk tautan non-YouTube.
+				linksGroup.POST("/links/:id/thumbnail", links.UploadThumbnail)
+				linksGroup.DELETE("/links/:id/thumbnail", links.DeleteThumbnail)
 
 				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
 				// -- baris links yang sama, cuma butuh endpoint create sendiri

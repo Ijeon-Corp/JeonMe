@@ -101,6 +101,13 @@ type linkItem struct {
 	// (lihat lib/link-icons.ts sisi klien). Kosong berarti tetap pakai
 	// deteksi otomatis seperti sebelumnya.
 	CustomIconURL string `json:"custom_icon_url"`
+	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
+	// pengguna, referensi "Featured Layout" Linktree sungguhan): tautan
+	// tampil sebagai kartu thumbnail 16:9, bukan baris teks. ThumbnailURL
+	// TERPISAH dari CustomIconURL (ikon bulat kecil) -- tujuan visualnya
+	// beda, lihat migrasi 000064.
+	IsFeatured   bool   `json:"is_featured"`
+	ThumbnailURL string `json:"thumbnail_url"`
 }
 
 // List mengembalikan seluruh tautan & blok konten milik kreator yang sedang
@@ -117,6 +124,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
+			l.is_featured, l.thumbnail_url,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -133,7 +141,8 @@ func (h *LinksHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
-			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL, &it.ClickCount); err == nil {
+			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
+			&it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -197,6 +206,55 @@ func isValidVideoEmbedURL(raw string) bool {
 	}
 	host := strings.ToLower(u.Host)
 	return strings.Contains(host, "youtube.com") || strings.Contains(host, "youtu.be") || strings.Contains(host, "tiktok.com")
+}
+
+// youtubeVideoIDPattern -- ID video YouTube SELALU 11 karakter
+// alfanumerik/dash/underscore, dipakai memvalidasi hasil ekstraksi di
+// deriveYoutubeThumbnail supaya tidak salah membangun URL thumbnail dari
+// segmen path yang ternyata bukan ID video (mis. domain custom/typo).
+var youtubeVideoIDPattern = regexp.MustCompile(`^[\w-]{11}$`)
+
+// deriveYoutubeThumbnail -- Modul "Featured Link" (permintaan langsung
+// pengguna, referensi "Featured Layout" Linktree sungguhan): thumbnail
+// otomatis TANPA API key/panggilan keluar untuk tautan YouTube, memakai
+// pola URL thumbnail publik YouTube (img.youtube.com/vi/<id>/hqdefault.jpg,
+// selalu tersedia untuk video publik apa pun). Platform lain (Instagram,
+// dst) TIDAK didukung di sini -- kreator unggah manual lewat
+// UploadLinkThumbnail. Mendukung 3 bentuk URL YouTube: youtu.be/<id>,
+// youtube.com/watch?v=<id>, youtube.com/shorts/<id>, youtube.com/embed/<id>.
+func deriveYoutubeThumbnail(rawURL string) (string, bool) {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return "", false
+	}
+	host := strings.ToLower(u.Host)
+
+	var id string
+	switch {
+	case strings.Contains(host, "youtu.be"):
+		id = strings.Trim(u.Path, "/")
+	case strings.Contains(host, "youtube.com"):
+		switch {
+		case u.Path == "/watch":
+			id = u.Query().Get("v")
+		case strings.HasPrefix(u.Path, "/shorts/"):
+			id = strings.TrimPrefix(u.Path, "/shorts/")
+		case strings.HasPrefix(u.Path, "/embed/"):
+			id = strings.TrimPrefix(u.Path, "/embed/")
+		}
+	default:
+		return "", false
+	}
+
+	// Path bisa punya segmen tambahan setelah ID (mis. "/shorts/<id>/"),
+	// potong di karakter non-ID pertama.
+	if i := strings.IndexAny(id, "/?&"); i != -1 {
+		id = id[:i]
+	}
+	if !youtubeVideoIDPattern.MatchString(id) {
+		return "", false
+	}
+	return fmt.Sprintf("https://img.youtube.com/vi/%s/hqdefault.jpg", id), true
 }
 
 // allowedMapsHosts -- permintaan langsung pengguna (referensi tangkapan
@@ -455,6 +513,11 @@ type updateLinkRequest struct {
 	// -- divalidasi terhadap block_type baris yang SUDAH ada (tidak bisa
 	// ganti block_type lewat endpoint ini, cuma isinya).
 	BlockData map[string]any `json:"block_data"`
+	// IsFeatured -- Modul "Featured Link". Thumbnail TIDAK ada di request
+	// ini (beda dari field lain di struct ini) -- diisi OTOMATIS (YouTube,
+	// lihat deriveYoutubeThumbnail di bawah) atau lewat UploadLinkThumbnail
+	// terpisah, sama seperti CustomIconURL yang juga upload-only.
+	IsFeatured *bool `json:"is_featured"`
 }
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
@@ -594,6 +657,27 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		blockDataJSON = encoded
 	}
 
+	// Featured Link -- kalau kreator baru menandai is_featured=true DAN
+	// belum ada thumbnail tersimpan sama sekali, coba turunkan otomatis
+	// dari URL YouTube (tidak perlu API key/unggah manual). URL efektif
+	// pakai yang baru diisi di request ini kalau ada, kalau tidak pakai
+	// yang sudah tersimpan -- supaya "ganti URL + tandai Featured
+	// sekaligus" tetap menurunkan thumbnail dari URL BARU, bukan lama.
+	var autoThumbnail *string
+	if req.IsFeatured != nil && *req.IsFeatured {
+		var currentURL, currentThumbnail string
+		if err := h.DB.QueryRow(ctx, `SELECT url, thumbnail_url FROM links WHERE id = $1`, linkID).
+			Scan(&currentURL, &currentThumbnail); err == nil && currentThumbnail == "" {
+			effectiveURL := currentURL
+			if req.URL != nil && *req.URL != "" {
+				effectiveURL = *req.URL
+			}
+			if thumb, ok := deriveYoutubeThumbnail(effectiveURL); ok {
+				autoThumbnail = &thumb
+			}
+		}
+	}
+
 	_, err := h.DB.Exec(ctx, `
 		UPDATE links SET
 			title = COALESCE($1, title),
@@ -604,9 +688,12 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			lock_type = COALESCE($6, lock_type),
 			lock_code = COALESCE($7, lock_code),
 			lock_min_age = COALESCE($8, lock_min_age),
-			block_data = COALESCE($9, block_data)
-		WHERE id = $10
-	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON, linkID)
+			block_data = COALESCE($9, block_data),
+			is_featured = COALESCE($10, is_featured),
+			thumbnail_url = COALESCE($11, thumbnail_url)
+		WHERE id = $12
+	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON,
+		req.IsFeatured, autoThumbnail, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
@@ -719,6 +806,109 @@ func (h *LinksHandler) DeleteIcon(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "ikon tautan dihapus, kembali ke deteksi otomatis"})
+}
+
+// maxLinkThumbnailSize -- 5MB (sama seperti avatar) -- lebih besar dari
+// maxLinkIconSize (2MB) karena thumbnail Featured Link tampil BESAR
+// (16:9, seluruh lebar kartu), bukan ikon bulat kecil.
+const maxLinkThumbnailSize = 5 * 1024 * 1024
+
+// UploadThumbnail -- Modul "Featured Link" (permintaan langsung pengguna,
+// referensi "Featured Layout" Linktree sungguhan): unggah manual thumbnail
+// 16:9 untuk tautan non-YouTube (deriveYoutubeThumbnail cuma menangani
+// YouTube). Pola SAMA PERSIS dengan UploadIcon di atas -- key storage
+// SELALU "link-thumbnails/<linkID>" (unggah ulang menimpa) + cache-busting
+// "?v=<timestamp>" disimpan ke DB, BUKAN endpoint gabungan dengan UploadIcon
+// karena tujuan visualnya beda (lihat catatan ThumbnailURL, linkItem).
+func (h *LinksHandler) UploadThumbnail(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("thumbnail")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"thumbnail\")"})
+		return
+	}
+	if fileHeader.Size > maxLinkThumbnailSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("link-thumbnails/%s.webp", linkID)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah thumbnail"})
+		return
+	}
+
+	thumbnailURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET thumbnail_url = $1, is_featured = true WHERE id = $2`, thumbnailURL, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "thumbnail terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"thumbnail_url": thumbnailURL, "message": "thumbnail tautan berhasil diunggah"})
+}
+
+// DeleteThumbnail -- mengembalikan tautan ke baris klasik (menghapus
+// thumbnail_url DAN mematikan is_featured -- kartu Featured tanpa
+// thumbnail tidak masuk akal, lihat renderLinkOrBlock di PagePreview.tsx).
+// Soft-fail utk penghapusan objek storage, pola sama seperti DeleteIcon.
+func (h *LinksHandler) DeleteThumbnail(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET thumbnail_url = '', is_featured = false WHERE id = $1`, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus thumbnail tautan"})
+		return
+	}
+
+	if h.Storage != nil {
+		_ = h.Storage.Delete(ctx, fmt.Sprintf("link-thumbnails/%s", linkID))
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"message": "thumbnail tautan dihapus, kembali ke baris klasik"})
 }
 
 // Unlock — No.79 (Sprint 9): endpoint PUBLIK, dipanggil dari halaman publik

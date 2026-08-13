@@ -90,8 +90,8 @@ func main() {
 		// URL kedaluwarsa seperti file produk berbayar) -- lihat komentar
 		// storage.Client.EnsurePublicRead. SEMUA prefix WAJIB dikirim dalam
 		// satu panggilan yang sama (SetBucketPolicy menimpa, bukan menambah).
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon tautan: %v", err)
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail tautan: %v", err)
 		}
 		cancel()
 	}

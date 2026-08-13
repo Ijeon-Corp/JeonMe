@@ -36,6 +36,14 @@ export interface PagePreviewLink {
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
   // (lihat lib/link-icons.ts). Kosong berarti tetap pakai deteksi otomatis.
   customIconUrl?: string;
+  // isFeatured/thumbnailUrl -- Modul "Featured Link" (permintaan langsung
+  // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
+  // isFeatured true DAN thumbnailUrl terisi, tautan dirender sebagai kartu
+  // thumbnail 16:9 (lihat renderLinkOrBlock di bawah) -- kalau salah satu
+  // kosong, jatuh balik diam-diam ke baris klasik biasa (TIDAK pernah
+  // kartu kosong/rusak).
+  isFeatured?: boolean;
+  thumbnailUrl?: string;
 }
 
 export interface PagePreviewProduct {
@@ -182,7 +190,7 @@ export interface PagePreviewData {
   // tepi atas), "spotlight" (avatar besar, nama dalam badge bulat, ikon
   // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
   // utmEnabled -- Modul Analitik Pihak Ketiga (permintaan langsung
   // pengguna, 12 Agustus 2026): kalau true, SETIAP tautan keluar
   // (TrackedLink) ditandai utm_source=jeonme&utm_medium=social&
@@ -249,7 +257,7 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
-  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
 }
 
 interface PreviewSourceLink {
@@ -262,6 +270,8 @@ interface PreviewSourceLink {
   block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
+  is_featured?: boolean;
+  thumbnail_url?: string;
 }
 
 interface PreviewSourceProduct {
@@ -335,6 +345,8 @@ export function toPreviewData(
         blockType: l.block_type,
         blockData: l.block_data,
         customIconUrl: l.custom_icon_url || undefined,
+        isFeatured: l.is_featured,
+        thumbnailUrl: l.thumbnail_url || undefined,
       })),
     products: products
       .filter((p) => p.is_active)
@@ -549,18 +561,22 @@ function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
-  // Enam varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
+  // Tujuh varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
   // "layouting nya juga berbeda" lalu "tambahkan lagi 2 bentuk layout
-  // lain nya"): "centered" & "banner" (bawaan, TIDAK BERUBAH), "card"
-  // (identitas dibungkus kartu bertema, avatar menonjol di tepi atas --
-  // kesan "kartu profil resmi"), "spotlight" (avatar lebih besar, nama
-  // dalam badge bulat -- kesan "panggung/showcase"), "cover" (pita warna
-  // di atas ala foto sampul, avatar menindih tepi BAWAHnya -- kesan
-  // "official page"), "minimal" (avatar kecil sebaris dengan nama ala
-  // header aplikasi/dokumen, konten jadi pusat perhatian bukan fotonya).
-  // Dipetakan ke kategori Quick Setup yang cocok di quick-setup-templates.ts,
-  // TAPI bisa dipakai manual di halaman mana pun -- field DB cuma
-  // VARCHAR(20) polos, tidak dibatasi cuma dari Quick Setup.
+  // lain nya", "hero" ditambah 13 Agustus 2026 hasil analisa benchmark
+  // Linktree/Lynk.id): "centered" & "banner" (bawaan, TIDAK BERUBAH),
+  // "card" (identitas dibungkus kartu bertema, avatar menonjol di tepi
+  // atas -- kesan "kartu profil resmi"), "spotlight" (avatar lebih
+  // besar, nama dalam badge bulat -- kesan "panggung/showcase"), "cover"
+  // (pita warna di atas ala foto sampul, avatar menindih tepi BAWAHnya
+  // -- kesan "official page"), "minimal" (avatar kecil sebaris dengan
+  // nama ala header aplikasi/dokumen, konten jadi pusat perhatian bukan
+  // fotonya), "hero" (avatarUrl yang sama ditampilkan besar edge-to-edge
+  // sebagai latar, nama/bio ditumpuk di atasnya -- lihat catatan lengkap
+  // di percabangannya sendiri di bawah). Dipetakan ke kategori Quick
+  // Setup yang cocok di quick-setup-templates.ts, TAPI bisa dipakai
+  // manual di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak
+  // dibatasi cuma dari Quick Setup.
   const variant = data.layoutVariant ?? "centered";
   const isBanner = variant === "banner";
   const isMinimal = variant === "minimal";
@@ -686,6 +702,42 @@ function renderBioHeader(
           {data.bio && <p className={`mt-2 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           {renderSocialRow(data.social)}
         </div>
+      </div>
+    );
+  }
+
+  // "hero" -- hasil analisa benchmark Linktree/Lynk.id (13 Agustus 2026):
+  // "Hero" Linktree BUKAN foto sampul terpisah, melainkan avatarUrl YANG
+  // SAMA ditampilkan besar edge-to-edge (bukan avatar bulat kecil) --
+  // makanya TIDAK ada field/kolom/upload baru untuk varian ini, murni
+  // gaya render ulang dari data yang sudah ada (konsisten dengan 6
+  // varian lain, semua hanya menyusun ulang avatarUrl/displayName/bio
+  // yang sama). Fallback ke "centered" (jatuh lewat ke return di bawah)
+  // KALAU avatarUrl masih kosong -- tidak ada apa pun untuk ditampilkan
+  // besar, daripada kotak kosong/rusak. Nama/bio SENGAJA tidak pakai
+  // nameHeading/theme.bio yang sudah dibangun di atas (warnanya
+  // disetel untuk latar halaman biasa) -- teks di sini SELALU putih,
+  // overlay ada di atas FOTO gelap (scrim), bukan latar tema.
+  if (variant === "hero" && data.avatarUrl) {
+    return (
+      <div className="relative -mx-6 -mt-14 flex w-[calc(100%+3rem)] flex-col items-center">
+        <div className="relative h-64 w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={data.avatarUrl} alt={data.username} className="h-full w-full object-cover" />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 px-6 pb-4 text-center">
+            <h1 className="flex items-center justify-center gap-1.5 font-heading text-xl font-bold text-white" style={theme.nameStyle}>
+              {data.displayName || data.username}
+              {data.isVerified && (
+                <span title="Kreator terverifikasi">
+                  <IconBadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+                </span>
+              )}
+            </h1>
+            {data.bio && <p className="mt-1 text-xs leading-relaxed text-white/85">{data.bio}</p>}
+          </div>
+        </div>
+        <div className="relative mt-3 w-full px-6">{renderSocialRow(data.social)}</div>
       </div>
     );
   }
@@ -816,6 +868,57 @@ function renderLinkOrBlock(
           Kirim Pesan
         </button>
       </div>
+    );
+  }
+
+  // "Featured Link" (permintaan langsung pengguna, referensi "Featured
+  // Layout" Linktree sungguhan, hasil analisa benchmark 13 Agustus 2026):
+  // tautan tampil sebagai kartu thumbnail 16:9, bukan baris teks klasik
+  // di bawah -- dipakai SELEKTIF untuk 1-2 tautan terpenting (video/
+  // promo), lihat catatan lengkap di isFeatured/thumbnailUrl,
+  // PagePreviewLink. SENGAJA dilewati untuk tautan terkunci (!link.lockType)
+  // -- interaksi buka-kunci (LockedLinkButton) tidak dirancang untuk
+  // bentuk kartu, dan URL asli tautan terkunci memang belum boleh
+  // diketahui sebelum gerbang terlewati, di luar cakupan permintaan ini.
+  if (!link.lockType && link.isFeatured && link.thumbnailUrl) {
+    const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
+    const cardClassName = `group block w-full overflow-hidden ${theme.cardRounded ?? "rounded-xl"} ${theme.card} transition-all duration-300`;
+    const cardInner = (
+      <>
+        <div className="relative aspect-video w-full overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={link.thumbnailUrl}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
+            {link.customIconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+            ) : (
+              <LinkPlatformIcon className={`h-3.5 w-3.5 ${iconColorClass}`} />
+            )}
+          </span>
+        </div>
+        <p className={`truncate px-3 py-2.5 text-left text-[11px] font-semibold ${theme.cardTitle}`}>{link.title}</p>
+      </>
+    );
+    return interactive ? (
+      <TrackedLink
+        key={link.id}
+        username={data.username}
+        pageSlug={data.pageSlug}
+        linkId={link.id}
+        href={buildUtmHref(link.url, link.title, data.utmEnabled)}
+        className={cardClassName}
+      >
+        {cardInner}
+      </TrackedLink>
+    ) : (
+      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className={cardClassName}>
+        {cardInner}
+      </a>
     );
   }
 
@@ -1462,7 +1565,41 @@ function LandingPagePreview({
                   <p className={`text-xs font-semibold ${theme.productTitle}`}>{block.title}</p>
                 </div>
               );
-            default:
+            default: {
+              // Featured Link paritas dengan layout bio biasa -- lihat
+              // catatan lengkap di renderLinkOrBlock.
+              if (block.isFeatured && block.thumbnailUrl) {
+                const featClassName = `group block w-full overflow-hidden ${theme.cardRounded ?? "rounded-xl"} ${theme.card} transition-all duration-300`;
+                const featInner = (
+                  <>
+                    <div className="relative aspect-video w-full overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={block.thumbnailUrl}
+                        alt=""
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <p className={`truncate px-3 py-2.5 text-left text-[11px] font-semibold ${theme.cardTitle}`}>{block.title}</p>
+                  </>
+                );
+                return interactive ? (
+                  <TrackedLink
+                    key={block.id}
+                    username={data.username}
+                    pageSlug={data.pageSlug}
+                    linkId={block.id}
+                    href={buildUtmHref(block.url, block.title, data.utmEnabled)}
+                    className={featClassName}
+                  >
+                    {featInner}
+                  </TrackedLink>
+                ) : (
+                  <a key={block.id} href={block.url} target="_blank" rel="noopener noreferrer" className={featClassName}>
+                    {featInner}
+                  </a>
+                );
+              }
               return interactive ? (
                 <TrackedLink
                   key={block.id}
@@ -1483,6 +1620,7 @@ function LandingPagePreview({
                   <span className="truncate">{block.title}</span>
                 </div>
               );
+            }
           }
         })}
 

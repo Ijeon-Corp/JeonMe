@@ -45,6 +45,14 @@ export type PageSettingsPatch = Partial<
     | "custom_title_color"
     | "custom_style_override"
     | "hide_watermark"
+    // layout_variant -- permintaan langsung pengguna, 13 Agustus 2026
+    // ("tambahkan model baru hero dan featured link... buat saja yang
+    // penting semua kebutuhan terpenuhi"): pemilih layout manual baru di
+    // /dashboard/design/header butuh field ini di PageSettingsPatch --
+    // SEBELUMNYA layout_variant cuma pernah diisi lewat Quick Setup
+    // (jalur kode berbeda, langsung updateMyPage), tidak pernah lewat
+    // hook ini.
+    | "layout_variant"
   >
 >;
 

@@ -120,6 +120,12 @@ export interface PublicLink {
   block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
+  // is_featured/thumbnail_url -- Modul "Featured Link" (permintaan langsung
+  // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
+  // is_featured true DAN thumbnail_url terisi, tautan dirender sebagai
+  // kartu thumbnail 16:9 (lihat renderLinkOrBlock, PagePreview.tsx).
+  is_featured: boolean;
+  thumbnail_url: string;
 }
 
 // No.79 (Sprint 9): buka tautan terkunci -- endpoint publik, tanpa akun.
@@ -318,7 +324,7 @@ export interface PublicPage {
   // "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
   // sebaris), "card" (dibungkus kartu bertema), "spotlight" (avatar
   // besar + badge nama). Lihat renderBioHeader di PagePreview.tsx.
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -489,7 +495,7 @@ export interface MyPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal";
+  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero";
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
@@ -688,6 +694,10 @@ export interface LinkItem {
   // tautan, menggantikan ikon platform yang terdeteksi otomatis dari URL
   // (lihat lib/link-icons.ts). Kosong berarti tetap pakai deteksi otomatis.
   custom_icon_url: string;
+  // is_featured/thumbnail_url -- Modul "Featured Link", lihat catatan
+  // lengkap di PublicLink.
+  is_featured: boolean;
+  thumbnail_url: string;
 }
 
 // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ) -- baris
@@ -725,6 +735,7 @@ export function updateLink(
     lock_min_age: number;
     clear_lock: boolean;
     block_data: Record<string, unknown>;
+    is_featured: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -762,6 +773,35 @@ export async function uploadLinkIcon(id: string, file: File): Promise<{ custom_i
 
 export function deleteLinkIcon(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}/icon`, { method: "DELETE" }, { auth: true });
+}
+
+// uploadLinkThumbnail -- Modul "Featured Link" (permintaan langsung
+// pengguna, referensi "Featured Layout" Linktree sungguhan): thumbnail
+// 16:9 manual untuk tautan non-YouTube (YouTube diturunkan otomatis
+// server-side lewat updateLink biasa, lihat deriveYoutubeThumbnail
+// backend). Sama pola multipart dengan uploadLinkIcon -- field beda
+// ("thumbnail"), endpoint beda, dan mengaktifkan is_featured sekaligus
+// (lihat UploadThumbnail, links.go).
+export async function uploadLinkThumbnail(id: string, file: File): Promise<{ thumbnail_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("thumbnail", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/thumbnail`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteLinkThumbnail(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/thumbnail`, { method: "DELETE" }, { auth: true });
 }
 
 export function reorderLinks(items: { id: string; position: number }[]) {

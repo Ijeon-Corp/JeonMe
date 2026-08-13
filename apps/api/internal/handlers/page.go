@@ -157,13 +157,19 @@ type publicPageResponse struct {
 	// (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026
 	// ("tambahkan jenis model layout selain 2 yang sudah ada"), "cover"/
 	// "minimal" ditambah lagi hari yang sama ("tambahkan lagi 2 bentuk
-	// layout lain nya"): "centered" (bawaan, avatar+nama+bio di tengah),
-	// "banner" (rata kiri sebaris ala kartu profil bisnis), "card"
-	// (identitas dibungkus kartu bertema, avatar menonjol di tepi atas),
-	// "spotlight" (avatar besar, nama dalam badge bulat), "cover" (pita
-	// warna di atas ala foto sampul, avatar menindih tepi bawahnya),
-	// "minimal" (avatar kecil sebaris nama ala header aplikasi/dokumen).
-	// Lihat renderBioHeader di PagePreview.tsx untuk keenamnya.
+	// layout lain nya"), "hero" ditambah 13 Agustus 2026 (hasil analisa
+	// benchmark Linktree/Lynk.id -- "Hero" Linktree BUKAN foto sampul
+	// terpisah, cuma foto profil yang SAMA ditampilkan besar edge-to-edge,
+	// jadi TIDAK butuh kolom/upload baru): "centered" (bawaan, avatar+
+	// nama+bio di tengah), "banner" (rata kiri sebaris ala kartu profil
+	// bisnis), "card" (identitas dibungkus kartu bertema, avatar menonjol
+	// di tepi atas), "spotlight" (avatar besar, nama dalam badge bulat),
+	// "cover" (pita warna di atas ala foto sampul, avatar menindih tepi
+	// bawahnya), "minimal" (avatar kecil sebaris nama ala header aplikasi/
+	// dokumen), "hero" (avatar_url YANG SAMA dirender besar edge-to-edge
+	// sebagai header, bukan bulat kecil -- fallback ke "centered" kalau
+	// avatar_url masih kosong, lihat renderBioHeader).
+	// Lihat renderBioHeader di PagePreview.tsx untuk ketujuhnya.
 	LayoutVariant string             `json:"layout_variant"`
 	Links         []publicLink       `json:"links"`
 	Products      []publicItem       `json:"products"`
@@ -301,6 +307,12 @@ type publicLink struct {
 	// di sisi klien (lihat lib/link-icons.ts). Kosong berarti tetap pakai
 	// deteksi otomatis.
 	CustomIconURL string `json:"custom_icon_url"`
+	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
+	// pengguna, referensi "Featured Layout" Linktree sungguhan): kalau true
+	// DAN ThumbnailURL terisi, tautan dirender sebagai kartu thumbnail 16:9
+	// (bukan baris klasik) -- lihat renderLinkOrBlock, PagePreview.tsx.
+	IsFeatured   bool   `json:"is_featured"`
+	ThumbnailURL string `json:"thumbnail_url"`
 }
 
 type publicItem struct {
@@ -532,7 +544,9 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	// gate is_active manual yang sudah ada -- keduanya harus lolos.
 	resp.Links = []publicLink{}
 	rows, err := h.DB.Query(ctx, `
-		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url FROM links
+		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
+			is_featured, thumbnail_url
+		FROM links
 		WHERE page_id = $1
 		AND is_active = true
 		AND (starts_at IS NULL OR starts_at <= now())
@@ -543,7 +557,8 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		defer rows.Close()
 		for rows.Next() {
 			var l publicLink
-			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL); err == nil {
+			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
+				&l.IsFeatured, &l.ThumbnailURL); err == nil {
 				// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 				// komentar di definisi struct publicLink.
 				if l.LockType != "" {
@@ -945,7 +960,7 @@ type updatePageRequest struct {
 	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -1839,7 +1854,7 @@ type updateExtraPageRequest struct {
 	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
-	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal"`
+	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
