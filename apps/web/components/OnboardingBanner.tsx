@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { OnboardingChecklistItem, dismissOnboarding, getOnboardingStatus } from "@/lib/api-client";
 import { IconCheck, IconChevronRight, IconClose, IconSparkle } from "@/components/icons";
 
@@ -22,6 +23,7 @@ import { IconCheck, IconChevronRight, IconClose, IconSparkle } from "@/component
 // dimuat sekali, fail-silent kalau gagal (jangan tampilkan dari data
 // yang tidak pasti).
 export default function OnboardingBanner() {
+  const pathname = usePathname();
   const [dismissed, setDismissed] = useState(true);
   const [checklist, setChecklist] = useState<OnboardingChecklistItem[]>([]);
   const [doneCount, setDoneCount] = useState(0);
@@ -29,6 +31,23 @@ export default function OnboardingBanner() {
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Bug dilaporkan pengguna (13 Agustus 2026, screenshot: "saya sudah
+  // melakukan semua intruksi setup akun tetapi kenapa indikasi sudah
+  // dilakukan nya tidak ada" -- checklist tetap 0/4 walau semua langkah
+  // sudah benar-benar dikerjakan): komponen ini dipasang di dashboard
+  // layout.tsx yang PERSISTEN lintas navigasi client-side (App Router
+  // TIDAK remount layout saat berpindah antar halaman /dashboard/*), jadi
+  // efek fetch SEBELUMNYA (dependency array kosong, "hanya sekali saat
+  // mount") membeku di status pertama kali dashboard dimuat -- kreator
+  // yang melengkapi foto profil di /dashboard/design/header lalu tautan
+  // di /dashboard/links lalu metode pembayaran di /dashboard/settings/
+  // payment TIDAK PERNAH melihat checklist ini refresh, walau progresnya
+  // sungguhan sudah tersimpan di server (GetStatus SELALU menghitung
+  // ulang benar dari DB, ini murni bug di sisi tampilan). Fix: refetch
+  // setiap kali pathname berubah (usePathname sebagai dependency) --
+  // kreator wajar berpindah halaman persis di antara tiap langkah
+  // checklist, jadi ini menangkap progres terbaru tanpa perlu reload
+  // manual browser.
   useEffect(() => {
     getOnboardingStatus()
       .then((s) => {
@@ -40,7 +59,7 @@ export default function OnboardingBanner() {
       .catch(() => {
         // Fail-silent, sama seperti AccountDeletionBanner.
       });
-  }, []);
+  }, [pathname]);
 
   async function handleDismiss() {
     setBusy(true);

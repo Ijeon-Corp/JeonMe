@@ -49,4 +49,47 @@ test.describe("Onboarding: Checklist Progresif", () => {
     await page.reload();
     await expect(page.getByText("Lengkapi setup akunmu -- 2/4 selesai")).toBeVisible({ timeout: 10000 });
   });
+
+  test("checklist ikut ter-refresh lewat navigasi sidebar (client-side, TANPA reload manual)", async ({ page }) => {
+    // Bug dilaporkan pengguna (13 Agustus 2026, screenshot): "saya sudah
+    // melakukan semua intruksi setup akun tetapi kenapa indikasi sudah
+    // dilakukan nya tidak ada" -- checklist tetap 0/4 walau semua langkah
+    // sungguhan sudah dikerjakan. Akar masalah: OnboardingBanner dipasang
+    // di dashboard layout.tsx yang PERSISTEN lintas navigasi client-side
+    // (App Router tidak remount layout), sedangkan efek fetch statusnya
+    // SEBELUMNYA dependency array kosong ("cuma sekali saat mount") --
+    // jadi begitu banner termuat pertama kali, dia BEKU di status itu
+    // selamanya walau kreator lanjut menyelesaikan langkah lain di
+    // halaman-halaman berikutnya TANPA pernah me-reload browser secara
+    // manual, yang mana itulah cara kreator sungguhan memakai dashboard
+    // ini (klik-klik sidebar, bukan reload manual tiap kali).
+    //
+    // Test SEBELUMNYA (di atas) memakai page.goto()/page.reload() di
+    // antara tiap aksi -- keduanya navigasi BROWSER PENUH (bukan transisi
+    // client-side Next.js <Link>), jadi remount ulang OnboardingBanner
+    // dari nol dan TIDAK PERNAH benar-benar menguji bug ini (itu sebabnya
+    // lolos sebelum bug ini ditemukan). Test ini SENGAJA memakai
+    // page.getByRole("link").click() lewat sidebar (transisi client-side
+    // sungguhan) supaya benar-benar membuktikan fix (usePathname sebagai
+    // dependency efek fetch, lihat OnboardingBanner.tsx) bekerja, bukan
+    // cuma lolos karena reload yang menyembunyikan bug.
+    await registerAndLogin(page, "onbcheck2");
+
+    await expect(page.getByText("Lengkapi setup akunmu -- 0/4 selesai")).toBeVisible({ timeout: 10000 });
+
+    // Navigasi ke Desain lewat SIDEBAR (klik <Link>, bukan page.goto) --
+    // "Desain" ada di dalam grup collapsible "Halaman Saya", buka dulu.
+    await page.getByRole("button", { name: "Halaman Saya" }).click();
+    await page.getByRole("link", { name: "Desain", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard\/design$/);
+    const publishToggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });
+    await publishToggle.click();
+    await expect(publishToggle).toHaveAttribute("aria-checked", "true");
+
+    // Balik ke Ringkasan lewat SIDEBAR juga -- ini transisi client-side
+    // yang SEBELUM fix tidak pernah memicu refetch checklist sama sekali.
+    await page.getByRole("link", { name: "Ringkasan", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByText("Lengkapi setup akunmu -- 1/4 selesai")).toBeVisible({ timeout: 10000 });
+  });
 });
