@@ -75,7 +75,23 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
   }
 
   return (
-    <PublicPageFrame>
+    <PublicPageFrame
+      theme={page.theme}
+      customTheme={{
+        backgroundType: page.custom_background_type,
+        backgroundValue: page.custom_background_value,
+        font: page.custom_font,
+        buttonColor: page.custom_button_color,
+        buttonStyle: page.custom_button_style,
+        buttonRounded: page.custom_button_rounded,
+        buttonShadow: page.custom_button_shadow,
+        buttonTextColor: page.custom_button_text_color,
+        pageTextColor: page.custom_page_text_color,
+        titleFont: page.custom_title_font,
+        titleColor: page.custom_title_color,
+        styleOverride: page.custom_style_override,
+      }}
+    >
       <AnalyticsScripts analytics={page.analytics} />
       <PageAnalytics username={page.username} />
       <PagePreview
