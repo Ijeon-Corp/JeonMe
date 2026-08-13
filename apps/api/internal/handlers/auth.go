@@ -19,22 +19,30 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/jeonme/api/internal/googleoauth"
 )
 
-// AuthHandler mengimplementasikan REQ-F-101 (registrasi), REQ-F-103 (reset
+// AuthHandler mengimplementasikan REQ-F-101 (registrasi, termasuk OAuth
+// Google -- lihat GoogleLogin di oauth_google.go), REQ-F-103 (reset
 // password), REQ-F-104 (verifikasi email), dan REQ-F-106 (revoke sesi).
-// OAuth Google (bagian dari REQ-F-101) belum diimplementasikan -- butuh
-// GOOGLE_CLIENT_ID/SECRET dari Google Cloud Console yang belum tersedia.
-// KYC (REQ-F-105) juga belum diimplementasikan.
+// KYC (REQ-F-105) belum diimplementasikan.
 type AuthHandler struct {
 	DB        *pgxpool.Pool
 	RDB       *redis.Client
 	JWTSecret string
 	AppEnv    string
+	// GoogleOAuth -- di-set terpisah sesudah NewAuthHandler (bukan lewat
+	// parameter constructor) supaya SEMUA call site lama (test helper di
+	// hampir setiap _test.go handler lain, yang tidak butuh Google OAuth
+	// sama sekali) tidak perlu ikut berubah. Selalu non-nil (NewClient
+	// tidak pernah gagal), ClientID/ClientSecret kosong ditangani sendiri
+	// oleh googleoauth.Client.Exchange (ErrNotConfigured).
+	GoogleOAuth *googleoauth.Client
 }
 
 func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEnv string) *AuthHandler {
-	return &AuthHandler{DB: db, RDB: rdb, JWTSecret: jwtSecret, AppEnv: appEnv}
+	return &AuthHandler{DB: db, RDB: rdb, JWTSecret: jwtSecret, AppEnv: appEnv, GoogleOAuth: googleoauth.NewClient("", "")}
 }
 
 type registerRequest struct {
@@ -176,7 +184,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var id, passwordHash string
+	var id string
+	// passwordHash -- *string (bukan string) karena akun yang HANYA pernah
+	// daftar/masuk lewat Google (lihat oauth_google.go) punya password_hash
+	// NULL di database (migrasi 000065) -- scan ke string polos akan gagal
+	// dengan error scan generik yang membingungkan, jadi ditangani eksplisit
+	// di bawah dengan pesan yang jelas ("akun ini terdaftar lewat Google").
+	var passwordHash *string
 	var suspendedAt, twoFactorEnabledAt *time.Time
 	err := h.DB.QueryRow(ctx,
 		`SELECT id, password_hash, suspended_at, two_factor_enabled_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
@@ -186,7 +200,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
+	if passwordHash == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "akun ini terdaftar lewat Google, silakan masuk pakai tombol \"Lanjutkan dengan Google\""})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*passwordHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
 	}

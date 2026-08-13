@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, getAdminSummary, login, requestPasswordReset, setToken, verifyLogin2FA } from "@/lib/api-client";
+import { ApiError, login, requestPasswordReset, setToken, verifyLogin2FA } from "@/lib/api-client";
+import { redirectAfterAuth } from "@/lib/auth-redirect";
 import AuthShell from "@/components/AuthShell";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,19 +26,6 @@ export default function LoginPage() {
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
 
-  async function afterLoginSuccess() {
-    // Tidak ada klaim "role" di JWT (AdminRequired selalu cek DB langsung,
-    // lihat middleware) -- cara termudah tahu status admin ya langsung
-    // coba salah satu endpoint admin. 403/error apa pun berarti bukan
-    // admin, arahkan ke dashboard kreator seperti biasa.
-    try {
-      await getAdminSummary();
-      router.push("/admin");
-    } catch {
-      router.push("/dashboard");
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -48,7 +37,7 @@ export default function LoginPage() {
         return;
       }
       setToken(res.token!);
-      await afterLoginSuccess();
+      await redirectAfterAuth(router);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal masuk, coba lagi.");
     } finally {
@@ -64,7 +53,7 @@ export default function LoginPage() {
     try {
       const { token } = await verifyLogin2FA({ mfa_token: mfaToken, code: mfaCode });
       setToken(token);
-      await afterLoginSuccess();
+      await redirectAfterAuth(router);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Kode 2FA salah, coba lagi.");
     } finally {
@@ -137,7 +126,17 @@ export default function LoginPage() {
       </h1>
       <p className="mt-3 text-sm text-muted">Kelola halaman dan produkmu.</p>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+      <div className="mt-8">
+        <GoogleAuthButton label="Masuk dengan Google" />
+      </div>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Email</label>
           <input

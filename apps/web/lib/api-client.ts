@@ -404,6 +404,21 @@ export function verifyLogin2FA(input: { mfa_token: string; code: string }) {
   });
 }
 
+// googleLogin -- alur Authorization Code (permintaan langsung pengguna, 13
+// Agustus 2026: "tambahkan di login dan register login via google").
+// Dipanggil dari app/auth/google/callback/page.tsx sesudah Google redirect
+// balik bawa authorization code -- endpoint backend yang sama melayani
+// login MAUPUN register (akun dibuat otomatis kalau emailnya belum
+// terdaftar), jadi token SELALU langsung ada di respons (tidak ada
+// mfa_required seperti login()/password biasa -- 2FA password tidak
+// relevan untuk jalur masuk lewat Google).
+export function googleLogin(input: { code: string; redirect_uri: string }) {
+  return apiFetch<{ token: string }>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function logout() {
   return apiFetch<{ message: string }>("/auth/logout", { method: "POST" }, { auth: true });
 }

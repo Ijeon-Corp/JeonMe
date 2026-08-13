@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, checkUsername, login, register, setToken } from "@/lib/api-client";
 import AuthShell from "@/components/AuthShell";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { IconCheck, IconClose } from "@/components/icons";
 
 type UsernameCheckState = "idle" | "checking" | "available" | "unavailable";
@@ -88,7 +89,32 @@ export default function RegisterPage() {
         Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-ink">gratis</span>.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+      <div className="mt-8">
+        {/* onBeforeRedirect -- pola validasi-saat-aksi yang SAMA seperti
+            handleSubmit form password di bawah (bukan menonaktifkan
+            tombol): checkbox persetujuan data pribadi (NF-09, UU PDP) WAJIB
+            tercentang dulu sebelum redirect ke Google terjadi sama sekali,
+            karena begitu redirect jalan akun bisa langsung terbuat di
+            backend tanpa titik konfirmasi lain. */}
+        <GoogleAuthButton
+          label="Daftar dengan Google"
+          onBeforeRedirect={() => {
+            if (!consentAccepted) {
+              setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+              return false;
+            }
+            return true;
+          }}
+        />
+      </div>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Klaim link bio gratismu</label>
           {/* Prefiks "jeonme.com/" MENYATU dengan input (referensi layout

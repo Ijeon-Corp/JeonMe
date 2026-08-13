@@ -21,6 +21,14 @@ type Config struct {
 	MidtransClientKey    string
 	MidtransIsProduction bool
 
+	// Google OAuth (login/register via Google, permintaan langsung
+	// pengguna 13 Agustus 2026) -- alur Authorization Code penuh, lihat
+	// internal/googleoauth. Kosong secara default (pola soft-fail sama
+	// seperti Midtrans/SMTP/WhatsApp di bawah) -- endpoint /auth/google
+	// membalas 501 yang jelas kalau belum diisi, bukan panic/500 buram.
+	GoogleClientID     string
+	GoogleClientSecret string
+
 	CORSAllowedOrigins string
 	PublicWebURL       string
 	// PublicAPIURL -- origin backend yang bisa diakses publik, dipakai
@@ -102,6 +110,9 @@ func Load() *Config {
 		MidtransServerKey:    getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransClientKey:    getEnv("MIDTRANS_CLIENT_KEY", ""),
 		MidtransIsProduction: getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 		// Dipakai membangun finish redirect URL Midtrans Snap (REQ-F-402) --

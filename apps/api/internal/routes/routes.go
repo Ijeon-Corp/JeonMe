@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/config"
+	"github.com/jeonme/api/internal/googleoauth"
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/midtrans"
@@ -25,6 +26,7 @@ import (
 func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, queueClient *asynq.Client, cfg *config.Config, version string) {
 	health := handlers.NewHealthHandler(db, rdb, version)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
+	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
 	page := handlers.NewPageHandler(db, rdb, s3)
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
@@ -96,8 +98,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			auth_.POST("/password-reset/confirm", auth.ConfirmPasswordReset)
 			auth_.POST("/email-verification/request", authRequired, auth.RequestEmailVerification)
 			auth_.POST("/email-verification/confirm", auth.ConfirmEmailVerification)
-			// TODO: OAuth Google (REQ-F-101) -- menunggu GOOGLE_CLIENT_ID/SECRET
-			// dari Google Cloud Console, lihat CICD-GUIDE.md / Rencana-Sprint-Jeonme.xlsx.
+			// Alur Authorization Code penuh (bukan Google Identity Services
+			// popup) -- lihat AuthHandler.GoogleLogin. Melayani login MAUPUN
+			// register sekaligus, satu tombol dipakai di kedua halaman
+			// (apps/web/components/GoogleAuthButton.tsx), jadi cukup satu
+			// rate limit bucket yang sama dengan register/login biasa.
+			auth_.POST("/google", authRateLimit, auth.GoogleLogin)
 		}
 
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
