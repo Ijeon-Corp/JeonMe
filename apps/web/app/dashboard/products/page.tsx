@@ -1135,26 +1135,45 @@ export default function DashboardProductsPage() {
               </button>
             )}
 
-            <div className="mt-4 flex items-center gap-3">
-              <button
-                type="button"
-                disabled={coverBusyId === manageProduct.id}
-                onClick={() => coverInputRefs.current[manageProduct.id]?.click()}
-                title={manageProduct.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
-                className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-primary-subtle disabled:opacity-60"
-              >
-                {manageProduct.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={manageProduct.cover_image_url} alt={manageProduct.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-primary/40">
-                    <IconBox className="h-6 w-6" />
-                  </div>
-                )}
-                <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
-                  <IconCamera className="h-2.5 w-2.5" />
-                </span>
-              </button>
+            {/* Permintaan langsung pengguna, 14 Agustus 2026: "saat kelola
+                produk ada 2 yang perlu diunggah yaitu icon dan produk nya,
+                sebagai user saya bingung dengan ui dan ux nya" -- akar
+                masalahnya BUKAN bug (toggle Aktifkan memang bekerja benar),
+                tapi tombol sampul sebelumnya cuma ikon kamera kecil TANPA
+                label teks sama sekali, duduk bersebelahan dengan tombol
+                "Unggah file" yang justru WAJIB utk mengaktifkan produk --
+                gampang tertukar. Sekarang keduanya diberi label & keterangan
+                wajib/opsional yang eksplisit, langsung di dalam modal ini
+                (bukan cuma di atas tabel, yang sudah tidak terlihat lagi
+                begitu modal Kelola terbuka). */}
+            <p className="mt-4 text-[11px] leading-relaxed text-muted">
+              <strong className="text-ink">File Produk</strong> (pdf/zip/epub/mp4/mp3/mov/gambar) wajib diunggah
+              supaya bisa diaktifkan -- ini yang akan diterima pembeli. <strong className="text-ink">Sampul</strong>{" "}
+              cuma opsional, sekadar gambar sampul yang tampil di halaman publik.
+            </p>
+            <div className="mt-2.5 flex items-end gap-3">
+              <div className="flex flex-shrink-0 flex-col items-center gap-1">
+                <button
+                  type="button"
+                  disabled={coverBusyId === manageProduct.id}
+                  onClick={() => coverInputRefs.current[manageProduct.id]?.click()}
+                  title={manageProduct.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
+                  className="relative h-14 w-14 overflow-hidden rounded-xl bg-primary-subtle disabled:opacity-60"
+                >
+                  {manageProduct.cover_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={manageProduct.cover_image_url} alt={manageProduct.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-primary/40">
+                      <IconBox className="h-6 w-6" />
+                    </div>
+                  )}
+                  <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
+                    <IconCamera className="h-2.5 w-2.5" />
+                  </span>
+                </button>
+                <span className="text-[10px] font-semibold text-muted">Sampul (opsional)</span>
+              </div>
               <input
                 ref={(el) => {
                   coverInputRefs.current[manageProduct.id] = el;
@@ -1192,7 +1211,7 @@ export default function DashboardProductsPage() {
                     }`}
                   >
                     {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
-                    {manageProduct.has_file ? "File terunggah" : "Unggah file"}
+                    {manageProduct.has_file ? "File Produk terunggah" : "Unggah File Produk (wajib)"}
                   </button>
                   {manageProduct.has_file && (
                     <button

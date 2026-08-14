@@ -42,7 +42,7 @@ test.describe("Toko & Checkout", () => {
     await page
       .locator('input[type="file"]:not([accept])')
       .setInputFiles({ name: "ebook.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 konten uji e2e") });
-    await expect(page.getByRole("button", { name: "File terunggah" })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "File Produk terunggah" })).toBeVisible({ timeout: 10000 });
 
     // Sakelar "Aktifkan {nama}" ada di BARIS TABEL (bukan di dalam modal
     // Kelola) -- modal harus ditutup dulu, sebelum ditutup backdrop-nya
