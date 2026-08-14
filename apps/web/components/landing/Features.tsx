@@ -59,23 +59,29 @@ const colorMap: Record<string, { bg: string; icon: string; hoverBg: string }> = 
   secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C", hoverBg: "group-hover:bg-secondary" },
 };
 
-export default function Features() {
+// showHeading -- default true (homepage). false dipakai HANYA oleh
+// app/features/page.tsx, yang sudah punya <h1> + intro sendiri di
+// atasnya -- lihat komentar sama di Pricing.tsx soal kenapa (menghindari
+// judul yang sama tampil dua kali berurutan).
+export default function Features({ showHeading = true }: { showHeading?: boolean }) {
   return (
     <section id="features" className="relative overflow-hidden bg-white py-20 md:py-28" aria-label="Fitur">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="reveal mx-auto mb-14 max-w-2xl text-center">
-          <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
-            Fitur
-          </span>
-          <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
-            Semua yang Dibutuhkan Kreator,
-            <br />
-            <span className="text-gradient">Ada di Satu Halaman</span>
-          </h2>
-          <p className="text-lg leading-relaxed text-muted">
-            Dari manajemen tautan hingga monetisasi — Jeonme memberimu toolkit lengkap untuk bertumbuh.
-          </p>
-        </div>
+        {showHeading && (
+          <div className="reveal mx-auto mb-14 max-w-2xl text-center">
+            <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
+              Fitur
+            </span>
+            <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
+              Semua yang Dibutuhkan Kreator,
+              <br />
+              <span className="text-gradient">Ada di Satu Halaman</span>
+            </h2>
+            <p className="text-lg leading-relaxed text-muted">
+              Dari manajemen tautan hingga monetisasi — Jeonme memberimu toolkit lengkap untuk bertumbuh.
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f, i) => {

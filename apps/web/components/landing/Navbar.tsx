@@ -4,13 +4,24 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 
+// Perbaikan SEO (temuan audit, 15 Agustus 2026): "Fitur" & "Harga"
+// sekarang menuju halaman TERPISAH (/features, /pricing) yang bisa
+// diindeks & dibagikan langsung -- sebelumnya cuma anchor scroll
+// (#features/#pricing) dalam SATU halaman /, jadi tidak pernah dapat URL
+// & meta description sendiri di hasil pencarian. Sisanya (Template/
+// Monetisasi/Testimoni/FAQ) tetap anchor ke section homepage, TAPI diberi
+// prefiks "/" ("/#templates", dst) -- Navbar ini dipakai ulang di halaman
+// /features & /pricing juga, anchor polos ("#templates") di sana akan
+// diam-diam tidak melakukan apa pun karena section-nya tidak ada di
+// halaman itu; dengan prefiks "/" link tetap benar dari halaman mana pun
+// (navigasi ke home lalu scroll ke section).
 const navLinks = [
-  { href: "#features", label: "Fitur" },
-  { href: "#templates", label: "Template" },
-  { href: "#monetization", label: "Monetisasi" },
-  { href: "#pricing", label: "Harga" },
-  { href: "#testimonials", label: "Testimoni" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/features", label: "Fitur" },
+  { href: "/#templates", label: "Template" },
+  { href: "/#monetization", label: "Monetisasi" },
+  { href: "/pricing", label: "Harga" },
+  { href: "/#testimonials", label: "Testimoni" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export default function Navbar() {
@@ -37,13 +48,13 @@ export default function Navbar() {
 
           <div className="hidden items-center gap-1 lg:flex">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 className="cursor-pointer rounded-lg px-3.5 py-2 text-sm font-semibold text-muted transition-all duration-150 hover:bg-primary-subtle hover:text-primary"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
@@ -78,14 +89,14 @@ export default function Navbar() {
           <div className="pb-4 lg:hidden">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className="cursor-pointer rounded-lg px-3.5 py-2.5 text-sm font-semibold text-ink hover:bg-primary-subtle"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
               <Link
                 href="/dashboard"

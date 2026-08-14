@@ -142,6 +142,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// GetPublicPage 404, untuk redirect permanen dari username lama.
 		api.GET("/usernames/:username/redirect", page.ResolveUsernameRedirect)
 
+		// Perbaikan SEO/marketing (temuan audit, 15 Agustus 2026): halaman
+		// publik (landing page, /pricing) butuh harga Premium ASLI tanpa
+		// login -- lihat komentar panjang di SubscriptionHandler.GetPlans.
+		api.GET("/plans", subscription.GetPlans)
+
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
 

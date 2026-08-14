@@ -134,6 +134,25 @@ func (h *SubscriptionHandler) GetStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type plansResponse struct {
+	MonthlyPriceIDR int64 `json:"monthly_price_idr"`
+	YearlyPriceIDR  int64 `json:"yearly_price_idr"`
+}
+
+// GetPlans -- perbaikan SEO/marketing (temuan audit, 15 Agustus 2026):
+// halaman publik (landing page, /pricing) sebelumnya menampilkan harga
+// KARANGAN (3 paket Gratis/Pro/Business, Rp149rb/Rp399rb) yang sama
+// sekali tidak cocok dengan produk sungguhan (satu paket Premium,
+// MonthlyPriceIDR/YearlyPriceIDR di atas) -- karena satu-satunya endpoint
+// harga yang ada (GetStatus) mewajibkan login, halaman publik tidak
+// pernah punya cara mengambil angka asli. Endpoint TERPISAH ini publik
+// (tanpa auth) & CUMA mengembalikan harga -- konsisten dengan komentar
+// GetStatus "satu sumber kebenaran" (api-client.ts), sekarang berlaku
+// juga utk pengunjung yang belum login.
+func (h *SubscriptionHandler) GetPlans(c *gin.Context) {
+	c.JSON(http.StatusOK, plansResponse{MonthlyPriceIDR: h.MonthlyPriceIDR, YearlyPriceIDR: h.YearlyPriceIDR})
+}
+
 type checkoutSubscriptionRequest struct {
 	Plan string `json:"plan" binding:"required,oneof=monthly yearly"`
 }

@@ -1,29 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const faqs = [
-  {
-    q: "Apa itu Jeonme?",
-    a: "Jeonme adalah platform link-in-bio all-in-one yang memungkinkan kreator, freelancer, dan bisnis menggabungkan tautan, konten, dan tools monetisasi mereka menjadi satu halaman yang indah dan bisa disesuaikan.",
-  },
-  {
-    q: "Bisakah saya pakai domain sendiri?",
-    a: "Bisa. Di paket Pro ke atas, kamu bisa menghubungkan domain kustom milikmu sendiri dan menghapus semua branding Jeonme untuk pengalaman yang sepenuhnya white-label.",
-  },
-  {
-    q: "Apakah ada paket gratis?",
-    a: "Tentu saja. Paket Gratis mencakup tautan tanpa batas, tema dasar, dan analitik dasar — tanpa perlu kartu kredit untuk memulai.",
-  },
-  {
-    q: "Bagaimana cara menjual produk digital?",
-    a: "Tambahkan blok produk ke halamanmu, upload ebook, template, atau file kelas, atur harga, dan Jeonme akan mengurus checkout serta pengiriman file secara otomatis dan aman.",
-  },
-  {
-    q: "Bisakah saya melacak analitik?",
-    a: "Ya — setiap paket sudah termasuk dashboard analitik yang mencakup pengunjung, klik, tautan berperforma terbaik, dan pelacakan konversi, dengan analitik pendapatan di paket Pro ke atas.",
-  },
-];
+import { faqs } from "@/lib/faq-data";
 
 export default function FAQ() {
   const [active, setActive] = useState<number | null>(null);

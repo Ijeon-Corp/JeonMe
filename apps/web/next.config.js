@@ -104,6 +104,12 @@ const nextConfig = {
     // dialah yang menang untuk path-path spesifik itu.
     const publicRoutes = [
       { source: '/', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
+      // /pricing & /features (perbaikan SEO, 15 Agustus 2026) -- halaman
+      // marketing baru, dikelompokkan sama dengan "/" (bukan strictRoutes)
+      // supaya konsisten dgn kategorisasi yang sudah ada di sini: rute
+      // marketing/top-level vs rute aplikasi (dashboard/admin/login/register).
+      { source: '/pricing', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
+      { source: '/features', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/:username', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/p/:slug', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/card/:username', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
@@ -129,6 +135,18 @@ const nextConfig = {
     const internalApiOrigin = (process.env.INTERNAL_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/api\/v1\/?$/, '');
     return [
       { source: '/api/:path*', destination: `${internalApiOrigin}/api/:path*` },
+    ];
+  },
+
+  // Perbaikan SEO (temuan audit, 15 Agustus 2026): /signup 404 -- rute
+  // pendaftaran sungguhan selalu /register (lihat app/register/), tapi
+  // "/signup" tetap ekspektasi umum (istilah generik SaaS) & kemungkinan
+  // ditautkan dari luar (backlink/iklan lama). Redirect permanen (308,
+  // permanent:true) supaya mesin pencari mengalihkan nilai SEO-nya ke
+  // /register, bukan cuma redirect sementara.
+  async redirects() {
+    return [
+      { source: '/signup', destination: '/register', permanent: true },
     ];
   },
 };

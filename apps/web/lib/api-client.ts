@@ -2344,6 +2344,20 @@ export function getSubscriptionStatus() {
   return apiFetch<SubscriptionStatus>("/dashboard/subscription", { method: "GET" }, { auth: true });
 }
 
+// getPlans -- perbaikan SEO/marketing (temuan audit, 15 Agustus 2026):
+// varian PUBLIK (tanpa auth) dari harga di atas, khusus dipakai halaman
+// publik (landing page, /pricing) yang belum tentu ada sesi login --
+// sebelumnya halaman itu memakai angka KARANGAN karena satu-satunya
+// endpoint harga (getSubscriptionStatus) mewajibkan login.
+export interface Plans {
+  monthly_price_idr: number;
+  yearly_price_idr: number;
+}
+
+export function getPlans() {
+  return apiFetch<Plans>("/plans", { method: "GET" });
+}
+
 // checkoutSubscription -- mulai pendaftaran, mengembalikan invoice_url
 // (halaman Snap ter-hosting Midtrans) untuk redirect. Kartu yang dipakai di
 // sini tersimpan otomatis untuk penagihan berulang siklus berikutnya.

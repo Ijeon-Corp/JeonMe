@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Logo from "./Logo";
 
 export default function Footer() {
@@ -31,9 +32,14 @@ export default function Footer() {
           <div>
             <h3 className="mb-4 font-heading text-sm font-bold text-ink">Produk</h3>
             <ul className="space-y-2.5">
-              <li><a href="#features" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Fitur</a></li>
-              <li><a href="#pricing" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Harga</a></li>
-              <li><a href="#templates" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Template</a></li>
+              {/* Fitur & Harga -- perbaikan SEO (temuan audit, 15 Agustus
+                  2026): halaman terpisah, bukan anchor scroll lagi (lihat
+                  komentar Navbar.tsx). Footer ini juga dipakai ulang di
+                  /features & /pricing sendiri, jadi anchor polos tidak
+                  akan berfungsi benar dari sana. */}
+              <li><Link href="/features" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Fitur</Link></li>
+              <li><Link href="/pricing" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Harga</Link></li>
+              <li><Link href="/#templates" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Template</Link></li>
               <li><a href="#" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Dokumentasi</a></li>
             </ul>
           </div>
