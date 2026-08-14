@@ -872,14 +872,27 @@ function renderLinkOrBlock(
   // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan
   // biasa -- tidak ada gerbang kunci/tracking klik untuk tipe ini (di
   // luar cakupan yang diminta).
+  //
+  // Permintaan langsung pengguna, 14 Agustus 2026: "saat saya ubah tombol
+  // di desain kenapa ga semua blok mengikuti warna tombol yang saya set".
+  // Akar masalah: video/faq/accordion/text/contact_form dulu pakai
+  // theme.productCard/productTitle (surface "mood" produk, sengaja TIDAK
+  // ikut custom_button_color -- lihat catatan getPageTheme di
+  // page-themes.ts soal migrasi 000035) -- padahal blok-blok ini muncul di
+  // DAFTAR TAUTAN YANG SAMA dengan tautan biasa & blok "maps" (yang sudah
+  // benar pakai theme.card/cardTitle). Disamakan ke theme.card/cardTitle
+  // supaya SEMUA item di daftar tautan konsisten ikut warna tombol -- TIDAK
+  // menyentuh productCard/productTitle di tempat lain (grid produk/event/
+  // booking/donasi/lead-capture, widget terpisah yang memang sengaja
+  // mengikuti mood tema, bukan bagian dari daftar tautan).
   if (link.blockType === "video") {
     return (
       <VideoEmbedBlock
         key={link.id}
         title={link.title}
         videoUrl={(link.blockData?.video_url as string) ?? ""}
-        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-        titleClassName={theme.productTitle}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
         icon={resolveBlockIcon(link, VideoIcon, "h-4 w-4")}
       />
     );
@@ -890,8 +903,8 @@ function renderLinkOrBlock(
         key={link.id}
         title={link.title}
         items={(link.blockData?.items as FaqItem[]) ?? []}
-        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-        titleClassName={theme.productTitle}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
         itemTitleClassName={theme.cardTitle}
         itemBodyClassName={theme.bio}
         icon={resolveBlockIcon(link, HelpCircle, "h-4 w-4")}
@@ -926,8 +939,8 @@ function renderLinkOrBlock(
         key={link.id}
         title=""
         items={[{ question: link.title, answer: (link.blockData?.text as string) ?? "" }]}
-        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-        titleClassName={theme.productTitle}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
         itemTitleClassName={theme.cardTitle}
         itemBodyClassName={theme.bio}
       />
@@ -938,7 +951,7 @@ function renderLinkOrBlock(
     // publik (judulnya cuma label internal dashboard) dan TANPA tautan/
     // klik apa pun.
     return (
-      <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.productCard}`}>
+      <div key={link.id} className={`w-full rounded-xl p-3 text-center ${theme.card}`}>
         <p className={`whitespace-pre-wrap text-xs leading-relaxed ${theme.bio}`}>
           {(link.blockData?.text as string) ?? ""}
         </p>
@@ -951,15 +964,15 @@ function renderLinkOrBlock(
         key={link.id}
         linkId={link.id}
         title={link.title}
-        cardClassName={`w-full rounded-xl p-2.5 ${theme.productCard}`}
-        titleClassName={theme.productTitle}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
         inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
         buttonClassName={theme.buyButton}
         icon={resolveBlockIcon(link, IconMail, "h-4 w-4")}
       />
     ) : (
-      <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.productCard}`}>
-        <p className={`text-xs font-semibold ${theme.productTitle}`}>{link.title}</p>
+      <div key={link.id} className={`w-full rounded-xl p-2.5 text-center ${theme.card}`}>
+        <p className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>
         <button
           type="button"
           disabled

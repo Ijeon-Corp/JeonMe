@@ -376,6 +376,29 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 		return analyticsSummaryResponse{}, errGagalHitungRingkasan
 	}
 
+	// Zero-fill SETIAP hari dalam rentang (bukan cuma hari yang punya
+	// event) -- sama seperti computeWeeklyRevenue di bawah. Bug dilaporkan
+	// langsung pengguna, 14 Agustus 2026: "grafik Tren Kunjungan & Klik
+	// tidak muncul di ringkasan dan statistik" -- akar masalahnya, sebelum
+	// perbaikan ini, DailySeries HANYA berisi hari yang benar-benar punya
+	// view/klik (hasil GROUP BY polos), jadi kreator baru/sepi pengunjung
+	// (paling umum: akun baru daftar) selalu dapat array KOSONG, dan
+	// frontend sengaja menyembunyikan seluruh kartu grafik kalau
+	// `daily_series.length === 0`. Efek sampingan yang JUGA diperbaiki:
+	// sebelumnya deret yang jarang (mis. cuma 2 dari 30 hari ada data)
+	// digambar sebagai HANYA 2 titik yang direntangkan ke lebar grafik
+	// penuh -- garis tren jadi menyesatkan (seolah naik mulus dari hari 1
+	// ke hari 25, padahal kosong di antaranya).
+	fromDay := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+	toDay := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
+	numDays := int(toDay.Sub(fromDay).Hours()/24) + 1
+
+	dailyByDate := make(map[string]dailyPoint, numDays)
+	for i := 0; i < numDays; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		dailyByDate[d] = dailyPoint{Date: d}
+	}
+
 	dailyRows, err := h.DB.Query(ctx, `
 		SELECT date_trunc('day', created_at)::date AS day,
 			COUNT(*) FILTER (WHERE event_type = 'view'),
@@ -391,9 +414,15 @@ func (h *AnalyticsHandler) computeSummary(ctx context.Context, userID string, fr
 			var pt dailyPoint
 			if err := dailyRows.Scan(&d, &pt.Views, &pt.Clicks); err == nil {
 				pt.Date = d.Format("2006-01-02")
-				resp.DailySeries = append(resp.DailySeries, pt)
+				dailyByDate[pt.Date] = pt
 			}
 		}
+	}
+
+	resp.DailySeries = make([]dailyPoint, 0, numDays)
+	for i := 0; i < numDays; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		resp.DailySeries = append(resp.DailySeries, dailyByDate[d])
 	}
 
 	linkRows, err := h.DB.Query(ctx, `
