@@ -18,7 +18,7 @@ test.describe("Pengaturan: Keamanan", () => {
     await page.goto("/login");
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill("PasswordBaru456!");
-    await page.getByRole("button", { name: "Masuk" }).click();
+    await page.getByRole("button", { name: "Masuk", exact: true }).click();
     await page.waitForURL("**/dashboard", { timeout: 15000 });
   });
 
@@ -41,7 +41,7 @@ test.describe("Pengaturan: Keamanan", () => {
     await page.goto("/login");
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill("Password123!");
-    await page.getByRole("button", { name: "Masuk" }).click();
+    await page.getByRole("button", { name: "Masuk", exact: true }).click();
 
     await expect(page.getByRole("heading", { name: "Verifikasi 2FA" })).toBeVisible();
     await page.locator('input[inputmode="numeric"]').fill(generateTotpCode(secret));

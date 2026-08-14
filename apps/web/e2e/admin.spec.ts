@@ -52,7 +52,7 @@ test.describe("Panel Admin", () => {
       await targetPage.goto("/login");
       await targetPage.locator('input[type="email"]').fill(targetEmail);
       await targetPage.locator('input[type="password"]').fill("Password123!");
-      await targetPage.getByRole("button", { name: "Masuk" }).click();
+      await targetPage.getByRole("button", { name: "Masuk", exact: true }).click();
       await expect(targetPage.getByText("akun ini sedang ditangguhkan, hubungi admin")).toBeVisible({ timeout: 10000 });
       await expect(targetPage).not.toHaveURL(/\/dashboard$/);
 
@@ -61,7 +61,7 @@ test.describe("Panel Admin", () => {
       await expect(adminPage.getByRole("button", { name: "Tangguhkan" })).toBeVisible({ timeout: 10000 });
 
       resetLocalAuthRateLimit();
-      await targetPage.getByRole("button", { name: "Masuk" }).click();
+      await targetPage.getByRole("button", { name: "Masuk", exact: true }).click();
       await targetPage.waitForURL("**/dashboard", { timeout: 10000 });
     } finally {
       await targetContext.close();
