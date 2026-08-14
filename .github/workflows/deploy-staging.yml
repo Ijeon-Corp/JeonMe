@@ -162,7 +162,17 @@ jobs:
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
-            docker image prune -f
+            # Insiden nyata, 14 Agustus 2026: deploy staging & production
+            # berbagi SATU Docker daemon (VPS shared, lihat CLAUDE.md) --
+            # kalau keduanya kebetulan deploy berdekatan, `docker image
+            # prune` bisa saling tabrak ("a prune operation is already
+            # running"). Housekeeping ini TIDAK esensial untuk keberhasilan
+            # deploy (container baru di atas SUDAH `up -d` sebelum baris
+            # ini) -- `set -e` di atas dulu membuat kegagalannya
+            # menggagalkan SELURUH job padahal deploy sendiri sukses.
+            # `|| true` supaya prune yang gagal tidak lagi menutupi status
+            # deploy yang sebenarnya berhasil.
+            docker image prune -f || true
 
       # Temuan sedang M2 (audit CI/CD): retry berjeda, bukan satu kali sleep+curl.
       #
