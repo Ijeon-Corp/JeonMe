@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/imageconv"
+	"github.com/jeonme/api/internal/netguard"
 	"github.com/jeonme/api/internal/storage"
 )
 
@@ -375,6 +376,19 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Perbaikan SSRF (audit keamanan 14 Agustus 2026): validasi cepat saat
+	// DISIMPAN supaya kesalahan jelas (skema salah, literal IP privat)
+	// langsung ketahuan di UI. Ini cuma feedback dini -- proteksi
+	// SESUNGGUHNYA (blokir DNS rebinding) ada di netguard.NewOutboundClient
+	// yang dipakai worker.deliverProductWebhook saat webhook BENAR-BENAR
+	// dipanggil, lihat komentar panjang di internal/netguard/netguard.go.
+	if req.WebhookURL != nil && *req.WebhookURL != "" {
+		if err := netguard.ValidateOutboundURL(*req.WebhookURL); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "webhook_url: " + err.Error()})
+			return
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)

@@ -29,6 +29,24 @@ func CORS(allowedOrigins string) gin.HandlerFunc {
 	return cors.New(cfg)
 }
 
+// SecurityHeaders -- perbaikan (audit keamanan 14 Agustus 2026): dulu API
+// ini TIDAK mengirim satu pun header keamanan standar (dibuktikan lewat
+// `curl -sD -` langsung). API ini murni JSON (bukan render HTML), jadi
+// Content-Security-Policy tidak relevan di sini -- yang benar-benar
+// berlaku: cegah browser "menebak" tipe konten (nosniff, relevan kalau ada
+// endpoint yang me-refleksikan input pengguna apa adanya), cegah respons
+// API ditanam di iframe (clickjacking-adjacent), dan HSTS supaya browser
+// tidak pernah diam-diam turun ke HTTP polos di kunjungan berikutnya.
+func SecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		c.Next()
+	}
+}
+
 // RequestLogger mencatat setiap request masuk -- dasar untuk observability
 // sebelum kita pasang APM yang lebih lengkap.
 func RequestLogger() gin.HandlerFunc {

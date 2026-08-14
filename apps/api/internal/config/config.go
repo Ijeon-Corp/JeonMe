@@ -30,7 +30,19 @@ type Config struct {
 	GoogleClientSecret string
 
 	CORSAllowedOrigins string
-	PublicWebURL       string
+	// TrustedProxies -- perbaikan SSRF/rate-limit-bypass (audit keamanan 14
+	// Agustus 2026): Gin's ClientIP() (dipakai middleware.RateLimit sebagai
+	// SATU-SATUNYA kunci pembatas laju) mempercayai header X-Forwarded-For
+	// dari SIAPA PUN kalau SetTrustedProxies tidak pernah dipanggil --
+	// dibuktikan lewat eksploitasi langsung: rate limit login berhasil
+	// dilewati total cukup ganti nilai X-Forwarded-For per request. Default
+	// loopback-only (127.0.0.1, ::1) sesuai arsitektur produksi yang
+	// didokumentasikan (CLAUDE.md: Apache jadi reverse proxy DI VPS YANG
+	// SAMA, koneksi ke proses Go ini selalu datang dari localhost) -- HANYA
+	// permintaan yang benar-benar diteruskan lewat proxy lokal itu yang
+	// boleh mengklaim X-Forwarded-For, klien luar tidak bisa memalsukannya.
+	TrustedProxies string
+	PublicWebURL   string
 	// PublicAPIURL -- origin backend yang bisa diakses publik, dipakai
 	// membangun tautan unduhan di email notifikasi (REQ-F-405), BUKAN
 	// hostname internal Docker (mis. "api:8080"). Padanan sisi Go dari
@@ -115,6 +127,7 @@ func Load() *Config {
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
+		TrustedProxies:     getEnv("TRUSTED_PROXIES", "127.0.0.1,::1"),
 		// Dipakai membangun finish redirect URL Midtrans Snap (REQ-F-402) --
 		// harus origin frontend yang benar-benar dipakai pembeli, bukan cuma
 		// daftar CORS.

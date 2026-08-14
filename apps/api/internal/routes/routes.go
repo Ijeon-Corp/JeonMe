@@ -94,8 +94,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// rate limit sama supaya kode TOTP tidak bisa di-brute-force.
 			auth_.POST("/2fa/verify-login", authRateLimit, auth.VerifyLogin2FA)
 			auth_.POST("/logout", authRequired, auth.Logout)
-			auth_.POST("/password-reset/request", auth.RequestPasswordReset)
-			auth_.POST("/password-reset/confirm", auth.ConfirmPasswordReset)
+			// Perbaikan (audit keamanan 14 Agustus 2026): dulu KEDUA endpoint
+			// ini tanpa rate limit sama sekali (beda dari /login, /register,
+			// /2fa/verify-login di atas) -- dibuktikan lewat 15 request
+			// beruntun ke /confirm tanpa satu pun kena 429. Dimitigasi
+			// sebagian oleh entropi token reset (32 byte acak), tapi tetap
+			// nol defense-in-depth. authRateLimit sama seperti endpoint auth
+			// lain -- bucket dibagi per prefix "auth", bukan bucket baru.
+			auth_.POST("/password-reset/request", authRateLimit, auth.RequestPasswordReset)
+			auth_.POST("/password-reset/confirm", authRateLimit, auth.ConfirmPasswordReset)
 			auth_.POST("/email-verification/request", authRequired, auth.RequestEmailVerification)
 			auth_.POST("/email-verification/confirm", auth.ConfirmEmailVerification)
 			// Alur Authorization Code penuh (bukan Google Identity Services

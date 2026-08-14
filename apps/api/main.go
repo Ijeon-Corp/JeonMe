@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -109,7 +110,21 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	// Perbaikan SSRF/rate-limit-bypass (audit keamanan 14 Agustus 2026):
+	// tanpa SetTrustedProxies, Gin's ClientIP() (dipakai middleware.RateLimit
+	// sebagai kunci pembatas laju) mempercayai X-Forwarded-For dari SIAPA
+	// PUN -- terbukti lewat eksploitasi langsung bisa melewati rate limit
+	// login total cukup ganti header itu per request. Lihat komentar
+	// panjang di internal/config/config.go (field TrustedProxies).
+	trustedProxies := strings.Split(cfg.TrustedProxies, ",")
+	for i := range trustedProxies {
+		trustedProxies[i] = strings.TrimSpace(trustedProxies[i])
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatalf("TRUSTED_PROXIES tidak valid: %v", err)
+	}
 	r.Use(middleware.RequestLogger())
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
 
 	routes.Register(r, db, rdb, s3Client, queueClient, cfg, Version)

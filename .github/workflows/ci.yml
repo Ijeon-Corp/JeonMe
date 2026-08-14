@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
 
       - name: Download dependencies
@@ -56,13 +56,13 @@ jobs:
       # terhadap kode saat ini sebelum diaktifkan sebagai gate blocking.
       #
       # install-mode: goinstall (bukan default "binary") -- binary rilis
-      # v1.64.8 dari golangci-lint sendiri dikompilasi dengan go1.24,
-      # sedangkan go.mod kita mensyaratkan go1.25.0 (naik otomatis saat
-      # go get -u dependency Go bulan lalu). golangci-lint MENOLAK
-      # menganalisis modul yang menargetkan versi Go lebih baru dari versi
-      # Go yang dipakai mengompilasi golangci-lint itu sendiri ("the Go
+      # v1.64.8 dari golangci-lint sendiri dikompilasi dengan versi Go lebih
+      # lama dari yang disyaratkan go.mod kita (naik ke go1.26 lewat
+      # perbaikan govulncheck, audit keamanan 14 Agustus 2026). golangci-lint
+      # MENOLAK menganalisis modul yang menargetkan versi Go lebih baru dari
+      # versi Go yang dipakai mengompilasi golangci-lint itu sendiri ("the Go
       # language version ... is lower than the targeted Go version").
-      # goinstall build dari source pakai toolchain Go 1.25 yang sudah
+      # goinstall build dari source pakai toolchain Go 1.26 yang sudah
       # disiapkan actions/setup-go di atas, jadi versinya selalu cocok.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6

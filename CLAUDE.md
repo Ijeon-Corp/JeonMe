@@ -12,7 +12,7 @@ dengan Toko/checkout produk digital bawaan). Domain produksi: jeonme.com.
 ## Stack
 
 - **Frontend**: `apps/web/` — Next.js 16 (App Router) + React 19 + TypeScript + Tailwind.
-- **Backend**: `apps/api/` — Go 1.25 + Gin, pgx/v5 (bukan ORM), migrasi lewat subcommand
+- **Backend**: `apps/api/` — Go 1.26 + Gin, pgx/v5 (bukan ORM), migrasi lewat subcommand
   binary sendiri (`./api migrate up/down/status`, gaya golang-migrate, TIDAK perlu CLI
   golang-migrate terpisah — file di `apps/api/migrations/*.up.sql`/`*.down.sql`).
 - **Data**: PostgreSQL 16 (banyak kolom JSONB untuk struktur fleksibel, mis.

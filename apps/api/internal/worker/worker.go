@@ -26,6 +26,7 @@ import (
 	"github.com/jeonme/api/internal/audit"
 	"github.com/jeonme/api/internal/crypto"
 	"github.com/jeonme/api/internal/mailer"
+	"github.com/jeonme/api/internal/netguard"
 	"github.com/jeonme/api/internal/payout"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/whatsapp"
@@ -491,7 +492,14 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 // productWebhookHTTPClient -- timeout PENDEK (bukan default tanpa batas)
 // supaya server kreator yang lambat/mati tidak menahan worker terlalu lama
 // -- ini task best-effort, bukan sesuatu yang boleh memblokir antrian.
-var productWebhookHTTPClient = &http.Client{Timeout: 10 * time.Second}
+//
+// netguard.NewOutboundClient -- perbaikan SSRF (audit keamanan 14 Agustus
+// 2026, lihat komentar panjang di internal/netguard/netguard.go):
+// webhook_url diisi bebas oleh kreator lalu dipanggil server-side di sini
+// setiap produknya terjual -- SEBELUMNYA memakai http.Client polos tanpa
+// validasi tujuan sama sekali, dibuktikan lewat eksploitasi langsung bisa
+// dipaksa memanggil alamat internal/loopback membawa email pembeli asli.
+var productWebhookHTTPClient = netguard.NewOutboundClient(10 * time.Second)
 
 // HandleProductWebhookDelivery -- Modul Toko (Fase C3): metode penyerahan
 // "webhook". SENGAJA TIDAK PERNAH mengembalikan error (selalu nil) --

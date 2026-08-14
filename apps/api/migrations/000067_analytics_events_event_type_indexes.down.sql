@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_analytics_events_link_id_event_type;
+DROP INDEX IF EXISTS idx_analytics_events_event_type_product_id;

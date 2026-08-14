@@ -230,12 +230,6 @@ func (h *VoucherHandler) Update(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var exists int
-	if err := h.DB.QueryRow(ctx, `SELECT 1 FROM vouchers WHERE id = $1 AND user_id = $2`, voucherID, userID).Scan(&exists); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "voucher tidak ditemukan"})
-		return
-	}
-
 	var expiresAt *time.Time
 	if req.ExpiresAt != nil && *req.ExpiresAt != "" {
 		t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
@@ -246,15 +240,25 @@ func (h *VoucherHandler) Update(c *gin.Context) {
 		expiresAt = &t
 	}
 
-	_, err := h.DB.Exec(ctx, `
+	// Kepemilikan disatukan langsung ke WHERE UPDATE ini (bukan SELECT
+	// terpisah dulu baru UPDATE by id polos seperti sebelumnya) -- pola
+	// yang sama dipakai konsisten di handler lain (mis. AffiliateHandler.Revoke)
+	// setelah temuan audit keamanan 14 Agustus 2026 (bukan celah yang
+	// berhasil dieksploitasi, tapi check-then-act dua langkah tetap defense-
+	// in-depth yang lebih lemah dibanding satu statement atomik).
+	tag, err := h.DB.Exec(ctx, `
 		UPDATE vouchers SET
 			is_active = COALESCE($1, is_active),
 			max_uses = COALESCE($2, max_uses),
 			expires_at = COALESCE($3, expires_at)
-		WHERE id = $4
-	`, req.IsActive, req.MaxUses, expiresAt, voucherID)
+		WHERE id = $4 AND user_id = $5
+	`, req.IsActive, req.MaxUses, expiresAt, voucherID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui voucher"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "voucher tidak ditemukan"})
 		return
 	}
 
