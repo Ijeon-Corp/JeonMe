@@ -81,6 +81,13 @@ const COMMON_SECURITY_HEADERS = [
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+  // Audit keamanan 15 Agustus 2026: Permissions-Policy restriktif. Jeonme
+  // tidak memakai API kamera/mikrofon/geolokasi/USB/pembayaran native dll.
+  // Google Maps dirender lewat iframe (frame-src di CSP), BUKAN API
+  // geolocation browser, jadi aman di-disable. Mencegah skrip pihak ketiga
+  // (Pixel/GA4 di halaman publik kreator) diam-diam meminta izin fitur
+  // sensitif. '=()' = tolak semua origin, termasuk same-origin.
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()' },
 ];
 
 /** @type {import('next').NextConfig} */

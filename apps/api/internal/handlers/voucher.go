@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -61,7 +62,8 @@ type createVoucherRequest struct {
 func (h *VoucherHandler) Create(c *gin.Context) {
 	var req createVoucherRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("voucher: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -223,7 +225,8 @@ func (h *VoucherHandler) Update(c *gin.Context) {
 
 	var req updateVoucherRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("voucher: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

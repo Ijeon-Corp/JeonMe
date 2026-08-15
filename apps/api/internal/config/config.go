@@ -30,6 +30,13 @@ type Config struct {
 	GoogleClientSecret string
 
 	CORSAllowedOrigins string
+	// HealthToken -- audit keamanan 15 Agustus 2026: rahasia opsional untuk
+	// mengakses /api/health/detail (version git SHA + status DB/Redis). Kosong
+	// = endpoint detail hanya boleh dari loopback. Dipakai runner CI GitHub
+	// Actions yang melewati Apache reverse-proxy (ClientIP bukan loopback),
+	// lewat header X-Health-Token. /api/health publik tetap terbuka tapi
+	// hanya {"status":"ok"}, tanpa version.
+	HealthToken string
 	// TrustedProxies -- perbaikan SSRF/rate-limit-bypass (audit keamanan 14
 	// Agustus 2026): Gin's ClientIP() (dipakai middleware.RateLimit sebagai
 	// SATU-SATUNYA kunci pembatas laju) mempercayai header X-Forwarded-For
@@ -127,6 +134,7 @@ func Load() *Config {
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
+		HealthToken:        getEnv("HEALTH_TOKEN", ""),
 		TrustedProxies:     getEnv("TRUSTED_PROXIES", "127.0.0.1,::1"),
 		// Dipakai membangun finish redirect URL Midtrans Snap (REQ-F-402) --
 		// harus origin frontend yang benar-benar dipakai pembeli, bukan cuma

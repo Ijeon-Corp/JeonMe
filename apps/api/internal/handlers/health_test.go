@@ -51,24 +51,52 @@ func TestHealthCheck_ReportsUpWhenDependenciesReachable(t *testing.T) {
 	assertTableExists(t, db, "users")
 	assertTableExists(t, db, "ledger_entries")
 
-	h := NewHealthHandler(db, rdb, "test-version")
+	h := NewHealthHandler(db, rdb, "test-version", "secret-token")
 
 	router := gin.New()
 	router.GET("/api/health", h.Check)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, ekspektasi %d. Body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	// Audit keamanan 15 Agustus 2026: respons PUBLIK tidak boleh mengandung
+	// version (git SHA) maupun rincian komponen -- itu membantu fingerprint
+	// versi build untuk riset CVE terarah. httptest default ClientIP-nya
+	// "192.0.2.1" (bukan loopback), jadi ini mensimulasikan request publik
+	// murni tanpa header X-Health-Token.
+	pubReq := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	pubRec := httptest.NewRecorder()
+	router.ServeHTTP(pubRec, pubReq)
+	if pubRec.Code != http.StatusOK {
+		t.Fatalf("status publik = %d, ekspektasi %d. Body: %s", pubRec.Code, http.StatusOK, pubRec.Body.String())
+	}
+	if strings.Contains(pubRec.Body.String(), "test-version") {
+		t.Fatalf("respons PUBLIK bocor version ke publik. Body: %s", pubRec.Body.String())
+	}
+	if strings.Contains(pubRec.Body.String(), "checks") {
+		t.Fatalf("respons PUBLIK bocor rincian komponen. Body: %s", pubRec.Body.String())
 	}
 
-	// Pipeline deploy memverifikasi field ini cocok dengan commit yang baru
-	// di-deploy -- kalau field ini hilang dari respons, deploy tidak akan
-	// pernah bisa mendeteksi container lama yang masih diam-diam berjalan.
-	if !strings.Contains(rec.Body.String(), `"version":"test-version"`) {
-		t.Fatalf("respons tidak menyertakan version yang benar. Body: %s", rec.Body.String())
+	// Request INTERNAL dengan X-Health-Token yang cocok -- pipeline deploy
+	// (deploy-staging/production.yml) memverifikasi field version cocok
+	// commit yang baru di-deploy lewat header ini, supaya bisa mendeteksi
+	// container lama yang masih diam-diam berjalan.
+	intReq := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	intReq.Header.Set("X-Health-Token", "secret-token")
+	intRec := httptest.NewRecorder()
+	router.ServeHTTP(intRec, intReq)
+	if intRec.Code != http.StatusOK {
+		t.Fatalf("status internal = %d, ekspektasi %d. Body: %s", intRec.Code, http.StatusOK, intRec.Body.String())
+	}
+	if !strings.Contains(intRec.Body.String(), `"version":"test-version"`) {
+		t.Fatalf("respons internal tidak menyertakan version yang benar. Body: %s", intRec.Body.String())
+	}
+
+	// Request dengan token SALAH tidak boleh dapat version (penyerang tidak
+	// bisa menebak token untuk mendapatkan fingerprint versi).
+	wrongReq := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	wrongReq.Header.Set("X-Health-Token", "bukan-token-yang-benar")
+	wrongRec := httptest.NewRecorder()
+	router.ServeHTTP(wrongRec, wrongReq)
+	if strings.Contains(wrongRec.Body.String(), "test-version") {
+		t.Fatalf("respons dengan token salah bocor version. Body: %s", wrongRec.Body.String())
 	}
 }
 

@@ -73,7 +73,8 @@ type createCheckoutRequest struct {
 func (h *CheckoutHandler) Create(c *gin.Context) {
 	var req createCheckoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("checkout: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -372,7 +373,8 @@ type validateVoucherRequest struct {
 func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 	var req validateVoucherRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("checkout: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -805,7 +807,8 @@ func (h *CheckoutHandler) RefundOrder(c *gin.Context) {
 
 	var req refundOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("checkout: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

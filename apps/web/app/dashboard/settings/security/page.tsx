@@ -14,10 +14,11 @@ import {
   get2FAStatus,
   listSessions,
   revokeSession,
+  revokeAllSessions,
   verify2FA,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconChevronRight, IconTrash } from "@/components/icons";
+import { IconChevronRight, IconLogout, IconTrash } from "@/components/icons";
 
 // Modul Settings §5. Sesi TIDAK punya tabel Postgres sendiri (dibangun di
 // atas denylist jti Redis yang sudah ada, lihat session.go backend) -- jadi
@@ -39,6 +40,7 @@ export default function SettingsSecurityPage() {
 
   const [sessions, setSessions] = useState<ActiveSession[] | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
 
   function loadStatus() {
     get2FAStatus()
@@ -126,6 +128,25 @@ export default function SettingsSecurityPage() {
       showToast(err instanceof ApiError ? err.message : "Gagal mencabut sesi.", "error");
     } finally {
       setRevokingId(null);
+    }
+  }
+
+  // Audit keamanan 15 Agustus 2026: cabut SEMUA sesi lain sekaligus. Sesi
+  // yang sedang dipakai tetap dipertahankan backend (revokeAllSessions),
+  // jadi daftar lokal dikosongkan kecuali sesi is_current.
+  async function handleRevokeAllSessions() {
+    if (!sessions) return;
+    setRevokingAll(true);
+    try {
+      const res = await revokeAllSessions();
+      // Segarkan daftar dari backend supaya sisa (hanya sesi ini) akurat.
+      const fresh = await listSessions();
+      setSessions(fresh);
+      showToast(`${res.revoked} sesi lain dicabut.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Gagal mencabut sesi lain.", "error");
+    } finally {
+      setRevokingAll(false);
     }
   }
 
@@ -277,8 +298,26 @@ export default function SettingsSecurityPage() {
       </section>
 
       <section className="mt-4 rounded-3xl border border-border bg-white p-5">
-        <h2 className="font-heading text-sm font-bold text-ink">Sesi Aktif</h2>
-        <p className="mt-1 text-xs text-muted">Device yang sedang login ke akunmu.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-heading text-sm font-bold text-ink">Sesi Aktif</h2>
+            <p className="mt-1 text-xs text-muted">Device yang sedang login ke akunmu.</p>
+          </div>
+          {/* Audit keamanan 15 Agustus 2026: satu klik cabut semua device lain
+              (sesi ini tetap aktif). Hanya muncul kalau ada lebih dari satu
+              sesi -- kalau cuma satu, tidak ada yang bisa dicabut. */}
+          {sessions && sessions.length > 1 && (
+            <button
+              type="button"
+              onClick={handleRevokeAllSessions}
+              disabled={revokingAll}
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+            >
+              <IconLogout className="h-3.5 w-3.5" />
+              Keluar dari semua perangkat lain
+            </button>
+          )}
+        </div>
 
         <div className="mt-3 flex flex-col gap-2">
           {sessions === null && (

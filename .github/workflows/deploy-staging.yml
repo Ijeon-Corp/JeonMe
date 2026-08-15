@@ -184,12 +184,24 @@ jobs:
       # pernah benar-benar naik. Sekarang verifikasi juga field `version`
       # di respons cocok dengan commit yang baru saja di-deploy.
       - name: Health check
+        env:
+          HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
         run: |
-          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://staging.jeonme.com/api/health -o /tmp/health.json || exit 1
+          # Audit keamanan 15 Agustus 2026: /api/health publik kini hanya
+          # {"status":"ok"} (tanpa version). Verifikasi version perlu header
+          # X-Health-Token (secret repo HEALTH_TOKEN) -- kalau secret belum
+          # di-set, env HEALTH_TOKEN kosong dan header tidak dikirim (curl
+          # menambah header kosong ditolak implisit), respons publik tanpa
+          # version membuat grep gagal: PETUNJUK = tambahkan secret HEALTH_TOKEN
+          # (nilai bebas rahasia) di repo Settings > Secrets, lalu set env
+          # HEALTH_TOKEN yang SAMA di .env VPS staging.
+          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf \
+            -H "X-Health-Token: ${HEALTH_TOKEN}" \
+            https://staging.jeonme.com/api/health -o /tmp/health.json || exit 1
           cat /tmp/health.json
           EXPECTED="${{ steps.image_tag.outputs.value }}"
           if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
-            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
+            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan. Kalau respons TIDAK berisi field version sama sekali, pastikan secret HEALTH_TOKEN sudah ditambahkan di repo DAN env HEALTH_TOKEN di .env VPS staging bernilai sama."
             exit 1
           fi
           echo "Versi terverifikasi cocok: ${EXPECTED}"

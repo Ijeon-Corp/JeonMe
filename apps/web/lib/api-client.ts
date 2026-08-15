@@ -2789,6 +2789,12 @@ export function revokeSession(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/security/sessions/${id}`, { method: "DELETE" }, { auth: true });
 }
 
+// Audit keamanan 15 Agustus 2026: cabut semua sesi lain (semua device lain)
+// kecuali sesi yang sedang dipakai pemanggil.
+export function revokeAllSessions() {
+  return apiFetch<{ message: string; revoked: number }>(`/dashboard/security/sessions/all`, { method: "DELETE" }, { auth: true });
+}
+
 // ---------- Laporan konten publik (REQ-F-702) ----------
 
 export function createReport(input: { target_type: "page" | "product"; target_id: string; reason: string; reporter_email?: string }) {

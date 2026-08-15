@@ -24,7 +24,7 @@ import (
 // queueClient boleh nil (mis. kalau REDIS_URL tidak valid) -- notifikasi
 // order.paid (REQ-F-405) akan dilewati dengan log peringatan, bukan panic.
 func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client, queueClient *asynq.Client, cfg *config.Config, version string) {
-	health := handlers.NewHealthHandler(db, rdb, version)
+	health := handlers.NewHealthHandler(db, rdb, version, cfg.HealthToken)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
 	page := handlers.NewPageHandler(db, rdb, s3)
@@ -62,6 +62,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	payoutSchedule := handlers.NewPayoutScheduleHandler(db)
 
 	// Dipakai health check pipeline deploy-production.yml -- lihat CICD-GUIDE.md.
+	// /api/health (publik) kini hanya {"status":"ok"} -- audit keamanan 15
+	// Agustus 2026, supaya git SHA + rincian komponen tidak terekspos ke publik
+	// untuk fingerprint riset CVE. Request internal (loopback ATAU header
+	// X-Health-Token cocok env HEALTH_TOKEN) tetap dapat version + checks,
+	// dipakai runner CI -- lihat health.go.
 	r.GET("/api/health", health.Check)
 
 	api := r.Group("/api/v1")
@@ -484,6 +489,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/security/2fa/status", security.Status2FA)
 			dashboard.GET("/security/sessions", security.ListSessions)
 			dashboard.DELETE("/security/sessions/:jti", security.RevokeSession)
+			// Audit keamanan 15 Agustus 2026: cabut semua sesi lain (semua device
+			// lain) dalam satu permintaan -- harus didaftar SEBELUM rute :jti di
+			// atas supaya "/sessions/all" tidak cocok pola ":jti" (Gin prioritas
+			// rute statis, tapi urutan tetap eksplisit demi kejelasan).
+			dashboard.DELETE("/security/sessions/all", security.RevokeAllSessions)
 		}
 
 		// Panel Admin -- REQ-F-701/702/703. Tidak ada jalur self-service untuk

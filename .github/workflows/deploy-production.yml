@@ -186,12 +186,22 @@ jobs:
       # Sekarang verifikasi juga field `version` di respons cocok dengan
       # commit yang baru saja di-deploy (atau tag rollback yang diminta).
       - name: Health check
+        env:
+          HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
         run: |
-          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf https://jeonme.com/api/health -o /tmp/health.json || exit 1
+          # Audit keamanan 15 Agustus 2026: /api/health publik kini hanya
+          # {"status":"ok"} (tanpa version). Verifikasi version perlu header
+          # X-Health-Token (secret repo HEALTH_TOKEN). Kalau respons TIDAK
+          # berisi field version sama sekali, pastikan secret HEALTH_TOKEN
+          # sudah ditambahkan di repo DAN env HEALTH_TOKEN di .env VPS
+          # produksi bernilai sama.
+          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf \
+            -H "X-Health-Token: ${HEALTH_TOKEN}" \
+            https://jeonme.com/api/health -o /tmp/health.json || exit 1
           cat /tmp/health.json
           EXPECTED="${{ steps.image_tag.outputs.value }}"
           if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
-            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan."
+            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan. Kalau respons TIDAK berisi field version sama sekali, pastikan secret HEALTH_TOKEN sudah ditambahkan di repo DAN env HEALTH_TOKEN di .env VPS produksi bernilai sama."
             exit 1
           fi
           echo "Versi terverifikasi cocok: ${EXPECTED}"

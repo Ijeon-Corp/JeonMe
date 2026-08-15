@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -60,7 +62,8 @@ type registerRequest struct {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if !req.ConsentAccepted {
@@ -151,6 +154,71 @@ type loginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Konstanta lockout brute-force per-akun (audit keamanan 15 Agustus 2026).
+// authRateLimit di routes.go membatasi per-IP (10/menit), tapi penyerang
+// yang memutar lintas banyak IP bisa tetap menembus email tunggal yang
+// diketahui -- lockout ini dikunci PER EMAIL (dengan toleransi case-insensitive),
+// bukan per IP, supaya credential stuffing terhadap satu akun dibatasi
+// terlepas dari berapa banyak IP yang dipakai.
+const (
+	loginFailMaxAttempts = 5              // setelah sekian kegagalan, akun dikunci sementara
+	loginFailWindow      = 15 * time.Minute // hitung kegagalan dalam window geser ini
+	loginLockoutDuration = 15 * time.Minute // durasi kunci setelah ambang terlampaui
+)
+
+func loginFailKey(email string) string {
+	return "login_fail:" + strings.ToLower(email)
+}
+
+// checkLoginLockout mengembalikan true kalau akun sedang dikunci karena terlalu
+// banyak kegagalan. Fail-open: kalau Redis bermasalah, tidak mengunci siapa pun
+// (rate limit adalah pertahanan tambahan, bukan satu-satunya lapisan -- sama
+// seperti middleware.RateLimit). Mengembalikan 0 countdown saat tidak terkunci.
+func checkLoginLockout(ctx context.Context, rdb *redis.Client, email string) (locked bool, retryAfter time.Duration) {
+	if rdb == nil {
+		return false, 0
+	}
+	count, err := rdb.Get(ctx, loginFailKey(email)).Int()
+	if err != nil || count < loginFailMaxAttempts {
+		return false, 0
+	}
+	ttl, err := rdb.TTL(ctx, loginFailKey(email)).Result()
+	if err != nil || ttl <= 0 {
+		return false, 0
+	}
+	return true, ttl
+}
+
+// recordLoginFailure menambah penghitung kegagalan untuk email ini. Set key
+// TTL = loginLockoutDuration saat ambang tercapai (kunci aktif), atau
+// loginFailWindow selama masih di bawah ambang (hitungan berjalan). Mengembalikan
+// jumlah percobaan setelah increment (dipakai untuk pesan yang informatif tanpa
+// membocorkan ambang eksak ke penyerang).
+func recordLoginFailure(ctx context.Context, rdb *redis.Client, email string) {
+	if rdb == nil {
+		return
+	}
+	key := loginFailKey(email)
+	pipe := rdb.TxPipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, loginFailWindow)
+	_, _ = pipe.Exec(ctx)
+	if count, err := incr.Result(); err == nil && count >= int64(loginFailMaxAttempts) {
+		// Perpanjang TTL ke durasi kunci penuh supaya ambang kegagalan
+		// "mengunci" akun selama loginLockoutDuration sejak percobaan ke-5.
+		_ = rdb.Expire(ctx, key, loginLockoutDuration).Err()
+	}
+}
+
+// clearLoginFailures menghapus penghitung kegagalan begitu login berhasil --
+// kegagalan lama tidak boleh membuat akun terkunci setelah password benar.
+func clearLoginFailures(ctx context.Context, rdb *redis.Client, email string) {
+	if rdb == nil {
+		return
+	}
+	_ = rdb.Del(ctx, loginFailKey(email)).Err()
+}
+
 // issueToken menerbitkan JWT + jti + exp dalam bentuk yang SELALU sama --
 // dipakai Login (jalur tanpa 2FA) MAUPUN VerifyLogin2FA (jalur sesudah kode
 // TOTP benar), supaya kedua jalur menghasilkan token yang identik bentuknya.
@@ -177,12 +245,26 @@ func (h *AuthHandler) issueToken(userID string) (signed, jti string, exp time.Ti
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Audit keamanan 15 Agustus 2026: brute-force lockout per-akun (lihat
+	// checkLoginLockout). Dicek SEBELUM query DB supaya akun yang sedang
+	// dikunci tidak bocor apakah email terdaftar pun (pesan sama dengan
+	// login gagal biasa). Catatan: pesan lockout sengaja TIDAK menyebut
+	// "terlalu banyak percobaan" eksplisit agar tidak membantu penyerang
+	// memetakan ambang -- tapi 423 (Locked) memberi sinyal ke klien yang
+	// mau menampilkan hint "coba lagi nanti".
+	if locked, retryAfter := checkLoginLockout(ctx, h.RDB, req.Email); locked {
+		c.Header("Retry-After", fmt.Sprintf("%d", int(retryAfter.Seconds())))
+		c.JSON(http.StatusLocked, gin.H{"error": "terlalu banyak percobaan login gagal, coba lagi nanti"})
+		return
+	}
 
 	var id string
 	// passwordHash -- *string (bukan string) karena akun yang HANYA pernah
@@ -196,6 +278,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		`SELECT id, password_hash, suspended_at, two_factor_enabled_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
 	).Scan(&id, &passwordHash, &suspendedAt, &twoFactorEnabledAt)
 	if err != nil {
+		recordLoginFailure(ctx, h.RDB, req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
 	}
@@ -206,6 +289,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*passwordHash), []byte(req.Password)); err != nil {
+		recordLoginFailure(ctx, h.RDB, req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
 	}
@@ -235,6 +319,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat token"})
 		return
 	}
+	clearLoginFailures(ctx, h.RDB, req.Email)
 	recordSession(ctx, h.RDB, id, jti, exp, c.Request.UserAgent(), c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{"token": signed})
@@ -252,7 +337,8 @@ type verifyLogin2FARequest struct {
 func (h *AuthHandler) VerifyLogin2FA(c *gin.Context) {
 	var req verifyLogin2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -340,7 +426,8 @@ type requestPasswordResetRequest struct {
 func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 	var req requestPasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -386,7 +473,8 @@ type confirmPasswordResetRequest struct {
 func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	var req confirmPasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -476,7 +564,8 @@ type confirmEmailVerificationRequest struct {
 func (h *AuthHandler) ConfirmEmailVerification(c *gin.Context) {
 	var req confirmEmailVerificationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
