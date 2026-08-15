@@ -183,25 +183,41 @@ jobs:
       # LAMA tetap menjawab sehat, menyembunyikan bahwa versi baru tidak
       # pernah benar-benar naik. Sekarang verifikasi juga field `version`
       # di respons cocok dengan commit yang baru saja di-deploy.
-      - name: Health check
-        env:
-          HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
-        run: |
-          # Audit keamanan 15 Agustus 2026: /api/health publik kini hanya
-          # {"status":"ok"} (tanpa version). Verifikasi version perlu header
-          # X-Health-Token (secret repo HEALTH_TOKEN) -- kalau secret belum
-          # di-set, env HEALTH_TOKEN kosong dan header tidak dikirim (curl
-          # menambah header kosong ditolak implisit), respons publik tanpa
-          # version membuat grep gagal: PETUNJUK = tambahkan secret HEALTH_TOKEN
-          # (nilai bebas rahasia) di repo Settings > Secrets, lalu set env
-          # HEALTH_TOKEN yang SAMA di .env VPS staging.
-          curl --retry 8 --retry-delay 5 --retry-connrefused --retry-all-errors -sf \
-            -H "X-Health-Token: ${HEALTH_TOKEN}" \
-            https://staging.jeonme.com/api/health -o /tmp/health.json || exit 1
-          cat /tmp/health.json
-          EXPECTED="${{ steps.image_tag.outputs.value }}"
-          if ! grep -q "\"version\":\"${EXPECTED}\"" /tmp/health.json; then
-            echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan. Kalau respons TIDAK berisi field version sama sekali, pastikan secret HEALTH_TOKEN sudah ditambahkan di repo DAN env HEALTH_TOKEN di .env VPS staging bernilai sama."
+      # Audit keamanan 15 Agustus 2026: /api/health publik kini hanya
+      # {"status":"ok"} (tanpa version) -- version tidak boleh terekspos ke
+      # internet supaya penyerang tidak bisa fingerprint versi build untuk
+      # riset CVE terarah. Verifikasi version dijalankan LEWAT SSH langsung
+      # di VPS, men-CURL loopback (127.0.0.1:8080) -- isInternalProbe di
+      # health.go mengizinkan request loopback tanpa X-Health-Token, jadi
+      # TIDAK perlu secret HEALTH_TOKEN baru di repo maupun env VPS. Jalur
+      # ini tidak pernah melewati Apache/internet publik, version tetap
+      # privat. API_HOST_PORT default 8080 (lihat docker-compose.staging.yml
+      # "127.0.0.1:${API_HOST_PORT:-8080}:8080").
+      - name: Health check (via SSH loopback di VPS)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT }}
+          envs: EXPECTED_VERSION
+          script: |
+            set -e
+            EXPECTED_VERSION="${{ steps.image_tag.outputs.value }}"
+            API_PORT="${API_HOST_PORT:-8080}"
+            for i in $(seq 1 12); do
+              BODY=$(curl -sf "http://127.0.0.1:${API_PORT}/api/health" 2>/dev/null || true)
+              if [ -n "$BODY" ]; then
+                echo "$BODY"
+                if echo "$BODY" | grep -q "\"version\":\"${EXPECTED_VERSION}\""; then
+                  echo "Versi terverifikasi cocok: ${EXPECTED_VERSION}"
+                  exit 0
+                fi
+                echo "::error::Health check OK tapi versi yang jalan tidak cocok dengan yang diharapkan (${EXPECTED_VERSION}) -- kemungkinan deploy gagal diam-diam dan container lama masih jalan. Body: $BODY"
+                exit 1
+              fi
+              echo "API belum siap (percobaan ${i}/12), tunggu 5 detik..."
+              sleep 5
+            done
+            echo "::error::API tidak merespons health check di loopback setelah 60 detik -- kemungkinan container api crash-loop. Cek: docker compose -f /opt/jeonme-staging/docker-compose.staging.yml logs --tail=50 api"
             exit 1
-          fi
-          echo "Versi terverifikasi cocok: ${EXPECTED}"
