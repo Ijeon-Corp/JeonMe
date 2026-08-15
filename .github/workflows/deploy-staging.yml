@@ -161,7 +161,18 @@ jobs:
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.staging.yml pull
-            docker compose -f docker-compose.staging.yml up -d --remove-orphans
+            # --force-recreate -- insiden nyata, 15 Agustus 2026: menambah
+            # HEALTH_TOKEN baru ke .env TIDAK cukup membuat `up -d` polos
+            # merecreate container api -- IMAGE_TAG di command sebelumnya
+            # (di step "Jalankan migrasi database") sudah menarik image yang
+            # SAMA seperti percobaan gagal sebelumnya kalau commit tidak
+            # berubah (retry workflow run yang sama), jadi docker compose
+            # menganggap konfigurasi tidak berubah & TIDAK me-restart
+            # container -- env var baru di .env tidak pernah terbaca proses
+            # yang sudah jalan. --force-recreate menjamin container SELALU
+            # dibuat ulang (baca .env dari awal) tiap deploy, apa pun hash
+            # konfigurasinya.
+            docker compose -f docker-compose.staging.yml up -d --remove-orphans --force-recreate
             # Insiden nyata, 14 Agustus 2026: deploy staging & production
             # berbagi SATU Docker daemon (VPS shared, lihat CLAUDE.md) --
             # kalau keduanya kebetulan deploy berdekatan, `docker image

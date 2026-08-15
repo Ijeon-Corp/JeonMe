@@ -162,7 +162,12 @@ jobs:
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # --force-recreate -- lihat komentar sama di deploy-staging.yml
+            # (insiden nyata, 15 Agustus 2026: env var baru di .env tidak
+            # cukup membuat `up -d` polos merecreate container kalau
+            # konfigurasi image/tag terlihat tidak berubah dari deploy
+            # sebelumnya).
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --force-recreate
             # Insiden nyata, 14 Agustus 2026: deploy staging & production
             # berbagi SATU Docker daemon (VPS shared, lihat CLAUDE.md) --
             # kalau keduanya kebetulan deploy berdekatan, `docker image
