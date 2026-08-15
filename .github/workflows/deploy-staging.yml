@@ -231,18 +231,6 @@ jobs:
               echo "::error::Secret STAGING_HEALTH_TOKEN belum diset -- health check tidak bisa memverifikasi version (lihat komentar step ini soal kenapa deteksi loopback murni-IP tidak bisa dipakai di sini). Set secret ini di GitHub (Settings > Secrets > Actions) DAN baris HEALTH_TOKEN=<nilai yang sama> di /opt/jeonme-staging/.env di VPS, lalu deploy ulang."
               exit 1
             fi
-            # Diagnostik SEMENTARA, 15 Agustus 2026 -- 2 percobaan fix
-            # sebelumnya (X-Health-Token, --force-recreate) masih gagal
-            # dengan gejala IDENTIK, dan tidak ada akses SSH/log langsung
-            # dari sisi asisten untuk debug lebih lanjut. TIDAK membocorkan
-            # nilai token (cuma panjang karakter) -- cukup untuk memastikan
-            # secret GitHub, baris di .env VPS, dan environment container
-            # yang BENAR-BENAR jalan semuanya konsisten.
-            echo "Diagnostik HEALTH_TOKEN -- panjang dari secret GitHub: ${#HEALTH_TOKEN} karakter"
-            VPS_ENV_LINE=$(grep -E '^HEALTH_TOKEN=' .env 2>/dev/null || true)
-            echo "Diagnostik HEALTH_TOKEN -- baris di .env VPS: panjang nilai ${#VPS_ENV_LINE} karakter (0 berarti baris TIDAK ADA sama sekali di .env)"
-            CONTAINER_ENV_LINE=$(docker compose -f docker-compose.staging.yml exec -T api env 2>/dev/null | grep -E '^HEALTH_TOKEN=' || true)
-            echo "Diagnostik HEALTH_TOKEN -- di environment container api yang SEDANG JALAN: panjang nilai ${#CONTAINER_ENV_LINE} karakter (0 berarti container belum/tidak pernah menerima variabel ini)"
             # API_HOST_PORT HANYA ada di .env (dibaca docker, BUKAN
             # diekspor ke shell session SSH), jadi baca langsung dari sana.
             # VPS shared sering pakai port unik per environment (SETUP-GUIDE
