@@ -103,6 +103,11 @@ export type PageThemeName =
   | "polaris"
   | "atmos"
   | "ember"
+  | "xmas"
+  | "pride"
+  | "retro"
+  | "kraft"
+  | "monsoon"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -2234,6 +2239,169 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
     videoSrc: "/videos/fireplace.mp4",
     posterSrc: "/videos/fireplace-poster.jpg",
+  },
+  // 5 preset baru (hasil analisa galeri tema kompetitor, 16 Agustus 2026 --
+  // pengguna: "saya mau baca dan lihat semua gambar yang ada di folder
+  // theme dan lakukan analisa" lalu "iya buatkan" atas rekomendasi 5 tema
+  // yang worth ditambahkan): xmas/pride/retro/kraft/monsoon mengisi mood
+  // yang belum ada satupun preset-nya sebelumnya (musiman, perayaan,
+  // terminal/retro-tech, tekstur kertas kraft, malam hujan). SEMUA murni
+  // CSS (gradient/radial-gradient/conic-gradient/noise SVG, teknik yang
+  // sama seperti canvas/static/cyber/cosmic di atas) -- TIDAK menambah
+  // aset gambar baru, konsisten dengan mayoritas 85 preset lain di file
+  // ini yang bukan foto wallpaper/video sungguhan.
+  xmas: {
+    // Referensi: mockup galeri kompetitor "xmas.C56RcPlE.png" -- latar
+    // hijau tua + border ilustrasi Natal (lonceng/holly/ornamen). Border
+    // ilustrasi sungguhan tidak direplikasi (butuh aset gambar), diganti
+    // radial-gradient merah+emas lembut di belakang avatar (glow) supaya
+    // tetap terasa "lampu Natal" tanpa aset baru.
+    label: "Xmas",
+    page: "bg-gradient-to-b from-[#052e1c] via-[#0b3d24] to-[#052e1c]",
+    glow: "bg-gradient-to-br from-red-500/30 via-amber-300/25 to-transparent",
+    avatarRing: "ring-4 ring-amber-300/50 shadow-[0_0_70px_-12px_rgba(217,119,6,0.5)]",
+    name: "text-white",
+    bio: "text-white/80",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-amber-300",
+    buyButton: "bg-amber-300 text-[#052e1c] font-bold hover:brightness-105",
+    footer: "text-white/30 hover:text-amber-300",
+    swatch: "#0F3D2E",
+    previewBg:
+      "radial-gradient(120% 120% at 25% 10%, rgba(248,113,113,0.28) 0%, transparent 45%), radial-gradient(90% 90% at 80% 85%, rgba(252,211,77,0.22) 0%, transparent 50%), linear-gradient(160deg, #052e1c 0%, #0b3d24 55%, #052e1c 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  pride: {
+    // Referensi: mockup galeri kompetitor "pride.BpG7t3VB.png" -- latar
+    // biru royal + lengkungan pelangi di bawah. Pelangi PENUH di seluruh
+    // `page` sengaja dihindari (halaman kreator bisa sangat panjang --
+    // pelangi akan jatuh persis di area footer pada halaman panjang,
+    // gagal kontras untuk teks footer yang tidak punya kartu/latar
+    // sendiri). Sebagai gantinya pelangi ditaruh di `glow` (blob blur
+    // TETAP di dekat avatar atas, posisi selalu sama, lihat PagePreview.tsx)
+    // via conic-gradient, dan di `previewBg` (kartu galeri kecil, statis,
+    // tidak ada masalah scroll) -- keduanya aman, `page` tetap biru solid
+    // supaya SELURUH teks di halaman (termasuk footer) tetap kontras
+    // tinggi apa pun panjang halamannya.
+    label: "Pride",
+    page: "bg-gradient-to-b from-blue-900 via-indigo-900 to-blue-950",
+    glow: "bg-[conic-gradient(from_180deg_at_50%_50%,#f43f5e,#f97316,#eab308,#22c55e,#38bdf8,#8b5cf6,#f43f5e)] opacity-50",
+    avatarRing: "ring-4 ring-white/85 shadow-hero",
+    name: "text-white",
+    bio: "text-white/80",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-amber-200",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#4F46E5",
+    previewBg:
+      "linear-gradient(180deg, #1e3a8a 0%, #1e40af 55%, #ef4444 78%, #f97316 83%, #eab308 88%, #22c55e 93%, #3b82f6 97%, #8b5cf6 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  retro: {
+    // Referensi: mockup galeri kompetitor "retro.tmNX0151.png" -- latar
+    // krem, font monospace, tombol kotak bergaris hitam (gaya terminal/
+    // komputer lawas). Satu-satunya preset di seluruh file ini yang
+    // menyetel `cardRounded` langsung (biasanya field itu HANYA diisi
+    // getPageTheme() untuk override custom -- di sini dipakai langsung
+    // di preset karena sudut kotak tegas justru CIRI KHAS tema ini, bukan
+    // sekadar pilihan lain dari rounded-xl default).
+    label: "Retro",
+    page: "bg-[#F3EFE0]",
+    glow: "hidden",
+    avatarRing: "ring-2 ring-ink",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-dashed border-ink/40 bg-transparent hover:bg-ink/5 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/50",
+    productCard: "border-2 border-dashed border-ink/40 bg-transparent",
+    productTitle: "text-ink",
+    productPrice: "text-ink/80",
+    buyButton: "bg-ink text-white font-bold hover:bg-ink/90",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#0A0A0A",
+    previewBg: "#F3EFE0",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
+    cardRounded: "rounded-none",
+  },
+  kraft: {
+    // Referensi: mockup galeri kompetitor "desert.DXvdLGal.png" -- tekstur
+    // kertas kraft/craft-paper polos + tombol putih bergaris putus-putus
+    // (kesan hand-drawn). SENGAJA dinamai "kraft", bukan "desert" -- Jeonme
+    // sudah punya wallpaper FOTO bernama "desert.jpg" (lanskap gurun
+    // sungguhan), beda total secara visual dari tekstur kertas polos ini,
+    // jadi nama berbeda supaya tidak membingungkan di galeri. Teknik noise
+    // SVG feTurbulence sama persis dengan canvas/static di atas, hanya
+    // warna dasarnya diganti tan kraft-paper + font serif hangat.
+    label: "Kraft",
+    page: "bg-[#D8C3A0]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/90 shadow-hero",
+    name: "text-[#3E2C1C]",
+    bio: "text-[#3E2C1C]/70",
+    card: "border-2 border-dashed border-[#3E2C1C]/30 bg-white/85 hover:bg-white hover:-translate-y-0.5",
+    cardTitle: "text-[#3E2C1C]",
+    chevron: "text-[#3E2C1C]/50",
+    productCard: "border-2 border-dashed border-[#3E2C1C]/30 bg-white/85",
+    productTitle: "text-[#3E2C1C]",
+    productPrice: "text-[#8B5E34]",
+    buyButton: "bg-[#3E2C1C] text-[#F3E9D8] font-bold hover:bg-[#3E2C1C]/90",
+    footer: "text-[#3E2C1C]/40 hover:text-[#3E2C1C]",
+    swatch: "#3E2C1C",
+    previewBg: "linear-gradient(160deg, #E4D3AE 0%, #D8C3A0 100%)",
+    previewIsDark: false,
+    pageStyle: {
+      fontFamily: "var(--font-custom-lora)",
+      backgroundImage:
+        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\"), linear-gradient(160deg, #E4D3AE 0%, #D8C3A0 100%)",
+      backgroundBlendMode: "overlay",
+    },
+  },
+  monsoon: {
+    // Referensi: mockup galeri kompetitor "rainy-night.fNTxc-2o.png" --
+    // foto jendela berembun hujan + lampu bokeh + tombol kaca buram
+    // (glassmorphism). Direplikasi murni CSS (bukan foto sungguhan):
+    // repeating-linear-gradient tipis diagonal = garis hujan, beberapa
+    // radial-gradient blur = lampu bokeh, di atas gradient biru-teal
+    // gelap. Dinamai "monsoon" (bukan "rainy-night" -- SATU-SATUNYA nama
+    // preset di seluruh file ini yang berupa frasa dua kata, semua 85
+    // preset lain nama tunggal) supaya konsisten dengan konvensi penamaan
+    // yang ada, sekaligus relevan buat konteks Indonesia (musim hujan).
+    label: "Monsoon",
+    page: "bg-[#0B1620]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-[0_0_60px_-10px_rgba(125,211,252,0.45)]",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/20 bg-white/[0.08] backdrop-blur-xl hover:bg-white/[0.14] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/55",
+    productCard: "border border-white/20 bg-white/[0.08] backdrop-blur-xl",
+    productTitle: "text-white",
+    productPrice: "text-sky-200",
+    buyButton: "border border-white/30 bg-white/15 text-white font-bold backdrop-blur-xl hover:bg-white/25",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#0EA5E9",
+    previewBg:
+      "radial-gradient(18% 12% at 20% 25%, rgba(186,230,253,0.55) 0%, transparent 70%), radial-gradient(14% 10% at 75% 15%, rgba(186,230,253,0.4) 0%, transparent 70%), radial-gradient(20% 14% at 60% 45%, rgba(125,211,252,0.3) 0%, transparent 70%), linear-gradient(180deg, #0B1620 0%, #142838 60%, #0B1620 100%)",
+    previewIsDark: true,
+    pageStyle: {
+      fontFamily: "var(--font-custom-lora)",
+      backgroundImage:
+        "repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 14px), radial-gradient(18% 12% at 20% 25%, rgba(186,230,253,0.5) 0%, transparent 70%), radial-gradient(14% 10% at 75% 15%, rgba(186,230,253,0.35) 0%, transparent 70%), radial-gradient(20% 14% at 60% 45%, rgba(125,211,252,0.25) 0%, transparent 70%), radial-gradient(16% 10% at 40% 70%, rgba(186,230,253,0.3) 0%, transparent 70%), linear-gradient(180deg, #0B1620 0%, #142838 55%, #0B1620 100%)",
+    },
   },
 };
 

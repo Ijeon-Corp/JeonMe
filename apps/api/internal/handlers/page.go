@@ -912,6 +912,11 @@ var availableThemes = map[string]bool{
 	// seperti flow/pulse/drift di atas.
 	"brew": true, "lagoon": true, "dune": true, "sakura": true, "nova": true, "maple": true,
 	"electric": true, "surge": true, "downtown": true, "polaris": true, "atmos": true, "ember": true,
+	// 5 preset baru hasil analisa galeri tema kompetitor, 16 Agustus 2026
+	// (pengguna minta baca semua gambar di folder theme/ lalu rekomendasi
+	// tema baru yang worth ditambahkan) -- lihat catatan lingkup lengkap
+	// di PAGE_THEMES (apps/web/lib/page-themes.ts).
+	"xmas": true, "pride": true, "retro": true, "kraft": true, "monsoon": true,
 	"custom": true,
 }
 

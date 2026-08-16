@@ -599,6 +599,13 @@ export const THEME_PRESETS = [
   "polaris",
   "atmos",
   "ember",
+  // 5 preset baru hasil analisa galeri tema kompetitor (16 Agustus 2026) --
+  // lihat catatan lingkup lengkap di PAGE_THEMES (page-themes.ts).
+  "xmas",
+  "pride",
+  "retro",
+  "kraft",
+  "monsoon",
 ] as const;
 
 export function getMyPage() {
