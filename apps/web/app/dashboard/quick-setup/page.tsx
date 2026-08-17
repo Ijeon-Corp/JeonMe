@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, MyPage, createBlock, createLink, deleteLink, getMyPage, listLinks, updateMyPage } from "@/lib/api-client";
+import { ApiError, MyPage, createBlock, createLink, createProduct, deleteLink, getMyPage, listLinks, updateMyPage } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems } from "@/lib/quick-setup-templates";
@@ -62,7 +62,11 @@ function buildPreviewData(t: QuickSetupTemplate, username: string, displayName: 
           ? { items: item.faqItems }
           : {},
     })),
-    products: [],
+    // products -- susulan permintaan pengguna, 17 Agustus 2026: "tambahkan
+    // template untuk produk yang siap pakai juga". Mockup mockup memakai id
+    // sintetis (nama produk, sama seperti `links` di atas yang pakai title
+    // sebagai id) -- belum tersimpan ke mana pun, cuma representasi visual.
+    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR })),
   };
 }
 
@@ -129,8 +133,12 @@ export default function QuickSetupPage() {
       // tautan sama sekali, tidak ada yang perlu dikonfirmasi).
       const existing = await listLinks();
       if (existing.length > 0) {
+        // Produk (kalau template ini punya) SENGAJA tidak disebut sebagai
+        // sesuatu yang "diganti" -- beda dari tautan/blok, produk baru
+        // MENAMBAH ke daftar produk yang sudah ada, bukan menimpanya.
+        const productNote = t.products && t.products.length > 0 ? ` Template ini juga akan menambah ${t.products.length} produk contoh (draft) di menu Toko.` : "";
         const ok = await confirmDelete(
-          `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.`,
+          `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.${productNote}`,
           { title: "Ganti semua tautan?", confirmButtonText: "Ya, Ganti" }
         );
         if (!ok) return;
@@ -176,6 +184,15 @@ export default function QuickSetupPage() {
         }
       }
 
+      // products -- susulan permintaan pengguna: "tambahkan template untuk
+      // produk yang siap pakai juga". BEDA dari tautan/blok di atas: TIDAK
+      // PERNAH dihapus/ditimpa (produk lama milik kreator dibiarkan apa
+      // adanya, cuma ditambah) -- lihat catatan lengkap di
+      // QuickSetupTemplateProduct kenapa ini aman & tidak destruktif.
+      for (const p of t.products ?? []) {
+        await createProduct({ name: p.name, description: p.description, price_idr: p.priceIDR, product_kind: p.productKind });
+      }
+
       setApplied(t);
       setSelected(null);
     } catch (err) {
@@ -196,6 +213,12 @@ export default function QuickSetupPage() {
           Tema, bio (kalau sebelumnya kosong), dan {applied.links.length} tautan starter sudah ditambahkan. Buka Link Bio untuk
           melengkapi link asli kamu ke tiap platform.
         </p>
+        {applied.products && applied.products.length > 0 && (
+          <p className="mt-2 text-sm text-muted">
+            {applied.products.length} produk contoh (draft) juga sudah dibuat di menu Toko -- belum aktif/bisa dibeli sampai kamu
+            unggah file & sesuaikan nama/harganya.
+          </p>
+        )}
         {applied.monetizationHint && (
           <p className="mt-3 rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{applied.monetizationHint}</p>
         )}
@@ -375,6 +398,21 @@ export default function QuickSetupPage() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+                {selected.products && selected.products.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Produk Siap Pakai</p>
+                    <ul className="mt-1 flex flex-wrap gap-1.5">
+                      {selected.products.map((p) => (
+                        <li key={p.name} className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-dark">
+                          {p.name}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-[11px] text-muted">
+                      Dibuat sebagai draft di menu Toko -- belum aktif/bisa dibeli sampai kamu unggah file & sesuaikan harga.
+                    </p>
                   </div>
                 )}
                 {selected.monetizationHint && (
