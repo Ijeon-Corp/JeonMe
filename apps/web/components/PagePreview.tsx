@@ -69,6 +69,11 @@ export interface PagePreviewProduct {
   // ditandai jumlah bab-nya.
   isCourse?: boolean;
   chapterCount?: number;
+  // isExternalLink/externalUrl -- Modul Toko (migrasi 000068, permintaan
+  // langsung pengguna: "produk bisa untuk affiliate juga ke shopee dll") --
+  // lihat catatan lengkap di BuyProductButton.tsx.
+  isExternalLink?: boolean;
+  externalUrl?: string;
 }
 
 export interface PagePreviewWishlistItem {
@@ -295,6 +300,8 @@ interface PreviewSourceProduct {
   pwyw_min_price_idr?: number | null;
   is_bundle?: boolean;
   bundle_original_price_idr?: number | null;
+  product_kind?: string;
+  external_url?: string;
 }
 
 // Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
@@ -371,6 +378,8 @@ export function toPreviewData(
         pwywMinPriceIdr: p.pwyw_min_price_idr ?? undefined,
         isBundle: p.is_bundle,
         bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
+        isExternalLink: p.product_kind === "external_link",
+        externalUrl: p.external_url,
       })),
   };
 }
@@ -1530,6 +1539,8 @@ export default function PagePreview({
                       referralCode={data.referralCode}
                       username={data.username}
                       pageSlug={data.pageSlug}
+                      externalUrl={product.isExternalLink ? product.externalUrl : undefined}
+                      openLabel={product.isExternalLink ? "Beli ↗" : undefined}
                     />
                   ) : (
                     <button
@@ -1921,6 +1932,8 @@ function ProdukPagePreview({
                       referralCode={data.referralCode}
                       username={data.username}
                       pageSlug={data.pageSlug}
+                      externalUrl={product.isExternalLink ? product.externalUrl : undefined}
+                      openLabel={product.isExternalLink ? "Beli ↗" : undefined}
                     />
                   ) : (
                     <button

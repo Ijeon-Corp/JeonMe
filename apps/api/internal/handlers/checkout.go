@@ -144,6 +144,17 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Modul Toko (migrasi 000068): produk "external_link" TIDAK PERNAH
+	// dibeli lewat checkout Jeonme -- tombol Beli di frontend membuka
+	// external_url langsung (BuyProductButton.tsx), jadi permintaan
+	// checkout untuk jenis ini seharusnya tidak pernah terjadi lewat UI
+	// normal. Ditolak di sini juga (bukan cuma disembunyikan di frontend)
+	// supaya tidak bisa dilewati lewat panggilan API langsung.
+	if productKind == "external_link" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "produk ini berupa tautan eksternal -- gunakan tombol Beli untuk membuka tautannya, bukan checkout"})
+		return
+	}
+
 	// Modul Toko (Fase D): Payment Link -- tolak checkout kalau link sudah
 	// kedaluwarsa atau batas jumlah pembayaran sudah tercapai. Dicek di
 	// SINI (sebelum order dibuat) supaya pembeli dapat pesan jelas, bukan

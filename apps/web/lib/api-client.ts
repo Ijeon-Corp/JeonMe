@@ -157,6 +157,10 @@ export interface PublicProduct {
   bundle_original_price_idr: number | null;
   is_course: boolean;
   chapter_count: number;
+  // is_external_link/external_url -- Modul Toko (migrasi 000068): tombol
+  // Beli membuka external_url di tab baru, bukan checkout Jeonme.
+  is_external_link: boolean;
+  external_url: string;
 }
 
 export interface PublicWishlistItem {
@@ -1172,11 +1176,15 @@ export interface DashboardProduct {
   unclaimed_code_count: number;
   // product_kind/success_message/payment_limit_count/link_expires_at --
   // Modul Toko (Fase D): "payment_link" kumpulkan pembayaran TANPA file
-  // (jasa/konsultasi), lihat migrasi 000048.
-  product_kind: "digital" | "payment_link";
+  // (jasa/konsultasi), lihat migrasi 000048. "external_link" -- permintaan
+  // langsung pengguna, 17 Agustus 2026: "produk bisa untuk affiliate juga
+  // ke shopee dll" (migrasi 000068) -- tombol Beli membuka external_url,
+  // tidak pernah lewat checkout Jeonme.
+  product_kind: "digital" | "payment_link" | "external_link";
   success_message: string;
   payment_limit_count: number | null;
   link_expires_at: string | null;
+  external_url: string;
   // position/is_featured -- Modul Toko (Fase E2, tab Listing): urutan
   // tampil di halaman publik. Unggulan (is_featured) selalu di atas,
   // lalu diurutkan position ASC -- lihat migrasi 000050.
@@ -1262,10 +1270,13 @@ export function createProduct(input: {
   category?: string;
   collaborator_splits?: CollaboratorSplit[];
   // Modul Toko (Fase D): lihat DashboardProduct.product_kind dkk.
-  product_kind?: "digital" | "payment_link";
+  product_kind?: "digital" | "payment_link" | "external_link";
   success_message?: string;
   payment_limit_count?: number;
   link_expires_at?: string;
+  // external_url -- WAJIB kalau product_kind="external_link", lihat
+  // catatan lengkap di DashboardProduct.
+  external_url?: string;
 }) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/products",
@@ -1304,6 +1315,7 @@ export function updateProduct(
     link_expires_at: string;
     clear_link_expiration: boolean;
     is_featured: boolean;
+    external_url: string;
   }>
 ) {
   return apiFetch<{ message: string }>(

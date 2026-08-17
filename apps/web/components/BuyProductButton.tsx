@@ -14,6 +14,7 @@ export default function BuyProductButton({
   username,
   pageSlug,
   wishlistItemId,
+  externalUrl,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -39,6 +40,13 @@ export default function BuyProductButton({
   // "diwujudkan". Dioper apa adanya ke createCheckout, divalidasi di
   // backend (lihat catatan panjang di CheckoutHandler.Create).
   wishlistItemId?: string;
+  // externalUrl -- Modul Toko (migrasi 000068, permintaan langsung
+  // pengguna: "saya mau untuk produk bisa untuk affiliate juga ke shopee
+  // dll"): kalau diisi, tombol ini TIDAK PERNAH membuka form checkout --
+  // klik langsung membuka tautan ini di tab baru (mis. listing Shopee/
+  // Tokopedia kreator sendiri), sama seperti tautan biasa. Klik tetap
+  // dilacak sebagai product_click seperti biasa.
+  externalUrl?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -102,7 +110,6 @@ export default function BuyProductButton({
   }
 
   function handleOpen() {
-    setOpen(true);
     if (username) {
       if (pageSlug) {
         trackEventBySlug(pageSlug, { event_type: "product_click", product_id: productId });
@@ -110,6 +117,11 @@ export default function BuyProductButton({
         trackEvent(username, { event_type: "product_click", product_id: productId });
       }
     }
+    if (externalUrl) {
+      window.open(externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setOpen(true);
   }
 
   if (!open) {

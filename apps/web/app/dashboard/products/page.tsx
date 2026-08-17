@@ -104,8 +104,8 @@ export default function DashboardProductsPage() {
 
   // addMode -- Modul Toko (Fase B3): "+ Tambah Produk" sekarang membuka
   // panel pilihan "Add Items" ala referensi (Digital Product vs Payment
-  // Link) alih-alih langsung membuka satu form.
-  const [addMode, setAddMode] = useState<"closed" | "choose" | "digital" | "payment_link">("closed");
+  // Link vs Link Eksternal) alih-alih langsung membuka satu form.
+  const [addMode, setAddMode] = useState<"closed" | "choose" | "digital" | "payment_link" | "external_link">("closed");
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
   const [category, setCategory] = useState("");
@@ -118,6 +118,19 @@ export default function DashboardProductsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [paymentLimitCount, setPaymentLimitCount] = useState("");
   const [linkExpiresAt, setLinkExpiresAt] = useState("");
+
+  // Link Eksternal (migrasi 000068) -- permintaan langsung pengguna, 17
+  // Agustus 2026: "saya mau untuk produk bisa untuk affiliate juga ke
+  // shopee dll". Field TAMBAHAN, terpisah dari form Digital Product/
+  // Payment Link di atas (name/priceIDR/category dipakai bersama).
+  const [externalUrl, setExternalUrl] = useState("");
+  // externalUrlEditId/externalUrlDraft -- edit tautan produk external_link
+  // yang SUDAH ada dari modal Kelola (pola sama seperti categoryEditId di
+  // bawah), karena ProductKind sendiri immutable tapi ExternalURL-nya
+  // tetap boleh diubah lewat Update (lihat catatan di product.go).
+  const [externalUrlEditId, setExternalUrlEditId] = useState<string | null>(null);
+  const [externalUrlDraft, setExternalUrlDraft] = useState("");
+  const [savingExternalUrl, setSavingExternalUrl] = useState(false);
 
   // categoryEditId -- Modul Toko (Fase B1): edit kategori dari modal Kelola.
   const [categoryEditId, setCategoryEditId] = useState<string | null>(null);
@@ -315,6 +328,64 @@ export default function DashboardProductsPage() {
       setError(err instanceof ApiError ? err.message : "Gagal membuat payment link.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  // handleCreateExternalLink -- Modul Toko (migrasi 000068, permintaan
+  // langsung pengguna: "saya mau untuk produk bisa untuk affiliate juga
+  // ke shopee dll"). Aktif langsung begitu dibuat, sama seperti Payment
+  // Link -- tidak butuh file.
+  async function handleCreateExternalLink(e: React.FormEvent) {
+    e.preventDefault();
+    const price = Number(priceIDR);
+    if (!name.trim() || !price || price < 1000) {
+      setError("Nama wajib diisi dan harga minimal Rp1.000.");
+      return;
+    }
+    if (!externalUrl.trim()) {
+      setError("Tautan produk (mis. link Shopee/Tokopedia) wajib diisi.");
+      return;
+    }
+    setError(null);
+    setCreating(true);
+    try {
+      await createProduct({
+        name,
+        price_idr: price,
+        category: category.trim() || undefined,
+        product_kind: "external_link",
+        external_url: externalUrl.trim(),
+      });
+      setProducts(await listProducts());
+      setName("");
+      setPriceIDR("");
+      setCategory("");
+      setExternalUrl("");
+      setAddMode("closed");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membuat produk link eksternal.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  // handleSaveExternalUrl -- ubah tautan produk external_link yang SUDAH
+  // ada (lewat modal Kelola) -- lihat catatan di externalUrlEditId.
+  async function handleSaveExternalUrl(product: DashboardProduct) {
+    if (!externalUrlDraft.trim()) {
+      setError("Tautan produk tidak boleh kosong.");
+      return;
+    }
+    setError(null);
+    setSavingExternalUrl(true);
+    try {
+      await updateProduct(product.id, { external_url: externalUrlDraft.trim() });
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, external_url: externalUrlDraft.trim() } : p)));
+      setExternalUrlEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan tautan.");
+    } finally {
+      setSavingExternalUrl(false);
     }
   }
 
@@ -801,7 +872,7 @@ export default function DashboardProductsPage() {
             {/* Modul Toko (Fase B3): panel "Add Items" ala referensi -- pilih
                 jenis item dulu sebelum masuk ke form spesifiknya. */}
             {addMode === "choose" && (
-              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-3xl p-4 shadow-card sm:grid-cols-2">
+              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-3xl p-4 shadow-card sm:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
@@ -819,6 +890,21 @@ export default function DashboardProductsPage() {
                   <IconWallet className="h-5 w-5 text-primary" />
                   <span className="text-sm font-bold text-ink">Payment Link</span>
                   <span className="text-[11px] text-muted">Terima pembayaran untuk jasa, donasi, atau tujuan khusus lain.</span>
+                </button>
+                {/* Link Eksternal -- permintaan langsung pengguna, 17
+                    Agustus 2026: "saya mau untuk produk bisa untuk
+                    affiliate juga ke shopee dll". Beda dari fitur Afiliasi
+                    (menu Audiens & Pemasaran, referral Jeonme-internal) --
+                    ini murni tombol Beli yang membuka tautan marketplace
+                    lain (boleh link affiliate milik kreator sendiri). */}
+                <button
+                  type="button"
+                  onClick={() => setAddMode("external_link")}
+                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                >
+                  <IconExternal className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-bold text-ink">Link Eksternal</span>
+                  <span className="text-[11px] text-muted">Tombol Beli membuka listing di Shopee/Tokopedia/toko lain (boleh link affiliate).</span>
                 </button>
               </div>
             )}
@@ -936,6 +1022,64 @@ export default function DashboardProductsPage() {
               </form>
             )}
 
+            {addMode === "external_link" && (
+              <form onSubmit={handleCreateExternalLink} className="glass mt-3 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    placeholder="Nama produk"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="number"
+                    required
+                    placeholder="Harga (IDR)"
+                    min={1000}
+                    value={priceIDR}
+                    onChange={(e) => setPriceIDR(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <input
+                  type="url"
+                  required
+                  placeholder="Tautan produk (mis. https://shopee.co.id/... atau link affiliate kamu)"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <input
+                  type="text"
+                  placeholder="Kategori (opsional)"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <div className="flex gap-2">
+                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                    {creating ? "Membuat..." : "Buat Produk"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddMode("closed");
+                      setName("");
+                      setPriceIDR("");
+                      setCategory("");
+                      setExternalUrl("");
+                    }}
+                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            )}
+
             {filteredProducts.length > 0 ? (
               <div className="glass mt-4 overflow-x-auto rounded-3xl shadow-card">
                 <table className="w-full min-w-[520px] text-left text-xs">
@@ -974,6 +1118,9 @@ export default function DashboardProductsPage() {
                               <div className="mt-0.5 flex flex-wrap gap-1">
                                 {p.product_kind === "payment_link" && (
                                   <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Payment Link</span>
+                                )}
+                                {p.product_kind === "external_link" && (
+                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Link Eksternal</span>
                                 )}
                                 {p.category && (
                                   <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-muted">{p.category}</span>
@@ -1188,7 +1335,7 @@ export default function DashboardProductsPage() {
                 }}
               />
 
-              {manageProduct.product_kind !== "payment_link" && (
+              {manageProduct.product_kind !== "payment_link" && manageProduct.product_kind !== "external_link" && (
                 <>
                   <input
                     ref={(el) => {
@@ -1425,7 +1572,60 @@ export default function DashboardProductsPage() {
                 ))}
             </div>
 
-            {manageProduct.product_kind !== "payment_link" && (
+            {/* Tautan produk -- Modul Toko (migrasi 000068): satu-satunya
+                field khusus external_link yang bisa diubah setelah dibuat
+                (ProductKind sendiri immutable, lihat catatan di product.go). */}
+            {manageProduct.product_kind === "external_link" && (
+              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold text-ink">
+                  <IconExternal className="h-3.5 w-3.5" /> Tautan Produk
+                </p>
+                {externalUrlEditId === manageProduct.id ? (
+                  <>
+                    <input
+                      type="url"
+                      autoFocus
+                      value={externalUrlDraft}
+                      onChange={(e) => setExternalUrlDraft(e.target.value)}
+                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        disabled={savingExternalUrl}
+                        onClick={() => handleSaveExternalUrl(manageProduct)}
+                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                      >
+                        {savingExternalUrl ? "Menyimpan..." : "Simpan"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExternalUrlEditId(null)}
+                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted hover:border-ink/30"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate text-[11px] text-ink">{manageProduct.external_url}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExternalUrlEditId(manageProduct.id);
+                        setExternalUrlDraft(manageProduct.external_url);
+                      }}
+                      className="flex-shrink-0 text-[11px] font-bold text-primary hover:underline"
+                    >
+                      Ubah
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {manageProduct.product_kind !== "payment_link" && manageProduct.product_kind !== "external_link" && (
               <DeliveryMethodPanel
                 key={manageProduct.id}
                 product={manageProduct}

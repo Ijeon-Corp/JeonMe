@@ -133,6 +133,8 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
             isCourse: p.is_course,
             chapterCount: p.chapter_count,
+            isExternalLink: p.is_external_link,
+            externalUrl: p.external_url,
           })),
           donation: page.donation
             ? {

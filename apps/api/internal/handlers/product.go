@@ -125,12 +125,26 @@ type createProductRequest struct {
 	// ditentukan saat pembuatan (bukan Update) -- mengubah jenis produk
 	// setelah dibuat berisiko meninggalkan kombinasi data yang aneh (mis.
 	// payment_link yang tiba-tiba dituntut punya file).
-	ProductKind string `json:"product_kind" binding:"omitempty,oneof=digital payment_link"`
+	//
+	// "external_link" -- permintaan langsung pengguna, 17 Agustus 2026:
+	// "saya mau untuk produk bisa untuk affiliate juga ke shopee dll"
+	// (lihat migrasi 000068). Beda dari fitur Afiliasi (affiliate.go,
+	// program referral Jeonme-internal) -- ini murni tombol "Beli" yang
+	// membuka ExternalURL di tab baru, TIDAK PERNAH lewat checkout Jeonme
+	// (lihat guard di checkout.go). Sama seperti payment_link, tidak
+	// butuh file, aktif langsung begitu dibuat.
+	ProductKind string `json:"product_kind" binding:"omitempty,oneof=digital payment_link external_link"`
 	// SuccessMessage/PaymentLimitCount/LinkExpiresAt -- HANYA relevan untuk
 	// product_kind="payment_link", lihat catatan lingkup di migrasi 000048.
 	SuccessMessage    string  `json:"success_message" binding:"omitempty,max=1000"`
 	PaymentLimitCount *int    `json:"payment_limit_count" binding:"omitempty,min=1"`
 	LinkExpiresAt     *string `json:"link_expires_at"`
+	// ExternalURL -- WAJIB diisi kalau ProductKind="external_link" (dicek
+	// di bawah), diabaikan untuk jenis lain. Bukan sasaran permintaan
+	// SERVER (cuma dibuka browser pembeli lewat window.open), jadi TIDAK
+	// perlu netguard.ValidateOutboundURL seperti webhook_url -- SSRF hanya
+	// relevan kalau server sendiri yang melakukan permintaan keluar.
+	ExternalURL string `json:"external_url" binding:"omitempty,url,max=2048"`
 
 	// Modul Settings §3: opsional, lihat collaborator_split.go.
 	CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
@@ -163,6 +177,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	if productKind == "" {
 		productKind = "digital"
 	}
+	if productKind == "external_link" && req.ExternalURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "external_url wajib diisi untuk produk jenis Link Eksternal"})
+		return
+	}
 
 	var linkExpiresAt *time.Time
 	if req.LinkExpiresAt != nil && *req.LinkExpiresAt != "" {
@@ -178,15 +196,15 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	_, err := h.DB.Exec(ctx, `
 		INSERT INTO products (
 			id, user_id, name, description, price_idr, is_active, collaborator_splits, category,
-			product_kind, success_message, payment_limit_count, link_expires_at
+			product_kind, success_message, payment_limit_count, link_expires_at, external_url
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`, id, userID, req.Name, req.Description, req.PriceIDR,
-		// Payment Link tidak butuh file -- langsung aktif begitu dibuat,
-		// beda dari produk digital biasa yang wajib unggah file dulu
-		// (lihat pengecekan file_key di Update).
-		productKind == "payment_link",
-		splitsJSON, req.Category, productKind, req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt)
+		// Payment Link & Link Eksternal tidak butuh file -- langsung aktif
+		// begitu dibuat, beda dari produk digital biasa yang wajib unggah
+		// file dulu (lihat pengecekan file_key di Update).
+		productKind == "payment_link" || productKind == "external_link",
+		splitsJSON, req.Category, productKind, req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.ExternalURL)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat produk"})
@@ -201,6 +219,8 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	message := "produk dibuat, unggah file sebelum mengaktifkan produk"
 	if productKind == "payment_link" {
 		message = "payment link dibuat dan langsung aktif"
+	} else if productKind == "external_link" {
+		message = "produk link eksternal dibuat dan langsung aktif"
 	}
 	c.JSON(http.StatusCreated, gin.H{"id": id, "message": message})
 }
@@ -236,7 +256,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 			p.pwyw_enabled, p.pwyw_min_price_idr, p.watermark_enabled, p.file_key ILIKE '%.pdf' AS is_pdf, p.collaborator_splits,
 			COALESCE(o.sold_count, 0) AS sold_count, p.category,
 			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count,
-			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at,
+			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at, p.external_url,
 			p.position, p.is_featured, COALESCE(pcl.click_count, 0) AS click_count
 		FROM products p
 		LEFT JOIN (
@@ -291,6 +311,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		SuccessMessage     string              `json:"success_message"`
 		PaymentLimitCount  *int                `json:"payment_limit_count"`
 		LinkExpiresAt      *time.Time          `json:"link_expires_at"`
+		ExternalURL        string              `json:"external_url"`
 		Position           int                 `json:"position"`
 		IsFeatured         bool                `json:"is_featured"`
 		// ClickCount -- lihat catatan lengkap di query SELECT di atas.
@@ -304,7 +325,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 			&it.FlashSalePriceIDR, &it.FlashSaleStartsAt, &it.FlashSaleEndsAt, &it.EffectivePriceIDR, &it.IsFlashSaleActive,
 			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
 			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount,
-			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt,
+			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt, &it.ExternalURL,
 			&it.Position, &it.IsFeatured, &it.ClickCount); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
@@ -363,6 +384,13 @@ type updateProductRequest struct {
 
 	// IsFeatured -- Modul Toko (Fase E2, tab Listing): lihat migrasi 000050.
 	IsFeatured *bool `json:"is_featured"`
+
+	// ExternalURL -- Modul Toko: hanya efektif untuk product_kind=
+	// "external_link" (lihat migrasi 000068), tapi tetap boleh diubah lewat
+	// Update (beda dari ProductKind sendiri yang immutable) -- kreator bisa
+	// memperbaiki tautan yang salah/kedaluwarsa tanpa perlu membuat ulang
+	// produknya dari awal.
+	ExternalURL *string `json:"external_url" binding:"omitempty,url,max=2048"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -418,7 +446,9 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	// jadi lewati pengecekan file_key yang berlaku untuk produk biasa.
 	// Modul Toko (Fase D): payment_link JUGA tidak pernah punya file (murni
 	// kumpulkan pembayaran), sudah aktif otomatis sejak dibuat (lihat Create).
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && !isBooking && productKind != "payment_link" {
+	// external_link (migrasi 000068) sama -- murni tautan keluar, tidak
+	// pernah punya file sendiri.
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && !isBooking && productKind != "payment_link" && productKind != "external_link" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}
@@ -612,13 +642,14 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			success_message = COALESCE($22, success_message),
 			payment_limit_count = COALESCE($23, payment_limit_count),
 			link_expires_at = COALESCE($24, link_expires_at),
-			is_featured = COALESCE($25, is_featured)
+			is_featured = COALESCE($25, is_featured),
+			external_url = COALESCE($26, external_url)
 		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
 		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID,
 		req.DeliveryMethod, req.WebhookURL, newWebhookSecret,
-		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured)
+		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured, req.ExternalURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return
