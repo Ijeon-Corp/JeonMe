@@ -170,6 +170,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             chapterCount: p.chapter_count,
             isExternalLink: p.is_external_link,
             externalUrl: p.external_url,
+            category: p.category,
           })),
           donation: page.donation
             ? {

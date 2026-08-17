@@ -351,6 +351,13 @@ type publicItem struct {
 	// di tab baru, TIDAK PERNAH lewat checkout Jeonme (lihat BuyProductButton.tsx).
 	IsExternalLink bool   `json:"is_external_link"`
 	ExternalURL    string `json:"external_url"`
+	// Category -- permintaan langsung pengguna, 17 Agustus 2026: "saya mau
+	// bisa buat katalog produk di halaman tokonya". Field ini SUDAH lama
+	// ada & bisa diisi kreator dari dashboard (migrasi 000046), tapi
+	// SEBELUM ini tidak pernah dikirim ke halaman publik sama sekali --
+	// murni label internal manajemen. Sekarang dipakai frontend untuk
+	// tab/filter kategori di grid Produk (lihat PagePreview.tsx).
+	Category string `json:"category"`
 }
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
@@ -602,7 +609,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
 			p.is_course,
 			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
-			p.product_kind = 'external_link', p.external_url
+			p.product_kind = 'external_link', p.external_url, p.category
 		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
 		ORDER BY p.is_featured DESC, p.position ASC
 	`, userID)
@@ -612,7 +619,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			var p publicItem
 			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
 				&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR,
-				&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL); err == nil {
+				&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL, &p.Category); err == nil {
 				resp.Products = append(resp.Products, p)
 			}
 		}

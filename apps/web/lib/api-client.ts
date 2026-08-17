@@ -161,6 +161,10 @@ export interface PublicProduct {
   // Beli membuka external_url di tab baru, bukan checkout Jeonme.
   is_external_link: boolean;
   external_url: string;
+  // category -- permintaan langsung pengguna, 17 Agustus 2026: "saya mau
+  // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
+  // kategori di grid Produk (lihat PagePreview.tsx).
+  category: string;
 }
 
 export interface PublicWishlistItem {

@@ -74,6 +74,10 @@ export interface PagePreviewProduct {
   // lihat catatan lengkap di BuyProductButton.tsx.
   isExternalLink?: boolean;
   externalUrl?: string;
+  // category -- permintaan langsung pengguna, 17 Agustus 2026: "saya mau
+  // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
+  // kategori di grid Produk, lihat renderCategoryTabs di bawah.
+  category?: string;
 }
 
 export interface PagePreviewWishlistItem {
@@ -302,6 +306,7 @@ interface PreviewSourceProduct {
   bundle_original_price_idr?: number | null;
   product_kind?: string;
   external_url?: string;
+  category?: string;
 }
 
 // Dipakai bersama oleh semua halaman dashboard "Halaman Saya" (Tautan/Produk/Desain)
@@ -380,8 +385,47 @@ export function toPreviewData(
         bundleOriginalPriceIdr: p.bundle_original_price_idr ?? undefined,
         isExternalLink: p.product_kind === "external_link",
         externalUrl: p.external_url,
+        category: p.category,
       })),
   };
+}
+
+// getProductCategories/renderCategoryTabs -- permintaan langsung pengguna,
+// 17 Agustus 2026: "saya mau bisa buat katalog produk di halaman tokonya".
+// `category` sudah lama bisa diisi kreator dari dashboard (migrasi 000046)
+// tapi TIDAK PERNAH tampil ke pengunjung publik -- murni label manajemen
+// internal. Dipakai ULANG oleh render grid Produk bio biasa MAUPUN
+// ProdukPagePreview (Toko) di bawah, supaya kedua jalur kode konsisten
+// (pola sama seperti renderLinkOrBlock/renderBioHeader lainnya di file
+// ini). Tab "Semua" SENGAJA selalu ada di depan, cuma tampil sama sekali
+// kalau minimal satu produk sungguhan sudah diberi kategori -- kreator
+// yang belum pernah mengisi kategori tidak akan melihat baris tab kosong.
+function getProductCategories(products: PagePreviewProduct[]): string[] {
+  const set = new Set<string>();
+  for (const p of products) {
+    if (p.category && p.category.trim()) set.add(p.category.trim());
+  }
+  return Array.from(set);
+}
+
+function renderCategoryTabs(categories: string[], selected: string, onSelect: (category: string) => void, theme: PageTheme) {
+  if (categories.length === 0) return null;
+  return (
+    <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
+      {["Semua", ...categories].map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onSelect(c)}
+          className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+            selected === c ? theme.buyButton : `${theme.card} ${theme.chevron}`
+          }`}
+        >
+          {c}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // renderLinkOrBlock -- dipulas jadi fungsi berdiri sendiri (Modul Halaman
@@ -1191,6 +1235,9 @@ export default function PagePreview({
   // Gap #4 benchmark kompetitif (9 Agustus 2026): item wishlist yang
   // dipilih pendukung untuk "diwujudkan" -- undefined berarti donasi umum.
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
+  // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
+  // renderCategoryTabs di atas.
+  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
@@ -1485,8 +1532,11 @@ export default function PagePreview({
         {data.products.length > 0 && (
           <div className="mt-8 w-full">
             <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Produk</p>
+            {renderCategoryTabs(getProductCategories(data.products), selectedProductCategory, setSelectedProductCategory, theme)}
             <div className="grid w-full grid-cols-2 gap-3">
-              {data.products.map((product) => (
+              {data.products
+                .filter((p) => selectedProductCategory === "Semua" || p.category === selectedProductCategory)
+                .map((product) => (
                 <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
                   <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
                     {product.cover_image_url ? (
@@ -1841,6 +1891,9 @@ function ProdukPagePreview({
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
+  // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
+  // renderCategoryTabs (dekat toPreviewData, atas file ini).
+  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
@@ -1878,8 +1931,11 @@ function ProdukPagePreview({
 
         {data.products.length > 0 ? (
           <div className="mt-8 w-full">
+            {renderCategoryTabs(getProductCategories(data.products), selectedProductCategory, setSelectedProductCategory, theme)}
             <div className="grid w-full grid-cols-2 gap-3">
-              {data.products.map((product) => (
+              {data.products
+                .filter((p) => selectedProductCategory === "Semua" || p.category === selectedProductCategory)
+                .map((product) => (
                 <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
                   <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
                     {product.cover_image_url ? (

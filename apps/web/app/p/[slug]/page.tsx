@@ -135,6 +135,7 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             chapterCount: p.chapter_count,
             isExternalLink: p.is_external_link,
             externalUrl: p.external_url,
+            category: p.category,
           })),
           donation: page.donation
             ? {
