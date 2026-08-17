@@ -35,6 +35,14 @@ export interface QuickSetupCategory {
   label: string;
 }
 
+// Kategori "tourism" ditambahkan 17 Agustus 2026 (permintaan langsung
+// pengguna: "dari semua foto itu tambahkan layout yang belum ada ke quick
+// setup") -- hasil analisa galeri tema kompetitor (folder theme/): template
+// s.id secara eksplisit memisahkan "Pariwisata" sebagai kategori sendiri
+// (destinasi + peta + itinerary), sesuatu yang TIDAK direpresentasikan sama
+// sekali di 8 kategori Jeonme sebelumnya -- "local" fokus ke bisnis jasa
+// warga lokal (barbershop/salon/fotografer), bukan agen wisata/pemandu yang
+// melayani wisatawan.
 export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
   { key: "creator", label: "Creator & Personal Brand" },
   { key: "business", label: "Business & Professional" },
@@ -42,6 +50,7 @@ export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
   { key: "education", label: "Education" },
   { key: "entertainment", label: "Entertainment" },
   { key: "local", label: "Local Business" },
+  { key: "tourism", label: "Tourism & Travel" },
   { key: "lifestyle", label: "Lifestyle" },
   { key: "special", label: "Special Purpose" },
 ];
@@ -716,6 +725,77 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     blocks: [{ type: "contact_form", title: "Hubungi Kami" }],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
+  // "sports-facility"/"nightlife-venue" -- hasil analisa galeri tema
+  // kompetitor, 17 Agustus 2026: template s.id "Sports Facility" (booking
+  // lapangan) & "Nightlife" (reservasi meja/event malam) belum punya
+  // padanan di kategori "local" -- barbershop/salon/fotografer di atas
+  // semuanya jasa personal, bukan bisnis penyewaan tempat/venue.
+  {
+    key: "sports-facility",
+    category: "local",
+    layoutVariant: "cover",
+    label: "Sports Facility",
+    description: "Sewa lapangan, jadwal, booking",
+    theme: "forest",
+    bio: "Sewa lapangan -- booking jadwal main sekarang",
+    links: [link("whatsapp", "Booking Lapangan")],
+    blocks: [
+      mapsBlock("Lokasi Lapangan"),
+      { type: "text", title: "Jadwal & Harga Sewa", text: "Tuliskan jam operasional & harga sewa per jam di sini." },
+      faqBlock([{ question: "Apakah bisa booking harian atau harus langganan?", answer: "Bisa booking harian atau paket langganan bulanan -- chat WhatsApp buat cek slot kosong." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "nightlife-venue",
+    category: "local",
+    layoutVariant: "spotlight",
+    label: "Nightlife Venue",
+    description: "Event, reservasi meja, lokasi",
+    theme: "noir",
+    bio: "Tempat nongkrong malam -- reservasi meja sekarang",
+    links: [link("whatsapp", "Reservasi Meja"), link("instagram", "Lihat Event Kami")],
+    blocks: [
+      mapsBlock(),
+      { type: "text", title: "Event Malam Ini", text: "Tuliskan jadwal DJ/live music/tema malam mingguan di sini." },
+      faqBlock([{ question: "Apakah ada dress code?", answer: "Smart casual disarankan -- cek detail dress code & jam buka di Instagram kami." }]),
+    ],
+  },
+
+  // ---------- Tourism & Travel ----------
+  // Hasil analisa galeri tema kompetitor, 17 Agustus 2026 (permintaan
+  // langsung pengguna): template s.id "Pariwisata" (skyline ilustrasi,
+  // Google Maps, kartu destinasi) & "Hello Summer" (itinerary perjalanan)
+  // -- kategori baru, lihat catatan lengkap di QUICK_SETUP_CATEGORIES.
+  {
+    key: "travel-agency",
+    category: "tourism",
+    layoutVariant: "hero",
+    label: "Travel Agency",
+    description: "Paket wisata, booking, lokasi",
+    theme: "lagoon",
+    bio: "Agen wisata -- wujudkan liburan impianmu",
+    links: [link("whatsapp", "Booking Paket Wisata"), link("instagram", "Lihat Destinasi Kami")],
+    blocks: [
+      { type: "text", title: "Paket Wisata", text: "Tuliskan paket wisata & harga yang kamu tawarkan di sini." },
+      mapsBlock("Kantor Kami"),
+      faqBlock([{ question: "Apakah harga sudah termasuk penginapan?", answer: "Tergantung paket -- detail sudah dicantumkan di masing-masing paket, atau tanya langsung via WhatsApp." }]),
+    ],
+  },
+  {
+    key: "tour-guide",
+    category: "tourism",
+    layoutVariant: "polaroid",
+    label: "Tour Guide",
+    description: "Rute wisata, cerita perjalanan, booking",
+    theme: "dune",
+    bio: "Pemandu wisata lokal -- jelajahi bareng aku",
+    links: [link("whatsapp", "Booking Tur"), link("instagram", "Lihat Cerita Perjalanan")],
+    blocks: [
+      { type: "text", title: "Rute & Destinasi", text: "Tuliskan rute/destinasi favorit yang biasa kamu pandu di sini." },
+      faqBlock([{ question: "Berapa orang maksimal per grup tur?", answer: "Fleksibel sesuai permintaan -- chat WhatsApp buat diskusi jumlah peserta & jadwal." }]),
+    ],
+  },
 
   // ---------- Lifestyle ----------
   {
@@ -853,6 +933,21 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Dana yang terkumpul dipakai untuk apa?", answer: "Lihat cerita di atas untuk rinciannya -- setiap dukungan sangat berarti, terima kasih!" }]),
     ],
     monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "seasonal-greeting",
+    category: "special",
+    label: "Seasonal Greeting",
+    description: "Ucapan musiman + media sosial",
+    // theme "xmas" -- salah satu dari 5 tema baru hasil analisa galeri tema
+    // kompetitor (17 Agustus 2026, folder theme/) yang ditambahkan
+    // sebelumnya (xmas/pride/retro/kraft/monsoon) -- template ini sengaja
+    // dibuat supaya kreator langsung punya jalan pakai temanya, bukan cuma
+    // preset yang nongkrong di galeri tanpa konteks pemakaian.
+    theme: "xmas",
+    bio: "Selamat merayakan! Semoga hari-harimu penuh kehangatan.",
+    links: [link("instagram"), link("whatsapp")],
+    blocks: [{ type: "text", title: "Ucapan Untukmu", text: "Tuliskan ucapan hangat musim ini untuk pengunjung halamanmu di sini." }],
   },
   {
     key: "coming-soon",
