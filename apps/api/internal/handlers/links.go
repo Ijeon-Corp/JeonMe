@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dhowden/tag"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -1210,6 +1212,37 @@ func (h *LinksHandler) UploadAudio(c *gin.Context) {
 	}
 	defer file.Close()
 
+	// Judul otomatis -- permintaan langsung pengguna, 17 Agustus 2026:
+	// "otomatis ambil judul dari audio yang di upload". dhowden/tag
+	// (pure-Go, TANPA cgo, konsisten dengan imageconv) membaca metadata
+	// ID3v1/ID3v2 (mp3) & tag serupa (m4a/ogg) -- kalau file punya tag
+	// Artist DAN Title, digabung "Artis - Judul" (ala pemutar musik
+	// sungguhan), kalau cuma Title dipakai apa adanya. Gagal baca (format
+	// TANPA tag, atau file rusak) BUKAN error fatal -- fallback ke nama
+	// file yang dibersihkan (titleFromFilename), audio tetap berhasil
+	// diunggah baik ada tag maupun tidak. tag.ReadFrom butuh io.ReadSeeker
+	// -- multipart.File sudah memenuhi itu, Seek balik ke awal WAJIB
+	// sebelum Storage.Upload supaya body yang terunggah tidak kepotong
+	// bagian yang sudah "dibaca habis" oleh pembaca tag.
+	derivedTitle := ""
+	if meta, terr := tag.ReadFrom(file); terr == nil {
+		artist := strings.TrimSpace(meta.Artist())
+		songTitle := strings.TrimSpace(meta.Title())
+		switch {
+		case artist != "" && songTitle != "":
+			derivedTitle = artist + " - " + songTitle
+		case songTitle != "":
+			derivedTitle = songTitle
+		}
+	}
+	if derivedTitle == "" {
+		derivedTitle = titleFromFilename(fileHeader.Filename)
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+
 	key := fmt.Sprintf("audio-blocks/%s%s", linkID, ext)
 	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah audio"})
@@ -1235,13 +1268,28 @@ func (h *LinksHandler) UploadAudio(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
 	}
-	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1, title = $2 WHERE id = $3`, encoded, derivedTitle, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "audio terunggah tapi gagal menyimpan referensinya"})
 		return
 	}
 
 	h.invalidateLinkCache(ctx, linkID)
-	c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "message": "audio berhasil diunggah"})
+	c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "title": derivedTitle, "message": "audio berhasil diunggah, judul otomatis dari file"})
+}
+
+// titleFromFilename -- fallback saat file audio tidak punya tag ID3 (atau
+// gagal dibaca): nama file tanpa ekstensi, "_"/"-" diganti spasi lalu
+// dirapikan. SELALU mengembalikan string tidak kosong (fallback "Audio"
+// kalau nama file kosong/cuma karakter yang hilang setelah dibersihkan).
+func titleFromFilename(name string) string {
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	base = strings.ReplaceAll(base, "_", " ")
+	base = strings.ReplaceAll(base, "-", " ")
+	base = strings.Join(strings.Fields(base), " ")
+	if base == "" {
+		return "Audio"
+	}
+	return base
 }
 
 // DeleteAudio -- mengosongkan audio_url (blok tetap ada, tinggal kosong --

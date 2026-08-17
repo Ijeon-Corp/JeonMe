@@ -370,8 +370,8 @@ function BlockSection({
     setAudioUploadingId(link.id);
     setError(null);
     try {
-      const { audio_url } = await uploadAudioBlock(link.id, file);
-      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url } } : l)));
+      const { audio_url, title } = await uploadAudioBlock(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title, block_data: { ...l.block_data, audio_url } } : l)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah audio.");
     } finally {

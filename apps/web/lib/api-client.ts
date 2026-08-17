@@ -886,7 +886,11 @@ export function deleteGalleryImage(id: string, index: number) {
 // menimpa) -- pola sama seperti uploadLinkIcon. Cover art blok ini sengaja
 // memakai uploadLinkIcon yang sudah ada (custom_icon_url generik untuk
 // semua block_type), tidak ada endpoint cover terpisah.
-export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_url: string; message: string }> {
+// `title` di respons -- permintaan langsung pengguna, 17 Agustus 2026:
+// "otomatis ambil judul dari audio yang di upload" -- backend membaca tag
+// ID3 (atau fallback nama file) & MENIMPA title blok, dikembalikan di sini
+// supaya UI langsung menampilkan judul baru tanpa perlu refetch terpisah.
+export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_url: string; title: string; message: string }> {
   const token = getToken();
   const form = new FormData();
   form.append("audio", file);

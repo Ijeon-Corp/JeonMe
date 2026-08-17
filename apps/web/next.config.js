@@ -50,14 +50,37 @@ function apiOriginFromEnv() {
 const API_ORIGIN = apiOriginFromEnv();
 const CONNECT_SRC = API_ORIGIN ? `'self' ${API_ORIGIN}` : "'self'";
 
+// Bug dilaporkan pengguna, 17 Agustus 2026 (konsol browser sungguhan di
+// halaman publik): dua celah CSP ditemukan begitu blok "audio"/"video"
+// (baru ditambahkan sesi ini) benar-benar dipakai --
+// 1. Tidak ada `media-src` sama sekali -> jatuh balik ke `default-src
+//    'self'`, blok elemen <audio> (AudioPlayerBlock.tsx) yang src-nya
+//    SELALU cross-origin (storage.jeonme.com/storage-staging.jeonme.com,
+//    domain object storage terpisah dari domain web ini, sama seperti
+//    `img-src` yang sudah lebih dulu perlu `https:` bukan cuma 'self'
+//    untuk alasan yang sama).
+// 2. `frame-src` cuma mengizinkan Google Maps -- VideoEmbedBlock.tsx sudah
+//    lama bisa merender embed YouTube MAUPUN TikTok, tapi frame-src tidak
+//    pernah diperbarui untuk keduanya (blok video sebenarnya SUDAH lama
+//    ada sebelum sesi ini, cuma baru ketahuan karena kreator baru benar-
+//    benar memakainya).
+// STRICT_CSP (dashboard) ikut diperbaiki sama persis -- PagePreview.tsx
+// (lewat LivePreviewPanel) dipakai ULANG apa adanya di pratinjau dashboard,
+// blok video/audio di situ merender iframe/elemen <audio> yang SAMA,
+// jadi celah yang sama persis berlaku di sana (belum sempat dilaporkan
+// tapi akar masalahnya identik, diperbaiki sekalian).
+const MEDIA_SRC = "media-src 'self' https:";
+const VIDEO_EMBED_FRAME_SRC = "https://www.youtube.com https://www.tiktok.com";
+
 const PUBLIC_PAGE_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
+  MEDIA_SRC,
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC} https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.facebook.com https://connect.facebook.net`,
-  "frame-src https://www.google.com",
+  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -68,9 +91,10 @@ const STRICT_CSP = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
+  MEDIA_SRC,
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC}`,
-  "frame-src 'none'",
+  `frame-src ${VIDEO_EMBED_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
