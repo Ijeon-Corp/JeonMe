@@ -230,6 +230,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// /links/:id biasa, bukan endpoint terpisah) untuk tautan non-YouTube.
 				linksGroup.POST("/links/:id/thumbnail", links.UploadThumbnail)
 				linksGroup.DELETE("/links/:id/thumbnail", links.DeleteThumbnail)
+				// Blok "gallery"/"audio" (hasil analisa galeri tema kompetitor,
+				// 17 Agustus 2026) -- pola upload SAMA seperti icon/thumbnail di
+				// atas, dipisah endpoint sendiri karena validasi & penyimpanan
+				// block_data-nya beda (array multi-foto vs satu file audio).
+				linksGroup.POST("/links/:id/gallery-images", links.UploadGalleryImage)
+				linksGroup.DELETE("/links/:id/gallery-images/:index", links.DeleteGalleryImage)
+				linksGroup.POST("/links/:id/audio", links.UploadAudio)
+				linksGroup.DELETE("/links/:id/audio", links.DeleteAudio)
 
 				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
 				// -- baris links yang sama, cuma butuh endpoint create sendiri

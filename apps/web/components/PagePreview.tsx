@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
+import AudioPlayerBlock from "@/components/AudioPlayerBlock";
 import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
+import GalleryBlock from "@/components/GalleryBlock";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import LoyaltyPointsWidget from "@/components/LoyaltyPointsWidget";
 import LockedLinkButton from "@/components/LockedLinkButton";
@@ -21,7 +23,7 @@ import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, Ico
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
-import { HelpCircle, Video as VideoIcon } from "lucide-react";
+import { HelpCircle, Images as GalleryIcon, Video as VideoIcon } from "lucide-react";
 
 export interface PagePreviewLink {
   id: string;
@@ -32,7 +34,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -273,7 +275,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
@@ -922,6 +924,30 @@ function renderLinkOrBlock(
         embedLng={link.blockData?.embed_lng as number | undefined}
         linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
         icon={resolveBlockIcon(link, IconMapPin, "h-6 w-6")}
+      />
+    );
+  }
+  if (link.blockType === "gallery") {
+    return (
+      <GalleryBlock
+        key={link.id}
+        title={link.title}
+        images={(link.blockData?.images as string[]) ?? []}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
+        icon={resolveBlockIcon(link, GalleryIcon, "h-4 w-4")}
+      />
+    );
+  }
+  if (link.blockType === "audio") {
+    return (
+      <AudioPlayerBlock
+        key={link.id}
+        title={link.title}
+        audioUrl={(link.blockData?.audio_url as string) ?? ""}
+        coverUrl={link.customIconUrl}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
       />
     );
   }

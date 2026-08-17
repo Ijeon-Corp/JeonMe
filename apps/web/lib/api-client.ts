@@ -117,7 +117,7 @@ export interface PublicLink {
   url: string;
   lock_type: "" | "age" | "code" | "subscribe";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -724,7 +724,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -748,7 +748,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -846,6 +846,66 @@ export async function uploadLinkThumbnail(id: string, file: File): Promise<{ thu
 
 export function deleteLinkThumbnail(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}/thumbnail`, { method: "DELETE" }, { auth: true });
+}
+
+// uploadGalleryImage/deleteGalleryImage -- blok "gallery" (hasil analisa
+// galeri tema kompetitor, 17 Agustus 2026): SATU foto per panggilan,
+// ditambahkan ke array block_data.images di backend (bukan ditimpa seperti
+// uploadLinkIcon/uploadLinkThumbnail) -- dipanggil berkali-kali untuk
+// mengisi galeri. Respons mengembalikan array `images` TERBARU (bukan cuma
+// URL foto yang baru diunggah) supaya UI tinggal render ulang, tidak perlu
+// menggabungkan state lama+baru sendiri.
+export async function uploadGalleryImage(id: string, file: File): Promise<{ images: string[]; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/gallery-images`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteGalleryImage(id: string, index: number) {
+  return apiFetch<{ images: string[]; message: string }>(
+    `/dashboard/links/${id}/gallery-images/${index}`,
+    { method: "DELETE" },
+    { auth: true }
+  );
+}
+
+// uploadAudioBlock/deleteAudioBlock -- blok "audio" (hasil analisa yang
+// sama): SATU file audio per blok, key storage tetap (unggah ulang
+// menimpa) -- pola sama seperti uploadLinkIcon. Cover art blok ini sengaja
+// memakai uploadLinkIcon yang sudah ada (custom_icon_url generik untuk
+// semua block_type), tidak ada endpoint cover terpisah.
+export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("audio", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/audio`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteAudioBlock(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/audio`, { method: "DELETE" }, { auth: true });
 }
 
 export function reorderLinks(items: { id: string; position: number }[]) {
@@ -1034,7 +1094,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;

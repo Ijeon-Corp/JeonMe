@@ -600,6 +600,37 @@ export function IconPlayCircle({ className }: IconProps) {
   );
 }
 
+// IconPauseCircle/IconMusicNote/IconPhotoLibrary -- blok "audio"/"gallery"
+// (hasil analisa galeri tema kompetitor, 17 Agustus 2026).
+export function IconPauseCircle({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth={base} />
+      <path d="M10.2 9v6M13.8 9v6" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconMusicNote({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M9 17.5a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 9 17.5Zm0 0V6l9-2v9.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18 13.5a2.5 2.5 0 1 1-2.5-2.5 2.5 2.5 0 0 1 2.5 2.5Z" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconPhotoLibrary({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3" y="5" width="14" height="14" rx="2" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="m3 15 3.5-3.5a1.5 1.5 0 0 1 2.12 0L13 15.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7.5" cy="9" r="1.4" stroke="currentColor" strokeWidth={base} />
+      <path d="M20 8v9a2 2 0 0 1-2 2H9" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ---------- Redesain halaman publik ala Linktree (topbar logo/share) ----------
 
 export function IconShare({ className }: IconProps) {

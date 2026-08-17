@@ -12,11 +12,15 @@ import {
   THEME_PRESETS,
   createExtraPageBlock,
   createExtraPageLink,
+  deleteAudioBlock,
+  deleteGalleryImage,
   deleteLink,
   reorderExtraPageLinks,
   updateExtraPage,
+  uploadAudioBlock,
   uploadExtraPageAvatar,
   uploadExtraPageBackground,
+  uploadGalleryImage,
 } from "@/lib/api-client";
 import {
   CUSTOM_BUTTON_ROUNDED_OPTIONS,
@@ -35,18 +39,24 @@ import {
   IconLock,
   IconMail,
   IconMapPin,
+  IconMusicNote,
   IconPaintbrush,
+  IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
   IconSparkle,
   IconTextLines,
   IconTrash,
+  IconX,
 } from "@/components/icons";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 
-type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion";
+type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio";
+
+// maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go).
+const maxGalleryImages = 9;
 
 // LAYOUT_OPTIONS -- paritas penuh dengan dashboard/design/header/page.tsx
 // (lihat catatan lengkap di sana) -- daftarnya SENGAJA disalin apa adanya
@@ -76,6 +86,11 @@ const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon:
   { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan", Icon: IconMail },
   { key: "maps", label: "Lokasi", description: "Google Maps (tertanam atau tautan)", Icon: IconMapPin },
   { key: "text", label: "Teks", description: "Paragraf bebas", Icon: IconTextLines },
+  // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
+  // 2026, lihat catatan lengkap di dashboard/links/page.tsx (pola sama
+  // persis, dipakai ulang di sini untuk paritas halaman utama/Toko).
+  { key: "gallery", label: "Galeri Foto", description: "Grid beberapa foto sekaligus", Icon: IconPhotoLibrary },
+  { key: "audio", label: "Audio/Musik", description: "Pemutar audio tertanam di bio", Icon: IconMusicNote },
 ];
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -85,6 +100,8 @@ const BLOCK_LABEL: Record<string, string> = {
   maps: "Lokasi",
   text: "Teks",
   accordion: "Accordion",
+  gallery: "Galeri Foto",
+  audio: "Audio/Musik",
 };
 
 export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
@@ -313,6 +330,64 @@ function BlockSection({
   const [faqItems, setFaqItems] = useState<{ question: string; answer: string }[]>([{ question: "", answer: "" }]);
   const [saving, setSaving] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+
+  // Blok "gallery"/"audio" (hasil analisa galeri tema kompetitor, 17
+  // Agustus 2026): foto/audio diunggah SETELAH blok dibuat (lihat catatan
+  // di CONTENT_TILES) -- id blok yang sedang mengunggah.
+  const [galleryUploadingId, setGalleryUploadingId] = useState<string | null>(null);
+  const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
+
+  async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setGalleryUploadingId(link.id);
+    setError(null);
+    try {
+      const { images } = await uploadGalleryImage(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto galeri.");
+    } finally {
+      setGalleryUploadingId(null);
+    }
+  }
+
+  async function handleGalleryImageDelete(link: LinkItem, index: number) {
+    setError(null);
+    try {
+      const { images } = await deleteGalleryImage(link.id, index);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto galeri.");
+    }
+  }
+
+  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAudioUploadingId(link.id);
+    setError(null);
+    try {
+      const { audio_url } = await uploadAudioBlock(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah audio.");
+    } finally {
+      setAudioUploadingId(null);
+    }
+  }
+
+  async function handleAudioDelete(link: LinkItem) {
+    setError(null);
+    try {
+      await deleteAudioBlock(link.id);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url: "" } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus audio.");
+    }
+  }
 
   function resetForm() {
     setTitle("");
@@ -547,6 +622,13 @@ function BlockSection({
             {blockType === "contact_form" && (
               <p className="text-xs text-muted">Formulir siap pakai -- pengunjung isi nama/email/pesan, terkirim ke emailmu.</p>
             )}
+            {(blockType === "gallery" || blockType === "audio") && (
+              <p className="text-xs text-muted">
+                {blockType === "gallery"
+                  ? 'Buat blok dulu, foto ditambahkan setelahnya lewat panel "Kelola foto" di kartu blok.'
+                  : 'Buat blok dulu, file audio diunggah setelahnya lewat panel "Kelola audio" di kartu blok.'}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button
@@ -576,21 +658,96 @@ function BlockSection({
             onDragStart={() => setDragId(link.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(link.id)}
-            className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-3 shadow-card"
+            className="flex flex-col gap-2.5 rounded-xl border border-border bg-white p-3 shadow-card"
           >
-            <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink">
-                {link.lock_type && <IconLock className="mr-1 inline h-3.5 w-3.5 text-muted" />}
-                {link.title}
-              </p>
-              <p className="truncate text-xs text-muted">
-                {link.block_type && link.block_type !== "link" ? BLOCK_LABEL[link.block_type] ?? link.block_type : link.url}
-              </p>
+            <div className="flex items-center gap-2.5">
+              <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-ink">
+                  {link.lock_type && <IconLock className="mr-1 inline h-3.5 w-3.5 text-muted" />}
+                  {link.title}
+                </p>
+                <p className="truncate text-xs text-muted">
+                  {link.block_type && link.block_type !== "link" ? BLOCK_LABEL[link.block_type] ?? link.block_type : link.url}
+                </p>
+              </div>
+              <button type="button" onClick={() => handleDelete(link.id)} className="flex-shrink-0 rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600">
+                <IconTrash className="h-4 w-4" />
+              </button>
             </div>
-            <button type="button" onClick={() => handleDelete(link.id)} className="flex-shrink-0 rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600">
-              <IconTrash className="h-4 w-4" />
-            </button>
+
+            {/* Panel "Kelola foto"/"Kelola audio" -- hasil analisa galeri
+                tema kompetitor, 17 Agustus 2026. SELALU tampil (bukan
+                dibalik toggle) karena inti dari blok ini, sama seperti
+                catatan di dashboard/links/page.tsx. */}
+            {link.block_type === "gallery" && (
+              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <p className="text-[11px] font-semibold text-muted">
+                  {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {((link.block_data?.images as string[]) ?? []).map((src, i) => (
+                    <div key={i} className="group relative h-16 w-16 flex-shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                      <button
+                        type="button"
+                        onClick={() => handleGalleryImageDelete(link, i)}
+                        title="Hapus foto"
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+                      >
+                        <IconX className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
+                    <label
+                      className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                        galleryUploadingId === link.id ? "opacity-60" : ""
+                      }`}
+                    >
+                      {galleryUploadingId === link.id ? (
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                      ) : (
+                        <>
+                          <IconPlus className="h-4 w-4" />
+                          <span className="text-[9px] font-semibold">Tambah</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleGalleryImageUpload(e, link)}
+                        disabled={galleryUploadingId === link.id}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
+            {link.block_type === "audio" && (
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
+                  {(link.block_data?.audio_url as string) ? "Audio terunggah." : "Belum ada audio (mp3/wav/m4a/ogg, maks 15MB)."}
+                </p>
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                  {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti" : "Unggah"}
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,.m4a,.ogg,audio/mpeg,audio/wav,audio/mp4,audio/ogg"
+                    onChange={(e) => handleAudioUpload(e, link)}
+                    disabled={audioUploadingId === link.id}
+                    className="hidden"
+                  />
+                </label>
+                {(link.block_data?.audio_url as string) && (
+                  <button type="button" onClick={() => handleAudioDelete(link)} className="flex-shrink-0 text-[11px] font-semibold text-red-600 hover:underline">
+                    Hapus
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

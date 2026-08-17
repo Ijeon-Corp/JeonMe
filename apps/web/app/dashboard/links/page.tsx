@@ -9,6 +9,8 @@ import {
   MyPage,
   createBlock,
   createLink,
+  deleteAudioBlock,
+  deleteGalleryImage,
   deleteLink,
   deleteLinkIcon,
   deleteLinkThumbnail,
@@ -18,7 +20,9 @@ import {
   reorderLinks,
   updateLink,
   updateMyPage,
+  uploadAudioBlock,
   uploadAvatar,
+  uploadGalleryImage,
   uploadLinkIcon,
   uploadLinkThumbnail,
 } from "@/lib/api-client";
@@ -38,7 +42,9 @@ import {
   IconLock,
   IconMail,
   IconMapPin,
+  IconMusicNote,
   IconPencil,
+  IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
   IconSearch,
@@ -61,6 +67,11 @@ import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
 
+// maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
+// utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
+// sumber kebenaran validasinya.
+const maxGalleryImages = 9;
+
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
   contact_form: "Formulir Kontak",
@@ -68,6 +79,8 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   maps: "Lokasi",
   text: "Teks",
   accordion: "Accordion",
+  gallery: "Galeri Foto",
+  audio: "Audio/Musik",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -190,7 +203,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion";
+  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -215,6 +228,15 @@ const CONTENT_TILES: ContentTile[] = [
   // Halaman Tambahan). Paragraf polos, TANPA tautan/aksi -- murni konten
   // (pengumuman, deskripsi singkat, dsb) di antara blok-blok lain.
   { key: "text", label: "Teks", description: "Tambahkan paragraf teks bebas di antara tautan", Icon: IconTextLines },
+  // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
+  // 2026 (template portofolio/wisata s.id pakai grid multi-foto, mockup
+  // "Music" kompetitor lain pakai pemutar audio tertanam -- keduanya belum
+  // ada padanan di Jeonme). Foto/audio diunggah SETELAH blok dibuat (lihat
+  // panel "Kelola foto"/"Kelola audio" yang muncul di kartu blok), bukan
+  // lewat form pembuatan blok biasa -- beda dari tipe lain yang isinya
+  // teks/URL, unggah file butuh multipart terpisah dari JSON create.
+  { key: "gallery", label: "Galeri Foto", description: "Grid beberapa foto sekaligus (portofolio, dokumentasi acara, dst)", Icon: IconPhotoLibrary },
+  { key: "audio", label: "Audio/Musik", description: "Pemutar audio tertanam di bio (rilisan musik, voice note, dst)", Icon: IconMusicNote },
 ];
 
 // Permintaan langsung pengguna, 14 Agustus 2026: "harusnya semua tipe ini
@@ -276,6 +298,13 @@ export default function DashboardLinksPage() {
   // thumbnail 16:9, lihat catatan lengkap di handleToggleFeatured.
   const [thumbnailUploadingId, setThumbnailUploadingId] = useState<string | null>(null);
 
+  // Blok "gallery"/"audio" (hasil analisa galeri tema kompetitor, 17
+  // Agustus 2026): unggah foto/audio langsung dari kartu blok (bukan lewat
+  // form pembuatan blok, lihat catatan CONTENT_TILES) -- id blok yang
+  // sedang mengunggah, null berarti tidak ada unggahan berjalan.
+  const [galleryUploadingId, setGalleryUploadingId] = useState<string | null>(null);
+  const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
+
   // Galeri ikon siap-pakai (permintaan langsung pengguna, 13 Agustus 2026:
   // "sediakan banyak icon yang bisa digunakan dan dipilih user") -- id
   // tautan yang sedang membuka IconPickerModal, null berarti modal tertutup.
@@ -314,7 +343,7 @@ export default function DashboardLinksPage() {
 
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
-  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text" | "accordion">("video");
+  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio">("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
   // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA tautan/aksi.
@@ -473,7 +502,7 @@ export default function DashboardLinksPage() {
     setAddModalOpen(false);
   }
 
-  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text" | "accordion", title: string) {
+  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio", title: string) {
     setBlockType(type);
     setBlockTitle(title);
     if (type === "text") setBlockText("");
@@ -564,6 +593,70 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
+    }
+  }
+
+  // handleGalleryImageUpload/handleGalleryImageDelete -- blok "gallery"
+  // (hasil analisa galeri tema kompetitor, 17 Agustus 2026): SATU foto per
+  // panggilan, backend mengembalikan array `images` TERBARU (bukan cuma
+  // URL foto baru) supaya state links tinggal ditimpa langsung, tidak
+  // perlu digabung manual dengan array lama di sisi klien.
+  async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setGalleryUploadingId(link.id);
+    setError(null);
+    try {
+      const { images } = await uploadGalleryImage(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto galeri.");
+    } finally {
+      setGalleryUploadingId(null);
+    }
+  }
+
+  async function handleGalleryImageDelete(link: LinkItem, index: number) {
+    setError(null);
+    try {
+      const { images } = await deleteGalleryImage(link.id, index);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto galeri.");
+    }
+  }
+
+  // handleAudioUpload/handleAudioDelete -- blok "audio", pola sama seperti
+  // handleIconUpload (unggah ulang menimpa file yang sama, satu audio per
+  // blok). Cover art blok ini sengaja TIDAK dapat unggahan sendiri --
+  // dipakai ulang tombol ikon kustom yang sudah generik untuk semua
+  // block_type (lihat baris kontrol ikon di kartu blok).
+  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setAudioUploadingId(link.id);
+    setError(null);
+    try {
+      const { audio_url } = await uploadAudioBlock(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah audio.");
+    } finally {
+      setAudioUploadingId(null);
+    }
+  }
+
+  async function handleAudioDelete(link: LinkItem) {
+    setError(null);
+    try {
+      await deleteAudioBlock(link.id);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url: "" } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus audio.");
     }
   }
 
@@ -1134,7 +1227,9 @@ export default function DashboardLinksPage() {
           <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
             <select
               value={blockType}
-              onChange={(e) => setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text" | "accordion")}
+              onChange={(e) =>
+                setBlockType(e.target.value as "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio")
+              }
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
               <option value="video">Video (YouTube/TikTok)</option>
@@ -1143,7 +1238,16 @@ export default function DashboardLinksPage() {
               <option value="accordion">Accordion (satu judul, klik untuk buka)</option>
               <option value="maps">Lokasi (Google Maps)</option>
               <option value="text">Teks</option>
+              <option value="gallery">Galeri Foto</option>
+              <option value="audio">Audio/Musik</option>
             </select>
+            {(blockType === "gallery" || blockType === "audio") && (
+              <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-muted">
+                {blockType === "gallery"
+                  ? "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok."
+                  : "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok."}
+              </p>
+            )}
             <input
               type="text"
               required
@@ -1537,6 +1641,98 @@ export default function DashboardLinksPage() {
                         <button
                           type="button"
                           onClick={() => handleRemoveThumbnail(link)}
+                          className="text-[11px] font-semibold text-red-600 hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Panel "Kelola foto" -- blok "gallery" (hasil analisa galeri
+                  tema kompetitor, 17 Agustus 2026), SELALU tampil (bukan
+                  dibalik toggle "Edit Konten") -- pola sama seperti panel
+                  Featured Link di atas, karena kelola-foto justru INTI dari
+                  blok ini, bukan pengaturan sekunder. */}
+              {link.block_type === "gallery" && (
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <p className="text-[11px] font-semibold text-muted">
+                    {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {((link.block_data?.images as string[]) ?? []).map((src, i) => (
+                      <div key={i} className="group relative h-16 w-16 flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                        <button
+                          type="button"
+                          onClick={() => handleGalleryImageDelete(link, i)}
+                          title="Hapus foto"
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+                        >
+                          <IconX className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
+                      <label
+                        className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                          galleryUploadingId === link.id ? "opacity-60" : ""
+                        }`}
+                      >
+                        {galleryUploadingId === link.id ? (
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                        ) : (
+                          <>
+                            <IconPlus className="h-4 w-4" />
+                            <span className="text-[9px] font-semibold">Tambah</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                          onChange={(e) => handleGalleryImageUpload(e, link)}
+                          disabled={galleryUploadingId === link.id}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Panel "Kelola audio" -- blok "audio", pola sama seperti
+                  panel Kelola foto di atas. Cover art dikelola lewat tombol
+                  ikon kustom yang sudah generik (baris kontrol ikon di
+                  atas), tidak diduplikasi di sini. */}
+              {link.block_type === "audio" && (
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-white text-primary ring-1 ring-black/5">
+                    <IconMusicNote className="h-5 w-5" />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="text-[11px] text-muted">
+                      {(link.block_data?.audio_url as string)
+                        ? "Audio terunggah, siap tampil di halaman publik."
+                        : "Belum ada audio -- unggah file mp3/wav/m4a/ogg (maks 15MB)."}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                        {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti Audio" : "Unggah Audio"}
+                        <input
+                          type="file"
+                          accept=".mp3,.wav,.m4a,.ogg,audio/mpeg,audio/wav,audio/mp4,audio/ogg"
+                          onChange={(e) => handleAudioUpload(e, link)}
+                          disabled={audioUploadingId === link.id}
+                          className="hidden"
+                        />
+                      </label>
+                      {(link.block_data?.audio_url as string) && (
+                        <button
+                          type="button"
+                          onClick={() => handleAudioDelete(link)}
                           className="text-[11px] font-semibold text-red-600 hover:underline"
                         >
                           Hapus

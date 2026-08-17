@@ -397,12 +397,50 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				return "embed wajib berupa true/false", false
 			}
 		}
+	case "gallery":
+		// "gallery" -- hasil analisa galeri tema kompetitor (17 Agustus
+		// 2026, folder theme/: template portofolio/wisata s.id memakai grid
+		// multi-foto yang belum ada padanannya di Jeonme, blok "image" lama
+		// cuma 1 foto per blok). "images" divalidasi longgar di sini (boleh
+		// kosong -- blok baru dibuat DULU lewat CreateBlock lalu fotonya
+		// ditambah satu-satu lewat UploadGalleryImage, pola sama seperti
+		// custom_icon_url yang upload-only terpisah dari create), tapi kalau
+		// TERISI setiap entri wajib URL http(s) valid (jaga-jaga endpoint ini
+		// juga dipakai utk PATCH block_data manual).
+		if raw, ok := data["images"]; ok {
+			images, isSlice := raw.([]any)
+			if !isSlice {
+				return "images wajib berupa daftar URL", false
+			}
+			for _, img := range images {
+				urlStr, isStr := img.(string)
+				u, err := url.Parse(urlStr)
+				if !isStr || err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+					return "setiap foto galeri wajib URL yang valid", false
+				}
+			}
+		}
+	case "audio":
+		// "audio" -- hasil analisa yang sama: mockup "Music" (galeri tema
+		// kompetitor 4 Agustus) menampilkan pemutar musik tertanam di bio,
+		// Jeonme belum punya padanannya sama sekali. audio_url boleh kosong
+		// saat blok baru dibuat (diisi lewat UploadAudio setelahnya, pola
+		// sama seperti gallery di atas), tapi kalau terisi wajib URL valid.
+		if raw, ok := data["audio_url"]; ok {
+			audioURL, _ := raw.(string)
+			if audioURL != "" {
+				u, err := url.Parse(audioURL)
+				if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+					return "audio_url wajib berupa URL yang valid", false
+				}
+			}
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -925,6 +963,348 @@ func (h *LinksHandler) DeleteThumbnail(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "thumbnail tautan dihapus, kembali ke baris klasik"})
+}
+
+// maxGalleryImageSize -- sama seperti maxLinkThumbnailSize (5MB), foto
+// galeri tampil besar di grid, bukan ikon kecil.
+const maxGalleryImageSize = 5 * 1024 * 1024
+
+// maxGalleryImages -- grid 3 kolom, 9 = pas 3 baris penuh di galeri (mockup
+// portofolio kompetitor "s56" pakai grid serupa, "My Shoot" 6 foto) --
+// dibatasi supaya satu blok tidak jadi galeri tak terbatas yang memberatkan
+// muat halaman publik.
+const maxGalleryImages = 9
+
+// UploadGalleryImage -- blok "gallery" (hasil analisa galeri tema kompetitor,
+// 17 Agustus 2026): SATU foto per panggilan, DITAMBAHKAN ke array block_data.
+// images (append, bukan timpa seperti UploadIcon/UploadThumbnail) -- kreator
+// memanggil endpoint ini berkali-kali untuk mengisi galerinya. Key storage
+// per-foto pakai UUID acak (bukan pola "<linkID>" tetap seperti icon/
+// thumbnail) karena satu blok bisa punya BANYAK foto sekaligus, bukan cuma
+// satu yang selalu ditimpa.
+func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockType string
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&blockType, &blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	if blockType != "gallery" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan ini bukan blok galeri foto"})
+		return
+	}
+
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	images, _ := blockData["images"].([]any)
+	if len(images) >= maxGalleryImages {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("maksimal %d foto per galeri", maxGalleryImages)})
+		return
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxGalleryImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("gallery-images/%s/%s.webp", linkID, uuid.NewString())
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah foto"})
+		return
+	}
+
+	imageURL := h.Storage.PublicURL(key)
+	images = append(images, imageURL)
+	blockData["images"] = images
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto berhasil ditambahkan ke galeri"})
+}
+
+// DeleteGalleryImage -- menghapus SATU foto dari array block_data.images
+// lewat indeksnya (posisi saat ini di array, dikirim dari daftar yang sudah
+// ditampilkan ke kreator -- bukan ID permanen karena foto galeri tidak
+// disimpan sebagai baris DB tersendiri, cuma entri array di JSONB). Soft-fail
+// utk penghapusan objek storage, pola sama seperti DeleteIcon/DeleteThumbnail.
+func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil || index < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "indeks foto tidak valid"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	images, _ := blockData["images"].([]any)
+	if index >= len(images) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "foto tidak ditemukan"})
+		return
+	}
+
+	removedURL, _ := images[index].(string)
+	images = append(images[:index], images[index+1:]...)
+	blockData["images"] = images
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
+		return
+	}
+
+	if h.Storage != nil && removedURL != "" {
+		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
+			_ = h.Storage.Delete(ctx, key)
+		}
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari galeri"})
+}
+
+// maxAudioFileSize -- 15MB, cukup untuk beberapa menit MP3 kualitas standar
+// tanpa membebani halaman publik (audio TIDAK dikonversi/dikompres ulang di
+// server, beda dari gambar lewat imageconv -- diunggah apa adanya setelah
+// validasi tipe).
+const maxAudioFileSize = 15 * 1024 * 1024
+
+// allowedAudioExt -- daftar putih ekstensi->Content-Type, pola SAMA PERSIS
+// dengan allowedProductFileExt (page.go)/allowedAvatarExt -- Content-Type
+// SELALU dipaksa dari sini, TIDAK PERNAH dipercaya dari klien (audit
+// keamanan 28 Juli 2026, lihat catatan allowedProductFileExt).
+var allowedAudioExt = map[string]string{
+	".mp3": "audio/mpeg",
+	".wav": "audio/wav",
+	".m4a": "audio/mp4",
+	".ogg": "audio/ogg",
+}
+
+// UploadAudio -- blok "audio" (hasil analisa galeri tema kompetitor, 17
+// Agustus 2026, mockup "Music"): SATU file audio per blok, key storage
+// TETAP "audio-blocks/<linkID>.<ext>" (unggah ulang menimpa, pola sama
+// seperti UploadIcon) -- beda dari gallery images yang memang perlu banyak
+// per blok. Cover art blok ini SENGAJA TIDAK dapat endpoint upload baru --
+// dipakai ulang custom_icon_url yang sudah ada (UploadIcon, generik untuk
+// SEMUA block_type, lihat resolveBlockIcon di PagePreview.tsx).
+func (h *LinksHandler) UploadAudio(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockType string
+	if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&blockType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	if blockType != "audio" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan ini bukan blok audio"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("audio")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"audio\")"})
+		return
+	}
+	if fileHeader.Size > maxAudioFileSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 15MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedAudioExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan mp3/wav/m4a/ogg", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("audio-blocks/%s%s", linkID, ext)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah audio"})
+		return
+	}
+
+	audioURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	blockData["audio_url"] = audioURL
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "audio terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "message": "audio berhasil diunggah"})
+}
+
+// DeleteAudio -- mengosongkan audio_url (blok tetap ada, tinggal kosong --
+// kreator bisa unggah audio baru lewat UploadAudio lagi). Soft-fail utk
+// penghapusan objek storage, pola sama seperti DeleteIcon.
+func (h *LinksHandler) DeleteAudio(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	delete(blockData, "audio_url")
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus audio"})
+		return
+	}
+
+	if h.Storage != nil {
+		for ext := range allowedAudioExt {
+			_ = h.Storage.Delete(ctx, fmt.Sprintf("audio-blocks/%s%s", linkID, ext))
+		}
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"message": "audio dihapus dari blok"})
+}
+
+// storageKeyFromPublicURL -- gallery images (beda dari icon/thumbnail/avatar
+// yang key-nya SELALU bisa ditebak dari <linkID>) disimpan dengan UUID acak
+// di key-nya, jadi satu-satunya cara menemukan object yang akan dihapus di
+// storage adalah menurunkan kembali key dari public URL yang tersimpan di
+// block_data.images. Soft-fail dipanggil di sisi pemanggil (DeleteGalleryImage)
+// kalau ini gagal menebak -- kolom DB tetap jadi sumber kebenaran, objek
+// yatim di storage bukan masalah kritis (pola sama seperti soft-fail lain).
+func storageKeyFromPublicURL(s *storage.Client, publicURL string) string {
+	prefix := s.PublicURL("")
+	if !strings.HasPrefix(publicURL, prefix) {
+		return ""
+	}
+	return strings.TrimPrefix(publicURL, prefix)
 }
 
 // Unlock — No.79 (Sprint 9): endpoint PUBLIK, dipanggil dari halaman publik
