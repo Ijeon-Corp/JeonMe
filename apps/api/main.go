@@ -91,8 +91,21 @@ func main() {
 		// URL kedaluwarsa seperti file produk berbayar) -- lihat komentar
 		// storage.Client.EnsurePublicRead. SEMUA prefix WAJIB dikirim dalam
 		// satu panggilan yang sama (SetBucketPolicy menimpa, bukan menambah).
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail tautan: %v", err)
+		//
+		// Bug dilaporkan pengguna, 17 Agustus 2026 ("audio gabisa di play"):
+		// "gallery-images"/"audio-blocks" (blok Galeri Foto/Audio, ditambah
+		// sesi sebelumnya) KETINGGALAN dari daftar ini -- file berhasil
+		// terunggah ke storage TAPI GetObject publik ditolak MinIO (403
+		// AccessDenied, dikonfirmasi lewat curl -I langsung ke object yang
+		// dilaporkan), browser lantas gagal memutar audio dengan pesan
+		// "NotSupportedError: no supported sources" (bukan masalah format
+		// audio -- responsnya memang bukan audio sama sekali, cuma badan
+		// error MinIO). SetBucketPolicy berjalan lagi setiap start-up server
+		// (bukan sekali saat migrasi), jadi begitu prefix ini ditambahkan &
+		// di-deploy, object yang SUDAH terunggah lebih dulu ikut otomatis
+		// bisa diakses publik tanpa perlu diunggah ulang.
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio tautan: %v", err)
 		}
 		cancel()
 	}
