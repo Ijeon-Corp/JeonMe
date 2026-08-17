@@ -135,11 +135,24 @@ export interface QuickSetupTemplateBlock {
 // sebagai contoh jalur berbeda) langsung AKTIF tanpa file -- cocok untuk
 // kasus kumpulkan pembayaran duluan (DP/voucher/pre-order), bukan produk
 // bisa diunduh.
+// coverImagePath -- susulan permintaan pengguna: "buat gambar product nya
+// ambil dari sumber online yang free saja dan jangan 1 product". Foto
+// SUNGGUHAN (bukan placeholder buatan sendiri) dari Wikimedia Commons
+// (lisensi CC0/CC-BY/CC-BY-SA/Public Domain, semuanya bebas dipakai) --
+// diunduh & disimpan statis di public/quick-setup-products/*.jpg (pola
+// SAMA PERSIS dengan wallpaper tema di public/wallpapers/*.jpg: diproses
+// SEKALI lalu jadi aset statis, bukan fetch dari internet tiap kali
+// template diterapkan) supaya tidak bergantung pada ketersediaan/CORS host
+// eksternal saat runtime. Path relatif ke root publik Next.js (dipakai
+// LANGSUNG sebagai <img src>, dan di-fetch same-origin lalu diunggah ulang
+// lewat uploadProductCover saat template diterapkan -- lihat applyTemplate,
+// dashboard/quick-setup/page.tsx).
 export interface QuickSetupTemplateProduct {
   name: string;
   description: string;
   priceIDR: number;
   productKind?: "digital" | "payment_link";
+  coverImagePath?: string;
 }
 
 export interface QuickSetupTemplate {
@@ -496,6 +509,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         name: "Produk Andalan Toko (Contoh)",
         description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
         priceIDR: 50000,
+        coverImagePath: "/quick-setup-products/online-store-1.jpg",
+      },
+      {
+        name: "Produk Terlaris (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 65000,
+        coverImagePath: "/quick-setup-products/online-store-2.jpg",
       },
     ],
   },
@@ -517,6 +537,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         name: "Katalog Koleksi Terbaru (Contoh)",
         description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
         priceIDR: 15000,
+        coverImagePath: "/quick-setup-products/fashion-store-1.jpg",
+      },
+      {
+        name: "Item Best Seller (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 120000,
+        coverImagePath: "/quick-setup-products/fashion-store-2.jpg",
       },
     ],
   },
@@ -535,6 +562,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         name: "E-Katalog Produk Kecantikan (Contoh)",
         description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
         priceIDR: 10000,
+        coverImagePath: "/quick-setup-products/beauty-store-1.jpg",
+      },
+      {
+        name: "Paket Perawatan (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 85000,
+        coverImagePath: "/quick-setup-products/beauty-store-2.jpg",
       },
     ],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
@@ -562,6 +596,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         description: "Ganti dengan voucher/promo aslimu -- produk jenis Payment Link ini langsung aktif tanpa perlu unggah file, cocok utk DP/pre-order.",
         priceIDR: 50000,
         productKind: "payment_link",
+        coverImagePath: "/quick-setup-products/food-beverage-1.jpg",
+      },
+      {
+        name: "Menu Favorit (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 25000,
+        coverImagePath: "/quick-setup-products/food-beverage-2.jpg",
       },
     ],
   },
@@ -580,6 +621,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         name: "Produk Andalan Kamu (Contoh)",
         description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
         priceIDR: 35000,
+        coverImagePath: "/quick-setup-products/small-business-1.jpg",
+      },
+      {
+        name: "Produk Buatan Tangan (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 45000,
+        coverImagePath: "/quick-setup-products/small-business-2.jpg",
       },
     ],
   },
@@ -1093,6 +1141,13 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         name: "Produk Baru Kamu (Contoh)",
         description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
         priceIDR: 75000,
+        coverImagePath: "/quick-setup-products/product-launch-1.jpg",
+      },
+      {
+        name: "Paket Bundling Peluncuran (Contoh)",
+        description: "Ganti dengan produk aslimu -- ini contoh draft, belum aktif sampai kamu unggah file & sesuaikan harga di menu Toko.",
+        priceIDR: 135000,
+        coverImagePath: "/quick-setup-products/product-launch-2.jpg",
       },
     ],
     monetizationHint: "Aktifkan Social Proof di menu Audiens & Pemasaran supaya notifikasi pembelian produkmu tampil ke pengunjung.",

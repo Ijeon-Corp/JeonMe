@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, MyPage, createBlock, createLink, createProduct, deleteLink, getMyPage, listLinks, updateMyPage } from "@/lib/api-client";
+import {
+  ApiError,
+  MyPage,
+  createBlock,
+  createLink,
+  createProduct,
+  deleteLink,
+  getMyPage,
+  listLinks,
+  updateMyPage,
+  uploadProductCover,
+} from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems } from "@/lib/quick-setup-templates";
@@ -66,7 +77,7 @@ function buildPreviewData(t: QuickSetupTemplate, username: string, displayName: 
     // template untuk produk yang siap pakai juga". Mockup mockup memakai id
     // sintetis (nama produk, sama seperti `links` di atas yang pakai title
     // sebagai id) -- belum tersimpan ke mana pun, cuma representasi visual.
-    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR })),
+    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
   };
 }
 
@@ -190,7 +201,25 @@ export default function QuickSetupPage() {
       // adanya, cuma ditambah) -- lihat catatan lengkap di
       // QuickSetupTemplateProduct kenapa ini aman & tidak destruktif.
       for (const p of t.products ?? []) {
-        await createProduct({ name: p.name, description: p.description, price_idr: p.priceIDR, product_kind: p.productKind });
+        const created = await createProduct({ name: p.name, description: p.description, price_idr: p.priceIDR, product_kind: p.productKind });
+        // Sampul produk -- susulan permintaan pengguna: "buat gambar
+        // product nya ambil dari sumber online yang free saja" -- aset
+        // statis SAMA ORIGIN (public/quick-setup-products/*.jpg, lihat
+        // catatan lengkap di QuickSetupTemplateProduct.coverImagePath),
+        // di-fetch sebagai blob lalu diunggah ulang lewat endpoint cover
+        // yang sudah ada (backend butuh multipart file, bukan URL
+        // eksternal). Soft-fail -- produk yang SUDAH dibuat di atas tetap
+        // berhasil walau foto sampulnya gagal terpasang.
+        if (p.coverImagePath) {
+          try {
+            const res = await fetch(p.coverImagePath);
+            const blob = await res.blob();
+            const file = new File([blob], `${p.name}.jpg`, { type: blob.type || "image/jpeg" });
+            await uploadProductCover(created.id, file);
+          } catch {
+            // diamkan -- lihat catatan soft-fail di atas.
+          }
+        }
       }
 
       setApplied(t);
