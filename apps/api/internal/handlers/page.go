@@ -17,7 +17,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/imageconv"
+	"github.com/jeonme/api/internal/instagramoauth"
 	"github.com/jeonme/api/internal/storage"
+	"github.com/jeonme/api/internal/tiktokoauth"
 )
 
 // PageHandler mengimplementasikan REQ-F-201 (halaman publik) dan
@@ -28,10 +30,18 @@ type PageHandler struct {
 	DB      *pgxpool.Pool
 	RDB     *redis.Client
 	Storage *storage.Client
+	// Instagram/TikTok -- Modul Koneksi Sosial (migrasi 000069), di-set
+	// terpisah sesudah NewPageHandler (pola sama seperti AuthHandler.
+	// GoogleOAuth) supaya dipakai GetPublicPage/GetPublicPageBySlug untuk
+	// menampilkan feed (lihat fetchInstagramFeed/fetchTikTokFeed,
+	// social_connect.go). Selalu non-nil, kredensial kosong ditangani
+	// sendiri lewat soft-fail di fungsi itu.
+	Instagram *instagramoauth.Client
+	TikTok    *tiktokoauth.Client
 }
 
 func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *PageHandler {
-	return &PageHandler{DB: db, RDB: rdb, Storage: s3}
+	return &PageHandler{DB: db, RDB: rdb, Storage: s3, Instagram: instagramoauth.NewClient("", ""), TikTok: tiktokoauth.NewClient("", "")}
 }
 
 // publicPageCacheTTL sengaja pendek (bukan invalidate-on-write untuk setiap
@@ -207,6 +217,15 @@ type publicPageResponse struct {
 	// supaya tidak bisa dilewati lewat panggilan API langsung.
 	ShopPaused        bool   `json:"shop_paused"`
 	ShopPausedMessage string `json:"shop_paused_message"`
+	// InstagramFeed/TikTokFeed -- Modul Koneksi Sosial (migrasi 000069),
+	// permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
+	// bisa connect ke akun kita contoh nya instagram tiktok". nil kalau
+	// kreator belum connect platform itu SAMA SEKALI, ATAU kalau
+	// pengambilan feed gagal (soft-fail total, lihat fetchInstagramFeed/
+	// fetchTikTokFeed di social_connect.go) -- halaman publik tetap normal
+	// tanpa widget ini, tidak pernah jadi alasan seluruh halaman gagal.
+	InstagramFeed *PublicSocialFeed `json:"instagram_feed"`
+	TikTokFeed    *PublicSocialFeed `json:"tiktok_feed"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -624,6 +643,12 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			}
 		}
 	}
+
+	// Modul Koneksi Sosial (migrasi 000069) -- lihat catatan lengkap di
+	// publicPageResponse.InstagramFeed/TikTokFeed & fetchInstagramFeed/
+	// fetchTikTokFeed (social_connect.go).
+	resp.InstagramFeed = fetchInstagramFeed(ctx, h.DB, h.RDB, h.Instagram, userID)
+	resp.TikTokFeed = fetchTikTokFeed(ctx, h.DB, h.RDB, h.TikTok, userID)
 
 	var donation publicDonation
 	var minAmount *int64

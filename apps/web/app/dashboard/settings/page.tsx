@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   IconChart,
   IconChevronRight,
+  IconExternal,
   IconGlobe,
   IconPencil,
   IconSearch,
@@ -121,6 +122,18 @@ const SETTINGS_GROUPS: { label: string; items: SettingsItem[] }[] = [
         title: "Analitik",
         description: "Facebook Pixel, Google Analytics, parameter UTM.",
         icon: IconChart,
+        badgeClass: "bg-primary-subtle text-primary",
+      },
+      // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus
+      // 2026: "saya mau jeonme ini bisa connect ke akun kita contoh nya
+      // instagram tiktok" (diriset dulu vs Linktree -- profil + postingan/
+      // video terbaru tampil otomatis di halaman publik, beda dari tautan
+      // Instagram/TikTok biasa yang sudah ada di menu Link Bio).
+      {
+        href: "/dashboard/social-connect",
+        title: "Koneksi Sosial",
+        description: "Sambungkan Instagram/TikTok, tampilkan postingan terbaru otomatis.",
+        icon: IconExternal,
         badgeClass: "bg-primary-subtle text-primary",
       },
     ],

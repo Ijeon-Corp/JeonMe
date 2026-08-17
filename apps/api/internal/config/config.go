@@ -29,6 +29,23 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 
+	// Koneksi Sosial (Instagram/TikTok) -- permintaan langsung pengguna, 17
+	// Agustus 2026: "saya mau jeonme ini bisa connect ke akun kita contoh
+	// nya instagram tiktok". Sama seperti GoogleClientID/Secret di atas --
+	// kosong secara default (soft-fail, lihat internal/instagramoauth &
+	// internal/tiktokoauth), endpoint terkait membalas 501 yang jelas
+	// sampai kredensial ASLI (App ID/Secret dari Meta for Developers,
+	// Client Key/Secret dari TikTok for Developers -- keduanya HANYA bisa
+	// didaftarkan pihak Jeonme sendiri, tidak bisa disintesis) diisi.
+	// TIDAK ada RedirectURI di sini -- pola SAMA PERSIS dengan
+	// GoogleClientID/Secret: frontend menghitung & mengirim redirect_uri
+	// sendiri di tiap permintaan (lihat lib/social-oauth.ts), backend cuma
+	// meneruskannya apa adanya ke penyedia OAuth.
+	InstagramAppID     string
+	InstagramAppSecret string
+	TikTokClientKey    string
+	TikTokClientSecret string
+
 	CORSAllowedOrigins string
 	// HealthToken -- audit keamanan 15 Agustus 2026: rahasia opsional untuk
 	// mengakses /api/health/detail (version git SHA + status DB/Redis). Kosong
@@ -132,6 +149,11 @@ func Load() *Config {
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+
+		InstagramAppID:     getEnv("INSTAGRAM_APP_ID", ""),
+		InstagramAppSecret: getEnv("INSTAGRAM_APP_SECRET", ""),
+		TikTokClientKey:    getEnv("TIKTOK_CLIENT_KEY", ""),
+		TikTokClientSecret: getEnv("TIKTOK_CLIENT_SECRET", ""),
 
 		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 		HealthToken:        getEnv("HEALTH_TOKEN", ""),

@@ -11,9 +11,11 @@ import (
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/googleoauth"
 	"github.com/jeonme/api/internal/handlers"
+	"github.com/jeonme/api/internal/instagramoauth"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/storage"
+	"github.com/jeonme/api/internal/tiktokoauth"
 )
 
 // Register mendaftarkan seluruh route API. Struktur mengikuti pemisahan
@@ -28,6 +30,18 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
 	page := handlers.NewPageHandler(db, rdb, s3)
+	// Modul Koneksi Sosial (migrasi 000069, permintaan langsung pengguna:
+	// "saya mau jeonme ini bisa connect ke akun kita contoh nya instagram
+	// tiktok") -- KEDUA klien (dashboard connect/disconnect DAN feed
+	// publik di GetPublicPage) WAJIB pakai instance yang sama-sama dibuat
+	// dari kredensial yang sama di sini, bukan dua NewClient terpisah yang
+	// kebetulan sama nilainya -- supaya kalau kredensial diubah lewat env
+	// var, tidak ada jalur yang ketinggalan pakai yang lama.
+	socialConnect := handlers.NewSocialConnectHandler(db, rdb)
+	socialConnect.Instagram = instagramoauth.NewClient(cfg.InstagramAppID, cfg.InstagramAppSecret)
+	socialConnect.TikTok = tiktokoauth.NewClient(cfg.TikTokClientKey, cfg.TikTokClientSecret)
+	page.Instagram = socialConnect.Instagram
+	page.TikTok = socialConnect.TikTok
 	product := handlers.NewProductHandler(db, s3, rdb)
 	voucher := handlers.NewVoucherHandler(db)
 	review := handlers.NewReviewHandler(db)
@@ -475,6 +489,19 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// tidak boleh mengubah identitas pemilik).
 			dashboard.GET("/settings/profile", settingsProfile.Get)
 			dashboard.PATCH("/settings/profile", settingsProfile.Update)
+
+			// Modul Koneksi Sosial (migrasi 000069, permintaan langsung
+			// pengguna: "saya mau jeonme ini bisa connect ke akun kita
+			// contoh nya instagram tiktok") -- TIDAK dipasangi ActAsOwner,
+			// sama seperti settings/profile di atas (identitas akun,
+			// kolaborator tidak boleh menyambungkan/memutus akun sosial
+			// pemilik). ConnectInstagram/ConnectTikTok menerima authorization
+			// code (POST, bukan redirect langsung dari server) -- lihat
+			// catatan lengkap pola ini di SocialConnectHandler.ConnectInstagram.
+			dashboard.GET("/social-connect", socialConnect.List)
+			dashboard.POST("/social-connect/instagram", socialConnect.ConnectInstagram)
+			dashboard.POST("/social-connect/tiktok", socialConnect.ConnectTikTok)
+			dashboard.DELETE("/social-connect/:platform", socialConnect.Disconnect)
 
 			// Modul Onboarding: pita pengingat "Tutorial" -- lihat catatan
 			// lingkup lengkap di OnboardingHandler.

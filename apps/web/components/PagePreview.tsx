@@ -19,7 +19,18 @@ import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
 import { PageStickerData, RecentPurchase } from "@/lib/api-client";
-import { IconBadgeCheck, IconBox, IconCalendar, IconChevronRight, IconHeart, IconMail, IconMapPin, IconTrash } from "@/components/icons";
+import {
+  IconBadgeCheck,
+  IconBox,
+  IconCalendar,
+  IconChevronRight,
+  IconHeart,
+  IconInstagram,
+  IconMail,
+  IconMapPin,
+  IconTiktok,
+  IconTrash,
+} from "@/components/icons";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
@@ -78,6 +89,22 @@ export interface PagePreviewProduct {
   // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
   // kategori di grid Produk, lihat renderCategoryTabs di bawah.
   category?: string;
+}
+
+// PagePreviewSocialFeed -- Modul Koneksi Sosial (migrasi 000069). item.url
+// membuka postingan/video ASLI di platform asalnya (tab baru) -- widget
+// ini murni etalase, bukan pemutar/viewer tertanam.
+export interface PagePreviewSocialFeedItem {
+  id: string;
+  thumbnailUrl: string;
+  url: string;
+  caption: string;
+}
+
+export interface PagePreviewSocialFeed {
+  platform: "instagram" | "tiktok";
+  username: string;
+  items: PagePreviewSocialFeedItem[];
 }
 
 export interface PagePreviewWishlistItem {
@@ -198,6 +225,15 @@ export interface PagePreviewData {
   // kontak sosial di bawah bio. Key kosong/tidak ada = platform itu belum
   // diisi, ikonnya tidak dirender (lihat buildFilledSocialLinks).
   social?: Partial<Record<SocialPlatformKey, string>>;
+  // instagramFeed/tiktokFeed -- Modul Koneksi Sosial (migrasi 000069,
+  // permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
+  // bisa connect ke akun kita contoh nya instagram tiktok"). undefined
+  // kalau kreator belum connect platform itu -- lihat renderSocialFeed di
+  // bawah. Cuma dirender di layout bio biasa (BUKAN Toko/ProdukPagePreview
+  // -- ini fitur profil, bukan katalog produk, konsisten dengan cakupan
+  // ProdukPagePreview yang sengaja "TANPA tautan/donasi/dst").
+  instagramFeed?: PagePreviewSocialFeed;
+  tiktokFeed?: PagePreviewSocialFeed;
   // layoutVariant -- permintaan langsung pengguna, 11 Agustus 2026
   // (susulan Quick Setup, "layouting nya juga berbeda"), "card" & "spotlight"
   // ditambah 12 Agustus 2026 (susulan lagi, "tambahkan jenis model layout
@@ -424,6 +460,47 @@ function renderCategoryTabs(categories: string[], selected: string, onSelect: (c
           {c}
         </button>
       ))}
+    </div>
+  );
+}
+
+// renderSocialFeed -- Modul Koneksi Sosial (migrasi 000069, permintaan
+// langsung pengguna: "saya mau jeonme ini bisa connect ke akun kita contoh
+// nya instagram tiktok", diriset dulu vs Linktree: profil + s/d 6
+// postingan/video TERBARU dalam grid 3 kolom, tiap kartu membuka
+// postingan/video ASLI di tab baru -- pola sama seperti Products/Events
+// yang sudah ada). undefined/items kosong -> tidak dirender sama sekali
+// (bukan kartu kosong).
+function renderSocialFeed(feed: PagePreviewSocialFeed | undefined, theme: PageTheme) {
+  if (!feed || feed.items.length === 0) return null;
+  const Icon = feed.platform === "instagram" ? IconInstagram : IconTiktok;
+  return (
+    <div className="mt-8 w-full">
+      <p className={`mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>
+        <Icon className="h-3.5 w-3.5" />
+        {feed.platform === "instagram" ? "Instagram" : "TikTok"} &middot; @{feed.username}
+      </p>
+      <div className="grid w-full grid-cols-3 gap-1.5">
+        {feed.items.map((item) => (
+          <a
+            key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={item.caption}
+            className={`aspect-square overflow-hidden rounded-lg ${theme.card}`}
+          >
+            {item.thumbnailUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.thumbnailUrl} alt={item.caption} loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              <div className={`flex h-full w-full items-center justify-center ${theme.chevron}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+            )}
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1310,6 +1387,9 @@ export default function PagePreview({
             {renderBioHeader(data, theme)}
           </div>
         </div>
+
+        {renderSocialFeed(data.instagramFeed, theme)}
+        {renderSocialFeed(data.tiktokFeed, theme)}
 
         {data.shopPaused && (
           <div className={`mt-6 w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>

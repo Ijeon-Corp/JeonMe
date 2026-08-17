@@ -137,6 +137,23 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             externalUrl: p.external_url,
             category: p.category,
           })),
+          // instagramFeed/tiktokFeed -- Modul Koneksi Sosial (migrasi
+          // 000069, permintaan langsung pengguna: "saya mau jeonme ini
+          // bisa connect ke akun kita contoh nya instagram tiktok").
+          instagramFeed: page.instagram_feed
+            ? {
+                platform: page.instagram_feed.platform,
+                username: page.instagram_feed.username,
+                items: page.instagram_feed.items.map((i) => ({ id: i.id, thumbnailUrl: i.thumbnail_url, url: i.url, caption: i.caption })),
+              }
+            : undefined,
+          tiktokFeed: page.tiktok_feed
+            ? {
+                platform: page.tiktok_feed.platform,
+                username: page.tiktok_feed.username,
+                items: page.tiktok_feed.items.map((i) => ({ id: i.id, thumbnailUrl: i.thumbnail_url, url: i.url, caption: i.caption })),
+              }
+            : undefined,
           donation: page.donation
             ? {
                 productId: page.donation.product_id,

@@ -242,6 +242,22 @@ export interface PageStickerData {
   scale: number;
 }
 
+// PublicSocialFeed/PublicSocialFeedItem -- Modul Koneksi Sosial (migrasi
+// 000069). item.url membuka postingan/video ASLI di platform asalnya
+// (Instagram permalink / TikTok share_url) saat diklik.
+export interface PublicSocialFeedItem {
+  id: string;
+  thumbnail_url: string;
+  url: string;
+  caption: string;
+}
+
+export interface PublicSocialFeed {
+  platform: "instagram" | "tiktok";
+  username: string;
+  items: PublicSocialFeedItem[];
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -319,6 +335,13 @@ export interface PublicPage {
   // menyembunyikan tombol beli & menampilkan pesannya di frontend.
   shop_paused: boolean;
   shop_paused_message: string;
+  // instagram_feed/tiktok_feed -- Modul Koneksi Sosial (migrasi 000069,
+  // permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
+  // bisa connect ke akun kita contoh nya instagram tiktok"). null kalau
+  // kreator belum connect platform itu ATAU pengambilan feed gagal
+  // (soft-fail, lihat fetchInstagramFeed/fetchTikTokFeed di social_connect.go).
+  instagram_feed: PublicSocialFeed | null;
+  tiktok_feed: PublicSocialFeed | null;
   // social_instagram..social_email -- permintaan langsung pengguna, 11
   // Agustus 2026: baris ikon kontak sosial di bawah bio halaman publik.
   // String kosong = platform itu belum diisi kreator, ikonnya tidak
@@ -434,6 +457,44 @@ export function googleLogin(input: { code: string; redirect_uri: string }) {
 
 export function logout() {
   return apiFetch<{ message: string }>("/auth/logout", { method: "POST" }, { auth: true });
+}
+
+// ---------- Modul Koneksi Sosial (Instagram/TikTok) ----------
+// Permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini bisa
+// connect ke akun kita contoh nya instagram tiktok". BEDA dari googleLogin
+// di atas -- endpoint ini selalu dipanggil LEWAT permintaan yang sudah
+// terautentikasi (auth: true), menyambungkan ke akun yang SUDAH login,
+// bukan membuat/mencari akun baru.
+
+export interface SocialConnection {
+  platform: "instagram" | "tiktok";
+  external_username: string;
+  avatar_url: string;
+  connected_at: string;
+}
+
+export function listSocialConnections() {
+  return apiFetch<SocialConnection[]>("/dashboard/social-connect", { method: "GET" }, { auth: true });
+}
+
+export function connectInstagram(input: { code: string; redirect_uri: string }) {
+  return apiFetch<{ message: string; username: string }>(
+    "/dashboard/social-connect/instagram",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function connectTikTok(input: { code: string; redirect_uri: string }) {
+  return apiFetch<{ message: string; username: string }>(
+    "/dashboard/social-connect/tiktok",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+export function disconnectSocial(platform: "instagram" | "tiktok") {
+  return apiFetch<{ message: string }>(`/dashboard/social-connect/${platform}`, { method: "DELETE" }, { auth: true });
 }
 
 export function requestPasswordReset(email: string) {
