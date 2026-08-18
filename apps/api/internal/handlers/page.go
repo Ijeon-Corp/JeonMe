@@ -2021,8 +2021,10 @@ type updateExtraPageRequest struct {
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
 	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse
-	// (page.go) & renderProductGrid (PagePreview.tsx).
-	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked"`
+	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
+	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
+	// kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
+	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap

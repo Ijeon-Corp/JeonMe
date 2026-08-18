@@ -205,8 +205,10 @@ export interface PagePreviewData {
   // pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
   // 'stacked' (1 kolom penuh lebar). Cuma dipakai renderProductGrid
   // (khusus ProdukPagePreview/Halaman Toko sejak grid Produk dihapus dari
-  // Bio) -- undefined/nilai lain jatuh balik ke 'grid'.
-  productLayout?: "grid" | "stacked";
+  // Bio) -- undefined/nilai lain jatuh balik ke 'grid'. 'category' --
+  // susulan 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
+  // kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
+  productLayout?: "grid" | "stacked" | "category";
   events?: PagePreviewEvent[];
   bookings?: PagePreviewBooking[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
@@ -320,7 +322,7 @@ interface PreviewSourcePage {
   social_telegram?: string;
   social_email?: string;
   layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
-  product_layout?: "grid" | "stacked";
+  product_layout?: "grid" | "stacked" | "category";
 }
 
 interface PreviewSourceLink {
@@ -558,6 +560,20 @@ function renderProductGrid(
   onSelectCategory: (c: string) => void
 ) {
   const gridColsClass = data.productLayout === "stacked" ? "grid-cols-1" : "grid-cols-2";
+  // categoryLayout -- permintaan langsung pengguna, 20 Agustus 2026: "bagian
+  // produk bisa ga dibuat layout baru di kelompokan seperti ini, misal ada
+  // blok sepatu, baju, celana ketika di klik blok sepatu maka akan muncul
+  // semua product sepatu nya" -- opsi layout KETIGA (di samping grid/stacked
+  // yang sudah ada, lihat migrasi 000072/000073). Sengaja REUSE state
+  // selectedCategory/onSelectCategory yang SUDAH ADA (dipakai renderCategoryTabs
+  // untuk grid/stacked) alih-alih state baru: "Semua" = tampilkan blok
+  // kategori (bukan tab+grid biasa), pilih kategori = drill-down ke grid
+  // produk kategori itu (kode grid di bawah TIDAK berubah sama sekali),
+  // klik tab "Semua" di situ otomatis jadi tombol "kembali" ke blok --
+  // gratis dari renderCategoryTabs yang sudah ada, tanpa tombol back terpisah.
+  const categoryLayout = data.productLayout === "category";
+  const categories = getProductCategories(data.products);
+  const uncategorized = data.products.filter((p) => !p.category || !p.category.trim());
 
   function trackProductClick(productId: string) {
     if (data.pageSlug) {
@@ -567,12 +583,67 @@ function renderProductGrid(
     }
   }
 
+  if (categoryLayout && selectedCategory === "Semua") {
+    // "Lainnya" -- bucket produk TANPA kategori diisi, supaya tidak
+    // menghilang begitu saja di layout ini (beda dari tab grid/stacked biasa
+    // yang tetap menampilkannya di tab "Semua" -- di sini "Semua" JADI
+    // tampilan blok, jadi produk tanpa kategori butuh blok sendiri).
+    const blocks = [
+      ...categories.map((c) => ({ name: c, items: data.products.filter((p) => p.category?.trim() === c) })),
+      ...(uncategorized.length > 0 ? [{ name: "Lainnya", items: uncategorized }] : []),
+    ];
+    if (blocks.length > 0) {
+      return (
+        <div className={`grid w-full ${gridColsClass} gap-3`}>
+          {blocks.map((b) => {
+            const cover = b.items.find((p) => p.cover_image_url)?.cover_image_url;
+            return (
+              <button
+                key={b.name}
+                type="button"
+                onClick={() => onSelectCategory(b.name)}
+                className={`flex flex-col rounded-xl p-2.5 text-left ${theme.productCard}`}
+              >
+                <div className={`relative mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cover} alt={b.name} loading="lazy" className="h-full w-full rounded-xl object-cover" />
+                  ) : (
+                    <IconBox className={`h-6 w-6 ${theme.chevron}`} />
+                  )}
+                  <span className={`absolute bottom-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full ${theme.card}`}>
+                    <IconChevronRight className={`h-3 w-3 ${theme.chevron}`} />
+                  </span>
+                </div>
+                <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{b.name}</p>
+                <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{b.items.length} produk</p>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+  }
+
+  const tabCategories = categoryLayout && uncategorized.length > 0 ? [...categories, "Lainnya"] : categories;
+
   return (
     <>
-      {renderCategoryTabs(getProductCategories(data.products), selectedCategory, onSelectCategory, theme)}
+      {renderCategoryTabs(tabCategories, selectedCategory, onSelectCategory, theme)}
       <div className={`grid w-full ${gridColsClass} gap-3`}>
         {data.products
-          .filter((p) => selectedCategory === "Semua" || p.category === selectedCategory)
+          .filter((p) =>
+            selectedCategory === "Semua"
+              ? true
+              : // "Lainnya" cuma jadi bucket sentinel produk tanpa kategori
+                // KHUSUS layout "category" (lihat blocks di atas) -- di
+                // grid/stacked, "Lainnya" tetap dibandingkan sebagai nama
+                // kategori LITERAL seperti biasa (kreator mungkin saja
+                // benar-benar menamai kategorinya sendiri "Lainnya").
+                categoryLayout && selectedCategory === "Lainnya"
+              ? !p.category || !p.category.trim()
+              : p.category === selectedCategory
+          )
           .map((product) => {
             const cover = (
               <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>

@@ -263,15 +263,26 @@ export default function ProdukPageEditor({
             1 product tampil memenuhi 1 baris jika ada 2 product berarti
             ada dibawah nya". Cuma relevan di sini (Halaman Toko) --
             grid Produk sudah tidak lagi dirender di halaman Bio sama
-            sekali (lihat PagePreview.tsx). */}
+            sekali (lihat PagePreview.tsx).
+
+            Opsi ketiga "category" -- susulan 20 Agustus 2026: "bagian
+            produk bisa ga dibuat layout baru di kelompokan seperti ini,
+            misal ada blok sepatu, baju, celana ketika di klik blok sepatu
+            maka akan muncul semua product sepatu nya" -- blok per kategori,
+            klik untuk drill-down (lihat renderProductGrid, PagePreview.tsx).
+            Perbandingan aktif diubah jadi kesetaraan EKSPLISIT per opsi
+            (bukan `!== "stacked"` seperti sebelumnya) supaya opsi ketiga ini
+            tidak ikut salah ke-highlight sebagai "Grid 2 Kolom". */}
         <div className="mt-4">
           <p className="text-sm font-semibold text-ink">Tata Letak Produk</p>
-          <div className="mt-1.5 flex gap-1.5">
+          <div className="mt-1.5 flex flex-col gap-1.5 sm:flex-row">
             <button
               type="button"
               onClick={() => handlePatch({ product_layout: "grid" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout !== "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+                !page.product_layout || page.product_layout === "grid"
+                  ? "border-primary bg-primary-subtle text-primary"
+                  : "border-border text-muted hover:text-ink"
               }`}
             >
               Grid 2 Kolom
@@ -285,7 +296,22 @@ export default function ProdukPageEditor({
             >
               1 Kolom Penuh
             </button>
+            <button
+              type="button"
+              onClick={() => handlePatch({ product_layout: "category" })}
+              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
+                page.product_layout === "category" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+              }`}
+            >
+              Blok Kategori
+            </button>
           </div>
+          {page.product_layout === "category" && (
+            <p className="mt-1.5 text-[11px] text-muted">
+              Pengunjung melihat blok kategori dulu (mis. Sepatu, Baju, Celana) -- klik satu blok untuk lihat semua produk di
+              kategori itu. Pastikan produkmu sudah diberi kategori lewat menu Kelola supaya masuk ke blok yang tepat.
+            </p>
+          )}
         </div>
       </section>
 
