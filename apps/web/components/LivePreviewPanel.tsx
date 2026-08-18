@@ -37,7 +37,19 @@ export default function LivePreviewPanel({
   onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   return (
-    <div className="mt-8 lg:sticky lg:top-6 lg:mt-0">
+    // min-w-0 (bug overflow horizontal, 18 Agustus 2026): panel ini SELALU
+    // diletakkan sebagai kolom kedua grid "[1fr_360px]" di ketiga halaman
+    // pemakainya (Link Bio, Toko, Desain) -- grid item defaultnya
+    // min-width:auto (pola berulang di repo ini, lihat CLAUDE.md), menolak
+    // menyusut di bawah lebar intrinsik kontennya. Kotak mockup di dalam
+    // sini pakai trik CSS `zoom:0.72` (bukan transform:scale) supaya
+    // PagePreview versi PENUH (max-w-md=448px) terlihat kecil -- tapi
+    // perhitungan lebar intrinsik grid item BISA memakai lebar SEBELUM
+    // zoom diterapkan, jauh melebihi track 360px, memaksa seluruh kolom
+    // (dan halaman) melebar ke kanan. min-w-0 memaksa item ini benar-benar
+    // menyusut ke lebar track yang dialokasikan, membiarkan overflow-y-auto/
+    // overflow-x internal kotak mockup yang menangani sisanya.
+    <div className="mt-8 min-w-0 lg:sticky lg:top-6 lg:mt-0">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Langsung</p>
         {page && (
