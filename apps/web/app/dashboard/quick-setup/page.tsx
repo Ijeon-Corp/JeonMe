@@ -12,6 +12,7 @@ import {
   getMyPage,
   listLinks,
   updateMyPage,
+  updateProduct,
   uploadProductCover,
 } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
@@ -210,14 +211,32 @@ export default function QuickSetupPage() {
         // yang sudah ada (backend butuh multipart file, bukan URL
         // eksternal). Soft-fail -- produk yang SUDAH dibuat di atas tetap
         // berhasil walau foto sampulnya gagal terpasang.
+        let coverUploaded = false;
         if (p.coverImagePath) {
           try {
             const res = await fetch(p.coverImagePath);
             const blob = await res.blob();
             const file = new File([blob], `${p.name}.jpg`, { type: blob.type || "image/jpeg" });
             await uploadProductCover(created.id, file);
+            coverUploaded = true;
           } catch {
             // diamkan -- lihat catatan soft-fail di atas.
+          }
+        }
+        // Aktivasi payment_link -- perbaikan 19 Agustus 2026: sebelumnya
+        // produk payment_link (satu-satunya template food-beverage) aktif
+        // OTOMATIS begitu dibuat, tidak butuh file. Sejak sampul jadi wajib
+        // untuk SEMUA jenis produk (product.go, permintaan langsung
+        // pengguna "sampul jangan dijadikan opsional"), Create tidak lagi
+        // mengaktifkan payment_link otomatis -- tanpa baris ini, produk
+        // contoh food-beverage akan diam-diam jadi draft (regresi dari
+        // perilaku sebelumnya), padahal sampulnya SUDAH ada di sini.
+        if (p.productKind === "payment_link" && coverUploaded) {
+          try {
+            await updateProduct(created.id, { is_active: true });
+          } catch {
+            // soft-fail -- produk tetap ada sebagai draft, kreator bisa
+            // aktifkan manual lewat Manage Items kalau ini gagal.
           }
         }
       }
