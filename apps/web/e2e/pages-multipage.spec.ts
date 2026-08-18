@@ -21,7 +21,7 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.locator('input[type="text"]').first().fill("Toko Utama E2E");
     await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
     await expect(page.getByText("Toko Utama E2E")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(`jeonme.com/p/${username}`)).toBeVisible();
+    await expect(page.getByText(`jeon.id/p/${username}`)).toBeVisible();
 
     // Jatah gratis (1 Halaman Produk, 0 Bio/Landing) sudah habis -- tombol
     // "Buat Halaman Baru" digantikan blok "jatah habis" + CTA upgrade
@@ -57,7 +57,7 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
 
     await expect(page.getByText(pageName)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(`jeonme.com/p/${slug}`)).toBeVisible();
+    await expect(page.getByText(`jeon.id/p/${slug}`)).toBeVisible();
     await expect(page.getByText("1/5 Bio/Landing")).toBeVisible();
   });
 });

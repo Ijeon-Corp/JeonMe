@@ -13,7 +13,7 @@ test.describe("Autentikasi", () => {
     await expect(page).toHaveURL(/\/dashboard$/);
     // Chip "halaman publikmu" di sidebar membuktikan sesi tersimpan &
     // getMyPage() sukses dipanggil dengan token yang baru didapat.
-    await expect(page.getByText(`jeonme.com/${username}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(`jeon.id/${username}`)).toBeVisible({ timeout: 10000 });
   });
 
   test("logout menghapus sesi dan kembali ke /login", async ({ page }) => {

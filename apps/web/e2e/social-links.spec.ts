@@ -18,7 +18,7 @@ test.describe("Kontak Sosial", () => {
 
     await page.getByPlaceholder(/Instagram/).fill("jeonme.official");
     await page.getByPlaceholder(/WhatsApp/).fill("6281234567890");
-    await page.getByPlaceholder(/^Email/).fill("halo@jeonme.com");
+    await page.getByPlaceholder(/^Email/).fill("halo@jeon.id");
     // TikTok SENGAJA dibiarkan kosong -- verifikasi ikonnya TIDAK ikut
     // dirender (platform kosong = tidak tampil, bukan ikon nonaktif).
     await page.getByRole("button", { name: /^simpan$/i }).click();
@@ -35,7 +35,7 @@ test.describe("Kontak Sosial", () => {
         timeout: 3000,
       });
       await expect(page.locator('a[title="WhatsApp"]')).toHaveAttribute("href", "https://wa.me/6281234567890", { timeout: 3000 });
-      await expect(page.locator('a[title="Email"]')).toHaveAttribute("href", "mailto:halo@jeonme.com", { timeout: 3000 });
+      await expect(page.locator('a[title="Email"]')).toHaveAttribute("href", "mailto:halo@jeon.id", { timeout: 3000 });
       await expect(page.locator('a[title="TikTok"]')).toHaveCount(0);
     }).toPass({ timeout: 75000, intervals: [5000] });
   });

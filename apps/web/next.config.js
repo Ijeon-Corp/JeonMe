@@ -55,7 +55,7 @@ const CONNECT_SRC = API_ORIGIN ? `'self' ${API_ORIGIN}` : "'self'";
 // (baru ditambahkan sesi ini) benar-benar dipakai --
 // 1. Tidak ada `media-src` sama sekali -> jatuh balik ke `default-src
 //    'self'`, blok elemen <audio> (AudioPlayerBlock.tsx) yang src-nya
-//    SELALU cross-origin (storage.jeonme.com/storage-staging.jeonme.com,
+//    SELALU cross-origin (storage.jeon.id/storage-staging.jeon.id,
 //    domain object storage terpisah dari domain web ini, sama seperti
 //    `img-src` yang sudah lebih dulu perlu `https:` bukan cuma 'self'
 //    untuk alasan yang sama).
