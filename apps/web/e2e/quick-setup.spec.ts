@@ -342,4 +342,60 @@ test.describe("Quick Setup", () => {
       expect(avatarBox!.height).toBeLessThan(50);
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
+
+  test("template diterapkan ke Bio juga menyinkronkan tema Halaman Toko yang sudah ada", async ({ page }) => {
+    // Toko & Bio SEKARANG halaman terpisah (grid Produk dihapus total dari
+    // Bio, lihat products-checkout.spec.ts) -- permintaan langsung
+    // pengguna, 19 Agustus 2026: "karena page link bio dan toko terpisah
+    // saya mau buatkan juga template quick setup untuk page toko nya".
+    // Template pertama ("Online Store", tema Peach) bikin Toko AUTO lewat
+    // produk contohnya (ensureProdukPage, backend). Template KEDUA ("Small
+    // Business", tema Mint) sendiri tidak menyebut Toko sama sekali di
+    // datanya -- tapi applyTemplate (dashboard/quick-setup/page.tsx) tetap
+    // HARUS menyamakan tema Toko yang SUDAH ADA itu ke Mint juga, dicek
+    // langsung di halaman Toko publik /p/{username}, bukan cuma Bio.
+    const { username } = await registerAndLogin(page, "quicksetup10");
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("online store");
+    await page.getByText("Online Store", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    // Tema Peach -- "bg-gradient-to-b from-orange-50 via-amber-50 to-white"
+    // (lib/page-themes.ts) -- ikut tersalin ke Toko AUTO begitu terbuat
+    // (ensureProdukPage menyalin tema Bio saat itu juga), jadi harusnya
+    // SUDAH Peach sejak awal, sebelum template kedua di bawah sama sekali.
+    await expect(async () => {
+      await page.goto(`/p/${username}`);
+      const html = await page.content();
+      expect(html).toContain("from-orange-50");
+    }).toPass({ timeout: 75000, intervals: [5000] });
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("small business");
+    await page.getByText("Small Business", { exact: true }).click();
+
+    // Modal pratinjau HARUS sudah memberi tahu soal ini SEBELUM diterapkan
+    // (tokoPage dari fetchMyPageAndToko sudah menemukan Toko auto di atas).
+    await expect(page.getByText(/tema halaman toko-mu juga akan ikut disesuaikan/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    // Dialog konfirmasi destruktif muncul (sudah ada tautan dari Online
+    // Store sebelumnya).
+    await page.getByRole("button", { name: "Ya, Ganti" }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/tema halaman toko-mu juga sudah ikut disesuaikan/i)).toBeVisible();
+
+    // Tema Mint -- "bg-gradient-to-br from-emerald-800 via-teal-800 to-cyan-800"
+    // -- Toko yang SUDAH ADA (bukan baru dibuat kali ini) ikut berubah,
+    // membuktikan updateExtraPage benar-benar dipanggil, bukan cuma
+    // mengandalkan penyalinan awal ensureProdukPage (yang tidak akan
+    // terpicu lagi -- Toko-nya sudah ada dari langkah sebelumnya).
+    await expect(async () => {
+      await page.goto(`/p/${username}`);
+      const html = await page.content();
+      expect(html).toContain("from-emerald-800");
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
 });

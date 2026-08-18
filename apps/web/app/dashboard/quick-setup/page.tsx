@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
+  ExtraPage,
   MyPage,
   createBlock,
   createLink,
@@ -11,6 +12,8 @@ import {
   deleteLink,
   getMyPage,
   listLinks,
+  listMyExtraPages,
+  updateExtraPage,
   updateMyPage,
   updateProduct,
   uploadProductCover,
@@ -82,6 +85,29 @@ function buildPreviewData(t: QuickSetupTemplate, username: string, displayName: 
   };
 }
 
+// pickAutoTokoPage -- Toko PERTAMA/auto tiap akun slug-nya SELALU =
+// username (ensureProdukPage, backend), beda dari Toko ke-2..5 (khusus
+// Premium, multi-brand, slug bebas sengaja dikustomisasi terpisah) --
+// HANYA Toko auto yang ikut disinkronkan tema Quick Setup di bawah,
+// supaya brand kedua/ketiga dst Premium tidak dipaksa ikut tema Bio.
+function pickAutoTokoPage(pages: ExtraPage[], username: string): ExtraPage | null {
+  return pages.find((p) => p.page_type === "produk" && p.slug === username) ?? null;
+}
+
+// fetchMyPageAndToko -- pengambil-data MURNI (tanpa setState), dipisah dari
+// efek yang memanggilnya supaya lolos aturan react-hooks/set-state-in-effect
+// (lihat pola resmi di CLAUDE.md) -- dipakai HANYA untuk memberi tahu di
+// modal pratinjau kalau kreator ini sudah punya Toko auto, yang berarti
+// temanya juga akan ikut disesuaikan begitu template diterapkan (lihat
+// applyTemplate). Cek ULANG yang OTORITATIF (bukan pakai state basi ini)
+// tetap dilakukan di applyTemplate sendiri saat benar-benar diterapkan.
+async function fetchMyPageAndToko(): Promise<{ page: MyPage | null; tokoPage: ExtraPage | null }> {
+  const page = await getMyPage().catch(() => null);
+  if (!page) return { page: null, tokoPage: null };
+  const pages = await listMyExtraPages().catch(() => [] as ExtraPage[]);
+  return { page, tokoPage: pickAutoTokoPage(pages, page.username) };
+}
+
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
 // menu saja seperti quick setup dan user disuruh pilih jenis template...
 // template ini bukan hanya visual tapi juga blok layout dll". Lihat catatan
@@ -104,12 +130,23 @@ export default function QuickSetupPage() {
   // kreator belum mengisi nama tampilan, jatuh ke placeholder "Nama Kamu"
   // (lihat buildPreviewData), BUKAN ke username seperti sebelumnya.
   const [myPage, setMyPage] = useState<MyPage | null>(null);
+  // tokoPage -- permintaan langsung pengguna, 19 Agustus 2026: "karena page
+  // link bio dan toko terpisah saya mau buatkan juga template quick setup
+  // untuk page toko nya". Toko AUTO kreator ini (kalau sudah ada) -- cuma
+  // dipakai untuk catatan informatif di modal pratinjau ("tema Toko-mu juga
+  // akan disesuaikan"), logika penerapan sesungguhnya di applyTemplate cek
+  // ulang sendiri, tidak mengandalkan state ini.
+  const [tokoPage, setTokoPage] = useState<ExtraPage | null>(null);
+  const [tokoSynced, setTokoSynced] = useState(false);
+
+  const applyMyPageAndToko = useCallback((result: { page: MyPage | null; tokoPage: ExtraPage | null }) => {
+    setMyPage(result.page);
+    setTokoPage(result.tokoPage);
+  }, []);
 
   useEffect(() => {
-    getMyPage()
-      .then(setMyPage)
-      .catch(() => {});
-  }, []);
+    fetchMyPageAndToko().then(applyMyPageAndToko);
+  }, [applyMyPageAndToko]);
 
   // Permintaan langsung pengguna: "harusnya saat pilih template kasih
   // liat preview nyaa" -- mockup VISUAL (komponen PagePreview yang sama
@@ -144,13 +181,21 @@ export default function QuickSetupPage() {
       // ada isi yang bakal hilang (skip dialog kalau memang belum ada
       // tautan sama sekali, tidak ada yang perlu dikonfirmasi).
       const existing = await listLinks();
+      const page = await getMyPage();
+      const extraPagesBefore = await listMyExtraPages().catch(() => [] as ExtraPage[]);
+      const tokoBefore = pickAutoTokoPage(extraPagesBefore, page.username);
+
       if (existing.length > 0) {
         // Produk (kalau template ini punya) SENGAJA tidak disebut sebagai
         // sesuatu yang "diganti" -- beda dari tautan/blok, produk baru
         // MENAMBAH ke daftar produk yang sudah ada, bukan menimpanya.
         const productNote = t.products && t.products.length > 0 ? ` Template ini juga akan menambah ${t.products.length} produk contoh (draft) di menu Toko.` : "";
+        // tokoNote -- permintaan langsung pengguna: "buatkan juga template
+        // quick setup untuk page toko nya" -- lihat catatan lengkap di
+        // pickAutoTokoPage/fetchMyPageAndToko soal kenapa cuma Toko auto.
+        const tokoNote = tokoBefore ? " Tema Halaman Toko-mu juga akan ikut disesuaikan mengikuti tema template ini." : "";
         const ok = await confirmDelete(
-          `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.${productNote}`,
+          `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.${productNote}${tokoNote}`,
           { title: "Ganti semua tautan?", confirmButtonText: "Ya, Ganti" }
         );
         if (!ok) return;
@@ -163,10 +208,12 @@ export default function QuickSetupPage() {
       }
 
       // Bio kreator yang SUDAH diisi tidak boleh ditimpa diam-diam --
-      // saran bio template cuma dipakai kalau bio masih kosong.
+      // saran bio template cuma dipakai kalau bio masih kosong. `page`
+      // dari fetch di atas (sebelum dialog konfirmasi) dipakai lagi di sini
+      // -- bio tidak realistis berubah selagi dialog konfirmasi terbuka di
+      // tab yang sama, jadi tidak perlu fetch ulang.
       // layout_variant SELALU ikut diterapkan (bukan cuma kalau bio
       // kosong) -- ini bagian dari "bentuk" template, sama seperti tema.
-      const page = await getMyPage();
       const layoutVariant = t.layoutVariant ?? "centered";
       await updateMyPage(
         page.bio.trim() ? { theme: t.theme, layout_variant: layoutVariant } : { theme: t.theme, bio: t.bio, layout_variant: layoutVariant }
@@ -241,6 +288,30 @@ export default function QuickSetupPage() {
         }
       }
 
+      // Sinkron tema Halaman Toko -- permintaan langsung pengguna, 19
+      // Agustus 2026: "karena page link bio dan toko terpisah saya mau
+      // buatkan juga template quick setup untuk page toko nya". Toko punya
+      // theme/layout_variant sendiri (page_type='produk', paritas penuh
+      // dengan builder Bio lewat ProdukPageEditor, lihat CLAUDE.md) --
+      // begitu template diterapkan ke Bio, Toko AUTO kreator ini (kalau
+      // sudah ada, lihat pickAutoTokoPage) ikut disamakan temanya supaya
+      // kedua halaman tetap satu identitas visual walau sekarang route-nya
+      // terpisah. Lookup diulang di sini (bukan pakai tokoBefore) supaya
+      // Toko yang BARU SAJA otomatis terbuat (ensureProdukPage, dipicu
+      // produk pertama loop di atas) juga tercakup, bukan cuma yang sudah
+      // ada sebelum template ini diterapkan.
+      const extraPagesAfter = await listMyExtraPages().catch(() => [] as ExtraPage[]);
+      const tokoAfter = pickAutoTokoPage(extraPagesAfter, page.username);
+      if (tokoAfter) {
+        try {
+          await updateExtraPage(tokoAfter.id, { theme: t.theme, layout_variant: layoutVariant });
+        } catch {
+          // soft-fail -- Bio & produk tetap berhasil diterapkan, kreator
+          // bisa samakan tema Toko manual lewat menu Produk kalau ini gagal.
+        }
+      }
+      setTokoSynced(tokoAfter !== null);
+
       setApplied(t);
       setSelected(null);
     } catch (err) {
@@ -266,6 +337,9 @@ export default function QuickSetupPage() {
             {applied.products.length} produk contoh (draft) juga sudah dibuat di menu Toko -- belum aktif/bisa dibeli sampai kamu
             unggah file & sesuaikan nama/harganya.
           </p>
+        )}
+        {tokoSynced && (
+          <p className="mt-2 text-sm text-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan mengikuti template ini.</p>
         )}
         {applied.monetizationHint && (
           <p className="mt-3 rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{applied.monetizationHint}</p>
@@ -413,6 +487,9 @@ export default function QuickSetupPage() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Tema</p>
                   <p className="mt-0.5 text-ink">{PAGE_THEMES[selected.theme as keyof typeof PAGE_THEMES]?.label ?? selected.theme}</p>
+                  {tokoPage && (
+                    <p className="mt-0.5 text-[11px] text-muted">Tema Halaman Toko-mu juga akan ikut disesuaikan.</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
