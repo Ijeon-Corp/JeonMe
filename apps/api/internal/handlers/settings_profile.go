@@ -175,7 +175,7 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 
 	// Modul Halaman Produk: Toko pertama (auto) pakai slug = username --
 	// kalau username-nya baru saja diganti, ikutkan slug Toko supaya
-	// tetap konsisten (jeonme.com/p/{username baru}). Cek "slug = username
+	// tetap konsisten (jeon.id/p/{username baru}). Cek "slug = username
 	// LAMA" sebagai penanda "ini memang Toko auto", bukan Toko ke-2..5
 	// Premium yang sengaja dikustomisasi slugnya sendiri -- best-effort,
 	// gagal diam-diam kalau slug baru kebetulan sudah dipakai halaman lain.

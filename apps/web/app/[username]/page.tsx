@@ -5,6 +5,7 @@ import AnalyticsScripts from "@/components/AnalyticsScripts";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
+import { SITE_URL } from "@/lib/site";
 
 type PageParams = {
   params: Promise<{ username: string }>;
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     openGraph: {
       title,
       description,
-      url: `https://jeonme.com/${page.username}`,
+      url: `${SITE_URL}/${page.username}`,
       siteName: "Jeonme",
       images: page.avatar_url ? [{ url: page.avatar_url }] : undefined,
       type: "profile",

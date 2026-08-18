@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
 
 // Perbaikan SEO (temuan audit, 15 Agustus 2026): melengkapi sitemap.ts di
 // atas -- rute privat/aplikasi (dashboard, admin, auth callback, API
@@ -7,7 +8,6 @@ import type { MetadataRoute } from "next";
 // crawling. TIDAK menambahkan aturan khusus AI-training (mis. blokir
 // GPTBot) -- itu keputusan kebijakan/bisnis di luar cakupan perbaikan
 // teknis ini, biarkan default (diizinkan) sampai ada keputusan eksplisit.
-const SITE_URL = "https://jeonme.com";
 
 export default function robots(): MetadataRoute.Robots {
   return {

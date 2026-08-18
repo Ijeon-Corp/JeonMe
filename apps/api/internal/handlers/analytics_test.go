@@ -28,7 +28,7 @@ func newTestAnalyticsHandler(t *testing.T) (*AnalyticsHandler, *AuthHandler) {
 	}
 	t.Cleanup(func() { rdb.Close() })
 
-	return NewAnalyticsHandler(db, testEncryptionKey), NewAuthHandler(db, rdb, "test-secret", "test")
+	return NewAnalyticsHandler(db, testEncryptionKey, "http://localhost:3000"), NewAuthHandler(db, rdb, "test-secret", "test")
 }
 
 // Track mencatat view & click, GetSummary menghitungnya dengan benar --

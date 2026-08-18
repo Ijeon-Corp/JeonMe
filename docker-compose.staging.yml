@@ -4,7 +4,7 @@
 # service nginx/certbot sendiri -- port 80/443 host sudah dipakai Apache
 # untuk domain lain dan tidak boleh direbut. web/api di-bind HANYA ke
 # 127.0.0.1 (tidak pernah expose ke publik langsung), lalu Apache di level
-# sistem yang mem-proxy domain staging.jeonme.com ke port-port ini.
+# sistem yang mem-proxy domain staging.jeon.id ke port-port ini.
 
 # Driver log default (json-file) TIDAK punya batas ukuran kalau tidak
 # dikonfigurasi -- bisa memenuhi disk pelan-pelan di server yang jalan lama.
@@ -93,7 +93,7 @@ services:
   #
   # Port 29100 (BUKAN default 9000 -- bentrok dengan MinIO tenant lain di VPS
   # shared ini, lihat bug #14 katalog CICD-GUIDE.md) di-bind ke 127.0.0.1 saja,
-  # diproxy Apache lewat storage-staging.jeonme.com dengan TLS -- supaya signed
+  # diproxy Apache lewat storage-staging.jeon.id dengan TLS -- supaya signed
   # download URL produk (REQ-F-304) bisa diakses dari luar VPS, bukan cuma
   # lewat jaringan Docker internal yang dipakai api (host "minio", port 9000).
   minio:

@@ -134,7 +134,7 @@ func (h *CustomDomainHandler) Set(c *gin.Context) {
 // CNAME domain harus mengarah ke CnameTarget, DAN TXT record
 // _jeonme-verify.{domain} harus berisi token yang sama seperti yang
 // ditampilkan di dashboard. Keduanya wajib lolos -- CNAME saja tidak cukup
-// karena siapa pun bisa mengarahkan CNAME ke jeonme.com tanpa benar-benar
+// karena siapa pun bisa mengarahkan CNAME ke jeon.id tanpa benar-benar
 // memiliki domainnya (mis. sekadar ingin tahu bisakah tampil), TXT
 // membuktikan mereka juga bisa menambah record DNS sembarang di domain
 // tersebut (proof of ownership).

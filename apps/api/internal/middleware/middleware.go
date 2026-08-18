@@ -15,7 +15,7 @@ import (
 )
 
 // CORS mengizinkan origin frontend (Next.js) untuk memanggil API ini.
-// Di production, isi allowedOrigins hanya dengan domain resmi (jeonme.com),
+// Di production, isi allowedOrigins hanya dengan domain resmi (jeon.id),
 // jangan pernah pakai wildcard "*" untuk endpoint yang butuh cookie/auth.
 func CORS(allowedOrigins string) gin.HandlerFunc {
 	origins := strings.Split(allowedOrigins, ",")

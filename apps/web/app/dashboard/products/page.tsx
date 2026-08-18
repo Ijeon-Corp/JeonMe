@@ -59,6 +59,7 @@ import ShopSettingsPanel from "@/components/ShopSettingsPanel";
 import TransactionPanel from "@/components/TransactionPanel";
 import ProdukPageEditor, { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
+import { SITE_URL } from "@/lib/site";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -782,12 +783,12 @@ export default function DashboardProductsPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-ink">{page.display_name || `@${page.username}`}</p>
                   <a
-                    href={`https://jeonme.com/${page.username}`}
+                    href={`${SITE_URL}/${page.username}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="truncate text-xs text-primary hover:underline"
                   >
-                    jeonme.com/{page.username}
+                    jeon.id/{page.username}
                   </a>
                 </div>
               </div>
@@ -1228,7 +1229,7 @@ export default function DashboardProductsPage() {
         products={products}
         pageType="produk"
         pageSlug={tokoPage?.slug}
-        openUrl={tokoPage ? `https://jeonme.com/p/${tokoPage.slug}` : undefined}
+        openUrl={tokoPage ? `${SITE_URL}/p/${tokoPage.slug}` : undefined}
         editableStickers={tab === "halaman_toko" && tokoSection === "stiker"}
         onStickersChange={handleTokoStickersChange}
       />

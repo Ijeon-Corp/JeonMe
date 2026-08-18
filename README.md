@@ -111,8 +111,8 @@ Ditandai `TODO` di kode, ringkasannya:
 
 Pipeline CI/CD sudah live dan terbukti jalan end-to-end, bukan cuma teori:
 
-- **Production**: https://jeonme.com — rilis pertama `v0.1.0`
-- **Staging**: https://staging.jeonme.com — auto-deploy dari `main`
+- **Production**: https://jeon.id — rilis pertama `v0.1.0` (domain kanonik sejak migrasi 18 Agustus 2026; jeonme.com tetap aktif, redirect 301 ke sini)
+- **Staging**: https://staging.jeon.id — auto-deploy dari `main`
 - Keduanya dites langsung: `/api/health` mengembalikan `{"status":"ok","checks":{"database":"up","redis":"up"}}`
 
 Ketiga workflow (`ci.yml`, `deploy-staging.yml`, `deploy-production.yml`) sudah lewat audit awal (13/14 temuan diperbaiki) **dan** rollout nyata pertama, yang menemukan **6 bug tambahan** yang tidak ketahuan lewat review kode saja (lowercase GHCR, SSH port non-default, dependency env var yang salah, service Redis hilang di CI, duplikasi entrypoint Docker, race condition healthcheck database). Katalog lengkap tiap bug — gejala, penyebab, perbaikan — ada di `CICD-GUIDE.md` Bagian 11.

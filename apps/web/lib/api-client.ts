@@ -5,7 +5,7 @@
 // bundle browser yang di-deploy ke staging/production selalu jatuh ke
 // fallback lama "http://localhost:8080/api/v1" -- artinya browser
 // PENGUNJUNG SUNGGUHAN mencoba menghubungi localhost:8080 MEREKA SENDIRI,
-// bukan backend jeonme.com/staging.jeonme.com. Verifikasi browser
+// bukan backend jeon.id/staging.jeon.id. Verifikasi browser
 // sebelumnya selalu (tanpa sadar) dijalankan lewat proses lokal
 // (`go run .` + `npm run dev` di host yang sama, TANPA Docker) sehingga
 // "localhost:8080" kebetulan selalu benar dan bug ini tidak pernah
@@ -1181,7 +1181,7 @@ export function createExtraPageBlock(
 }
 
 /**
- * Mengambil data halaman bio TAMBAHAN publik lewat slug (jeonme.com/p/{slug}).
+ * Mengambil data halaman bio TAMBAHAN publik lewat slug (jeon.id/p/{slug}).
  * Mengembalikan null kalau tidak ditemukan (404), sama seperti getPublicPage.
  */
 export async function getPublicPageBySlug(slug: string): Promise<PublicPage | null> {
@@ -2134,7 +2134,7 @@ export function upsertSocialProofSettings(input: SocialProofSettings) {
 // pengguna, 12 Agustus 2026, referensi tangkapan layar panel "Analytics"
 // Linktree) ----------
 
-// PublicAnalytics -- versi PUBLIK (dikirim ke halaman jeonme.com/{username}
+// PublicAnalytics -- versi PUBLIK (dikirim ke halaman jeon.id/{username}
 // milik siapa pun yang mengunjunginya), TANPA fb_access_token -- itu
 // SECRET, cuma dipakai server (analytics.go, Conversions API). Beda dari
 // AnalyticsSettings di bawah (versi DASHBOARD, cuma kreator pemilik akun

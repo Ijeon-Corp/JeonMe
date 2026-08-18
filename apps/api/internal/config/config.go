@@ -164,7 +164,7 @@ func Load() *Config {
 		PublicWebURL: getEnv("PUBLIC_WEB_URL", "http://localhost:3000"),
 		PublicAPIURL: getEnv("PUBLIC_API_URL", "http://localhost:8080/api/v1"),
 
-		CustomDomainCnameTarget: getEnv("CUSTOM_DOMAIN_CNAME_TARGET", "custom.jeonme.com"),
+		CustomDomainCnameTarget: getEnv("CUSTOM_DOMAIN_CNAME_TARGET", "custom.jeon.id"),
 
 		// Nilai default sengaja dibuat "jalan tanpa perlu setup tambahan" (bukan
 		// mustGetEnv) supaya server tetap bisa start walau VPS operator belum
@@ -229,7 +229,7 @@ func Load() *Config {
 		SMTPPort:     getEnvInt("SMTP_PORT", 587),
 		SMTPUsername: getEnv("SMTP_USER", ""),
 		SMTPPassword: getEnv("SMTP_PASS", ""),
-		SMTPFromAddr: getEnv("SMTP_FROM", "no-reply@jeonme.com"),
+		SMTPFromAddr: getEnv("SMTP_FROM", "no-reply@jeon.id"),
 
 		WhatsAppAPIToken:      getEnv("WHATSAPP_API_TOKEN", ""),
 		WhatsAppPhoneNumberID: getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),

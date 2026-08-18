@@ -6,7 +6,7 @@ import { IconClose } from "@/components/icons";
 
 // No.82 (Sprint 9): kode QR per halaman kreator, untuk materi promosi
 // offline (banner event, kemasan produk, dsb). Murni sisi klien -- URL
-// halaman publik sudah diketahui (jeonme.com/{username}), tidak perlu
+// halaman publik sudah diketahui (jeon.id/{username}), tidak perlu
 // endpoint backend sama sekali.
 export default function QRCodeModal({
   url,

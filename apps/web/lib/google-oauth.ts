@@ -9,7 +9,7 @@ const OAUTH_STATE_STORAGE_KEY = "jeonme_google_oauth_state";
 
 // googleRedirectUri -- origin diambil dari browser saat ini (bukan
 // hardcode), otomatis benar baik di localhost:3000 (dev) maupun
-// jeonme.com (production) dari satu build yang sama -- KEDUANYA harus
+// jeon.id (production) dari satu build yang sama -- KEDUANYA harus
 // didaftarkan persis sebagai Authorized redirect URI di Google Cloud
 // Console (lihat apps/api/.env.example).
 export function googleRedirectUri(): string {

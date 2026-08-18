@@ -35,6 +35,7 @@ import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 import { HelpCircle, Images as GalleryIcon, Video as VideoIcon } from "lucide-react";
+import { SITE_URL } from "@/lib/site";
 
 export interface PagePreviewLink {
   id: string;
@@ -1358,7 +1359,7 @@ export default function PagePreview({
           DIHILANGKAN (permintaan langsung pengguna), branding Jeonme cukup
           lewat pil "Buat halaman gratis di Jeonme" di bagian bawah. */}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
           di pratinjau posisi nya berbeda dengan ketika kita akses linknya
@@ -1696,7 +1697,7 @@ export default function PagePreview({
               (lihat isPremiumUser backend & PagePreviewData.hideWatermark). */}
           {(!data.isPremium || !data.hideWatermark) && (
             <a
-              href="https://jeonme.com/register"
+              href={`${SITE_URL}/register`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
@@ -1743,7 +1744,7 @@ function LandingPagePreview({
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {data.links.map((block) => {
@@ -1919,7 +1920,7 @@ function LandingPagePreview({
         <div className="mt-6 flex flex-col items-center gap-3">
           {(!data.isPremium || !data.hideWatermark) && (
             <a
-              href="https://jeonme.com/register"
+              href={`${SITE_URL}/register`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
@@ -1978,7 +1979,7 @@ function ProdukPagePreview({
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `https://jeonme.com/p/${data.pageSlug}` : `https://jeonme.com/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak
           langsung <main>) -- lihat catatan panjang di preview bio default
@@ -2092,7 +2093,7 @@ function ProdukPagePreview({
         <div className="mt-10 flex flex-col items-center gap-3">
           {(!data.isPremium || !data.hideWatermark) && (
             <a
-              href="https://jeonme.com/register"
+              href={`${SITE_URL}/register`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"

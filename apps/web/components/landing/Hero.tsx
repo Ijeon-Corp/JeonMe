@@ -100,7 +100,7 @@ export default function Hero() {
                       MP
                     </div>
                     <p className="font-heading text-base font-extrabold text-ink">Maya Putri</p>
-                    <p className="mt-0.5 text-xs text-ink/50">Kreator Digital • jeonme.com/mayaputri</p>
+                    <p className="mt-0.5 text-xs text-ink/50">Kreator Digital • jeon.id/mayaputri</p>
                   </div>
 
                   <div className="space-y-2 px-5">

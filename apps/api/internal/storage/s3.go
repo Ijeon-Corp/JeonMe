@@ -84,8 +84,8 @@ func (c *Client) EnsurePublicRead(ctx context.Context, prefixes ...string) error
 
 // PublicURL membangun URL publik permanen (BUKAN presigned/kedaluwarsa)
 // untuk object yang sudah diizinkan baca publik lewat EnsurePublicRead.
-// endpoint di sini SUDAH berupa domain publik (storage.jeonme.com/
-// storage-staging.jeonme.com di staging/production, localhost:9000 di
+// endpoint di sini SUDAH berupa domain publik (storage.jeon.id/
+// storage-staging.jeon.id di staging/production, localhost:9000 di
 // lokal) -- lihat komentar S3_ENDPOINT di config.go.
 func (c *Client) PublicURL(key string) string {
 	scheme := "http"

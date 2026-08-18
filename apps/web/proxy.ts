@@ -13,7 +13,10 @@ import { NextRequest, NextResponse } from "next/server";
 // otomatis per domain -- proxy ini baru bisa diuji nyata begitu ada
 // domain uji sungguhan yang diarahkan ke server (dicatat sebagai
 // pekerjaan lanjutan).
-const KNOWN_HOSTS = ["jeonme.com", "staging.jeonme.com", "localhost", "127.0.0.1"];
+// jeon.id adalah domain kanonik sejak migrasi 18 Agustus 2026; jeonme.com
+// TETAP terdaftar sebagai domain lama yang redirect 301 ke jeon.id (bukan
+// didekomisi), jadi kedua host tetap perlu dikenali di sini.
+const KNOWN_HOSTS = ["jeon.id", "staging.jeon.id", "jeonme.com", "staging.jeonme.com", "localhost", "127.0.0.1"];
 
 function resolveApiBaseUrl(): string {
   return process.env.INTERNAL_API_BASE_URL ?? "http://localhost:8080/api/v1";

@@ -379,7 +379,7 @@ type publicItem struct {
 	Category string `json:"category"`
 }
 
-// GetPublicPage — REQ-F-201: diakses tanpa login di jeonme.com/{username}.
+// GetPublicPage — REQ-F-201: diakses tanpa login di jeon.id/{username}.
 // Endpoint trafik tertinggi di seluruh sistem, jadi dicek dulu di cache Redis
 // (NF-01/02) sebelum menyentuh database. HANYA menjangkau halaman UTAMA
 // (is_primary=true) -- halaman TAMBAHAN (No.98) diakses lewat slug sendiri,
@@ -475,7 +475,7 @@ func (h *PageHandler) ResolveUsernameRedirect(c *gin.Context) {
 }
 
 // GetPublicPageBySlug — No.98 (Sprint 14): diakses tanpa login di
-// jeonme.com/p/{slug}, namespace terpisah dari username akun supaya tidak
+// jeon.id/p/{slug}, namespace terpisah dari username akun supaya tidak
 // bentrok. Halaman tambahan berbagi katalog produk/monetisasi yang SAMA
 // dengan kreatornya (lihat catatan lingkup di migrasi 000029) -- cuma
 // bio/avatar/tema/tautan yang independen per halaman.
@@ -1538,7 +1538,7 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 // catatan lingkup lengkap di migrasi 000029). Halaman UTAMA (is_primary=true,
 // dibuat otomatis saat registrasi) TIDAK BERUBAH sama sekali -- semua route
 // di atas (/dashboard/page, /dashboard/links, dst) tetap hanya menjangkau
-// halaman utama. Halaman tambahan diakses publik lewat jeonme.com/p/{slug},
+// halaman utama. Halaman tambahan diakses publik lewat jeon.id/p/{slug},
 // namespace terpisah dari username akun.
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$`)
@@ -1622,7 +1622,7 @@ const premiumProdukPageLimit = 5
 // manual lewat dashboard/pages kalau ini gagal diam-diam.
 //
 // Slug SELALU = username akun (bukan slug bebas) supaya URL-nya konsisten
-// dengan Halaman Bio (jeonme.com/{username}), bukan slug acak yang harus
+// dengan Halaman Bio (jeon.id/{username}), bukan slug acak yang harus
 // diketik manual -- lihat aturan sama di CreatePage untuk Toko ke-2..5
 // (Premium, mis. multi-brand) yang tetap pakai slug bebas seperti sebelumnya.
 func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, userID string) {

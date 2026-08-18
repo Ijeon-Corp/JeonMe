@@ -118,7 +118,7 @@ export default function SettingsProfilePage() {
             Username
           </label>
           <div className="mt-1 flex items-center rounded-xl border border-border bg-white focus-within:border-primary">
-            <span className="pl-3 text-sm text-muted">jeonme.com/</span>
+            <span className="pl-3 text-sm text-muted">jeon.id/</span>
             <input
               id="settings-username"
               value={username}

@@ -6,6 +6,7 @@ import { ApiError, BusinessCard, getBusinessCard, getMyPage, upsertBusinessCard 
 import Toggle from "@/components/Toggle";
 import QRCodeModal from "@/components/QRCodeModal";
 import { IconQrCode } from "@/components/icons";
+import { SITE_URL } from "@/lib/site";
 
 const EMPTY: BusinessCard = {
   is_active: false,
@@ -62,7 +63,7 @@ export default function DashboardBusinessCardPage() {
 
   if (loading) return <PageSkeleton />;
 
-  const cardURL = username ? `https://jeonme.com/card/${username}` : "";
+  const cardURL = username ? `${SITE_URL}/card/${username}` : "";
 
   return (
     <div className="mx-auto max-w-lg">
@@ -90,7 +91,7 @@ export default function DashboardBusinessCardPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-ink">Aktifkan Kartu Kontak</p>
-            <p className="text-xs text-muted">Kartu bisa diakses publik lewat jeonme.com/card/{username} kalau aktif.</p>
+            <p className="text-xs text-muted">Kartu bisa diakses publik lewat jeon.id/card/{username} kalau aktif.</p>
           </div>
           <Toggle
             checked={card.is_active}

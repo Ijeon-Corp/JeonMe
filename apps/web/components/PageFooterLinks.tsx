@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ReportButton from "@/components/ReportButton";
 import { IconBadgeCheck, IconClose } from "@/components/icons";
+import { SITE_URL } from "@/lib/site";
 
 // Baris footer utilitas ala Linktree ("Cookie Preferences · Report ·
 // Privacy · Explore · About this account · More from Linktree"), permintaan
@@ -127,7 +128,7 @@ export default function PageFooterLinks({
                   Jeonme adalah platform link-in-bio & monetisasi produk digital untuk kreator Indonesia.
                 </p>
                 <a
-                  href="https://jeonme.com/register"
+                  href={`${SITE_URL}/register`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary rounded-lg py-2 text-center text-sm font-bold text-white"

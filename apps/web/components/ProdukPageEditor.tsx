@@ -52,6 +52,7 @@ import {
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
+import { SITE_URL } from "@/lib/site";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio";
 
@@ -196,7 +197,7 @@ export default function ProdukPageEditor({
         <p className="mt-2 text-sm text-muted">
           Halaman Toko-mu otomatis dibuat & dipublikasikan begitu kamu menambahkan produk pertama di tab Manage Items --
           tidak perlu langkah manual apa pun. Kalau mau menyiapkan bio/tema/blok-nya lebih awal, buat sekarang juga bisa,
-          URL-nya selalu <span className="font-semibold text-ink">jeonme.com/p/{username}</span>.
+          URL-nya selalu <span className="font-semibold text-ink">jeon.id/p/{username}</span>.
         </p>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button
@@ -217,13 +218,13 @@ export default function ProdukPageEditor({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-lg font-bold text-ink">Halaman Toko</h2>
           <a
-            href={`https://jeonme.com/p/${page.slug}`}
+            href={`${SITE_URL}/p/${page.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
           >
             <IconExternal className="h-3.5 w-3.5" />
-            jeonme.com/p/{page.slug}
+            jeon.id/p/{page.slug}
           </a>
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 }
 
 // No.95 (Sprint 13): halaman kartu kontak digital, TERPISAH dari halaman
-// utama kreator (jeonme.com/{username}) -- dituju lewat kode QR khusus
+// utama kreator (jeon.id/{username}) -- dituju lewat kode QR khusus
 // kartu, bukan halaman link-in-bio biasa.
 export default async function BusinessCardPage({ params }: PageParams) {
   const { username } = await params;

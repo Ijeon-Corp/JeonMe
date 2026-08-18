@@ -10,6 +10,7 @@ import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/GlobalSearch";
+import { SITE_URL } from "@/lib/site";
 import {
   Workspace,
   clearToken,
@@ -217,7 +218,7 @@ export default function DashboardLayout({
 
   function handleCopyLink() {
     if (!username) return;
-    navigator.clipboard.writeText(`https://jeonme.com/${username}`).then(() => {
+    navigator.clipboard.writeText(`${SITE_URL}/${username}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });
@@ -470,7 +471,7 @@ export default function DashboardLayout({
                 </Link>
                 {username && (
                   <a
-                    href={`https://jeonme.com/${username}`}
+                    href={`${SITE_URL}/${username}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Lihat halaman publik"
@@ -500,7 +501,7 @@ export default function DashboardLayout({
                         sama seperti label GlobalSearch) -- di rentang
                         tablet cukup ikon salin saja supaya baris ini tidak
                         ikut memaksa halaman melebar horizontal. */}
-                    <span className="hidden lg:inline">jeonme.com/{username}</span>
+                    <span className="hidden lg:inline">jeon.id/{username}</span>
                     <IconCopy className="h-3 w-3" />
                     {copied && <span className="text-primary">Tersalin!</span>}
                   </button>

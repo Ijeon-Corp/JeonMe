@@ -1,7 +1,9 @@
 # Jeonme
 
 Platform link-in-bio + monetisasi kreator Indonesia (setara Linktree/Lynk.id, tapi
-dengan Toko/checkout produk digital bawaan). Domain produksi: jeonme.com.
+dengan Toko/checkout produk digital bawaan). Domain produksi: jeon.id (migrasi
+dari jeonme.com, 18 Agustus 2026 -- jeonme.com tetap aktif, redirect 301 ke
+jeon.id, bukan didekomisi).
 
 > Catatan: `README.md`/`DEVELOPER-GUIDE.md`/`SETUP-GUIDE.md` di root masih menyebut
 > proyek ini "boilerplate/skeleton dengan banyak TODO" — itu SUDAH TIDAK AKURAT.
@@ -37,9 +39,9 @@ apps/web/lib/api-client.ts    SATU file besar: semua tipe respons API + fungsi f
 
 Satu akun kreator punya **banyak halaman** (tabel `pages`), dua kategori:
 
-- **Halaman utama** (`is_primary=true`, `page_type` SELALU `'bio'`) — di `jeonme.com/{username}`.
+- **Halaman utama** (`is_primary=true`, `page_type` SELALU `'bio'`) — di `jeon.id/{username}`.
   Selalu ada, dibuat saat registrasi.
-- **Halaman tambahan** (`is_primary=false`) — di `jeonme.com/p/{slug}`, `page_type` salah satu
+- **Halaman tambahan** (`is_primary=false`) — di `jeon.id/p/{slug}`, `page_type` salah satu
   dari `bio` / `landing` / `produk`. "Halaman Toko" adalah `page_type='produk'`.
   - Toko **pertama** tiap akun dibuat **otomatis** begitu produk pertama ada
     (`ensureProdukPage`, soft-fail, dipanggil dari `ProductHandler.Create`), slug-nya

@@ -4,8 +4,7 @@
 // dari components/landing/FAQ.tsx (satu sumber kebenaran, lihat
 // komentar di sana), TIDAK disalin ulang di sini.
 import type { FaqItem } from "@/lib/faq-data";
-
-const SITE_URL = "https://jeonme.com";
+import { SITE_URL } from "@/lib/site";
 
 export function organizationSchema() {
   return {

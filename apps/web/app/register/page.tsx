@@ -117,7 +117,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Klaim link bio gratismu</label>
-          {/* Prefiks "jeonme.com/" MENYATU dengan input (referensi layout
+          {/* Prefiks "jeon.id/" MENYATU dengan input (referensi layout
               signup Beacons) -- lebih jelas ini adalah alamat, bukan cuma
               teks bantuan terpisah di bawah field seperti sebelumnya. */}
           <div
@@ -129,7 +129,7 @@ export default function RegisterPage() {
                 : "border-border focus-within:border-primary focus-within:ring-primary/20"
             }`}
           >
-            <span className="flex-shrink-0 text-sm font-semibold text-muted">jeonme.com/</span>
+            <span className="flex-shrink-0 text-sm font-semibold text-muted">jeon.id/</span>
             <input
               type="text"
               required
@@ -139,7 +139,7 @@ export default function RegisterPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="username-kamu"
               // focus:!shadow-none (BUKAN cuma focus:shadow-none, `!` wajib)
-              // -- input INI menyatu di tengah pil "jeonme.com/[input]",
+              // -- input INI menyatu di tengah pil "jeon.id/[input]",
               // bukan kotak fokus berdiri sendiri; glow fokus global
               // (globals.css, `input:not([type=checkbox]):not([type=radio])
               // :focus`) selektornya justru LEBIH spesifik daripada utility

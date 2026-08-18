@@ -36,10 +36,19 @@ type AnalyticsHandler struct {
 	// (lihat maybeSendConversionsEvent) -- token TIDAK PERNAH disimpan
 	// plaintext, sama seperti account_number_encrypted (payout_methods).
 	EncryptionKey []byte
+	// PublicWebURL -- perbaikan migrasi domain, 18 Agustus 2026 (pengguna:
+	// "saya mau pindah domain dari jeonme.com ke jeon.id"): sourceURL yang
+	// dikirim ke Meta Conversions API (maybeSendConversionsEvent) SEBELUM
+	// ini hardcode literal "https://jeonme.com/..." -- bug nyata ditemukan
+	// saat memetakan seluruh referensi domain, akan tetap salah kalau
+	// tidak diperbaiki di sini walau env var PUBLIC_WEB_URL sudah diubah
+	// ke domain baru di tempat lain. Sekarang ikut config.PublicWebURL,
+	// SATU sumber kebenaran yang sama dipakai handler lain (checkout.go dkk).
+	PublicWebURL string
 }
 
-func NewAnalyticsHandler(db *pgxpool.Pool, encryptionKey []byte) *AnalyticsHandler {
-	return &AnalyticsHandler{DB: db, EncryptionKey: encryptionKey}
+func NewAnalyticsHandler(db *pgxpool.Pool, encryptionKey []byte, publicWebURL string) *AnalyticsHandler {
+	return &AnalyticsHandler{DB: db, EncryptionKey: encryptionKey, PublicWebURL: publicWebURL}
 }
 
 type trackEventRequest struct {
@@ -99,7 +108,7 @@ func (h *AnalyticsHandler) Track(c *gin.Context) {
 		return
 	}
 
-	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), "https://jeonme.com/"+username)
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), h.PublicWebURL+"/"+username)
 	c.Status(http.StatusNoContent)
 }
 
@@ -125,7 +134,7 @@ func (h *AnalyticsHandler) TrackBySlug(c *gin.Context) {
 		return
 	}
 
-	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), "https://jeonme.com/p/"+slug)
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), h.PublicWebURL+"/p/"+slug)
 	c.Status(http.StatusNoContent)
 }
 

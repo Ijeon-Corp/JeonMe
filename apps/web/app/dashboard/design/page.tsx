@@ -8,6 +8,7 @@ import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@
 import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconLock, IconSparkle } from "@/components/icons";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
+import { SITE_URL } from "@/lib/site";
 
 // Struktur halaman ini diikutkan tangkapan layar halaman Design Linktree:
 // satu baris "Theme" berdiri sendiri di atas, lalu label "Customize", lalu
@@ -54,13 +55,13 @@ export default function DashboardDesignPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
             <a
-              href={`https://jeonme.com/${page.username}`}
+              href={`${SITE_URL}/${page.username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
             >
               <IconExternal className="h-3.5 w-3.5" />
-              jeonme.com/{page.username}
+              jeon.id/{page.username}
             </a>
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">

@@ -19,7 +19,7 @@ const LINK_BIO_STEPS = [
   },
   {
     title: "Terbitkan halamanmu",
-    body: "Di Desain, aktifkan \"Terbitkan halaman publik\". Halamanmu langsung bisa diakses di jeonme.com/username-mu.",
+    body: "Di Desain, aktifkan \"Terbitkan halaman publik\". Halamanmu langsung bisa diakses di jeon.id/username-mu.",
     href: "/dashboard/design",
   },
 ];

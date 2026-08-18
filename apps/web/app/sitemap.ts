@@ -1,15 +1,15 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
 
 // Perbaikan SEO (temuan audit, 15 Agustus 2026): sebelumnya tidak ada
 // sitemap.xml sama sekali. Cakupan halaman marketing/statis (/, /pricing,
 // /features, /login, /register) yang berlaku sama di seluruh deployment
-// -- SENGAJA TIDAK menyertakan halaman kreator dinamis (jeonme.com/
+// -- SENGAJA TIDAK menyertakan halaman kreator dinamis (jeon.id/
 // {username}) yang jumlahnya bisa ribuan & sebagian bertanda noindex
 // per-halaman (lihat pages.noindex, page.go) -- itu butuh endpoint publik
 // baru utk daftar username yang layak diindeks + kemungkinan
 // generateSitemaps() utk multi-file kalau jumlahnya besar, cakupan
 // terpisah dari perbaikan ini.
-const SITE_URL = "https://jeonme.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

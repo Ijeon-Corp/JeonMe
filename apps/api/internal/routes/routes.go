@@ -62,7 +62,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	subscription := handlers.NewSubscriptionHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PremiumMonthlyPriceIDR, cfg.PremiumYearlyPriceIDR)
 	encryptionKey := []byte(cfg.EncryptionKey)
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
-	analytics := handlers.NewAnalyticsHandler(db, encryptionKey)
+	analytics := handlers.NewAnalyticsHandler(db, encryptionKey, cfg.PublicWebURL)
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
 	account := handlers.NewAccountHandler(db, rdb, s3)
 	admin := handlers.NewAdminHandler(db)

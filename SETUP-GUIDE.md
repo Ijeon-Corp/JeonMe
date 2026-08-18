@@ -25,16 +25,16 @@ Skrip pendukung ada di `scripts/`:
 | VPS | `103.147.33.34` (Debian 12, shared dengan proyek lain) |
 | SSH | Port `61512`, user `deploy` (grup `docker`, tanpa sudo) |
 | Repo GitHub | `Ijeon-Corp/JeonMe` |
-| Production | `https://jeonme.com` — direktori `/opt/jeonme-production` |
-| Staging | `https://staging.jeonme.com` — direktori `/opt/jeonme-staging` |
+| Production | `https://jeon.id` — direktori `/opt/jeonme-production` (jeonme.com tetap aktif, redirect 301 ke jeon.id sejak migrasi 18 Agustus 2026) |
+| Staging | `https://staging.jeon.id` — direktori `/opt/jeonme-staging` |
 | Reverse proxy + TLS | Apache + Certbot **sistem** (bukan di dalam Docker) — lihat CICD-GUIDE.md §2 |
 | CI/CD | `.github/workflows/{ci,deploy-staging,deploy-production}.yml` |
 
 Rilis pertama (`v0.1.0`) berhasil di-deploy ke production pada 8 Juli 2026 setelah 6 bug ditemukan & diperbaiki selama rollout — katalog lengkap ada di `CICD-GUIDE.md` Bagian 11. Endpoint health check kedua environment sudah diverifikasi hidup:
 
 ```bash
-curl https://jeonme.com/api/health
-curl https://staging.jeonme.com/api/health
+curl https://jeon.id/api/health
+curl https://staging.jeon.id/api/health
 # ekspektasi: {"status":"ok","checks":{"database":"up","redis":"up"}}
 ```
 
@@ -87,7 +87,7 @@ WEB_HOST_PORT=23000           # unik per environment kalau 1 VPS dipakai bersama
 API_HOST_PORT=28080
 POSTGRES_PASSWORD=$(openssl rand -hex 20)
 JWT_SECRET=$(openssl rand -hex 32)
-CORS_ALLOWED_ORIGINS=https://jeonme.com
+CORS_ALLOWED_ORIGINS=https://jeon.id
 ```
 
 ### 2.5 GitHub Secrets & Environments
@@ -118,7 +118,7 @@ Cari sha valid dari tab Actions (histori run **Deploy Production**/**Deploy Stag
 - [x] `.env` terisi lengkap di kedua direktori, termasuk `GHCR_REPO` huruf kecil
 - [x] `docker login ghcr.io` sukses sebagai user `deploy`
 - [x] GitHub Environments `staging` & `production` terisi secrets lengkap (termasuk `*_SSH_PORT`), `production` punya required reviewer
-- [x] DNS `jeonme.com`, `www`, `staging.jeonme.com` proxied lewat Cloudflare ke VPS
+- [x] DNS `jeon.id`, `www`, `staging.jeon.id` proxied lewat Cloudflare ke VPS (domain lama `jeonme.com`/`staging.jeonme.com` tetap di-proxy juga, redirect 301 ke jeon.id sejak migrasi 18 Agustus 2026)
 - [x] Apache vhost + sertifikat TLS terbit untuk ketiga domain, renewal tercakup `certbot.timer` sistem
 - [x] Push ke `main` → staging ter-deploy otomatis → `/api/health` "ok"
 - [x] Tag `v0.1.0` → approval → production ter-deploy → `/api/health` "ok"

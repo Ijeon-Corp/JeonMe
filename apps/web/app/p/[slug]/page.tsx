@@ -37,8 +37,8 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   };
 }
 
-// No.98 (Sprint 14): halaman bio TAMBAHAN, diakses lewat jeonme.com/p/{slug}
-// -- namespace terpisah dari jeonme.com/{username} (halaman utama). Memakai
+// No.98 (Sprint 14): halaman bio TAMBAHAN, diakses lewat jeon.id/p/{slug}
+// -- namespace terpisah dari jeon.id/{username} (halaman utama). Memakai
 // ulang PagePreview yang SAMA seperti halaman utama -- produk/event/booking/
 // dst yang tampil SAMA persis (monetisasi tetap per-akun, bukan per-halaman),
 // hanya bio/avatar/tema/tautan yang berbeda per halaman.

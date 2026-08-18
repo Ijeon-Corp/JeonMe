@@ -276,7 +276,7 @@ export default function DashboardExtraPagesPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-muted">
-        Kelola beberapa halaman terpisah dari satu akun di jeonme.com/p/{"{slug}"}: halaman{" "}
+        Kelola beberapa halaman terpisah dari satu akun di jeon.id/p/{"{slug}"}: halaman{" "}
         <b>Bio</b> (bio/tema/tautan sendiri, produk & monetisasi tetap sama seperti halaman utamamu), halaman{" "}
         <b>Landing</b> (blok penuh-lebar untuk satu kampanye/tujuan tertentu -- heading, teks, gambar, tombol CTA),
         atau halaman <b>Produk</b> (showcase katalog Toko-mu saja -- kreator gratis dapat {FREE_PRODUK_PAGE_LIMIT}).
@@ -380,11 +380,11 @@ export default function DashboardExtraPagesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Slug URL (jeonme.com/p/...)</label>
+              <label className="mb-1 block text-xs font-semibold text-ink">Slug URL (jeon.id/p/...)</label>
               {isFirstProdukPage ? (
                 <>
                   <div className="w-full rounded-lg border border-border bg-ink/5 px-3 py-2 text-sm text-muted">
-                    jeonme.com/p/{username || "..."}
+                    jeon.id/p/{username || "..."}
                   </div>
                   <p className="mt-1 text-[11px] text-muted">
                     Toko pertama selalu memakai username akunmu, bukan slug bebas -- ganti nanti lewat Pengaturan &gt;
@@ -439,7 +439,7 @@ export default function DashboardExtraPagesPage() {
                 </div>
                 <p className="flex items-center gap-1 text-xs text-muted">
                   <IconGlobe className="h-3 w-3" />
-                  jeonme.com/p/{page.slug}
+                  jeon.id/p/{page.slug}
                 </p>
               </div>
               <button

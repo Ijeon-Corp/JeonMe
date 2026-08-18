@@ -9,7 +9,7 @@
 # port 80 untuk verifikasi).
 #
 # Penggunaan:
-#   ./scripts/issue-certbot-cert.sh jeonme.com www.jeonme.com admin@jeonme.com
+#   ./scripts/issue-certbot-cert.sh jeon.id www.jeon.id admin@jeon.id
 #   (domain sebanyak apa pun di depan, argumen terakhir HARUS email dan
 #   mengandung karakter '@')
 set -euo pipefail

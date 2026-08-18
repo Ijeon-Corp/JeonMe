@@ -49,4 +49,4 @@ docker image prune -f
 
 echo ""
 echo "Selesai. Verifikasi manual (ganti domain sesuai environment):"
-echo "  curl -sf https://jeonme.com/api/health || curl -sf https://staging.jeonme.com/api/health"
+echo "  curl -sf https://jeon.id/api/health || curl -sf https://staging.jeon.id/api/health"

@@ -3,6 +3,7 @@
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { IconExternal } from "@/components/icons";
 import PagePreview, { toPreviewData } from "@/components/PagePreview";
+import { SITE_URL } from "@/lib/site";
 
 // Kolom pratinjau langsung yang dipakai bersama oleh ketiga halaman di bawah
 // "Halaman Saya" (Tautan/Produk/Desain) -- sebelumnya blok ini terduplikasi
@@ -11,7 +12,7 @@ import PagePreview, { toPreviewData } from "@/components/PagePreview";
 // pageType/pageSlug/openUrl -- Modul Halaman Toko (7 Agustus 2026): opsional,
 // dipakai ProdukPageEditor supaya panel yang SAMA bisa merender pratinjau
 // halaman TAMBAHAN (page_type="produk"), bukan cuma halaman utama. Kosong
-// berarti perilaku lama (halaman utama, jeonme.com/{username}) TIDAK berubah
+// berarti perilaku lama (halaman utama, jeon.id/{username}) TIDAK berubah
 // sama sekali untuk 3 pemakai yang sudah ada.
 export default function LivePreviewPanel({
   page,
@@ -41,7 +42,7 @@ export default function LivePreviewPanel({
         <p className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Langsung</p>
         {page && (
           <a
-            href={openUrl ?? `https://jeonme.com/${page.username}`}
+            href={openUrl ?? `${SITE_URL}/${page.username}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
