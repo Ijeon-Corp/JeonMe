@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, SettingsProfile, getSettingsProfile, updateSettingsProfile } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconChevronRight } from "@/components/icons";
+import { IconChevronRight, IconQrCode } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
+import QRCodeModal from "@/components/QRCodeModal";
+import { SITE_URL } from "@/lib/site";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -26,6 +28,7 @@ export default function SettingsProfilePage() {
   const [category, setCategory] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     getSettingsProfile()
@@ -103,14 +106,37 @@ export default function SettingsProfilePage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      {original?.avatar_url && (
-        // eslint-disable-next-line @next/next/no-img-element -- pratinjau kecil, tidak perlu next/image di sini
-        <img
-          src={original.avatar_url}
-          alt=""
-          className="mt-4 h-16 w-16 rounded-full border border-border object-cover"
-        />
-      )}
+      <div className="mt-4 flex items-center gap-3">
+        {original?.avatar_url && (
+          // eslint-disable-next-line @next/next/no-img-element -- pratinjau kecil, tidak perlu next/image di sini
+          <img
+            src={original.avatar_url}
+            alt=""
+            className="h-16 w-16 rounded-full border border-border object-cover"
+          />
+        )}
+        {/* Kode QR profil (permintaan langsung pengguna, 18 Agustus 2026:
+            "tambahkan qr code di settings profile") -- QRCodeModal SUDAH
+            dipasang di top bar dashboard (dashboard/layout.tsx) & fitur
+            Kartu Kontak, ditambahkan lagi di sini karena halaman Profil &
+            Akun ini tempat paling wajar mencarinya (identitas akun),
+            dibanding harus tahu dulu ada tombol tersembunyi di top bar.
+            SENGAJA pakai original.username (nilai TERSIMPAN/live di
+            server), BUKAN state `username` yang terikat ke input field --
+            kalau kreator sedang mengetik ganti username tapi belum klik
+            "Simpan Perubahan", QR yang dibuat dari nilai belum tersimpan
+            itu akan mengarah ke alamat yang belum tentu benar-benar hidup. */}
+        {original?.username && (
+          <button
+            type="button"
+            onClick={() => setQrOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3.5 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            <IconQrCode className="h-4 w-4" />
+            Lihat Kode QR
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         <div>
@@ -184,6 +210,10 @@ export default function SettingsProfilePage() {
           {saving ? "Menyimpan..." : "Simpan Perubahan"}
         </button>
       </form>
+
+      {qrOpen && original?.username && (
+        <QRCodeModal url={`${SITE_URL}/${original.username}`} username={original.username} onClose={() => setQrOpen(false)} />
+      )}
     </div>
   );
 }
