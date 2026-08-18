@@ -164,6 +164,33 @@ func NewSignupVerificationTask(email, code string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeSignupVerificationEmail, payload), nil
 }
 
+// TypePasswordResetEmail -- perbaikan 20 Agustus 2026 (ditemukan lewat
+// audit "apakah notifikasi sudah berfungsi semua"): RequestPasswordReset
+// SELAMA INI cuma menyimpan token ke DB, TIDAK PERNAH benar-benar mengirim
+// email-nya (komentar lama di auth.go secara eksplisit bilang "Pengiriman
+// email BELUM diimplementasikan" dari sebelum worker/mailer ada) --
+// pengguna produksi yang lupa password sebelumnya SAMA SEKALI tidak
+// punya jalan reset (dev_reset_token cuma tampil saat AppEnv != production).
+// ASINKRON (pola sama dengan auth:signup_verification_email) supaya
+// lambatnya SMTP tidak membuat AuthHandler.RequestPasswordReset menunggu.
+// Payload membawa ResetURL LENGKAP (bukan cuma token mentah) -- AuthHandler
+// yang sudah tahu PublicWebURL yang membangunnya, worker tinggal
+// menempelkan ke badan email apa adanya.
+const TypePasswordResetEmail = "auth:password_reset_email"
+
+type PasswordResetPayload struct {
+	Email    string `json:"email"`
+	ResetURL string `json:"reset_url"`
+}
+
+func NewPasswordResetTask(email, resetURL string) (*asynq.Task, error) {
+	payload, err := json.Marshal(PasswordResetPayload{Email: email, ResetURL: resetURL})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload reset password %s: %w", email, err)
+	}
+	return asynq.NewTask(TypePasswordResetEmail, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

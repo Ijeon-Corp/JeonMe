@@ -157,6 +157,12 @@ const nextConfig = {
       // dengan pola publik "/:username" (lihat catatan urutan array di
       // atas) dan dapat CSP longgar yang salah untuk halaman auth.
       { source: '/verify-email', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
+      // /reset-password (perbaikan 20 Agustus 2026 -- reset password
+      // SEBELUMNYA tidak pernah benar-benar mengirim email, lihat
+      // queue.TypePasswordResetEmail) -- gap yang SAMA seperti /verify-email
+      // di atas, satu segmen path yang tanpa entri eksplisit akan diam-diam
+      // cocok dengan pola publik "/:username".
+      { source: '/reset-password', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
     ];
     return [...publicRoutes, ...strictRoutes];
   },

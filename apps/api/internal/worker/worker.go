@@ -60,6 +60,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeProductWebhookDelivery, h.HandleProductWebhookDelivery)
 	mux.HandleFunc(queue.TypeAudienceBroadcast, h.HandleAudienceBroadcast)
 	mux.HandleFunc(queue.TypeSignupVerificationEmail, h.HandleSignupVerificationEmail)
+	mux.HandleFunc(queue.TypePasswordResetEmail, h.HandlePasswordResetEmail)
 	return mux
 }
 
@@ -87,6 +88,34 @@ func (h *Handler) HandleSignupVerificationEmail(_ context.Context, t *asynq.Task
 	}
 
 	log.Printf("worker: kode verifikasi akun terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandlePasswordResetEmail -- lihat catatan lengkap di
+// queue.TypePasswordResetEmail (perbaikan gap "reset password tidak pernah
+// benar-benar mengirim email"). Pola sama persis dengan
+// HandleSignupVerificationEmail: tidak ada status untuk dicek ulang, pesan
+// yang sudah dienqueue selalu relevan untuk dikirim.
+func (h *Handler) HandlePasswordResetEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.PasswordResetPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Reset password akun Jeon.id kamu"
+	body := fmt.Sprintf(
+		"Ada permintaan reset password untuk akun Jeon.id yang terdaftar dengan email ini.\n\n"+
+			"Klik tautan berikut untuk membuat password baru (berlaku 1 jam sejak diminta):\n%s\n\n"+
+			"Kalau kamu tidak meminta reset password, abaikan saja email ini -- password akunmu tidak akan berubah.\n\n"+
+			"Salam,\nTim Jeon.id",
+		payload.ResetURL,
+	)
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim email reset password: %w", err)
+	}
+
+	log.Printf("worker: email reset password terkirim ke %s", payload.Email)
 	return nil
 }
 

@@ -30,6 +30,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
 	auth.Queue = queueClient
+	auth.PublicWebURL = cfg.PublicWebURL
 	page := handlers.NewPageHandler(db, rdb, s3)
 	// Modul Koneksi Sosial (migrasi 000069, permintaan langsung pengguna:
 	// "saya mau jeonme ini bisa connect ke akun kita contoh nya instagram

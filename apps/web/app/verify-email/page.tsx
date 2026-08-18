@@ -112,7 +112,7 @@ export default function VerifyEmailPage() {
     return (
       <AuthShell>
         <div className="flex flex-col items-center py-6 text-center">
-          <span className="verify-success-circle flex h-16 w-16 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+          <span className="success-pop-circle flex h-16 w-16 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
             <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
               <path
                 d="M5 12.5 9.5 17 19 7"
@@ -121,7 +121,7 @@ export default function VerifyEmailPage() {
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="verify-success-check"
+                className="success-pop-check"
               />
             </svg>
           </span>

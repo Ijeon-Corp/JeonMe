@@ -50,6 +50,15 @@ type AuthHandler struct {
 	// Register) -- soft-fail, akun tetap dibuat walau Redis/queue
 	// bermasalah, kreator tinggal pakai "Kirim ulang kode".
 	Queue *asynq.Client
+	// PublicWebURL -- perbaikan 20 Agustus 2026 (gap "reset password tidak
+	// pernah kirim email", lihat queue.TypePasswordResetEmail): dibutuhkan
+	// RequestPasswordReset untuk membangun tautan lengkap ke halaman
+	// /reset-password (frontend), sebelum diteruskan ke worker lewat
+	// payload. Sama seperti Queue -- di-set terpisah sesudah NewAuthHandler
+	// supaya call site test lama tidak perlu berubah; string kosong di
+	// test cuma menghasilkan tautan relatif di badan email (tidak pernah
+	// benar-benar dikirim tanpa Queue juga di-set, lihat RequestPasswordReset).
+	PublicWebURL string
 }
 
 func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEnv string) *AuthHandler {
@@ -479,10 +488,15 @@ type requestPasswordResetRequest struct {
 }
 
 // RequestPasswordReset — REQ-F-103. Selalu membalas 200 walau email tidak
-// terdaftar (menghindari enumerasi akun). Pengiriman email BELUM
-// diimplementasikan (tidak ada provider SMTP/email terpasang) -- token
-// dikembalikan langsung di response hanya saat APP_ENV != production,
-// supaya tetap bisa diuji manual sebelum worker notifikasi (Sprint 2/3) siap.
+// terdaftar (menghindari enumerasi akun). Email SUNGGUHAN dikirim lewat
+// worker (queue.TypePasswordResetEmail) sejak perbaikan 20 Agustus 2026 --
+// SEBELUMNYA cuma menyimpan token ke DB tanpa pernah benar-benar
+// mengirimkannya, ditemukan lewat audit "apakah notifikasi sudah berfungsi
+// semua" (pengguna produksi yang lupa password sebelumnya tidak punya jalan
+// reset sama sekali). dev_reset_token TETAP dikembalikan langsung di
+// response saat APP_ENV != production -- dev convenience, pola sama dengan
+// dev_verification_code di Register, tidak mengganti pengiriman email
+// sungguhan (keduanya sama-sama terjadi).
 func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 	var req requestPasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -516,9 +530,15 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 		return
 	}
 
+	if h.Queue != nil {
+		resetURL := h.PublicWebURL + "/reset-password?token=" + rawToken
+		if task, err := queue.NewPasswordResetTask(req.Email, resetURL); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
 	resp := gin.H{"message": "jika email terdaftar, tautan reset sudah dikirim"}
 	if h.AppEnv != "production" {
-		// TODO: ganti dengan pengiriman email sungguhan begitu provider SMTP/worker siap.
 		resp["dev_reset_token"] = rawToken
 	}
 	c.JSON(http.StatusOK, resp)

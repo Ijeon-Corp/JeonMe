@@ -372,3 +372,23 @@ func TestHandleTeamInviteNotification_Succeeds(t *testing.T) {
 		t.Fatalf("HandleTeamInviteNotification: error tidak terduga: %v", err)
 	}
 }
+
+// Perbaikan 20 Agustus 2026 (audit "apakah notifikasi sudah berfungsi
+// semua"): sebelumnya RequestPasswordReset tidak pernah mengenqueue task
+// apa pun (email reset password TIDAK PERNAH benar-benar terkirim) --
+// worker-nya sendiri sekarang ada, pola test SAMA PERSIS dengan
+// TestHandleTeamInviteNotification_Succeeds di atas (mailer soft-fail
+// tanpa SMTP asli, membuktikan alur kontrol worker bukan pengiriman SMTP
+// sungguhan).
+func TestHandlePasswordResetEmail_Succeeds(t *testing.T) {
+	h := newTestHandler(t)
+
+	task, err := queue.NewPasswordResetTask("pengguna@example.com", "http://localhost:3000/reset-password?token=abc123")
+	if err != nil {
+		t.Fatalf("gagal encode task: %v", err)
+	}
+
+	if err := h.HandlePasswordResetEmail(t.Context(), task); err != nil {
+		t.Fatalf("HandlePasswordResetEmail: error tidak terduga: %v", err)
+	}
+}
