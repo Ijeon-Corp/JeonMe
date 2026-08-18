@@ -1376,7 +1376,17 @@ export default function PagePreview({
       {/* Topbar: cuma tombol share kanan -- logo Jeonme di pojok kiri
           DIHILANGKAN (permintaan langsung pengguna), branding Jeonme cukup
           lewat pil "Buat halaman gratis di Jeonme" di bagian bawah. */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
+      {/* z-20 (bug dilaporkan pengguna, 18 Agustus 2026: "tombol share
+          ketutup foto profile"): avatar varian "card"/"cover" (lihat
+          renderBioHeader) juga pakai z-10 di wrapper-nya sendiri -- semua
+          div pembungkus di antara sini & sana cuma position:relative TANPA
+          z-index eksplisit, jadi TIDAK membuat stacking context baru, dan
+          z-10 avatar berakhir dibandingkan LANGSUNG dengan z-10 tombol ini
+          dalam satu context yang sama. Nilai SAMA -> penentu jadi urutan
+          DOM, avatar (lebih belakangan di JSX) menang & menutupi tombol.
+          z-20 di sini memastikan tombol share SELALU di atas, apa pun
+          varian avatar/tema yang dipakai. */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
@@ -1766,7 +1776,17 @@ function LandingPagePreview({
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
+      {/* z-20 (bug dilaporkan pengguna, 18 Agustus 2026: "tombol share
+          ketutup foto profile"): avatar varian "card"/"cover" (lihat
+          renderBioHeader) juga pakai z-10 di wrapper-nya sendiri -- semua
+          div pembungkus di antara sini & sana cuma position:relative TANPA
+          z-index eksplisit, jadi TIDAK membuat stacking context baru, dan
+          z-10 avatar berakhir dibandingkan LANGSUNG dengan z-10 tombol ini
+          dalam satu context yang sama. Nilai SAMA -> penentu jadi urutan
+          DOM, avatar (lebih belakangan di JSX) menang & menutupi tombol.
+          z-20 di sini memastikan tombol share SELALU di atas, apa pun
+          varian avatar/tema yang dipakai. */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
@@ -2003,7 +2023,17 @@ function ProdukPagePreview({
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end p-4">
+      {/* z-20 (bug dilaporkan pengguna, 18 Agustus 2026: "tombol share
+          ketutup foto profile"): avatar varian "card"/"cover" (lihat
+          renderBioHeader) juga pakai z-10 di wrapper-nya sendiri -- semua
+          div pembungkus di antara sini & sana cuma position:relative TANPA
+          z-index eksplisit, jadi TIDAK membuat stacking context baru, dan
+          z-10 avatar berakhir dibandingkan LANGSUNG dengan z-10 tombol ini
+          dalam satu context yang sama. Nilai SAMA -> penentu jadi urutan
+          DOM, avatar (lebih belakangan di JSX) menang & menutupi tombol.
+          z-20 di sini memastikan tombol share SELALU di atas, apa pun
+          varian avatar/tema yang dipakai. */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak
