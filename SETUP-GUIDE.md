@@ -22,8 +22,8 @@ Skrip pendukung ada di `scripts/`:
 
 | Item | Nilai |
 |---|---|
-| VPS | `103.147.33.34` (Debian 12, shared dengan proyek lain) |
-| SSH | Port `61512`, user `deploy` (grup `docker`, tanpa sudo) |
+| VPS | `202.73.26.92` (Debian 12, shared dengan proyek lain) -- **pindah dari `103.147.33.34`** (18 Agustus 2026, dilaporkan pengguna; IP baru dikonfirmasi lewat request HTTP langsung dgn `Host: jeonme.com` yang menjawab dgn banner Apache asli "Apache/2.4.67 (Debian) Server at jeonme.com", sementara IP lama sudah connection-timeout total). SSH port/user DI BAWAH ini KEMUNGKINAN masih sama seperti sebelumnya tapi BELUM diverifikasi ulang di host baru -- konfirmasi manual sebelum dipakai. |
+| SSH | Port `61512`, user `deploy` (grup `docker`, tanpa sudo) -- **asumsi carry-over dari VPS lama, belum diverifikasi di `202.73.26.92`** |
 | Repo GitHub | `Ijeon-Corp/JeonMe` |
 | Production | `https://jeonme.com` — direktori `/opt/jeonme-production` (masih domain yang benar-benar melayani traffic; migrasi ke `jeon.id` SEDANG BERJALAN, lihat Bagian 1.1 di bawah -- kode sudah siap sejak 18 Agustus 2026, tapi DNS/vhost Apache/sertifikat TLS untuk `jeon.id` BELUM dieksekusi di VPS) |
 | Staging | `https://staging.jeonme.com` — direktori `/opt/jeonme-staging` |
@@ -42,7 +42,7 @@ curl https://staging.jeonme.com/api/health
 
 Sisi kode SUDAH selesai & live sejak commit `26766b7` (URL yang dihasilkan aplikasi -- share link, sitemap, OG tags, redirect_uri OAuth, dst -- semua sudah menunjuk `jeon.id`, dengan `jeonme.com` tetap dikenali sebagai host lama di `apps/web/proxy.ts`). Yang **belum** dieksekusi adalah langkah infra di VPS (DNS, vhost Apache baru, sertifikat TLS, `.env` VPS, konsol OAuth) -- checklist eksekusinya:
 
-- [ ] DNS `jeon.id`, `www.jeon.id`, `staging.jeon.id` diarahkan ke `103.147.33.34` lewat Cloudflare (proxied atau DNS-only, keduanya sudah terbukti jalan untuk domain lain di VPS ini).
+- [ ] DNS `jeon.id`, `www.jeon.id`, `staging.jeon.id` diarahkan ke `202.73.26.92` (VPS saat ini, lihat Bagian 1) lewat Cloudflare (proxied atau DNS-only, keduanya sudah terbukti jalan untuk domain lain di VPS ini).
 - [ ] Vhost Apache baru dibuat di VPS untuk `jeon.id`/`www.jeon.id` (production) dan `staging.jeon.id` (staging) -- pola PERSIS sama seperti `jeonme.com.conf`/`staging.jeonme.com.conf` yang sudah ada (lihat CICD-GUIDE.md §10.1), cuma ganti `ServerName`/`ServerAlias` dan nama file log, PORT PROXY TETAP SAMA (23000/28080 production, 23100/28180 staging) -- domain lama dan domain baru mem-proxy ke container APP YANG SAMA.
 - [ ] Sertifikat TLS diterbitkan untuk `jeon.id`/`www.jeon.id`/`staging.jeon.id` lewat `certbot certonly --webroot` (webroot `/var/www/certbot`, sama seperti domain lain di VPS ini) -- otomatis masuk cakupan `certbot.timer` sistem begitu diterbitkan, tidak perlu cron tambahan.
 - [ ] `.env` di `/opt/jeonme-production` DAN `/opt/jeonme-staging` diperbarui: `CORS_ALLOWED_ORIGINS`, `PUBLIC_WEB_URL`, `PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL` (kalau diisi eksplisit), `SMTP_FROM`, `CUSTOM_DOMAIN_CNAME_TARGET` -- ganti ke `jeon.id`, TAPI tambahkan `jeon.id` ke `CORS_ALLOWED_ORIGINS` (dipisah koma) BUKAN mengganti seluruhnya, supaya `jeonme.com` yang belum sempat redirect di browser pengunjung tidak mendadak diblokir CORS.
