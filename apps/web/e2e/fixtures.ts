@@ -120,6 +120,11 @@ export async function registerAndLogin(page: Page, usernamePrefix: string): Prom
 
     if (result === "ok") {
       await page.getByRole("button", { name: "Verifikasi & Masuk" }).click();
+      // Layar animasi "Verifikasi Berhasil!" (permintaan langsung pengguna,
+      // 19 Agustus 2026: "tambahkan animasi verifikasi berhasil setelah
+      // klik oke baru redirect ke dashboard") -- kode benar TIDAK LAGI
+      // langsung redirect, harus klik "OK" dulu di layar itu.
+      await page.getByRole("button", { name: "OK", exact: true }).click();
       await page.waitForURL("**/dashboard", { timeout: 15000 });
       return { username, email };
     }

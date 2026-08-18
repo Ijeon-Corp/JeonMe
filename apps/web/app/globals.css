@@ -260,6 +260,38 @@ h1, h2, h3, h4, h5 {
   }
 }
 
+/* Animasi sukses verifikasi email -- permintaan langsung pengguna, 19
+   Agustus 2026: "tambahkan animasi verifikasi berhasil setelah klik oke
+   baru redirect ke dashboard" (app/verify-email/page.tsx). Lingkaran
+   "pop" duluan lalu centang "digambar" nyusul (delay 0.35s) -- checkPop
+   pakai cubic-bezier overshoot (>1 di tengah) supaya kesannya kenyal/hidup,
+   bukan cuma fade biasa. .verify-success-check butuh atribut SVG
+   pathLength={1} di elemen <path>-nya (dipasang di komponen React, bukan
+   di sini) supaya stroke-dasharray/dashoffset satuan "1" ini akurat
+   independen dari geometri path asli -- teknik SVG2 standar, tidak perlu
+   hitung manual panjang path. Otomatis berhenti kalau
+   prefers-reduced-motion (blok umum di atas berlaku ke SEMUA animasi di
+   file ini, termasuk dua kelas ini, tanpa penanganan terpisah). */
+.verify-success-circle {
+  animation: checkPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.verify-success-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: checkDraw 0.4s ease-out 0.35s both;
+}
+
+@keyframes checkDraw {
+  to { stroke-dashoffset: 0; }
+}
+
 /* Modul UX: dialog konfirmasi SweetAlert2 (pengganti window.confirm() bawaan
    browser di semua aksi destruktif/penting) -- tombolnya di-restyle lewat
    class swal-btn-* (buttonsStyling: false di lib/confirm.ts) supaya pakai

@@ -40,6 +40,13 @@ test.describe("Verifikasi Email Signup", () => {
     // membuktikan satu percobaan salah tidak ikut merusak kode yang valid.
     await codeInput.fill(realCode);
     await page.getByRole("button", { name: "Verifikasi & Masuk" }).click();
+
+    // Animasi sukses (permintaan langsung pengguna, 19 Agustus 2026:
+    // "tambahkan animasi verifikasi berhasil setelah klik oke baru redirect
+    // ke dashboard") -- muncul dulu SEBELUM redirect, harus klik "OK".
+    await expect(page.getByRole("heading", { name: "Verifikasi Berhasil!" })).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/verify-email/);
+    await page.getByRole("button", { name: "OK", exact: true }).click();
     await page.waitForURL("**/dashboard", { timeout: 15000 });
   });
 });

@@ -41,6 +41,14 @@ export default function VerifyEmailPage() {
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [devHint, setDevHint] = useState<string | null>(null);
+  // verified/continuing -- permintaan langsung pengguna, 19 Agustus 2026:
+  // "tambahkan animasi verifikasi berhasil setelah klik oke baru redirect
+  // ke dashboard" -- SEBELUMNYA kode benar langsung redirectAfterAuth tanpa
+  // jeda. Token tetap disimpan SEGERA begitu kode benar (akun sudah aktif
+  // sungguhan saat itu juga), cuma NAVIGASI-nya ditahan sampai kreator
+  // klik "OK" di layar animasi sukses ini.
+  const [verified, setVerified] = useState(false);
+  const [continuing, setContinuing] = useState(false);
 
   useEffect(() => {
     resolveInitialParams().then((result) => {
@@ -69,12 +77,17 @@ export default function VerifyEmailPage() {
     try {
       const res = await confirmSignupVerification({ email, code: code.trim() });
       setToken(res.token);
-      await redirectAfterAuth(router);
+      setVerified(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memverifikasi, coba lagi.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleContinue() {
+    setContinuing(true);
+    await redirectAfterAuth(router);
   }
 
   async function handleResend() {
@@ -93,6 +106,38 @@ export default function VerifyEmailPage() {
     } finally {
       setResending(false);
     }
+  }
+
+  if (verified) {
+    return (
+      <AuthShell>
+        <div className="flex flex-col items-center py-6 text-center">
+          <span className="verify-success-circle flex h-16 w-16 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
+              <path
+                d="M5 12.5 9.5 17 19 7"
+                pathLength={1}
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="verify-success-check"
+              />
+            </svg>
+          </span>
+          <h1 className="mt-5 font-heading text-2xl font-bold text-ink sm:text-3xl">Verifikasi Berhasil!</h1>
+          <p className="mt-2 text-sm text-muted">Akunmu sudah aktif & siap dipakai.</p>
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={continuing}
+            className="mt-7 w-full rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          >
+            {continuing ? "Memuat..." : "OK"}
+          </button>
+        </div>
+      </AuthShell>
+    );
   }
 
   return (
