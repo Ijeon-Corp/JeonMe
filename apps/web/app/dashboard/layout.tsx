@@ -10,6 +10,7 @@ import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/GlobalSearch";
+import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
 import {
   Workspace,
@@ -37,6 +38,7 @@ import {
   IconPaintbrush,
   IconPhone,
   IconPlayCircle,
+  IconQrCode,
   IconSettings,
   IconSparkle,
   IconWallet,
@@ -153,6 +155,7 @@ export default function DashboardLayout({
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
 
@@ -481,6 +484,25 @@ export default function DashboardLayout({
                     <IconExternal className="h-4 w-4" />
                   </a>
                 )}
+                {/* Kode QR profil (permintaan langsung pengguna, 18 Agustus
+                    2026: "buatkan qrcode untuk profile kita, supaya orang
+                    lain tinggal scan dan menuju profile") -- QRCodeModal
+                    SUDAH ada sebelumnya, tapi cuma dipakai fitur Kartu
+                    Kontak (business-card/page.tsx). Ditaruh di top bar
+                    (bukan halaman tersendiri) supaya konsisten dengan tombol
+                    "Lihat halaman publik"/"Salin tautan" di sebelahnya --
+                    ketiganya sama-sama aksi cepat "bagikan halaman publikmu". */}
+                {username && (
+                  <button
+                    type="button"
+                    onClick={() => setQrOpen(true)}
+                    title="Kode QR profil"
+                    aria-label="Kode QR profil"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                  >
+                    <IconQrCode className="h-4 w-4" />
+                  </button>
+                )}
                 <Link
                   href="/dashboard/settings"
                   title="Pengaturan"
@@ -536,6 +558,9 @@ export default function DashboardLayout({
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </div>
         </div>
+        {qrOpen && username && (
+          <QRCodeModal url={`${SITE_URL}/${username}`} username={username} onClose={() => setQrOpen(false)} />
+        )}
       </ToastProvider>
     </AuthGuard>
   );
