@@ -192,7 +192,7 @@ export default function DashboardDesignPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-ink">Sembunyikan Watermark</p>
                   <p className="truncate text-xs text-muted">
-                    {page.is_premium ? "Hilangkan pil “Buat halaman gratis di Jeonme” di footer" : "Khusus kreator Premium -- upgrade dulu"}
+                    {page.is_premium ? "Hilangkan pil “Buat halaman gratis di Jeon.id” di footer" : "Khusus kreator Premium -- upgrade dulu"}
                   </p>
                 </div>
               </button>

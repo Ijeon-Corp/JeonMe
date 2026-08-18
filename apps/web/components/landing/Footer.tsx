@@ -71,7 +71,7 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border py-6 sm:flex-row">
-          <p className="text-sm text-slate-400">© 2026 Jeonme. Seluruh hak cipta dilindungi.</p>
+          <p className="text-sm text-slate-400">© 2026 Jeon.id. Seluruh hak cipta dilindungi.</p>
           <div className="flex items-center gap-6">
             <a href="#" className="cursor-pointer text-xs text-slate-400 transition-colors hover:text-ink">Kebijakan Privasi</a>
             <a href="#" className="cursor-pointer text-xs text-slate-400 transition-colors hover:text-ink">Ketentuan Layanan</a>

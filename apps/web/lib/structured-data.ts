@@ -10,7 +10,7 @@ export function organizationSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Jeonme",
+    name: "Jeon.id",
     url: SITE_URL,
     logo: `${SITE_URL}/logo-baru.png`,
     description: "Platform link-in-bio dan monetisasi produk digital untuk kreator Indonesia.",

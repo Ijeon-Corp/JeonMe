@@ -87,7 +87,7 @@ export default async function Pricing({ showHeading = true }: { showHeading?: bo
             </Link>
             <ul className="space-y-3">
               <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Semua fitur Gratis</li>
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Hapus watermark Jeonme</li>
+              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Hapus watermark Jeon.id</li>
               <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Latar belakang kustom (warna/gradien/gambar)</li>
               <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Sampai 5 Halaman Toko &amp; Halaman Tambahan</li>
               <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Integrasi Meta Conversions API</li>

@@ -42,7 +42,7 @@ export default function Navbar() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" aria-label="Jeonme home">
+          <Link href="/" aria-label="Jeon.id home">
             <Logo />
           </Link>
 

@@ -96,7 +96,7 @@ const customSpaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Jeonme — Satu Link, Peluang Tanpa Batas",
+  title: "Jeon.id — Satu Link, Peluang Tanpa Batas",
   description: "Platform link-in-bio dan monetisasi produk digital untuk kreator Indonesia.",
 };
 

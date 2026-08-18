@@ -122,7 +122,7 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
-        Masuk ke Jeonme
+        Masuk ke Jeon.id
       </h1>
       <p className="mt-3 text-sm text-muted">Kelola halaman dan produkmu.</p>
 

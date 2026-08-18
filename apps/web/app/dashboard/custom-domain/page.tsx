@@ -90,12 +90,12 @@ export default function DashboardCustomDomainPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <p className="mt-1 text-sm text-muted">
-        Arahkan domainmu sendiri (mis. toko.namamu.com) ke halaman Jeonme-mu. Fitur PRO di kompetitor -- gratis di
-        Jeonme.
+        Arahkan domainmu sendiri (mis. toko.namamu.com) ke halaman Jeon.id-mu. Fitur PRO di kompetitor -- gratis di
+        Jeon.id.
       </p>
       <p className="mt-2 rounded-lg bg-accent-subtle px-3 py-2 text-xs text-accent-dark">
         Versi awal: bagian pengaturan & verifikasi domain sudah bisa dipakai. Domainmu belum bisa benar-benar
-        menampilkan halaman sampai infrastruktur server selesai disiapkan tim Jeonme.
+        menampilkan halaman sampai infrastruktur server selesai disiapkan tim Jeon.id.
       </p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

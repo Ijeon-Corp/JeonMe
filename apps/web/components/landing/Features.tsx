@@ -78,7 +78,7 @@ export default function Features({ showHeading = true }: { showHeading?: boolean
               <span className="text-gradient">Ada di Satu Halaman</span>
             </h2>
             <p className="text-lg leading-relaxed text-muted">
-              Dari manajemen tautan hingga monetisasi — Jeonme memberimu toolkit lengkap untuk bertumbuh.
+              Dari manajemen tautan hingga monetisasi — Jeon.id memberimu toolkit lengkap untuk bertumbuh.
             </p>
           </div>
         )}

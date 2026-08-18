@@ -19,7 +19,7 @@ test.describe("Langganan Premium: Gating Watermark", () => {
     const { username } = await registerAndLogin(page, "premium");
     await publishPage(page);
 
-    const watermarkPill = "Buat halaman gratis di Jeonme";
+    const watermarkPill = "Buat halaman gratis di Jeon.id";
 
     await page.goto("/dashboard/design");
     const watermarkToggle = page.getByRole("switch", { name: "Sembunyikan watermark" });

@@ -252,9 +252,9 @@ export default function DashboardLayout({
             polos + aksen berlian emas kecil (pola sama seperti mockup).
             Logo gambar (logo-baru.png) SENGAJA DIKECUALIKAN di dashboard
             -- permintaan langsung pengguna, 10 Agustus 2026: khusus area
-            dashboard tetap teks "Jeonme" polos, bukan gambar. */}
+            dashboard tetap teks "Jeon.id" polos, bukan gambar. */}
         <Link href="/dashboard" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-white">
-          Jeonme<span className="text-xs text-accent-light" aria-hidden="true">&#9670;</span>
+          Jeon.id<span className="text-xs text-accent-light" aria-hidden="true">&#9670;</span>
         </Link>
 
         {workspaces.length > 1 && (
@@ -413,7 +413,7 @@ export default function DashboardLayout({
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
               <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
-                Jeonme
+                Jeon.id
               </Link>
               <button
                 type="button"

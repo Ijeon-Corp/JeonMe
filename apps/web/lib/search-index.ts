@@ -57,7 +57,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { label: "Header", href: "/dashboard/design/header", description: "Foto profil & gambar latar halaman.", icon: IconCamera, keywords: ["header", "foto", "avatar", "sampul", "cover"] },
   { label: "Tombol", href: "/dashboard/design/tombol", description: "Gaya, kelengkungan, dan warna tombol.", icon: IconSparkle, keywords: ["tombol", "button"] },
   { label: "Font", href: "/dashboard/design/font", description: "Font halaman & font judul.", icon: IconBook, keywords: ["font", "huruf", "tipografi"] },
-  { label: "Domain Kustom", href: "/dashboard/custom-domain", description: "Arahkan domainmu sendiri ke halaman Jeonme.", icon: IconGlobe, keywords: ["domain", "cname"] },
+  { label: "Domain Kustom", href: "/dashboard/custom-domain", description: "Arahkan domainmu sendiri ke halaman Jeon.id.", icon: IconGlobe, keywords: ["domain", "cname"] },
   { label: "Halaman Tambahan", href: "/dashboard/pages", description: "Halaman bio/landing tambahan di luar halaman utama.", icon: IconGlobe, keywords: ["halaman", "landing", "bio tambahan"] },
   { label: "Voucher", href: "/dashboard/vouchers", description: "Kode diskon untuk produkmu.", icon: IconTag, keywords: ["voucher", "diskon", "kode"] },
   { label: "Bundel", href: "/dashboard/bundles", description: "Gabungkan beberapa produk jadi satu paket.", icon: IconGift, keywords: ["bundel", "paket"] },

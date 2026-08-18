@@ -83,7 +83,7 @@ export default function RegisterPage() {
   return (
     <AuthShell>
       <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
-        Daftar ke Jeonme
+        Daftar ke Jeon.id
       </h1>
       <p className="mt-3 text-sm text-muted">
         Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-ink">gratis</span>.
@@ -209,7 +209,7 @@ export default function RegisterPage() {
             onChange={(e) => setConsentAccepted(e.target.checked)}
             className="mt-0.5 h-4 w-4 flex-shrink-0"
           />
-          Saya menyetujui pemrosesan data pribadi saya oleh Jeonme sesuai kebutuhan layanan
+          Saya menyetujui pemrosesan data pribadi saya oleh Jeon.id sesuai kebutuhan layanan
           (sesuai UU PDP).
         </label>
 

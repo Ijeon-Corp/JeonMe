@@ -17,7 +17,7 @@ export default function FinalCTA() {
           <br />
           Digitalmu Hari Ini.
         </h2>
-        <p className="mx-auto mb-9 max-w-xl text-lg text-white/75">Bergabunglah dengan ribuan kreator yang bertumbuh bersama Jeonme.</p>
+        <p className="mx-auto mb-9 max-w-xl text-lg text-white/75">Bergabunglah dengan ribuan kreator yang bertumbuh bersama Jeon.id.</p>
         <Link href="/dashboard" className="btn-primary shadow-hero inline-flex cursor-pointer rounded-xl px-9 py-4 font-heading text-base font-bold text-white">
           Mulai Gratis
         </Link>

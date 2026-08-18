@@ -17,7 +17,7 @@ import { faqPageSchema } from "@/lib/structured-data";
 // components/landing/Pricing.tsx) supaya tidak ada dua sumber angka
 // yang bisa berbeda.
 export const metadata: Metadata = {
-  title: "Harga — Jeonme",
+  title: "Harga — Jeon.id",
   description:
     "Mulai gratis dengan tautan tanpa batas dan 1 Halaman Toko. Upgrade ke Premium untuk hapus watermark, latar belakang kustom, dan sampai 5 Halaman Toko.",
   alternates: { canonical: "/pricing" },

@@ -99,7 +99,7 @@ export default function SettingsSeoPage() {
             type="text"
             maxLength={70}
             value={seoTitle}
-            placeholder={`@${page.username} — Jeonme`}
+            placeholder={`@${page.username} — Jeon.id`}
             onChange={(e) => setSeoTitle(e.target.value)}
             className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -110,7 +110,7 @@ export default function SettingsSeoPage() {
           <textarea
             maxLength={160}
             value={seoDescription}
-            placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeonme.`}
+            placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeon.id.`}
             onChange={(e) => setSeoDescription(e.target.value)}
             rows={2}
             className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"

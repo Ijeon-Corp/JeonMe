@@ -103,7 +103,7 @@ export default function DashboardAffiliatesPage() {
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-muted">
         Undang afiliator dengan komisi custom per produk. Versi awal: mode privat -- afiliator harus sudah jadi
-        pengguna Jeonme.
+        pengguna Jeon.id.
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -130,7 +130,7 @@ export default function DashboardAffiliatesPage() {
                 placeholder="afiliator@email.com"
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
-              <p className="mt-1 text-[11px] text-muted">Harus sudah punya akun Jeonme dengan email ini.</p>
+              <p className="mt-1 text-[11px] text-muted">Harus sudah punya akun Jeon.id dengan email ini.</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-ink">Produk</label>

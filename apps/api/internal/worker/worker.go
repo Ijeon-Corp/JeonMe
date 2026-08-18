@@ -571,16 +571,25 @@ func (h *Handler) HandleProductWebhookDelivery(ctx context.Context, t *asynq.Tas
 }
 
 // deliverProductWebhook -- POST mentah + tanda tangan HMAC-SHA256 di header
-// X-Jeonme-Signature (hex) supaya server kreator bisa memverifikasi
-// pengirimnya benar-benar Jeonme, sama seperti kita memverifikasi
+// X-Jeon-Signature (hex) supaya server kreator bisa memverifikasi
+// pengirimnya benar-benar Jeon.id, sama seperti kita memverifikasi
 // signature_key dari Midtrans, tapi arah terbalik.
+//
+// PENTING (rename 18 Agustus 2026, sebelumnya X-Jeonme-Signature): ini
+// PERUBAHAN BREAKING untuk kreator yang SUDAH mengonfigurasi server webhook
+// sendiri dan memvalidasi nama header lama -- verifikasi tanda tangan
+// mereka akan gagal sampai mereka update kode penerimanya sendiri. Tidak
+// ada cara soft-fail/dual-header di sini tanpa kompleksitas tambahan
+// (mis. kirim KEDUA header sementara masa transisi) -- keputusan bisnis
+// pengguna untuk tetap ganti langsung, dicatat di sini supaya jelas
+// kenapa nama header berubah kalau ada laporan webhook gagal terverifikasi.
 func deliverProductWebhook(ctx context.Context, url string, body []byte, signature string) (status string, responseCode *int, errMessage string) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return "failed", nil, fmt.Sprintf("gagal membuat request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Jeonme-Signature", signature)
+	req.Header.Set("X-Jeon-Signature", signature)
 
 	resp, err := productWebhookHTTPClient.Do(req)
 	if err != nil {

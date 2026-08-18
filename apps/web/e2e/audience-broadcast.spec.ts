@@ -45,7 +45,7 @@ test.describe("Broadcast Email Audiens", () => {
     await expect(page.getByText("Kirim pesan ke 1 subscriber", { exact: false })).toBeVisible({ timeout: 10000 });
 
     const subjectInput = page.locator('input[placeholder="Subjek email"]');
-    await subjectInput.fill("Halo dari Jeonme E2E");
+    await subjectInput.fill("Halo dari Jeon.id E2E");
     await page.getByPlaceholder("Isi pesan...").fill("Ini pesan broadcast uji coba.");
     await page.getByRole("button", { name: /Kirim ke 1 Subscriber/ }).click();
 

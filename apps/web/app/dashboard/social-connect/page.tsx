@@ -87,7 +87,7 @@ function ConnectCard({
         </button>
       ) : (
         <p className="rounded-xl border border-dashed border-border p-3 text-center text-[11px] text-muted">
-          Fitur ini belum dikonfigurasi di server Jeonme.
+          Fitur ini belum dikonfigurasi di server Jeon.id.
         </p>
       )}
     </div>

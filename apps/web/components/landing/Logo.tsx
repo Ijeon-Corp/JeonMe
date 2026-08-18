@@ -7,6 +7,6 @@
 export default function Logo({ className = "" }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-baru.png" alt="Jeonme" className={`h-9 w-auto ${className}`} />
+    <img src="/logo-baru.png" alt="Jeon.id" className={`h-9 w-auto ${className}`} />
   );
 }

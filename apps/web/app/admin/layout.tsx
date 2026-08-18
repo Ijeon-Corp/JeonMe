@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/admin" className="flex items-center gap-2">
           <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-baru.png" alt="Jeonme" className="h-full w-full object-contain" />
+            <img src="/logo-baru.png" alt="Jeon.id" className="h-full w-full object-contain" />
           </span>
           <span className="font-heading text-lg font-extrabold text-white">Admin</span>
         </Link>
@@ -117,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
             <Link href="/admin" className="flex items-center gap-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-baru.png" alt="Jeonme" className="h-7 w-auto" />
+              <img src="/logo-baru.png" alt="Jeon.id" className="h-7 w-auto" />
               <span className="font-heading text-lg font-extrabold text-ink">Admin</span>
             </Link>
             <button

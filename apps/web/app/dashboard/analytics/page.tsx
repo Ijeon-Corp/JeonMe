@@ -154,7 +154,7 @@ export default function DashboardAnalyticsPage() {
           <div>
             <p className="text-sm font-bold text-ink">Parameter UTM</p>
             <p className="mt-0.5 text-xs text-muted">
-              Tandai halaman Jeonme-mu sebagai trafik &apos;social&apos; di Google Analytics. Parameter kampanye diatur
+              Tandai halaman Jeon.id-mu sebagai trafik &apos;social&apos; di Google Analytics. Parameter kampanye diatur
               otomatis dari judul tiap tautan.
             </p>
           </div>

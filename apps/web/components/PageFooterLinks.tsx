@@ -22,7 +22,7 @@ const FOOTER_ITEMS: { key: FooterModalKey; label: string }[] = [
   { key: "privacy", label: "Privasi" },
   { key: "explore", label: "Jelajahi" },
   { key: "about", label: "Tentang Akun Ini" },
-  { key: "more", label: "Lainnya dari Jeonme" },
+  { key: "more", label: "Lainnya dari Jeon.id" },
 ];
 
 const MODAL_TITLES: Record<FooterModalKey, string> = {
@@ -31,7 +31,7 @@ const MODAL_TITLES: Record<FooterModalKey, string> = {
   privacy: "Privasi",
   explore: "Jelajahi",
   about: "Tentang Akun Ini",
-  more: "Lainnya dari Jeonme",
+  more: "Lainnya dari Jeon.id",
 };
 
 export default function PageFooterLinks({
@@ -77,7 +77,7 @@ export default function PageFooterLinks({
 
             {active === "cookie" && (
               <p className="text-sm leading-relaxed text-muted">
-                Jeonme memakai cookie/local storage seperlunya untuk menjaga sesi masuk & preferensi tampilan. Belum ada
+                Jeon.id memakai cookie/local storage seperlunya untuk menjaga sesi masuk & preferensi tampilan. Belum ada
                 pengaturan cookie granular yang bisa diubah pengunjung dari halaman ini.
               </p>
             )}
@@ -91,13 +91,13 @@ export default function PageFooterLinks({
 
             {active === "privacy" && (
               <p className="text-sm leading-relaxed text-muted">
-                Jeonme menyimpan data yang kamu berikan (nama, email, produk) untuk menjalankan layanan bagi kreator.
-                Pembayaran diproses pihak ketiga (Midtrans) dan tidak disimpan Jeonme. Statistik kunjungan/klik dicatat
+                Jeon.id menyimpan data yang kamu berikan (nama, email, produk) untuk menjalankan layanan bagi kreator.
+                Pembayaran diproses pihak ketiga (Midtrans) dan tidak disimpan Jeon.id. Statistik kunjungan/klik dicatat
                 untuk kreator, bukan untuk dijual ke pihak lain.
               </p>
             )}
 
-            {active === "explore" && <p className="text-sm leading-relaxed text-muted">Jelajahi kreator lain belum tersedia di Jeonme saat ini.</p>}
+            {active === "explore" && <p className="text-sm leading-relaxed text-muted">Jelajahi kreator lain belum tersedia di Jeon.id saat ini.</p>}
 
             {active === "about" && (
               <div className="flex flex-col gap-1.5 text-sm text-muted">
@@ -125,7 +125,7 @@ export default function PageFooterLinks({
             {active === "more" && (
               <div className="flex flex-col gap-3">
                 <p className="text-sm leading-relaxed text-muted">
-                  Jeonme adalah platform link-in-bio & monetisasi produk digital untuk kreator Indonesia.
+                  Jeon.id adalah platform link-in-bio & monetisasi produk digital untuk kreator Indonesia.
                 </p>
                 <a
                   href={`${SITE_URL}/register`}

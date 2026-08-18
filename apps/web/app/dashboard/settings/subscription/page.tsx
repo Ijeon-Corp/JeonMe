@@ -96,7 +96,7 @@ export default function SettingsSubscriptionPage() {
         Langganan Premium
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Hilangkan watermark &quot;Buat halaman gratis di Jeonme&quot; di halaman publikmu, dan gunakan latar belakang
+        Hilangkan watermark &quot;Buat halaman gratis di Jeon.id&quot; di halaman publikmu, dan gunakan latar belakang
         kustom (warna/gradien/gambar sendiri).
       </p>
 
@@ -161,7 +161,7 @@ export default function SettingsSubscriptionPage() {
       )}
 
       <ul className="mt-6 flex flex-col gap-2 text-sm text-ink">
-        <BenefitRow text="Hilangkan watermark Jeonme di halaman publikmu" />
+        <BenefitRow text="Hilangkan watermark Jeon.id di halaman publikmu" />
         <BenefitRow text="Latar belakang kustom (warna, gradien, atau gambar sendiri)" />
       </ul>
 

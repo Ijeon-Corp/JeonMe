@@ -133,16 +133,16 @@ export default function DashboardBalancePage() {
               <IconBadgeCheck className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-bold text-secondary-dark">Jeonme 0% komisi transaksi</p>
+              <p className="text-sm font-bold text-secondary-dark">Jeon.id 0% komisi transaksi</p>
               <p className="mt-0.5 text-xs text-secondary-dark/80">
-                Kamu terima 100% dari harga jual produkmu -- Jeonme tidak memotong apa pun dari penjualan.
+                Kamu terima 100% dari harga jual produkmu -- Jeon.id tidak memotong apa pun dari penjualan.
                 Satu-satunya potongan adalah biaya prosesor pembayaran (Midtrans) di bawah ini, diteruskan apa adanya.
               </p>
             </div>
           </div>
 
           <h2 className="mt-5 font-heading text-lg font-bold text-ink">Estimasi Biaya Prosesor per Metode</h2>
-          <p className="mt-1 text-xs text-muted">Ditentukan Midtrans, di luar kendali Jeonme -- bukan komisi platform.</p>
+          <p className="mt-1 text-xs text-muted">Ditentukan Midtrans, di luar kendali Jeon.id -- bukan komisi platform.</p>
 
           <div className="mt-3 flex flex-col gap-1.5">
             {feeBreakdown.reference.map((r) => (

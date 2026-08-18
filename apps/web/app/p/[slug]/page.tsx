@@ -16,12 +16,12 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   const page = await getPublicPageBySlug(slug);
 
   if (!page) {
-    return { title: "Halaman tidak ditemukan — Jeonme" };
+    return { title: "Halaman tidak ditemukan — Jeon.id" };
   }
 
   const displayName = page.display_name || page.username;
-  const title = page.seo_title || `${displayName} — Jeonme`;
-  const description = page.seo_description || page.bio || `Lihat semua tautan ${displayName} di Jeonme.`;
+  const title = page.seo_title || `${displayName} — Jeon.id`;
+  const description = page.seo_description || page.bio || `Lihat semua tautan ${displayName} di Jeon.id.`;
 
   return {
     title,
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     openGraph: {
       title,
       description,
-      siteName: "Jeonme",
+      siteName: "Jeon.id",
       images: page.avatar_url ? [{ url: page.avatar_url }] : undefined,
       type: "profile",
     },

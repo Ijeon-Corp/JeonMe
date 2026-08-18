@@ -22,12 +22,12 @@ export interface FaqItem {
 // Premium-only, analytics.go).
 export const faqs: FaqItem[] = [
   {
-    q: "Apa itu Jeonme?",
-    a: "Jeonme adalah platform link-in-bio all-in-one yang memungkinkan kreator, freelancer, dan bisnis menggabungkan tautan, konten, dan tools monetisasi mereka menjadi satu halaman yang indah dan bisa disesuaikan.",
+    q: "Apa itu Jeon.id?",
+    a: "Jeon.id adalah platform link-in-bio all-in-one yang memungkinkan kreator, freelancer, dan bisnis menggabungkan tautan, konten, dan tools monetisasi mereka menjadi satu halaman yang indah dan bisa disesuaikan.",
   },
   {
     q: "Bisakah saya pakai domain sendiri?",
-    a: "Bisa, di semua paket termasuk Gratis — hubungkan domain kustom milikmu sendiri lewat Pengaturan halaman. Untuk menghapus watermark \"Buat halaman gratis di Jeonme\" dan mengatur latar belakang kustom, upgrade ke Premium.",
+    a: "Bisa, di semua paket termasuk Gratis — hubungkan domain kustom milikmu sendiri lewat Pengaturan halaman. Untuk menghapus watermark \"Buat halaman gratis di Jeon.id\" dan mengatur latar belakang kustom, upgrade ke Premium.",
   },
   {
     q: "Apakah ada paket gratis?",
@@ -35,7 +35,7 @@ export const faqs: FaqItem[] = [
   },
   {
     q: "Bagaimana cara menjual produk digital?",
-    a: "Tambahkan blok produk ke halamanmu, upload ebook, template, atau file kelas, atur harga, dan Jeonme akan mengurus checkout serta pengiriman file secara otomatis dan aman.",
+    a: "Tambahkan blok produk ke halamanmu, upload ebook, template, atau file kelas, atur harga, dan Jeon.id akan mengurus checkout serta pengiriman file secara otomatis dan aman.",
   },
   {
     q: "Bisakah saya melacak analitik?",

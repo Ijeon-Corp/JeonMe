@@ -1387,7 +1387,7 @@ export default function PagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
           di pratinjau posisi nya berbeda dengan ketika kita akses linknya
@@ -1735,7 +1735,7 @@ export default function PagePreview({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
             >
-              Buat halaman gratis di Jeonme
+              Buat halaman gratis di Jeon.id
             </a>
           )}
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
@@ -1787,7 +1787,7 @@ function LandingPagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {data.links.map((block) => {
@@ -1970,7 +1970,7 @@ function LandingPagePreview({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
             >
-              Buat halaman gratis di Jeonme
+              Buat halaman gratis di Jeon.id
             </a>
           )}
           {/* Footer SELALU tampil, termasuk di pratinjau dashboard
@@ -2034,7 +2034,7 @@ function ProdukPagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeonme`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak
           langsung <main>) -- lihat catatan panjang di preview bio default
@@ -2158,7 +2158,7 @@ function ProdukPagePreview({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
             >
-              Buat halaman gratis di Jeonme
+              Buat halaman gratis di Jeon.id
             </a>
           )}
           <PageFooterLinks

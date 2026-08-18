@@ -95,7 +95,7 @@ export default function DashboardKycPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <p className="mt-1 text-sm text-muted">
-        Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeonme. Akun
+        Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeon.id. Akun
         yang belum terverifikasi tetap bisa berjualan dan menarik dana -- hanya diproses belakangan.
       </p>
 

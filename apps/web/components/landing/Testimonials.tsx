@@ -5,7 +5,7 @@ import Carousel, { CarouselArrows, type CarouselHandle } from "./Carousel";
 
 const testimonials = [
   {
-    quote: "Jeonme benar-benar menggantikan tiga tools berbeda yang selama ini aku pakai bergantian. Penjualan ebook-ku naik dua kali lipat di bulan pertama.",
+    quote: "Jeon.id benar-benar menggantikan tiga tools berbeda yang selama ini aku pakai bergantian. Penjualan ebook-ku naik dua kali lipat di bulan pertama.",
     name: "Maya Putri",
     role: "Kreator Digital",
     initials: "MP",

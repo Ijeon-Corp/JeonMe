@@ -189,8 +189,8 @@ export default function DeliveryMethodPanel({
             </button>
           )}
           <p className="text-[10px] text-muted">
-            Tiap POST ditandatangani di header <code>X-Jeonme-Signature</code> (HMAC-SHA256 dari isi body) supaya
-            server kamu bisa memverifikasi pengirimnya benar-benar Jeonme.
+            Tiap POST ditandatangani di header <code>X-Jeon-Signature</code> (HMAC-SHA256 dari isi body) supaya
+            server kamu bisa memverifikasi pengirimnya benar-benar Jeon.id.
           </p>
         </div>
       )}

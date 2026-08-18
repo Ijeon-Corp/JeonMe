@@ -16,7 +16,7 @@ import ScrollReveal from "@/components/landing/ScrollReveal";
 // Monetization/Analytics -- konten yang sama dipakai juga di homepage,
 // bukan duplikat ditulis ulang) jadi satu halaman berdiri sendiri.
 export const metadata: Metadata = {
-  title: "Fitur — Jeonme",
+  title: "Fitur — Jeon.id",
   description:
     "Tautan tanpa batas, tema yang bisa disesuaikan penuh, dashboard analitik, jual produk digital, booking konsultasi, kumpulkan email, domain kustom, dan generator kode QR — semua di satu halaman bio.",
   alternates: { canonical: "/features" },
@@ -39,7 +39,7 @@ export default function FeaturesPage() {
               <span className="text-gradient">Ada di Satu Halaman</span>
             </h1>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted">
-              Dari manajemen tautan hingga monetisasi penuh — Jeonme memberimu toolkit lengkap untuk bertumbuh,
+              Dari manajemen tautan hingga monetisasi penuh — Jeon.id memberimu toolkit lengkap untuk bertumbuh,
               tanpa perlu menyambungkan banyak tools terpisah.
             </p>
           </div>

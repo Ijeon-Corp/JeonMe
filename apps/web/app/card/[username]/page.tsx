@@ -11,10 +11,10 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   const card = await getPublicBusinessCard(username);
 
   if (!card) {
-    return { title: "Kartu kontak tidak ditemukan — Jeonme" };
+    return { title: "Kartu kontak tidak ditemukan — Jeon.id" };
   }
 
-  return { title: `${card.full_name} — Kartu Kontak Jeonme` };
+  return { title: `${card.full_name} — Kartu Kontak Jeon.id` };
 }
 
 // No.95 (Sprint 13): halaman kartu kontak digital, TERPISAH dari halaman

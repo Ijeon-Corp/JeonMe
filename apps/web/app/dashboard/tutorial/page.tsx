@@ -67,7 +67,7 @@ export default function TutorialPage() {
         Tutorial
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Panduan singkat membuat link bio dan produk pertamamu di Jeonme.
+        Panduan singkat membuat link bio dan produk pertamamu di Jeon.id.
       </p>
 
       <section className="mt-6">
@@ -99,7 +99,7 @@ export default function TutorialPage() {
         <Link href="/dashboard/audience" className="font-semibold text-primary hover:underline">
           Audiens
         </Link>{" "}
-        atau email support Jeonme.
+        atau email support Jeon.id.
       </p>
     </div>
   );
