@@ -77,6 +77,31 @@ import { SITE_URL } from "@/lib/site";
 // diunduh berkali-kali), jadi "Stok" akan selalu palsu kalau dipaksakan.
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
+// renderCoverPicker -- gambar sampul WAJIB (permintaan langsung pengguna,
+// 19 Agustus 2026: "gambar sampul dan juga gambar product itu disamakan
+// saja jadi sampul jangan dijadikan opsional") -- dipakai bersama ketiga
+// form create (Digital/Payment Link/Link Eksternal) di bawah, sama seperti
+// renderCategoryTabs dipakai bersama di PagePreview.tsx. `required` di
+// input asli TETAP dipasang sebagai jaring pengaman native HTML5, tapi
+// validasi UX utamanya lewat pengecekan `if (!coverFile)` eksplisit di
+// masing-masing handler (pesan error lebih jelas & konsisten dengan
+// validasi nama/harga lain di form yang sama).
+function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-2.5 text-xs font-semibold text-muted hover:border-primary hover:text-primary">
+      <IconCamera className="h-4 w-4 flex-shrink-0" />
+      <span className="min-w-0 truncate">{coverFile ? coverFile.name : "Pilih gambar sampul (wajib)"}</span>
+      <input
+        type="file"
+        required
+        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+      />
+    </label>
+  );
+}
+
 export default function DashboardProductsPage() {
   const [tab, setTab] = useState<
     | "halaman_toko"
@@ -110,6 +135,15 @@ export default function DashboardProductsPage() {
   const [name, setName] = useState("");
   const [priceIDR, setPriceIDR] = useState("");
   const [category, setCategory] = useState("");
+  // coverFile -- permintaan langsung pengguna, 19 Agustus 2026: "gambar
+  // sampul... jangan dijadikan opsional". Dipakai BERSAMA ketiga form
+  // (Digital/Payment Link/Link Eksternal) di bawah, sama seperti name/
+  // priceIDR/category -- backend menolak aktivasi produk apa pun tanpa
+  // cover_image_url (lihat gerbang di product.go Update), jadi wajib
+  // dikumpulkan di sini SEBELUM create, bukan sesudahnya lewat panel
+  // Kelola seperti sebelumnya (yang bikin produk baru "menghilang" dari
+  // Toko tanpa penjelasan jelas kenapa).
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
@@ -277,14 +311,26 @@ export default function DashboardProductsPage() {
       setError("Nama produk wajib diisi dan harga minimal Rp1.000.");
       return;
     }
+    if (!coverFile) {
+      setError("Gambar sampul wajib diunggah.");
+      return;
+    }
     setError(null);
     setCreating(true);
     try {
-      await createProduct({ name, price_idr: price, category: category.trim() || undefined });
+      const { id } = await createProduct({ name, price_idr: price, category: category.trim() || undefined });
+      // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
+      // diunggah LANGSUNG setelah produk dibuat, bukan lagi langkah
+      // opsional terpisah lewat panel Kelola. Produk digital MASIH perlu
+      // unggah File Produk & aktivasi manual terpisah seperti sebelumnya
+      // (tidak berubah) -- sampul cuma satu syarat TAMBAHAN, bukan
+      // pengganti file.
+      await uploadProductCover(id, coverFile);
       setProducts(await listProducts());
       setName("");
       setPriceIDR("");
       setCategory("");
+      setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat produk.");
@@ -305,10 +351,14 @@ export default function DashboardProductsPage() {
       setError("Nama wajib diisi dan harga minimal Rp1.000.");
       return;
     }
+    if (!coverFile) {
+      setError("Gambar sampul wajib diunggah.");
+      return;
+    }
     setError(null);
     setCreating(true);
     try {
-      await createProduct({
+      const { id } = await createProduct({
         name,
         price_idr: price,
         category: category.trim() || undefined,
@@ -317,6 +367,13 @@ export default function DashboardProductsPage() {
         payment_limit_count: paymentLimitCount ? Number(paymentLimitCount) : undefined,
         link_expires_at: linkExpiresAt ? new Date(linkExpiresAt).toISOString() : undefined,
       });
+      // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
+      // Payment Link TIDAK LAGI aktif otomatis begitu dibuat (lihat
+      // product.go Create), jadi aktivasi eksplisit di sini SETELAH
+      // sampul terunggah supaya UX "langsung jadi" yang sudah ada
+      // sebelumnya tetap terasa sama dari sisi kreator.
+      await uploadProductCover(id, coverFile);
+      await updateProduct(id, { is_active: true });
       setProducts(await listProducts());
       setName("");
       setPriceIDR("");
@@ -324,6 +381,7 @@ export default function DashboardProductsPage() {
       setSuccessMessage("");
       setPaymentLimitCount("");
       setLinkExpiresAt("");
+      setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat payment link.");
@@ -334,8 +392,10 @@ export default function DashboardProductsPage() {
 
   // handleCreateExternalLink -- Modul Toko (migrasi 000068, permintaan
   // langsung pengguna: "saya mau untuk produk bisa untuk affiliate juga
-  // ke shopee dll"). Aktif langsung begitu dibuat, sama seperti Payment
-  // Link -- tidak butuh file.
+  // ke shopee dll"). Diaktifkan otomatis setelah sampul terunggah (lihat
+  // catatan lengkap di handleCreatePaymentLink -- gerbang sampul wajib
+  // sejak 19 Agustus 2026 membuat produk ini TIDAK LAGI aktif otomatis
+  // langsung dari Create seperti sebelumnya).
   async function handleCreateExternalLink(e: React.FormEvent) {
     e.preventDefault();
     const price = Number(priceIDR);
@@ -347,21 +407,28 @@ export default function DashboardProductsPage() {
       setError("Tautan produk (mis. link Shopee/Tokopedia) wajib diisi.");
       return;
     }
+    if (!coverFile) {
+      setError("Gambar sampul wajib diunggah.");
+      return;
+    }
     setError(null);
     setCreating(true);
     try {
-      await createProduct({
+      const { id } = await createProduct({
         name,
         price_idr: price,
         category: category.trim() || undefined,
         product_kind: "external_link",
         external_url: externalUrl.trim(),
       });
+      await uploadProductCover(id, coverFile);
+      await updateProduct(id, { is_active: true });
       setProducts(await listProducts());
       setName("");
       setPriceIDR("");
       setCategory("");
       setExternalUrl("");
+      setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat produk link eksternal.");
@@ -911,47 +978,53 @@ export default function DashboardProductsPage() {
             )}
 
             {addMode === "digital" && (
-              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-3xl p-4 shadow-card sm:flex-row">
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  placeholder="Nama produk"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <input
-                  type="number"
-                  required
-                  placeholder="Harga (IDR)"
-                  min={1000}
-                  value={priceIDR}
-                  onChange={(e) => setPriceIDR(e.target.value)}
-                  className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <input
-                  type="text"
-                  placeholder="Kategori (opsional)"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                  {creating ? "Membuat..." : "Buat"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddMode("closed");
-                    setName("");
-                    setPriceIDR("");
-                    setCategory("");
-                  }}
-                  className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
-                >
-                  Batal
-                </button>
+              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    placeholder="Nama produk"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="number"
+                    required
+                    placeholder="Harga (IDR)"
+                    min={1000}
+                    value={priceIDR}
+                    onChange={(e) => setPriceIDR(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Kategori (opsional)"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                {renderCoverPicker(coverFile, setCoverFile)}
+                <div className="flex gap-2">
+                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                    {creating ? "Membuat..." : "Buat"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddMode("closed");
+                      setName("");
+                      setPriceIDR("");
+                      setCategory("");
+                      setCoverFile(null);
+                    }}
+                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                  >
+                    Batal
+                  </button>
+                </div>
               </form>
             )}
 
@@ -1001,6 +1074,7 @@ export default function DashboardProductsPage() {
                     className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
+                {renderCoverPicker(coverFile, setCoverFile)}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
                     {creating ? "Membuat..." : "Buat Payment Link"}
@@ -1014,6 +1088,7 @@ export default function DashboardProductsPage() {
                       setSuccessMessage("");
                       setPaymentLimitCount("");
                       setLinkExpiresAt("");
+                      setCoverFile(null);
                     }}
                     className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
                   >
@@ -1060,6 +1135,7 @@ export default function DashboardProductsPage() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
+                {renderCoverPicker(coverFile, setCoverFile)}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
                     {creating ? "Membuat..." : "Buat Produk"}
@@ -1072,6 +1148,7 @@ export default function DashboardProductsPage() {
                       setPriceIDR("");
                       setCategory("");
                       setExternalUrl("");
+                      setCoverFile(null);
                     }}
                     className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
                   >
@@ -1121,7 +1198,23 @@ export default function DashboardProductsPage() {
                                   <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Payment Link</span>
                                 )}
                                 {p.product_kind === "external_link" && (
-                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Link Eksternal</span>
+                                  // Diklik langsung ke tautan afiliasinya --
+                                  // permintaan langsung pengguna, 19 Agustus
+                                  // 2026: "Manage items tipe external link
+                                  // harusnya bisa di klik menuju product
+                                  // affiliate nya". stopPropagation TIDAK
+                                  // perlu di sini (baris tabel ini sendiri
+                                  // tidak punya onClick, cuma tombol "Kelola"
+                                  // terpisah di ujung kanan yang membuka
+                                  // panel), jadi aman tanpa itu.
+                                  <a
+                                    href={p.external_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-0.5 rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary hover:underline"
+                                  >
+                                    Link Eksternal <IconExternal className="h-2.5 w-2.5" />
+                                  </a>
                                 )}
                                 {p.category && (
                                   <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-muted">{p.category}</span>
@@ -1293,11 +1386,18 @@ export default function DashboardProductsPage() {
                 gampang tertukar. Sekarang keduanya diberi label & keterangan
                 wajib/opsional yang eksplisit, langsung di dalam modal ini
                 (bukan cuma di atas tabel, yang sudah tidak terlihat lagi
-                begitu modal Kelola terbuka). */}
+                begitu modal Kelola terbuka).
+                Diperbarui 19 Agustus 2026 (permintaan langsung pengguna:
+                "sampul jangan dijadikan opsional"): Sampul SEKARANG JUGA
+                wajib untuk semua jenis produk (termasuk Payment Link/Link
+                Eksternal yang tidak punya File Produk sama sekali) --
+                gerbang aktivasi backend (product.go) menolak keduanya kalau
+                salah satu kosong. */}
             <p className="mt-4 text-[11px] leading-relaxed text-muted">
               <strong className="text-ink">File Produk</strong> (pdf/zip/epub/mp4/mp3/mov/gambar) wajib diunggah
-              supaya bisa diaktifkan -- ini yang akan diterima pembeli. <strong className="text-ink">Sampul</strong>{" "}
-              cuma opsional, sekadar gambar sampul yang tampil di halaman publik.
+              supaya bisa diaktifkan -- ini yang akan diterima pembeli (kecuali Payment Link/Link Eksternal, tidak
+              butuh file). <strong className="text-ink">Sampul</strong> WAJIB untuk semua jenis produk -- gambar
+              yang tampil di kartu produk halaman publik.
             </p>
             <div className="mt-2.5 flex items-end gap-3">
               <div className="flex flex-shrink-0 flex-col items-center gap-1">
@@ -1320,7 +1420,7 @@ export default function DashboardProductsPage() {
                     <IconCamera className="h-2.5 w-2.5" />
                   </span>
                 </button>
-                <span className="text-[10px] font-semibold text-muted">Sampul (opsional)</span>
+                <span className="text-[10px] font-semibold text-muted">Sampul (wajib)</span>
               </div>
               <input
                 ref={(el) => {

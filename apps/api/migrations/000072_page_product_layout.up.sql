@@ -1,0 +1,19 @@
+-- Permintaan langsung pengguna, 19 Agustus 2026: "buat pilihan dua tipe
+-- layout product yang ditampilkan... 1 product tampil memenuhi 1 baris
+-- jika ada 2 product berarti ada dibawah nya" -- pilihan layout grid
+-- 2-kolom (bawaan, TIDAK BERUBAH) vs stacked 1-kolom penuh lebar untuk
+-- grid Produk di Halaman Toko. Kolom PER HALAMAN (pola sama seperti
+-- layout_variant, migrasi 000062) -- kreator Premium bisa punya sampai 5
+-- Toko, masing-masing boleh beda pilihan layout.
+--
+-- Cuma relevan untuk halaman page_type='produk' (grid Produk sekarang
+-- KHUSUS tampil di Halaman Toko, tidak lagi di halaman Bio -- lihat
+-- perubahan PagePreview.tsx sesi yang sama), tapi kolomnya tetap
+-- ditambahkan ke SEMUA baris pages (bukan tabel terpisah) supaya
+-- konsisten dengan pola layout_variant yang sudah ada -- tidak dipakai
+-- untuk page_type lain, tidak masalah.
+--
+-- DEFAULT 'grid' SENGAJA supaya SEMUA Toko yang sudah ada tetap tampil
+-- PERSIS SAMA seperti sebelum migrasi ini (grid 2 kolom yang sudah
+-- berjalan), tidak ada perubahan visual diam-diam.
+ALTER TABLE pages ADD COLUMN product_layout VARCHAR(10) NOT NULL DEFAULT 'grid';

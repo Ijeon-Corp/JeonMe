@@ -14,6 +14,17 @@ export function uniqueUsername(prefix: string): string {
   return `e2e${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
 }
 
+// PNG 64x64 valid minimal (bukan file fixture terpisah di disk) -- gambar
+// dekoratif (avatar, sampul produk, dst) dikonversi ke WebP di backend
+// lewat imageconv (lihat CLAUDE.md), byte sembarang akan ditolak, jadi
+// tidak bisa dummy string polos seperti file produk digital (yang TIDAK
+// ikut dikonversi). Diangkat ke sini (sebelumnya cuma di quick-setup.spec.ts
+// sebagai TEST_AVATAR_PNG_BASE64) sejak sampul produk JUGA wajib diunggah
+// saat create (permintaan langsung pengguna, 19 Agustus 2026) -- dua spec
+// file sekarang butuh gambar uji yang valid, bukan cuma satu.
+export const TEST_IMAGE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAABA0lEQVR4nNXCkbYQAAAFwQtBEARBEARBEARBEDwIgiAIgiAIgiAIFoIgeBAEQRAEQRAEC0EQBEEQBEEQBEEQBEHQd+yc2bD9CKbvKKbvGKbvOKbvBKbvJKbvFKbvNKbvDKbvLKbvHKbvPKbvAqbvIqbvEqbvANN3GdN3BdN3FdN3DdN3HdN3A9N3E9N3C9N3G9N3B9N3F9N3D9N3H9MHpu8Bpu8hpu8Rpu8Q0/cY0/cE0/cU0/cM0/cc0/cC0/cS0/cK0/ca0/cG0yem7y2m7x2m7z2m7wOm7yOm7xOm7zOm7wum7yum7xum7zum7wem7yem7xem7zem7w+m7y+m7x+m/wdgL6GHQTG2qQAAAABJRU5ErkJggg==";
+
 // Baca satu key dari apps/api/.env (config lokal SUNGGUHAN yang dipakai API
 // yang sedang jalan, bukan disalin ulang ke sini -- supaya tidak pernah
 // beda dengan apa yang API benar-benar pakai, dan supaya secret seperti

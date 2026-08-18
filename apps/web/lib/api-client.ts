@@ -370,6 +370,8 @@ export interface PublicPage {
   // sebaris), "card" (dibungkus kartu bertema), "spotlight" (avatar
   // besar + badge nama). Lihat renderBioHeader di PagePreview.tsx.
   layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  // product_layout -- lihat catatan lengkap di ExtraPageDetail.
+  product_layout: "grid" | "stacked";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -1058,6 +1060,12 @@ export interface ExtraPageDetail extends Omit<MyPage, "username"> {
   name: string;
   slug: string;
   page_type: "bio" | "landing" | "produk";
+  // product_layout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
+  // pilihan dua tipe layout product" -- cuma relevan untuk page_type=
+  // "produk" (Toko), TIDAK ada di MyPage (grid Produk dihapus dari halaman
+  // Bio, lihat PagePreview.tsx) makanya field ini ditambah di sini, bukan
+  // di-Pick dari MyPage seperti field lain di interface ini.
+  product_layout: "grid" | "stacked";
 }
 
 export function getExtraPage(id: string) {
@@ -1124,6 +1132,10 @@ export function updateExtraPage(
     {
       name: string;
       slug: string;
+      // product_layout -- lihat catatan lengkap di ExtraPageDetail (tidak
+      // bisa di-Pick dari MyPage seperti field lain di bawah, MyPage tidak
+      // punya field ini sama sekali).
+      product_layout: "grid" | "stacked";
     } & Pick<
       MyPage,
       | "theme"

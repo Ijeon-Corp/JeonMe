@@ -236,6 +236,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             email: page.social_email,
           },
           layoutVariant: page.layout_variant,
+          productLayout: page.product_layout,
           utmEnabled: page.analytics?.utm_enabled ?? false,
         }}
         interactive

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { payOrderViaWebhook, registerAndLogin } from "./fixtures";
+import { TEST_IMAGE_PNG_BASE64, payOrderViaWebhook, registerAndLogin } from "./fixtures";
 
 // Modul Toko (checkout produk digital) -- fitur monetisasi INTI Jeonme
 // (lihat CLAUDE.md: "dengan Toko/checkout produk digital bawaan"), belum
@@ -22,6 +22,14 @@ test.describe("Toko & Checkout", () => {
 
     await page.getByPlaceholder("Nama produk").fill(productName);
     await page.getByPlaceholder("Harga (IDR)").fill(String(priceIDR));
+    // Sampul WAJIB sejak 19 Agustus 2026 (permintaan langsung pengguna:
+    // "sampul jangan dijadikan opsional") -- SATU-SATUNYA input file yang
+    // ada di form create ini (unggah File Produk terpisah masih lewat
+    // modal Kelola setelah produk ada, lihat di bawah).
+    await page
+      .locator("form", { has: page.getByPlaceholder("Nama produk") })
+      .locator('input[type="file"]')
+      .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
     await page.locator("form", { has: page.getByPlaceholder("Nama produk") }).getByRole("button", { name: "Buat" }).click();
 
     const productRow = page.getByRole("row", { name: new RegExp(productName) });
@@ -61,6 +69,14 @@ test.describe("Toko & Checkout", () => {
       await expect(page.getByText(productName)).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 30000, intervals: [3000] });
     await expect(page.getByText(`Rp ${priceIDR.toLocaleString("id-ID")}`)).toBeVisible();
+
+    // TIDAK boleh tampil di halaman Bio -- permintaan langsung pengguna, 19
+    // Agustus 2026: "jangan tampilkan product di page link bio itu khusus
+    // dihalaman toko saja". Grid Produk dihapus total dari render halaman
+    // Bio (lihat PagePreview.tsx), walau produknya sendiri aktif & sudah
+    // terbukti tampil benar di Toko barusan.
+    await page.goto(`/${username}`);
+    await expect(page.getByText(productName)).toHaveCount(0);
 
     // Alur beli: buka form, isi email pembeli, submit -- ini SUNGGUHAN
     // memanggil Midtrans (server-to-server dari API Go) untuk membuat

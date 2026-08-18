@@ -1,13 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
-
-// PNG 64x64 valid minimal (bukan file fixture terpisah di disk -- pola sama
-// dengan buffer inline di products-checkout.spec.ts) -- avatar butuh gambar
-// yang benar-benar bisa didekode (backend mengonversi ke WebP lewat
-// imageconv, byte sembarang akan ditolak), jadi tidak bisa dummy string
-// polos seperti file produk digital.
-const TEST_AVATAR_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAABA0lEQVR4nNXCkbYQAAAFwQtBEARBEARBEARBEDwIgiAIgiAIgiAIFoIgeBAEQRAEQRAEC0EQBEEQBEEQBEEQBEHQd+yc2bD9CKbvKKbvGKbvOKbvBKbvJKbvFKbvNKbvDKbvLKbvHKbvPKbvAqbvIqbvEqbvANN3GdN3BdN3FdN3DdN3HdN3A9N3E9N3C9N3G9N3B9N3F9N3D9N3H9MHpu8Bpu8hpu8Rpu8Q0/cY0/cE0/cU0/cM0/cc0/cC0/cS0/cK0/ca0/cG0yem7y2m7x2m7z2m7wOm7yOm7xOm7zOm7wum7yum7xum7zum7wem7yem7xem7zem7w+m7y+m7x+m/wdgL6GHQTG2qQAAAABJRU5ErkJggg==";
+import { TEST_IMAGE_PNG_BASE64, publishPage, registerAndLogin } from "./fixtures";
 
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
 // menu saja seperti quick setup dan user disuruh pilih jenis template...
@@ -244,7 +236,7 @@ test.describe("Quick Setup", () => {
     await page
       .locator('input[type="file"]')
       .first()
-      .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_AVATAR_PNG_BASE64, "base64") });
+      .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
     await expect(page.getByText("Mengunggah...")).toHaveCount(0, { timeout: 15000 });
 
     await page.goto("/dashboard/quick-setup");

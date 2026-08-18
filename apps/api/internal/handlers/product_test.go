@@ -512,7 +512,15 @@ func TestProductReorder_UpdatesPositionAndEnforcesOwnership(t *testing.T) {
 
 // Modul Toko (Fase D): Payment Link langsung AKTIF begitu dibuat (tidak
 // perlu unggah file dulu, beda dari produk digital biasa).
-func TestProductCreate_PaymentLinkIsActiveImmediately(t *testing.T) {
+// Permintaan langsung pengguna, 19 Agustus 2026 (gambar sampul wajib):
+// SEBELUMNYA payment_link aktif LANGSUNG begitu dibuat (nama test ini dulu
+// "PaymentLinkIsActiveImmediately") -- sekarang dibuat TIDAK aktif dulu,
+// sama seperti produk digital biasa, karena endpoint create tidak pernah
+// menerima gambar sampul (diunggah terpisah lewat UploadCover) dan sampul
+// sekarang wajib sebelum aktivasi. Test ini membuktikan urutan barunya:
+// create -> belum aktif -> coba aktifkan tanpa sampul (ditolak) -> sampul
+// ada -> aktifkan (berhasil).
+func TestProductCreate_PaymentLinkRequiresCoverBeforeActivation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	product, auth := newTestProductHandler(t)
 	userID := registerTestUser(t, auth)
@@ -520,12 +528,19 @@ func TestProductCreate_PaymentLinkIsActiveImmediately(t *testing.T) {
 	router := gin.New()
 	g := router.Group("/", fakeAuth())
 	g.POST("/products", product.Create)
+	g.PATCH("/products/:id", product.Update)
 	g.GET("/products", product.List)
 
-	doJSON(t, router, http.MethodPost, "/products", map[string]any{
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
 		"name": "Konsultasi 1 Jam", "price_idr": 150000, "product_kind": "payment_link",
 		"success_message": "Sampai jumpa di sesi konsultasinya!",
 	}, map[string]string{"X-Test-UserID": userID})
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
 
 	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userID})
 	var items []struct {
@@ -534,13 +549,27 @@ func TestProductCreate_PaymentLinkIsActiveImmediately(t *testing.T) {
 		SuccessMessage string `json:"success_message"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
-		t.Fatalf("gagal decode respons: %v", err)
+		t.Fatalf("gagal decode respons list: %v", err)
 	}
-	if len(items) != 1 || !items[0].IsActive || items[0].ProductKind != "payment_link" {
-		t.Fatalf("items = %+v, ekspektasi 1 payment_link yang langsung aktif", items)
+	if len(items) != 1 || items[0].IsActive || items[0].ProductKind != "payment_link" {
+		t.Fatalf("items = %+v, ekspektasi 1 payment_link yang BELUM aktif", items)
 	}
 	if items[0].SuccessMessage != "Sampai jumpa di sesi konsultasinya!" {
 		t.Errorf("success_message = %q, tidak sesuai yang dikirim", items[0].SuccessMessage)
+	}
+
+	activateTrue := true
+	rejectRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{"is_active": activateTrue}, map[string]string{"X-Test-UserID": userID})
+	if rejectRec.Code != http.StatusBadRequest {
+		t.Fatalf("aktivasi tanpa sampul: status = %d, ekspektasi %d. Body: %s", rejectRec.Code, http.StatusBadRequest, rejectRec.Body.String())
+	}
+
+	if _, err := product.DB.Exec(t.Context(), `UPDATE products SET cover_image_url = 'https://example.com/cover.jpg' WHERE id = $1`, created.ID); err != nil {
+		t.Fatalf("gagal set cover_image_url: %v", err)
+	}
+	okRec := doJSON(t, router, http.MethodPatch, "/products/"+created.ID, map[string]any{"is_active": activateTrue}, map[string]string{"X-Test-UserID": userID})
+	if okRec.Code != http.StatusOK {
+		t.Fatalf("aktivasi setelah sampul ada: status = %d, ekspektasi %d. Body: %s", okRec.Code, http.StatusOK, okRec.Body.String())
 	}
 }
 

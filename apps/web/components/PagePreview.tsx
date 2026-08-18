@@ -18,7 +18,7 @@ import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
-import { PageStickerData, RecentPurchase } from "@/lib/api-client";
+import { PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
 import {
   IconBadgeCheck,
   IconBox,
@@ -26,8 +26,10 @@ import {
   IconChevronRight,
   IconHeart,
   IconInstagram,
+  IconLink,
   IconMail,
   IconMapPin,
+  IconMenu,
   IconTiktok,
   IconTrash,
 } from "@/components/icons";
@@ -199,6 +201,12 @@ export interface PagePreviewData {
   hideWatermark?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
+  // productLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
+  // pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
+  // 'stacked' (1 kolom penuh lebar). Cuma dipakai renderProductGrid
+  // (khusus ProdukPagePreview/Halaman Toko sejak grid Produk dihapus dari
+  // Bio) -- undefined/nilai lain jatuh balik ke 'grid'.
+  productLayout?: "grid" | "stacked";
   events?: PagePreviewEvent[];
   bookings?: PagePreviewBooking[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
@@ -312,6 +320,7 @@ interface PreviewSourcePage {
   social_telegram?: string;
   social_email?: string;
   layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  product_layout?: "grid" | "stacked";
 }
 
 interface PreviewSourceLink {
@@ -375,6 +384,7 @@ export function toPreviewData(
       email: page.social_email,
     },
     layoutVariant: page.layout_variant,
+    productLayout: page.product_layout,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {
@@ -462,6 +472,201 @@ function renderCategoryTabs(categories: string[], selected: string, onSelect: (c
         </button>
       ))}
     </div>
+  );
+}
+
+// PageSwitcher -- hamburger kiri-atas untuk berpindah antara Link Bio &
+// Toko (permintaan langsung pengguna, 19 Agustus 2026: "karna 1 akun
+// punya dua halaman yaitu link bio dan toko tambahkan hamburger button
+// di kiri atas menampilkan page toko atau bio"). Perlu jadi KOMPONEN
+// sungguhan (bukan fungsi render biasa seperti renderCategoryTabs) karena
+// butuh state buka/tutup sendiri.
+//
+// Slug Toko SENGAJA dibangun langsung dari username (${SITE_URL}/p/
+// ${username}), BUKAN dari field pageSlug yang sudah ada di
+// PagePreviewData -- Toko PERTAMA/otomatis tiap akun SELALU memakai
+// slug = username (bukan slug bebas, lihat ensureProdukPage & catatan
+// arsitektur di CLAUDE.md), jadi tidak perlu endpoint tambahan hanya
+// untuk menemukan alamat Toko dari halaman Bio. Kreator Premium dengan
+// beberapa Toko (slug bebas) tetap diarahkan ke Toko PERTAMA ini --
+// cukup untuk kasus yang digambarkan pengguna ("1 akun 2 halaman").
+//
+// showToko dikontrol dari products.length > 0 di pemanggil (bukan
+// query terpisah) -- Toko otomatis TIDAK PERNAH ada sebelum produk
+// pertama dibuat (ensureProdukPage), jadi ini sinyal yang sudah tersedia
+// tanpa butuh data baru.
+function PageSwitcher({ username, showToko, current, theme }: { username: string; showToko: boolean; current: "bio" | "produk"; theme: PageTheme }) {
+  const [open, setOpen] = useState(false);
+  if (!showToko) return null;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Ganti halaman"
+        className={`flex h-8 w-8 items-center justify-center rounded-full ${theme.card}`}
+      >
+        <IconMenu className={`h-4 w-4 ${theme.chevron}`} />
+      </button>
+      {open && (
+        <>
+          <div aria-hidden className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className={`absolute left-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-xl shadow-card ${theme.card}`}>
+            <a
+              href={`${SITE_URL}/${username}`}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
+                current === "bio" ? "opacity-100" : "opacity-70 hover:opacity-100"
+              }`}
+            >
+              <IconLink className="h-3.5 w-3.5" /> Link Bio
+            </a>
+            <a
+              href={`${SITE_URL}/p/${username}`}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
+                current === "produk" ? "opacity-100" : "opacity-70 hover:opacity-100"
+              }`}
+            >
+              <IconBox className="h-3.5 w-3.5" /> Toko
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// renderProductGrid -- grid Produk Halaman Toko. Diangkat jadi satu fungsi
+// bersama (permintaan langsung pengguna, 19 Agustus 2026) sejak grid Produk
+// DIHAPUS dari halaman Bio (lihat catatan di render utama PagePreview) --
+// sekarang cuma satu pemanggil (ProdukPagePreview), jadi tidak lagi
+// terduplikasi dua tempat seperti sebelumnya.
+//
+// Dua perbaikan sekaligus untuk produk isExternalLink (permintaan langsung
+// pengguna yang sama): (1) SELURUH kartu bisa diklik menuju tautan afiliasi
+// (bukan cuma tombol kecil di bawah) -- gambar/nama/harga dibungkus <a>
+// tersendiri, tracking product_click tetap terkirim persis seperti
+// BuyProductButton.handleOpen. (2) Label tombolnya BUKAN "Beli" lagi (tidak
+// pernah ada transaksi lewat Jeon.id untuk produk jenis ini) -- jadi
+// "Lihat Produk ↗", dan dirender sebagai <span> visual di dalam <a> yang
+// sama (BUKAN <button> bersarang di dalam <a>, itu HTML tidak valid).
+function renderProductGrid(
+  data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
+  theme: PageTheme,
+  canBuy: boolean,
+  selectedCategory: string,
+  onSelectCategory: (c: string) => void
+) {
+  const gridColsClass = data.productLayout === "stacked" ? "grid-cols-1" : "grid-cols-2";
+
+  function trackProductClick(productId: string) {
+    if (data.pageSlug) {
+      trackEventBySlug(data.pageSlug, { event_type: "product_click", product_id: productId });
+    } else {
+      trackEvent(data.username, { event_type: "product_click", product_id: productId });
+    }
+  }
+
+  return (
+    <>
+      {renderCategoryTabs(getProductCategories(data.products), selectedCategory, onSelectCategory, theme)}
+      <div className={`grid w-full ${gridColsClass} gap-3`}>
+        {data.products
+          .filter((p) => selectedCategory === "Semua" || p.category === selectedCategory)
+          .map((product) => {
+            const cover = (
+              <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
+                {product.cover_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={product.cover_image_url}
+                    alt={product.name}
+                    loading="lazy"
+                    className="h-full w-full rounded-xl object-cover"
+                  />
+                ) : (
+                  <IconBox className={`h-6 w-6 ${theme.chevron}`} />
+                )}
+              </div>
+            );
+            const priceBlock = product.pwywEnabled ? (
+              <p className={`text-xs font-bold ${theme.productPrice}`}>
+                Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
+              </p>
+            ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
+              <div className="flex items-center gap-1.5">
+                <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                  Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
+                </p>
+                <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+              </div>
+            ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
+              <div className="flex items-center gap-1.5">
+                <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+                  Rp {product.price_idr.toLocaleString("id-ID")}
+                </p>
+                <p className={`text-xs font-bold ${theme.productPrice}`}>
+                  Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
+                </p>
+              </div>
+            ) : (
+              <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+            );
+
+            if (product.isExternalLink && product.externalUrl) {
+              return (
+                <a
+                  key={product.id}
+                  href={product.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackProductClick(product.id)}
+                  className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}
+                >
+                  {cover}
+                  <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+                  {priceBlock}
+                  <span
+                    className={`mt-2.5 block w-full rounded-lg py-1.5 text-center text-xs transition-all duration-200 ${theme.buyButton}`}
+                  >
+                    Lihat Produk ↗
+                  </span>
+                </a>
+              );
+            }
+
+            return (
+              <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
+                {cover}
+                <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+                {product.isCourse && (
+                  <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
+                )}
+                {priceBlock}
+                {canBuy ? (
+                  <BuyProductButton
+                    productId={product.id}
+                    buttonClassName={theme.buyButton}
+                    pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+                    referralCode={data.referralCode}
+                    username={data.username}
+                    pageSlug={data.pageSlug}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+                    className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                  >
+                    Beli
+                  </button>
+                )}
+              </div>
+            );
+          })}
+      </div>
+    </>
   );
 }
 
@@ -1331,9 +1536,6 @@ export default function PagePreview({
   // Gap #4 benchmark kompetitif (9 Agustus 2026): item wishlist yang
   // dipilih pendukung untuk "diwujudkan" -- undefined berarti donasi umum.
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
-  // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
-  // renderCategoryTabs di atas.
-  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
@@ -1386,8 +1588,17 @@ export default function PagePreview({
           DOM, avatar (lebih belakangan di JSX) menang & menutupi tombol.
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
+        <PageSwitcher username={data.username} showToko={data.products.length > 0} current="bio" theme={theme} />
+        {/* ml-auto (bukan justify-between di kontainer) -- PageSwitcher
+            return null kalau showToko false, dan justify-between dengan
+            SATU anak nyata akan mendorongnya ke KIRI (bukan tetap di
+            kanan) begitu anak pertama tidak ikut dihitung sama sekali.
+            ml-auto SELALU mendorong tombol ini ke kanan terlepas dari
+            PageSwitcher merender apa pun. */}
+        <div className="ml-auto">
+          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        </div>
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
           di pratinjau posisi nya berbeda dengan ketika kita akses linknya
@@ -1638,89 +1849,14 @@ export default function PagePreview({
           </div>
         )}
 
-        {data.products.length > 0 && (
-          <div className="mt-8 w-full">
-            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Produk</p>
-            {renderCategoryTabs(getProductCategories(data.products), selectedProductCategory, setSelectedProductCategory, theme)}
-            <div className="grid w-full grid-cols-2 gap-3">
-              {data.products
-                .filter((p) => selectedProductCategory === "Semua" || p.category === selectedProductCategory)
-                .map((product) => (
-                <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
-                  <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
-                    {product.cover_image_url ? (
-                      // loading="lazy" -- kartu produk hampir selalu di
-                      // bawah lipatan pertama (avatar + bio + tombol tautan
-                      // datang lebih dulu di SEMUA layout), tunda fetch-nya
-                      // supaya tidak berebut bandwidth dgn elemen LCP (avatar).
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.cover_image_url}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full rounded-xl object-cover"
-                      />
-                    ) : (
-                      <IconBox className={`h-6 w-6 ${theme.chevron}`} />
-                    )}
-                  </div>
-                  <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                  {product.isCourse && (
-                    <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
-                  )}
-                  {product.pwywEnabled ? (
-                    <p className={`text-xs font-bold ${theme.productPrice}`}>
-                      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
-                    </p>
-                  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
-                      </p>
-                      <p className={`text-xs font-bold ${theme.productPrice}`}>
-                        Rp {product.price_idr.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                        Rp {product.price_idr.toLocaleString("id-ID")}
-                      </p>
-                      <p className={`text-xs font-bold ${theme.productPrice}`}>
-                        Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className={`text-xs font-bold ${theme.productPrice}`}>
-                      Rp {product.price_idr.toLocaleString("id-ID")}
-                    </p>
-                  )}
-                  {canBuy ? (
-                    <BuyProductButton
-                      productId={product.id}
-                      buttonClassName={theme.buyButton}
-                      pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
-                      referralCode={data.referralCode}
-                      username={data.username}
-                      pageSlug={data.pageSlug}
-                      externalUrl={product.isExternalLink ? product.externalUrl : undefined}
-                      openLabel={product.isExternalLink ? "Beli ↗" : undefined}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                      className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                    >
-                      Beli
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Grid Produk DIHAPUS dari halaman Bio -- permintaan langsung
+            pengguna, 19 Agustus 2026: "jangan tampilkan product di page
+            link bio itu khusus dihalaman toko saja". Katalog produk masih
+            dibagi lintas akun seperti biasa (lihat catatan CLAUDE.md),
+            cuma render-nya sekarang KHUSUS ProdukPagePreview (Halaman
+            Toko) -- lihat renderProductGrid di bawah. Pengunjung diarahkan
+            ke Toko lewat hamburger nav top-left (lihat renderPageSwitcher)
+            begitu akun ini punya produk. */}
 
         <div className="mt-10 flex flex-col items-center gap-3">
           {/* Modul Langganan Premium (permintaan langsung pengguna, 8
@@ -2033,8 +2169,15 @@ function ProdukPagePreview({
           DOM, avatar (lebih belakangan di JSX) menang & menutupi tombol.
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
+        {/* showToko selalu true di sini -- ProdukPagePreview MEMANG
+            merender Halaman Toko, jadi keberadaannya sudah terbukti
+            dengan sendirinya (beda dari sisi Bio yang perlu cek
+            products.length dulu). */}
+        <PageSwitcher username={data.username} showToko current="produk" theme={theme} />
+        <div className="ml-auto">
+          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        </div>
       </div>
       {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak
           langsung <main>) -- lihat catatan panjang di preview bio default
@@ -2067,84 +2210,7 @@ function ProdukPagePreview({
 
         {data.products.length > 0 ? (
           <div className="mt-8 w-full">
-            {renderCategoryTabs(getProductCategories(data.products), selectedProductCategory, setSelectedProductCategory, theme)}
-            <div className="grid w-full grid-cols-2 gap-3">
-              {data.products
-                .filter((p) => selectedProductCategory === "Semua" || p.category === selectedProductCategory)
-                .map((product) => (
-                <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
-                  <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
-                    {product.cover_image_url ? (
-                      // loading="lazy" -- kartu produk hampir selalu di
-                      // bawah lipatan pertama (avatar + bio + tombol tautan
-                      // datang lebih dulu di SEMUA layout), tunda fetch-nya
-                      // supaya tidak berebut bandwidth dgn elemen LCP (avatar).
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.cover_image_url}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full rounded-xl object-cover"
-                      />
-                    ) : (
-                      <IconBox className={`h-6 w-6 ${theme.chevron}`} />
-                    )}
-                  </div>
-                  <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                  {product.isCourse && (
-                    <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
-                  )}
-                  {product.pwywEnabled ? (
-                    <p className={`text-xs font-bold ${theme.productPrice}`}>
-                      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
-                    </p>
-                  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
-                      </p>
-                      <p className={`text-xs font-bold ${theme.productPrice}`}>
-                        Rp {product.price_idr.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                        Rp {product.price_idr.toLocaleString("id-ID")}
-                      </p>
-                      <p className={`text-xs font-bold ${theme.productPrice}`}>
-                        Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className={`text-xs font-bold ${theme.productPrice}`}>
-                      Rp {product.price_idr.toLocaleString("id-ID")}
-                    </p>
-                  )}
-                  {canBuy ? (
-                    <BuyProductButton
-                      productId={product.id}
-                      buttonClassName={theme.buyButton}
-                      pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
-                      referralCode={data.referralCode}
-                      username={data.username}
-                      pageSlug={data.pageSlug}
-                      externalUrl={product.isExternalLink ? product.externalUrl : undefined}
-                      openLabel={product.isExternalLink ? "Beli ↗" : undefined}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                      className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                    >
-                      Beli
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
           </div>
         ) : (
           <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>

@@ -258,6 +258,35 @@ export default function ProdukPageEditor({
             {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-muted" />}
           </button>
         </div>
+        {/* Layout grid Produk -- permintaan langsung pengguna, 19 Agustus
+            2026: "buat pilihan dua tipe layout product yang ditampilkan...
+            1 product tampil memenuhi 1 baris jika ada 2 product berarti
+            ada dibawah nya". Cuma relevan di sini (Halaman Toko) --
+            grid Produk sudah tidak lagi dirender di halaman Bio sama
+            sekali (lihat PagePreview.tsx). */}
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-ink">Tata Letak Produk</p>
+          <div className="mt-1.5 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => handlePatch({ product_layout: "grid" })}
+              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
+                page.product_layout !== "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+              }`}
+            >
+              Grid 2 Kolom
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePatch({ product_layout: "stacked" })}
+              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
+                page.product_layout === "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+              }`}
+            >
+              1 Kolom Penuh
+            </button>
+          </div>
+        </div>
       </section>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
