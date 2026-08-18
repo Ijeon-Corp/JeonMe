@@ -398,9 +398,19 @@ export default function DashboardProductsPage() {
   // langsung dari Create seperti sebelumnya).
   async function handleCreateExternalLink(e: React.FormEvent) {
     e.preventDefault();
-    const price = Number(priceIDR);
-    if (!name.trim() || !price || price < 1000) {
-      setError("Nama wajib diisi dan harga minimal Rp1.000.");
+    // Harga OPSIONAL khusus jenis ini -- permintaan langsung pengguna, 20
+    // Agustus 2026: "untuk produk affiliate harga jadikan optional" (link
+    // afiliasi tidak pernah lewat checkout Jeonme, harga di sini murni
+    // informasi tampilan). Kalau diisi, tetap harus masuk akal (>= Rp1.000)
+    // -- validasi min TETAP jalan, cuma boleh dikosongkan sama sekali.
+    const priceTrimmed = priceIDR.trim();
+    const price = priceTrimmed ? Number(priceTrimmed) : undefined;
+    if (!name.trim()) {
+      setError("Nama wajib diisi.");
+      return;
+    }
+    if (price !== undefined && price < 1000) {
+      setError("Kalau harga diisi, minimal Rp1.000 -- atau kosongkan saja kalau tidak ingin menampilkan harga.");
       return;
     }
     if (!externalUrl.trim()) {
@@ -1112,8 +1122,7 @@ export default function DashboardProductsPage() {
                   />
                   <input
                     type="number"
-                    required
-                    placeholder="Harga (IDR)"
+                    placeholder="Harga (IDR, opsional)"
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
@@ -1244,6 +1253,12 @@ export default function DashboardProductsPage() {
                               <span className="mr-1 text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                               <span className="font-bold text-accent-dark">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
                             </span>
+                          ) : p.product_kind === "external_link" && p.price_idr === 0 ? (
+                            // Harga opsional khusus Link Eksternal (permintaan
+                            // langsung pengguna, 20 Agustus 2026) -- 0 di sini
+                            // berarti sengaja tidak diisi, bukan produk gratis
+                            // Rp0 sungguhan (jenis lain harga tetap wajib >= 1000).
+                            <span className="text-muted">Tidak ditampilkan</span>
                           ) : (
                             <span className="font-bold text-ink">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                           )}

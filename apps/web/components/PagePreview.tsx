@@ -609,6 +609,14 @@ function renderProductGrid(
                   Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
                 </p>
               </div>
+            ) : product.isExternalLink && product.price_idr === 0 ? (
+              // Harga opsional khusus Link Eksternal (permintaan langsung
+              // pengguna, 20 Agustus 2026: "untuk produk affiliate harga
+              // jadikan optional") -- 0 berarti sengaja tidak diisi
+              // (jenis produk lain harga tetap wajib >= Rp1.000, jadi 0
+              // TIDAK PERNAH berarti "gratis" untuk mereka), jangan
+              // tampilkan baris harga sama sekali daripada "Rp 0".
+              null
             ) : (
               <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
             );

@@ -114,7 +114,17 @@ func (h *ProductHandler) invalidatePageCache(ctx context.Context, userID string)
 type createProductRequest struct {
 	Name        string `json:"name" binding:"required,max=200"`
 	Description string `json:"description"`
-	PriceIDR    int64  `json:"price_idr" binding:"required,min=1000"`
+	// PriceIDR -- pointer supaya bisa DIABAIKAN khusus product_kind=
+	// "external_link" (permintaan langsung pengguna, 20 Agustus 2026: "untuk
+	// produk affiliate harga jadikan optional") -- link afiliasi (Shopee/
+	// Tokopedia/dll) TIDAK PERNAH lewat checkout Jeonme sama sekali (lihat
+	// catatan ExternalURL di bawah), jadi harga di sini murni informasi
+	// tampilan, bukan nilai transaksi -- kreator afiliasi wajar tidak selalu
+	// tahu/mau menampilkan harga pasti (harga bisa berubah di toko tujuan).
+	// "digital"/"payment_link" TETAP WAJIB (dicek manual di Create di bawah,
+	// binding tag saja tidak bisa kondisional per product_kind) karena
+	// keduanya representasi transaksi sungguhan lewat Jeonme.
+	PriceIDR *int64 `json:"price_idr" binding:"omitempty,min=1000"`
 	// Category -- Modul Toko (Fase B1): bebas isi kreator sendiri, lihat
 	// migrasi 000046.
 	Category string `json:"category" binding:"omitempty,max=50"`
@@ -181,6 +191,19 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "external_url wajib diisi untuk produk jenis Link Eksternal"})
 		return
 	}
+	// Harga wajib untuk SEMUA jenis produk KECUALI external_link (lihat
+	// catatan lengkap di createProductRequest.PriceIDR) -- binding tag
+	// `omitempty` di atas cuma bisa lewatkan validasi min, tidak bisa
+	// mensyaratkan field secara kondisional per product_kind, jadi dicek
+	// manual di sini.
+	if productKind != "external_link" && req.PriceIDR == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "harga wajib diisi (minimal Rp1.000) untuk jenis produk ini"})
+		return
+	}
+	var priceIDR int64
+	if req.PriceIDR != nil {
+		priceIDR = *req.PriceIDR
+	}
 
 	var linkExpiresAt *time.Time
 	if req.LinkExpiresAt != nil && *req.LinkExpiresAt != "" {
@@ -199,7 +222,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			product_kind, success_message, payment_limit_count, link_expires_at, external_url
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`, id, userID, req.Name, req.Description, req.PriceIDR,
+	`, id, userID, req.Name, req.Description, priceIDR,
 		// SELALU dibuat tidak aktif -- permintaan langsung pengguna, 19
 		// Agustus 2026 (gambar sampul wajib): SEBELUMNYA Payment Link/Link
 		// Eksternal langsung aktif begitu dibuat (tidak butuh file), tapi

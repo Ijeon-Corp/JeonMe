@@ -573,6 +573,78 @@ func TestProductCreate_PaymentLinkRequiresCoverBeforeActivation(t *testing.T) {
 	}
 }
 
+// Permintaan langsung pengguna, 20 Agustus 2026: "untuk produk affiliate
+// harga jadikan optional" -- external_link TIDAK PERNAH lewat checkout
+// Jeonme (lihat catatan lengkap di createProductRequest.PriceIDR, product.go),
+// jadi harga di sini murni informasi tampilan. digital/payment_link TETAP
+// WAJIB (representasi transaksi sungguhan) -- dicek berdampingan di sini
+// supaya perubahan validasi manual (bukan cuma binding tag) di Create
+// benar-benar kondisional per product_kind, bukan malah melonggarkan semua
+// jenis produk sekaligus.
+func TestProductCreate_ExternalLinkPriceOptionalOtherKindsStillRequired(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/products", product.List)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	// external_link TANPA price_idr sama sekali -- harus berhasil, harga
+	// tersimpan 0 (bukan ditolak).
+	createRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Sepatu Rekomendasi", "product_kind": "external_link", "external_url": "https://shopee.co.id/produk-123",
+	}, headers)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create external_link tanpa harga: status = %d, ekspektasi %d. Body: %s", createRec.Code, http.StatusCreated, createRec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode respons create: %v", err)
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/products", nil, headers)
+	var items []struct {
+		ID       string `json:"id"`
+		PriceIDR int64  `json:"price_idr"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons list: %v", err)
+	}
+	found := false
+	for _, it := range items {
+		if it.ID == created.ID {
+			found = true
+			if it.PriceIDR != 0 {
+				t.Errorf("price_idr = %d, ekspektasi 0 (tidak diisi sama sekali)", it.PriceIDR)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("produk external_link yang baru dibuat tidak ditemukan di list")
+	}
+
+	// digital TANPA price_idr -- harus tetap DITOLAK (beda dari external_link).
+	digitalRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Ebook Tanpa Harga",
+	}, headers)
+	if digitalRec.Code != http.StatusBadRequest {
+		t.Fatalf("create digital tanpa harga: status = %d, ekspektasi %d (harga tetap wajib). Body: %s", digitalRec.Code, http.StatusBadRequest, digitalRec.Body.String())
+	}
+
+	// payment_link TANPA price_idr -- harus tetap DITOLAK juga.
+	paymentLinkRec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+		"name": "Konsultasi Tanpa Harga", "product_kind": "payment_link",
+	}, headers)
+	if paymentLinkRec.Code != http.StatusBadRequest {
+		t.Fatalf("create payment_link tanpa harga: status = %d, ekspektasi %d (harga tetap wajib). Body: %s", paymentLinkRec.Code, http.StatusBadRequest, paymentLinkRec.Body.String())
+	}
+}
+
 // Modul Toko (Fase C3): webhook_secret dibuat SEKALI saat delivery_method
 // pertama kali diubah jadi "webhook", dan TIDAK diregenerasi pada update
 // berikutnya (mis. saat webhook_url diubah lagi) -- integrasi kreator yang

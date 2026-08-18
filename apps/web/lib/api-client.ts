@@ -1381,7 +1381,12 @@ export function listProducts() {
 export function createProduct(input: {
   name: string;
   description?: string;
-  price_idr: number;
+  // price_idr -- opsional KHUSUS product_kind="external_link" (permintaan
+  // langsung pengguna, 20 Agustus 2026: "untuk produk affiliate harga
+  // jadikan optional") -- lihat catatan lengkap di
+  // createProductRequest.PriceIDR (product.go). Jenis lain tetap wajib,
+  // ditegakkan backend, bukan cuma di sini.
+  price_idr?: number;
   category?: string;
   collaborator_splits?: CollaboratorSplit[];
   // Modul Toko (Fase D): lihat DashboardProduct.product_kind dkk.
