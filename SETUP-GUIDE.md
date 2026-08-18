@@ -25,18 +25,31 @@ Skrip pendukung ada di `scripts/`:
 | VPS | `103.147.33.34` (Debian 12, shared dengan proyek lain) |
 | SSH | Port `61512`, user `deploy` (grup `docker`, tanpa sudo) |
 | Repo GitHub | `Ijeon-Corp/JeonMe` |
-| Production | `https://jeon.id` — direktori `/opt/jeonme-production` (jeonme.com tetap aktif, redirect 301 ke jeon.id sejak migrasi 18 Agustus 2026) |
-| Staging | `https://staging.jeon.id` — direktori `/opt/jeonme-staging` |
+| Production | `https://jeonme.com` — direktori `/opt/jeonme-production` (masih domain yang benar-benar melayani traffic; migrasi ke `jeon.id` SEDANG BERJALAN, lihat Bagian 1.1 di bawah -- kode sudah siap sejak 18 Agustus 2026, tapi DNS/vhost Apache/sertifikat TLS untuk `jeon.id` BELUM dieksekusi di VPS) |
+| Staging | `https://staging.jeonme.com` — direktori `/opt/jeonme-staging` |
 | Reverse proxy + TLS | Apache + Certbot **sistem** (bukan di dalam Docker) — lihat CICD-GUIDE.md §2 |
 | CI/CD | `.github/workflows/{ci,deploy-staging,deploy-production}.yml` |
 
 Rilis pertama (`v0.1.0`) berhasil di-deploy ke production pada 8 Juli 2026 setelah 6 bug ditemukan & diperbaiki selama rollout — katalog lengkap ada di `CICD-GUIDE.md` Bagian 11. Endpoint health check kedua environment sudah diverifikasi hidup:
 
 ```bash
-curl https://jeon.id/api/health
-curl https://staging.jeon.id/api/health
+curl https://jeonme.com/api/health
+curl https://staging.jeonme.com/api/health
 # ekspektasi: {"status":"ok","checks":{"database":"up","redis":"up"}}
 ```
+
+### 1.1 Migrasi domain ke `jeon.id` (mulai 18 Agustus 2026, EKSEKUSI INFRA BELUM SELESAI)
+
+Sisi kode SUDAH selesai & live sejak commit `26766b7` (URL yang dihasilkan aplikasi -- share link, sitemap, OG tags, redirect_uri OAuth, dst -- semua sudah menunjuk `jeon.id`, dengan `jeonme.com` tetap dikenali sebagai host lama di `apps/web/proxy.ts`). Yang **belum** dieksekusi adalah langkah infra di VPS (DNS, vhost Apache baru, sertifikat TLS, `.env` VPS, konsol OAuth) -- checklist eksekusinya:
+
+- [ ] DNS `jeon.id`, `www.jeon.id`, `staging.jeon.id` diarahkan ke `103.147.33.34` lewat Cloudflare (proxied atau DNS-only, keduanya sudah terbukti jalan untuk domain lain di VPS ini).
+- [ ] Vhost Apache baru dibuat di VPS untuk `jeon.id`/`www.jeon.id` (production) dan `staging.jeon.id` (staging) -- pola PERSIS sama seperti `jeonme.com.conf`/`staging.jeonme.com.conf` yang sudah ada (lihat CICD-GUIDE.md §10.1), cuma ganti `ServerName`/`ServerAlias` dan nama file log, PORT PROXY TETAP SAMA (23000/28080 production, 23100/28180 staging) -- domain lama dan domain baru mem-proxy ke container APP YANG SAMA.
+- [ ] Sertifikat TLS diterbitkan untuk `jeon.id`/`www.jeon.id`/`staging.jeon.id` lewat `certbot certonly --webroot` (webroot `/var/www/certbot`, sama seperti domain lain di VPS ini) -- otomatis masuk cakupan `certbot.timer` sistem begitu diterbitkan, tidak perlu cron tambahan.
+- [ ] `.env` di `/opt/jeonme-production` DAN `/opt/jeonme-staging` diperbarui: `CORS_ALLOWED_ORIGINS`, `PUBLIC_WEB_URL`, `PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL` (kalau diisi eksplisit), `SMTP_FROM`, `CUSTOM_DOMAIN_CNAME_TARGET` -- ganti ke `jeon.id`, TAPI tambahkan `jeon.id` ke `CORS_ALLOWED_ORIGINS` (dipisah koma) BUKAN mengganti seluruhnya, supaya `jeonme.com` yang belum sempat redirect di browser pengunjung tidak mendadak diblokir CORS.
+- [ ] Redirect 301 `jeonme.com` → `jeon.id` dipasang di vhost `jeonme.com.conf` (BUKAN dihapus/didekomisi) -- domain lama tetap terdaftar & sertifikatnya tetap diperpanjang `certbot.timer`, cuma isi vhost-nya diganti jadi redirect murni, tidak lagi proxy ke aplikasi.
+- [ ] `docker compose restart api web` (atau `up -d` ulang) di kedua direktori supaya container membaca `.env` yang baru -- ganti isi `.env` saja TIDAK otomatis diterapkan ke container yang sudah jalan.
+- [ ] Redirect URI `jeon.id` didaftarkan di Google Cloud Console / Meta for Developers (Instagram) / TikTok Developer Portal, DI SAMPING (bukan menggantikan) redirect URI `jeonme.com` yang sudah ada -- lihat `apps/api/.env.example` untuk daftar lengkap path-nya per provider.
+- [ ] Verifikasi: `curl https://jeon.id/api/health` dan `curl https://staging.jeon.id/api/health` mengembalikan `{"status":"ok",...}`; buka `https://jeon.id` di browser sungguhan (bukan cuma curl -- CSP/redirect kadang cuma ketahuan dari browser asli, lihat bug #18 di CICD-GUIDE.md); pastikan `https://jeonme.com` benar-benar 301 ke `https://jeon.id`, bukan 404/loop.
 
 ## 2. Template Setup — VPS Baru (Dedicated)
 
@@ -111,14 +124,16 @@ cd /opt/jeonme-production    # atau /opt/jeonme-staging
 
 Cari sha valid dari tab Actions (histori run **Deploy Production**/**Deploy Staging** sebelumnya yang sukses) atau `git log --oneline`. Skrip ini **tidak** menjalankan migrasi turun — kalau migrasi baru sudah terlanjur jalan dan tidak backward-compatible, rollback image saja tidak cukup, perlu keputusan manual.
 
-## Rekap Checklist (deployment saat ini)
+## Rekap Checklist (rilis pertama, 8 Juli 2026 -- domain jeonme.com)
 
 - [x] Kode di-push ke `Ijeon-Corp/JeonMe`
 - [x] VPS shared diprovisioning: user `deploy`, direktori `/opt/jeonme-{production,staging}`
 - [x] `.env` terisi lengkap di kedua direktori, termasuk `GHCR_REPO` huruf kecil
 - [x] `docker login ghcr.io` sukses sebagai user `deploy`
 - [x] GitHub Environments `staging` & `production` terisi secrets lengkap (termasuk `*_SSH_PORT`), `production` punya required reviewer
-- [x] DNS `jeon.id`, `www`, `staging.jeon.id` proxied lewat Cloudflare ke VPS (domain lama `jeonme.com`/`staging.jeonme.com` tetap di-proxy juga, redirect 301 ke jeon.id sejak migrasi 18 Agustus 2026)
+- [x] DNS `jeonme.com`, `www`, `staging.jeonme.com` proxied lewat Cloudflare ke VPS
 - [x] Apache vhost + sertifikat TLS terbit untuk ketiga domain, renewal tercakup `certbot.timer` sistem
 - [x] Push ke `main` → staging ter-deploy otomatis → `/api/health` "ok"
 - [x] Tag `v0.1.0` → approval → production ter-deploy → `/api/health` "ok"
+
+Checklist migrasi ke `jeon.id` (18 Agustus 2026 dst.) ada terpisah di Bagian 1.1 di atas -- statusnya BELUM selesai di sisi infra, jangan disamakan dengan checklist rilis pertama ini.

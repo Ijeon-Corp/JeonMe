@@ -1,9 +1,14 @@
 # Jeonme
 
 Platform link-in-bio + monetisasi kreator Indonesia (setara Linktree/Lynk.id, tapi
-dengan Toko/checkout produk digital bawaan). Domain produksi: jeon.id (migrasi
-dari jeonme.com, 18 Agustus 2026 -- jeonme.com tetap aktif, redirect 301 ke
-jeon.id, bukan didekomisi).
+dengan Toko/checkout produk digital bawaan). Domain produksi TARGET: jeon.id
+(migrasi dari jeonme.com, disiapkan 18 Agustus 2026 -- jeonme.com tetap aktif,
+redirect 301 ke jeon.id, bukan didekomisi). Sisi KODE sudah menghasilkan URL
+jeon.id di mana pun (share link, sitemap, redirect_uri OAuth, dll), TAPI
+eksekusi infra (DNS/vhost Apache/sertifikat TLS di VPS) belum jalan per
+penulisan catatan ini -- jeonme.com yang MASIH benar-benar melayani traffic
+sampai checklist di SETUP-GUIDE.md §1.1 selesai. Jangan asumsikan jeon.id
+sudah bisa diakses tanpa verifikasi langsung.
 
 > Catatan: `README.md`/`DEVELOPER-GUIDE.md`/`SETUP-GUIDE.md` di root masih menyebut
 > proyek ini "boilerplate/skeleton dengan banyak TODO" — itu SUDAH TIDAK AKURAT.
