@@ -76,6 +76,13 @@ export function resetLocalAuthRateLimit(): void {
 // ditinggal begitu saja, tidak masalah -- akun uji memang tidak dibersihkan
 // otomatis, lihat e2e/README.md) supaya register percobaan berikutnya
 // tidak pernah bentrok dengan sisa percobaan sebelumnya.
+// Verifikasi email wajib saat signup (permintaan langsung pengguna, 19
+// Agustus 2026) -- form register SEKARANG redirect ke /verify-email, BUKAN
+// langsung /dashboard. Kode 6 digit otomatis terisi di input begitu
+// halaman itu dimuat (AppEnv API test/lokal != "production", lihat
+// dev_verification_code & prefill otomatis di verify-email/page.tsx) --
+// e2e cukup menunggu prefill itu lalu klik submit, TIDAK perlu membaca
+// email sungguhan/SMTP sama sekali.
 export async function registerAndLogin(page: Page, usernamePrefix: string): Promise<{ username: string; email: string }> {
   const password = "Password123!";
   // Reset SEBELUM percobaan pertama juga -- suite lengkap (banyak spec
@@ -96,11 +103,15 @@ export async function registerAndLogin(page: Page, usernamePrefix: string): Prom
 
     const rateLimited = page.getByText("terlalu banyak permintaan");
     const result = await Promise.race([
-      page.waitForURL("**/dashboard", { timeout: 15000 }).then(() => "ok" as const),
+      page.waitForURL("**/verify-email**", { timeout: 15000 }).then(() => "ok" as const),
       rateLimited.waitFor({ timeout: 15000 }).then(() => "rate-limited" as const),
     ]).catch(() => "timeout" as const);
 
-    if (result === "ok") return { username, email };
+    if (result === "ok") {
+      await page.getByRole("button", { name: "Verifikasi & Masuk" }).click();
+      await page.waitForURL("**/dashboard", { timeout: 15000 });
+      return { username, email };
+    }
     // "timeout" (bukan cuma "rate-limited" eksplisit) JUGA berarti retry --
     // kasus di atas (register sukses, login-otomatis 429) tidak pernah
     // memunculkan toast "terlalu banyak permintaan" sama sekali, tapi tetap

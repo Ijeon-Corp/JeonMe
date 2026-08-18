@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, checkUsername, login, register, setToken } from "@/lib/api-client";
+import { ApiError, checkUsername, register } from "@/lib/api-client";
 import AuthShell from "@/components/AuthShell";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { IconCheck, IconClose } from "@/components/icons";
@@ -62,13 +62,21 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      await register({ email, username, password, consent_accepted: consentAccepted });
-      // Langsung login supaya pengguna tidak perlu isi form dua kali. Akun
-      // yang baru saja dibuat tidak mungkin sudah punya 2FA aktif (Modul
-      // Settings §5), jadi token selalu langsung ada di sini.
-      const res = await login({ email, password });
-      setToken(res.token!);
-      router.push("/dashboard");
+      const res = await register({ email, username, password, consent_accepted: consentAccepted });
+      // Permintaan langsung pengguna, 19 Agustus 2026: "saat sign up butuh
+      // kode verif yang dikirim dari email untuk aktivasi baru setelah itu
+      // akun bisa digunakan" -- akun baru SEKARANG SELALU butuh verifikasi
+      // (backend menolak /auth/login sebelum kode dimasukkan), jadi
+      // langsung ke halaman verifikasi tanpa mencoba login dulu (percobaan
+      // login di sini cuma akan gagal 403). dev_verification_code diteruskan
+      // lewat sessionStorage (bukan query string URL) supaya tidak
+      // tersimpan di riwayat browser/log server -- cuma dipakai halaman
+      // verifikasi utk prefill kode saat SMTP belum dikonfigurasi
+      // (AppEnv != production, lihat catatan lengkap di api-client.ts).
+      if (res.dev_verification_code) {
+        sessionStorage.setItem("jeon_dev_verification_code", res.dev_verification_code);
+      }
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mendaftar, coba lagi.");
     } finally {

@@ -29,6 +29,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	health := handlers.NewHealthHandler(db, rdb, version, cfg.HealthToken)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
+	auth.Queue = queueClient
 	page := handlers.NewPageHandler(db, rdb, s3)
 	// Modul Koneksi Sosial (migrasi 000069, permintaan langsung pengguna:
 	// "saya mau jeonme ini bisa connect ke akun kita contoh nya instagram
@@ -124,6 +125,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			auth_.POST("/password-reset/confirm", authRateLimit, auth.ConfirmPasswordReset)
 			auth_.POST("/email-verification/request", authRequired, auth.RequestEmailVerification)
 			auth_.POST("/email-verification/confirm", auth.ConfirmEmailVerification)
+			// Aktivasi akun baru (permintaan langsung pengguna, 19 Agustus
+			// 2026) -- publik seperti /register itu sendiri, rate limit sama
+			// (authRateLimit) supaya kode 6 digit tidak bisa di-brute-force
+			// lewat rate limit LAYER INI (di atas lockout per-email di
+			// ConfirmSignupVerification sendiri -- dua lapis, sama pola
+			// dengan /login+checkLoginLockout).
+			auth_.POST("/signup-verification/confirm", authRateLimit, auth.ConfirmSignupVerification)
+			auth_.POST("/signup-verification/resend", authRateLimit, auth.ResendSignupVerification)
 			// Alur Authorization Code penuh (bukan Google Identity Services
 			// popup) -- lihat AuthHandler.GoogleLogin. Melayani login MAUPUN
 			// register sekaligus, satu tombol dipakai di kedua halaman

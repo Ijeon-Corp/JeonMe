@@ -138,6 +138,32 @@ func NewAudienceBroadcastTask(broadcastID string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeAudienceBroadcast, payload), nil
 }
 
+// TypeSignupVerificationEmail -- permintaan langsung pengguna, 19 Agustus
+// 2026: "saat sign up butuh kode verif yang dikirim dari email untuk
+// aktivasi baru setelah itu akun bisa digunakan". ASINKRON (pola sama
+// dengan order.paid/team.invite) supaya lambatnya SMTP tidak pernah membuat
+// AuthHandler.Register menunggu. Payload membawa kode MENTAH (bukan hash)
+// karena worker butuh menuliskannya apa adanya ke badan email -- DB cuma
+// pernah menyimpan hash-nya (lihat generateVerificationCode di auth.go),
+// jadi kode asli ini SATU-SATUNYA salinan yang ada setelah request HTTP
+// selesai. Sama seperti payload job lain, hidup singkat di Redis
+// (dihapus asynq begitu task selesai diproses) -- risiko diterima
+// konsisten dengan pola job queue yang sudah ada di repo ini.
+const TypeSignupVerificationEmail = "auth:signup_verification_email"
+
+type SignupVerificationPayload struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+func NewSignupVerificationTask(email, code string) (*asynq.Task, error) {
+	payload, err := json.Marshal(SignupVerificationPayload{Email: email, Code: code})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload verifikasi email %s: %w", email, err)
+	}
+	return asynq.NewTask(TypeSignupVerificationEmail, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

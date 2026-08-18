@@ -81,9 +81,18 @@ function activeWorkspaceHeaders(): Record<string, string> {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  // body -- permintaan langsung pengguna, 19 Agustus 2026 (verifikasi
+  // email wajib saat signup): backend sekarang mengirim flag tambahan
+  // (email_verification_required) di body error 403 /auth/login, bukan
+  // cuma pesan teks -- caller BUTUH membedakan kasus ini dari error login
+  // biasa supaya bisa mengarahkan ke halaman verifikasi, bukan cuma
+  // menampilkan pesan generik. Opsional & additive -- SEMUA call site
+  // lama yang cuma pakai err.message tetap jalan apa adanya.
+  body: Record<string, unknown>;
+  constructor(status: number, message: string, body: Record<string, unknown> = {}) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -103,7 +112,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   const body = isJSON ? await res.json().catch(() => ({})) : undefined;
 
   if (!res.ok) {
-    throw new ApiError(res.status, body?.error ?? `Permintaan gagal (${res.status})`);
+    throw new ApiError(res.status, body?.error ?? `Permintaan gagal (${res.status})`, body ?? {});
   }
 
   return body as T;
@@ -403,13 +412,42 @@ export async function getPublicPage(username: string): Promise<PublicPage | null
 
 // ---------- Auth ----------
 
+// register -- permintaan langsung pengguna, 19 Agustus 2026: "saat sign up
+// butuh kode verif yang dikirim dari email untuk aktivasi baru setelah itu
+// akun bisa digunakan". email_verification_required SELALU true untuk
+// akun baru sekarang (backend menolak login sebelum kode dimasukkan, lihat
+// confirmSignupVerification di bawah) -- dev_verification_code cuma ada di
+// staging/dev (AppEnv != production), pola sama dengan dev_reset_token.
 export function register(input: {
   email: string;
   password: string;
   username: string;
   consent_accepted: boolean;
 }) {
-  return apiFetch<{ id: string; username: string }>("/auth/register", {
+  return apiFetch<{ id: string; username: string; email_verification_required?: boolean; dev_verification_code?: string }>(
+    "/auth/register",
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+// confirmSignupVerification -- langkah kedua registrasi: menukar kode 6
+// digit dari email dengan JWT sungguhan. Beda dari confirmEmailVerification
+// di bawah (itu berbasis TAUTAN, untuk pengguna yang SUDAH login minta
+// verifikasi ulang) -- endpoint ini publik, dipakai TEPAT SETELAH register,
+// akun belum pernah punya sesi sama sekali sampai kode ini benar.
+export function confirmSignupVerification(input: { email: string; code: string }) {
+  return apiFetch<{ token: string }>("/auth/signup-verification/confirm", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// resendSignupVerification -- dipanggil dari halaman verifikasi kalau kode
+// lama sudah kedaluwarsa (15 menit) atau tidak pernah sampai. Backend
+// membatasi cooldown 60 detik per email di sisi server (429 kalau terlalu
+// cepat) -- caller cukup teruskan error itu apa adanya ke pengguna.
+export function resendSignupVerification(input: { email: string }) {
+  return apiFetch<{ message: string; dev_verification_code?: string }>("/auth/signup-verification/resend", {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -1,0 +1,15 @@
+-- Permintaan langsung pengguna, 19 Agustus 2026: "saat sign up butuh kode
+-- verif yang dikirim dari email untuk aktivasi baru setelah itu akun bisa
+-- digunakan" -- Login (auth.go) sekarang MENOLAK menerbitkan token untuk
+-- akun dengan email_verified_at NULL.
+--
+-- Kolom ini sudah ada sejak migrasi awal tapi SEBELUMNYA murni kosmetik
+-- (cuma dipakai sebagai salah satu syarat badge "terverifikasi" di halaman
+-- publik, lihat page.go) -- tidak pernah menghalangi login. Supaya
+-- perubahan ini TIDAK mengunci keluar seluruh pengguna lama yang akunnya
+-- sudah aktif bertahun-tahun (kejadian nyata kalau tidak di-backfill:
+-- semua orang tiba-tiba tidak bisa login sampai "verifikasi" akun yang
+-- sudah lama mereka pakai), akun yang SUDAH ADA sebelum kebijakan ini
+-- otomatis dianggap terverifikasi. Hanya akun BARU (mendaftar setelah
+-- migrasi ini) yang benar-benar diwajibkan memasukkan kode dari email.
+UPDATE users SET email_verified_at = now() WHERE email_verified_at IS NULL;

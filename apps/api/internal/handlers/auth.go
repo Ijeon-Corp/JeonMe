@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +25,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jeonme/api/internal/googleoauth"
+	"github.com/jeonme/api/internal/queue"
 )
 
 // AuthHandler mengimplementasikan REQ-F-101 (registrasi, termasuk OAuth
@@ -41,6 +44,12 @@ type AuthHandler struct {
 	// tidak pernah gagal), ClientID/ClientSecret kosong ditangani sendiri
 	// oleh googleoauth.Client.Exchange (ErrNotConfigured).
 	GoogleOAuth *googleoauth.Client
+	// Queue -- pola sama seperti GoogleOAuth di atas: di-set terpisah
+	// sesudah NewAuthHandler (bukan lewat parameter constructor) supaya
+	// SEMUA call site test lama tidak perlu ikut berubah. Nil-safe (lihat
+	// Register) -- soft-fail, akun tetap dibuat walau Redis/queue
+	// bermasalah, kreator tinggal pakai "Kirim ulang kode".
+	Queue *asynq.Client
 }
 
 func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEnv string) *AuthHandler {
@@ -126,12 +135,48 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Kode aktivasi akun -- permintaan langsung pengguna, 19 Agustus 2026:
+	// "saat sign up butuh kode verif yang dikirim dari email untuk
+	// aktivasi baru setelah itu akun bisa digunakan". Dibuat DI DALAM
+	// transaksi yang sama dengan pembuatan user/pages supaya atomik --
+	// tidak mungkin ada akun baru tanpa kode aktivasi yang menyertainya
+	// (kalau enqueue emailnya sendiri gagal di bawah, kreator tetap bisa
+	// minta kirim ulang lewat ResendSignupVerification karena barisnya
+	// sudah pasti ada di DB).
+	rawCode, codeHash, genErr := generateVerificationCode()
+	if genErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+		id, codeHash, time.Now().Add(15*time.Minute),
+	); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan akun"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "username": req.Username})
+	// Soft-fail (pola sama seperti SMTP/S3/WhatsApp di seluruh repo ini) --
+	// akun TETAP dibuat walau Redis/queue bermasalah, kreator tinggal pakai
+	// "Kirim ulang kode" di halaman verifikasi.
+	if h.Queue != nil {
+		if task, err := queue.NewSignupVerificationTask(req.Email, rawCode); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
+	resp := gin.H{"id": id, "username": req.Username, "email_verification_required": true}
+	if h.AppEnv != "production" {
+		// TODO: hapus begitu verifikasi email-manual sudah teruji stabil di
+		// production sungguhan -- pola sama seperti dev_reset_token.
+		resp["dev_verification_code"] = rawCode
+	}
+	c.JSON(http.StatusCreated, resp)
 }
 
 // CheckUsername -- permintaan langsung pengguna, 11 Agustus 2026: cek
@@ -273,10 +318,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// dengan error scan generik yang membingungkan, jadi ditangani eksplisit
 	// di bawah dengan pesan yang jelas ("akun ini terdaftar lewat Google").
 	var passwordHash *string
-	var suspendedAt, twoFactorEnabledAt *time.Time
+	var suspendedAt, twoFactorEnabledAt, emailVerifiedAt *time.Time
 	err := h.DB.QueryRow(ctx,
-		`SELECT id, password_hash, suspended_at, two_factor_enabled_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
-	).Scan(&id, &passwordHash, &suspendedAt, &twoFactorEnabledAt)
+		`SELECT id, password_hash, suspended_at, two_factor_enabled_at, email_verified_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
+	).Scan(&id, &passwordHash, &suspendedAt, &twoFactorEnabledAt, &emailVerifiedAt)
 	if err != nil {
 		recordLoginFailure(ctx, h.RDB, req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
@@ -299,6 +344,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// pihak yang tidak berhak (mereka sudah membuktikan tahu password-nya).
 	if suspendedAt != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "akun ini sedang ditangguhkan, hubungi admin"})
+		return
+	}
+
+	// Gerbang aktivasi akun -- permintaan langsung pengguna, 19 Agustus
+	// 2026. Dicek SETELAH password benar (sama alasannya dengan suspend di
+	// atas -- bukan kebocoran info ke pihak yang tidak berhak) tapi
+	// SEBELUM 2FA (akun yang belum diaktivasi tidak boleh sampai ke
+	// tantangan 2FA sama sekali). Akun lama sudah di-backfill terverifikasi
+	// lewat migrasi 000071, jadi ini HANYA menghalangi akun baru yang
+	// benar-benar belum menuntaskan kode dari email -- akun Google OAuth
+	// juga tidak pernah kena (oauth_google.go langsung mengisi
+	// email_verified_at=now() saat dibuat, Google sudah memverifikasi
+	// emailnya).
+	if emailVerifiedAt == nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "akun belum diverifikasi, cek email untuk kode aktivasi", "email_verification_required": true})
 		return
 	}
 
@@ -611,6 +671,164 @@ func (h *AuthHandler) ConfirmEmailVerification(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "email berhasil diverifikasi"})
 }
 
+type confirmSignupVerificationRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Code  string `json:"code" binding:"required"`
+}
+
+// ConfirmSignupVerification -- permintaan langsung pengguna, 19 Agustus
+// 2026, langkah kedua alur registrasi (lihat Register): publik (belum ada
+// JWT di titik ini, akun baru belum pernah login sama sekali), menukar
+// kode 6 digit yang dikirim ke email dengan JWT sungguhan -- dari sinilah
+// akun BENAR-BENAR "bisa digunakan" pertama kali, bukan lewat Login biasa
+// (yang sekarang menolak akun belum terverifikasi, lihat gerbang di atas).
+//
+// Rate-limit KHUSUS (checkVerifyLockout, terpisah dari checkLoginLockout)
+// -- kode cuma 6 digit (1 juta kombinasi) dan endpoint ini TIDAK
+// mensyaratkan password sama sekali, jadi WAJIB dibatasi ketat supaya
+// tidak bisa di-brute-force dalam waktu wajar.
+func (h *AuthHandler) ConfirmSignupVerification(c *gin.Context) {
+	var req confirmSignupVerificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if locked, retryAfter := checkVerifyLockout(ctx, h.RDB, req.Email); locked {
+		c.Header("Retry-After", fmt.Sprintf("%d", int(retryAfter.Seconds())))
+		c.JSON(http.StatusLocked, gin.H{"error": "terlalu banyak percobaan, coba lagi nanti"})
+		return
+	}
+
+	var userID string
+	var emailVerifiedAt *time.Time
+	err := h.DB.QueryRow(ctx,
+		`SELECT id, email_verified_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
+	).Scan(&userID, &emailVerifiedAt)
+	if err != nil {
+		recordVerifyFailure(ctx, h.RDB, req.Email)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kode tidak valid atau sudah kedaluwarsa"})
+		return
+	}
+	if emailVerifiedAt != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini sudah terverifikasi, silakan masuk seperti biasa"})
+		return
+	}
+
+	var tokenID string
+	err = h.DB.QueryRow(ctx, `
+		SELECT id FROM email_verification_tokens
+		WHERE user_id = $1 AND token_hash = $2 AND used_at IS NULL AND expires_at > now()
+	`, userID, hashToken(req.Code)).Scan(&tokenID)
+	if err != nil {
+		recordVerifyFailure(ctx, h.RDB, req.Email)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kode tidak valid atau sudah kedaluwarsa"})
+		return
+	}
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx, `UPDATE users SET email_verified_at = now() WHERE id = $1`, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memverifikasi akun"})
+		return
+	}
+	if _, err := tx.Exec(ctx, `UPDATE email_verification_tokens SET used_at = now() WHERE id = $1`, tokenID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memverifikasi akun"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan verifikasi"})
+		return
+	}
+
+	clearVerifyFailures(ctx, h.RDB, req.Email)
+
+	signed, jti, exp, err := h.issueToken(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat token"})
+		return
+	}
+	recordSession(ctx, h.RDB, userID, jti, exp, c.Request.UserAgent(), c.ClientIP())
+
+	c.JSON(http.StatusOK, gin.H{"token": signed})
+}
+
+type resendSignupVerificationRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ResendSignupVerification -- publik, dipanggil dari halaman verifikasi
+// kalau kode lama sudah kedaluwarsa (15 menit) atau emailnya tidak pernah
+// sampai. Cooldown 60 detik per email (SETNX Redis) mencegah spam kirim
+// ulang. Respons SELALU generik (sama pola dengan RequestPasswordReset) --
+// tidak membocorkan apakah email itu terdaftar atau sudah terverifikasi.
+func (h *AuthHandler) ResendSignupVerification(c *gin.Context) {
+	var req resendSignupVerificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("auth: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	genericResp := gin.H{"message": "kalau akun belum terverifikasi, kode baru sudah dikirim"}
+
+	if h.RDB != nil {
+		cooldownKey := "verify_resend_cooldown:" + strings.ToLower(req.Email)
+		ok, err := h.RDB.SetNX(ctx, cooldownKey, "1", 60*time.Second).Result()
+		if err == nil && !ok {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "tunggu sebentar sebelum minta kode baru"})
+			return
+		}
+	}
+
+	var userID string
+	var emailVerifiedAt *time.Time
+	err := h.DB.QueryRow(ctx,
+		`SELECT id, email_verified_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
+	).Scan(&userID, &emailVerifiedAt)
+	if err != nil || emailVerifiedAt != nil {
+		c.JSON(http.StatusOK, genericResp)
+		return
+	}
+
+	rawCode, codeHash, genErr := generateVerificationCode()
+	if genErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx,
+		`INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+		userID, codeHash, time.Now().Add(15*time.Minute),
+	); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+
+	if h.Queue != nil {
+		if task, err := queue.NewSignupVerificationTask(req.Email, rawCode); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
+	resp := genericResp
+	if h.AppEnv != "production" {
+		resp["dev_verification_code"] = rawCode
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 // generateToken membuat token acak 32-byte. Nilai mentah (rawToken) dikirim
 // ke pengguna (lewat email nantinya); hanya hash SHA-256-nya yang disimpan
 // di database, supaya kebocoran database tidak otomatis membocorkan token aktif.
@@ -626,4 +844,69 @@ func generateToken() (rawToken string, tokenHash string, err error) {
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
+}
+
+// generateVerificationCode -- kode 6 digit numerik (bukan token hex panjang
+// seperti generateToken) supaya gampang diketik manual dari email. Dipakai
+// KHUSUS alur aktivasi akun saat signup (beda dari
+// RequestEmailVerification/ConfirmEmailVerification yang berbasis tautan
+// utk pengguna yang SUDAH login) -- disimpan di tabel
+// email_verification_tokens yang SAMA, kolom token_hash generik (SHA-256
+// dari string apa pun), tidak spesifik ke format token panjang. crypto/rand
+// (bukan math/rand) -- kode ini fungsinya sama seperti password sementara,
+// harus CSPRNG.
+func generateVerificationCode() (rawCode string, codeHash string, err error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", "", err
+	}
+	rawCode = fmt.Sprintf("%06d", n.Int64())
+	return rawCode, hashToken(rawCode), nil
+}
+
+// Lockout percobaan kode verifikasi -- pola SENGAJA diduplikasi dari
+// checkLoginLockout/recordLoginFailure/clearLoginFailures (bukan
+// digeneralisasi jadi satu helper bersama) supaya mekanisme lockout login
+// yang sudah teruji tidak ikut berubah/berisiko regresi hanya karena
+// menambah alur baru ini -- kode di sini independen, aman diaudit
+// terpisah. Ambang & durasi sama persis dengan login (5 percobaan/15
+// menit) -- cukup, tidak perlu tuning terpisah untuk kasus ini.
+func verifyFailKey(email string) string {
+	return "email_verify_fail:" + strings.ToLower(email)
+}
+
+func checkVerifyLockout(ctx context.Context, rdb *redis.Client, email string) (locked bool, retryAfter time.Duration) {
+	if rdb == nil {
+		return false, 0
+	}
+	count, err := rdb.Get(ctx, verifyFailKey(email)).Int()
+	if err != nil || count < loginFailMaxAttempts {
+		return false, 0
+	}
+	ttl, err := rdb.TTL(ctx, verifyFailKey(email)).Result()
+	if err != nil || ttl <= 0 {
+		return false, 0
+	}
+	return true, ttl
+}
+
+func recordVerifyFailure(ctx context.Context, rdb *redis.Client, email string) {
+	if rdb == nil {
+		return
+	}
+	key := verifyFailKey(email)
+	pipe := rdb.TxPipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, loginFailWindow)
+	_, _ = pipe.Exec(ctx)
+	if count, err := incr.Result(); err == nil && count >= int64(loginFailMaxAttempts) {
+		_ = rdb.Expire(ctx, key, loginLockoutDuration).Err()
+	}
+}
+
+func clearVerifyFailures(ctx context.Context, rdb *redis.Client, email string) {
+	if rdb == nil {
+		return
+	}
+	_ = rdb.Del(ctx, verifyFailKey(email)).Err()
 }

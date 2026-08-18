@@ -59,7 +59,35 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeTeamInviteNotification, h.HandleTeamInviteNotification)
 	mux.HandleFunc(queue.TypeProductWebhookDelivery, h.HandleProductWebhookDelivery)
 	mux.HandleFunc(queue.TypeAudienceBroadcast, h.HandleAudienceBroadcast)
+	mux.HandleFunc(queue.TypeSignupVerificationEmail, h.HandleSignupVerificationEmail)
 	return mux
+}
+
+// HandleSignupVerificationEmail -- kode aktivasi akun baru (lihat catatan
+// lengkap di queue.TypeSignupVerificationEmail & AuthHandler.Register).
+// Pola sama persis dengan HandleTeamInviteNotification/
+// HandleContactFormNotification: tidak ada status untuk dicek ulang,
+// pesan yang sudah dienqueue selalu relevan untuk dikirim.
+func (h *Handler) HandleSignupVerificationEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.SignupVerificationPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Kode verifikasi akun Jeon.id kamu"
+	body := fmt.Sprintf(
+		"Kode verifikasinya: %s\n\nMasukkan kode ini di halaman verifikasi untuk mengaktifkan akun Jeon.id-mu. "+
+			"Kode berlaku 15 menit sejak diminta.\n\nKalau kamu tidak mendaftar di Jeon.id, abaikan saja email ini.\n\n"+
+			"Salam,\nTim Jeon.id",
+		payload.Code,
+	)
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim kode verifikasi: %w", err)
+	}
+
+	log.Printf("worker: kode verifikasi akun terkirim ke %s", payload.Email)
+	return nil
 }
 
 // teamRoleLabel -- label Indonesia untuk role di email undangan (pola sama

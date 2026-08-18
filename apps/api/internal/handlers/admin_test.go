@@ -85,6 +85,7 @@ func TestAdminSuspendActivate_BlocksAndRestoresLogin(t *testing.T) {
 	if err := json.Unmarshal(regRec.Body.Bytes(), &reg); err != nil {
 		t.Fatalf("gagal decode register: %v", err)
 	}
+	markEmailVerified(t, auth, reg.ID)
 
 	suspendRec := doJSON(t, router, http.MethodPatch, "/admin/users/"+reg.ID+"/suspend", nil, map[string]string{"X-Test-UserID": adminID})
 	if suspendRec.Code != http.StatusOK {

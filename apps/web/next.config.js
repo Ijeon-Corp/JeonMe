@@ -151,6 +151,12 @@ const nextConfig = {
       { source: '/admin/:path*', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
       { source: '/login', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
       { source: '/register', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
+      // /verify-email (kode aktivasi akun, permintaan langsung pengguna 19
+      // Agustus 2026) -- SATU segmen path SAMA seperti /login & /register
+      // di atas, jadi TANPA entri eksplisit ini juga akan diam-diam cocok
+      // dengan pola publik "/:username" (lihat catatan urutan array di
+      // atas) dan dapat CSP longgar yang salah untuk halaman auth.
+      { source: '/verify-email', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
     ];
     return [...publicRoutes, ...strictRoutes];
   },

@@ -1,0 +1,5 @@
+-- Backfill data, bukan perubahan skema -- sengaja no-op. Tidak ada cara
+-- membedakan akun yang memang sudah pernah verifikasi email sungguhan dari
+-- akun lama yang di-backfill migrasi up ini, jadi mengembalikan
+-- email_verified_at ke NULL berisiko mengunci keluar pengguna yang
+-- sebenarnya sah. Tidak di-rollback otomatis.

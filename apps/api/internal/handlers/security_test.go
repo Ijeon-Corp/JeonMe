@@ -47,6 +47,7 @@ func TestChangePassword_RequiresCorrectOldPasswordThenAllowsLogin(t *testing.T) 
 	gin.SetMode(gin.TestMode)
 	security, auth := newTestSecurityHandler(t)
 	userID := registerTestUser(t, auth)
+	markEmailVerified(t, auth, userID)
 
 	var email string
 	if err := security.DB.QueryRow(t.Context(), `SELECT email FROM users WHERE id = $1`, userID).Scan(&email); err != nil {
@@ -221,6 +222,7 @@ func TestLogin_With2FAEnabled_RequiresChallengeThenIssuesToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	security, auth := newTestSecurityHandler(t)
 	userID := registerTestUser(t, auth)
+	markEmailVerified(t, auth, userID)
 
 	var email string
 	if err := security.DB.QueryRow(t.Context(), `SELECT email FROM users WHERE id = $1`, userID).Scan(&email); err != nil {
@@ -299,6 +301,7 @@ func TestSessions_ListShowsCurrentAndRevokeInvalidatesImmediately(t *testing.T) 
 	gin.SetMode(gin.TestMode)
 	security, auth := newTestSecurityHandler(t)
 	userID := registerTestUser(t, auth)
+	markEmailVerified(t, auth, userID)
 
 	var email string
 	if err := security.DB.QueryRow(t.Context(), `SELECT email FROM users WHERE id = $1`, userID).Scan(&email); err != nil {

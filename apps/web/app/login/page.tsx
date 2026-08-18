@@ -39,6 +39,16 @@ export default function LoginPage() {
       setToken(res.token!);
       await redirectAfterAuth(router);
     } catch (err) {
+      // email_verification_required -- permintaan langsung pengguna, 19
+      // Agustus 2026: akun yang belum memasukkan kode dari email ditolak
+      // /auth/login dengan flag ini (lihat catatan lengkap di
+      // ApiError.body, api-client.ts). Arahkan LANGSUNG ke halaman
+      // verifikasi (bukan cuma menampilkan pesan error generik) supaya
+      // pengguna tidak bingung harus ke mana.
+      if (err instanceof ApiError && err.body.email_verification_required) {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : "Gagal masuk, coba lagi.");
     } finally {
       setLoading(false);
