@@ -997,7 +997,21 @@ export default function DashboardLinksPage() {
     // dikelilingi jarak kosong simetris). Lihat catatan lengkap di
     // DesignPageShell.tsx.
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
-      <div>
+      {/* min-w-0 (bug dilaporkan pengguna, 18 Agustus 2026, produksi
+          jeon.id: "pratinjau itu ga responsif, ketika zoom 100% keatas
+          tampilan nya jadi rusak") -- kolom "1fr" ini SEBELUMNYA tidak
+          punya min-w-0 sama sekali, beda dari kolom setara di
+          dashboard/products/page.tsx yang SUDAH diperbaiki utk bug SEJENIS
+          sejak 5 Agustus 2026. Grid item defaultnya min-width:auto (pola
+          berulang di repo ini, lihat CLAUDE.md) -- menolak menyusut di
+          bawah lebar intrinsik kontennya (baris ikon toolbar tiap kartu
+          tautan: jam/gembok/kamera/grid/bintang, TIDAK bisa melipat).
+          Memperbesar zoom browser mengecilkan lebar viewport CSS efektif
+          (lebih sedikit piksel CSS muat di layar fisik yang sama) --
+          begitu ruang yang tersedia untuk kolom ini turun di bawah lebar
+          intrinsik itu, grid dipaksa melebar melebihi kontainer, mendorong
+          kolom pratinjau (360px) & seluruh halaman ikut rusak/overflow. */}
+      <div className="min-w-0">
         <p className="mt-1 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

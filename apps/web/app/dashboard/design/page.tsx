@@ -46,7 +46,13 @@ export default function DashboardDesignPage() {
 
   return (
     <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
-      <div className="max-w-2xl">
+      {/* min-w-0 (pencegahan, bug sejenis di links/page.tsx & products/
+          page.tsx -- lihat catatan lengkap di links/page.tsx): max-w-2xl
+          cuma membatasi lebar MAKSIMUM, tidak mengubah min-width:auto
+          bawaan grid item, jadi kolom ini SAMA rentannya menolak menyusut
+          di bawah lebar intrinsik kontennya di viewport sempit/zoom
+          tinggi walau belum dilaporkan pengguna di halaman ini. */}
+      <div className="min-w-0 max-w-2xl">
         <p className="mt-1 text-sm text-muted">Foto profil, bio, tema, dan status terbit halaman publikmu.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
