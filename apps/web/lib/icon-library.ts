@@ -15,6 +15,35 @@
 // array) supaya urutan di IconPickerModal boleh berubah kapan pun tanpa
 // merusak ikon yang sudah dipilih kreator sebelumnya. `label` teks
 // Indonesia untuk pencarian & tooltip.
+//
+// Kategori "Media Sosial" (20 Agustus 2026, permintaan langsung pengguna:
+// "tambahkan juga di bagian icon supaya bisa dipilih" -- susulan dari
+// penggantian ikon sosmed di components/icons.tsx) MENGECUALIKAN aturan
+// "satu-satunya dependency eksternal" di atas -- ikon brand (Instagram,
+// TikTok, dst, prefix key "brand-") diimpor LANGSUNG dari icons.tsx
+// (Simple Icons, sudah akurat & dikenal), bukan dicari padanan lucide-nya
+// (lucide-react tidak punya logo brand sama sekali). `Icon` karena itu
+// diketik generik (bukan LucideIcon murni) supaya menerima keduanya --
+// IconPickerModal cuma pernah merender `<icon.Icon className="..." />`,
+// jadi cukup kompatibel selama komponennya menerima prop `className`.
+import type { ComponentType } from "react";
+import {
+  IconAppleMusic,
+  IconApplePodcasts,
+  IconDiscord,
+  IconFacebook,
+  IconGoogleMaps,
+  IconInstagram,
+  IconLinkedin,
+  IconShopee,
+  IconSpotify,
+  IconTelegram,
+  IconTiktok,
+  IconTwitch,
+  IconWhatsapp,
+  IconX,
+  IconYoutube,
+} from "@/components/icons";
 import type { LucideIcon } from "lucide-react";
 import {
   MessageCircle,
@@ -233,7 +262,10 @@ export interface LibraryIcon {
   key: string;
   label: string;
   category: string;
-  Icon: LucideIcon;
+  // ComponentType<{className?:string}> (bukan LucideIcon murni) -- lihat
+  // catatan lengkap kenapa di komentar header file ini (kategori "Media
+  // Sosial" butuh ikon brand dari icons.tsx, bukan lucide-react).
+  Icon: LucideIcon | ComponentType<{ className?: string }>;
 }
 
 // Kategori disusun sesuai jenis konten yang biasa dipakai kreator link-in-
@@ -241,6 +273,30 @@ export interface LibraryIcon {
 // urutan array = urutan tampil di IconPickerModal, "Semua" (pencarian
 // tanpa kategori) tetap menampilkan seluruhnya.
 export const ICON_LIBRARY: LibraryIcon[] = [
+  // Media Sosial -- permintaan langsung pengguna, 20 Agustus 2026:
+  // "tambahkan juga di bagian icon supaya bisa dipilih" (susulan
+  // penggantian ikon sosmed hand-drawn di icons.tsx jadi Simple Icons
+  // asli). Ditaruh PALING ATAS (bukan digabung ke "Komunikasi & Sosial"
+  // generik di bawah) supaya jadi kategori pertama yang terlihat -- sesuai
+  // penekanan pengguna "terutama sosmed icon". Key prefix "brand-" (bukan
+  // nama platform polos) supaya tidak bentrok kalau suatu saat lucide-react
+  // punya key dengan nama sama.
+  { key: "brand-instagram", label: "Instagram", category: "Media Sosial", Icon: IconInstagram },
+  { key: "brand-tiktok", label: "TikTok", category: "Media Sosial", Icon: IconTiktok },
+  { key: "brand-youtube", label: "YouTube", category: "Media Sosial", Icon: IconYoutube },
+  { key: "brand-whatsapp", label: "WhatsApp", category: "Media Sosial", Icon: IconWhatsapp },
+  { key: "brand-facebook", label: "Facebook", category: "Media Sosial", Icon: IconFacebook },
+  { key: "brand-x", label: "X (Twitter)", category: "Media Sosial", Icon: IconX },
+  { key: "brand-linkedin", label: "LinkedIn", category: "Media Sosial", Icon: IconLinkedin },
+  { key: "brand-telegram", label: "Telegram", category: "Media Sosial", Icon: IconTelegram },
+  { key: "brand-spotify", label: "Spotify", category: "Media Sosial", Icon: IconSpotify },
+  { key: "brand-discord", label: "Discord", category: "Media Sosial", Icon: IconDiscord },
+  { key: "brand-twitch", label: "Twitch", category: "Media Sosial", Icon: IconTwitch },
+  { key: "brand-shopee", label: "Shopee", category: "Media Sosial", Icon: IconShopee },
+  { key: "brand-apple-music", label: "Apple Music", category: "Media Sosial", Icon: IconAppleMusic },
+  { key: "brand-apple-podcasts", label: "Apple Podcasts", category: "Media Sosial", Icon: IconApplePodcasts },
+  { key: "brand-google-maps", label: "Google Maps", category: "Media Sosial", Icon: IconGoogleMaps },
+
   // Komunikasi & Sosial
   { key: "message-circle", label: "Pesan", category: "Komunikasi & Sosial", Icon: MessageCircle },
   { key: "message-square", label: "Chat", category: "Komunikasi & Sosial", Icon: MessageSquare },

@@ -82,4 +82,50 @@ test.describe("Tautan", () => {
       await expect(page.getByText(linkTitle)).toHaveCount(0);
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
+
+  // Ikon Media Sosial di galeri ikon -- permintaan langsung pengguna, 20
+  // Agustus 2026: "coba download icon pack gratis untuk mengganti icon
+  // icon yang jelek sekarang ini terutama sosmed icon dan tambahkan juga
+  // di bagian icon supaya bisa dipilih". Sebelumnya IconPickerModal
+  // (lib/icon-library.ts) cuma berisi ikon generik lucide-react -- ikon
+  // brand (Instagram dkk, dari Simple Icons lewat components/icons.tsx)
+  // sekarang jadi kategori "Media Sosial" tersendiri, bisa dipilih EKSPLISIT
+  // lewat galeri, bukan cuma auto-detect dari URL.
+  test("ikon brand (Media Sosial) bisa dipilih dari galeri ikon & tersimpan", async ({ page }) => {
+    await registerAndLogin(page, "iconpick");
+
+    await page.goto("/dashboard/links");
+    await page.getByRole("button", { name: "Tambah" }).first().click();
+    await page.getByRole("button", { name: "Tautan", exact: true }).click();
+
+    const linkTitle = "Kanal Resmi";
+    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    // URL generik SENGAJA (bukan instagram.com/dll) -- membuktikan ikon
+    // yang tampil benar-benar dari PILIHAN eksplisit lewat galeri, bukan
+    // kebetulan cocok deteksi otomatis detectLinkIcon (lib/link-icons.ts).
+    await page.getByPlaceholder("https://...").fill("https://example.com/kanal-resmi");
+    const addForm = page.locator("form", { has: page.getByPlaceholder("Judul tautan") });
+    await addForm.getByRole("button", { name: "Tambah" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
+
+    const row = page.locator("li", { hasText: linkTitle }).first();
+    await row.getByTitle("Pilih dari galeri ikon").click();
+
+    await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toBeVisible();
+    await expect(page.getByText("Media Sosial", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Instagram", exact: true }).click();
+
+    // Modal tertutup begitu ikon dipilih, tombol galeri di baris tautan ini
+    // ikut berubah warna (text-primary) menandakan ada icon_key tersimpan.
+    await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toHaveCount(0);
+    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-primary/);
+
+    // Reload penuh -- membuktikan pilihannya benar-benar tersimpan ke
+    // backend (icon_key), bukan cuma state lokal sesi ini. Buka lagi
+    // galerinya, opsi "Instagram" harus tampil TERPILIH (border-primary).
+    await page.reload();
+    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-primary/);
+    await row.getByTitle("Pilih dari galeri ikon").click();
+    await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-primary/);
+  });
 });
