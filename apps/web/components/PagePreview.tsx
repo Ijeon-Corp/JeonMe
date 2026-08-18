@@ -768,8 +768,21 @@ function renderBioHeader(
     : "h-24 w-24";
 
   const avatar = data.avatarUrl ? (
+    // fetchPriority="high" (optimasi performa, analisa & benchmark
+    // kompetitif 18 Agustus 2026): avatar HAMPIR SELALU elemen LCP (Largest
+    // Contentful Paint) di halaman publik -- gambar tunggal terbesar yang
+    // langsung terlihat tanpa scroll di semua 8 layout. Tanpa hint ini,
+    // browser memberi prioritas fetch yang SAMA seperti gambar lain yang
+    // baru muncul setelah scroll, padahal justru avatar ini yang paling
+    // menentukan skor LCP (metrik Core Web Vitals paling relevan buat
+    // "halaman publik yang terasa cepat" dibanding kompetitor).
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={data.avatarUrl} alt={data.username} className={`relative ${avatarSize} flex-shrink-0 rounded-full object-cover ${theme.avatarRing}`} />
+    <img
+      src={data.avatarUrl}
+      alt={data.username}
+      fetchPriority="high"
+      className={`relative ${avatarSize} flex-shrink-0 rounded-full object-cover ${theme.avatarRing}`}
+    />
   ) : (
     <div
       className={`relative flex ${avatarSize} flex-shrink-0 items-center justify-center rounded-full bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
@@ -899,8 +912,10 @@ function renderBioHeader(
     return (
       <div className="relative -mx-6 -mt-14 flex w-[calc(100%+3rem)] flex-col items-center">
         <div className="relative h-64 w-full">
+          {/* fetchPriority="high" -- elemen LCP di layout "hero", lihat
+              catatan panjang di avatar layout default di atas. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={data.avatarUrl} alt={data.username} className="h-full w-full object-cover" />
+          <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-full w-full object-cover" />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 pb-4 text-center">
             <h1 className="flex items-center justify-center gap-1.5 font-heading text-xl font-bold text-white" style={theme.nameStyle}>
@@ -934,8 +949,10 @@ function renderBioHeader(
   // maupun terang) supaya fotonya tetap "menonjol" dari latar.
   if (variant === "polaroid") {
     const polaroidPhoto = data.avatarUrl ? (
+      // fetchPriority="high" -- elemen LCP di layout "polaroid", lihat
+      // catatan panjang di avatar layout default di atas.
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={data.avatarUrl} alt={data.username} className="h-28 w-28 object-cover" />
+      <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-28 w-28 object-cover" />
     ) : (
       <div className="flex h-28 w-28 items-center justify-center bg-primary-subtle font-heading text-2xl font-bold text-primary">
         {data.username.slice(0, 1).toUpperCase()}
@@ -986,7 +1003,7 @@ function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentTyp
   if (link.customIconUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={link.customIconUrl} alt="" className={`${sizeClass} flex-shrink-0 rounded-full object-cover`} />
+      <img src={link.customIconUrl} alt="" loading="lazy" className={`${sizeClass} flex-shrink-0 rounded-full object-cover`} />
     );
   }
   const libraryIcon = getLibraryIcon(link.iconKey);
@@ -1162,12 +1179,13 @@ function renderLinkOrBlock(
           <img
             src={link.thumbnailUrl}
             alt=""
+            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-3.5 w-3.5 text-white" />
             ) : (
@@ -1239,7 +1257,7 @@ function renderLinkOrBlock(
           <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-6 w-6" />
             ) : (
@@ -1265,7 +1283,7 @@ function renderLinkOrBlock(
           <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" className="h-full w-full rounded-full object-cover" />
+              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-6 w-6" />
             ) : (
@@ -1621,10 +1639,15 @@ export default function PagePreview({
                 <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
                   <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
                     {product.cover_image_url ? (
+                      // loading="lazy" -- kartu produk hampir selalu di
+                      // bawah lipatan pertama (avatar + bio + tombol tautan
+                      // datang lebih dulu di SEMUA layout), tunda fetch-nya
+                      // supaya tidak berebut bandwidth dgn elemen LCP (avatar).
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={product.cover_image_url}
                         alt={product.name}
+                        loading="lazy"
                         className="h-full w-full rounded-xl object-cover"
                       />
                     ) : (
@@ -1768,6 +1791,7 @@ function LandingPagePreview({
                   key={block.id}
                   src={(block.blockData?.image_url as string) ?? ""}
                   alt={(block.blockData?.caption as string) || block.title}
+                  loading="lazy"
                   className="w-full rounded-xl object-cover"
                 />
               );
@@ -1870,6 +1894,7 @@ function LandingPagePreview({
                       <img
                         src={block.thumbnailUrl}
                         alt=""
+                        loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
@@ -2020,10 +2045,15 @@ function ProdukPagePreview({
                 <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
                   <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
                     {product.cover_image_url ? (
+                      // loading="lazy" -- kartu produk hampir selalu di
+                      // bawah lipatan pertama (avatar + bio + tombol tautan
+                      // datang lebih dulu di SEMUA layout), tunda fetch-nya
+                      // supaya tidak berebut bandwidth dgn elemen LCP (avatar).
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={product.cover_image_url}
                         alt={product.name}
+                        loading="lazy"
                         className="h-full w-full rounded-xl object-cover"
                       />
                     ) : (

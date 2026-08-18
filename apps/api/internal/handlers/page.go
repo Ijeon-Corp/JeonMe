@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/jeonme/api/internal/imageconv"
 	"github.com/jeonme/api/internal/instagramoauth"
@@ -566,18 +567,11 @@ func (h *PageHandler) servePublicPageFromCache(c *gin.Context, ctx context.Conte
 // katalog produk/monetisasi (dibagi lintas SEMUA halaman kreator), pageID
 // menentukan daftar tautan (independen PER halaman).
 func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Context, cacheKey, userID, pageID string, emailVerified bool, resp *publicPageResponse) {
-	// No.88 (Sprint 10): badge terverifikasi -- sinyal kepercayaan murah untuk
-	// pembeli, dihitung LANGSUNG dari data yang sudah ada (BUKAN proses review
-	// manual seperti Linktree): email terverifikasi + profil lengkap (bio DAN
-	// foto profil terisi) + minimal 1 transaksi sukses (order status='paid').
-	var hasPaidOrder bool
-	_ = h.DB.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM orders o JOIN products pr ON pr.id = o.product_id WHERE pr.user_id = $1 AND o.status = 'paid')
-	`, userID).Scan(&hasPaidOrder)
-	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
-	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
+	// IsPremium dihitung SINKRON & LEBIH DULU (satu query murah) -- dipakai
+	// sebagai gerbang watermark di bawah DAN sebagai predikat query analytics
+	// paralel di bawah, jadi harus sudah siap sebelum goroutine-goroutine itu
+	// dilepas.
 	resp.IsPremium = isPremiumUser(ctx, h.DB, userID)
-	resp.ShopPaused, resp.ShopPausedMessage = getShopPauseStatus(ctx, h.DB, userID)
 	// Gerbang premium ditegakkan DI SINI (bukan cuma dipercaya dari kolom
 	// DB apa adanya) -- kreator gratis yang kolomnya masih true (mis. bekas
 	// Premium yang berakhir masa aktifnya) tetap SELALU tampil watermark.
@@ -585,203 +579,296 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		resp.HideWatermark = false
 	}
 
-	// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
-	// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
-	// gate is_active manual yang sudah ada -- keduanya harus lolos.
-	resp.Links = []publicLink{}
-	rows, err := h.DB.Query(ctx, `
-		SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
-			icon_key, is_featured, thumbnail_url
-		FROM links
-		WHERE page_id = $1
-		AND is_active = true
-		AND (starts_at IS NULL OR starts_at <= now())
-		AND (ends_at IS NULL OR ends_at >= now())
-		ORDER BY position ASC
-	`, pageID)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var l publicLink
-			if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
-				&l.IconKey, &l.IsFeatured, &l.ThumbnailURL); err == nil {
-				// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
-				// komentar di definisi struct publicLink.
-				if l.LockType != "" {
-					l.URL = ""
-				}
-				resp.Links = append(resp.Links, l)
-			}
-		}
-	}
+	// Optimasi performa (analisa & benchmark kompetitif, 18 Agustus 2026):
+	// SEBELUMNYA ~12 query Postgres independen (badge verifikasi, status jeda
+	// toko, tautan, produk, feed Instagram/TikTok, donasi+wishlist+goal,
+	// event, booking, lead capture, loyalty, social proof, analitik) jalan
+	// BERURUTAN satu-satu di sini pada SETIAP cache-miss halaman publik --
+	// endpoint dengan traffic tertinggi di seluruh API (cache Redis cuma 30
+	// detik, lihat publicPageCacheTTL), jadi latensi cache-miss dulu = jumlah
+	// SEMUA round-trip ini ditumpuk. Query-query di bawah TIDAK saling
+	// bergantung satu sama lain (kecuali IsPremium yang sudah dihitung di
+	// atas), jadi sekarang dijalankan PARALEL lewat errgroup -- latensi
+	// cache-miss turun jadi kira-kira waktu query PALING LAMBAT, bukan jumlah
+	// semuanya. g.SetLimit(6) SENGAJA membatasi jumlah goroutine aktif
+	// bersamaan (bukan dilepas semua ~12 sekaligus) -- pgxpool cuma
+	// dikonfigurasi MaxConns=20 (lihat database.go) dan dipakai bersama oleh
+	// SEMUA request bersamaan (termasuk checkout/dashboard/worker), jadi satu
+	// request halaman publik cache-miss TIDAK BOLEH menyedot hampir seluruh
+	// pool koneksi sendirian -- itu bisa membuat P99 lebih buruk di bawah
+	// traffic bersamaan alih-alih lebih baik.
+	var hasPaidOrder bool
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(6)
 
-	// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
-	// di halaman publik sebagai produk yang bisa dibeli, dengan harga
-	// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
-	// No.71/90/92: blok dukungan/donasi, event, & booking DIFILTER di sini --
-	// masing-masing tampil sebagai blok tersendiri (resp.Donation/resp.
-	// Events/resp.Bookings), bukan kartu di grid Produk.
-	resp.Products = []publicItem{}
-	productRows, err := h.DB.Query(ctx, `
-		SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
-			p.is_bundle,
-			(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
-			p.is_course,
-			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
-			p.product_kind = 'external_link', p.external_url, p.category
-		FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
-		ORDER BY p.is_featured DESC, p.position ASC
-	`, userID)
-	if err == nil {
-		defer productRows.Close()
-		for productRows.Next() {
-			var p publicItem
-			if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
-				&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR,
-				&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL, &p.Category); err == nil {
-				resp.Products = append(resp.Products, p)
+	g.Go(func() error {
+		// No.88 (Sprint 10): badge terverifikasi -- sinyal kepercayaan murah
+		// untuk pembeli, dihitung LANGSUNG dari data yang sudah ada (BUKAN
+		// proses review manual seperti Linktree): email terverifikasi +
+		// profil lengkap (bio DAN foto profil terisi) + minimal 1 transaksi
+		// sukses (order status='paid'). profileComplete dihitung di luar
+		// goroutine (lihat setelah g.Wait() di bawah) karena cuma baca
+		// field resp yang SUDAH diisi sebelum fungsi ini dipanggil.
+		_ = h.DB.QueryRow(gctx, `
+			SELECT EXISTS(SELECT 1 FROM orders o JOIN products pr ON pr.id = o.product_id WHERE pr.user_id = $1 AND o.status = 'paid')
+		`, userID).Scan(&hasPaidOrder)
+		return nil
+	})
+
+	g.Go(func() error {
+		resp.ShopPaused, resp.ShopPausedMessage = getShopPauseStatus(gctx, h.DB, userID)
+		return nil
+	})
+
+	g.Go(func() error {
+		// No.78 (Sprint 9): tautan terjadwal otomatis tampil/sembunyi berdasar
+		// starts_at/ends_at (NULL = tidak dibatasi rentang waktu itu), di ATAS
+		// gate is_active manual yang sudah ada -- keduanya harus lolos.
+		resp.Links = []publicLink{}
+		rows, err := h.DB.Query(gctx, `
+			SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
+				icon_key, is_featured, thumbnail_url
+			FROM links
+			WHERE page_id = $1
+			AND is_active = true
+			AND (starts_at IS NULL OR starts_at <= now())
+			AND (ends_at IS NULL OR ends_at >= now())
+			ORDER BY position ASC
+		`, pageID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var l publicLink
+				if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
+					&l.IconKey, &l.IsFeatured, &l.ThumbnailURL); err == nil {
+					// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
+					// komentar di definisi struct publicLink.
+					if l.LockType != "" {
+						l.URL = ""
+					}
+					resp.Links = append(resp.Links, l)
+				}
 			}
 		}
-	}
+		return nil
+	})
+
+	g.Go(func() error {
+		// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
+		// di halaman publik sebagai produk yang bisa dibeli, dengan harga
+		// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
+		// No.71/90/92: blok dukungan/donasi, event, & booking DIFILTER di sini --
+		// masing-masing tampil sebagai blok tersendiri (resp.Donation/resp.
+		// Events/resp.Bookings), bukan kartu di grid Produk.
+		resp.Products = []publicItem{}
+		productRows, err := h.DB.Query(gctx, `
+			SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
+				p.is_bundle,
+				(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
+				p.is_course,
+				(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
+				p.product_kind = 'external_link', p.external_url, p.category
+			FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
+			ORDER BY p.is_featured DESC, p.position ASC
+		`, userID)
+		if err == nil {
+			defer productRows.Close()
+			for productRows.Next() {
+				var p publicItem
+				if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
+					&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR,
+					&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL, &p.Category); err == nil {
+					resp.Products = append(resp.Products, p)
+				}
+			}
+		}
+		return nil
+	})
 
 	// Modul Koneksi Sosial (migrasi 000069) -- lihat catatan lengkap di
 	// publicPageResponse.InstagramFeed/TikTokFeed & fetchInstagramFeed/
-	// fetchTikTokFeed (social_connect.go).
-	resp.InstagramFeed = fetchInstagramFeed(ctx, h.DB, h.RDB, h.Instagram, userID)
-	resp.TikTokFeed = fetchTikTokFeed(ctx, h.DB, h.RDB, h.TikTok, userID)
+	// fetchTikTokFeed (social_connect.go). Dua goroutine TERPISAH (bukan satu)
+	// karena masing-masing bisa memicu panggilan API pihak ketiga (refresh
+	// token) yang jauh lebih lambat dari query Postgres biasa -- tidak boleh
+	// saling menunggu.
+	g.Go(func() error {
+		resp.InstagramFeed = fetchInstagramFeed(gctx, h.DB, h.RDB, h.Instagram, userID)
+		return nil
+	})
+	g.Go(func() error {
+		resp.TikTokFeed = fetchTikTokFeed(gctx, h.DB, h.RDB, h.TikTok, userID)
+		return nil
+	})
 
-	var donation publicDonation
-	var minAmount *int64
-	var goalStartedAt *time.Time
-	if err := h.DB.QueryRow(ctx, `
-		SELECT id, name, pwyw_min_price_idr, donation_goal_title, donation_goal_amount_idr, donation_goal_started_at
-		FROM products
-		WHERE user_id = $1 AND is_donation = true AND is_active = true
-	`, userID).Scan(&donation.ProductID, &donation.Title, &minAmount, &donation.GoalTitle, &donation.GoalAmountIDR, &goalStartedAt); err == nil {
-		if minAmount != nil {
-			donation.MinAmountIDR = *minAmount
-		}
-		// GoalRaisedIDR -- SUM sejak goal ini dipasang, sama seperti
-		// DonationHandler.Get (lihat catatan panjang di migrasi 000060).
-		if donation.GoalAmountIDR > 0 && goalStartedAt != nil {
-			_ = h.DB.QueryRow(ctx, `
-				SELECT COALESCE(SUM(amount_idr), 0) FROM orders WHERE product_id = $1 AND status = 'paid' AND created_at >= $2
-			`, donation.ProductID, *goalStartedAt).Scan(&donation.GoalRaisedIDR)
-		}
+	g.Go(func() error {
+		var donation publicDonation
+		var minAmount *int64
+		var goalStartedAt *time.Time
+		if err := h.DB.QueryRow(gctx, `
+			SELECT id, name, pwyw_min_price_idr, donation_goal_title, donation_goal_amount_idr, donation_goal_started_at
+			FROM products
+			WHERE user_id = $1 AND is_donation = true AND is_active = true
+		`, userID).Scan(&donation.ProductID, &donation.Title, &minAmount, &donation.GoalTitle, &donation.GoalAmountIDR, &goalStartedAt); err == nil {
+			if minAmount != nil {
+				donation.MinAmountIDR = *minAmount
+			}
+			// GoalRaisedIDR -- SUM sejak goal ini dipasang, sama seperti
+			// DonationHandler.Get (lihat catatan panjang di migrasi 000060).
+			// Sengaja tetap SEKUENSIAL di dalam goroutine ini sendiri (goal
+			// raised & wishlist keduanya butuh donation.ProductID/donation
+			// sudah ketemu duluan) -- yang paralel adalah CABANG donasi ini
+			// terhadap cabang-cabang lain (link/produk/event/dst), bukan
+			// query di dalam satu cabang yang memang saling bergantung.
+			if donation.GoalAmountIDR > 0 && goalStartedAt != nil {
+				_ = h.DB.QueryRow(gctx, `
+					SELECT COALESCE(SUM(amount_idr), 0) FROM orders WHERE product_id = $1 AND status = 'paid' AND created_at >= $2
+				`, donation.ProductID, *goalStartedAt).Scan(&donation.GoalRaisedIDR)
+			}
 
-		// Wishlist (Gap #4 benchmark kompetitif) -- selalu diikutkan kalau
-		// blok Donasi aktif, TERLEPAS dari ada isinya atau tidak (array
-		// kosong, bukan null, supaya frontend tidak perlu nil-check ganda).
-		donation.Wishlist = []publicWishlistItem{}
-		wishlistRows, err := h.DB.Query(ctx, `
-			SELECT id, name, price_idr, link, raised_idr FROM donation_wishlist_items WHERE user_id = $1 ORDER BY created_at DESC
+			// Wishlist (Gap #4 benchmark kompetitif) -- selalu diikutkan kalau
+			// blok Donasi aktif, TERLEPAS dari ada isinya atau tidak (array
+			// kosong, bukan null, supaya frontend tidak perlu nil-check ganda).
+			donation.Wishlist = []publicWishlistItem{}
+			wishlistRows, err := h.DB.Query(gctx, `
+				SELECT id, name, price_idr, link, raised_idr FROM donation_wishlist_items WHERE user_id = $1 ORDER BY created_at DESC
+			`, userID)
+			if err == nil {
+				for wishlistRows.Next() {
+					var w publicWishlistItem
+					if err := wishlistRows.Scan(&w.ID, &w.Name, &w.PriceIDR, &w.Link, &w.RaisedIDR); err == nil {
+						donation.Wishlist = append(donation.Wishlist, w)
+					}
+				}
+				wishlistRows.Close()
+			}
+
+			resp.Donation = &donation
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		// No.90 (Sprint 11): event yang sudah lewat TIDAK ditampilkan lagi
+		// (event_ends_at < now()) -- tidak ada gunanya menjual tiket ke acara
+		// yang sudah selesai.
+		resp.Events = []publicEvent{}
+		eventRows, err := h.DB.Query(gctx, `
+			SELECT p.id, p.name, p.description, `+effectivePriceExpr+`,
+				p.event_starts_at, p.event_ends_at, p.event_timezone, p.event_location, p.event_is_online,
+				p.event_capacity, (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id)
+			FROM products p
+			WHERE p.user_id = $1 AND p.is_active = true AND p.is_event = true AND p.event_ends_at >= now()
+			ORDER BY p.event_starts_at ASC
 		`, userID)
 		if err == nil {
-			for wishlistRows.Next() {
-				var w publicWishlistItem
-				if err := wishlistRows.Scan(&w.ID, &w.Name, &w.PriceIDR, &w.Link, &w.RaisedIDR); err == nil {
-					donation.Wishlist = append(donation.Wishlist, w)
-				}
-			}
-			wishlistRows.Close()
-		}
-
-		resp.Donation = &donation
-	}
-
-	// No.90 (Sprint 11): event yang sudah lewat TIDAK ditampilkan lagi
-	// (event_ends_at < now()) -- tidak ada gunanya menjual tiket ke acara
-	// yang sudah selesai.
-	resp.Events = []publicEvent{}
-	eventRows, err := h.DB.Query(ctx, `
-		SELECT p.id, p.name, p.description, `+effectivePriceExpr+`,
-			p.event_starts_at, p.event_ends_at, p.event_timezone, p.event_location, p.event_is_online,
-			p.event_capacity, (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id)
-		FROM products p
-		WHERE p.user_id = $1 AND p.is_active = true AND p.is_event = true AND p.event_ends_at >= now()
-		ORDER BY p.event_starts_at ASC
-	`, userID)
-	if err == nil {
-		defer eventRows.Close()
-		for eventRows.Next() {
-			var ev publicEvent
-			var capacity *int
-			var attendeeCount int
-			if err := eventRows.Scan(&ev.ProductID, &ev.Name, &ev.Description, &ev.EffectivePriceIDR, &ev.IsFlashSaleActive,
-				&ev.StartsAt, &ev.EndsAt, &ev.Timezone, &ev.Location, &ev.IsOnline, &capacity, &attendeeCount); err == nil {
-				if capacity != nil {
-					left := *capacity - attendeeCount
-					if left < 0 {
-						left = 0
+			defer eventRows.Close()
+			for eventRows.Next() {
+				var ev publicEvent
+				var capacity *int
+				var attendeeCount int
+				if err := eventRows.Scan(&ev.ProductID, &ev.Name, &ev.Description, &ev.EffectivePriceIDR, &ev.IsFlashSaleActive,
+					&ev.StartsAt, &ev.EndsAt, &ev.Timezone, &ev.Location, &ev.IsOnline, &capacity, &attendeeCount); err == nil {
+					if capacity != nil {
+						left := *capacity - attendeeCount
+						if left < 0 {
+							left = 0
+						}
+						ev.SpotsLeft = &left
 					}
-					ev.SpotsLeft = &left
+					resp.Events = append(resp.Events, ev)
 				}
-				resp.Events = append(resp.Events, ev)
 			}
 		}
-	}
+		return nil
+	})
 
-	// No.92 (Sprint 11): hanya booking dengan minimal 1 slot tersedia yang
-	// ditampilkan -- tidak ada gunanya menampilkan blok booking yang tidak
-	// bisa dipesan sama sekali.
-	resp.Bookings = []publicBooking{}
-	bookingRows, err := h.DB.Query(ctx, `
-		SELECT p.id, p.name, p.description, p.price_idr, p.booking_duration_minutes,
-			(SELECT COUNT(*) FROM booking_slots bs WHERE bs.booking_product_id = p.id AND bs.order_id IS NULL AND bs.starts_at > now())
-		FROM products p
-		WHERE p.user_id = $1 AND p.is_active = true AND p.is_booking = true
-	`, userID)
-	if err == nil {
-		defer bookingRows.Close()
-		for bookingRows.Next() {
-			var bk publicBooking
-			if err := bookingRows.Scan(&bk.ProductID, &bk.Name, &bk.Description, &bk.PriceIDR, &bk.DurationMinutes, &bk.AvailableSlotCount); err == nil && bk.AvailableSlotCount > 0 {
-				resp.Bookings = append(resp.Bookings, bk)
-			}
-		}
-	}
-
-	var leadCapture publicLeadCapture
-	if err := h.DB.QueryRow(ctx, `
-		SELECT title, collect_email, collect_whatsapp FROM lead_capture_settings
-		WHERE user_id = $1 AND is_active = true
-	`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
-		resp.LeadCapture = &leadCapture
-	}
-
-	_ = h.DB.QueryRow(ctx, `SELECT is_active FROM loyalty_settings WHERE user_id = $1`, userID).Scan(&resp.LoyaltyActive)
-
-	var spActive, spShowOnProductPage bool
-	var spDisplaySeconds, spIntervalSeconds int
-	if err := h.DB.QueryRow(ctx, `
-		SELECT is_active, show_on_product_page, display_seconds, interval_seconds
-		FROM social_proof_settings WHERE user_id = $1
-	`, userID).Scan(&spActive, &spShowOnProductPage, &spDisplaySeconds, &spIntervalSeconds); err == nil && spActive && spShowOnProductPage {
-		recent := fetchRecentPurchases(ctx, h.DB, `
-			SELECT p.name, o.buyer_email, o.created_at
-			FROM orders o JOIN products p ON p.id = o.product_id
-			WHERE p.user_id = $1 AND o.status = 'paid'
-			ORDER BY o.created_at DESC LIMIT 10
+	g.Go(func() error {
+		// No.92 (Sprint 11): hanya booking dengan minimal 1 slot tersedia yang
+		// ditampilkan -- tidak ada gunanya menampilkan blok booking yang tidak
+		// bisa dipesan sama sekali.
+		resp.Bookings = []publicBooking{}
+		bookingRows, err := h.DB.Query(gctx, `
+			SELECT p.id, p.name, p.description, p.price_idr, p.booking_duration_minutes,
+				(SELECT COUNT(*) FROM booking_slots bs WHERE bs.booking_product_id = p.id AND bs.order_id IS NULL AND bs.starts_at > now())
+			FROM products p
+			WHERE p.user_id = $1 AND p.is_active = true AND p.is_booking = true
 		`, userID)
-		if len(recent) > 0 {
-			resp.SocialProof = &publicSocialProof{DisplaySeconds: spDisplaySeconds, IntervalSeconds: spIntervalSeconds, Recent: recent}
+		if err == nil {
+			defer bookingRows.Close()
+			for bookingRows.Next() {
+				var bk publicBooking
+				if err := bookingRows.Scan(&bk.ProductID, &bk.Name, &bk.Description, &bk.PriceIDR, &bk.DurationMinutes, &bk.AvailableSlotCount); err == nil && bk.AvailableSlotCount > 0 {
+					resp.Bookings = append(resp.Bookings, bk)
+				}
+			}
 		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var leadCapture publicLeadCapture
+		if err := h.DB.QueryRow(gctx, `
+			SELECT title, collect_email, collect_whatsapp FROM lead_capture_settings
+			WHERE user_id = $1 AND is_active = true
+		`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
+			resp.LeadCapture = &leadCapture
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		_ = h.DB.QueryRow(gctx, `SELECT is_active FROM loyalty_settings WHERE user_id = $1`, userID).Scan(&resp.LoyaltyActive)
+		return nil
+	})
+
+	g.Go(func() error {
+		var spActive, spShowOnProductPage bool
+		var spDisplaySeconds, spIntervalSeconds int
+		if err := h.DB.QueryRow(gctx, `
+			SELECT is_active, show_on_product_page, display_seconds, interval_seconds
+			FROM social_proof_settings WHERE user_id = $1
+		`, userID).Scan(&spActive, &spShowOnProductPage, &spDisplaySeconds, &spIntervalSeconds); err == nil && spActive && spShowOnProductPage {
+			recent := fetchRecentPurchases(gctx, h.DB, `
+				SELECT p.name, o.buyer_email, o.created_at
+				FROM orders o JOIN products p ON p.id = o.product_id
+				WHERE p.user_id = $1 AND o.status = 'paid'
+				ORDER BY o.created_at DESC LIMIT 10
+			`, userID)
+			if len(recent) > 0 {
+				resp.SocialProof = &publicSocialProof{DisplaySeconds: spDisplaySeconds, IntervalSeconds: spIntervalSeconds, Recent: recent}
+			}
+		}
+		return nil
+	})
+
+	// Modul Analitik Pihak Ketiga -- resp.IsPremium SUDAH dihitung SINKRON di
+	// awal fungsi ini (sebelum g dibuat), tinggal dipakai ulang sebagai
+	// gerbang, TIDAK query isPremiumUser dua kali. fb_access_token_encrypted
+	// SENGAJA TIDAK di-SELECT sama sekali di sini (bukan cuma tidak dikirim)
+	// -- query ini murni untuk payload publik, tidak ada alasan menyentuh
+	// kolom secret.
+	if resp.IsPremium {
+		g.Go(func() error {
+			var pixelID, gaID string
+			var utmEnabled bool
+			if err := h.DB.QueryRow(gctx, `
+				SELECT fb_pixel_id, ga_measurement_id, utm_enabled FROM analytics_settings WHERE user_id = $1
+			`, userID).Scan(&pixelID, &gaID, &utmEnabled); err == nil && (pixelID != "" || gaID != "") {
+				resp.Analytics = &publicAnalytics{FbPixelID: pixelID, GaMeasurementID: gaID, UtmEnabled: utmEnabled}
+			}
+			return nil
+		})
 	}
 
-	// Modul Analitik Pihak Ketiga -- resp.IsPremium SUDAH dihitung di atas
-	// (baris awal fungsi ini), tinggal dipakai ulang sebagai gerbang, TIDAK
-	// query isPremiumUser dua kali. fb_access_token_encrypted SENGAJA TIDAK
-	// di-SELECT sama sekali di sini (bukan cuma tidak dikirim) -- query ini
-	// murni untuk payload publik, tidak ada alasan menyentuh kolom secret.
-	if resp.IsPremium {
-		var pixelID, gaID string
-		var utmEnabled bool
-		if err := h.DB.QueryRow(ctx, `
-			SELECT fb_pixel_id, ga_measurement_id, utm_enabled FROM analytics_settings WHERE user_id = $1
-		`, userID).Scan(&pixelID, &gaID, &utmEnabled); err == nil && (pixelID != "" || gaID != "") {
-			resp.Analytics = &publicAnalytics{FbPixelID: pixelID, GaMeasurementID: gaID, UtmEnabled: utmEnabled}
-		}
-	}
+	// Semua goroutine di atas soft-fail sendiri (pola konsisten dgn kode
+	// lama -- errornya ditelan lewat `if err == nil`/`_ =`), TIDAK ADA yang
+	// pernah me-return error sungguhan ke g.Wait(). g dipakai murni sebagai
+	// primitif sinkronisasi "tunggu semua goroutine di atas selesai", bukan
+	// utk propagasi error.
+	_ = g.Wait()
+
+	profileComplete := resp.Bio != "" && resp.AvatarURL != ""
+	resp.IsVerified = emailVerified && profileComplete && hasPaidOrder
 
 	if h.RDB != nil {
 		if encoded, err := json.Marshal(resp); err == nil {
