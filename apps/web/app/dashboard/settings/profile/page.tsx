@@ -3,14 +3,20 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ApiError, SettingsProfile, getSettingsProfile, updateSettingsProfile } from "@/lib/api-client";
+import { ApiError, SettingsProfile, checkUsername, getSettingsProfile, updateSettingsProfile } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconChevronRight, IconQrCode } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconClose, IconQrCode } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
+
+type UsernameCheckState = "idle" | "checking" | "available" | "unavailable";
+
+function formatCooldownDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
 
 // Modul Settings §2: display_name/bio DITULIS ke tabel pages (kolom yang
 // sama dipakai halaman Desain/PagePreview) -- SENGAJA tidak menduplikasi
@@ -29,6 +35,11 @@ export default function SettingsProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
+  const [usernameCheck, setUsernameCheck] = useState<{ username: string; state: UsernameCheckState; message: string }>({
+    username: "",
+    state: "idle",
+    message: "",
+  });
 
   useEffect(() => {
     getSettingsProfile()
@@ -44,6 +55,38 @@ export default function SettingsProfilePage() {
   }, []);
 
   const usernameChanged = original !== null && username.trim() !== original.username;
+  const cooldownUntil = original?.username_change_available_at ?? null;
+  const cooldownActive = cooldownUntil !== null;
+
+  // Live-check ketersediaan username -- permintaan langsung pengguna, 19
+  // Agustus 2026, sama seperti /register (checkUsername.ts). BEDA di sini:
+  // dilewati kalau nilainya sama dengan original.username (belum benar-benar
+  // diganti, endpoint publik /auth/check-username tidak tahu cara
+  // mengecualikan baris milik pemanggil sendiri jadi akan salah melaporkan
+  // "sudah dipakai") ATAUPUN kalau cooldown 30 hari sedang aktif (field
+  // otomatis di-disable, tidak perlu nge-hit API sama sekali).
+  useEffect(() => {
+    const trimmed = username.trim();
+    const timer = setTimeout(() => {
+      if (cooldownActive || trimmed.length < 3 || trimmed === original?.username) {
+        setUsernameCheck({ username: trimmed, state: "idle", message: "" });
+        return;
+      }
+      setUsernameCheck({ username: trimmed, state: "checking", message: "" });
+      checkUsername(trimmed)
+        .then((res) => {
+          setUsernameCheck({ username: trimmed, state: res.available ? "available" : "unavailable", message: res.message });
+        })
+        .catch(() => {
+          setUsernameCheck({ username: trimmed, state: "idle", message: "" });
+        });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [username, original, cooldownActive]);
+
+  // Abaikan hasil check yang sudah basi (username berubah lagi setelah hasil
+  // sebelumnya datang, sebelum debounce berikutnya sempat jalan).
+  const usernameState: UsernameCheckState = usernameCheck.username === username.trim() ? usernameCheck.state : "idle";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,7 +114,20 @@ export default function SettingsProfilePage() {
         display_name: displayName !== original.display_name ? displayName : undefined,
         bio: bio !== original.bio ? bio : undefined,
       });
-      setOriginal({ ...original, username: res.username, category, display_name: displayName, bio });
+      setOriginal({
+        ...original,
+        username: res.username,
+        category,
+        display_name: displayName,
+        bio,
+        // Cooldown 30 hari mulai berlaku SEKARANG kalau username baru saja
+        // diganti -- dihitung optimis di klien (bukan menunggu GET ulang)
+        // supaya field langsung ter-disable, konsisten dengan apa yang
+        // backend akan tegakkan kalau dicoba lagi detik ini juga.
+        username_change_available_at: usernameChanged
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          : original.username_change_available_at,
+      });
       setUsername(res.username);
       showToast("Profil berhasil disimpan.");
     } catch (err) {
@@ -143,20 +199,68 @@ export default function SettingsProfilePage() {
           <label htmlFor="settings-username" className="text-xs font-bold uppercase tracking-wider text-muted">
             Username
           </label>
-          <div className="mt-1 flex items-center rounded-xl border border-border bg-white focus-within:border-primary">
+          <div
+            className={`mt-1 flex items-center rounded-xl border bg-white transition-colors focus-within:ring-2 ${
+              usernameState === "available"
+                ? "border-secondary focus-within:border-secondary focus-within:ring-secondary/20"
+                : usernameState === "unavailable"
+                ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
+                : "border-border focus-within:border-primary focus-within:ring-primary/20"
+            }`}
+          >
             <span className="pl-3 text-sm text-muted">jeon.id/</span>
+            {/* focus:!shadow-none -- glow fokus global (globals.css,
+                `input:not([type=checkbox]):not([type=radio]):focus`) selektornya
+                lebih spesifik daripada utility Tailwind biasa, jadi tanpa `!`
+                glow bawaan tetap muncul sebagai kotak abu-abu yang tidak
+                mengikuti bentuk pil pembungkus -- persis menutupi "/" di
+                "jeon.id/" (dilaporkan pengguna: "ketika di klik bagian
+                username kenapa seperti memblok bagian /"). Bug & fix yang
+                sama persis sudah ada di /register, lihat komentar di sana. */}
             <input
               id="settings-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               maxLength={30}
-              className="w-full rounded-r-xl py-2.5 pr-3 text-sm text-ink focus:outline-none"
+              disabled={cooldownActive}
+              className="w-full rounded-r-xl py-2.5 pr-3 text-sm text-ink focus:!shadow-none focus:outline-none disabled:cursor-not-allowed disabled:text-muted disabled:opacity-70"
             />
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Ganti username tetap mengalihkan pengunjung dari alamat lama selama 90 hari, jadi tautan yang sudah
-            dibagikan tidak langsung 404.
-          </p>
+          {cooldownActive && cooldownUntil ? (
+            <p className="mt-1 text-xs text-muted">
+              Username cuma bisa diganti sekali per 30 hari -- kamu bisa ganti lagi mulai {formatCooldownDate(cooldownUntil)}.
+            </p>
+          ) : (
+            <>
+              {usernameState !== "idle" && (
+                <p
+                  className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${
+                    usernameState === "available"
+                      ? "text-secondary-dark"
+                      : usernameState === "unavailable"
+                      ? "text-red-600"
+                      : "text-muted"
+                  }`}
+                >
+                  {usernameState === "checking" && "Memeriksa ketersediaan..."}
+                  {usernameState === "available" && (
+                    <>
+                      <IconCheck className="h-3.5 w-3.5 flex-shrink-0" /> Username tersedia
+                    </>
+                  )}
+                  {usernameState === "unavailable" && (
+                    <>
+                      <IconClose className="h-3.5 w-3.5 flex-shrink-0" /> {usernameCheck.message}
+                    </>
+                  )}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-muted">
+                Ganti username tetap mengalihkan pengunjung dari alamat lama selama 90 hari, jadi tautan yang sudah
+                dibagikan tidak langsung 404.
+              </p>
+            </>
+          )}
         </div>
 
         <div>

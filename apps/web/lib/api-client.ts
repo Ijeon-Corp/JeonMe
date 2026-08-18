@@ -2886,6 +2886,10 @@ export interface SettingsProfile {
   display_name: string;
   bio: string;
   avatar_url: string;
+  // Cooldown ganti username 1x/30 hari (permintaan langsung pengguna, 19
+  // Agustus 2026) -- null berarti boleh ganti sekarang, string RFC3339
+  // berarti baru boleh ganti lagi mulai tanggal itu.
+  username_change_available_at: string | null;
 }
 
 export function getSettingsProfile() {

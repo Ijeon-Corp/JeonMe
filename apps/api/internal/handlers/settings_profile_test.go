@@ -218,11 +218,74 @@ func TestSettingsProfile_UsernameChange_RejectsRecentlyVacatedName(t *testing.T)
 		t.Fatalf("status = %d, ekspektasi 409 (squat protection), body %s", rec2.Code, rec2.Body.String())
 	}
 
+	// Cooldown 30 hari (permintaan langsung pengguna, 19 Agustus 2026)
+	// SENGAJA dimundurkan lewat SQL langsung sebelum percobaan ganti KEDUA
+	// userA -- test ini fokus membuktikan pengecualian squat-protection
+	// (pemilik ASLI boleh ambil balik nama lamanya, beda dari userB di
+	// atas), BUKAN menguji cooldown itu sendiri (sudah ada test terpisah,
+	// lihat TestSettingsProfile_UsernameChange_EnforcesCooldown). Tanpa
+	// mundur-kan ini, rec3 di bawah akan kena 429 duluan sebelum sempat
+	// membuktikan squat-protection apa pun -- dua concern beda yang
+	// kebetulan sama-sama membaca username_history, harus diuji terpisah.
+	if _, err := settings.DB.Exec(t.Context(), `UPDATE username_history SET changed_at = now() - interval '31 days' WHERE user_id = $1`, userA); err != nil {
+		t.Fatalf("gagal mundurkan username_history: %v", err)
+	}
+
 	rec3 := doJSON(t, router, http.MethodPatch, "/settings/profile", map[string]any{
 		"username": oldUsernameA,
 	}, map[string]string{"X-Test-UserID": userA})
 	if rec3.Code != http.StatusOK {
 		t.Fatalf("userA gagal ambil balik username sendiri: status %d, body %s", rec3.Code, rec3.Body.String())
+	}
+}
+
+// Permintaan langsung pengguna, 19 Agustus 2026: "batasi hanya bisa ganti
+// 1x per 30 hari". Percobaan ganti KEDUA (langsung setelah yang pertama,
+// tanpa jeda waktu) harus ditolak 429 -- beda dari
+// TestSettingsProfile_UsernameChange_RejectsRecentlyVacatedName di atas
+// yang menguji squat-protection (soal SIAPA boleh pakai nama tertentu),
+// test ini murni soal SESERING APA satu akun boleh ganti nama, terlepas
+// dari nama barunya benar-benar tersedia atau tidak.
+func TestSettingsProfile_UsernameChange_EnforcesCooldown(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	settings, auth, _ := newTestSettingsProfileHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.PATCH("/settings/profile", settings.Update)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	first := doJSON(t, router, http.MethodPatch, "/settings/profile", map[string]any{
+		"username": "cooldown1" + uuid.NewString()[:8],
+	}, headers)
+	if first.Code != http.StatusOK {
+		t.Fatalf("ganti pertama gagal: status %d, body %s", first.Code, first.Body.String())
+	}
+
+	second := doJSON(t, router, http.MethodPatch, "/settings/profile", map[string]any{
+		"username": "cooldown2" + uuid.NewString()[:8],
+	}, headers)
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("ganti kedua (langsung setelah pertama) = %d, ekspektasi %d (cooldown 30 hari). Body: %s",
+			second.Code, http.StatusTooManyRequests, second.Body.String())
+	}
+
+	// GET juga harus melaporkan cooldown-nya PROAKTIF (sebelum kreator
+	// coba submit sama sekali) -- lihat catatan lengkap di
+	// settingsProfileResponse.UsernameChangeAvailableAt.
+	getRouter := gin.New()
+	gg := getRouter.Group("/", fakeAuth())
+	gg.GET("/settings/profile", settings.Get)
+	getRec := doJSON(t, getRouter, http.MethodGet, "/settings/profile", nil, headers)
+	var getResp struct {
+		UsernameChangeAvailableAt *string `json:"username_change_available_at"`
+	}
+	if err := json.Unmarshal(getRec.Body.Bytes(), &getResp); err != nil {
+		t.Fatalf("gagal decode response GET: %v", err)
+	}
+	if getResp.UsernameChangeAvailableAt == nil {
+		t.Fatalf("username_change_available_at = nil, ekspektasi terisi (baru saja ganti username)")
 	}
 }
 

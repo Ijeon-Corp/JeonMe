@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -13,6 +14,16 @@ import (
 
 	"github.com/jeonme/api/internal/audit"
 )
+
+// usernameChangeCooldown -- permintaan langsung pengguna, 19 Agustus 2026:
+// "batasi hanya bisa ganti 1x per 30 hari". Beda dari window redirect 90
+// hari yang SUDAH ada (username_history.changed_at dipakai checkUsernameAvailable
+// utk cegah squatting & ResolveUsernameRedirect utk alihkan pengunjung) --
+// itu soal berapa lama nama LAMA tetap dialihkan/direservasi, ini soal
+// SESERING APA pemilik akun boleh memulai perubahan baru. Kolom yang sama
+// (username_history.changed_at) dipakai ulang untuk keduanya, cuma
+// jendela waktunya beda.
+const usernameChangeCooldown = 30 * 24 * time.Hour
 
 // SettingsProfileHandler mengimplementasikan Modul Settings §2 (Profile &
 // Account). display_name/bio/avatar_url SUDAH ada di tabel pages (dikelola
@@ -35,6 +46,13 @@ type settingsProfileResponse struct {
 	DisplayName string `json:"display_name"`
 	Bio         string `json:"bio"`
 	AvatarURL   string `json:"avatar_url"`
+	// UsernameChangeAvailableAt -- permintaan langsung pengguna, 19 Agustus
+	// 2026 (cooldown 30 hari). null berarti boleh ganti sekarang juga
+	// (belum pernah ganti sama sekali, atau cooldown sebelumnya sudah
+	// lewat) -- diekspos di GET supaya frontend bisa menonaktifkan/memberi
+	// tahu batas waktu SEBELUM kreator mengetik & submit, bukan baru
+	// ketahuan lewat error 429 setelah mencoba.
+	UsernameChangeAvailableAt *string `json:"username_change_available_at"`
 }
 
 func (h *SettingsProfileHandler) Get(c *gin.Context) {
@@ -53,6 +71,15 @@ func (h *SettingsProfileHandler) Get(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat profil"})
 		return
+	}
+
+	var lastChangedAt *time.Time
+	_ = h.DB.QueryRow(ctx, `SELECT MAX(changed_at) FROM username_history WHERE user_id = $1`, userID).Scan(&lastChangedAt)
+	if lastChangedAt != nil {
+		if availableAt := lastChangedAt.Add(usernameChangeCooldown); time.Now().Before(availableAt) {
+			s := availableAt.Format(time.RFC3339)
+			resp.UsernameChangeAvailableAt = &s
+		}
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -113,6 +140,24 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 	if req.Username != nil {
 		trimmed := strings.TrimSpace(*req.Username)
 		if trimmed != oldUsername {
+			// Cooldown 30 hari (permintaan langsung pengguna, 19 Agustus
+			// 2026) -- dicek DI DALAM transaksi yang sama sebelum
+			// checkUsernameAvailable, supaya penolakannya jelas ("baru bisa
+			// ganti lagi tanggal X") alih-alih tercampur dengan pesan
+			// "username sudah dipakai" yang beda alasannya sama sekali.
+			var lastChangedAt *time.Time
+			if err := tx.QueryRow(ctx, `SELECT MAX(changed_at) FROM username_history WHERE user_id = $1`, userID).Scan(&lastChangedAt); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa riwayat username"})
+				return
+			}
+			if lastChangedAt != nil {
+				if availableAt := lastChangedAt.Add(usernameChangeCooldown); time.Now().Before(availableAt) {
+					c.JSON(http.StatusTooManyRequests, gin.H{
+						"error": fmt.Sprintf("username cuma bisa diganti sekali per 30 hari -- coba lagi mulai %s", availableAt.Format("2 January 2006")),
+					})
+					return
+				}
+			}
 			if ok, msg := checkUsernameAvailable(ctx, tx, trimmed, userID); !ok {
 				c.JSON(http.StatusConflict, gin.H{"error": msg})
 				return
