@@ -97,32 +97,7 @@ export default function RegisterPage() {
         Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-ink">gratis</span>.
       </p>
 
-      <div className="mt-8">
-        {/* onBeforeRedirect -- pola validasi-saat-aksi yang SAMA seperti
-            handleSubmit form password di bawah (bukan menonaktifkan
-            tombol): checkbox persetujuan data pribadi (NF-09, UU PDP) WAJIB
-            tercentang dulu sebelum redirect ke Google terjadi sama sekali,
-            karena begitu redirect jalan akun bisa langsung terbuat di
-            backend tanpa titik konfirmasi lain. */}
-        <GoogleAuthButton
-          label="Daftar dengan Google"
-          onBeforeRedirect={() => {
-            if (!consentAccepted) {
-              setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
-              return false;
-            }
-            return true;
-          }}
-        />
-      </div>
-
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Klaim link bio gratismu</label>
           {/* Prefiks "jeon.id/" MENYATU dengan input (referensi layout
@@ -231,6 +206,29 @@ export default function RegisterPage() {
           {loading ? "Memproses..." : "Daftar Gratis"}
         </button>
       </form>
+
+      {/* Google -- permintaan langsung pengguna, 20 Agustus 2026: "pindah
+          kan daftar dengan google nya dibagian bawah setelah password" --
+          SEBELUMNYA di atas form (di atas divider "atau"), sekarang di
+          bawah form (checkbox persetujuan data pribadi sudah kelihatan di
+          atasnya begitu discroll ke sini). onBeforeRedirect TIDAK berubah
+          -- checkbox tetap wajib tercentang dulu sebelum redirect ke
+          Google, cuma posisi tombolnya yang pindah. */}
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <GoogleAuthButton
+        label="Daftar dengan Google"
+        onBeforeRedirect={() => {
+          if (!consentAccepted) {
+            setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+            return false;
+          }
+          return true;
+        }}
+      />
 
       <p className="mt-8 text-center text-sm text-muted">
         Sudah punya akun?{" "}

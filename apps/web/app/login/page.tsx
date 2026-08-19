@@ -136,17 +136,7 @@ export default function LoginPage() {
       </h1>
       <p className="mt-3 text-sm text-muted">Kelola halaman dan produkmu.</p>
 
-      <div className="mt-8">
-        <GoogleAuthButton label="Masuk dengan Google" />
-      </div>
-
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Email</label>
           <input
@@ -178,6 +168,17 @@ export default function LoginPage() {
           {loading ? "Memproses..." : "Masuk"}
         </button>
       </form>
+
+      {/* Google -- permintaan langsung pengguna, 20 Agustus 2026: "pindah
+          kan daftar dengan google nya dibagian bawah setelah password" --
+          SEBELUMNYA di atas form (di atas divider "atau"), sekarang di
+          bawah form email/password. */}
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <GoogleAuthButton label="Masuk dengan Google" />
 
       <button
         type="button"
