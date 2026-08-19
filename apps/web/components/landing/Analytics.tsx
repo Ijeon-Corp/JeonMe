@@ -69,9 +69,6 @@ export default function Analytics() {
           </div>
 
           <div className="reveal order-1 lg:order-2" style={{ transitionDelay: "0.1s" }}>
-            <span className="mb-4 inline-block rounded-full border border-secondary/15 bg-secondary-subtle px-3 py-1.5 text-xs font-semibold text-secondary-dark">
-              Analitik
-            </span>
             <h2 className="mb-5 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
               Tahu Persis
               <br />

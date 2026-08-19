@@ -20,9 +20,6 @@ export default function Monetization() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="reveal">
-            <span className="mb-4 inline-block rounded-full border border-accent/15 bg-accent-subtle px-3 py-1.5 text-xs font-semibold text-accent-dark">
-              Monetisasi
-            </span>
             <h2 className="mb-5 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
               Ubah Audiensmu
               <br />

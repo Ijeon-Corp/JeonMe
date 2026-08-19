@@ -42,9 +42,6 @@ export default function Testimonials() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div className="max-w-xl">
-            <span className="mb-4 inline-block rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-semibold text-primary">
-              Testimoni
-            </span>
             <h2 className="font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
               Disukai Kreator
               <br />

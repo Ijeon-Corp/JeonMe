@@ -15,11 +15,6 @@ export default function Hero() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-10">
           <div className="text-center lg:text-left">
-            <div className="reveal mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-1.5 shadow-sm">
-              <span className="animate-pulse-slow h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-wide text-ink/80">Satu Link, Peluang Tanpa Batas.</span>
-            </div>
-
             <h1
               className="reveal mb-6 font-heading text-4xl font-extrabold leading-[1.12] tracking-tight text-ink sm:text-5xl lg:text-[3.3rem]"
               style={{ transitionDelay: "0.05s" }}

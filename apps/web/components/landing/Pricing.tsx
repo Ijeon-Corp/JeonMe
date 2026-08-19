@@ -39,9 +39,6 @@ export default async function Pricing({ showHeading = true }: { showHeading?: bo
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {showHeading && (
           <div className="reveal mx-auto mb-14 max-w-2xl text-center">
-            <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
-              Harga
-            </span>
             <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
               Harga Sederhana untuk
               <br />

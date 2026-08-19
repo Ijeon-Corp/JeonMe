@@ -10,9 +10,6 @@ export default function FAQ() {
     <section id="faq" className="bg-primary-subtle/40 py-20 md:py-28" aria-label="FAQ">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-12 text-center">
-          <span className="mb-4 inline-block rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-semibold text-primary">
-            FAQ
-          </span>
           <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
             Pertanyaan yang Sering
             <br />

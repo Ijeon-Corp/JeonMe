@@ -29,9 +29,6 @@ export default function Templates() {
     <section id="templates" className="relative overflow-hidden bg-primary-subtle/40 py-20 md:py-28" aria-label="Template">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mx-auto mb-10 max-w-2xl text-center">
-          <span className="mb-4 inline-block rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-semibold text-primary">
-            Template
-          </span>
           <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
             Mulai dari
             <br />
