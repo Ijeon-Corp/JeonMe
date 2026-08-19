@@ -80,115 +80,20 @@ export default function Hero() {
           </div>
 
           <div className="relative flex justify-center pb-6 lg:justify-end">
-            <div className="animate-float relative w-full max-w-[300px]">
-              <div className="shadow-hero relative rounded-[2.5rem] bg-ink p-3">
-                <div
-                  className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50"
-                  style={{ aspectRatio: "9/18" }}
-                >
-                  <div className="flex h-8 items-center justify-between px-6 pt-3">
-                    <span className="text-[10px] font-bold text-ink/60">9:41</span>
-                    <div className="h-4 w-16 rounded-full bg-ink/80" />
-                    <span className="text-[10px] font-bold text-ink/60">100%</span>
-                  </div>
-
-                  <div className="px-6 pb-3 pt-4 text-center">
-                    <div
-                      className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full text-xl font-extrabold text-white ring-4 ring-white"
-                      style={{ background: "linear-gradient(135deg,#1B4D3E,#1F7A6C)" }}
-                    >
-                      MP
-                    </div>
-                    <p className="font-heading text-base font-extrabold text-ink">Maya Putri</p>
-                    <p className="mt-0.5 text-xs text-ink/50">Kreator Digital • jeon.id/mayaputri</p>
-                  </div>
-
-                  <div className="space-y-2 px-5">
-                    <div className="flex items-center gap-2.5 rounded-2xl border-2 border-primary bg-white px-4 py-2.5 shadow-sm">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-primary">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>
-                      </div>
-                      <p className="text-[11px] font-bold text-ink">Gabung Kelas</p>
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-2xl border-2 border-accent bg-white px-4 py-2.5 shadow-sm">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-accent">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
-                      </div>
-                      <p className="text-[11px] font-bold text-ink">Beli Ebook</p>
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-2xl border-2 border-secondary bg-white px-4 py-2.5 shadow-sm">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-secondary">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                      </div>
-                      <p className="text-[11px] font-bold text-ink">Booking Konsultasi</p>
-                    </div>
-                    <div className="flex items-center gap-2.5 rounded-2xl border-2 border-rose-300 bg-white px-4 py-2.5 shadow-sm">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
-                      </div>
-                      <p className="text-[11px] font-bold text-ink">Tonton YouTube</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-center gap-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#1B4D3E" aria-hidden="true"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" /></svg>
-                    </div>
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" strokeWidth="2" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg>
-                    </div>
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="#1F7A6C" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass animate-float-slow absolute -left-12 top-16 hidden rounded-xl px-3 py-2.5 shadow-card lg:block">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-100">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" aria-hidden="true"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted">Pendapatan</p>
-                    <p className="font-heading text-xs font-extrabold text-green-600">+Rp2,4jt</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass animate-float-slow absolute -right-10 top-44 hidden rounded-xl px-3 py-2.5 shadow-card lg:block" style={{ animationDelay: "1s" }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#145C52" strokeWidth="2" aria-hidden="true"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted">Klik</p>
-                    <p className="font-heading text-xs font-extrabold text-secondary-dark">15K</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass animate-float-slow absolute -left-10 bottom-28 hidden rounded-xl px-3 py-2.5 shadow-card lg:block" style={{ animationDelay: "2s" }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9822F" strokeWidth="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted">Pelanggan</p>
-                    <p className="font-heading text-xs font-extrabold text-accent-dark">1.200</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass animate-float-slow absolute -right-8 bottom-2 hidden rounded-xl px-3 py-2 shadow-card lg:block" style={{ animationDelay: "1.5s" }}>
-                <p className="mb-1 text-[9px] text-muted">Pertumbuhan</p>
-                <div className="flex h-6 items-end gap-0.5">
-                  <div className="mock-bar w-1.5 rounded-sm bg-primary/40" style={{ height: "40%" }} />
-                  <div className="mock-bar w-1.5 rounded-sm bg-primary/60" style={{ height: "60%", animationDelay: "0.3s" }} />
-                  <div className="mock-bar w-1.5 rounded-sm bg-primary" style={{ height: "90%", animationDelay: "0.6s" }} />
-                  <div className="mock-bar w-1.5 rounded-sm bg-accent" style={{ height: "70%", animationDelay: "0.9s" }} />
-                </div>
-              </div>
+            {/* Mockup pratinjau produk -- permintaan langsung pengguna, 20
+                Agustus 2026: "ganti yang bagian kanan ini dengan gambar
+                hero.png". SEBELUMNYA telepon + kartu mengambang dibangun
+                manual dari puluhan div/SVG (lihat riwayat git kalau perlu
+                versi lama itu) -- diganti satu file gambar (public/hero.png)
+                yang sudah mengandung ilustrasi lengkap yang sama (telepon +
+                kartu statistik mengambang), pola yang SAMA seperti
+                AuthShowcase.tsx (image1.png, sekarang hero.png juga --
+                lihat catatan di sana) menggantikan mockup JSX buatan tangan
+                dengan gambar. animate-float dipertahankan di pembungkusnya
+                supaya efek mengambang halus yang sama tetap ada. */}
+            <div className="animate-float w-full max-w-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/hero.png" alt="Pratinjau halaman bio & dashboard Jeon.id" className="w-full object-contain" />
             </div>
           </div>
         </div>
