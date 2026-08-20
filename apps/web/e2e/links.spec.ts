@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 test.describe("Tautan", () => {
   test("menambah tautan lewat UI, muncul di dashboard & halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "links");
-    await publishPage(page);
 
     await page.goto("/dashboard/links");
     // Halaman ini TIDAK punya elemen role="heading" sama sekali (judul top
@@ -51,7 +50,6 @@ test.describe("Tautan", () => {
 
   test("menonaktifkan tautan membuatnya hilang dari halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "toggle");
-    await publishPage(page);
 
     await page.goto("/dashboard/links");
     await page.getByRole("button", { name: "Tambah" }).first().click();

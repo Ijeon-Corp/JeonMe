@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
-import { Page, expect } from "@playwright/test";
+import { Page } from "@playwright/test";
 
 // Helper bersama untuk seluruh test E2E -- membuat akun kreator uji BARU
 // dan SUNGGUHAN (register lewat UI, bukan lewat API langsung) supaya test
@@ -212,15 +212,6 @@ export function generateTotpCode(secret: string, at: Date = new Date()): string 
     ((hmac[offset + 2] & 0xff) << 8) |
     (hmac[offset + 3] & 0xff);
   return (binary % 1_000_000).toString().padStart(6, "0");
-}
-
-export async function publishPage(page: Page): Promise<void> {
-  await page.goto("/dashboard/design");
-  const toggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });
-  if ((await toggle.getAttribute("aria-checked")) !== "true") {
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-  }
 }
 
 // Jalankan SQL langsung ke Postgres lokal lewat psql (bukan lib pg -- tidak

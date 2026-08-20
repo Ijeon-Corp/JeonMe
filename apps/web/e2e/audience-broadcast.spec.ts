@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 // Gap #3 dari laporan benchmark kompetitif (permintaan langsung pengguna,
 // 9 Agustus 2026): Audiens sebelumnya cuma capture form + ekspor CSV,
@@ -12,7 +12,6 @@ import { publishPage, registerAndLogin } from "./fixtures";
 test.describe("Broadcast Email Audiens", () => {
   test("subscriber mendaftar lewat form publik, kreator kirim broadcast, status jadi terkirim", async ({ page, browser }) => {
     const { username } = await registerAndLogin(page, "broadcast");
-    await publishPage(page);
 
     await page.goto("/dashboard/audience");
     const enableToggle = page.getByRole("switch", { name: "Aktifkan blok pengumpulan lead" });

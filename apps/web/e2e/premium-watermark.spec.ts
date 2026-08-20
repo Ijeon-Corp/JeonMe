@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { grantPremium, publishPage, registerAndLogin, runSql } from "./fixtures";
+import { grantPremium, registerAndLogin, runSql } from "./fixtures";
 
 // Gating Premium untuk watermark -- pola PALING eksplisit ditandai wajib
 // diuji ulang di backend menurut CLAUDE.md ("Field yang dikirim ke halaman
@@ -17,7 +17,6 @@ import { grantPremium, publishPage, registerAndLogin, runSql } from "./fixtures"
 test.describe("Langganan Premium: Gating Watermark", () => {
   test("akun gratis tidak bisa hilangkan watermark (UI terkunci & backend re-gate), Premium bisa", async ({ page }) => {
     const { username } = await registerAndLogin(page, "premium");
-    await publishPage(page);
 
     const watermarkPill = "Buat halaman gratis di Jeon.id";
 

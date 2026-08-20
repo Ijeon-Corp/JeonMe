@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 // Kontak Sosial (Instagram/TikTok/Facebook/WhatsApp/dll) -- permintaan
 // langsung pengguna, 11 Agustus 2026: "dibagian profile atau menu link bio
@@ -11,7 +11,6 @@ import { publishPage, registerAndLogin } from "./fixtures";
 test.describe("Kontak Sosial", () => {
   test("kreator isi Instagram/WhatsApp/Email, tampil sebagai ikon di bawah bio halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "social");
-    await publishPage(page);
 
     await page.goto("/dashboard/links");
     await page.getByRole("button", { name: /kontak sosial/i }).click();

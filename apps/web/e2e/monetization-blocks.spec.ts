@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 // Blok monetisasi tambahan (donasi/event/booking/loyalitas) -- shared lintas
 // SEMUA halaman satu akun (lihat CLAUDE.md), belum ada cakupan E2E sama
@@ -13,7 +13,6 @@ function toDatetimeLocal(date: Date): string {
 test.describe("Blok Monetisasi: Donasi, Event, Booking, Loyalitas", () => {
   test("keempat blok tersimpan lewat dashboard & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "monetize");
-    await publishPage(page);
 
     // Donasi.
     const donationTitle = "Traktir Kopi E2E";

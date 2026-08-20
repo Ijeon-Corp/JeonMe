@@ -53,7 +53,7 @@ export default function DashboardDesignPage() {
           di bawah lebar intrinsik kontennya di viewport sempit/zoom
           tinggi walau belum dilaporkan pengguna di halaman ini. */}
       <div className="min-w-0 max-w-2xl">
-        <p className="mt-1 text-sm text-muted">Foto profil, bio, tema, dan status terbit halaman publikmu.</p>
+        <p className="mt-1 text-sm text-muted">Foto profil, bio, dan tema halaman publikmu.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -70,13 +70,6 @@ export default function DashboardDesignPage() {
               jeon.id/{page.username}
             </a>
           </div>
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-            <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
-              {page.is_published ? "Sudah terbit" : "Belum terbit"}
-            </span>
-          </div>
-
           {/* No.88 (Sprint 10): progres badge terverifikasi -- sinyal
               kepercayaan gratis, otomatis dari data yang sudah ada, tanpa
               proses review manual. */}
@@ -208,11 +201,6 @@ export default function DashboardDesignPage() {
                 onChange={() => handlePageSettingChange({ hide_watermark: !page.hide_watermark })}
                 label="Sembunyikan watermark"
               />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Toggle checked={page.is_published} onChange={() => handlePageSettingChange({ is_published: !page.is_published })} label="Terbitkan halaman publik" />
-              <span className="text-sm font-semibold text-ink">Terbitkan halaman publik</span>
             </div>
           </div>
         </section>

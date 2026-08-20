@@ -14,13 +14,8 @@ const LINK_BIO_STEPS = [
   },
   {
     title: "Tambahkan tautan",
-    body: "Buka Link Bio, klik \"+ Tambah Tautan\", isi judul dan URL (Instagram, WhatsApp, YouTube, dll). Susun ulang urutannya dengan drag-and-drop.",
+    body: "Buka Link Bio, klik \"+ Tambah Tautan\", isi judul dan URL (Instagram, WhatsApp, YouTube, dll). Susun ulang urutannya dengan drag-and-drop. Halamanmu sudah bisa diakses langsung di jeon.id/username-mu sejak akun dibuat.",
     href: "/dashboard/links",
-  },
-  {
-    title: "Terbitkan halamanmu",
-    body: "Di Desain, aktifkan \"Terbitkan halaman publik\". Halamanmu langsung bisa diakses di jeon.id/username-mu.",
-    href: "/dashboard/design",
   },
 ];
 

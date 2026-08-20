@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { payOrderViaWebhook, publishPage, registerAndLogin } from "./fixtures";
+import { payOrderViaWebhook, registerAndLogin } from "./fixtures";
 
 // Gap #4 dari laporan benchmark kompetitif (permintaan langsung pengguna, 9
 // Agustus 2026): blok Donasi sebelumnya cuma toggle+judul+nominal minimum,
@@ -12,7 +12,6 @@ import { payOrderViaWebhook, publishPage, registerAndLogin } from "./fixtures";
 test.describe("Donasi: Target & Wishlist", () => {
   test("kreator pasang target+wishlist, pendonor pilih item, progress goal & wishlist naik", async ({ page, browser }) => {
     const { username } = await registerAndLogin(page, "songoal");
-    await publishPage(page);
 
     const donationAmount = 20000;
 

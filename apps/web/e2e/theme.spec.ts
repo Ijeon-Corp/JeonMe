@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 test.describe("Tema", () => {
   test("memilih tema di galeri memperbarui pratinjau langsung & halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "theme");
-    await publishPage(page);
 
     await page.goto("/dashboard/design/theme");
     await expect(page.getByRole("heading", { name: "Tema" })).toBeVisible();
@@ -28,7 +27,6 @@ test.describe("Tema", () => {
 
   test("ganti tema mereset kustomisasi Tombol/Font lama (No.130)", async ({ page }) => {
     const { username } = await registerAndLogin(page, "themereset");
-    await publishPage(page);
 
     // Pilih tema Cyber dulu, lalu kustomisasi warna tombol lewat panel
     // Tombol -- mengaktifkan custom_style_override.

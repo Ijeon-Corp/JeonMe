@@ -59,10 +59,9 @@ func (h *OnboardingHandler) GetStatus(c *gin.Context) {
 
 	var pageID string
 	var bio, avatarURL string
-	var isPublished bool
 	if err := h.DB.QueryRow(ctx, `
-		SELECT id, bio, avatar_url, is_published FROM pages WHERE user_id = $1 AND is_primary = true
-	`, userID).Scan(&pageID, &bio, &avatarURL, &isPublished); err != nil {
+		SELECT id, bio, avatar_url FROM pages WHERE user_id = $1 AND is_primary = true
+	`, userID).Scan(&pageID, &bio, &avatarURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat status onboarding"})
 		return
 	}
@@ -78,9 +77,14 @@ func (h *OnboardingHandler) GetStatus(c *gin.Context) {
 		SELECT EXISTS(SELECT 1 FROM payout_methods WHERE user_id = $1 AND verified = true)
 	`, userID).Scan(&hasVerifiedPayment)
 
+	// Item "publish" (Terbitkan halaman publik) DIHAPUS dari checklist ini --
+	// permintaan langsung pengguna, 20 Agustus 2026: "hilangkan terbitkan
+	// halaman publik karna langsung otomatis aktif dan terbit halaman nya".
+	// pages.is_published sekarang DEFAULT true (migrasi 000074) untuk
+	// halaman utama, jadi item ini akan SELALU "done" begitu akun dibuat --
+	// tidak ada gunanya lagi ditampilkan sebagai langkah checklist.
 	checklist := []checklistItem{
 		{Key: "profile", Label: "Lengkapi foto profil & bio", Done: bio != "" && avatarURL != "", Href: "/dashboard/design/header"},
-		{Key: "publish", Label: "Terbitkan halaman publik", Done: isPublished, Href: "/dashboard/design"},
 		{Key: "content", Label: "Tambah tautan atau produk pertama", Done: hasContent, Href: "/dashboard/links"},
 		{Key: "payment", Label: "Hubungkan & verifikasi metode pembayaran", Done: hasVerifiedPayment, Href: "/dashboard/settings/payment"},
 	}

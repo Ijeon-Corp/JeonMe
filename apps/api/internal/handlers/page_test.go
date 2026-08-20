@@ -640,3 +640,40 @@ func TestIsPremiumUser_FalseForUserWithNoSubscriptionRow(t *testing.T) {
 		t.Error("isPremiumUser = true, ekspektasi false -- user ini belum pernah punya baris subscriptions")
 	}
 }
+
+// Permintaan langsung pengguna, 20 Agustus 2026: "hilangkan terbitkan
+// halaman publik karna langsung otomatis aktif dan terbit halaman nya" --
+// Halaman Utama akun BARU sekarang harus langsung terlihat publik TANPA
+// langkah manual apa pun (migrasi 000074, DEFAULT is_published diubah jadi
+// true) -- SENGAJA TIDAK ada `UPDATE pages SET is_published = true` manual
+// di test ini (beda dari account_test.go yang masih melakukannya untuk
+// alasan lain) supaya benar-benar membuktikan DEFAULT kolomnya, bukan
+// cuma membuktikan GetPublicPage bekerja kalau sudah dipublish.
+func TestGetPublicPage_NewlyRegisteredUser_VisibleImmediatelyWithoutManualPublish(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	page, auth := newTestPageHandler(t)
+	userID := registerTestUser(t, auth)
+
+	var username string
+	if err := page.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
+		t.Fatalf("gagal ambil username: %v", err)
+	}
+
+	router := gin.New()
+	router.GET("/pages/:username", page.GetPublicPage)
+
+	rec := doJSON(t, router, http.MethodGet, "/pages/"+username, nil, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GetPublicPage untuk user baru: status = %d, ekspektasi 200 (harus langsung terlihat publik tanpa toggle manual). Body: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Username string `json:"username"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if resp.Username != username {
+		t.Errorf("username respons = %q, ekspektasi %q", resp.Username, username)
+	}
+}

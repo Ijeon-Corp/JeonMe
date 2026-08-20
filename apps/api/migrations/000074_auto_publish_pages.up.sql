@@ -1,0 +1,30 @@
+-- Permintaan langsung pengguna, 20 Agustus 2026: "hilangkan terbitkan
+-- halaman publik karna langsung otomatis aktif dan terbit halaman nya" --
+-- sebelumnya (migrasi 000001) pages.is_published DEFAULT false, kreator
+-- WAJIB menekan toggle "Terbitkan halaman publik" (dashboard/design)
+-- secara manual sebelum halamannya benar-benar bisa diakses publik --
+-- langkah tambahan yang membingungkan kreator baru (sampai perlu
+-- disebutkan eksplisit di halaman Tutorial & jadi salah satu item
+-- checklist onboarding).
+--
+-- DEFAULT diubah jadi true supaya akun BARU langsung aktif tanpa langkah
+-- manual -- HANYA berdampak ke INSERT yang tidak menyebut is_published
+-- secara eksplisit, yaitu SATU-SATUNYA jalur pembuatan Halaman Utama
+-- (`INSERT INTO pages (user_id) VALUES ($1)` di Register/createGoogleUser/
+-- createAppleUser, auth.go & oauth_*.go). SEMUA jalur pembuatan Halaman
+-- Tambahan (Toko/landing, page.go CreatePage) SELALU menyebut is_published
+-- eksplisit di INSERT-nya sendiri (true untuk Toko auto pertama, false
+-- untuk halaman tambahan lain yang sengaja mulai draft) -- DEFAULT kolom
+-- ini TIDAK PERNAH dipakai jalur itu, jadi perilakunya TIDAK BERUBAH SAMA
+-- SEKALI. Toggle "Publikasikan {nama}" untuk Halaman Tambahan
+-- (dashboard/pages/page.tsx) SENGAJA TETAP ADA -- beda kasus, kreator
+-- Premium yang menyiapkan beberapa halaman memang wajar ingin publish
+-- manual saat sudah siap, bukan langsung publik begitu dibuat.
+--
+-- Backfill HANYA Halaman Utama yang sudah ada (is_primary=true) supaya
+-- kreator lama yang belum sempat/lupa menekan toggle ini ikut aktif juga
+-- -- toggle-nya sendiri dihapus dari UI, jadi tanpa backfill ini akun lama
+-- yang kebetulan is_published=false akan terkunci tidak terlihat publik
+-- SELAMANYA tanpa cara memperbaikinya sendiri.
+ALTER TABLE pages ALTER COLUMN is_published SET DEFAULT true;
+UPDATE pages SET is_published = true WHERE is_primary = true AND is_published = false;

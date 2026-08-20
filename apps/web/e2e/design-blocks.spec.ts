@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { publishPage, registerAndLogin } from "./fixtures";
+import { registerAndLogin } from "./fixtures";
 
 // Blok desain halaman utama (/dashboard/design/header|tombol|font|sticker)
 // -- belum ada cakupan E2E sebelumnya di luar theme.spec.ts (yang cuma
@@ -11,7 +11,6 @@ import { publishPage, registerAndLogin } from "./fixtures";
 test.describe("Desain: Header, Tombol, Font, Stiker", () => {
   test("kustomisasi header/tombol/font tersimpan & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "design");
-    await publishPage(page);
 
     // Header: nama tampilan + bio.
     await page.goto("/dashboard/design/header");

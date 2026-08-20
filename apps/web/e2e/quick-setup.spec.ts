@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { TEST_IMAGE_PNG_BASE64, publishPage, registerAndLogin } from "./fixtures";
+import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
 
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
 // menu saja seperti quick setup dan user disuruh pilih jenis template...
@@ -9,7 +9,6 @@ import { TEST_IMAGE_PNG_BASE64, publishPage, registerAndLogin } from "./fixtures
 test.describe("Quick Setup", () => {
   test("terapkan template Streamer langsung mengisi tema, bio, dan tautan starter", async ({ page }) => {
     const { username } = await registerAndLogin(page, "quicksetup");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("streamer");
@@ -159,7 +158,6 @@ test.describe("Quick Setup", () => {
     // tengah) dicek lewat bounding box, bukan nama kelas CSS (supaya
     // tidak rapuh kalau susunan class Tailwind berubah).
     const { username } = await registerAndLogin(page, "quicksetup4");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("company");
@@ -206,7 +204,6 @@ test.describe("Quick Setup", () => {
     // (h-24 = 96px / h-16 = 64px), dicek lewat bounding box tinggi
     // avatar, bukan nama kelas CSS.
     const { username } = await registerAndLogin(page, "quicksetup5");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("content creator");
@@ -230,7 +227,6 @@ test.describe("Quick Setup", () => {
     // benar-benar menguji rendering hero yang sesungguhnya (foto besar
     // edge-to-edge), bukan cuma fallback-nya.
     const { username } = await registerAndLogin(page, "quicksetup8");
-    await publishPage(page);
 
     await page.goto("/dashboard/design/header");
     await page
@@ -266,7 +262,6 @@ test.describe("Quick Setup", () => {
     // satunya varian yang memiringkan elemen) -- penanda paling spesifik
     // untuk varian ini, bukan nama kelas yang gampang berubah.
     const { username } = await registerAndLogin(page, "quicksetup9");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("travel blogger");
@@ -296,7 +291,6 @@ test.describe("Quick Setup", () => {
     // hidden) ataupun memicu scrollbar horizontal di halaman publik asli,
     // bukan cuma mockup dashboard yang sudah dizoom/dipotong duluan.
     const { username } = await registerAndLogin(page, "quicksetup6");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("restaurant");
@@ -327,7 +321,6 @@ test.describe("Quick Setup", () => {
     // paling kecil dari SEMUA varian (h-10=40px) -- cek lewat bounding box,
     // bukan nama kelas CSS, sama seperti test varian lain.
     const { username } = await registerAndLogin(page, "quicksetup7");
-    await publishPage(page);
 
     await page.goto("/dashboard/quick-setup");
     await page.getByPlaceholder(/cari template/i).fill("teacher");

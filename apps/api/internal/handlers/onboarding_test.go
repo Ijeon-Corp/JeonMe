@@ -83,3 +83,40 @@ func TestOnboardingDismiss_PersistsAcrossRequests(t *testing.T) {
 		t.Error("dismissed = false, ekspektasi true setelah dismiss dipanggil")
 	}
 }
+
+// Permintaan langsung pengguna, 20 Agustus 2026: "hilangkan terbitkan
+// halaman publik karna langsung otomatis aktif dan terbit halaman nya" --
+// item checklist "publish" dihapus (halaman selalu aktif sejak akun
+// dibuat, tidak ada langkah untuk dicek lagi), total turun dari 4 jadi 3.
+func TestOnboardingGetStatus_ChecklistNoLongerHasPublishItem(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	onboarding, auth := newTestOnboardingHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/onboarding", onboarding.GetStatus)
+
+	rec := doJSON(t, router, http.MethodGet, "/onboarding", nil, map[string]string{"X-Test-UserID": userID})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Total     int `json:"total"`
+		Checklist []struct {
+			Key string `json:"key"`
+		} `json:"checklist"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if resp.Total != 3 {
+		t.Errorf("total = %d, ekspektasi 3 (item \"publish\" sudah dihapus)", resp.Total)
+	}
+	for _, item := range resp.Checklist {
+		if item.Key == "publish" {
+			t.Error("item checklist \"publish\" masih ada, ekspektasi sudah dihapus")
+		}
+	}
+}
