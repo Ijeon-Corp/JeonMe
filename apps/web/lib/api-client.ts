@@ -124,7 +124,9 @@ export interface PublicLink {
   id: string;
   title: string;
   url: string;
-  lock_type: "" | "age" | "code" | "subscribe";
+  // "sensitive" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // juga sensitive content supaya nanti tampil ke user ketika mau akses".
+  lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
   block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   block_data: Record<string, unknown>;
@@ -838,7 +840,7 @@ export interface LinkItem {
   is_active: boolean;
   starts_at: string | null;
   ends_at: string | null;
-  lock_type: "" | "age" | "code" | "subscribe";
+  lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_code: string;
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
@@ -892,7 +894,7 @@ export function updateLink(
     starts_at: string;
     ends_at: string;
     clear_schedule: boolean;
-    lock_type: "age" | "code" | "subscribe";
+    lock_type: "age" | "code" | "subscribe" | "sensitive";
     lock_code: string;
     lock_min_age: number;
     clear_lock: boolean;
@@ -910,6 +912,14 @@ export function updateLink(
 
 export function deleteLink(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+// duplicateLink -- permintaan langsung pengguna, 20 Agustus 2026: "di
+// bagian link bio di blok nya tambahkan fungsi duplicate". Berlaku utk
+// SEMUA block_type (tautan biasa maupun blok konten) -- backend menyalin
+// seluruh kolom sekaligus (LinksHandler.Duplicate), bukan cuma judul+URL.
+export function duplicateLink(id: string) {
+  return apiFetch<{ id: string; message: string }>(`/dashboard/links/${id}/duplicate`, { method: "POST" }, { auth: true });
 }
 
 // uploadLinkIcon -- permintaan langsung pengguna: unggah gambar kustom per

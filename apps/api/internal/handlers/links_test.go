@@ -148,3 +148,177 @@ func TestLinks_OwnershipEnforced(t *testing.T) {
 		t.Fatalf("delete lintas-akun = %d, ekspektasi %d (ditolak)", deleteRec.Code, http.StatusNotFound)
 	}
 }
+
+// Permintaan langsung pengguna, 20 Agustus 2026: "di bagian link bio di
+// blok nya tambahkan fungsi duplicate". Duplikat harus menyalin field
+// (judul diberi akhiran " (Salinan)", URL sama persis) dan muncul sebagai
+// baris KEDUA (posisi lebih besar dari aslinya) -- BUKAN menyisip tepat
+// setelah aslinya, ditaruh di paling akhir.
+func TestLinksDuplicate_CopiesFieldsAndAppendsAtEnd(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.POST("/links/:id/duplicate", links.Duplicate)
+	g.GET("/links", links.List)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Website Saya", "url": "https://example.com",
+	}, headers)
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created link: %v", err)
+	}
+
+	dupRec := doJSON(t, router, http.MethodPost, "/links/"+created.ID+"/duplicate", nil, headers)
+	if dupRec.Code != http.StatusCreated {
+		t.Fatalf("duplicate gagal: status %d, body %s", dupRec.Code, dupRec.Body.String())
+	}
+	var dupResp struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(dupRec.Body.Bytes(), &dupResp); err != nil {
+		t.Fatalf("gagal decode respons duplicate: %v", err)
+	}
+	if dupResp.ID == created.ID {
+		t.Fatal("ID hasil duplicate sama dengan aslinya, ekspektasi baris baru")
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items []linkItem
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode list: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("jumlah tautan = %d, ekspektasi 2 (asli + duplikat)", len(items))
+	}
+	// List terurut per position ASC -- duplikat (posisi lebih besar) harus
+	// jadi item KEDUA, bukan pertama.
+	original, duplicate := items[0], items[1]
+	if original.ID != created.ID {
+		t.Fatalf("item pertama = %q, ekspektasi tautan asli %q (posisi tidak berubah)", original.ID, created.ID)
+	}
+	if duplicate.ID != dupResp.ID {
+		t.Fatalf("item kedua = %q, ekspektasi duplikat %q (posisi paling akhir)", duplicate.ID, dupResp.ID)
+	}
+	if duplicate.Title != "Website Saya (Salinan)" {
+		t.Errorf("judul duplikat = %q, ekspektasi %q", duplicate.Title, "Website Saya (Salinan)")
+	}
+	if duplicate.URL != created.URL {
+		t.Errorf("URL duplikat = %q, ekspektasi sama dengan asli %q", duplicate.URL, created.URL)
+	}
+	if !duplicate.IsActive {
+		t.Error("duplikat seharusnya is_active=true (menyalin status aslinya)")
+	}
+}
+
+func TestLinksDuplicate_OwnershipEnforced(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userA := registerTestUser(t, auth)
+	userB := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.POST("/links/:id/duplicate", links.Duplicate)
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Punya A", "url": "https://a.example.com",
+	}, map[string]string{"X-Test-UserID": userA})
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created link: %v", err)
+	}
+
+	dupRec := doJSON(t, router, http.MethodPost, "/links/"+created.ID+"/duplicate", nil, map[string]string{"X-Test-UserID": userB})
+	if dupRec.Code != http.StatusNotFound {
+		t.Fatalf("duplicate lintas-akun = %d, ekspektasi %d (ditolak)", dupRec.Code, http.StatusNotFound)
+	}
+}
+
+// Permintaan langsung pengguna, 20 Agustus 2026: "tambahkan juga sensitive
+// content supaya nanti tampil ke user ketika mau akses" -- lock_type
+// "sensitive" TIDAK butuh field tambahan apa pun (beda dari "age"/"code"),
+// pola sama dengan "subscribe".
+func TestLinksUpdate_AcceptsSensitiveLockTypeWithoutExtraFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.PATCH("/links/:id", links.Update)
+	g.GET("/links", links.List)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Konten Dewasa", "url": "https://example.com/sensitif",
+	}, headers)
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created link: %v", err)
+	}
+
+	updateRec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{
+		"lock_type": "sensitive",
+	}, headers)
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("set lock_type=sensitive gagal: status %d, body %s", updateRec.Code, updateRec.Body.String())
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items []linkItem
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode list: %v", err)
+	}
+	if len(items) != 1 || items[0].LockType != "sensitive" {
+		t.Fatalf("items = %+v, ekspektasi 1 tautan dengan lock_type=sensitive", items)
+	}
+}
+
+// Unlock untuk lock_type="sensitive" harus SELALU berhasil tanpa verifikasi
+// apa pun (murni klik persetujuan) -- pola sama persis dengan "age".
+func TestLinksUnlock_SensitiveLockType_SucceedsWithoutVerification(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.PATCH("/links/:id", links.Update)
+	router.POST("/links/:id/unlock", links.Unlock)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Konten Dewasa", "url": "https://example.com/sensitif",
+	}, headers)
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created link: %v", err)
+	}
+	doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"lock_type": "sensitive"}, headers)
+
+	// Unlock PUBLIK -- SENGAJA tanpa header X-Test-UserID (pengunjung
+	// halaman publik tidak login), body kosong (tidak ada code/email/whatsapp
+	// yang perlu dikirim untuk "sensitive").
+	unlockRec := doJSON(t, router, http.MethodPost, "/links/"+created.ID+"/unlock", map[string]any{}, nil)
+	if unlockRec.Code != http.StatusOK {
+		t.Fatalf("unlock sensitive gagal: status %d, body %s", unlockRec.Code, unlockRec.Body.String())
+	}
+	var unlockResp struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(unlockRec.Body.Bytes(), &unlockResp); err != nil {
+		t.Fatalf("gagal decode respons unlock: %v", err)
+	}
+	if unlockResp.URL != created.URL {
+		t.Errorf("url hasil unlock = %q, ekspektasi %q", unlockResp.URL, created.URL)
+	}
+}

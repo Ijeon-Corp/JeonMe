@@ -248,6 +248,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				linksGroup.POST("/links", links.Create)
 				linksGroup.PATCH("/links/:id", links.Update)
 				linksGroup.DELETE("/links/:id", links.Delete)
+				// Permintaan langsung pengguna, 20 Agustus 2026: "tambahkan fungsi
+				// duplicate" -- lihat LinksHandler.Duplicate.
+				linksGroup.POST("/links/:id/duplicate", links.Duplicate)
 				linksGroup.PATCH("/links/reorder", links.Reorder)
 				// Permintaan langsung pengguna: unggah gambar kustom per tautan
 				// (menggantikan ikon platform otomatis di halaman publik).

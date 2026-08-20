@@ -14,6 +14,7 @@ import {
   deleteLink,
   deleteLinkIcon,
   deleteLinkThumbnail,
+  duplicateLink,
   getMyPage,
   listLinks,
   listProducts,
@@ -34,6 +35,7 @@ import {
   IconChevronRight,
   IconClock,
   IconClose,
+  IconCopy,
   IconFacebook,
   IconGripVertical,
   IconInstagram,
@@ -334,9 +336,13 @@ export default function DashboardLinksPage() {
   const [scheduleEnd, setScheduleEnd] = useState("");
   const [savingSchedule, setSavingSchedule] = useState(false);
 
-  // No.79 (Sprint 9): kunci tautan (usia/kode/subscribe).
+  // No.79 (Sprint 9): kunci tautan (usia/kode/subscribe). "sensitive" --
+  // permintaan langsung pengguna, 20 Agustus 2026: "tambahkan juga
+  // sensitive content" -- opsi ke-4, dipakai jalur "Kunci tautan" (khusus
+  // block_type "link", form penuh di bawah) MAUPUN toggle ringkas
+  // "Tandai konten sensitif" (block_type lain, lihat handleToggleSensitive).
   const [lockEditId, setLockEditId] = useState<string | null>(null);
-  const [lockTypeInput, setLockTypeInput] = useState<"age" | "code" | "subscribe">("code");
+  const [lockTypeInput, setLockTypeInput] = useState<"age" | "code" | "subscribe" | "sensitive">("code");
   const [lockCodeInput, setLockCodeInput] = useState("");
   const [lockMinAgeInput, setLockMinAgeInput] = useState("18");
   const [savingLock, setSavingLock] = useState(false);
@@ -839,6 +845,44 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuka kunci tautan.");
+    }
+  }
+
+  // handleToggleSensitive -- permintaan langsung pengguna, 20 Agustus 2026:
+  // "tambahkan juga sensitive content" -- versi RINGKAS dari form kunci di
+  // atas, khusus block_type SELAIN "link" (video/faq/maps/gallery/audio/
+  // accordion/text/contact_form). Tipe-tipe ini tidak punya age/kode/
+  // subscribe (tidak masuk akal untuk konten inline, bukan tautan keluar),
+  // jadi cukup satu klik toggle -- bukan form seperti openLockForm/
+  // handleSaveLock yang menawarkan 4 pilihan sekaligus.
+  async function handleToggleSensitive(link: LinkItem) {
+    setError(null);
+    try {
+      if (link.lock_type === "sensitive") {
+        await updateLink(link.id, { clear_lock: true });
+      } else {
+        await updateLink(link.id, { lock_type: "sensitive" });
+      }
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menandai konten sensitif.");
+    }
+  }
+
+  // handleDuplicate -- permintaan langsung pengguna, 20 Agustus 2026: "di
+  // bagian link bio di blok nya tambahkan fungsi duplicate". Berlaku utk
+  // SEMUA block_type -- backend (LinksHandler.Duplicate) menyalin seluruh
+  // kolom sekaligus, frontend cukup refresh list setelahnya (pola sama
+  // seperti handleSaveLock/handleClearLock di atas).
+  async function handleDuplicate(link: LinkItem) {
+    setError(null);
+    try {
+      await duplicateLink(link.id);
+      const refreshed = await listLinks();
+      setLinks(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menduplikasi blok.");
     }
   }
 
@@ -1535,6 +1579,24 @@ export default function DashboardLinksPage() {
                     </button>
                   </>
                 )}
+                {/* Tandai konten sensitif -- permintaan langsung pengguna, 20
+                    Agustus 2026: "tambahkan juga sensitive content supaya
+                    nanti tampil ke user ketika mau akses". Versi RINGKAS
+                    (satu klik toggle, bukan form kunci penuh) khusus block_type
+                    SELAIN "link" -- lihat catatan lengkap di handleToggleSensitive
+                    kenapa age/kode/subscribe tidak ditawarkan di sini. */}
+                {link.block_type !== "link" && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSensitive(link)}
+                    title={link.lock_type === "sensitive" ? "Batalkan peringatan konten sensitif" : "Tandai konten sensitif"}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
+                      link.lock_type === "sensitive" ? "text-primary" : "text-muted"
+                    }`}
+                  >
+                    <span aria-hidden className="text-sm leading-none">⚠️</span>
+                  </button>
+                )}
                 {/* Kontrol ikon -- permintaan langsung pengguna, 14 Agustus 2026:
                     "harusnya semua tipe ini... bisa ubah icon" -- sebelumnya
                     unggah/galeri/hapus ikon cuma tersedia utk tautan biasa,
@@ -1609,6 +1671,21 @@ export default function DashboardLinksPage() {
                   </button>
                 )}
                 <div className="flex-1" />
+                {/* Duplikat -- permintaan langsung pengguna, 20 Agustus 2026:
+                    "di bagian link bio di blok nya tambahkan fungsi duplicate".
+                    Berlaku utk SEMUA block_type, langsung tereksekusi tanpa
+                    dialog konfirmasi (beda dari Hapus di bawah) -- duplikat
+                    murni MENAMBAH baris baru, tidak menghapus/mengubah apa pun
+                    yang sudah ada, jadi tidak ada risiko kehilangan data yang
+                    perlu dikonfirmasi dulu. */}
+                <button
+                  type="button"
+                  onClick={() => handleDuplicate(link)}
+                  title="Duplikat"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle hover:text-primary"
+                >
+                  <IconCopy className="h-4 w-4" />
+                </button>
                 {/* Permintaan langsung pengguna, 14 Agustus 2026: "kalau mau
                     hapus tampilkan toast peringatan dulu" -- sebelumnya hapus
                     langsung tanpa konfirmasi apa pun (link maupun blok
@@ -1811,12 +1888,13 @@ export default function DashboardLinksPage() {
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <select
                       value={lockTypeInput}
-                      onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe")}
+                      onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
                       className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     >
                       <option value="code">Kode akses</option>
                       <option value="age">Konfirmasi usia</option>
                       <option value="subscribe">Wajib subscribe (email/WhatsApp)</option>
+                      <option value="sensitive">Peringatan konten sensitif</option>
                     </select>
                     {lockTypeInput === "code" && (
                       <input
@@ -1860,7 +1938,14 @@ export default function DashboardLinksPage() {
                   link.lock_type && (
                     <div className="ml-11 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
                       <span className="text-[11px] font-semibold text-secondary-dark">
-                        Terkunci -- {link.lock_type === "code" ? "kode akses" : link.lock_type === "age" ? `usia ${link.lock_min_age ?? 18}+` : "wajib subscribe"}
+                        Terkunci --{" "}
+                        {link.lock_type === "code"
+                          ? "kode akses"
+                          : link.lock_type === "age"
+                          ? `usia ${link.lock_min_age ?? 18}+`
+                          : link.lock_type === "sensitive"
+                          ? "peringatan konten sensitif"
+                          : "wajib subscribe"}
                       </span>
                       <button type="button" onClick={() => handleClearLock(link)} className="text-[11px] font-bold text-red-600 hover:underline">
                         Buka Kunci

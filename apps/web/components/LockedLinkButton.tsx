@@ -22,7 +22,12 @@ export default function LockedLinkButton({
   pageSlug?: string;
   linkId: string;
   title: string;
-  lockType: "age" | "code" | "subscribe";
+  // "sensitive" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // juga sensitive content supaya nanti tampil ke user ketika mau akses".
+  // Pola SAMA PERSIS dengan "age" -- murni klik "lanjutkan", tidak ada
+  // input/verifikasi (lihat handleUnlock & AuthHandler.Unlock case
+  // "sensitive").
+  lockType: "age" | "code" | "subscribe" | "sensitive";
   lockMinAge: number | null;
   className?: string;
 }) {
@@ -76,6 +81,9 @@ export default function LockedLinkButton({
       {lockType === "age" && (
         <p className="text-xs text-muted">Konten ini untuk usia {lockMinAge ?? 18}+ tahun.</p>
       )}
+      {lockType === "sensitive" && (
+        <p className="text-xs text-muted">⚠️ Konten ini mungkin berisi materi sensitif.</p>
+      )}
       {lockType === "code" && (
         <input
           type="text"
@@ -119,7 +127,7 @@ export default function LockedLinkButton({
           disabled={loading}
           className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
         >
-          {loading ? "Membuka..." : lockType === "age" ? "Ya, lanjutkan" : "Buka"}
+          {loading ? "Membuka..." : lockType === "age" || lockType === "sensitive" ? "Ya, lanjutkan" : "Buka"}
         </button>
       </div>
     </form>

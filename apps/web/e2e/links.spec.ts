@@ -126,4 +126,75 @@ test.describe("Tautan", () => {
     await row.getByTitle("Pilih dari galeri ikon").click();
     await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-primary/);
   });
+
+  // Duplikat -- permintaan langsung pengguna, 20 Agustus 2026: "di bagian
+  // link bio di blok nya tambahkan fungsi duplicate".
+  test("duplikat tautan menyalin judul+URL & muncul sebagai baris kedua", async ({ page }) => {
+    await registerAndLogin(page, "duplink");
+
+    await page.goto("/dashboard/links");
+    await page.getByRole("button", { name: "Tambah" }).first().click();
+    await page.getByRole("button", { name: "Tautan", exact: true }).click();
+
+    const linkTitle = "Website Saya";
+    const linkUrl = "https://example.com/asli";
+    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    await page.getByPlaceholder("https://...").fill(linkUrl);
+    await page
+      .locator("form", { has: page.getByPlaceholder("Judul tautan") })
+      .getByRole("button", { name: "Tambah" })
+      .click();
+    await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
+
+    const row = page.locator("li", { hasText: linkTitle }).first();
+    await row.getByTitle("Duplikat").click();
+
+    // Baris baru muncul dengan judul berakhiran " (Salinan)", URL sama persis.
+    const dupTitle = `${linkTitle} (Salinan)`;
+    await expect(page.getByRole("listitem").filter({ hasText: dupTitle })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toHaveCount(2);
+    const dupRow = page.locator("li", { hasText: dupTitle }).first();
+    await expect(dupRow.getByText(linkUrl, { exact: true })).toBeVisible();
+  });
+
+  // Konten Sensitif -- permintaan langsung pengguna, 20 Agustus 2026:
+  // "tambahkan juga sensitive content supaya nanti tampil ke user ketika
+  // mau akses". Blok "Teks" dipakai sebagai contoh (satu-satunya jenis
+  // block_type yang isinya PASTI beda dari judulnya -- membuktikan
+  // peringatan MENGGANTIKAN konten asli sepenuhnya, bukan cuma menimpa
+  // sebagian tampilan).
+  test("blok bertanda konten sensitif tampil sebagai peringatan dulu di halaman publik, baru terlihat setelah diklik", async ({
+    page,
+  }) => {
+    const { username } = await registerAndLogin(page, "sensitif");
+
+    await page.goto("/dashboard/links");
+    await page.getByRole("button", { name: "Tambah" }).first().click();
+    await page.getByRole("button", { name: "Teks", exact: true }).click();
+
+    const blockTitle = "Info Internal";
+    const blockText = "Isi teks yang cuma boleh dilihat setelah klik lanjut.";
+    await page.getByPlaceholder("Judul blok (internal, tidak tampil ke publik)").fill(blockTitle);
+    await page.getByPlaceholder("Isi teks yang tampil di halaman publik").fill(blockText);
+    await page.getByRole("button", { name: "Buat Blok" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: blockTitle })).toBeVisible({ timeout: 10000 });
+
+    const row = page.locator("li", { hasText: blockTitle }).first();
+    await row.getByTitle("Tandai konten sensitif").click();
+    await expect(row.getByTitle("Batalkan peringatan konten sensitif")).toBeVisible({ timeout: 5000 });
+
+    // Halaman publik: SEBELUM diklik, teks asli TIDAK boleh terlihat sama
+    // sekali -- cuma peringatan generik + tombol "Lihat Konten".
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      await expect(page.getByText("Lihat Konten", { exact: true })).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 75000, intervals: [5000] });
+    await expect(page.getByText(blockText)).toHaveCount(0);
+    await expect(page.getByText("Konten Sensitif", { exact: true })).toBeVisible();
+
+    // Klik "Lihat Konten" -- teks asli baru muncul SESUDAHNYA, murni
+    // client-side (tanpa reload/navigasi).
+    await page.getByRole("button", { name: "Lihat Konten", exact: true }).click();
+    await expect(page.getByText(blockText)).toBeVisible();
+  });
 });

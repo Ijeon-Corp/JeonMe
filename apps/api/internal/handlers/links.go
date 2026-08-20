@@ -552,7 +552,18 @@ type updateLinkRequest struct {
 	// terkunci. "age" butuh lock_min_age, "code" butuh lock_code, "subscribe"
 	// tidak butuh keduanya (URL asli disembunyikan dari halaman publik,
 	// baru dibuka lewat POST /links/:id/unlock).
-	LockType   *string `json:"lock_type" binding:"omitempty,oneof=age code subscribe"`
+	//
+	// "sensitive" -- permintaan langsung pengguna, 20 Agustus 2026:
+	// "tambahkan juga sensitive content supaya nanti tampil ke user ketika
+	// mau akses". SAMA PERSIS pola "age" (murni klik persetujuan, tidak
+	// ada verifikasi/field tambahan, lihat Unlock di bawah), BEDA hanya
+	// pesan yang tampil ke pengunjung. Untuk block_type SELAIN "link"/
+	// "button" (video/faq/maps/gallery/audio/accordion/text/contact_form),
+	// dampaknya murni di frontend (PagePreview.tsx, SensitiveContentGate) --
+	// block_data TETAP terkirim apa adanya di payload halaman publik (tidak
+	// disembunyikan server-side seperti url tautan terkunci), karena ini
+	// peringatan santun bukan gerbang keamanan sungguhan.
+	LockType   *string `json:"lock_type" binding:"omitempty,oneof=age code subscribe sensitive"`
 	LockCode   *string `json:"lock_code" binding:"omitempty,max=50"`
 	LockMinAge *int    `json:"lock_min_age" binding:"omitempty,min=13,max=99"`
 	ClearLock  bool    `json:"clear_lock"`
@@ -1423,6 +1434,12 @@ func (h *LinksHandler) Unlock(c *gin.Context) {
 		// Konfirmasi usia murni klik persetujuan (tidak ada verifikasi
 		// identitas sungguhan) -- konsisten dengan perilaku age-lock
 		// Linktree yang sebenarnya (dikonfirmasi riset kompetitor).
+	case "sensitive":
+		// Sama seperti "age" -- murni klik "lanjutkan", tidak ada
+		// verifikasi. Endpoint ini HANYA relevan untuk block_type "link"/
+		// "button" (url disembunyikan sampai unlock) -- block_type lain
+		// digerbang murni client-side, tidak pernah memanggil endpoint ini
+		// sama sekali (lihat SensitiveContentGate, PagePreview.tsx).
 	}
 
 	c.JSON(http.StatusOK, gin.H{"url": url})
@@ -1488,6 +1505,62 @@ func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "pesan terkirim"})
+}
+
+// Duplicate — permintaan langsung pengguna, 20 Agustus 2026: "di bagian
+// link bio di blok nya tambahkan fungsi duplicate". Menyalin SEMUA kolom
+// (termasuk kunci/lock_type, jadwal, ikon, featured, block_data) lewat
+// SATU INSERT...SELECT -- duplikat penuh, bukan cuma judul+URL. Ditaruh di
+// posisi PALING AKHIR (bukan tepat setelah aslinya) supaya tidak perlu
+// menggeser posisi baris lain, pola position sama seperti Create. Judul
+// diberi akhiran " (Salinan)" (dipotong ke 100 karakter -- batas kolom
+// title, VARCHAR(100) NOT NULL -- kalau judul asli sudah mepet batas)
+// supaya kreator langsung tahu mana baris yang baru digandakan tanpa
+// harus membandingkan isi satu-satu.
+func (h *LinksHandler) Duplicate(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var pageID string
+	if err := h.DB.QueryRow(ctx, `SELECT page_id FROM links WHERE id = $1`, linkID).Scan(&pageID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+		return
+	}
+
+	var nextPosition int
+	if err := h.DB.QueryRow(ctx,
+		`SELECT COALESCE(MAX(position) + 1, 0) FROM links WHERE page_id = $1`, pageID,
+	).Scan(&nextPosition); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung posisi tautan"})
+		return
+	}
+
+	newID := uuid.NewString()
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO links (
+			id, page_id, title, url, position, is_active, starts_at, ends_at,
+			lock_type, lock_code, lock_min_age, block_type, block_data,
+			custom_icon_url, is_featured, thumbnail_url, icon_key
+		)
+		SELECT $1, page_id, LEFT(title || ' (Salinan)', 100), url, $2, is_active, starts_at, ends_at,
+			lock_type, lock_code, lock_min_age, block_type, block_data,
+			custom_icon_url, is_featured, thumbnail_url, icon_key
+		FROM links WHERE id = $3
+	`, newID, nextPosition, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menduplikasi blok"})
+		return
+	}
+
+	h.invalidatePageCacheByID(ctx, pageID)
+	c.JSON(http.StatusCreated, gin.H{"id": newID, "message": "blok berhasil diduplikasi"})
 }
 
 // Delete — REQ-F-202 (hapus permanen; untuk sementara pakai Update is_active=false).

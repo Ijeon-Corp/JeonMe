@@ -43,7 +43,9 @@ export interface PagePreviewLink {
   id: string;
   title: string;
   url: string;
-  lockType?: "age" | "code" | "subscribe";
+  // "sensitive" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // juga sensitive content supaya nanti tampil ke user ketika mau akses".
+  lockType?: "age" | "code" | "subscribe" | "sensitive";
   lockMinAge?: number | null;
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
@@ -330,7 +332,7 @@ interface PreviewSourceLink {
   title: string;
   url: string;
   is_active: boolean;
-  lock_type?: "" | "age" | "code" | "subscribe";
+  lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
   block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
   block_data?: Record<string, unknown>;
@@ -1297,16 +1299,85 @@ function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentTyp
   return <DefaultIcon className={`${sizeClass} flex-shrink-0`} />;
 }
 
+// SENSITIVE_GATEABLE_BLOCK_TYPES -- block_type yang punya render dedicated
+// SENDIRI di renderLinkOrBlock (early return SEBELUM sampai ke fallback
+// "tautan biasa" di ujung fungsi) -- tanpa daftar ini, lockType="sensitive"
+// tidak akan pernah dicek untuk tipe-tipe tersebut sama sekali. "link" dan
+// "button" SENGAJA TIDAK dimasukkan -- keduanya sudah digerbang lewat jalur
+// LockedLinkButton yang sudah ada (fetch URL asli dari server SETELAH klik
+// "lanjutkan", lihat AuthHandler.Unlock case "sensitive") karena url-nya
+// memang disembunyikan dari payload halaman publik selama lockType terisi
+// (apa pun jenisnya) -- lihat publicLink, page.go.
+const SENSITIVE_GATEABLE_BLOCK_TYPES = new Set(["video", "faq", "maps", "gallery", "audio", "accordion", "text", "contact_form"]);
+
+// SensitiveContentGate -- permintaan langsung pengguna, 20 Agustus 2026:
+// "tambahkan juga sensitive content supaya nanti tampil ke user ketika mau
+// akses". Beda dari LockedLinkButton (age/code/subscribe, HANYA tautan
+// biasa) -- blok konten (video/galeri/dll) tidak "dibuka" lewat fetch URL
+// server, isinya SUDAH ada di block_data yang terkirim (lihat catatan di
+// SENSITIVE_GATEABLE_BLOCK_TYPES), jadi cukup gerbang MURNI client-side:
+// tampilkan peringatan dulu, baru render konten aslinya begitu diklik.
+// Komponen SUNGGUHAN (bukan fungsi render biasa) karena butuh state
+// `revealed` sendiri -- renderContent lazy (function, bukan children
+// langsung) supaya konten aslinya TIDAK PERNAH dirender/dievaluasi sebelum
+// pengunjung benar-benar klik "Lihat Konten".
+//
+// Judul blok SENGAJA TIDAK ditampilkan di peringatan (beda dari
+// LockedLinkButton yang menampilkan `title`) -- untuk block_type "text",
+// judul memang murni label internal dashboard, TIDAK PERNAH dimaksudkan
+// tampil ke publik sama sekali (lihat catatan "text" di renderLinkOrBlock
+// bawah). Peringatan generik berlaku aman utk SEMUA tipe di
+// SENSITIVE_GATEABLE_BLOCK_TYPES tanpa terkecuali, sekaligus lebih sesuai
+// pola peringatan konten sensitif platform lain (X/Twitter dkk) yang
+// sengaja tidak membocorkan detail apa pun soal kontennya di baliknya.
+function SensitiveContentGate({ theme, renderContent }: { theme: PageTheme; renderContent: () => React.ReactNode }) {
+  const [revealed, setRevealed] = useState(false);
+  if (revealed) {
+    return <>{renderContent()}</>;
+  }
+  return (
+    <div className={`w-full rounded-xl p-4 text-center ${theme.card}`}>
+      <p className={`text-xs font-semibold ${theme.cardTitle}`}>⚠️ Konten Sensitif</p>
+      <p className={`mt-1 text-[11px] opacity-80 ${theme.cardTitle}`}>Konten ini mungkin berisi materi sensitif.</p>
+      <button
+        type="button"
+        onClick={() => setRevealed(true)}
+        className={`mt-3 rounded-lg px-4 py-1.5 text-xs font-bold ${theme.buyButton}`}
+      >
+        Lihat Konten
+      </button>
+    </div>
+  );
+}
+
 function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled">,
   interactive: boolean
 ) {
-  // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan
-  // biasa -- tidak ada gerbang kunci/tracking klik untuk tipe ini (di
-  // luar cakupan yang diminta).
-  //
+  // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan biasa
+  // (block_type sendiri-sendiri di bawah) -- TIDAK ada gerbang kunci
+  // age/code/subscribe untuk tipe-tipe ini (LockedLinkButton, di luar
+  // cakupan permintaan awal). lockType="sensitive" BEDA -- lihat
+  // SensitiveContentGate & SENSITIVE_GATEABLE_BLOCK_TYPES di atas, susulan
+  // permintaan pengguna 20 Agustus 2026. Dicek PALING ATAS di sini (SEBELUM
+  // dispatch block_type manapun) supaya berlaku ke SEMUA tipe yang relevan
+  // sekaligus, bukan disisipkan satu-satu di tiap cabang di bawah --
+  // renderContent memanggil ULANG renderLinkOrBlock dengan lockType
+  // dikosongkan (bukan rekursi tak berujung, cabang ini otomatis dilewati
+  // di panggilan kedua) supaya SELURUH dispatch block_type di bawah TETAP
+  // satu sumber kebenaran, tidak perlu diduplikasi.
+  if (link.lockType === "sensitive" && link.blockType && SENSITIVE_GATEABLE_BLOCK_TYPES.has(link.blockType)) {
+    return (
+      <SensitiveContentGate
+        key={link.id}
+        theme={theme}
+        renderContent={() => renderLinkOrBlock({ ...link, lockType: undefined }, theme, data, interactive)}
+      />
+    );
+  }
+
   // Permintaan langsung pengguna, 14 Agustus 2026: "saat saya ubah tombol
   // di desain kenapa ga semua blok mengikuti warna tombol yang saya set".
   // Akar masalah: video/faq/accordion/text/contact_form dulu pakai
