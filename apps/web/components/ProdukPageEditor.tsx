@@ -64,6 +64,9 @@ const maxGalleryImages = 9;
 // di sini (bukan diimpor dari satu sumber), konsisten dengan pola "dua
 // jalur kode berbeda" yang sudah dipakai proyek ini untuk paritas
 // halaman utama/Toko (CONTENT_TILES/BLOCK_LABEL di atas juga begitu).
+// 7 opsi baru (split/ticket/headline/ribbon/duo/masthead/portrait) --
+// lihat catatan lengkap di dashboard/design/header/page.tsx & renderBioHeader
+// (PagePreview.tsx).
 const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; description: string }[] = [
   { value: "centered", label: "Centered", description: "Avatar besar di tengah -- gaya klasik, bawaan." },
   { value: "banner", label: "Banner", description: "Avatar kecil rata kiri, sebaris dengan nama." },
@@ -73,6 +76,13 @@ const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; descript
   { value: "minimal", label: "Minimal", description: "Avatar kecil sebaris nama, konten jadi fokus." },
   { value: "hero", label: "Hero", description: "Foto profil tampil besar edge-to-edge sebagai latar. Isi Foto Profil dulu." },
   { value: "polaroid", label: "Polaroid", description: "Avatar kotak dibingkai putih & dimiringkan ala foto polaroid." },
+  { value: "split", label: "Split", description: "2 kolom -- foto persegi di kiri, nama & bio di kanan. Kesan formal ala CV digital." },
+  { value: "ticket", label: "Ticket", description: "Dua bagian dipisah garis putus-putus ala tiket/boarding pass." },
+  { value: "headline", label: "Headline", description: "Nama & bio dulu di atas, foto kecil menyusul di bawah." },
+  { value: "ribbon", label: "Ribbon", description: "Badge aksen di sudut avatar, nama dalam pita selebar penuh." },
+  { value: "duo", label: "Duo", description: "Avatar & nama jadi satu chip pil ringkas, rata tengah." },
+  { value: "masthead", label: "Masthead", description: "Pita warna selebar penuh berisi avatar+nama+bio langsung di dalamnya." },
+  { value: "portrait", label: "Portrait", description: "Foto tegak dibingkai & berbayang ala poster. Isi Foto Profil dulu." },
 ];
 
 const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [

@@ -18,6 +18,11 @@ import { ApiError, MyPage, uploadAvatar } from "@/lib/api-client";
 // PER PILIHAN sengaja tidak dibuat -- LivePreviewPanel di kanan (lihat
 // DesignPageShell) sudah otomatis menampilkan hasil sungguhan begitu
 // dipilih, tidak perlu mockup statis ganda.
+// Revisi 20 Agustus 2026 (permintaan langsung pengguna): "saya mau
+// tambahkan jadi total 15 layout yang berbeda ambil referensi dari web
+// serupa dan buat unik dan sesuai dengan kategorinya" -- 7 opsi baru
+// ditambah (split/ticket/headline/ribbon/duo/masthead/portrait), lihat
+// catatan lengkap tiap varian di renderBioHeader (PagePreview.tsx).
 const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; description: string }[] = [
   { value: "centered", label: "Centered", description: "Avatar besar di tengah -- gaya klasik, bawaan." },
   { value: "banner", label: "Banner", description: "Avatar kecil rata kiri, sebaris dengan nama." },
@@ -27,6 +32,13 @@ const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; descript
   { value: "minimal", label: "Minimal", description: "Avatar kecil sebaris nama, konten jadi fokus." },
   { value: "hero", label: "Hero", description: "Foto profil tampil besar edge-to-edge sebagai latar. Isi Foto Profil dulu supaya efeknya terlihat." },
   { value: "polaroid", label: "Polaroid", description: "Avatar kotak dibingkai putih & dimiringkan ala foto polaroid." },
+  { value: "split", label: "Split", description: "2 kolom -- foto persegi di kiri, nama & bio di kanan. Kesan formal ala CV digital." },
+  { value: "ticket", label: "Ticket", description: "Dua bagian dipisah garis putus-putus ala tiket/boarding pass." },
+  { value: "headline", label: "Headline", description: "Nama & bio dulu di atas, foto kecil menyusul di bawah." },
+  { value: "ribbon", label: "Ribbon", description: "Badge aksen di sudut avatar, nama dalam pita selebar penuh." },
+  { value: "duo", label: "Duo", description: "Avatar & nama jadi satu chip pil ringkas, rata tengah." },
+  { value: "masthead", label: "Masthead", description: "Pita warna selebar penuh berisi avatar+nama+bio langsung di dalamnya." },
+  { value: "portrait", label: "Portrait", description: "Foto tegak dibingkai & berbayang ala poster. Isi Foto Profil dulu supaya efeknya terlihat." },
 ];
 
 export default function DesignHeaderPage() {

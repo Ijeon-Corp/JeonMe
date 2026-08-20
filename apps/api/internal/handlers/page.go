@@ -189,7 +189,20 @@ type publicPageResponse struct {
 	// -- referensi estetika Pinterest/VSCO board cover, cocok utk kategori
 	// yang kontennya visual/aesthetic-driven seperti lifestyle/travel/
 	// fashion blogger, lihat renderBioHeader).
-	// Lihat renderBioHeader di PagePreview.tsx untuk kedelapannya.
+	//
+	// Revisi 20 Agustus 2026 (permintaan langsung pengguna): "saya mau
+	// tambahkan jadi total 15 layout yang berbeda ambil referensi dari web
+	// serupa dan buat unik dan sesuai dengan kategorinya" -- 7 nilai baru
+	// ditambah: "split" (2 kolom, foto persegi kiri + identitas kanan),
+	// "ticket" (dua bagian dipisah garis putus-putus ala boarding pass),
+	// "headline" (teks dulu, foto kecil menyusul di bawah), "ribbon" (badge
+	// aksen + nama dalam pita selebar penuh), "duo" (avatar+nama jadi satu
+	// chip pil), "masthead" (pita warna berisi identitas langsung di
+	// dalamnya, beda dari "cover" yang identitasnya menyusul di BAWAH
+	// pita), "portrait" (foto tegak dibingkai & berbayang, terkungkung
+	// dalam kolom -- beda dari "hero" yang bleed penuh ke tepi bingkai).
+	// Lihat renderBioHeader di PagePreview.tsx untuk kelima belasnya, &
+	// quick-setup-templates.ts untuk pemetaan kategori->varian terbaru.
 	LayoutVariant string             `json:"layout_variant"`
 	// ProductLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
 	// pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
@@ -1123,7 +1136,7 @@ type updatePageRequest struct {
 	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
-	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid"`
+	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -2019,7 +2032,7 @@ type updateExtraPageRequest struct {
 	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
-	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid"`
+	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse
 	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
 	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di

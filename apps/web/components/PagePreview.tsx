@@ -256,7 +256,28 @@ export interface PagePreviewData {
   // tepi atas), "spotlight" (avatar besar, nama dalam badge bulat, ikon
   // sosial lebih menonjol). Cuma berlaku di layout bio biasa & Toko
   // (ProdukPagePreview) -- lihat renderBioHeader di bawah.
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  //
+  // Revisi 20 Agustus 2026 (permintaan langsung pengguna): "saya mau
+  // tambahkan jadi total 15 layout yang berbeda ambil referensi dari web
+  // serupa dan buat unik dan sesuai dengan kategorinya" -- 7 varian baru
+  // ditambah ("split"/"ticket"/"headline"/"ribbon"/"duo"/"masthead"/
+  // "portrait"), lihat catatan lengkap tiap varian di renderBioHeader.
+  layoutVariant?:
+    | "centered"
+    | "banner"
+    | "card"
+    | "spotlight"
+    | "cover"
+    | "minimal"
+    | "hero"
+    | "polaroid"
+    | "split"
+    | "ticket"
+    | "headline"
+    | "ribbon"
+    | "duo"
+    | "masthead"
+    | "portrait";
   // utmEnabled -- Modul Analitik Pihak Ketiga (permintaan langsung
   // pengguna, 12 Agustus 2026): kalau true, SETIAP tautan keluar
   // (TrackedLink) ditandai utm_source=jeonme&utm_medium=social&
@@ -323,7 +344,22 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
-  layout_variant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  layout_variant?:
+    | "centered"
+    | "banner"
+    | "card"
+    | "spotlight"
+    | "cover"
+    | "minimal"
+    | "hero"
+    | "polaroid"
+    | "split"
+    | "ticket"
+    | "headline"
+    | "ribbon"
+    | "duo"
+    | "masthead"
+    | "portrait";
   product_layout?: "grid" | "stacked" | "category";
 }
 
@@ -1019,12 +1055,12 @@ function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
-  // Delapan varian (permintaan langsung pengguna, 12 Agustus 2026, susulan
-  // "layouting nya juga berbeda" lalu "tambahkan lagi 2 bentuk layout
-  // lain nya", "hero" ditambah 13 Agustus 2026 hasil analisa benchmark
-  // Linktree/Lynk.id, "polaroid" ditambah hari yang sama lagi supaya
-  // KEDELAPAN kategori Quick Setup punya struktur unik masing-masing --
-  // lihat catatan lengkap & pemetaan kategori->varian di
+  // Lima belas varian (permintaan langsung pengguna, 12 Agustus 2026,
+  // susulan "layouting nya juga berbeda" lalu "tambahkan lagi 2 bentuk
+  // layout lain nya", "hero" ditambah 13 Agustus 2026 hasil analisa
+  // benchmark Linktree/Lynk.id, "polaroid" ditambah hari yang sama lagi
+  // supaya KEDELAPAN kategori Quick Setup (saat itu) punya struktur unik
+  // masing-masing -- lihat catatan lengkap & pemetaan kategori->varian di
   // QuickSetupTemplate.layoutVariant, quick-setup-templates.ts):
   // "centered" & "banner" (bawaan, TIDAK BERUBAH), "card" (identitas
   // dibungkus kartu bertema, avatar menonjol di tepi atas -- kesan "kartu
@@ -1036,21 +1072,42 @@ function renderBioHeader(
   // yang sama ditampilkan besar edge-to-edge sebagai latar, nama/bio
   // ditumpuk di atasnya), "polaroid" (avatar KOTAK dibingkai putih &
   // dimiringkan ala foto polaroid/board Pinterest -- lihat catatan lengkap
-  // di percabangan masing-masing di bawah). Dipetakan ke kategori Quick
-  // Setup yang cocok di quick-setup-templates.ts, TAPI bisa dipakai
-  // manual di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak
-  // dibatasi cuma dari Quick Setup.
+  // di percabangan masing-masing di bawah).
+  //
+  // Revisi 20 Agustus 2026 (permintaan langsung pengguna): "saya mau
+  // tambahkan jadi total 15 layout yang berbeda ambil referensi dari web
+  // serupa dan buat unik dan sesuai dengan kategorinya" -- 7 varian baru:
+  // "split" (2 kolom, foto persegi kiri + identitas kanan, ref: about-page
+  // Carrd/Notion), "ticket" (dua "stub" dipisah garis putus-putus ala
+  // boarding pass/tiket acara), "headline" (teks dulu baru foto kecil di
+  // bawahnya, kebalikan "centered", ref: header profil Substack/Medium),
+  // "ribbon" (badge aksen di sudut avatar + nama dalam pita selebar penuh,
+  // ref: badge produk marketplace), "duo" (avatar+nama jadi satu chip pil
+  // ringkas, ref: kartu profil Discord/WhatsApp Business), "masthead"
+  // (pita warna selebar penuh ala "cover" TAPI identitas ada LANGSUNG DI
+  // DALAM pitanya, ref: cover photo Facebook Page), "portrait" (foto TEGAK
+  // dibingkai & berbayang, TERKUNGKUNG dalam kolom -- beda dari "hero"
+  // yang bleed penuh -- ref: poster film/cover album). Lihat catatan
+  // lengkap tiap varian di percabangannya masing-masing di bawah, & lihat
+  // pemetaan kategori->varian terbaru di quick-setup-templates.ts.
+  // Dipetakan ke kategori Quick Setup yang cocok, TAPI bisa dipakai manual
+  // di halaman mana pun -- field DB cuma VARCHAR(20) polos, tidak dibatasi
+  // cuma dari Quick Setup.
   const variant = data.layoutVariant ?? "centered";
   const isBanner = variant === "banner";
   const isMinimal = variant === "minimal";
   const avatarSize = isMinimal
     ? "h-10 w-10"
-    : isBanner
+    : isBanner || variant === "masthead"
     ? "h-16 w-16"
     : variant === "cover"
     ? "h-20 w-20"
     : variant === "spotlight"
     ? "h-28 w-28"
+    : variant === "duo"
+    ? "h-12 w-12"
+    : variant === "headline"
+    ? "h-16 w-16"
     : "h-24 w-24";
 
   const avatar = data.avatarUrl ? (
@@ -1079,7 +1136,9 @@ function renderBioHeader(
 
   const nameHeading = (
     <h1
-      className={`flex items-center gap-1.5 font-heading text-base font-bold ${isBanner || isMinimal ? "" : "justify-center"} ${theme.name}`}
+      className={`flex items-center gap-1.5 font-heading text-base font-bold ${
+        isBanner || isMinimal || variant === "split" || variant === "masthead" ? "" : "justify-center"
+      } ${theme.name}`}
       style={theme.nameStyle}
     >
       {data.displayName || data.username}
@@ -1248,6 +1307,182 @@ function renderBioHeader(
       <div className="relative flex w-full flex-col items-center">
         <div className="relative -rotate-3 rounded-sm bg-white p-2 pb-6 shadow-xl">{polaroidPhoto}</div>
         <div className="relative mt-5 text-center">
+          {nameHeading}
+          {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social)}
+        </div>
+      </div>
+    );
+  }
+
+  // "split" -- ref: hero "About" page personal-website ala Carrd/Notion --
+  // dua kolom, foto PERSEGI (rounded-2xl, bukan lingkaran seperti varian
+  // lain kecuali polaroid, TAPI tidak dimiringkan/dibingkai putih seperti
+  // polaroid) FIXED di kiri, identitas mengalir di kanan, rata ATAS
+  // (items-start, bukan items-center) ala tata letak CV/kartu profesional
+  // -- dipetakan ke sub-kategori Business yang butuh kesan lebih formal
+  // (Consultant/Agency/Professional CV) daripada avatar bulat generik.
+  // Avatar KOTAK di sini custom (bukan const `avatar` di atas yang selalu
+  // bulat) -- pola sama seperti hero/polaroid yang juga membangun elemen
+  // avatar sendiri saat butuh bentuk beda dari bulat standar.
+  if (variant === "split") {
+    const splitAvatar = data.avatarUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={data.avatarUrl}
+        alt={data.username}
+        fetchPriority="high"
+        className={`h-20 w-20 flex-shrink-0 rounded-2xl object-cover ${theme.avatarRing}`}
+      />
+    ) : (
+      <div
+        className={`flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl bg-white/20 font-heading text-2xl font-bold ${theme.name} ${theme.avatarRing}`}
+      >
+        {data.username.slice(0, 1).toUpperCase()}
+      </div>
+    );
+    return (
+      <div className="relative flex w-full items-start gap-4 text-left">
+        {splitAvatar}
+        <div className="relative min-w-0 flex-1 pt-1">
+          {nameHeading}
+          {data.bio && <p className={`mt-1.5 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social, "left")}
+        </div>
+      </div>
+    );
+  }
+
+  // "ticket" -- ref: boarding pass/tiket acara fisik (Eventbrite dkk) --
+  // dua "stub" ditumpuk dalam satu kartu bertema, dipisah garis putus-
+  // putus dengan dua lingkaran kecil ala lubang sobekan tiket di kedua
+  // ujungnya. Warna divider & lingkaran SENGAJA netral (black/opacity,
+  // pola sama seperti vignette "cover" di atas) supaya aman dilihat di
+  // tema apa pun tanpa butuh warna khusus per-tema. Dipetakan ke template
+  // yang MEMANG soal tiket/reservasi (Event di kategori Special, Sports
+  // Facility di Local) -- struktur selaras isi, bukan cuma dekorasi.
+  if (variant === "ticket") {
+    return (
+      <div className={`relative w-full rounded-2xl ${theme.productCard}`}>
+        <div className="relative flex flex-col items-center px-5 pb-4 pt-5">
+          {avatar}
+          <div className="relative mt-3">{nameHeading}</div>
+        </div>
+        <div className="relative mx-5 border-t-2 border-dashed border-black/10" aria-hidden>
+          <span className="absolute left-0 top-0 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/10" />
+          <span className="absolute right-0 top-0 h-4 w-4 -translate-y-1/2 translate-x-1/2 rounded-full bg-black/10" />
+        </div>
+        <div className="relative px-5 pb-5 pt-4 text-center">
+          {data.bio && <p className={`text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          {renderSocialRow(data.social)}
+        </div>
+      </div>
+    );
+  }
+
+  // "headline" -- kebalikan komposisi "centered": teks (nama+bio) di ATAS,
+  // foto KECIL menyusul di BAWAHnya, ala header profil Substack/Medium
+  // yang mengedepankan pernyataan/tulisan dulu baru foto penulis -- cocok
+  // untuk sub-kategori Education yang isinya lebih ke konten/pesan
+  // (silabus, testimoni, komunitas) daripada wajah pengajarnya.
+  if (variant === "headline") {
+    return (
+      <div className="relative flex w-full flex-col items-center text-center">
+        {nameHeading}
+        {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+        <div className="relative mt-4">{avatar}</div>
+        {renderSocialRow(data.social)}
+      </div>
+    );
+  }
+
+  // "ribbon" -- avatar dengan aksen bulat kecil menempel di sudut kanan-
+  // bawah (ala badge "produk unggulan" di kartu e-commerce, warna dari
+  // theme.buyButton -- tombol aksi tema yang sama dipakai supaya aksennya
+  // konsisten dengan warna CTA halaman) + nama dibungkus pita selebar
+  // penuh (beda dari "spotlight" yang badge bulat) -- ref: kartu produk
+  // marketplace (Shopee/Tokopedia) yang selalu menonjolkan badge kecil di
+  // foto produknya. Dipetakan ke sub-kategori Toko yang produknya lebih
+  // visual/retail (Fashion/Beauty Store).
+  if (variant === "ribbon") {
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        <div className="relative">
+          {avatar}
+          <span
+            aria-hidden
+            className={`absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full text-sm shadow ${theme.buyButton}`}
+          >
+            ✦
+          </span>
+        </div>
+        <div className={`relative mt-4 w-full rounded-full px-4 py-2 text-center ${theme.productCard}`}>{nameHeading}</div>
+        {data.bio && <p className={`mt-3 max-w-xs text-center text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+        {renderSocialRow(data.social)}
+      </div>
+    );
+  }
+
+  // "duo" -- avatar & nama digabung jadi SATU chip pil horizontal (ala
+  // kartu profil ringkas Discord/WhatsApp Business, foto & nama sejajar
+  // sama-sama jadi identitas utama), bio & sosial terpisah di LUAR chip,
+  // di bawahnya. Beda dari "banner" (rata KIRI, lebar penuh, bio menyatu
+  // di kolom yang sama) -- di sini semuanya rata TENGAH & ringkas, cocok
+  // untuk sub-kategori Lifestyle yang personanya lebih "personal trainer/
+  // consultant" (Fitness Coach/Beauty Creator) ketimbang editorial visual.
+  if (variant === "duo") {
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        <div className={`relative inline-flex max-w-full items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 ${theme.productCard}`}>
+          {avatar}
+          {nameHeading}
+        </div>
+        {data.bio && <p className={`mt-3 max-w-xs text-center text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+        {renderSocialRow(data.social)}
+      </div>
+    );
+  }
+
+  // "masthead" -- pita warna selebar penuh (-mx-6, sama seperti "cover")
+  // TAPI avatar+nama+bio ada LANGSUNG DI DALAM pitanya (bukan menyusul di
+  // bawah seperti "cover") -- ala papan nama toko/signage bisnis lokal,
+  // ref: cover photo Facebook Page yang teksnya ditumpuk LANGSUNG di atas
+  // foto sampul, bukan di bawahnya. Dipetakan ke template retail/toko
+  // fisik (Food & Beverage/Affiliate Store, Barbershop/Salon/Photographer)
+  // yang punya kesan "papan nama" kuat.
+  if (variant === "masthead") {
+    return (
+      <div className="relative -mx-6 -mt-14 flex w-[calc(100%+3rem)] flex-col items-center">
+        <div className={`relative flex w-full items-center gap-3 px-6 py-5 ${theme.productCard}`}>
+          {avatar}
+          <div className="relative min-w-0 flex-1 text-left">
+            {nameHeading}
+            {data.bio && <p className={`mt-1 text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
+          </div>
+        </div>
+        <div className="relative mt-3 w-full px-6">{renderSocialRow(data.social, "left")}</div>
+      </div>
+    );
+  }
+
+  // "portrait" -- foto TEGAK (aspect-[3/4]) dibingkai rounded-2xl &
+  // berbayang, TERKUNGKUNG di dalam kolom (beda dari "hero" yang bleed
+  // penuh -mx-6 ke tepi bingkai) -- ref: poster film/gig konser & cover
+  // album, cocok untuk sub-kategori yang personanya "tampil di atas
+  // panggung" (Musisi/DJ) atau "karakter" (Gamer/Streamer). Nama & bio di
+  // BAWAH foto (bukan ditumpuk di atasnya seperti "hero") -- menghindari
+  // masalah kontras teks putih di atas foto sembarang warna, sekaligus
+  // membedakan strukturnya dari hero. Fallback ke "centered" (jatuh lewat
+  // ke return di bawah) KALAU avatarUrl masih kosong, pola sama seperti
+  // "hero".
+  if (variant === "portrait" && data.avatarUrl) {
+    return (
+      <div className="relative flex w-full flex-col items-center">
+        <div className="relative aspect-[3/4] w-40 overflow-hidden rounded-2xl shadow-xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-full w-full object-cover" />
+        </div>
+        <div className="relative mt-4 text-center">
           {nameHeading}
           {data.bio && <p className={`mt-2 max-w-xs text-xs leading-relaxed ${theme.bio}`}>{data.bio}</p>}
           {renderSocialRow(data.social)}

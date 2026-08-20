@@ -391,4 +391,99 @@ test.describe("Quick Setup", () => {
       expect(html).toContain("from-emerald-800");
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
+
+  // 7 varian layout baru -- permintaan langsung pengguna, 20 Agustus 2026:
+  // "saya mau tambahkan jadi total 15 layout yang berbeda ambil referensi
+  // dari web serupa dan buat unik dan sesuai dengan kategorinya". Tidak
+  // semua 7 varian baru dapat test tersendiri di sini (delapan varian lama
+  // sudah representatif soal POLA verifikasi -- bounding box/computed
+  // style, bukan nama kelas CSS) -- 3 di bawah ini dipilih mewakili 3 gaya
+  // implementasi paling berbeda (dua kolom, kartu berdivider, gambar
+  // terkungkung) supaya regresi paling berisiko tetap terjaga.
+  test("varian layout Split (2 kolom, avatar persegi rata kiri) sungguhan tampil di halaman publik", async ({ page }) => {
+    // "split" dipetakan ke Consultant (kategori Business) -- avatar KOTAK
+    // (rounded-2xl, BUKAN rounded-full seperti 8 varian lama) jadi
+    // selector avatar placeholder di test lain (div.rounded-full.text-2xl)
+    // TIDAK cocok di sini, sengaja pakai div.rounded-2xl.text-2xl supaya
+    // ikut membuktikan bentuknya benar-benar persegi, bukan cuma posisi.
+    const { username } = await registerAndLogin(page, "quicksetup11");
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("consultant");
+    await page.getByText("Consultant", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const avatarBox = await page.locator("div.rounded-2xl.text-2xl").first().boundingBox();
+      const viewportWidth = page.viewportSize()!.width;
+      expect(avatarBox).not.toBeNull();
+      // Rata kiri (sama seperti pengecekan Banner) -- avatar TIDAK di
+      // tengah viewport secara horizontal.
+      const avatarCenterX = avatarBox!.x + avatarBox!.width / 2;
+      expect(Math.abs(avatarCenterX - viewportWidth / 2)).toBeGreaterThan(60);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Ticket (dua bagian dipisah garis putus-putus) sungguhan tampil di halaman publik", async ({ page }) => {
+    // "ticket" dipetakan ke Event (kategori Special, satu-satunya template
+    // di kategori itu yang TIDAK jatuh ke default "centered") -- dicek
+    // lewat computed style border-style "dashed" pada divider, penanda
+    // paling spesifik untuk varian ini (satu-satunya yang punya garis
+    // pemisah putus-putus di antara avatar+nama & bio).
+    const { username } = await registerAndLogin(page, "quicksetup12");
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("event");
+    await page.getByText("Event", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const divider = page.locator("div.border-dashed").first();
+      await expect(divider).toBeVisible({ timeout: 3000 });
+      const borderStyle = await divider.evaluate((el) => getComputedStyle(el).borderTopStyle);
+      expect(borderStyle).toBe("dashed");
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  test("varian layout Portrait (foto tegak terkungkung, beda dari Hero yang bleed penuh) sungguhan tampil di halaman publik", async ({
+    page,
+  }) => {
+    // "portrait" dipetakan ke Streamer (kategori Creator) -- sama seperti
+    // test Hero, avatar diunggah dulu supaya benar-benar menguji rendering
+    // sesungguhnya, bukan fallback "centered"-nya (lihat renderBioHeader,
+    // PagePreview.tsx: portrait butuh avatarUrl juga). Beda dari Hero:
+    // gambarnya TERKUNGKUNG dalam kolom (w-40=160px, jauh lebih sempit
+    // dari viewport) & TIDAK menempel tepi kiri halaman (constrastnya
+    // dengan "hero" yang -mx-6 bleed penuh ke tepi bingkai).
+    const { username } = await registerAndLogin(page, "quicksetup13");
+
+    await page.goto("/dashboard/design/header");
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
+    await expect(page.getByText("Mengunggah...")).toHaveCount(0, { timeout: 15000 });
+
+    await page.goto("/dashboard/quick-setup");
+    await page.getByPlaceholder(/cari template/i).fill("streamer");
+    await page.getByText("Streamer", { exact: true }).click();
+    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const portraitImg = page.locator(`img[alt='${username}']`);
+      await expect(portraitImg).toBeVisible({ timeout: 3000 });
+      const box = await portraitImg.boundingBox();
+      const viewportWidth = page.viewportSize()!.width;
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeLessThan(200);
+      expect(box!.x).toBeGreaterThan(20);
+      expect(box!.x + box!.width).toBeLessThan(viewportWidth - 20);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
 });

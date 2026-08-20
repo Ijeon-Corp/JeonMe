@@ -269,6 +269,28 @@ export interface PublicSocialFeed {
   items: PublicSocialFeedItem[];
 }
 
+// PageLayoutVariant -- SATU sumber kebenaran union (dipakai di PublicPage &
+// MyPage/ExtraPageDetail di bawah) supaya kedua tempat itu tidak bisa diam-
+// diam berbeda daftar nilainya -- lihat renderBioHeader (PagePreview.tsx)
+// untuk detail visual tiap varian & quick-setup-templates.ts untuk pemetaan
+// kategori->varian.
+export type PageLayoutVariant =
+  | "centered"
+  | "banner"
+  | "card"
+  | "spotlight"
+  | "cover"
+  | "minimal"
+  | "hero"
+  | "polaroid"
+  | "split"
+  | "ticket"
+  | "headline"
+  | "ribbon"
+  | "duo"
+  | "masthead"
+  | "portrait";
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -370,8 +392,10 @@ export interface PublicPage {
   // (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026:
   // "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
   // sebaris), "card" (dibungkus kartu bertema), "spotlight" (avatar
-  // besar + badge nama). Lihat renderBioHeader di PagePreview.tsx.
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  // besar + badge nama). 7 nilai baru ditambah 20 Agustus 2026 (permintaan
+  // langsung pengguna: "tambahkan jadi total 15 layout"). Lihat
+  // renderBioHeader di PagePreview.tsx.
+  layout_variant: PageLayoutVariant;
   // product_layout -- lihat catatan lengkap di ExtraPageDetail.
   product_layout: "grid" | "stacked" | "category";
 }
@@ -636,7 +660,7 @@ export interface MyPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
-  layout_variant: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  layout_variant: PageLayoutVariant;
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/

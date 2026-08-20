@@ -184,37 +184,98 @@ export interface QuickSetupTemplate {
   // isi blok di dalam nya tapi juga struktur layoutnya, ambil referensi
   // dari web lain nya sesuai dengan kategori yang ada" -- SEBELUMNYA
   // creator & entertainment sama-sama "spotlight", lifestyle & special
-  // sama-sama jatuh ke default "centered" (2 tabrakan). Sekarang KEDELAPAN
-  // kategori dapat varian STRUKTUR unik masing-masing (tidak ada dua
-  // kategori yang sama), varian ke-8 "polaroid" ditambah khusus supaya
-  // muat. SATU varian per kategori (bukan campur dalam satu kategori)
-  // supaya tiap kategori punya "signature look" sendiri:
-  //   - creator      -> "hero" (avatar penuh edge-to-edge -- ref: Linktree
-  //                      Hero / bio Instagram, personal brand tampil besar)
-  //   - business     -> "banner" (avatar kecil rata kiri sebaris nama+bio
-  //                      -- ref: header profil LinkedIn / kartu nama digital)
-  //   - shop         -> "card" (identitas dibungkus kartu bertema, avatar
-  //                      menonjol -- ref: header toko Shopify, kesan "kartu
-  //                      resmi/etalase brand")
-  //   - education    -> "minimal" (avatar kecil sebaris nama, konten jadi
-  //                      pusat perhatian -- ref: header dokumen Notion /
-  //                      halaman instruktur Coursera, daftar kelas > foto)
+  // sama-sama jatuh ke default "centered" (2 tabrakan). Saat itu KEDELAPAN
+  // kategori diberi SATU varian struktur unik masing-masing.
+  //
+  // Revisi 20 Agustus 2026 (permintaan langsung pengguna): "saya mau
+  // tambahkan jadi total 15 layout yang berbeda ambil referensi dari web
+  // serupa dan buat unik dan sesuai dengan kategorinya" -- 7 varian baru
+  // ditambah (split/ticket/headline/ribbon/duo/masthead/portrait, lihat
+  // catatan lengkap tiap varian di renderBioHeader, PagePreview.tsx).
+  // Dengan 15 varian tapi cuma 9 kategori, "satu varian per kategori"
+  // sudah tidak berlaku lagi -- kategori dengan banyak template (Business/
+  // Shop/Education/Local/Lifestyle/Creator/Entertainment) sekarang dibagi
+  // jadi beberapa SUB-KELOMPOK, tiap sub-kelompok dapat varian sendiri
+  // (bukan cuma tema/isi blok beda, strukturnya juga beda) supaya makin
+  // variatif TANPA kehilangan "signature look" utama tiap kategori:
+  //   - creator       -> "hero" (avatar penuh edge-to-edge -- ref: Linktree
+  //                       Hero/bio Instagram) untuk persona umum (Creator
+  //                       Profile/Influencer/Personal Branding/Public
+  //                       Figure); "portrait" (foto tegak ala poster gig,
+  //                       ref: cover album/poster konser) khusus Streamer &
+  //                       Gamer -- kesan "karakter/panggung" lebih kuat.
+  //   - business      -> "banner" (avatar kecil rata kiri sebaris nama+bio
+  //                       -- ref: header profil LinkedIn) untuk profil umum
+  //                       (Business Profile/Company/Freelancer); "split"
+  //                       (2 kolom, foto persegi kiri + identitas kanan --
+  //                       ref: about-page Carrd/Notion) untuk yang butuh
+  //                       kesan lebih formal/CV (Consultant/Agency/
+  //                       Professional CV).
+  //   - shop          -> "card" (identitas dibungkus kartu bertema, avatar
+  //                       menonjol -- ref: header toko Shopify) untuk toko
+  //                       umum (Online Store/Small Business); "ribbon"
+  //                       (badge aksen + pita nama selebar penuh, ref:
+  //                       badge produk marketplace) untuk yang visual/
+  //                       retail (Fashion/Beauty Store); "masthead" (pita
+  //                       warna berisi identitas langsung, ref: cover photo
+  //                       Facebook Page) untuk yang berkesan toko fisik
+  //                       (Food & Beverage/Affiliate Store).
+  //   - education     -> "minimal" (avatar kecil sebaris nama, konten jadi
+  //                       pusat perhatian -- ref: header dokumen Notion)
+  //                       untuk Teacher/Tutor; "headline" (teks dulu, foto
+  //                       kecil menyusul -- ref: header profil Substack/
+  //                       Medium) untuk yang lebih ke konten/pesan (Course
+  //                       Creator/Student/Education Brand).
   //   - entertainment -> "spotlight" (avatar besar dalam badge bulat --
-  //                      ref: artwork bulat artis Spotify / cover circle
-  //                      podcast Apple Podcasts)
-  //   - local        -> "cover" (pita warna ala foto sampul, avatar
-  //                      menindih tepi bawahnya -- ref: cover photo halaman
-  //                      Facebook Page / Google Business Profile toko lokal)
-  //   - lifestyle    -> "polaroid" (avatar KOTAK dibingkai putih & sedikit
-  //                      dimiringkan ala foto polaroid -- ref: cover board
-  //                      Pinterest / estetika feed VSCO, cocok utk konten
-  //                      visual travel/fashion/beauty)
-  //   - special      -> "centered" (bawaan, gaya Linktree klasik -- ref:
-  //                      Linktree default, paling pas utk kategori hub/
-  //                      serba-guna seperti "Link Hub"/"Coming Soon" yang
-  //                      memang tidak butuh identitas visual berat)
+  //                       ref: artwork bulat Spotify/cover circle Apple
+  //                       Podcasts) untuk Artist/Podcaster/Content Creator;
+  //                       "portrait" (ref: poster konser/cover album) untuk
+  //                       Musician & DJ -- lebih pas kesan "tampil di
+  //                       panggung"nya.
+  //   - local         -> "cover" (pita warna ala foto sampul, avatar
+  //                       menindih tepi bawahnya -- ref: cover photo
+  //                       Facebook Page/Google Business Profile) untuk
+  //                       Restaurant/Cafe/Event Organizer; "masthead"
+  //                       untuk jasa dengan kesan "papan nama toko fisik"
+  //                       (Barbershop/Salon/Photographer); "ticket" (ref:
+  //                       boarding pass/tiket acara) khusus Sports Facility
+  //                       (booking lapangan = reservasi); "spotlight" tetap
+  //                       dipakai Nightlife Venue (kesan panggung/showcase).
+  //   - tourism       -> "hero" untuk Travel Agency, "polaroid" untuk Tour
+  //                       Guide -- SUDAH bervariasi sejak awal (kategori
+  //                       ini cuma 2 template), tidak diubah.
+  //   - lifestyle     -> "polaroid" (avatar KOTAK dibingkai putih & sedikit
+  //                       dimiringkan ala foto polaroid -- ref: cover board
+  //                       Pinterest/estetika feed VSCO) untuk konten visual
+  //                       (Travel Blogger/Lifestyle Creator/Fashion
+  //                       Creator); "duo" (avatar+nama jadi satu chip pil,
+  //                       ref: kartu profil Discord/WhatsApp Business)
+  //                       untuk persona "personal trainer/consultant"
+  //                       (Fitness Coach/Beauty Creator).
+  //   - special       -> "centered" (bawaan, gaya Linktree klasik -- paling
+  //                       pas utk kategori hub/serba-guna seperti "Link
+  //                       Hub"/"Coming Soon" yang memang tidak butuh
+  //                       identitas visual berat) untuk semua template
+  //                       KECUALI Event, yang dapat "ticket" (ref: boarding
+  //                       pass/tiket acara) -- struktur selaras isi
+  //                       ("Event" = literally soal tiket).
   // Kosong/undefined = "centered".
-  layoutVariant?: "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid";
+  layoutVariant?:
+    | "centered"
+    | "banner"
+    | "card"
+    | "spotlight"
+    | "cover"
+    | "minimal"
+    | "hero"
+    | "polaroid"
+    | "split"
+    | "ticket"
+    | "headline"
+    | "ribbon"
+    | "duo"
+    | "masthead"
+    | "portrait";
 }
 
 // Judul default per platform -- permintaan langsung pengguna (referensi
@@ -362,7 +423,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "streamer",
     category: "creator",
-    layoutVariant: "hero",
+    layoutVariant: "portrait",
     label: "Streamer",
     description: "Twitch, YouTube, Discord, donasi",
     theme: "cyber",
@@ -377,7 +438,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "gamer",
     category: "creator",
-    layoutVariant: "hero",
+    layoutVariant: "portrait",
     label: "Gamer",
     description: "Profil game, Discord, YouTube, Twitch",
     theme: "electric",
@@ -436,7 +497,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "consultant",
     category: "business",
-    layoutVariant: "banner",
+    layoutVariant: "split",
     label: "Consultant",
     description: "Layanan, booking, testimoni",
     theme: "noir",
@@ -451,7 +512,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "agency",
     category: "business",
-    layoutVariant: "banner",
+    layoutVariant: "split",
     label: "Agency",
     description: "Layanan, portofolio, daftar klien",
     theme: "midnight",
@@ -468,7 +529,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "professional-cv",
     category: "business",
-    layoutVariant: "banner",
+    layoutVariant: "split",
     label: "Professional CV",
     description: "Pengalaman, keahlian, pendidikan, kontak",
     theme: "minimal",
@@ -522,7 +583,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fashion-store",
     category: "shop",
-    layoutVariant: "card",
+    layoutVariant: "ribbon",
     label: "Fashion Store",
     description: "Katalog, Instagram, Shopee/Tokopedia",
     theme: "rose",
@@ -550,7 +611,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "beauty-store",
     category: "shop",
-    layoutVariant: "card",
+    layoutVariant: "ribbon",
     label: "Beauty Store",
     description: "Produk, katalog, booking",
     theme: "peach",
@@ -576,7 +637,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "food-beverage",
     category: "shop",
-    layoutVariant: "card",
+    layoutVariant: "masthead",
     label: "Food & Beverage",
     description: "Menu, pemesanan, lokasi",
     theme: "amber",
@@ -634,7 +695,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "affiliate-store",
     category: "shop",
-    layoutVariant: "card",
+    layoutVariant: "masthead",
     label: "Affiliate Store",
     description: "Rekomendasi produk + tautan afiliasi",
     theme: "bloom",
@@ -681,7 +742,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "course-creator",
     category: "education",
-    layoutVariant: "minimal",
+    layoutVariant: "headline",
     label: "Course Creator",
     description: "Kelas, testimoni, pendaftaran",
     theme: "golden",
@@ -696,7 +757,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "student",
     category: "education",
-    layoutVariant: "minimal",
+    layoutVariant: "headline",
     label: "Student",
     description: "Portofolio, proyek, media sosial",
     theme: "minimal",
@@ -707,7 +768,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "education-brand",
     category: "education",
-    layoutVariant: "minimal",
+    layoutVariant: "headline",
     label: "Education Brand",
     description: "Kelas, event, komunitas",
     theme: "atmos",
@@ -724,7 +785,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "musician",
     category: "entertainment",
-    layoutVariant: "spotlight",
+    layoutVariant: "portrait",
     label: "Musician",
     description: "Spotify, YouTube, Apple Music, media sosial",
     theme: "ember",
@@ -756,7 +817,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "dj",
     category: "entertainment",
-    layoutVariant: "spotlight",
+    layoutVariant: "portrait",
     label: "DJ",
     description: "Mix, event, booking",
     theme: "downtown",
@@ -827,7 +888,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "barbershop",
     category: "local",
-    layoutVariant: "cover",
+    layoutVariant: "masthead",
     label: "Barbershop",
     description: "Layanan, daftar harga, booking",
     theme: "noir",
@@ -843,7 +904,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "salon",
     category: "local",
-    layoutVariant: "cover",
+    layoutVariant: "masthead",
     label: "Salon",
     description: "Layanan, portofolio, booking",
     theme: "surge",
@@ -855,7 +916,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "photographer",
     category: "local",
-    layoutVariant: "cover",
+    layoutVariant: "masthead",
     label: "Photographer",
     description: "Portofolio, harga, booking",
     theme: "nova",
@@ -888,7 +949,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "sports-facility",
     category: "local",
-    layoutVariant: "cover",
+    layoutVariant: "ticket",
     label: "Sports Facility",
     description: "Sewa lapangan, jadwal, booking",
     theme: "forest",
@@ -973,7 +1034,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "fitness-coach",
     category: "lifestyle",
-    layoutVariant: "polaroid",
+    layoutVariant: "duo",
     label: "Fitness Coach",
     description: "Latihan, program, booking",
     theme: "dune",
@@ -988,7 +1049,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "beauty-creator",
     category: "lifestyle",
-    layoutVariant: "polaroid",
+    layoutVariant: "duo",
     label: "Beauty Creator",
     description: "Tutorial, produk, media sosial",
     theme: "rose",
@@ -1058,6 +1119,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   {
     key: "event",
     category: "special",
+    layoutVariant: "ticket",
     label: "Event",
     description: "Info acara + tiket + lokasi",
     theme: "golden",

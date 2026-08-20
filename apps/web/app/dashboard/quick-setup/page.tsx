@@ -30,7 +30,10 @@ import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 // renderBioHeader/QuickSetupTemplate.layoutVariant tapi lupa disusulkan ke
 // map ini) -- ditemukan & diperbaiki 13 Agustus 2026 saat memberi tiap
 // kategori Quick Setup varian layout unik.
-const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid", string> = {
+const LAYOUT_VARIANT_LABELS: Record<
+  "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid" | "split" | "ticket" | "headline" | "ribbon" | "duo" | "masthead" | "portrait",
+  string
+> = {
   centered: "Centered (di tengah)",
   banner: "Banner (rata kiri sebaris)",
   card: "Card (dibungkus kartu, avatar menonjol)",
@@ -39,6 +42,13 @@ const LAYOUT_VARIANT_LABELS: Record<"centered" | "banner" | "card" | "spotlight"
   minimal: "Minimal (avatar kecil sebaris nama)",
   hero: "Hero (foto profil besar edge-to-edge)",
   polaroid: "Polaroid (avatar kotak dibingkai & dimiringkan)",
+  split: "Split (2 kolom, foto persegi kiri + identitas kanan)",
+  ticket: "Ticket (dua bagian dipisah garis putus-putus ala tiket)",
+  headline: "Headline (teks dulu, foto kecil menyusul di bawah)",
+  ribbon: "Ribbon (badge aksen + nama dalam pita selebar penuh)",
+  duo: "Duo (avatar+nama jadi satu chip pil ringkas)",
+  masthead: "Masthead (pita warna berisi identitas langsung di dalamnya)",
+  portrait: "Portrait (foto tegak dibingkai & berbayang ala poster)",
 };
 
 // buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap
