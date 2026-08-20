@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/jeonme/api/internal/appleoauth"
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/googleoauth"
 	"github.com/jeonme/api/internal/handlers"
@@ -29,6 +30,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	health := handlers.NewHealthHandler(db, rdb, version, cfg.HealthToken)
 	auth := handlers.NewAuthHandler(db, rdb, cfg.JWTSecret, cfg.AppEnv)
 	auth.GoogleOAuth = googleoauth.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret)
+	auth.AppleOAuth = appleoauth.NewClient(cfg.AppleTeamID, cfg.AppleClientID, cfg.AppleKeyID, cfg.ApplePrivateKey)
 	auth.Queue = queueClient
 	auth.PublicWebURL = cfg.PublicWebURL
 	page := handlers.NewPageHandler(db, rdb, s3)
@@ -140,6 +142,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// (apps/web/components/GoogleAuthButton.tsx), jadi cukup satu
 			// rate limit bucket yang sama dengan register/login biasa.
 			auth_.POST("/google", authRateLimit, auth.GoogleLogin)
+			// AppleLogin -- pola SAMA PERSIS dengan /google di atas (lihat
+			// AuthHandler.AppleLogin, apps/web/components/AppleAuthButton.tsx).
+			auth_.POST("/apple", authRateLimit, auth.AppleLogin)
 		}
 
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.

@@ -495,6 +495,16 @@ export function googleLogin(input: { code: string; redirect_uri: string }) {
   });
 }
 
+// appleLogin -- pola SAMA PERSIS dengan googleLogin di atas (permintaan
+// langsung pengguna, 20 Agustus 2026: "tambahkan juga login via apple").
+// Dipanggil dari app/auth/apple/callback/page.tsx.
+export function appleLogin(input: { code: string; redirect_uri: string }) {
+  return apiFetch<{ token: string }>("/auth/apple", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function logout() {
   return apiFetch<{ message: string }>("/auth/logout", { method: "POST" }, { auth: true });
 }

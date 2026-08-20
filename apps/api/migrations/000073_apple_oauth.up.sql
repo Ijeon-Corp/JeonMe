@@ -1,0 +1,13 @@
+-- Kolom apple_id -- permintaan langsung pengguna, 20 Agustus 2026:
+-- "tambahkan juga login via apple" (susulan login via Google yang sudah
+-- ada, migrasi 000065). password_hash SUDAH nullable sejak migrasi itu,
+-- tidak perlu diubah lagi di sini.
+--
+-- apple_id menyimpan klaim "sub" dari ID token Apple (pengenal akun Apple
+-- yang stabil & unik SELAMANYA untuk kombinasi Team ID + akun pengguna --
+-- BUKAN email, karena Apple mengizinkan pengguna menyembunyikan email
+-- asli lewat relay "Hide My Email" yang bisa berubah, sub tidak pernah
+-- berubah selama akun Apple itu masih ada). UNIQUE (bukan composite
+-- dengan apa pun) karena satu akun Apple cuma boleh tertaut ke SATU akun
+-- Jeonme -- pola SAMA PERSIS dengan google_id.
+ALTER TABLE users ADD COLUMN apple_id VARCHAR(255) UNIQUE;

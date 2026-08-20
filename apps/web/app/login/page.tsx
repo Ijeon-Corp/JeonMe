@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, login, requestPasswordReset, setToken, verifyLogin2FA } from "@/lib/api-client";
 import { redirectAfterAuth } from "@/lib/auth-redirect";
 import AuthShell from "@/components/AuthShell";
+import AppleAuthButton from "@/components/AppleAuthButton";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function LoginPage() {
@@ -178,7 +179,16 @@ export default function LoginPage() {
         <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
         <div className="h-px flex-1 bg-border" />
       </div>
-      <GoogleAuthButton label="Masuk dengan Google" />
+      {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
+          "tambahkan juga login via apple". Kedua tombol soft-fail sendiri-
+          sendiri (tidak dirender kalau kredensial masing-masing belum
+          diisi), jadi urutan/keberadaan salah satu tidak bergantung yang
+          lain -- flex-col gap-2.5 supaya rapi kalau cuma satu yang tampil
+          MAUPUN keduanya. */}
+      <div className="flex flex-col gap-2.5">
+        <GoogleAuthButton label="Masuk dengan Google" />
+        <AppleAuthButton label="Masuk dengan Apple" />
+      </div>
 
       <button
         type="button"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, checkUsername, register } from "@/lib/api-client";
 import AuthShell from "@/components/AuthShell";
+import AppleAuthButton from "@/components/AppleAuthButton";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { IconCheck, IconClose } from "@/components/icons";
 
@@ -87,6 +88,20 @@ export default function RegisterPage() {
   // Abaikan hasil check yang sudah basi (username berubah lagi setelah hasil
   // sebelumnya datang, sebelum debounce berikutnya sempat jalan).
   const usernameState: UsernameCheckState = usernameCheck.username === username.trim() ? usernameCheck.state : "idle";
+
+  // requireConsent -- dipakai KEDUA tombol OAuth (Google & Apple, permintaan
+  // langsung pengguna 20 Agustus 2026: "tambahkan juga login via apple") --
+  // checkbox persetujuan data pribadi (NF-09, UU PDP) WAJIB tercentang dulu
+  // sebelum redirect ke penyedia OAuth mana pun terjadi, karena begitu
+  // redirect jalan akun bisa langsung terbuat di backend tanpa titik
+  // konfirmasi lain.
+  function requireConsent(): boolean {
+    if (!consentAccepted) {
+      setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
+      return false;
+    }
+    return true;
+  }
 
   return (
     <AuthShell>
@@ -219,16 +234,15 @@ export default function RegisterPage() {
         <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
         <div className="h-px flex-1 bg-border" />
       </div>
-      <GoogleAuthButton
-        label="Daftar dengan Google"
-        onBeforeRedirect={() => {
-          if (!consentAccepted) {
-            setError("Kamu harus menyetujui pemrosesan data pribadi untuk mendaftar.");
-            return false;
-          }
-          return true;
-        }}
-      />
+      {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
+          "tambahkan juga login via apple". onBeforeRedirect sama persis
+          dengan Google -- checkbox persetujuan data pribadi wajib
+          tercentang dulu untuk KEDUA tombol, satu fungsi dipakai ulang
+          bukan didefinisikan dobel. */}
+      <div className="flex flex-col gap-2.5">
+        <GoogleAuthButton label="Daftar dengan Google" onBeforeRedirect={requireConsent} />
+        <AppleAuthButton label="Daftar dengan Apple" onBeforeRedirect={requireConsent} />
+      </div>
 
       <p className="mt-8 text-center text-sm text-muted">
         Sudah punya akun?{" "}

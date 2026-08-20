@@ -29,6 +29,24 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 
+	// Apple OAuth ("Sign in with Apple", permintaan langsung pengguna 20
+	// Agustus 2026: "tambahkan juga login via apple") -- lihat
+	// internal/appleoauth. Kosong secara default (soft-fail sama seperti
+	// GoogleClientID/Secret di atas) -- endpoint /auth/apple membalas 501
+	// yang jelas kalau belum diisi.
+	//
+	// AppleClientID -- Services ID (mis. "id.jeon.web"), BUKAN App ID/
+	// bundle ID. AppleKeyID -- 10 karakter, muncul sekali saat key Sign in
+	// with Apple dibuat di Apple Developer > Keys. ApplePrivateKey -- isi
+	// file .p8 yang diunduh (HANYA bisa diunduh SEKALI, simpan baik-baik) --
+	// disimpan di .env sebagai SATU BARIS dengan newline literal "\n"
+	// (bukan newline sungguhan, .env tidak mendukung nilai multi-baris),
+	// dinormalisasi balik jadi PEM asli di appleoauth.Client.parsePrivateKey.
+	AppleTeamID     string
+	AppleClientID   string
+	AppleKeyID      string
+	ApplePrivateKey string
+
 	// Koneksi Sosial (Instagram/TikTok) -- permintaan langsung pengguna, 17
 	// Agustus 2026: "saya mau jeonme ini bisa connect ke akun kita contoh
 	// nya instagram tiktok". Sama seperti GoogleClientID/Secret di atas --
@@ -149,6 +167,11 @@ func Load() *Config {
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+
+		AppleTeamID:     getEnv("APPLE_TEAM_ID", ""),
+		AppleClientID:   getEnv("APPLE_CLIENT_ID", ""),
+		AppleKeyID:      getEnv("APPLE_KEY_ID", ""),
+		ApplePrivateKey: getEnv("APPLE_PRIVATE_KEY", ""),
 
 		InstagramAppID:     getEnv("INSTAGRAM_APP_ID", ""),
 		InstagramAppSecret: getEnv("INSTAGRAM_APP_SECRET", ""),

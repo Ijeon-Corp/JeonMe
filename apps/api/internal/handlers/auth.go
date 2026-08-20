@@ -24,6 +24,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/jeonme/api/internal/appleoauth"
 	"github.com/jeonme/api/internal/googleoauth"
 	"github.com/jeonme/api/internal/queue"
 )
@@ -44,6 +45,11 @@ type AuthHandler struct {
 	// tidak pernah gagal), ClientID/ClientSecret kosong ditangani sendiri
 	// oleh googleoauth.Client.Exchange (ErrNotConfigured).
 	GoogleOAuth *googleoauth.Client
+	// AppleOAuth -- pola sama persis dengan GoogleOAuth di atas: di-set
+	// terpisah sesudah NewAuthHandler, non-nil (appleoauth.NewClient tidak
+	// pernah gagal), kredensial kosong ditangani AppleLogin/appleoauth.Client.Exchange
+	// (ErrNotConfigured -> 501).
+	AppleOAuth *appleoauth.Client
 	// Queue -- pola sama seperti GoogleOAuth di atas: di-set terpisah
 	// sesudah NewAuthHandler (bukan lewat parameter constructor) supaya
 	// SEMUA call site test lama tidak perlu ikut berubah. Nil-safe (lihat
@@ -62,7 +68,11 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(db *pgxpool.Pool, rdb *redis.Client, jwtSecret string, appEnv string) *AuthHandler {
-	return &AuthHandler{DB: db, RDB: rdb, JWTSecret: jwtSecret, AppEnv: appEnv, GoogleOAuth: googleoauth.NewClient("", "")}
+	return &AuthHandler{
+		DB: db, RDB: rdb, JWTSecret: jwtSecret, AppEnv: appEnv,
+		GoogleOAuth: googleoauth.NewClient("", ""),
+		AppleOAuth:  appleoauth.NewClient("", "", "", ""),
+	}
 }
 
 type registerRequest struct {
@@ -215,7 +225,7 @@ type loginRequest struct {
 // bukan per IP, supaya credential stuffing terhadap satu akun dibatasi
 // terlepas dari berapa banyak IP yang dipakai.
 const (
-	loginFailMaxAttempts = 5              // setelah sekian kegagalan, akun dikunci sementara
+	loginFailMaxAttempts = 5                // setelah sekian kegagalan, akun dikunci sementara
 	loginFailWindow      = 15 * time.Minute // hitung kegagalan dalam window geser ini
 	loginLockoutDuration = 15 * time.Minute // durasi kunci setelah ambang terlampaui
 )
