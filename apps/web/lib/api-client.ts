@@ -128,7 +128,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -869,7 +869,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -893,7 +893,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -1063,6 +1063,38 @@ export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_
 
 export function deleteAudioBlock(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}/audio`, { method: "DELETE" }, { auth: true });
+}
+
+// uploadFileBlock/deleteFileBlock -- blok "file" (permintaan langsung
+// pengguna, 20 Agustus 2026: "tambahkan file pdf download"), pola sama
+// seperti uploadAudioBlock/deleteAudioBlock di atas -- SATU file per blok,
+// key storage tetap (unggah ulang menimpa). Beda dari audio: title blok
+// TIDAK ikut ditimpa di respons (lihat catatan UploadFile, links.go) --
+// file_name/file_size_bytes dikembalikan terpisah murni untuk ditampilkan
+// di kartu unduh (FileDownloadBlock.tsx).
+export async function uploadFileBlock(
+  id: string,
+  file: File
+): Promise<{ file_url: string; file_name: string; file_size_bytes: number; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/file`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteFileBlock(id: string) {
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/file`, { method: "DELETE" }, { auth: true });
 }
 
 export function reorderLinks(items: { id: string; position: number }[]) {
@@ -1261,7 +1293,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;

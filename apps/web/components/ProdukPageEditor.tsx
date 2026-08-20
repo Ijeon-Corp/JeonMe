@@ -13,6 +13,7 @@ import {
   createExtraPageBlock,
   createExtraPageLink,
   deleteAudioBlock,
+  deleteFileBlock,
   deleteGalleryImage,
   deleteLink,
   reorderExtraPageLinks,
@@ -20,6 +21,7 @@ import {
   uploadAudioBlock,
   uploadExtraPageAvatar,
   uploadExtraPageBackground,
+  uploadFileBlock,
   uploadGalleryImage,
 } from "@/lib/api-client";
 import {
@@ -34,6 +36,7 @@ import {
   IconCheck,
   IconChevronRight,
   IconExternal,
+  IconFileText,
   IconGripVertical,
   IconLink,
   IconLock,
@@ -54,7 +57,7 @@ import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
 
-type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio";
+type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go).
 const maxGalleryImages = 9;
@@ -102,6 +105,11 @@ const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon:
   // persis, dipakai ulang di sini untuk paritas halaman utama/Toko).
   { key: "gallery", label: "Galeri Foto", description: "Grid beberapa foto sekaligus", Icon: IconPhotoLibrary },
   { key: "audio", label: "Audio/Musik", description: "Pemutar audio tertanam di bio", Icon: IconMusicNote },
+  // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // file pdf download", lihat catatan lengkap di dashboard/links/page.tsx
+  // (pola sama persis, dipakai ulang di sini untuk paritas halaman
+  // utama/Toko).
+  { key: "file", label: "File & Unduhan", description: "Bagikan PDF/ZIP/EPUB gratis untuk diunduh", Icon: IconFileText },
 ];
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -113,6 +121,7 @@ const BLOCK_LABEL: Record<string, string> = {
   accordion: "Accordion",
   gallery: "Galeri Foto",
   audio: "Audio/Musik",
+  file: "File & Unduhan",
 };
 
 export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
@@ -402,6 +411,9 @@ function BlockSection({
   // di CONTENT_TILES) -- id blok yang sedang mengunggah.
   const [galleryUploadingId, setGalleryUploadingId] = useState<string | null>(null);
   const [audioUploadingId, setAudioUploadingId] = useState<string | null>(null);
+  // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // file pdf download", pola sama seperti galleryUploadingId/audioUploadingId.
+  const [fileUploadingId, setFileUploadingId] = useState<string | null>(null);
 
   async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
     const file = e.target.files?.[0];
@@ -452,6 +464,38 @@ function BlockSection({
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url: "" } } : l)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menghapus audio.");
+    }
+  }
+
+  // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+  // file pdf download", pola sama seperti handleAudioUpload/handleAudioDelete.
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFileUploadingId(link.id);
+    setError(null);
+    try {
+      const { file_url, file_name, file_size_bytes } = await uploadFileBlock(link.id, file);
+      setLinks((prev) =>
+        prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url, file_name, file_size_bytes } } : l))
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
+    } finally {
+      setFileUploadingId(null);
+    }
+  }
+
+  async function handleFileDelete(link: LinkItem) {
+    setError(null);
+    try {
+      await deleteFileBlock(link.id);
+      setLinks((prev) =>
+        prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url: "", file_name: "", file_size_bytes: 0 } } : l))
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus file.");
     }
   }
 
@@ -688,11 +732,13 @@ function BlockSection({
             {blockType === "contact_form" && (
               <p className="text-xs text-muted">Formulir siap pakai -- pengunjung isi nama/email/pesan, terkirim ke emailmu.</p>
             )}
-            {(blockType === "gallery" || blockType === "audio") && (
+            {(blockType === "gallery" || blockType === "audio" || blockType === "file") && (
               <p className="text-xs text-muted">
                 {blockType === "gallery"
                   ? 'Buat blok dulu, foto ditambahkan setelahnya lewat panel "Kelola foto" di kartu blok.'
-                  : 'Buat blok dulu, file audio diunggah setelahnya lewat panel "Kelola audio" di kartu blok.'}
+                  : blockType === "audio"
+                  ? 'Buat blok dulu, file audio diunggah setelahnya lewat panel "Kelola audio" di kartu blok.'
+                  : 'Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel "Kelola file" di kartu blok.'}
               </p>
             )}
 
@@ -809,6 +855,31 @@ function BlockSection({
                 </label>
                 {(link.block_data?.audio_url as string) && (
                   <button type="button" onClick={() => handleAudioDelete(link)} className="flex-shrink-0 text-[11px] font-semibold text-red-600 hover:underline">
+                    Hapus
+                  </button>
+                )}
+              </div>
+            )}
+            {/* Panel "Kelola file" -- blok "file" (permintaan langsung
+                pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
+                pola sama persis seperti panel Kelola audio di atas. */}
+            {link.block_type === "file" && (
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
+                  {(link.block_data?.file_url as string) ? "File terunggah." : "Belum ada file (pdf/zip/epub, maks 20MB)."}
+                </p>
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                  {fileUploadingId === link.id ? "Mengunggah..." : (link.block_data?.file_url as string) ? "Ganti" : "Unggah"}
+                  <input
+                    type="file"
+                    accept=".pdf,.zip,.epub,application/pdf,application/zip,application/epub+zip"
+                    onChange={(e) => handleFileUpload(e, link)}
+                    disabled={fileUploadingId === link.id}
+                    className="hidden"
+                  />
+                </label>
+                {(link.block_data?.file_url as string) && (
+                  <button type="button" onClick={() => handleFileDelete(link)} className="flex-shrink-0 text-[11px] font-semibold text-red-600 hover:underline">
                     Hapus
                   </button>
                 )}

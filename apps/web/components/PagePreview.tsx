@@ -7,6 +7,7 @@ import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
+import FileDownloadBlock from "@/components/FileDownloadBlock";
 import GalleryBlock from "@/components/GalleryBlock";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import LoyaltyPointsWidget from "@/components/LoyaltyPointsWidget";
@@ -50,7 +51,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -370,7 +371,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
@@ -1543,7 +1544,7 @@ function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentTyp
 // "lanjutkan", lihat AuthHandler.Unlock case "sensitive") karena url-nya
 // memang disembunyikan dari payload halaman publik selama lockType terisi
 // (apa pun jenisnya) -- lihat publicLink, page.go.
-const SENSITIVE_GATEABLE_BLOCK_TYPES = new Set(["video", "faq", "maps", "gallery", "audio", "accordion", "text", "contact_form"]);
+const SENSITIVE_GATEABLE_BLOCK_TYPES = new Set(["video", "faq", "maps", "gallery", "audio", "accordion", "text", "contact_form", "file"]);
 
 // SensitiveContentGate -- permintaan langsung pengguna, 20 Agustus 2026:
 // "tambahkan juga sensitive content supaya nanti tampil ke user ketika mau
@@ -1684,6 +1685,20 @@ function renderLinkOrBlock(
         title={link.title}
         audioUrl={(link.blockData?.audio_url as string) ?? ""}
         coverUrl={link.customIconUrl}
+        cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+        titleClassName={theme.cardTitle}
+      />
+    );
+  }
+  if (link.blockType === "file") {
+    return (
+      <FileDownloadBlock
+        key={link.id}
+        title={link.title}
+        fileUrl={(link.blockData?.file_url as string) ?? ""}
+        fileName={link.blockData?.file_name as string | undefined}
+        fileSizeBytes={link.blockData?.file_size_bytes as number | undefined}
+        iconUrl={link.customIconUrl}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}
       />

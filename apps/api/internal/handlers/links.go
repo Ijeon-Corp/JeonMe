@@ -437,12 +437,26 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				}
 			}
 		}
+	case "file":
+		// "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+		// file pdf download". Pola SAMA PERSIS dengan "audio" di atas -- blok
+		// boleh dibuat DULU dengan file_url kosong (diisi lewat UploadFile
+		// setelahnya), tapi kalau file_url TERISI wajib URL valid.
+		if raw, ok := data["file_url"]; ok {
+			fileURL, _ := raw.(string)
+			if fileURL != "" {
+				u, err := url.Parse(fileURL)
+				if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+					return "file_url wajib berupa URL yang valid", false
+				}
+			}
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -1349,6 +1363,178 @@ func (h *LinksHandler) DeleteAudio(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "audio dihapus dari blok"})
+}
+
+// maxFileBlockSize -- 20MB, cukup untuk ebook/PDF/dokumen singkat tanpa
+// membebani VPS shared -- lebih kecil dari maxProductFileSize (100MB,
+// product.go) karena blok ini gratis/lead-magnet, bukan produk berbayar inti.
+const maxFileBlockSize = 20 * 1024 * 1024
+
+// allowedFileBlockExt -- daftar putih ekstensi->Content-Type, pola SAMA
+// PERSIS dengan allowedAudioExt di atas & allowedProductFileExt (product.go)
+// -- Content-Type DIPAKSAKAN dari server, TIDAK PERNAH dipercaya dari klien
+// (lihat catatan keamanan lengkap di allowedProductFileExt, audit 28 Juli
+// 2026: mencegah kreator jahat mengunggah file berbahaya bernama "*.pdf"
+// tapi Content-Type asli HTML/script). Sengaja dibatasi ke 3 format
+// dokumen/arsip (BUKAN audio/video/gambar -- itu sudah punya blok sendiri
+// masing-masing) supaya blok ini tetap fokus ke "unduhan dokumen", tidak
+// tumpang tindih dengan blok lain.
+var allowedFileBlockExt = map[string]string{
+	".pdf":  "application/pdf",
+	".zip":  "application/zip",
+	".epub": "application/epub+zip",
+}
+
+// UploadFile -- blok "file" (permintaan langsung pengguna, 20 Agustus 2026:
+// "tambahkan file pdf download"). Pola SAMA PERSIS dengan UploadAudio di
+// atas (SATU file per blok, key storage TETAP "file-blocks/<linkID>.<ext>",
+// unggah ulang menimpa) -- beda utama: title blok TIDAK ditimpa otomatis
+// (PDF tidak punya metadata judul semudah tag ID3 audio, & judul blok di
+// sini biasanya sudah deskriptif dari kreator sendiri, mis. "Download
+// E-book Gratis") -- nama file asli & ukurannya disimpan terpisah di
+// block_data (file_name/file_size_bytes) murni untuk ditampilkan di kartu
+// unduh (FileDownloadBlock.tsx), bukan menggantikan title.
+func (h *LinksHandler) UploadFile(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockType string
+	if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&blockType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	if blockType != "file" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan ini bukan blok file"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"file\")"})
+		return
+	}
+	if fileHeader.Size > maxFileBlockSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 20MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	contentType, ok := allowedFileBlockExt[ext]
+	if !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan pdf/zip/epub", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	key := fmt.Sprintf("file-blocks/%s%s", linkID, ext)
+	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah file"})
+		return
+	}
+
+	fileURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	blockData["file_url"] = fileURL
+	blockData["file_name"] = fileHeader.Filename
+	blockData["file_size_bytes"] = fileHeader.Size
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "file terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{
+		"file_url":        fileURL,
+		"file_name":       fileHeader.Filename,
+		"file_size_bytes": fileHeader.Size,
+		"message":         "file berhasil diunggah",
+	})
+}
+
+// DeleteFile -- mengosongkan file_url/file_name/file_size_bytes (blok tetap
+// ada, tinggal kosong -- kreator bisa unggah file baru lewat UploadFile
+// lagi). Soft-fail utk penghapusan objek storage, pola sama seperti
+// DeleteAudio.
+func (h *LinksHandler) DeleteFile(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	delete(blockData, "file_url")
+	delete(blockData, "file_name")
+	delete(blockData, "file_size_bytes")
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus file"})
+		return
+	}
+
+	if h.Storage != nil {
+		for ext := range allowedFileBlockExt {
+			_ = h.Storage.Delete(ctx, fmt.Sprintf("file-blocks/%s%s", linkID, ext))
+		}
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"message": "file dihapus dari blok"})
 }
 
 // storageKeyFromPublicURL -- gallery images (beda dari icon/thumbnail/avatar

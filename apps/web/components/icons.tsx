@@ -703,3 +703,21 @@ export function IconTextLines({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconFileText -- blok "file" (permintaan langsung pengguna, 20 Agustus
+// 2026: "tambahkan file pdf download"): dokumen bersudut lipat + 2 baris
+// teks, dipakai di CONTENT_TILES & FileDownloadBlock.
+export function IconFileText({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M7 3.5h6.5L18 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 3.5V8H18" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 13h6M9 16.5h4.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}

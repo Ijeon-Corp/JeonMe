@@ -322,3 +322,38 @@ func TestLinksUnlock_SensitiveLockType_SucceedsWithoutVerification(t *testing.T)
 		t.Errorf("url hasil unlock = %q, ekspektasi %q", unlockResp.URL, created.URL)
 	}
 }
+
+// Blok "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+// file pdf download". Pola SAMA PERSIS dengan blok "gallery"/"audio" --
+// dibuat DULU dengan block_data kosong (file_url diisi setelahnya lewat
+// UploadFile, tidak diuji di sini karena butuh object storage sungguhan,
+// pola sama seperti audio/gallery yang juga tidak punya test upload
+// terpisah) -- test ini memastikan oneof binding & validateBlockData
+// benar-benar menerima block_type "file" tanpa field tambahan apa pun.
+func TestLinksCreateBlock_AcceptsFileBlockType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/blocks", links.CreateBlock)
+	g.GET("/links", links.List)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/blocks", map[string]any{
+		"block_type": "file", "title": "Download E-book Gratis",
+	}, headers)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("buat blok file gagal: status %d, body %s", createRec.Code, createRec.Body.String())
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items []linkItem
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode list: %v", err)
+	}
+	if len(items) != 1 || items[0].BlockType != "file" || items[0].Title != "Download E-book Gratis" {
+		t.Fatalf("items = %+v, ekspektasi 1 blok dengan block_type=file", items)
+	}
+}
