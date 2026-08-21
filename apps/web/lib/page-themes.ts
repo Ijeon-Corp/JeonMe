@@ -108,6 +108,33 @@ export type PageThemeName =
   | "retro"
   | "kraft"
   | "monsoon"
+  // 15 preset baru (permintaan langsung pengguna, 21 Agustus 2026: "saya
+  // mau buatkan lagi tema dan layout quick setup lebih banyak lagi pilihan
+  // nya") -- murni gradien/warna CSS (TANPA aset foto/video baru, beda dari
+  // batch wallpaper sebelumnya) supaya bisa ditambah cepat & aman tanpa
+  // ketergantungan sumber gambar eksternal. Mengisi celah mood/palet yang
+  // belum ada di 81 preset sebelumnya: emerald/wine/terracotta/cocoa
+  // (jewel-tone gelap belum terwakili penuh), candy/matcha/champagne/
+  // ivory/lemon/blush (pastel LEMBUT -- mayoritas preset sebelumnya vivid
+  // atau gelap), vapor/holographic (neon iridescent ala Gen-Z), obsidian
+  // (hitam matte polos TANPA aksen emas seperti noir), corporate (abu-navy
+  // profesional, beda dari noir yang emas-hitam), azure (biru cerah bersih,
+  // beda dari ocean/sapphire yang lebih gelap/dalam).
+  | "emerald"
+  | "wine"
+  | "candy"
+  | "vapor"
+  | "matcha"
+  | "terracotta"
+  | "champagne"
+  | "obsidian"
+  | "holographic"
+  | "corporate"
+  | "ivory"
+  | "lemon"
+  | "cocoa"
+  | "azure"
+  | "blush"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -2402,6 +2429,351 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
       backgroundImage:
         "repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 14px), radial-gradient(18% 12% at 20% 25%, rgba(186,230,253,0.5) 0%, transparent 70%), radial-gradient(14% 10% at 75% 15%, rgba(186,230,253,0.35) 0%, transparent 70%), radial-gradient(20% 14% at 60% 45%, rgba(125,211,252,0.25) 0%, transparent 70%), radial-gradient(16% 10% at 40% 70%, rgba(186,230,253,0.3) 0%, transparent 70%), linear-gradient(180deg, #0B1620 0%, #142838 55%, #0B1620 100%)",
     },
+  },
+
+  // ---------- 15 preset baru, 21 Agustus 2026 (lihat catatan lingkup
+  // lengkap di PageThemeName di atas) ----------
+  emerald: {
+    // Jewel-tone emerald + aksen amber -- kesan mewah/premium, cocok utk
+    // kreator luxury/lifestyle atau bisnis premium.
+    label: "Emerald",
+    page: "bg-gradient-to-br from-emerald-950 via-emerald-800 to-amber-600",
+    glow: "bg-gradient-to-br from-emerald-300/20 via-amber-300/10 to-transparent",
+    avatarRing: "ring-4 ring-amber-200/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/80",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-amber-200",
+    buyButton: "bg-amber-400 text-ink font-bold hover:brightness-105",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#059669",
+    previewBg: "linear-gradient(135deg, #022c22 0%, #065f46 50%, #d97706 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  wine: {
+    // Burgundy elegan -- rose/red/purple gelap bertumpuk, ala label wine
+    // premium. Cocok utk konsultan/personal branding yang mau kesan formal
+    // tapi tidak sekelam noir.
+    label: "Wine",
+    page: "bg-gradient-to-br from-rose-950 via-red-950 to-purple-950",
+    glow: "bg-gradient-to-br from-rose-400/15 via-red-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-rose-200",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#881337",
+    previewBg: "linear-gradient(135deg, #4c0519 0%, #450a0a 55%, #3b0764 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  candy: {
+    // Pastel playful (pink-purple-sky) -- mayoritas 81 preset sebelumnya
+    // vivid/gelap, ini mengisi celah "lembut & ceria" utk audiens muda.
+    label: "Candy",
+    page: "bg-gradient-to-br from-pink-200 via-purple-200 to-sky-200",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-white/60 bg-white/70 backdrop-blur hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/60 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-fuchsia-600",
+    buyButton: "bg-fuchsia-500 text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#F9A8D4",
+    previewBg: "linear-gradient(135deg, #fbcfe8 0%, #e9d5ff 50%, #bae6fd 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  vapor: {
+    // Vaporwave neon (magenta-ungu-cyan) -- beda dari "cyber" (teal/biru
+    // gelap) & "holographic" (pastel iridescent), ini versi VIVID/saturasi
+    // tinggi ala poster synthwave.
+    label: "Vapor",
+    page: "bg-gradient-to-br from-fuchsia-600 via-purple-600 to-cyan-400",
+    glow: "bg-gradient-to-br from-cyan-300/25 via-fuchsia-300/15 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/85",
+    card: "border border-white/20 bg-white/10 backdrop-blur hover:bg-white/[0.18] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/55",
+    productCard: "border border-white/20 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-cyan-100",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#D946EF",
+    previewBg: "linear-gradient(135deg, #c026d3 0%, #7e22ce 50%, #22d3ee 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  matcha: {
+    // Sage/matcha lembut -- mood wellness/cafe, beda dari "mint" (teal
+    // gelap saturasi tinggi) & "dew" (hijau gelap) -- ini versi PASTEL.
+    label: "Matcha",
+    page: "bg-gradient-to-br from-lime-100 via-green-100 to-emerald-200",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-emerald-900/10 bg-white/70 backdrop-blur hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-emerald-900/10 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-emerald-700",
+    buyButton: "bg-emerald-700 text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#84CC16",
+    previewBg: "linear-gradient(135deg, #ecfccb 0%, #dcfce7 50%, #a7f3d0 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+  },
+  terracotta: {
+    // Tanah liat hangat (oranye-merah-rose gelap) -- ala pottery/kerajinan,
+    // beda dari "canyon"/"dune" (lebih coklat/pasir) & "blaze" (oranye
+    // solid tunggal).
+    label: "Terracotta",
+    page: "bg-gradient-to-br from-orange-700 via-red-700 to-rose-800",
+    glow: "bg-gradient-to-br from-orange-300/20 via-red-300/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/80",
+    card: "border border-white/15 bg-white/10 backdrop-blur hover:bg-white/[0.16] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/15 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-orange-100",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#C2410C",
+    previewBg: "linear-gradient(135deg, #c2410c 0%, #b91c1c 55%, #9f1239 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
+  },
+  champagne: {
+    // Rose gold lembut -- kesan mewah TAPI terang (beda dari emerald/wine
+    // yang gelap), cocok utk konten kecantikan/pernikahan/undangan.
+    label: "Champagne",
+    page: "bg-gradient-to-br from-amber-100 via-rose-100 to-amber-200",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-amber-900/10 bg-white/70 backdrop-blur hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-amber-900/10 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-amber-700",
+    buyButton: "bg-ink text-white font-bold hover:brightness-110",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#FDE68A",
+    previewBg: "linear-gradient(135deg, #fef3c7 0%, #fce7f3 50%, #fde68a 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  obsidian: {
+    // Hitam matte polos TANPA aksen warna kuat -- beda dari "noir" (hitam +
+    // emas) & "midnight" (hitam kehijauan) & "drift" (hitam + ungu
+    // animasi) -- ini paling minimal/netral, murni highlight putih tipis.
+    label: "Obsidian",
+    page: "bg-[#0A0A0F]",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/70",
+    card: "border border-white/10 bg-white/[0.06] backdrop-blur hover:bg-white/[0.1] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/10 bg-white/[0.06] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/85",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/30 hover:text-white",
+    swatch: "#0A0A0F",
+    previewBg: "radial-gradient(circle at 30% 20%, #2a2a35 0%, #0A0A0F 70%)",
+    previewIsDark: true,
+    pageStyle: {
+      fontFamily: "var(--font-custom-montserrat)",
+      backgroundImage: "radial-gradient(circle 400px at 20% 10%, rgba(255,255,255,0.06) 0%, transparent 70%)",
+    },
+  },
+  holographic: {
+    // Iridescent rainbow (magenta-cyan-kuning) ala stiker/kartu hologram --
+    // trendi utk kreator Gen-Z, beda dari "vapor" (vivid saturasi tinggi)
+    // karena ini versi PASTEL/terang.
+    label: "Holographic",
+    page: "bg-gradient-to-br from-fuchsia-400 via-cyan-300 to-yellow-300",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-white/50 bg-white/60 backdrop-blur hover:bg-white/80",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/50 bg-white/60 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-purple-700",
+    buyButton: "bg-ink text-white font-bold hover:brightness-110",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#E879F9",
+    previewBg: "linear-gradient(135deg, #e879f9 0%, #67e8f9 50%, #fde047 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  corporate: {
+    // Abu-navy profesional -- beda dari "noir" (hitam+emas mewah) & "storm"
+    // (abu netral polos), ini condong navy/biru gelap, cocok konsultan/
+    // agency/CV.
+    label: "Corporate",
+    page: "bg-gradient-to-br from-slate-800 via-slate-900 to-blue-950",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/12 bg-white/[0.07] backdrop-blur hover:bg-white/[0.12] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/12 bg-white/[0.07] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-sky-200",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#1E293B",
+    previewBg: "linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #172554 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-body)" },
+  },
+  ivory: {
+    // Krem/putih gading bersih -- beda dari "air" (abu netral polos) &
+    // "minimal" (hijau gelap, meski namanya "minimal"), ini yang benar-
+    // benar TERANG minimalis dengan sedikit kehangatan.
+    label: "Ivory",
+    page: "bg-gradient-to-b from-stone-50 via-orange-50 to-stone-100",
+    glow: "hidden",
+    avatarRing: "ring-1 ring-ink/10",
+    name: "text-ink",
+    bio: "text-muted",
+    card: "border border-ink/10 bg-white hover:border-ink/25",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-ink/10 bg-white",
+    productTitle: "text-ink",
+    productPrice: "text-ink/70",
+    buyButton: "bg-ink text-white font-bold hover:brightness-110",
+    footer: "text-muted/50 hover:text-ink",
+    swatch: "#FAFAF9",
+    previewBg: "linear-gradient(180deg, #fafaf9 0%, #fff7ed 55%, #f5f5f4 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+  },
+  lemon: {
+    // Kuning cerah ceria -- belum ada preset dengan kuning sebagai warna
+    // UTAMA (grid/halo cuma aksen), cocok utk konten ceria/anak muda/promo.
+    label: "Lemon",
+    page: "bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/75",
+    card: "border border-white/50 bg-white/70 backdrop-blur hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-white/50 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-amber-800",
+    buyButton: "bg-ink text-white font-bold hover:brightness-110",
+    footer: "text-ink/40 hover:text-ink",
+    swatch: "#FDE047",
+    previewBg: "linear-gradient(135deg, #fde047 0%, #facc15 50%, #fbbf24 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  cocoa: {
+    // Coklat pekat hangat -- beda dari "brew" (foto wallpaper cafe) &
+    // "kraft" (coklat kertas terang), ini gradien coklat GELAP murni CSS,
+    // cocok konten kuliner/kopi/kerajinan kulit.
+    label: "Cocoa",
+    page: "bg-gradient-to-br from-amber-950 via-stone-900 to-neutral-950",
+    glow: "bg-gradient-to-br from-amber-400/10 via-transparent to-transparent",
+    avatarRing: "ring-4 ring-white/70 shadow-hero",
+    name: "text-white",
+    bio: "text-white/75",
+    card: "border border-white/12 bg-white/[0.07] backdrop-blur hover:bg-white/[0.12] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/50",
+    productCard: "border border-white/12 bg-white/[0.07] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-amber-200",
+    buyButton: "bg-amber-100 text-ink font-bold hover:brightness-95",
+    footer: "text-white/35 hover:text-white",
+    swatch: "#451A03",
+    previewBg: "linear-gradient(135deg, #451a03 0%, #1c1917 55%, #0a0a0a 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
+  },
+  azure: {
+    // Biru langit bersih & cerah -- beda dari "ocean"/"sapphire" (lebih
+    // gelap/dalam) & "surge" (video), ini gradien biru TERANG murni CSS.
+    label: "Azure",
+    page: "bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500",
+    glow: "bg-gradient-to-br from-white/25 via-sky-200/10 to-transparent",
+    avatarRing: "ring-4 ring-white/80 shadow-hero",
+    name: "text-white",
+    bio: "text-white/85",
+    card: "border border-white/20 bg-white/10 backdrop-blur hover:bg-white/[0.18] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-white/55",
+    productCard: "border border-white/20 bg-white/10 backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-white/90",
+    buyButton: "bg-white text-ink font-bold hover:brightness-95",
+    footer: "text-white/40 hover:text-white",
+    swatch: "#0EA5E9",
+    previewBg: "linear-gradient(135deg, #38bdf8 0%, #3b82f6 50%, #06b6d4 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  blush: {
+    // Dusty rose lembut -- beda dari "rose" (merah muda VIVID/solid) &
+    // "sakura" (foto wallpaper), ini gradien pastel muted, cocok konten
+    // kecantikan/pernikahan/lifestyle feminin yang kalem.
+    label: "Blush",
+    page: "bg-gradient-to-br from-rose-100 via-pink-100 to-rose-200",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-rose-900/10 bg-white/70 backdrop-blur hover:bg-white/90",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-rose-900/10 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-rose-600",
+    buyButton: "bg-rose-500 text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#FDA4AF",
+    previewBg: "linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fecdd3 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
   },
 };
 

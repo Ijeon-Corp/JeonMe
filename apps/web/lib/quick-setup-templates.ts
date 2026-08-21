@@ -446,6 +446,36 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     links: [link("discord"), link("youtube"), link("twitch")],
     blocks: [{ type: "text", title: "Game yang Dimainkan", text: "Tuliskan game favorit yang sering kamu mainkan & rank/level saat ini di sini." }],
   },
+  // 2 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism).
+  {
+    key: "islamic-creator",
+    category: "creator",
+    layoutVariant: "hero",
+    label: "Islamic Creator",
+    description: "Konten dakwah, media sosial, kolaborasi",
+    theme: "ivory",
+    bio: "Konten dakwah & inspirasi -- semoga bermanfaat",
+    links: [link("instagram"), link("youtube"), link("tiktok")],
+    blocks: [
+      { type: "text", title: "Tentang Konten Ini", text: "Tuliskan fokus kontenmu (kajian, motivasi, tips ibadah sehari-hari) di sini." },
+      faqBlock([{ question: "Terbuka untuk kolaborasi kajian/event?", answer: "Terbuka, DM lewat Instagram untuk diskusi jadwal & tema kolaborasi." }]),
+    ],
+  },
+  {
+    key: "book-author",
+    category: "creator",
+    layoutVariant: "headline",
+    label: "Book Author",
+    description: "Buku terbaru, website, media sosial",
+    theme: "cocoa",
+    bio: "Penulis buku -- cerita yang lahir dari kata demi kata",
+    links: [link("instagram"), link("website", "Kunjungi Website Kami")],
+    blocks: [
+      { type: "text", title: "Buku Terbaru", text: "Tuliskan judul & sinopsis singkat buku terbarumu di sini." },
+      faqBlock([{ question: "Apakah menerima undangan bedah buku?", answer: "Menerima, kirim detail acara lewat DM Instagram untuk diskusi jadwal." }]),
+    ],
+  },
 
   // ---------- Business & Professional ----------
   {
@@ -538,6 +568,38 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     blocks: [
       { type: "text", title: "Pengalaman & Keahlian", text: "Tuliskan pengalaman kerja dan keahlianmu di sini." },
       { type: "contact_form", title: "Hubungi Saya" },
+    ],
+  },
+  // 2 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism).
+  {
+    key: "insurance-agent",
+    category: "business",
+    layoutVariant: "split",
+    label: "Insurance Agent",
+    description: "Produk asuransi, konsultasi, kontak",
+    theme: "corporate",
+    bio: "Agen asuransi -- lindungi masa depanmu",
+    links: [link("whatsapp", "Konsultasi Gratis"), link("linkedin")],
+    blocks: [
+      { type: "text", title: "Produk Asuransi", text: "Tuliskan jenis produk asuransi (jiwa, kesehatan, pendidikan) yang kamu tawarkan di sini." },
+      faqBlock([{ question: "Bagaimana cara klaim asuransi?", answer: "Aku bantu proses klaim dari awal sampai selesai -- hubungi langsung begitu ada kejadian." }]),
+      { type: "contact_form", title: "Konsultasi Asuransi" },
+    ],
+  },
+  {
+    key: "coworking-space",
+    category: "business",
+    layoutVariant: "masthead",
+    label: "Coworking Space",
+    description: "Paket, fasilitas, booking",
+    theme: "obsidian",
+    bio: "Coworking space -- kerja produktif, kolaborasi maksimal",
+    links: [link("whatsapp", "Booking Ruang"), link("instagram", "Lihat Fasilitas Kami")],
+    blocks: [
+      mapsBlock("Lokasi Kami"),
+      { type: "text", title: "Paket & Harga", text: "Tuliskan paket membership (harian/bulanan) & fasilitas yang didapat di sini." },
+      faqBlock([{ question: "Apakah ada meeting room?", answer: "Ada, bisa disewa terpisah per jam -- booking dulu via WhatsApp supaya tidak bentrok jadwal." }]),
     ],
   },
 
@@ -710,6 +772,50 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
+  // 3 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism). "products" SENGAJA tidak diisi utk ketiganya
+  // (beda dari 5 template shop lain) -- belum ada foto produk contoh yang
+  // relevan & benar-benar lisensi bebas tersedia untuk batik/jamu/pet
+  // shop, jadi tidak dipaksakan asal comot gambar generik.
+  {
+    key: "batik-craft",
+    category: "shop",
+    layoutVariant: "ribbon",
+    label: "Batik & Kerajinan",
+    description: "Katalog, cerita produk, marketplace",
+    theme: "kraft",
+    bio: "Batik & kerajinan tradisional -- karya asli tangan lokal",
+    links: [link("instagram", "Lihat Koleksi Batik"), link("whatsapp", "Pesan via WhatsApp"), link("shopee")],
+    blocks: [
+      { type: "text", title: "Proses Pembuatan", text: "Ceritakan proses pembuatan batik/kerajinanmu (tulis tangan, cap, motif khas) di sini." },
+      faqBlock([{ question: "Apakah bisa custom motif?", answer: "Bisa, chat dulu buat diskusi motif & warna sesuai keinginanmu." }]),
+    ],
+  },
+  {
+    key: "herbal-jamu",
+    category: "shop",
+    layoutVariant: "card",
+    label: "Jamu & Herbal",
+    description: "Produk, katalog, pemesanan",
+    theme: "matcha",
+    bio: "Jamu & herbal -- sehat alami ala nenek moyang",
+    links: [link("whatsapp", "Pesan via WhatsApp"), link("instagram", "Lihat Produk Kami")],
+    blocks: [faqBlock([{ question: "Apakah aman dikonsumsi rutin?", answer: "Aman, semua bahan alami tanpa pengawet -- tetap konsultasi dulu kalau kamu punya kondisi kesehatan khusus." }])],
+  },
+  {
+    key: "petshop",
+    category: "shop",
+    layoutVariant: "ribbon",
+    label: "Pet Shop",
+    description: "Produk, lokasi, grooming",
+    theme: "lemon",
+    bio: "Pet shop -- semua kebutuhan hewan kesayanganmu",
+    links: [link("whatsapp", "Chat Admin Kami"), link("instagram", "Lihat Produk Kami"), link("shopee")],
+    blocks: [
+      mapsBlock("Lokasi Toko"),
+      faqBlock([{ question: "Apakah ada layanan grooming?", answer: "Ada, booking dulu via WhatsApp supaya tidak perlu antre lama." }]),
+    ],
+  },
 
   // ---------- Education ----------
   {
@@ -779,6 +885,25 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "contact_form", title: "Daftar Kelas" },
     ],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus dan Event -- aktifkan di menu Produk & Monetisasi.",
+  },
+  // 1 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism). layoutVariant "duo" dipakai ULANG dari
+  // Lifestyle (Fitness Coach/Beauty Creator) -- kesan "kartu instruktur
+  // personal" sama-sama cocok utk kursus privat/kelas kecil.
+  {
+    key: "language-course",
+    category: "education",
+    layoutVariant: "duo",
+    label: "Language Course",
+    description: "Kelas bahasa, jadwal, pendaftaran",
+    theme: "candy",
+    bio: "Kursus bahasa -- lancar berbahasa, buka peluang baru",
+    links: [link("whatsapp", "Daftar Kelas")],
+    blocks: [
+      { type: "text", title: "Kelas Tersedia", text: "Tuliskan bahasa yang diajarkan & level kelas (pemula-mahir) di sini." },
+      faqBlock([{ question: "Kelas online atau tatap muka?", answer: "Tersedia keduanya -- pilih sesuai kenyamananmu saat mendaftar." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
 
   // ---------- Entertainment ----------
@@ -856,6 +981,23 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Konten Terbaru", text: "Tuliskan konten atau series terbarumu di sini." },
       { type: "contact_form", title: "Ajak Kolaborasi" },
     ],
+  },
+  // 1 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism).
+  {
+    key: "motivational-speaker",
+    category: "entertainment",
+    layoutVariant: "spotlight",
+    label: "Motivational Speaker",
+    description: "Topik seminar, booking, media sosial",
+    theme: "vapor",
+    bio: "Motivator & pembicara publik -- bangkitkan semangatmu",
+    links: [link("instagram"), link("youtube"), link("whatsapp", "Booking Jadi Pembicara")],
+    blocks: [
+      { type: "text", title: "Topik Favorit", text: "Tuliskan topik seminar/talkshow yang biasa kamu bawakan di sini." },
+      faqBlock([{ question: "Bagaimana cara booking untuk event?", answer: "Kirim detail acara (tanggal, tema, jumlah peserta) lewat WhatsApp, tim akan konfirmasi ketersediaan." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
 
   // ---------- Local Business ----------
@@ -977,6 +1119,73 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "contact_form", title: "Reservasi Meja" },
     ],
   },
+  // 4 template baru, 21 Agustus 2026 (permintaan langsung pengguna: "saya
+  // mau buatkan lagi tema dan layout quick setup lebih banyak lagi pilihan
+  // nya") -- niche jasa lokal yang belum terwakili (properti/pernikahan/
+  // laundry/gym), lihat catatan lengkap di homestay-villa (kategori
+  // Tourism) soal filosofi penambahan batch ini.
+  {
+    key: "real-estate-agent",
+    category: "local",
+    layoutVariant: "split",
+    label: "Real Estate Agent",
+    description: "Listing properti, konsultasi, kontak",
+    theme: "corporate",
+    bio: "Agen properti -- bantu wujudkan rumah impianmu",
+    links: [link("whatsapp", "Konsultasi Properti"), link("instagram", "Lihat Listing Rumah")],
+    blocks: [
+      { type: "text", title: "Listing Terbaru", text: "Tuliskan properti yang sedang kamu tawarkan (lokasi, harga, tipe) di sini." },
+      faqBlock([{ question: "Apakah bisa bantu proses KPR?", answer: "Bisa, aku bantu proses dari awal sampai akad -- termasuk simulasi & pengajuan KPR ke bank rekanan." }]),
+      { type: "contact_form", title: "Konsultasi Gratis" },
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Booking Konsultasi -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "wedding-organizer",
+    category: "local",
+    layoutVariant: "ticket",
+    label: "Wedding Organizer",
+    description: "Paket nikah, portofolio, konsultasi",
+    theme: "champagne",
+    bio: "Wedding organizer -- wujudkan hari bahagiamu",
+    links: [link("whatsapp", "Konsultasi Paket Nikah"), link("instagram", "Lihat Portofolio Kami")],
+    blocks: [
+      { type: "text", title: "Paket Pernikahan", text: "Tuliskan paket WO (harga, vendor, layanan) yang kamu tawarkan di sini." },
+      faqBlock([{ question: "Berapa lama sebelum hari-H sebaiknya booking?", answer: "Idealnya 6-12 bulan sebelumnya supaya vendor favorit masih tersedia -- tapi tetap hubungi kami untuk cek jadwal terdekat." }]),
+      { type: "contact_form", title: "Konsultasi Pernikahan" },
+    ],
+  },
+  {
+    key: "laundry-service",
+    category: "local",
+    layoutVariant: "masthead",
+    label: "Laundry Service",
+    description: "Layanan, harga, antar-jemput",
+    theme: "azure",
+    bio: "Laundry -- bersih, wangi, cepat selesai",
+    links: [link("whatsapp", "Order Antar-Jemput")],
+    blocks: [
+      mapsBlock(),
+      { type: "text", title: "Layanan & Harga", text: "Tuliskan jenis layanan (kiloan/satuan/setrika) & harga per kg di sini." },
+      faqBlock([{ question: "Apakah ada layanan antar-jemput?", answer: "Ada, gratis untuk area sekitar -- chat WhatsApp untuk cek jangkauan & jadwal jemput." }]),
+    ],
+  },
+  {
+    key: "gym-fitness-center",
+    category: "local",
+    layoutVariant: "portrait",
+    label: "Gym & Fitness Center",
+    description: "Kelas, membership, booking",
+    theme: "electric",
+    bio: "Gym & fitness center -- mulai transformasi tubuhmu",
+    links: [link("whatsapp", "Daftar Member"), link("instagram", "Lihat Fasilitas Kami")],
+    blocks: [
+      mapsBlock("Lokasi Gym"),
+      { type: "text", title: "Kelas & Membership", text: "Tuliskan jenis kelas (yoga, HIIT, angkat beban) & harga membership di sini." },
+      faqBlock([{ question: "Ada trial gratis?", answer: "Ada, trial 1 hari gratis untuk member baru -- datang langsung atau daftar via WhatsApp dulu." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
+  },
 
   // ---------- Tourism & Travel ----------
   // Hasil analisa galeri tema kompetitor, 17 Agustus 2026 (permintaan
@@ -1010,6 +1219,84 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     blocks: [
       { type: "text", title: "Rute & Destinasi", text: "Tuliskan rute/destinasi favorit yang biasa kamu pandu di sini." },
       faqBlock([{ question: "Berapa orang maksimal per grup tur?", answer: "Fleksibel sesuai permintaan -- chat WhatsApp buat diskusi jumlah peserta & jadwal." }]),
+    ],
+  },
+  // 5 template baru, 21 Agustus 2026 (permintaan langsung pengguna: "saya
+  // mau buatkan lagi tema dan layout quick setup lebih banyak lagi pilihan
+  // nya") -- Tourism sebelumnya kategori PALING SEDIKIT templatenya (cuma
+  // 2), diperkuat jadi 7 supaya sepadan kategori lain. Tiap sub-niche dapat
+  // varian layout & tema BERBEDA (bukan cuma 2 yang sama seperti sebelumnya)
+  // supaya benar-benar variatif, bukan cuma jumlah bertambah.
+  {
+    key: "homestay-villa",
+    category: "tourism",
+    layoutVariant: "cover",
+    label: "Homestay & Villa",
+    description: "Fasilitas, lokasi, booking",
+    theme: "tide",
+    bio: "Homestay & villa -- nginap nyaman ala rumah sendiri",
+    links: [link("whatsapp", "Booking Sekarang"), link("instagram", "Lihat Villa Kami")],
+    blocks: [
+      mapsBlock("Lokasi Villa"),
+      { type: "text", title: "Fasilitas", text: "Tuliskan fasilitas villa/homestay (kolam renang, dapur, WiFi, dst) di sini." },
+      faqBlock([{ question: "Berapa lama minimal menginap?", answer: "Minimal 1 malam, tapi ada diskon khusus untuk booking mingguan -- tanya via WhatsApp." }]),
+    ],
+  },
+  {
+    key: "diving-center",
+    category: "tourism",
+    layoutVariant: "portrait",
+    label: "Diving Center",
+    description: "Paket diving, spot, booking",
+    theme: "azure",
+    bio: "Diving center -- jelajahi bawah laut bareng kami",
+    links: [link("whatsapp", "Booking Trip Diving"), link("instagram", "Lihat Spot Diving")],
+    blocks: [
+      { type: "text", title: "Paket Diving", text: "Tuliskan paket diving (open water, spot favorit, sewa alat) & harga di sini." },
+      faqBlock([{ question: "Perlu sertifikat diving dulu?", answer: "Untuk pemula tersedia paket trial diving tanpa sertifikat, didampingi instruktur bersertifikat." }]),
+    ],
+  },
+  {
+    key: "culinary-tour",
+    category: "tourism",
+    layoutVariant: "masthead",
+    label: "Culinary Tour",
+    description: "Rute kuliner, jadwal, booking",
+    theme: "terracotta",
+    bio: "Wisata kuliner -- jelajahi rasa autentik daerah ini",
+    links: [link("whatsapp", "Booking Tur Kuliner"), link("instagram", "Lihat Menu Tur")],
+    blocks: [
+      { type: "text", title: "Rute Kuliner", text: "Tuliskan tempat makan/jajanan khas yang dikunjungi selama tur di sini." },
+      faqBlock([{ question: "Harga tur sudah termasuk makanan?", answer: "Sudah, semua paket termasuk cicip makanan di setiap pemberhentian -- tinggal siapkan perut kosong!" }]),
+    ],
+  },
+  {
+    key: "adventure-guide",
+    category: "tourism",
+    layoutVariant: "portrait",
+    label: "Adventure Guide",
+    description: "Trekking, camping, booking",
+    theme: "highland",
+    bio: "Trekking & camping guide -- taklukkan alam bareng aku",
+    links: [link("whatsapp", "Booking Trip"), link("instagram", "Lihat Dokumentasi Trip")],
+    blocks: [
+      { type: "text", title: "Rute & Gunung", text: "Tuliskan jalur pendakian/camping ground favorit yang biasa kamu pandu di sini." },
+      faqBlock([{ question: "Perlu bawa alat sendiri?", answer: "Tenda & alat masak bisa disewa, tinggal bawa perlengkapan pribadi -- detail lengkap dikirim setelah booking." }]),
+    ],
+  },
+  {
+    key: "city-tour",
+    category: "tourism",
+    layoutVariant: "hero",
+    label: "City Tour",
+    description: "Destinasi, titik kumpul, booking",
+    theme: "skyline",
+    bio: "City tour -- kenali kota ini lebih dekat",
+    links: [link("whatsapp", "Booking City Tour"), link("instagram", "Lihat Destinasi Tur")],
+    blocks: [
+      mapsBlock("Titik Kumpul"),
+      { type: "text", title: "Destinasi Wajib", text: "Tuliskan landmark/tempat bersejarah yang dikunjungi selama tur di sini." },
+      faqBlock([{ question: "Tur jalan kaki atau naik kendaraan?", answer: "Tergantung paket -- ada opsi jalan kaki santai atau naik kendaraan untuk jarak lebih jauh." }]),
     ],
   },
 
@@ -1213,5 +1500,38 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       },
     ],
     monetizationHint: "Aktifkan Social Proof di menu Audiens & Pemasaran supaya notifikasi pembelian produkmu tampil ke pengunjung.",
+  },
+  // 2 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
+  // villa (kategori Tourism).
+  {
+    key: "nonprofit-charity",
+    category: "special",
+    layoutVariant: "cover",
+    label: "Nonprofit & Charity",
+    description: "Program sosial, donasi, relawan",
+    theme: "blush",
+    bio: "Yayasan -- bersama kita bisa berbuat lebih banyak",
+    links: [link("instagram"), link("whatsapp", "Hubungi Kami")],
+    blocks: [
+      { type: "text", title: "Program Kami", text: "Tuliskan program/kegiatan sosial yang sedang berjalan di sini." },
+      faqBlock([{ question: "Bagaimana cara donasi/menjadi relawan?", answer: "Klik tautan di atas atau isi formulir di bawah, tim kami akan menghubungi balik." }]),
+      { type: "contact_form", title: "Gabung Jadi Relawan" },
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Dukungan (Donasi) -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "mosque-community",
+    category: "special",
+    layoutVariant: "masthead",
+    label: "Mosque & Community",
+    description: "Jadwal kegiatan, info, kontak",
+    theme: "emerald",
+    bio: "Info kegiatan & jadwal komunitas kami",
+    links: [link("whatsapp", "Gabung Grup Info"), link("instagram")],
+    blocks: [
+      mapsBlock("Lokasi Kami"),
+      { type: "text", title: "Jadwal Kegiatan", text: "Tuliskan jadwal kajian/kegiatan rutin komunitas di sini." },
+      faqBlock([{ question: "Bagaimana cara ikut kegiatan?", answer: "Gabung grup WhatsApp untuk info jadwal terbaru, semua kegiatan terbuka untuk umum." }]),
+    ],
   },
 ];

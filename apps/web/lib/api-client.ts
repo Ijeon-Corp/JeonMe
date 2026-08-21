@@ -751,6 +751,24 @@ export const THEME_PRESETS = [
   "retro",
   "kraft",
   "monsoon",
+  // 15 preset baru, 21 Agustus 2026 (permintaan langsung pengguna: "saya
+  // mau buatkan lagi tema dan layout quick setup lebih banyak lagi pilihan
+  // nya") -- lihat catatan lingkup lengkap di PageThemeName (page-themes.ts).
+  "emerald",
+  "wine",
+  "candy",
+  "vapor",
+  "matcha",
+  "terracotta",
+  "champagne",
+  "obsidian",
+  "holographic",
+  "corporate",
+  "ivory",
+  "lemon",
+  "cocoa",
+  "azure",
+  "blush",
 ] as const;
 
 export function getMyPage() {
