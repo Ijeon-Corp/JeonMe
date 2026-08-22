@@ -1,15 +1,15 @@
+// Ikon ilustrasi 3D yang disediakan pengguna langsung (permintaan 23
+// Agustus 2026: "ganti semua icon di analytic dengan gambar yang sudah
+// saya samakan namanya"), public/homepage/icon/*.png -- pola sama seperti
+// Features.tsx/Monetization.tsx sebelumnya. "pelacakan konversi.png"
+// SENGAJA pakai spasi (bukan tanda hubung) apa adanya sesuai nama file
+// yang disediakan -- di-encode %20 di src supaya valid sebagai URL.
 const points = [
-  { title: "Analitik Pengunjung", desc: "Lihat dari mana traffic-mu datang dan siapa yang mengunjungi halamanmu.", color: "primary", icon: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" /> },
-  { title: "Analitik Klik", desc: "Pantau tautan dan tombol mana yang paling banyak mendapat interaksi.", color: "accent", icon: <path d="M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /> },
-  { title: "Pelacakan Konversi", desc: "Pahami apa yang mengubah pengunjung menjadi pelanggan berbayar.", color: "secondary", icon: <path d="M18 20V10M12 20V4M6 20v-6" /> },
-  { title: "Analitik Pendapatan", desc: "Pantau penghasilan dari setiap produk, kelas, dan booking.", color: "primary", icon: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /> },
+  { title: "Analitik Pengunjung", desc: "Lihat dari mana traffic-mu datang dan siapa yang mengunjungi halamanmu.", image: "/homepage/icon/analitik-pengunjung.png" },
+  { title: "Analitik Klik", desc: "Pantau tautan dan tombol mana yang paling banyak mendapat interaksi.", image: "/homepage/icon/analitik-klik.png" },
+  { title: "Pelacakan Konversi", desc: "Pahami apa yang mengubah pengunjung menjadi pelanggan berbayar.", image: "/homepage/icon/pelacakan%20konversi.png" },
+  { title: "Analitik Pendapatan", desc: "Pantau penghasilan dari setiap produk, kelas, dan booking.", image: "/homepage/icon/analitik-pendapatan.png" },
 ];
-
-const colorMap: Record<string, { bg: string; icon: string }> = {
-  primary: { bg: "bg-primary-subtle", icon: "#1B4D3E" },
-  accent: { bg: "bg-accent-subtle", icon: "#C9A24B" },
-  secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C" },
-};
 
 export default function Analytics() {
   return (
@@ -38,22 +38,16 @@ export default function Analytics() {
               Dapatkan visibilitas real-time yang jelas tentang bagaimana audiensmu berinteraksi dengan halamanmu — dan ubah insight menjadi pertumbuhan.
             </p>
             <div className="space-y-4">
-              {points.map((p) => {
-                const c = colorMap[p.color];
-                return (
-                  <div key={p.title} className="flex items-start gap-3">
-                    <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${c.bg}`}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.icon} strokeWidth="2" aria-hidden="true">
-                        {p.icon}
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="mb-0.5 font-heading text-sm font-bold text-ink">{p.title}</h3>
-                      <p className="text-xs leading-relaxed text-muted">{p.desc}</p>
-                    </div>
+              {points.map((p) => (
+                <div key={p.title} className="flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.image} alt="" className="h-12 w-12 flex-shrink-0 object-contain" />
+                  <div>
+                    <h3 className="mb-0.5 font-heading text-sm font-bold text-ink">{p.title}</h3>
+                    <p className="text-xs leading-relaxed text-muted">{p.desc}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
