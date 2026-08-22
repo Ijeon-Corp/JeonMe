@@ -17,7 +17,7 @@ import { faqPageSchema } from "@/lib/structured-data";
 // components/landing/Pricing.tsx) supaya tidak ada dua sumber angka
 // yang bisa berbeda.
 export const metadata: Metadata = {
-  title: "Harga — Jeon.id",
+  title: "Harga Jeon.id",
   description:
     "Mulai gratis dengan tautan tanpa batas dan 1 Halaman Toko. Upgrade ke Premium untuk hapus watermark, latar belakang kustom, dan sampai 5 Halaman Toko.",
   alternates: { canonical: "/pricing" },
@@ -54,7 +54,7 @@ export default function PricingPage() {
               <span className="text-gradient">Setiap Tahap Pertumbuhan</span>
             </h1>
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted">
-              Mulai gratis. Upgrade ke Premium saat kamu siap memonetisasi lebih besar — tanpa biaya tersembunyi.
+              Mulai gratis. Upgrade ke Premium saat kamu siap memonetisasi lebih besar, tanpa biaya tersembunyi.
             </p>
           </div>
         </section>

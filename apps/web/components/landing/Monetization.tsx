@@ -22,7 +22,7 @@ export default function Monetization() {
               <span className="text-gradient">Menjadi Penghasilan</span>
             </h2>
             <p className="mb-8 text-lg leading-relaxed text-muted">
-              Aktifkan tools monetisasi yang kamu butuhkan — tanpa aplikasi tambahan, tanpa login berulang.
+              Aktifkan tools monetisasi yang kamu butuhkan, tanpa aplikasi tambahan, tanpa login berulang.
             </p>
 
             <div className="grid grid-cols-2 gap-3">

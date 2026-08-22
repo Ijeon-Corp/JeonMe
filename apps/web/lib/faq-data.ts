@@ -27,11 +27,11 @@ export const faqs: FaqItem[] = [
   },
   {
     q: "Bisakah saya pakai domain sendiri?",
-    a: "Bisa, di semua paket termasuk Gratis — hubungkan domain kustom milikmu sendiri lewat Pengaturan halaman. Untuk menghapus watermark \"Buat halaman gratis di Jeon.id\" dan mengatur latar belakang kustom, upgrade ke Premium.",
+    a: "Bisa, di semua paket termasuk Gratis, hubungkan domain kustom milikmu sendiri lewat Pengaturan halaman. Untuk menghapus watermark \"Buat halaman gratis di Jeon.id\" dan mengatur latar belakang kustom, upgrade ke Premium.",
   },
   {
     q: "Apakah ada paket gratis?",
-    a: "Tentu saja. Paket Gratis mencakup tautan & blok konten tanpa batas, semua tema (termasuk wallpaper dan video), 1 Halaman Toko, serta statistik kunjungan dan klik — tanpa perlu kartu kredit untuk memulai.",
+    a: "Tentu saja. Paket Gratis mencakup tautan & blok konten tanpa batas, semua tema (termasuk wallpaper dan video), 1 Halaman Toko, serta statistik kunjungan dan klik, tanpa perlu kartu kredit untuk memulai.",
   },
   {
     q: "Bagaimana cara menjual produk digital?",
@@ -39,6 +39,6 @@ export const faqs: FaqItem[] = [
   },
   {
     q: "Bisakah saya melacak analitik?",
-    a: "Ya — setiap paket (termasuk Gratis) sudah punya dashboard analitik lengkap: pengunjung, klik per tautan, produk terlaris, dan pendapatan. Paket Premium menambahkan integrasi Meta Conversions API untuk melacak konversi iklan Facebook/Instagram.",
+    a: "Ya, setiap paket (termasuk Gratis) sudah punya dashboard analitik lengkap: pengunjung, klik per tautan, produk terlaris, dan pendapatan. Paket Premium menambahkan integrasi Meta Conversions API untuk melacak konversi iklan Facebook/Instagram.",
   },
 ];

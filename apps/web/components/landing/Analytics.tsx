@@ -35,7 +35,7 @@ export default function Analytics() {
               <span className="text-gradient">Apa yang Berhasil</span>
             </h2>
             <p className="mb-8 text-lg leading-relaxed text-muted">
-              Dapatkan visibilitas real-time yang jelas tentang bagaimana audiensmu berinteraksi dengan halamanmu — dan ubah insight menjadi pertumbuhan.
+              Dapatkan visibilitas real-time yang jelas tentang bagaimana audiensmu berinteraksi dengan halamanmu, dan ubah insight menjadi pertumbuhan.
             </p>
             <div className="space-y-4">
               {points.map((p) => (

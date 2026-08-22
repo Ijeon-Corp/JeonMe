@@ -124,7 +124,7 @@ export default function Features({ showHeading = true, compact = false }: { show
               <span className="text-gradient">Ada di Satu Halaman</span>
             </h2>
             <p className="text-lg leading-relaxed text-muted">
-              Dari manajemen tautan hingga monetisasi — Jeon.id memberimu toolkit lengkap untuk bertumbuh.
+              Dari manajemen tautan hingga monetisasi, Jeon.id memberimu toolkit lengkap untuk bertumbuh.
             </p>
           </div>
         )}
@@ -135,7 +135,7 @@ export default function Features({ showHeading = true, compact = false }: { show
             return (
               <div
                 key={f.title}
-                className="pop-card reveal group cursor-pointer rounded-2xl border border-border bg-white p-6 shadow-card"
+                className="pop-card reveal group cursor-pointer rounded-2xl border border-border bg-white p-6 text-center shadow-card"
                 style={{ transitionDelay: `${0.05 + (i % 4) * 0.05}s` }}
               >
                 {f.image ? (
@@ -144,11 +144,13 @@ export default function Features({ showHeading = true, compact = false }: { show
                   // yang sudah saya sediakan sesuai dengan nama gambarnya")
                   // -- HANYA 4 item compact yang punya gambar; 8 item
                   // lainnya (khusus /features, lihat COMPACT_TITLES) belum
-                  // disediakan gambarnya, tetap pakai ikon SVG lama.
+                  // disediakan gambarnya, tetap pakai ikon SVG lama. mx-auto
+                  // -- permintaan langsung pengguna susulan, 23 Agustus
+                  // 2026: "buat icon di bagian features ada di tengah".
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.image} alt="" className="mb-4 h-14 w-14 object-contain" />
+                  <img src={f.image} alt="" className="mx-auto mb-4 h-14 w-14 object-contain" />
                 ) : (
-                  <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
+                  <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
                     <svg
                       width="22"
                       height="22"
