@@ -9,7 +9,7 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // yang menggunakan bg gambar dan live wallpaper", lalu susulan "coba
 // tampilkan sama persis seperti yang ada di quick template beserta isi
 // blok nya tetapi dengan data dummy seperti john doe dan jane doe foto
-// profil juga ambil online saja". Kurasi 6 template ASLI dari
+// profil juga ambil online saja". Kurasi template ASLI dari
 // lib/quick-setup-templates.ts (71 template) yang temanya termasuk
 // WALLPAPER_THEME_NAMES (foto asli) atau VIDEO_THEME_NAMES ("live
 // wallpaper", lib/page-themes.ts) -- dirender pakai KOMPONEN PagePreview
@@ -19,13 +19,37 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // foto profil dummy (John Doe/Jane Doe, foto randomuser.me -- layanan
 // publik foto wajah acak, bebas dipakai tanpa API key) karena template
 // belum terpasang ke akun sungguhan mana pun.
+//
+// 16 item (grid 4x4) -- permintaan langsung pengguna susulan: "buat
+// template 4x4". Dari SELURUH 71 template, HANYA 20 yang temanya
+// wallpaper/video (19 di luar "coming-soon", kategori khusus placeholder
+// yang tidak cocok jadi contoh showcase) -- 4 di antaranya berbagi tema
+// (jadi berbagi aset visual) dengan template lain: electric (gamer & gym-
+// fitness-center), amber (restaurant & food-beverage), lagoon (travel-
+// agency & travel-blogger), dune (tour-guide & fitness-coach). Supaya
+// tepat 16 kartu TANPA gambar/video kembar yang membingungkan, hanya SATU
+// sisi tiap pasangan itu yang dipakai, KECUALI electric (gamer & gym-
+// fitness-center tetap dua-duanya -- 15 tema unik tidak cukup untuk 16,
+// dan nuansa energik electric masuk akal untuk kedua persona itu).
 const CURATED_KEYS = [
+  // Live Wallpaper (video sungguhan) -- 6 dari 6 VIDEO_THEME_NAMES yang dipakai template.
   { key: "gamer", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg" },
   { key: "dj", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
   { key: "musician", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
+  { key: "education-brand", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
+  { key: "salon", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/8.jpg" },
+  { key: "gym-fitness-center", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/12.jpg" },
+  // Wallpaper (foto asli) -- 10 template, tema unik (lihat catatan pasangan di atas).
   { key: "travel-agency", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
   { key: "restaurant", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/12.jpg" },
   { key: "photographer", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/26.jpg" },
+  { key: "tour-guide", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/71.jpg" },
+  { key: "tutor", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/33.jpg" },
+  { key: "artist", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/19.jpg" },
+  { key: "cafe", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/52.jpg" },
+  { key: "homestay-villa", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/64.jpg" },
+  { key: "adventure-guide", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/17.jpg" },
+  { key: "city-tour", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/38.jpg" },
 ];
 
 const templates = CURATED_KEYS.map((c) => {
@@ -76,7 +100,7 @@ export default function Templates() {
           ))}
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((t) => (
             <div
               key={t.key}
@@ -94,7 +118,9 @@ export default function Templates() {
                   yang biasanya SELALU tampil di pratinjau dashboard jadi
                   teks kecil tak terbaca & berantakan di thumbnail sekecil
                   ini, dipotong khusus di sini (lihat prop-nya, PagePreview.tsx). */}
-              <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+              {/* h-[26rem] -- permintaan langsung pengguna susulan: "buat
+                  height nya lebih tinggi" (sebelumnya h-80/320px). */}
+              <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
                 <div className="h-full [zoom:0.5]">
                   <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} hideFooterChrome />
                 </div>

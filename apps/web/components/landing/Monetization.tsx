@@ -12,7 +12,12 @@ const items = [
 
 export default function Monetization() {
   return (
-    <section id="monetization" className="relative overflow-hidden bg-white py-20 md:py-28" aria-label="Monetisasi">
+    // bg-primary-subtle/40 -- permintaan langsung pengguna susulan, 23
+    // Agustus 2026: "hapus background putih nya" (sebelumnya bg-white) --
+    // pola sama seperti section Template/FAQ, memberi kontras lembut
+    // supaya gambar monetization.png (yang PANELnya sendiri putih) tidak
+    // menyatu datar dengan latar section.
+    <section id="monetization" className="relative overflow-hidden bg-primary-subtle/40 py-20 md:py-28" aria-label="Monetisasi">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="reveal">
@@ -47,10 +52,17 @@ export default function Monetization() {
                 versi lama itu) -- diganti satu file gambar
                 (public/homepage/monetization.png), pola yang SAMA seperti
                 penggantian mockup Hero.tsx (hero.png, lihat catatan sama di
-                sana). */}
-            <div className="w-full max-w-sm">
+                sana). max-w-lg (naik dari max-w-sm) & animate-float --
+                permintaan susulan: "buat lebih besar... buat ada animasi
+                bergerak", animate-float SAMA PERSIS kelas yang dipakai
+                mockup Hero.tsx (lihat tailwind.config.ts) supaya gerakan
+                mengambangnya konsisten dengan section lain. Tanpa shadow/
+                rounded tambahan di sini -- monetization.png (seperti
+                hero.png) sudah punya bayangannya sendiri dibakar ke
+                gambar, shadow CSS ekstra cuma menumpuk jadi ganda. */}
+            <div className="animate-float w-full max-w-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/homepage/monetization.png" alt="Dashboard pendapatan & monetisasi Jeon.id" className="w-full rounded-2xl object-contain shadow-hero" />
+              <img src="/homepage/monetization.png" alt="Dashboard pendapatan & monetisasi Jeon.id" className="w-full object-contain" />
             </div>
           </div>
         </div>
