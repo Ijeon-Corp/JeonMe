@@ -1,6 +1,5 @@
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
-import TrustedBy from "@/components/landing/TrustedBy";
 import Features from "@/components/landing/Features";
 import ProductShowcase from "@/components/landing/ProductShowcase";
 import Monetization from "@/components/landing/Monetization";
@@ -38,7 +37,6 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
-        <TrustedBy />
         <Features />
         <ProductShowcase />
         <Monetization />

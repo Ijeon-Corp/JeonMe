@@ -31,8 +31,8 @@ function formatRupiah(n: number): string {
 // itu (h1 halaman, lalu h2 section persis di bawahnya).
 export default async function Pricing({ showHeading = true }: { showHeading?: boolean }) {
   const plans = await getPlans().catch(() => null);
-  const monthly = plans ? formatRupiah(plans.monthly_price_idr) : "Rp29.000";
-  const yearly = plans ? formatRupiah(plans.yearly_price_idr) : "Rp299.000";
+  const monthly = plans ? formatRupiah(plans.monthly_price_idr) : "Rp99.000";
+  const yearly = plans ? formatRupiah(plans.yearly_price_idr) : "Rp999.000";
 
   return (
     <section id="pricing" className="relative overflow-hidden bg-white py-20 md:py-28" aria-label="Harga">

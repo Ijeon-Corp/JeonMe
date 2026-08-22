@@ -239,17 +239,15 @@ func Load() *Config {
 		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 0.0),
 		HoldingPeriodDays:  getEnvInt("HOLDING_PERIOD_DAYS", 3),
 
-		// PLACEHOLDER bisnis (Modul Langganan Premium, permintaan langsung
-		// pengguna 3 Agustus 2026: "custom background by user premium",
-		// hilangkan watermark untuk versi berbayar) -- pengguna memilih
-		// siklus "Bulanan + Tahunan (diskon)" tapi TIDAK menyebutkan angka
-		// pastinya, jadi dipilih titik harga umum SaaS kreator Indonesia
-		// (mirip pola PLATFORM_FEE_PERCENT/HOLDING_PERIOD_DAYS di atas)
-		// SAMPAI ada keputusan bisnis final -- ganti lewat env, tidak perlu
-		// ubah kode. Tahunan ~14% lebih murah dari 12x bulanan (pola diskon
-		// umum "hemat ~2 bulan").
-		PremiumMonthlyPriceIDR: int64(getEnvInt("PREMIUM_MONTHLY_PRICE_IDR", 29000)),
-		PremiumYearlyPriceIDR:  int64(getEnvInt("PREMIUM_YEARLY_PRICE_IDR", 299000)),
+		// Modul Langganan Premium -- harga final ditetapkan lewat permintaan
+		// langsung pengguna, 23 Agustus 2026: "ubah harga premium jadi 99k
+		// perbulan" (sebelumnya placeholder Rp29.000, lihat riwayat git kalau
+		// perlu). Tahunan Rp999.000 dipilih SAAT itu juga untuk menjaga rasio
+		// diskon ~14-16% yang sama terhadap 12x harga bulanan (pola "hemat ~2
+		// bulan") -- bukan lagi tebakan, tapi masih diganti lewat env var,
+		// tidak perlu ubah kode kalau berubah lagi nanti.
+		PremiumMonthlyPriceIDR: int64(getEnvInt("PREMIUM_MONTHLY_PRICE_IDR", 99000)),
+		PremiumYearlyPriceIDR:  int64(getEnvInt("PREMIUM_YEARLY_PRICE_IDR", 999000)),
 
 		// Dev default HANYA untuk kenyamanan lokal (pola sama dengan
 		// S3_ACCESS_KEY di atas) -- 32 byte persis, sengaja diverifikasi di

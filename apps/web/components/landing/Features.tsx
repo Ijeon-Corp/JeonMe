@@ -51,6 +51,41 @@ const features = [
     color: "accent",
     icon: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,
   },
+  // 4 fitur berikut ditambahkan permintaan langsung pengguna, 23 Agustus
+  // 2026: "tambahkan fitur fiturnya benchmark dari linktree dan lynk id" --
+  // dipilih fitur yang SUNGGUHAN sudah ada di backend (bukan janji kosong,
+  // lihat handler terkait per item) yang jadi jualan utama dua kompetitor
+  // itu tapi belum ditonjolkan di grid ini.
+  {
+    title: "Koneksi Instagram & TikTok",
+    desc: "Tampilkan feed Instagram & TikTok terbarumu otomatis, langsung di halaman bio.",
+    color: "secondary",
+    icon: (
+      <path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h10a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM17.5 6.5h.01" />
+    ),
+  },
+  {
+    title: "Kunci & Gerbang Konten",
+    desc: "Kunci tautan dengan verifikasi usia, kode rahasia, atau syarat subscribe.",
+    color: "primary",
+    icon: (
+      <path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 11V7a6 6 0 0 1 12 0v4M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" />
+    ),
+  },
+  {
+    title: "Multi-Halaman & Toko",
+    desc: "Buat sampai 5 Halaman Toko & halaman tambahan dalam satu akun untuk multi-brand.",
+    color: "accent",
+    icon: <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />,
+  },
+  {
+    title: "Bukti Sosial Real-Time",
+    desc: "Tampilkan notifikasi kunjungan & pembelian terbaru untuk tingkatkan kepercayaan pengunjung.",
+    color: "secondary",
+    icon: (
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 0 1-3.46 0" />
+    ),
+  },
 ];
 
 const colorMap: Record<string, { bg: string; icon: string; hoverBg: string }> = {
