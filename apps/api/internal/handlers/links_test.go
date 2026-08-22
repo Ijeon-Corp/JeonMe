@@ -357,3 +357,66 @@ func TestLinksCreateBlock_AcceptsFileBlockType(t *testing.T) {
 		t.Fatalf("items = %+v, ekspektasi 1 blok dengan block_type=file", items)
 	}
 }
+
+// Warna ikon kustom -- permintaan langsung pengguna, 22 Agustus 2026: "bisa
+// mengubah warna yang kita inginkan untuk icon di blok daripada hanya
+// warna hitam saja". Format hex divalidasi MANUAL (bukan tag "hexcolor"
+// bawaan validator) -- lihat catatan lengkap di updateLinkRequest.IconColor
+// kenapa (omitempty pada *string TIDAK menganggap pointer non-nil ke ""
+// sebagai "kosong", jadi "hexcolor" tetap menolak "" padahal seharusnya
+// lolos sebagai sinyal "batalkan warna"). Test ini membuktikan KETIGA
+// perilaku sekaligus: format valid diterima, format tidak valid ditolak,
+// & string kosong eksplisit berhasil membatalkan (bukan ikut ditolak).
+func TestLinksUpdate_IconColorValidatesHexAndAllowsClearing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	g.PATCH("/links/:id", links.Update)
+	g.GET("/links", links.List)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	createRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Warna", "url": "https://example.com/warna",
+	}, headers)
+	var created linkItem
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("gagal decode created link: %v", err)
+	}
+
+	invalidRec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"icon_color": "not-a-color"}, headers)
+	if invalidRec.Code != http.StatusBadRequest {
+		t.Fatalf("warna hex tidak valid seharusnya ditolak: status %d, body %s", invalidRec.Code, invalidRec.Body.String())
+	}
+
+	validRec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"icon_color": "#3366ff"}, headers)
+	if validRec.Code != http.StatusOK {
+		t.Fatalf("set warna valid gagal: status %d, body %s", validRec.Code, validRec.Body.String())
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items []linkItem
+	if err := json.Unmarshal(listRec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode list: %v", err)
+	}
+	if len(items) != 1 || items[0].IconColor != "#3366ff" {
+		t.Fatalf("items = %+v, ekspektasi icon_color=#3366ff", items)
+	}
+
+	clearRec := doJSON(t, router, http.MethodPatch, "/links/"+created.ID, map[string]any{"icon_color": ""}, headers)
+	if clearRec.Code != http.StatusOK {
+		t.Fatalf("membatalkan warna (string kosong) seharusnya berhasil: status %d, body %s", clearRec.Code, clearRec.Body.String())
+	}
+
+	listRec2 := doJSON(t, router, http.MethodGet, "/links", nil, headers)
+	var items2 []linkItem
+	if err := json.Unmarshal(listRec2.Body.Bytes(), &items2); err != nil {
+		t.Fatalf("gagal decode list: %v", err)
+	}
+	if len(items2) != 1 || items2[0].IconColor != "" {
+		t.Fatalf("items2 = %+v, ekspektasi icon_color kosong setelah dibatalkan", items2)
+	}
+}

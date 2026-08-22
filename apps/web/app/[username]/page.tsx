@@ -133,6 +133,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             blockData: l.block_data,
             customIconUrl: l.custom_icon_url || undefined,
             iconKey: l.icon_key || undefined,
+            iconColor: l.icon_color || undefined,
             isFeatured: l.is_featured,
             thumbnailUrl: l.thumbnail_url || undefined,
           })),

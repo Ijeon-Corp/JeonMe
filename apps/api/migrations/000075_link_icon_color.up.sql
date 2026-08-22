@@ -1,0 +1,19 @@
+-- Warna ikon kustom per tautan/blok -- permintaan langsung pengguna, 22
+-- Agustus 2026: "lebih bagus kalo kita bisa mengubah warna yang kita
+-- inginkan untuk icon di blok daripada hanya warna hitam saja". Ikon galeri
+-- (icon_key, migrasi 000066) & ikon platform hasil deteksi otomatis
+-- (detectLinkIcon, lib/link-icons.ts) sebelumnya TIDAK PERNAH diberi kelas
+-- warna eksplisit di sebagian tempat render (PagePreview.tsx) -- warnanya
+-- ikut cascade currentColor dari elemen pembungkus, jadi kreator tidak
+-- bisa memilih warna sendiri sama sekali, cuma warisan tema.
+--
+-- Kolom TERPISAH dari icon_key (pola sama persis) -- string hex pendek,
+-- BUKAN file media, tidak butuh pipeline upload/storage. Kosong ('') berarti
+-- "ikuti warna tema seperti sebelumnya" (perilaku lama utuh, tidak ada
+-- perubahan visual diam-diam untuk tautan yang sudah ada). Validasi format
+-- hex dilakukan di backend (binding:"hexcolor") -- BEDA dari icon_key yang
+-- sengaja tidak divalidasi, karena nilai ini dirender langsung sebagai CSS
+-- inline style (color: <nilai>), nilai sembarang bisa merusak tampilan atau
+-- (secara teori) jadi celah CSS injection kalau tidak dibatasi format hex
+-- ketat.
+ALTER TABLE links ADD COLUMN icon_color VARCHAR(7) NOT NULL DEFAULT '';

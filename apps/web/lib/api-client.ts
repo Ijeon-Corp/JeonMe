@@ -136,6 +136,12 @@ export interface PublicLink {
   // PagePreview.tsx): custom_icon_url > icon_key > deteksi otomatis dari
   // URL > ikon generik.
   icon_key: string;
+  // icon_color -- permintaan langsung pengguna, 22 Agustus 2026: "bisa
+  // mengubah warna yang kita inginkan untuk icon di blok daripada hanya
+  // warna hitam saja" -- hex warna ("#rrggbb"), kosong = ikut warna tema
+  // seperti sebelumnya. Cuma berlaku untuk icon_key/deteksi otomatis --
+  // custom_icon_url (gambar unggahan) tidak bisa diberi warna ulang.
+  icon_color: string;
   // is_featured/thumbnail_url -- Modul "Featured Link" (permintaan langsung
   // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
   // is_featured true DAN thumbnail_url terisi, tautan dirender sebagai
@@ -900,6 +906,9 @@ export interface LinkItem {
   // dari galeri siap-pakai (lib/icon-library.ts), lihat catatan lengkap di
   // PublicLink.icon_key.
   icon_key: string;
+  // icon_color -- permintaan langsung pengguna, 22 Agustus 2026: warna
+  // kustom ikon (hex "#rrggbb"), lihat catatan lengkap di PublicLink.
+  icon_color: string;
   // is_featured/thumbnail_url -- Modul "Featured Link", lihat catatan
   // lengkap di PublicLink.
   is_featured: boolean;
@@ -943,6 +952,7 @@ export function updateLink(
     block_data: Record<string, unknown>;
     is_featured: boolean;
     icon_key: string;
+    icon_color: string;
   }>
 ) {
   return apiFetch<{ message: string }>(

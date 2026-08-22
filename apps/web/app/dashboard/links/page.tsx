@@ -48,6 +48,7 @@ import {
   IconMail,
   IconMapPin,
   IconMusicNote,
+  IconPaintbrush,
   IconPencil,
   IconPhotoLibrary,
   IconPlayCircle,
@@ -613,6 +614,34 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
+    }
+  }
+
+  // handleIconColorChange/handleClearIconColor -- permintaan langsung
+  // pengguna, 22 Agustus 2026: "bisa mengubah warna yang kita inginkan
+  // untuk icon di blok daripada hanya warna hitam saja". TERPISAH dari
+  // handleRemoveIcon di atas -- warna ini aditif (berlaku BARENGAN dengan
+  // ikon galeri ATAU deteksi otomatis, bukan gantinya), jadi butuh
+  // mekanisme hapus sendiri, tidak ikut tercampur dgn "Hapus ikon".
+  async function handleIconColorChange(link: LinkItem, color: string) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_color: color } : l)));
+    try {
+      await updateLink(link.id, { icon_color: color });
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal mengubah warna ikon.");
+    }
+  }
+
+  async function handleClearIconColor(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_color: "" } : l)));
+    try {
+      await updateLink(link.id, { icon_color: "" });
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal mengatur ulang warna ikon.");
     }
   }
 
@@ -1687,6 +1716,48 @@ export default function DashboardLinksPage() {
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
+                {/* Warna ikon kustom -- permintaan langsung pengguna, 22
+                    Agustus 2026: "bisa mengubah warna yang kita inginkan
+                    untuk icon di blok daripada hanya warna hitam saja".
+                    Disembunyikan kalau pakai ikon kustom hasil unggah
+                    (custom_icon_url, gambar raster) -- warna cuma berlaku
+                    utk ikon SVG (galeri/deteksi otomatis), tidak masuk akal
+                    "mewarnai ulang" foto. <input type="color"> asli
+                    disembunyikan (opacity-0) menutupi swatch bulat supaya
+                    klik di mana pun pada tombol membuka color picker native
+                    browser -- pola sama seperti label unggah file di atas. */}
+                {!link.custom_icon_url && (
+                  <label
+                    title={link.icon_color ? "Ganti warna ikon" : "Pilih warna ikon"}
+                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle"
+                  >
+                    {link.icon_color ? (
+                      <span
+                        className="h-4 w-4 rounded-full ring-1 ring-border"
+                        style={{ backgroundColor: link.icon_color }}
+                        aria-hidden
+                      />
+                    ) : (
+                      <IconPaintbrush className="h-4 w-4 text-muted" />
+                    )}
+                    <input
+                      type="color"
+                      value={link.icon_color || "#000000"}
+                      onChange={(e) => handleIconColorChange(link, e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
+                )}
+                {link.icon_color && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearIconColor(link)}
+                    title="Hapus warna ikon (kembali ke warna tema)"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                )}
                 {(link.custom_icon_url || link.icon_key) && (
                   <button
                     type="button"

@@ -61,6 +61,9 @@ export interface PagePreviewLink {
   // dari galeri siap-pakai (lib/icon-library.ts). Prioritas render:
   // customIconUrl > iconKey > deteksi otomatis dari URL > ikon generik.
   iconKey?: string;
+  // iconColor -- permintaan langsung pengguna, 22 Agustus 2026: warna
+  // kustom ikon (hex), lihat catatan lengkap di resolveBlockIcon di bawah.
+  iconColor?: string;
   // isFeatured/thumbnailUrl -- Modul "Featured Link" (permintaan langsung
   // pengguna, referensi "Featured Layout" Linktree sungguhan): kalau
   // isFeatured true DAN thumbnailUrl terisi, tautan dirender sebagai kartu
@@ -375,6 +378,7 @@ interface PreviewSourceLink {
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
+  icon_color?: string;
   is_featured?: boolean;
   thumbnail_url?: string;
 }
@@ -455,6 +459,7 @@ export function toPreviewData(
         blockData: l.block_data,
         customIconUrl: l.custom_icon_url || undefined,
         iconKey: l.icon_key || undefined,
+        iconColor: l.icon_color || undefined,
         isFeatured: l.is_featured,
         thumbnailUrl: l.thumbnail_url || undefined,
       })),
@@ -1521,6 +1526,34 @@ function renderBioHeader(
 // PERSIS dengan tautan biasa (customIconUrl > iconKey galeri > ikon default),
 // dipakai utk blok video/faq/accordion/maps/contact_form yang sebelumnya
 // TIDAK punya slot ikon sama sekali di halaman publik.
+//
+// ColoredIcon -- permintaan langsung pengguna, 22 Agustus 2026: "bisa
+// mengubah warna yang kita inginkan untuk icon di blok daripada hanya
+// warna hitam saja". Ikon galeri (lucide-react/Simple Icons) SEMUANYA
+// pakai stroke/fill="currentColor" (mewarisi CSS `color`), TAPI
+// sebelumnya tidak ada satu pun elemen pembungkus warna eksplisit di
+// sini -- jadi cuma ikut warna apa pun yang kebetulan cascade dari
+// elemen terdekat, kreator tidak punya kendali sama sekali.
+//
+// Dibungkus lewat elemen <span style={{color}}> (BUKAN meneruskan prop
+// `style` langsung ke komponen ikon) -- disengaja: komponen ikon di
+// components/icons.tsx (hand-drawn, ~50 fungsi) TIDAK meneruskan prop
+// selain `className` ke elemen svg-nya masing-masing, jadi meneruskan
+// `style` langsung akan diam-diam tidak berefek untuk sebagian ikon.
+// Membungkus dengan <span> memanfaatkan currentColor yang MEMANG sudah
+// dipakai semua ikon di proyek ini -- bekerja universal tanpa perlu
+// menyentuh definisi setiap komponen ikon satu per satu. TIDAK
+// diterapkan ke customIconUrl (gambar hasil upload, bukan SVG, tidak
+// bisa "diwarnai ulang" lewat CSS color).
+function ColoredIcon({ color, children }: { color?: string; children: React.ReactNode }) {
+  if (!color) return <>{children}</>;
+  return (
+    <span className="contents" style={{ color }}>
+      {children}
+    </span>
+  );
+}
+
 function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentType<{ className?: string }>, sizeClass: string) {
   if (link.customIconUrl) {
     return (
@@ -1530,9 +1563,17 @@ function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentTyp
   }
   const libraryIcon = getLibraryIcon(link.iconKey);
   if (libraryIcon) {
-    return <libraryIcon.Icon className={`${sizeClass} flex-shrink-0`} />;
+    return (
+      <ColoredIcon color={link.iconColor}>
+        <libraryIcon.Icon className={`${sizeClass} flex-shrink-0`} />
+      </ColoredIcon>
+    );
   }
-  return <DefaultIcon className={`${sizeClass} flex-shrink-0`} />;
+  return (
+    <ColoredIcon color={link.iconColor}>
+      <DefaultIcon className={`${sizeClass} flex-shrink-0`} />
+    </ColoredIcon>
+  );
 }
 
 // SENSITIVE_GATEABLE_BLOCK_TYPES -- block_type yang punya render dedicated
@@ -1787,14 +1828,17 @@ function renderLinkOrBlock(
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
+          <span
+            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm"
+            style={link.iconColor ? { color: link.iconColor } : undefined}
+          >
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
-              <libraryIcon.Icon className="h-3.5 w-3.5 text-white" />
+              <libraryIcon.Icon className="h-3.5 w-3.5" />
             ) : (
-              <LinkPlatformIcon className={`h-3.5 w-3.5 ${iconColorClass}`} />
+              <LinkPlatformIcon className={`h-3.5 w-3.5 ${link.iconColor ? "" : iconColorClass}`} />
             )}
           </span>
         </div>
@@ -1859,14 +1903,17 @@ function renderLinkOrBlock(
           href={buildUtmHref(link.url, link.title, data.utmEnabled)}
           className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
         >
-          <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+          <span
+            className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
+            style={link.iconColor ? { color: link.iconColor } : undefined}
+          >
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-6 w-6" />
             ) : (
-              <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
+              <LinkPlatformIcon className={`h-7 w-7 ${link.iconColor ? "" : iconColorClass}`} />
             )}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>
@@ -1885,14 +1932,17 @@ function renderLinkOrBlock(
           rel="noopener noreferrer"
           className={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
         >
-          <span className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center">
+          <span
+            className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
+            style={link.iconColor ? { color: link.iconColor } : undefined}
+          >
             {link.customIconUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-6 w-6" />
             ) : (
-              <LinkPlatformIcon className={`h-7 w-7 ${iconColorClass}`} />
+              <LinkPlatformIcon className={`h-7 w-7 ${link.iconColor ? "" : iconColorClass}`} />
             )}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>

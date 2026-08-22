@@ -110,6 +110,13 @@ type linkItem struct {
 	// (lihat PagePreview.tsx): CustomIconURL > IconKey > deteksi otomatis
 	// dari URL > ikon generik. Kosong berarti belum dipilih.
 	IconKey string `json:"icon_key"`
+	// IconColor -- permintaan langsung pengguna, 22 Agustus 2026: "bisa
+	// mengubah warna yang kita inginkan untuk icon di blok daripada hanya
+	// warna hitam saja" -- hex warna ("#rrggbb"), diterapkan sebagai CSS
+	// inline style di IconKey/ikon deteksi otomatis (BUKAN CustomIconURL,
+	// gambar hasil upload tidak bisa diberi warna ulang). Kosong berarti
+	// ikut warna tema seperti sebelumnya (perilaku lama).
+	IconColor string `json:"icon_color"`
 	// IsFeatured/ThumbnailURL -- Modul "Featured Link" (permintaan langsung
 	// pengguna, referensi "Featured Layout" Linktree sungguhan): tautan
 	// tampil sebagai kartu thumbnail 16:9, bukan baris teks. ThumbnailURL
@@ -133,7 +140,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
-			l.icon_key, l.is_featured, l.thumbnail_url,
+			l.icon_key, l.icon_color, l.is_featured, l.thumbnail_url,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -151,7 +158,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
 			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
-			&it.IconKey, &it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
+			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -607,7 +614,25 @@ type updateLinkRequest struct {
 	// otomatis) -- *string biasa cukup, tidak perlu flag Clear* terpisah
 	// seperti jadwal/kunci karena tidak ada field lain yang saling terkait.
 	IconKey *string `json:"icon_key" binding:"omitempty,max=50"`
+	// IconColor -- permintaan langsung pengguna, 22 Agustus 2026: warna
+	// kustom ikon, pola SAMA seperti IconKey (string kosong eksplisit =
+	// batalkan, kembali ke warna tema). Format hex divalidasi MANUAL di
+	// Update (bukan tag "hexcolor" bawaan validator) -- ditemukan lewat
+	// verifikasi langsung: "omitempty" pada field *string TIDAK menganggap
+	// pointer non-nil ke string kosong sebagai "kosong" (beda dari field
+	// string biasa/non-pointer) -- pointer itu sendiri sudah non-nil,
+	// jadi "hexcolor" tetap dijalankan & menolak "" (dikirim eksplisit
+	// untuk membatalkan), padahal seharusnya lolos. IconKey "kebetulan"
+	// tidak pernah menampakkan bug yang sama karena validatornya (max=50)
+	// tetap lolos untuk string kosong apa pun alasannya.
+	IconColor *string `json:"icon_color" binding:"omitempty,max=7"`
 }
+
+// hexColorPattern -- format PERSIS yang dihasilkan <input type="color">
+// HTML (satu-satunya sumber nilai ini di frontend): selalu "#" + 6 digit
+// hex. Dicek manual (bukan tag validator) di Update, lihat catatan di
+// updateLinkRequest.IconColor kenapa.
+var hexColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 // Update — REQ-F-202 (edit) & REQ-F-203 (nonaktifkan sementara via is_active=false).
 // No.78 (Sprint 9): penjadwalan starts_at/ends_at -- tautan otomatis
@@ -620,6 +645,10 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	var req updateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.IconColor != nil && *req.IconColor != "" && !hexColorPattern.MatchString(*req.IconColor) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "warna ikon wajib format hex #rrggbb"})
 		return
 	}
 
@@ -795,10 +824,11 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			block_data = COALESCE($9, block_data),
 			is_featured = COALESCE($10, is_featured),
 			thumbnail_url = COALESCE($11, thumbnail_url),
-			icon_key = COALESCE($12, icon_key)
-		WHERE id = $13
+			icon_key = COALESCE($12, icon_key),
+			icon_color = COALESCE($13, icon_color)
+		WHERE id = $14
 	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON,
-		req.IsFeatured, autoThumbnail, req.IconKey, linkID)
+		req.IsFeatured, autoThumbnail, req.IconKey, req.IconColor, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
@@ -1758,11 +1788,11 @@ func (h *LinksHandler) Duplicate(c *gin.Context) {
 		INSERT INTO links (
 			id, page_id, title, url, position, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color
 		)
 		SELECT $1, page_id, LEFT(title || ' (Salinan)', 100), url, $2, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color
 		FROM links WHERE id = $3
 	`, newID, nextPosition, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menduplikasi blok"})
