@@ -190,7 +190,12 @@ test.describe("Tautan", () => {
       await expect(page.getByText("Lihat Konten", { exact: true })).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 75000, intervals: [5000] });
     await expect(page.getByText(blockText)).toHaveCount(0);
-    await expect(page.getByText("Konten Sensitif", { exact: true })).toBeVisible();
+    // Teks sungguhan berawalan emoji "⚠️ " (lihat SensitiveContentGate,
+    // PagePreview.tsx) -- exact:true di sini SEBELUMNYA cocokkan "Konten
+    // Sensitif" polos tanpa emoji, tidak pernah match, ditemukan lewat audit
+    // 22 Agustus 2026 (bug di TEST ini, bukan di produk -- gate-nya sendiri
+    // sudah benar, terbukti dari assertion sebelumnya yang lolos).
+    await expect(page.getByText("⚠️ Konten Sensitif", { exact: true })).toBeVisible();
 
     // Klik "Lihat Konten" -- teks asli baru muncul SESUDAHNYA, murni
     // client-side (tanpa reload/navigasi).

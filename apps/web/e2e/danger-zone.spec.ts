@@ -5,13 +5,9 @@ test.describe("Pengaturan: Zona Berbahaya", () => {
   test("nonaktifkan akun menyembunyikan halaman publik, aktifkan kembali memunculkannya lagi", async ({ page }) => {
     const { username } = await registerAndLogin(page, "deactivate");
 
-    await page.goto("/dashboard/design");
-    const toggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });
-    if ((await toggle.getAttribute("aria-checked")) !== "true") {
-      await toggle.click();
-      await expect(toggle).toHaveAttribute("aria-checked", "true");
-    }
-
+    // Toggle "Terbitkan halaman publik" DIHAPUS 20 Agustus 2026 -- halaman
+    // sekarang otomatis aktif sejak akun dibuat (lihat commit auto-publish),
+    // jadi tidak perlu lagi diaktifkan manual di sini seperti sebelumnya.
     const publishedResponse = await page.goto(`/${username}`);
     expect(publishedResponse?.status()).toBe(200);
 
@@ -41,13 +37,9 @@ test.describe("Pengaturan: Zona Berbahaya", () => {
   test("ajukan penghapusan akun lalu batalkan sebelum jatuh tempo", async ({ page }) => {
     const { username } = await registerAndLogin(page, "reqdelete");
 
-    await page.goto("/dashboard/design");
-    const toggle = page.getByRole("switch", { name: "Terbitkan halaman publik" });
-    if ((await toggle.getAttribute("aria-checked")) !== "true") {
-      await toggle.click();
-      await expect(toggle).toHaveAttribute("aria-checked", "true");
-    }
-
+    // Toggle "Terbitkan halaman publik" DIHAPUS 20 Agustus 2026 -- halaman
+    // sekarang otomatis aktif sejak akun dibuat (lihat commit auto-publish),
+    // jadi tidak perlu lagi diaktifkan manual di sini seperti sebelumnya.
     await page.goto("/dashboard/settings/danger-zone");
 
     const wrongUsernameForm = page.locator("form", { has: page.getByPlaceholder("Ketik username-mu untuk konfirmasi") });

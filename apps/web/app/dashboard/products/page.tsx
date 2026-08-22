@@ -327,6 +327,16 @@ export default function DashboardProductsPage() {
       // pengganti file.
       await uploadProductCover(id, coverFile);
       setProducts(await listProducts());
+      // Refetch Halaman Toko HANYA kalau sebelumnya belum ada (tokoPage
+      // masih null) -- bug ditemukan lewat audit 22 Agustus 2026: Toko
+      // otomatis dibuat backend begitu produk PERTAMA ada (ensureProdukPage),
+      // tapi loadTokoData() di sini cuma jalan SEKALI saat mount (useEffect
+      // dependency [applyTokoResult] stabil), jadi tab "Halaman Toko" tetap
+      // menampilkan "belum aktif" walau Toko-nya SUDAH ada di database
+      // sampai kreator me-reload manual. Kondisional (bukan refetch tiap
+      // create) supaya tidak ada permintaan API sia-sia begitu Toko memang
+      // sudah ada dari sebelumnya.
+      if (!tokoPage) applyTokoResult(await loadTokoData());
       setName("");
       setPriceIDR("");
       setCategory("");
@@ -375,6 +385,8 @@ export default function DashboardProductsPage() {
       await uploadProductCover(id, coverFile);
       await updateProduct(id, { is_active: true });
       setProducts(await listProducts());
+      // Lihat catatan lengkap di handleCreate (produk Digital) di atas.
+      if (!tokoPage) applyTokoResult(await loadTokoData());
       setName("");
       setPriceIDR("");
       setCategory("");
@@ -434,6 +446,8 @@ export default function DashboardProductsPage() {
       await uploadProductCover(id, coverFile);
       await updateProduct(id, { is_active: true });
       setProducts(await listProducts());
+      // Lihat catatan lengkap di handleCreate (produk Digital) di atas.
+      if (!tokoPage) applyTokoResult(await loadTokoData());
       setName("");
       setPriceIDR("");
       setCategory("");

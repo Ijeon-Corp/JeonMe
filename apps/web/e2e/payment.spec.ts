@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./fixtures";
+import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
 
 test.describe("Pengaturan: Pembayaran & Penarikan", () => {
   test("tambah metode pembayaran, verifikasi, jadikan utama, lalu muncul di form penarikan", async ({ page }) => {
@@ -128,6 +128,13 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
       await page.getByRole("button", { name: "Digital Product" }).click();
       await page.getByPlaceholder("Nama produk").fill("Produk Split E2E");
       await page.getByPlaceholder("Harga (IDR)").fill("100000");
+      // Sampul WAJIB sejak 19 Agustus 2026 -- test ini luput diperbarui
+      // saat perubahan itu dibuat (ditemukan lewat audit 22 Agustus 2026),
+      // pola sama seperti products-checkout.spec.ts.
+      await page
+        .locator("form", { has: page.getByPlaceholder("Nama produk") })
+        .locator('input[type="file"]')
+        .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
       await page.getByRole("button", { name: "Buat" }).click();
       await expect(page.getByText("Produk Split E2E")).toBeVisible();
 

@@ -36,7 +36,12 @@ test.describe("Onboarding: Checklist Progresif", () => {
 
     await page.reload();
     await expect(page.getByText("Lengkapi setup akunmu -- 1/3 selesai")).toBeVisible({ timeout: 10000 });
-    await page.getByRole("button", { name: "Lihat semua" }).click();
+    // exact:true -- ditemukan lewat audit 22 Agustus 2026: tanpa ini,
+    // locator juga cocok dengan tombol GALERI IKON "Lihat semua pilihan"
+    // (title attribute, dashboard/links/page.tsx) yang SAMA-SAMA ada di
+    // halaman ini -- strict mode violation (2 elemen cocok), bukan bug
+    // fitur, murni selector kurang spesifik.
+    await page.getByRole("button", { name: "Lihat semua", exact: true }).click();
     // Item yang sudah selesai dicoret & tidak lagi berupa link actionable.
     // .first() -- halaman /dashboard/links MASIH terbuka (baru direload,
     // bukan navigasi), checklist di banner SELALU dirender lebih dulu di

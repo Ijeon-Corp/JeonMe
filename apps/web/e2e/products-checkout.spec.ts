@@ -78,6 +78,14 @@ test.describe("Toko & Checkout", () => {
     await page.goto(`/${username}`);
     await expect(page.getByText(productName)).toHaveCount(0);
 
+    // Balik ke halaman Toko -- bug ditemukan lewat audit 22 Agustus 2026:
+    // pengecekan Bio di atas (ditambah commit 5ccbe39, 19 Agustus 2026)
+    // meninggalkan halaman di `/${username}` (Bio) TANPA navigasi balik ke
+    // Toko sebelum mengklik "Beli" di bawah -- tombolnya memang tidak
+    // pernah ada di Bio (baru saja dibuktikan barisnya sendiri), jadi klik
+    // itu selalu timeout menunggu elemen yang tidak akan pernah muncul.
+    await page.goto(`/p/${username}`);
+
     // Alur beli: buka form, isi email pembeli, submit -- ini SUNGGUHAN
     // memanggil Midtrans (server-to-server dari API Go) untuk membuat
     // transaksi Snap, jadi invoice_url yang didapat itu nyata. BuyProductButton

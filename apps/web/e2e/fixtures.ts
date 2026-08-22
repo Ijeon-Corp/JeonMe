@@ -102,11 +102,27 @@ export async function registerAndLogin(page: Page, usernamePrefix: string): Prom
   resetLocalAuthRateLimit();
 
   for (let attempt = 0; attempt < 6; attempt++) {
-    const username = uniqueUsername(usernamePrefix);
-    const email = `${username}@example.com`;
+    const rawUsername = uniqueUsername(usernamePrefix);
 
     await page.goto("/register");
-    await page.locator('input[placeholder="username-kamu"]').fill(username);
+    const usernameField = page.locator('input[placeholder="username-kamu"]');
+    await usernameField.fill(rawUsername);
+    // Audit keamanan/performa 22 Agustus 2026: baca NILAI SUNGGUHAN dari
+    // input, bukan `rawUsername` mentah -- input punya maxLength={30}
+    // (register/page.tsx), jadi .fill() dengan prefix yang cukup panjang
+    // (mis. "quicksetup11" -> "e2equicksetup11<13 digit timestamp><1-3
+    // digit acak>" bisa tembus 31 karakter) DIAM-DIAM terpotong oleh
+    // browser jadi <=30 karakter -- itulah yang benar-benar terkirim ke
+    // POST /auth/register (backend menolak >30 karakter, "username terlalu
+    // panjang"). Versi lama fungsi ini me-return `rawUsername` yang TIDAK
+    // pernah terpotong, jadi pemanggil yang lantas page.goto(`/${username}`)
+    // mendapat 404 -- akun sungguhan terdaftar dengan username LEBIH
+    // PENDEK. Ditemukan lewat kegagalan e2e/quick-setup.spec.ts varian
+    // Split/Ticket/Portrait (prefix "quicksetup11/12/13", 12 karakter,
+    // 31 karakter total kalau bagian acaknya 3 digit -- ~90% kemungkinan).
+    const username = (await usernameField.inputValue()).trim();
+    const email = `${username}@example.com`;
+
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
     await page.locator('input[type="checkbox"]').check();
