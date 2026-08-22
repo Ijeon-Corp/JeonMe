@@ -37,7 +37,7 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
-        <Features />
+        <Features compact />
         <ProductShowcase />
         <Monetization />
         <Templates />

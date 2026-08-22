@@ -2,28 +2,73 @@
 
 import { useState } from "react";
 
-const categories = [
-  { key: "all", label: "Semua" },
-  { key: "minimal", label: "Minimal" },
-  { key: "dark", label: "Gelap" },
-  { key: "creator", label: "Kreator" },
-  { key: "business", label: "Bisnis" },
-  { key: "portfolio", label: "Portofolio" },
-  { key: "education", label: "Edukasi" },
+// Templates -- permintaan langsung pengguna, 23 Agustus 2026: "gunakan
+// template yang sudah ada untuk ditampilkan terutama tampilkan template
+// yang menggunakan bg gambar dan live wallpaper". SEBELUMNYA 6 kartu di
+// sini murni dekoratif (gradien CSS acak, tidak berkaitan dengan template
+// sungguhan mana pun) -- diganti kurasi 6 template ASLI dari
+// lib/quick-setup-templates.ts (71 template) yang temanya termasuk
+// WALLPAPER_THEME_NAMES (foto asli, lib/page-themes.ts) atau
+// VIDEO_THEME_NAMES ("live wallpaper", video .mp4 sungguhan) -- bukan
+// tema gradien/warna solid biasa, supaya section ini jadi pratinjau
+// SUNGGUHAN dari apa yang kreator dapat, bukan mockup buatan tangan.
+const templates = [
+  {
+    key: "gamer",
+    title: "Gamer",
+    tag: "Live Wallpaper" as const,
+    kind: "video" as const,
+    src: "/videos/neon.mp4",
+    poster: "/videos/neon-poster.jpg",
+  },
+  {
+    key: "dj",
+    title: "DJ",
+    tag: "Live Wallpaper" as const,
+    kind: "video" as const,
+    src: "/videos/citynight.mp4",
+    poster: "/videos/citynight-poster.jpg",
+  },
+  {
+    key: "musician",
+    title: "Musisi",
+    tag: "Live Wallpaper" as const,
+    kind: "video" as const,
+    src: "/videos/fireplace.mp4",
+    poster: "/videos/fireplace-poster.jpg",
+  },
+  {
+    key: "travel-agency",
+    title: "Agen Wisata",
+    tag: "Wallpaper" as const,
+    kind: "image" as const,
+    src: "/wallpapers/beach.jpg",
+  },
+  {
+    key: "restaurant",
+    title: "Restoran",
+    tag: "Wallpaper" as const,
+    kind: "image" as const,
+    src: "/wallpapers/kilau.jpg",
+  },
+  {
+    key: "photographer",
+    title: "Fotografer",
+    tag: "Wallpaper" as const,
+    kind: "image" as const,
+    src: "/wallpapers/stars.jpg",
+  },
 ];
 
-const templates = [
-  { cat: "minimal", title: "Pure Minimal", label: "Minimal", bg: "from-slate-50 to-slate-100", accent: "bg-ink", dark: false },
-  { cat: "dark", title: "Midnight Mode", label: "Gelap", bg: "from-slate-900 to-ink", accent: "", dark: true, gradient: "linear-gradient(135deg,#1F7A6C,#1B4D3E)" },
-  { cat: "creator", title: "Creator Spotlight", label: "Kreator", bg: "from-teal-100 to-emerald-100", accent: "", dark: false, gradient: "linear-gradient(135deg,#1B4D3E,#1F7A6C)" },
-  { cat: "business", title: "Corporate Edge", label: "Bisnis", bg: "from-teal-50 to-cyan-100", accent: "", dark: false, gradient: "linear-gradient(135deg,#1F7A6C,#1B4D3E)" },
-  { cat: "portfolio", title: "Visual Folio", label: "Portofolio", bg: "from-amber-50 to-rose-50", accent: "", dark: false, gradient: "linear-gradient(135deg,#C9A24B,#1F7A6C)" },
-  { cat: "education", title: "Learn Hub", label: "Edukasi", bg: "from-emerald-50 to-teal-100", accent: "", dark: false, gradient: "linear-gradient(135deg,#1B4D3E,#C9A24B)" },
-];
+const filters = [
+  { key: "all", label: "Semua" },
+  { key: "Wallpaper", label: "Wallpaper" },
+  { key: "Live Wallpaper", label: "Live Wallpaper" },
+] as const;
 
 export default function Templates() {
-  const [active, setActive] = useState("all");
-  const visible = templates.filter((t) => active === "all" || t.cat === active);
+  const [active, setActive] = useState<(typeof filters)[number]["key"]>("all");
+  const visible = templates.filter((t) => active === "all" || t.tag === active);
 
   return (
     <section id="templates" className="relative overflow-hidden bg-primary-subtle/40 py-20 md:py-28" aria-label="Template">
@@ -34,21 +79,21 @@ export default function Templates() {
             <br />
             <span className="text-gradient">Template yang Indah</span>
           </h2>
-          <p className="text-lg leading-relaxed text-muted">Pilih kategori, sesuaikan dalam hitungan menit, dan publikasikan halamanmu sendiri.</p>
+          <p className="text-lg leading-relaxed text-muted">Pilih dari puluhan template siap pakai, sesuaikan dalam hitungan menit, dan publikasikan halamanmu sendiri.</p>
         </div>
 
         <div className="reveal mb-10 flex flex-wrap justify-center gap-2">
-          {categories.map((cat) => (
+          {filters.map((f) => (
             <button
-              key={cat.key}
-              onClick={() => setActive(cat.key)}
+              key={f.key}
+              onClick={() => setActive(f.key)}
               className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                active === cat.key
+                active === f.key
                   ? "bg-primary text-white"
                   : "border border-border bg-white text-muted hover:border-primary hover:text-primary"
               }`}
             >
-              {cat.label}
+              {f.label}
             </button>
           ))}
         </div>
@@ -56,26 +101,31 @@ export default function Templates() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((t) => (
             <div
-              key={t.title}
+              key={t.key}
               className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-white shadow-card"
             >
-              <div className={`bg-gradient-to-br p-6 ${t.bg}`} style={{ aspectRatio: "4/3" }}>
-                <div
-                  className="mx-auto mb-3 h-10 w-10 rounded-full"
-                  style={{ background: t.gradient ?? "#1B4D3E" }}
-                />
-                <div className={`mx-auto mb-4 h-3 w-20 rounded ${t.dark ? "bg-white/20" : "bg-ink/20"}`} />
-                <div className="mx-auto max-w-[180px] space-y-2">
-                  <div className={`h-7 rounded-lg ${t.dark ? "bg-white/10" : "bg-white shadow-sm"}`} />
-                  <div className={`h-7 rounded-lg ${t.dark ? "bg-white/10" : "bg-white shadow-sm"}`} />
-                </div>
+              <div className="relative w-full overflow-hidden bg-ink" style={{ aspectRatio: "4/3" }}>
+                {t.kind === "video" ? (
+                  <video
+                    src={t.src}
+                    poster={t.poster}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={t.src} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                )}
               </div>
               <div className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 transition-opacity duration-250 group-hover:opacity-100">
                 <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">Lihat Template</span>
               </div>
               <div className="p-4">
                 <h3 className="font-heading text-sm font-bold text-ink">{t.title}</h3>
-                <p className="mt-0.5 text-xs text-muted">{t.label}</p>
+                <p className="mt-0.5 text-xs text-muted">{t.tag}</p>
               </div>
             </div>
           ))}

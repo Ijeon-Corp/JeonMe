@@ -1,8 +1,8 @@
+// Dipersempit jadi 3 item -- permintaan langsung pengguna, 23 Agustus 2026:
+// "hanya tampilkan ini saja di sebelah kiri nya Jual Produk Digital,
+// Membership, Affiliator".
 const items = [
   { label: "Jual Produk Digital", color: "primary", icon: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /> },
-  { label: "Jual Kelas Online", color: "accent", icon: <path d="M22 10v6M2 10l10-5 10 5-10 5z M6 12v5c3 3 9 3 12 0v-5" /> },
-  { label: "Konsultasi Berbayar", color: "secondary", icon: <path d="M3 4h18c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /> },
-  { label: "Donasi", color: "rose", icon: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /> },
   { label: "Membership", color: "primary", icon: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" /> },
   { label: "Affiliator", color: "accent", icon: <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z M2 12h20" /> },
 ];
@@ -11,7 +11,6 @@ const colorMap: Record<string, { bg: string; icon: string }> = {
   primary: { bg: "bg-primary-subtle", icon: "#1B4D3E" },
   accent: { bg: "bg-accent-subtle", icon: "#C9A24B" },
   secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C" },
-  rose: { bg: "bg-rose-50", icon: "#E11D48" },
 };
 
 export default function Monetization() {
@@ -50,82 +49,17 @@ export default function Monetization() {
           </div>
 
           <div className="reveal flex justify-center lg:justify-end" style={{ transitionDelay: "0.15s" }}>
-            <div className="relative w-full max-w-sm">
-              <div className="shadow-hero overflow-hidden rounded-2xl border border-border bg-white">
-                <div className="gradient-cta relative p-6 text-center">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/80">Total Pendapatan Bulan Ini</p>
-                  <p className="font-heading text-3xl font-extrabold text-white">Rp142,4jt</p>
-                  <p className="mt-1 flex items-center justify-center gap-1 text-xs text-white/70">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><polyline points="18 15 12 9 6 15" /></svg>
-                    +41% dari bulan lalu
-                  </p>
-                </div>
-                <div className="p-5">
-                  <div className="mb-4 grid grid-cols-3 gap-2">
-                    <div className="rounded-xl border border-primary/10 bg-primary-subtle p-3">
-                      <p className="mb-1 text-[10px] text-muted">Produk</p>
-                      <p className="font-heading text-lg font-extrabold leading-none text-primary">24</p>
-                    </div>
-                    <div className="rounded-xl border border-accent/10 bg-accent-subtle p-3">
-                      <p className="mb-1 text-[10px] text-muted">Kelas</p>
-                      <p className="font-heading text-lg font-extrabold leading-none text-accent">6</p>
-                    </div>
-                    <div className="rounded-xl border border-secondary/10 bg-secondary-subtle p-3">
-                      <p className="mb-1 text-[10px] text-muted">Booking</p>
-                      <p className="font-heading text-lg font-extrabold leading-none text-secondary-dark">38</p>
-                    </div>
-                  </div>
-                  <div className="mb-3 rounded-xl border border-border bg-white p-3 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[10px] font-semibold text-ink">Pendapatan — 6 Bulan</p>
-                      <span className="flex items-center gap-0.5 rounded bg-green-50 px-1.5 py-0.5 text-[9px] font-semibold text-green-600">
-                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><polyline points="18 15 12 9 6 15" /></svg>41%
-                      </span>
-                    </div>
-                    <div className="flex h-12 items-end gap-1.5">
-                      <div className="mock-bar flex-1 rounded-sm bg-emerald-100" style={{ height: "35%" }} />
-                      <div className="mock-bar flex-1 rounded-sm bg-emerald-200" style={{ height: "55%", animationDelay: "0.2s" }} />
-                      <div className="mock-bar flex-1 rounded-sm bg-teal-300" style={{ height: "48%", animationDelay: "0.4s" }} />
-                      <div className="mock-bar flex-1 rounded-sm bg-primary" style={{ height: "75%", animationDelay: "0.6s" }} />
-                      <div className="mock-bar flex-1 rounded-sm bg-accent" style={{ height: "65%", animationDelay: "0.8s" }} />
-                      <div className="mock-bar flex-1 rounded-sm bg-secondary" style={{ height: "95%", animationDelay: "1s" }} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 shadow-sm">
-                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-primary-subtle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1B4D3E" strokeWidth="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[10px] font-semibold text-ink">Ebook &quot;Design Systems&quot;</p>
-                        <p className="text-[9px] text-muted">312 terjual</p>
-                      </div>
-                      <span className="flex-shrink-0 rounded bg-green-50 px-1.5 py-0.5 text-[9px] font-semibold text-green-600">Laris</span>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 shadow-sm">
-                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-accent-subtle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9A24B" strokeWidth="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z M6 12v5c3 3 9 3 12 0v-5" /></svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[10px] font-semibold text-ink">Cohort Mentoring UX</p>
-                        <p className="text-[9px] text-muted">86 terdaftar</p>
-                      </div>
-                      <span className="flex-shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-accent-dark">Kelas</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="glass absolute -right-4 -top-4 rounded-xl px-3 py-2.5 shadow-card">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-100">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted">Pencairan hari ini</p>
-                    <p className="font-heading text-xs font-extrabold text-green-600">+Rp9,3jt</p>
-                  </div>
-                </div>
-              </div>
+            {/* Mockup dashboard pendapatan -- permintaan langsung pengguna,
+                23 Agustus 2026: "ganti gambar disampingnya dengan gambar
+                monetization.png". SEBELUMNYA dashboard pendapatan dibangun
+                manual dari puluhan div/SVG (lihat riwayat git kalau perlu
+                versi lama itu) -- diganti satu file gambar
+                (public/homepage/monetization.png), pola yang SAMA seperti
+                penggantian mockup Hero.tsx (hero.png, lihat catatan sama di
+                sana). */}
+            <div className="w-full max-w-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/homepage/monetization.png" alt="Dashboard pendapatan & monetisasi Jeon.id" className="w-full rounded-2xl object-contain shadow-hero" />
             </div>
           </div>
         </div>

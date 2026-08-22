@@ -94,11 +94,21 @@ const colorMap: Record<string, { bg: string; icon: string; hoverBg: string }> = 
   secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C", hoverBg: "group-hover:bg-secondary" },
 };
 
+// compact -- permintaan langsung pengguna, 23 Agustus 2026: "Di section
+// features hanya tampilkan ini saja" (Tautan Tanpa Batas/Tema yang
+// Indah/Produk Digital/Multi-Halaman & Toko) -- KHUSUS homepage, supaya
+// section itu ringkas 1 baris 4 kartu. app/features/page.tsx (halaman
+// SEO berdiri sendiri, metadata-nya menjanjikan daftar fitur LENGKAP)
+// TETAP menampilkan semua item -- compact default false di sana.
+const COMPACT_TITLES = ["Tautan Tanpa Batas", "Tema yang Indah", "Produk Digital", "Multi-Halaman & Toko"];
+
 // showHeading -- default true (homepage). false dipakai HANYA oleh
 // app/features/page.tsx, yang sudah punya <h1> + intro sendiri di
 // atasnya -- lihat komentar sama di Pricing.tsx soal kenapa (menghindari
 // judul yang sama tampil dua kali berurutan).
-export default function Features({ showHeading = true }: { showHeading?: boolean }) {
+export default function Features({ showHeading = true, compact = false }: { showHeading?: boolean; compact?: boolean }) {
+  const visibleFeatures = compact ? features.filter((f) => COMPACT_TITLES.includes(f.title)) : features;
+
   return (
     <section id="features" className="relative overflow-hidden bg-white py-20 md:py-28" aria-label="Fitur">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -116,7 +126,7 @@ export default function Features({ showHeading = true }: { showHeading?: boolean
         )}
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f, i) => {
+          {visibleFeatures.map((f, i) => {
             const c = colorMap[f.color];
             return (
               <div
