@@ -165,5 +165,5 @@ func (c *Client) Classify(ctx context.Context, rawURL, title string) (Verdict, e
 		return Verdict{}, fmt.Errorf("moderation: gagal parse hasil klasifikasi: %w", err)
 	}
 
-	return Verdict{Blocked: result.Blocked, Category: result.Category, Reason: result.Reason}, nil
+	return Verdict(result), nil
 }
