@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -501,4 +502,229 @@ func (h *AdminHandler) GetSummary(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+// ----------------------------------------------------------------------
+// Moderasi tautan sensitif -- permintaan langsung pengguna, 22 Agustus
+// 2026: "sistem bisa memblokir jika memasukkan link yang sensitif contoh
+// nya link judol link 18+ dll". Panel admin untuk mengelola dua tabel yang
+// dipakai handlers.LinkModerationChecker (moderation.go) -- lihat catatan
+// lengkap arsitektur di sana. Endpoint di bawah HANYA mengelola data,
+// keputusan blokir sungguhan terjadi di LinksHandler/ProductHandler saat
+// kreator menyimpan tautan.
+// ----------------------------------------------------------------------
+
+type blockedKeywordItem struct {
+	ID        string    `json:"id"`
+	Keyword   string    `json:"keyword"`
+	Category  string    `json:"category"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ListBlockedKeywords — daftar kata kunci yang dicek terhadap URL+judul
+// tautan baru dari domain yang belum pernah dilihat.
+func (h *AdminHandler) ListBlockedKeywords(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `SELECT id, keyword, category, created_at FROM blocked_keywords ORDER BY created_at DESC`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kata kunci"})
+		return
+	}
+	defer rows.Close()
+
+	items := []blockedKeywordItem{}
+	for rows.Next() {
+		var it blockedKeywordItem
+		if err := rows.Scan(&it.ID, &it.Keyword, &it.Category, &it.CreatedAt); err == nil {
+			items = append(items, it)
+		}
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+type createBlockedKeywordRequest struct {
+	Keyword  string `json:"keyword" binding:"required,max=100"`
+	Category string `json:"category" binding:"omitempty,oneof=judi_online konten_dewasa lainnya"`
+}
+
+// CreateBlockedKeyword — tambah satu kata kunci baru ke blocklist.
+func (h *AdminHandler) CreateBlockedKeyword(c *gin.Context) {
+	adminID := c.GetString("userID")
+
+	var req createBlockedKeywordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Category == "" {
+		req.Category = "lainnya"
+	}
+	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
+	if keyword == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kata kunci tidak boleh kosong"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	id := uuid.NewString()
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO blocked_keywords (id, keyword, category, created_at) VALUES ($1, $2, $3, now())
+	`, id, keyword, req.Category); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menambah kata kunci (mungkin sudah ada)"})
+		return
+	}
+	_ = audit.Log(ctx, h.DB, adminID, "blocked_keyword.created", "blocked_keyword", id, nil)
+
+	c.JSON(http.StatusCreated, gin.H{"id": id, "keyword": keyword, "category": req.Category})
+}
+
+// DeleteBlockedKeyword — hapus satu kata kunci dari blocklist.
+func (h *AdminHandler) DeleteBlockedKeyword(c *gin.Context) {
+	id := c.Param("id")
+	adminID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `DELETE FROM blocked_keywords WHERE id = $1`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus kata kunci"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "kata kunci tidak ditemukan"})
+		return
+	}
+	_ = audit.Log(ctx, h.DB, adminID, "blocked_keyword.deleted", "blocked_keyword", id, nil)
+
+	c.JSON(http.StatusOK, gin.H{"message": "kata kunci dihapus"})
+}
+
+type domainVerdictItem struct {
+	ID        string    `json:"id"`
+	Domain    string    `json:"domain"`
+	Verdict   string    `json:"verdict"`
+	Category  string    `json:"category"`
+	Source    string    `json:"source"`
+	Reason    string    `json:"reason"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ListDomainVerdicts — cache reputasi per-domain (hasil kurasi admin
+// manual MAUPUN klasifikasi AI otomatis). ?verdict=blocked|allowed
+// (opsional) untuk memfilter, mis. meninjau semua domain yang pernah
+// diblokir AI untuk kemungkinan false-positive.
+func (h *AdminHandler) ListDomainVerdicts(c *gin.Context) {
+	verdictFilter := c.Query("verdict")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	query := `SELECT id, domain, verdict, COALESCE(category, ''), source, COALESCE(reason, ''), created_at, updated_at FROM link_domain_verdicts`
+	args := []any{}
+	if verdictFilter == "blocked" || verdictFilter == "allowed" {
+		query += ` WHERE verdict = $1`
+		args = append(args, verdictFilter)
+	}
+	query += ` ORDER BY updated_at DESC LIMIT 200`
+
+	rows, err := h.DB.Query(ctx, query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat reputasi domain"})
+		return
+	}
+	defer rows.Close()
+
+	items := []domainVerdictItem{}
+	for rows.Next() {
+		var it domainVerdictItem
+		if err := rows.Scan(&it.ID, &it.Domain, &it.Verdict, &it.Category, &it.Source, &it.Reason, &it.CreatedAt, &it.UpdatedAt); err == nil {
+			items = append(items, it)
+		}
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+type upsertDomainVerdictRequest struct {
+	Domain   string `json:"domain" binding:"required,max=255"`
+	Verdict  string `json:"verdict" binding:"required,oneof=allowed blocked"`
+	Category string `json:"category" binding:"omitempty,oneof=judi_online konten_dewasa lainnya"`
+	Reason   string `json:"reason" binding:"omitempty,max=500"`
+}
+
+// UpsertDomainVerdict — override manual admin: langsung memblokir/
+// mengizinkan satu domain (mis. domain baru yang jelas judol tapi belum
+// sempat dicoba kreator mana pun, ATAU membatalkan false-positive AI/kata
+// kunci). source selalu "manual" supaya beda dari cache otomatis di
+// tampilan admin.
+func (h *AdminHandler) UpsertDomainVerdict(c *gin.Context) {
+	adminID := c.GetString("userID")
+
+	var req upsertDomainVerdictRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Verdict == "blocked" && req.Category == "" {
+		req.Category = "lainnya"
+	}
+	domain := normalizeModerationDomain(strings.TrimSpace(req.Domain))
+	if domain == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "domain tidak boleh kosong"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var categoryVal any
+	if req.Category != "" {
+		categoryVal = req.Category
+	}
+	var reasonVal any
+	if req.Reason != "" {
+		reasonVal = req.Reason
+	}
+
+	id := uuid.NewString()
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO link_domain_verdicts (id, domain, verdict, category, source, reason, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, 'manual', $5, now(), now())
+		ON CONFLICT (domain) DO UPDATE SET verdict = $3, category = $4, source = 'manual', reason = $5, updated_at = now()
+	`, id, domain, req.Verdict, categoryVal, reasonVal); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan reputasi domain"})
+		return
+	}
+	_ = audit.Log(ctx, h.DB, adminID, "domain_verdict."+req.Verdict, "link_domain_verdict", domain, nil)
+
+	c.JSON(http.StatusOK, gin.H{"domain": domain, "verdict": req.Verdict})
+}
+
+// DeleteDomainVerdict — hapus entri reputasi (mis. override manual yang
+// sudah tidak relevan) supaya domain itu dievaluasi ulang dari awal
+// (kata kunci lalu AI) di percobaan berikutnya.
+func (h *AdminHandler) DeleteDomainVerdict(c *gin.Context) {
+	id := c.Param("id")
+	adminID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `DELETE FROM link_domain_verdicts WHERE id = $1`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus reputasi domain"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "entri tidak ditemukan"})
+		return
+	}
+	_ = audit.Log(ctx, h.DB, adminID, "domain_verdict.deleted", "link_domain_verdict", id, nil)
+
+	c.JSON(http.StatusOK, gin.H{"message": "entri dihapus"})
 }

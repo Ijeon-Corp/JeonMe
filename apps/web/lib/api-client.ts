@@ -3201,6 +3201,70 @@ export function updatePayoutStatus(id: string, status: "processing" | "completed
   );
 }
 
+// ---------- Admin: moderasi tautan sensitif (permintaan langsung
+// pengguna, 22 Agustus 2026: "sistem bisa memblokir jika memasukkan link
+// yang sensitif contoh nya link judol link 18+ dll") ----------
+
+export type ModerationCategory = "judi_online" | "konten_dewasa" | "lainnya";
+
+export interface BlockedKeyword {
+  id: string;
+  keyword: string;
+  category: ModerationCategory;
+  created_at: string;
+}
+
+export function listBlockedKeywords() {
+  return apiFetch<BlockedKeyword[]>("/admin/moderation/keywords", { method: "GET" }, { auth: true });
+}
+
+export function createBlockedKeyword(keyword: string, category: ModerationCategory) {
+  return apiFetch<BlockedKeyword>(
+    "/admin/moderation/keywords",
+    { method: "POST", body: JSON.stringify({ keyword, category }) },
+    { auth: true }
+  );
+}
+
+export function deleteBlockedKeyword(id: string) {
+  return apiFetch<{ message: string }>(`/admin/moderation/keywords/${id}`, { method: "DELETE" }, { auth: true });
+}
+
+export interface DomainVerdict {
+  id: string;
+  domain: string;
+  verdict: "allowed" | "blocked";
+  category: ModerationCategory | "";
+  source: "manual" | "keyword" | "ai";
+  reason: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// verdictFilter opsional ("blocked"/"allowed") -- default backend
+// mengembalikan keduanya, diurutkan yang terbaru diputuskan dulu.
+export function listDomainVerdicts(verdictFilter?: "blocked" | "allowed") {
+  const qs = verdictFilter ? `?verdict=${verdictFilter}` : "";
+  return apiFetch<DomainVerdict[]>(`/admin/moderation/domains${qs}`, { method: "GET" }, { auth: true });
+}
+
+// Override manual admin -- langsung memblokir/mengizinkan satu domain
+// (mis. domain judol baru yang belum sempat dicoba kreator mana pun, ATAU
+// membatalkan false-positive AI/kata kunci).
+export function upsertDomainVerdict(domain: string, verdict: "allowed" | "blocked", category?: ModerationCategory, reason?: string) {
+  return apiFetch<{ domain: string; verdict: string }>(
+    "/admin/moderation/domains",
+    { method: "POST", body: JSON.stringify({ domain, verdict, category, reason }) },
+    { auth: true }
+  );
+}
+
+// Hapus entri reputasi (mis. override manual yang sudah tidak relevan)
+// supaya domain itu dievaluasi ulang dari awal di percobaan berikutnya.
+export function deleteDomainVerdict(id: string) {
+  return apiFetch<{ message: string }>(`/admin/moderation/domains/${id}`, { method: "DELETE" }, { auth: true });
+}
+
 // ---------- Admin: review KYC (Sprint 10, No.84) ----------
 
 export interface AdminKycItem {

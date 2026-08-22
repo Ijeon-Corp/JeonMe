@@ -15,6 +15,7 @@ import (
 	"github.com/jeonme/api/internal/instagramoauth"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/midtrans"
+	"github.com/jeonme/api/internal/moderation"
 	"github.com/jeonme/api/internal/storage"
 	"github.com/jeonme/api/internal/tiktokoauth"
 )
@@ -67,6 +68,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	encryptionKey := []byte(cfg.EncryptionKey)
 	socialConnect.EncryptionKey = encryptionKey
 	page.EncryptionKey = encryptionKey
+	// Moderasi tautan sensitif (judi online/18+) -- permintaan langsung
+	// pengguna, 22 Agustus 2026, lihat catatan lengkap di
+	// handlers.LinkModerationChecker. SATU instance dibagi ke LinksHandler
+	// & ProductHandler (pola sama seperti encryptionKey di atas).
+	linkModeration := &handlers.LinkModerationChecker{DB: db, AI: moderation.NewClient(cfg.AnthropicAPIKey)}
+	links.Moderation = linkModeration
+	product.Moderation = linkModeration
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
 	analytics := handlers.NewAnalyticsHandler(db, encryptionKey, cfg.PublicWebURL)
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
@@ -582,6 +590,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.GET("/kyc", kyc.AdminList)
 			adminGroup.GET("/kyc/:userId", kyc.AdminGetDetail)
 			adminGroup.PATCH("/kyc/:userId", kyc.AdminReview)
+
+			// Moderasi tautan sensitif -- permintaan langsung pengguna, 22
+			// Agustus 2026, lihat catatan lengkap di handlers.LinkModerationChecker.
+			adminGroup.GET("/moderation/keywords", admin.ListBlockedKeywords)
+			adminGroup.POST("/moderation/keywords", admin.CreateBlockedKeyword)
+			adminGroup.DELETE("/moderation/keywords/:id", admin.DeleteBlockedKeyword)
+			adminGroup.GET("/moderation/domains", admin.ListDomainVerdicts)
+			adminGroup.POST("/moderation/domains", admin.UpsertDomainVerdict)
+			adminGroup.DELETE("/moderation/domains/:id", admin.DeleteDomainVerdict)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.

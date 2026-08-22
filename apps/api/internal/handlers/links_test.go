@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -418,5 +419,87 @@ func TestLinksUpdate_IconColorValidatesHexAndAllowsClearing(t *testing.T) {
 	}
 	if len(items2) != 1 || items2[0].IconColor != "" {
 		t.Fatalf("items2 = %+v, ekspektasi icon_color kosong setelah dibatalkan", items2)
+	}
+}
+
+// TestLinksCreate_BlocksSensitiveKeywordAndCachesDomainVerdict -- permintaan
+// langsung pengguna, 22 Agustus 2026: "sistem bisa memblokir jika
+// memasukkan link yang sensitif contoh nya link judol link 18+ dll".
+// Sengaja TANPA moderation.Client (AI) -- menguji dua lapis deterministik
+// saja (blocked_keywords + cache link_domain_verdicts), lapis AI diuji
+// terpisah lewat unit test murni di internal/moderation kalau perlu (butuh
+// ANTHROPIC_API_KEY sungguhan, di luar cakupan test handler ini).
+func TestLinksCreate_BlocksSensitiveKeywordAndCachesDomainVerdict(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	links.Moderation = &LinkModerationChecker{DB: links.DB}
+	userID := registerTestUser(t, auth)
+
+	ctx := t.Context()
+	testKeyword := "kwtestslot" + uuid.NewString()[:8]
+	testDomain := "domain-test-" + uuid.NewString()[:8] + ".example"
+	cleanDomain := "domain-clean-" + uuid.NewString()[:8] + ".example"
+	if _, err := links.DB.Exec(ctx, `INSERT INTO blocked_keywords (id, keyword, category, created_at) VALUES ($1, $2, 'judi_online', now())`,
+		uuid.NewString(), testKeyword); err != nil {
+		t.Fatalf("gagal seed kata kunci test: %v", err)
+	}
+	t.Cleanup(func() {
+		// context.Background(), BUKAN ctx (t.Context()) -- t.Context()
+		// dibatalkan TEPAT SEBELUM fungsi ter-daftar t.Cleanup dijalankan
+		// (ditemukan lewat verifikasi langsung: baris test ini sebelumnya
+		// memakai ctx, query DELETE gagal diam-diam krn context sudah
+		// dibatalkan, error-nya dibuang lewat "_, _ =", sisa data test
+		// menumpuk di database tanpa ketahuan).
+		cleanupCtx := context.Background()
+		_, _ = links.DB.Exec(cleanupCtx, `DELETE FROM blocked_keywords WHERE keyword = $1`, testKeyword)
+		_, _ = links.DB.Exec(cleanupCtx, `DELETE FROM link_domain_verdicts WHERE domain IN ($1, $2)`, testDomain, cleanDomain)
+	})
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	// 1. URL domain baru + path mengandung kata kunci -- harus ditolak.
+	blockedRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Uji", "url": "https://" + testDomain + "/" + testKeyword,
+	}, headers)
+	if blockedRec.Code != http.StatusBadRequest {
+		t.Fatalf("tautan dgn kata kunci sensitif seharusnya ditolak: status %d, body %s", blockedRec.Code, blockedRec.Body.String())
+	}
+	var blockedBody struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(blockedRec.Body.Bytes(), &blockedBody)
+	if blockedBody.Error == "" {
+		t.Fatalf("pesan error blokir seharusnya tidak kosong, body: %s", blockedRec.Body.String())
+	}
+
+	// 2. Domain itu sekarang harus ter-cache sebagai blocked, source=keyword.
+	var verdict, source string
+	if err := links.DB.QueryRow(ctx, `SELECT verdict, source FROM link_domain_verdicts WHERE domain = $1`, testDomain).
+		Scan(&verdict, &source); err != nil {
+		t.Fatalf("verdict domain seharusnya ter-cache: %v", err)
+	}
+	if verdict != "blocked" || source != "keyword" {
+		t.Fatalf("verdict = %q, source = %q, ekspektasi blocked/keyword", verdict, source)
+	}
+
+	// 3. Path BERBEDA (tanpa kata kunci) ke domain yang SAMA tetap ditolak --
+	// cache per-domain (lapis 1) berlaku lebih dulu, tidak perlu cocok kata
+	// kunci lagi setelah domain diputuskan.
+	secondRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Uji Lain", "url": "https://" + testDomain + "/halaman-lain-tanpa-kata-kunci",
+	}, headers)
+	if secondRec.Code != http.StatusBadRequest {
+		t.Fatalf("domain yang sudah ter-cache blocked seharusnya tetap ditolak: status %d, body %s", secondRec.Code, secondRec.Body.String())
+	}
+
+	// 4. Domain bersih (tidak ada kaitan sama sekali) tetap lolos seperti biasa.
+	okRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Aman", "url": "https://" + cleanDomain + "/halaman-biasa",
+	}, headers)
+	if okRec.Code != http.StatusCreated {
+		t.Fatalf("tautan domain bersih seharusnya lolos: status %d, body %s", okRec.Code, okRec.Body.String())
 	}
 }

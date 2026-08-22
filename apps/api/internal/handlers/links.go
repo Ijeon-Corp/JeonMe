@@ -40,6 +40,11 @@ type LinksHandler struct {
 	Queue   *asynq.Client
 	RDB     *redis.Client
 	Storage *storage.Client
+	// Moderation -- permintaan langsung pengguna, 22 Agustus 2026: blokir
+	// tautan judi online/18+, lihat catatan lengkap di
+	// LinkModerationChecker (moderation.go). Diwiring di routes.go, dibagi
+	// dengan ProductHandler.
+	Moderation *LinkModerationChecker
 }
 
 func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client, rdb *redis.Client, s3 *storage.Client) *LinksHandler {
@@ -190,8 +195,16 @@ func (h *LinksHandler) Create(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	// Timeout lebih longgar dari 5s dasar handler lain di file ini --
+	// h.Moderation.Check bisa memanggil Claude API (dibatasi sendiri 5s,
+	// lihat moderation.go) untuk domain yang belum pernah dilihat.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
+
+	if res := h.Moderation.Check(ctx, req.URL, req.Title); res.Blocked {
+		c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+		return
+	}
 
 	var pageID string
 	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE user_id = $1 AND is_primary = true`, userID).Scan(&pageID); err != nil {
@@ -515,6 +528,11 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
+	if res := h.Moderation.Check(ctx, req.URL, req.Title); res.Blocked {
+		c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+		return
+	}
+
 	if req.BlockType == "maps" {
 		if embed, _ := req.BlockData["embed"].(bool); embed {
 			lat, lng, rerr := resolveMapsEmbedCoords(ctx, req.URL)
@@ -661,6 +679,24 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	if !h.ownsLink(ctx, linkID, userID) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
 		return
+	}
+
+	// Blokir link sensitif -- cuma dicek kalau URL benar-benar diganti
+	// (bukan setiap PATCH, mis. sekadar toggle is_active). Judul dipakai
+	// sebagai konteks tambahan untuk kata kunci/AI -- pakai judul baru
+	// kalau ikut diganti di request yang sama, kalau tidak ambil judul
+	// yang sudah tersimpan.
+	if req.URL != nil && *req.URL != "" {
+		title := ""
+		if req.Title != nil {
+			title = *req.Title
+		} else {
+			_ = h.DB.QueryRow(ctx, `SELECT title FROM links WHERE id = $1`, linkID).Scan(&title)
+		}
+		if res := h.Moderation.Check(ctx, *req.URL, title); res.Blocked {
+			c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+			return
+		}
 	}
 
 	var starts, ends *time.Time
@@ -2004,11 +2040,16 @@ func (h *LinksHandler) CreateForPage(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	if !h.ownsPage(ctx, pageID, userID) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	if res := h.Moderation.Check(ctx, req.URL, req.Title); res.Blocked {
+		c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
 		return
 	}
 
@@ -2064,6 +2105,16 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
+	if !h.ownsPage(ctx, pageID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	if res := h.Moderation.Check(ctx, req.URL, req.Title); res.Blocked {
+		c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+		return
+	}
+
 	if req.BlockType == "maps" {
 		if embed, _ := req.BlockData["embed"].(bool); embed {
 			lat, lng, rerr := resolveMapsEmbedCoords(ctx, req.URL)
@@ -2074,11 +2125,6 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 			req.BlockData["embed_lat"] = lat
 			req.BlockData["embed_lng"] = lng
 		}
-	}
-
-	if !h.ownsPage(ctx, pageID, userID) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
-		return
 	}
 
 	id, position, blockDataJSON, err := h.insertBlock(ctx, pageID, req)

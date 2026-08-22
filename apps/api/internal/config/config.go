@@ -120,6 +120,15 @@ type Config struct {
 	// enkripsi/dekripsi gagal, beda dari S3/SMTP yang gagal per-fitur).
 	EncryptionKey string
 
+	// AnthropicAPIKey -- permintaan langsung pengguna, 22 Agustus 2026:
+	// lapisan AI (Claude API) untuk blokir tautan judi online/18+, lihat
+	// internal/moderation & handlers.LinkModerationChecker. Kosong = lapis
+	// AI dilewati sepenuhnya, blocklist domain/kata kunci deterministik
+	// TETAP berlaku -- pola sama seperti GoogleClientID/InstagramAppID
+	// (fitur opsional yang gagal-anggun kalau belum dikonfigurasi), BUKAN
+	// seperti EncryptionKey (yang wajib & fail-fast di production).
+	AnthropicAPIKey string
+
 	// SMTP dipakai worker (subcommand `worker`) untuk mengirim notifikasi
 	// email (REQ-F-405). Kosong secara default -- job pengiriman akan
 	// log-only (bukan gagal/crash) selama belum ada provider SMTP asli,
@@ -247,6 +256,8 @@ func Load() *Config {
 		// bawah supaya kesalahan panjang ketahuan SAAT STARTUP, bukan saat
 		// kreator pertama kali mencoba simpan rekening.
 		EncryptionKey: mustGetEnvInProd(appEnv, "ENCRYPTION_KEY", "jeonme-dev-encryption-key-32-ok!"),
+
+		AnthropicAPIKey: getEnv("ANTHROPIC_API_KEY", ""),
 
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     getEnvInt("SMTP_PORT", 587),

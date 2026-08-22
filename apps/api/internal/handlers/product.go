@@ -94,6 +94,11 @@ type ProductHandler struct {
 	DB      *pgxpool.Pool
 	Storage *storage.Client
 	RDB     *redis.Client
+	// Moderation -- permintaan langsung pengguna, 22 Agustus 2026: blokir
+	// URL eksternal produk (product_kind="external_link") yang judi
+	// online/18+, lihat LinkModerationChecker (moderation.go). Instance
+	// yang SAMA dibagi dengan LinksHandler, diwiring di routes.go.
+	Moderation *LinkModerationChecker
 }
 
 func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client, rdb *redis.Client) *ProductHandler {
@@ -179,7 +184,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	// Timeout lebih longgar dari 5s dasar -- h.Moderation.Check bisa
+	// memanggil Claude API (dibatasi sendiri 5s, lihat internal/moderation)
+	// untuk domain external_link yang belum pernah dilihat.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID); err != nil {
@@ -198,6 +206,12 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	if productKind == "external_link" && req.ExternalURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "external_url wajib diisi untuk produk jenis Link Eksternal"})
 		return
+	}
+	if productKind == "external_link" {
+		if res := h.Moderation.Check(ctx, req.ExternalURL, req.Name); res.Blocked {
+			c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+			return
+		}
 	}
 	// Harga wajib untuk SEMUA jenis produk KECUALI external_link (lihat
 	// catatan lengkap di createProductRequest.PriceIDR) -- binding tag
@@ -457,10 +471,13 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	// Timeout lebih longgar dari 5s dasar -- h.Moderation.Check bisa
+	// memanggil Claude API (dibatasi sendiri 5s, lihat internal/moderation)
+	// untuk domain external_link yang belum pernah dilihat.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var fileKey, coverImageURL string
+	var fileKey, coverImageURL, currentName string
 	var currentPriceIDR int64
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
@@ -468,12 +485,23 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var isBundle, isDonation, isEvent, isCourse, isBooking bool
 	var currentWebhookSecret, productKind string
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret, product_kind
+		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret, product_kind, name
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret, &productKind)
+	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret, &productKind, &currentName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
+	}
+
+	if productKind == "external_link" && req.ExternalURL != nil && *req.ExternalURL != "" {
+		name := currentName
+		if req.Name != nil {
+			name = *req.Name
+		}
+		if res := h.Moderation.Check(ctx, *req.ExternalURL, name); res.Blocked {
+			c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
+			return
+		}
 	}
 
 	// No.70/71/90/91/92: bundel, blok dukungan, event, kursus, dan booking
