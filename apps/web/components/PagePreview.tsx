@@ -1964,6 +1964,7 @@ export default function PagePreview({
   rootClassName = "min-h-screen",
   editableStickers = false,
   onStickersChange,
+  hideFooterChrome = false,
 }: {
   data: PagePreviewData;
   interactive?: boolean;
@@ -1977,6 +1978,16 @@ export default function PagePreview({
   // ini sama sekali).
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
+  // hideFooterChrome -- permintaan langsung pengguna, 23 Agustus 2026:
+  // kartu galeri Template homepage (components/landing/Templates.tsx)
+  // merender PagePreview SUNGGUHAN dizoom kecil, TAPI watermark "Buat
+  // halaman gratis di Jeon.id" + PageFooterLinks (Preferensi Cookie/
+  // Laporkan/Privasi/dst) yang SELALU tampil di pratinjau dashboard biasa
+  // (lihat catatan "Footer SELALU tampil" di bawah) jadi noise visual di
+  // thumbnail sekecil itu -- teks kecil tak terbaca, terkesan berantakan.
+  // Default false supaya TIDAK mengubah perilaku dashboard/halaman publik
+  // yang sudah ada sama sekali, HANYA true di pemanggilan homepage itu.
+  hideFooterChrome?: boolean;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
   // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar/booking
@@ -1995,7 +2006,9 @@ export default function PagePreview({
   if (data.pageType === "landing") {
     // Landing page (No.99) tidak punya produk/monetisasi sama sekali --
     // shop_paused tidak relevan di sini, tetap pakai `interactive` biasa.
-    return <LandingPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} />;
+    return (
+      <LandingPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} hideFooterChrome={hideFooterChrome} />
+    );
   }
 
   // Modul Halaman Produk: showcase katalog Toko saja -- TANPA
@@ -2011,6 +2024,7 @@ export default function PagePreview({
         interactive={interactive}
         editableStickers={editableStickers}
         onStickersChange={onStickersChange}
+        hideFooterChrome={hideFooterChrome}
       />
     );
   }
@@ -2308,35 +2322,39 @@ export default function PagePreview({
             ke Toko lewat hamburger nav top-left (lihat renderPageSwitcher)
             begitu akun ini punya produk. */}
 
-        <div className="mt-10 flex flex-col items-center gap-3">
-          {/* Modul Langganan Premium (permintaan langsung pengguna, 8
-              Agustus 2026): kreator gratis SELALU tampil watermark ini,
-              apa pun nilai hideWatermark -- kreator Premium bisa
-              menyembunyikannya sendiri lewat toggle di Desain/Halaman Toko
-              (lihat isPremiumUser backend & PagePreviewData.hideWatermark). */}
-          {(!data.isPremium || !data.hideWatermark) && (
-            <a
-              href={`${SITE_URL}/register`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-            >
-              Buat halaman gratis di Jeon.id
-            </a>
-          )}
-          {/* Footer SELALU tampil, termasuk di pratinjau dashboard
-              (interactive=false) -- permintaan langsung pengguna: "tampilkan
-              seluruh footer privacy dll", sebelumnya sengaja disembunyikan
-              di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
-              pesan "tidak tersedia", lihat PageFooterLinks). */}
-          <PageFooterLinks
-            pageId={data.id}
-            username={data.username}
-            bio={data.bio}
-            isVerified={data.isVerified}
-            footerClassName={theme.footer}
-          />
-        </div>
+        {!hideFooterChrome && (
+          <div className="mt-10 flex flex-col items-center gap-3">
+            {/* Modul Langganan Premium (permintaan langsung pengguna, 8
+                Agustus 2026): kreator gratis SELALU tampil watermark ini,
+                apa pun nilai hideWatermark -- kreator Premium bisa
+                menyembunyikannya sendiri lewat toggle di Desain/Halaman Toko
+                (lihat isPremiumUser backend & PagePreviewData.hideWatermark). */}
+            {(!data.isPremium || !data.hideWatermark) && (
+              <a
+                href={`${SITE_URL}/register`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+              >
+                Buat halaman gratis di Jeon.id
+              </a>
+            )}
+            {/* Footer SELALU tampil, termasuk di pratinjau dashboard
+                (interactive=false) -- permintaan langsung pengguna: "tampilkan
+                seluruh footer privacy dll", sebelumnya sengaja disembunyikan
+                di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
+                pesan "tidak tersedia", lihat PageFooterLinks). hideFooterChrome
+                di atas adalah pengecualian TERPISAH & sengaja (lihat catatan
+                lengkap di prop-nya), bukan pembatalan keputusan ini. */}
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          </div>
+        )}
       </div>
     </main>
   );
@@ -2353,11 +2371,13 @@ function LandingPagePreview({
   interactive,
   rootClassName,
   theme,
+  hideFooterChrome = false,
 }: {
   data: PagePreviewData;
   interactive: boolean;
   rootClassName: string;
   theme: PageTheme;
+  hideFooterChrome?: boolean;
 }) {
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
@@ -2548,30 +2568,34 @@ function LandingPagePreview({
           }
         })}
 
-        <div className="mt-6 flex flex-col items-center gap-3">
-          {(!data.isPremium || !data.hideWatermark) && (
-            <a
-              href={`${SITE_URL}/register`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-            >
-              Buat halaman gratis di Jeon.id
-            </a>
-          )}
-          {/* Footer SELALU tampil, termasuk di pratinjau dashboard
-              (interactive=false) -- permintaan langsung pengguna: "tampilkan
-              seluruh footer privacy dll", sebelumnya sengaja disembunyikan
-              di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
-              pesan "tidak tersedia", lihat PageFooterLinks). */}
-          <PageFooterLinks
-            pageId={data.id}
-            username={data.username}
-            bio={data.bio}
-            isVerified={data.isVerified}
-            footerClassName={theme.footer}
-          />
-        </div>
+        {!hideFooterChrome && (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            {(!data.isPremium || !data.hideWatermark) && (
+              <a
+                href={`${SITE_URL}/register`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+              >
+                Buat halaman gratis di Jeon.id
+              </a>
+            )}
+            {/* Footer SELALU tampil, termasuk di pratinjau dashboard
+                (interactive=false) -- permintaan langsung pengguna: "tampilkan
+                seluruh footer privacy dll", sebelumnya sengaja disembunyikan
+                di pratinjau. Item "Laporkan" sudah aman tanpa pageId (fallback
+                pesan "tidak tersedia", lihat PageFooterLinks). hideFooterChrome
+                di atas adalah pengecualian TERPISAH & sengaja, lihat catatan
+                lengkap di prop-nya (PagePreview). */}
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          </div>
+        )}
       </div>
     </main>
   );
@@ -2594,6 +2618,7 @@ function ProdukPagePreview({
   interactive,
   editableStickers,
   onStickersChange,
+  hideFooterChrome = false,
 }: {
   data: PagePreviewData;
   rootClassName: string;
@@ -2602,6 +2627,7 @@ function ProdukPagePreview({
   interactive: boolean;
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
+  hideFooterChrome?: boolean;
 }) {
   // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
   // renderCategoryTabs (dekat toPreviewData, atas file ini).
@@ -2666,25 +2692,27 @@ function ProdukPagePreview({
           <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
         )}
 
-        <div className="mt-10 flex flex-col items-center gap-3">
-          {(!data.isPremium || !data.hideWatermark) && (
-            <a
-              href={`${SITE_URL}/register`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-            >
-              Buat halaman gratis di Jeon.id
-            </a>
-          )}
-          <PageFooterLinks
-            pageId={data.id}
-            username={data.username}
-            bio={data.bio}
-            isVerified={data.isVerified}
-            footerClassName={theme.footer}
-          />
-        </div>
+        {!hideFooterChrome && (
+          <div className="mt-10 flex flex-col items-center gap-3">
+            {(!data.isPremium || !data.hideWatermark) && (
+              <a
+                href={`${SITE_URL}/register`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+              >
+                Buat halaman gratis di Jeon.id
+              </a>
+            )}
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          </div>
+        )}
       </div>
     </main>
   );

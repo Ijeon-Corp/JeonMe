@@ -1235,7 +1235,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     label: "Travel Agency",
     description: "Paket wisata, booking, lokasi",
     theme: "lagoon",
-    bio: "Agen wisata -- wujudkan liburan impianmu",
+    bio: "Agen wisata, wujudkan liburan impianmu",
     links: [link("whatsapp", "Booking Paket Wisata"), link("instagram", "Lihat Destinasi Kami")],
     blocks: [
       { type: "text", title: "Paket Wisata", text: "Tuliskan paket wisata & harga yang kamu tawarkan di sini." },

@@ -86,11 +86,26 @@ export default function Templates() {
                   PERSIS dengan galeri /dashboard/quick-setup (lihat catatan
                   lengkap di buildQuickSetupPreviewData). pointer-events-none
                   -- mockup MURNI visual, kartu ini tidak punya link tujuan
-                  (beda dari quick-setup yang buka modal saat diklik). */}
+                  (beda dari quick-setup yang buka modal saat diklik).
+                  hideFooterChrome -- keluhan langsung pengguna, 23 Agustus
+                  2026 (kirim screenshot): "jujur tampilan template nya
+                  jelek banget" -- footer platform (watermark "Buat halaman
+                  gratis di Jeon.id" + Preferensi Cookie/Laporkan/Privasi/dst)
+                  yang biasanya SELALU tampil di pratinjau dashboard jadi
+                  teks kecil tak terbaca & berantakan di thumbnail sekecil
+                  ini, dipotong khusus di sini (lihat prop-nya, PagePreview.tsx). */}
               <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-                <div className="h-full [zoom:0.42]">
-                  <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} />
+                <div className="h-full [zoom:0.5]">
+                  <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} hideFooterChrome />
                 </div>
+                {/* Fade bawah -- keluhan langsung pengguna, 23 Agustus 2026:
+                    tanpa ini, tautan/blok terakhir yang tidak muat di h-80
+                    terpotong MENTAH di tengah kalimat (mis. kartu Musisi).
+                    Konten asli tetap kepanjangan bervariasi per template,
+                    fade ini menyamarkan garis potong itu jadi transisi
+                    halus ke area putih judul kartu di bawahnya, apa pun
+                    warna latar tema (gelap/terang) di baliknya. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
               </div>
               <div className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 transition-opacity duration-250 group-hover:opacity-100">
                 <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">Lihat Template</span>
