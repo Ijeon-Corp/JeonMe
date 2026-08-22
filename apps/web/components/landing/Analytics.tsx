@@ -17,55 +17,15 @@ export default function Analytics() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="reveal order-2 lg:order-1">
-            <div className="shadow-hero rounded-2xl border border-border bg-white p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <p className="font-heading font-bold text-ink">Ringkasan Performa</p>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-muted">30 hari terakhir</span>
-              </div>
-              <div className="mb-5 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-primary/10 bg-primary-subtle p-4">
-                  <p className="mb-1 text-[11px] text-muted">Pengunjung</p>
-                  <p className="font-heading text-xl font-extrabold text-ink">48,2K</p>
-                  <p className="mt-0.5 text-[10px] font-semibold text-green-600">↑ 18% dari bulan lalu</p>
-                </div>
-                <div className="rounded-xl border border-secondary/10 bg-secondary-subtle p-4">
-                  <p className="mb-1 text-[11px] text-muted">Rasio Klik</p>
-                  <p className="font-heading text-xl font-extrabold text-ink">32,4%</p>
-                  <p className="mt-0.5 text-[10px] font-semibold text-green-600">↑ 6% dari bulan lalu</p>
-                </div>
-              </div>
-              <div className="mb-5">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-semibold text-ink">Pelacakan Konversi</p>
-                  <span className="text-[10px] font-semibold text-secondary-dark">rata-rata 12,8%</span>
-                </div>
-                <svg viewBox="0 0 300 60" className="h-14 w-full" preserveAspectRatio="none">
-                  <polyline points="0,45 30,40 60,42 90,30 120,32 150,18 180,22 210,12 240,15 270,6 300,8" fill="none" stroke="#1B4D3E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <polyline points="0,45 30,40 60,42 90,30 120,32 150,18 180,22 210,12 240,15 270,6 300,8 300,60 0,60" fill="url(#analyticsGrad)" opacity="0.18" stroke="none" />
-                  <defs>
-                    <linearGradient id="analyticsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#1B4D3E" />
-                      <stop offset="100%" stopColor="#1B4D3E" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-              <div className="space-y-2">
-                <p className="mb-2 text-xs font-semibold text-ink">Tautan Berperforma Terbaik</p>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] font-medium text-ink">Beli Ebook</p>
-                  <span className="text-[11px] font-bold text-primary">3.204 klik</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] font-medium text-ink">Gabung Kelas</p>
-                  <span className="text-[11px] font-bold text-primary">2.118 klik</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <p className="text-[11px] font-medium text-ink">Booking Konsultasi</p>
-                  <span className="text-[11px] font-bold text-primary">1.540 klik</span>
-                </div>
-              </div>
-            </div>
+            {/* Mockup "Ringkasan Performa" -- permintaan langsung pengguna,
+                23 Agustus 2026: "di section analytics ganti dengan gambar
+                analytics.png". SEBELUMNYA dibangun manual dari puluhan
+                div/SVG (lihat riwayat git kalau perlu versi lama itu) --
+                diganti satu file gambar (public/homepage/analytics.png),
+                pola yang SAMA seperti penggantian mockup Hero.tsx (hero.png)
+                & Monetization.tsx (monetization.png). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/homepage/analytics.png" alt="Dashboard analitik Jeon.id" className="w-full rounded-2xl object-contain shadow-hero" />
           </div>
 
           <div className="reveal order-1 lg:order-2" style={{ transitionDelay: "0.1s" }}>

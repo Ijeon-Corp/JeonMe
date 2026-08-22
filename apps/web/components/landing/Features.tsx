@@ -3,6 +3,7 @@ const features = [
     title: "Tautan Tanpa Batas",
     desc: "Tambahkan tautan sebanyak yang kamu mau dan atur sesuai keinginanmu.",
     color: "primary",
+    image: "/homepage/icon/tautan-tanpa-batas.png",
     icon: (
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     ),
@@ -11,6 +12,7 @@ const features = [
     title: "Tema yang Indah",
     desc: "Sesuaikan warna, font, background, dan tombol agar sesuai brand-mu.",
     color: "accent",
+    image: "/homepage/icon/design-menarik.png",
     icon: (
       <path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.586 7.586M11 11a2 2 0 1 0 0 .01" />
     ),
@@ -25,6 +27,7 @@ const features = [
     title: "Produk Digital",
     desc: "Jual ebook, template, kelas, dan file langsung dari halamanmu.",
     color: "primary",
+    image: "/homepage/icon/produk-digital.png",
     icon: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />,
   },
   {
@@ -76,6 +79,7 @@ const features = [
     title: "Multi-Halaman & Toko",
     desc: "Buat sampai 5 Halaman Toko & halaman tambahan dalam satu akun untuk multi-brand.",
     color: "accent",
+    image: "/homepage/icon/multi-halaman.png",
     icon: <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />,
   },
   {
@@ -134,21 +138,32 @@ export default function Features({ showHeading = true, compact = false }: { show
                 className="pop-card reveal group cursor-pointer rounded-2xl border border-border bg-white p-6 shadow-card"
                 style={{ transitionDelay: `${0.05 + (i % 4) * 0.05}s` }}
               >
-                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={c.icon}
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    className="transition-colors duration-250 group-hover:stroke-white"
-                    aria-hidden="true"
-                  >
-                    {f.icon}
-                  </svg>
-                </div>
+                {f.image ? (
+                  // Ikon ilustrasi 3D yang disediakan pengguna langsung
+                  // (permintaan 23 Agustus 2026: "ganti icon dengan gambar
+                  // yang sudah saya sediakan sesuai dengan nama gambarnya")
+                  // -- HANYA 4 item compact yang punya gambar; 8 item
+                  // lainnya (khusus /features, lihat COMPACT_TITLES) belum
+                  // disediakan gambarnya, tetap pakai ikon SVG lama.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.image} alt="" className="mb-4 h-14 w-14 object-contain" />
+                ) : (
+                  <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={c.icon}
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      className="transition-colors duration-250 group-hover:stroke-white"
+                      aria-hidden="true"
+                    >
+                      {f.icon}
+                    </svg>
+                  </div>
+                )}
                 <h3 className="mb-2 font-heading font-bold text-ink">{f.title}</h3>
                 <p className="text-sm leading-relaxed text-muted">{f.desc}</p>
               </div>

@@ -1,17 +1,14 @@
 // Dipersempit jadi 3 item -- permintaan langsung pengguna, 23 Agustus 2026:
 // "hanya tampilkan ini saja di sebelah kiri nya Jual Produk Digital,
-// Membership, Affiliator".
+// Membership, Affiliator". Ikon SVG diganti gambar ilustrasi 3D yang
+// disediakan pengguna langsung (permintaan susulan: "ganti icon dengan
+// gambar yang sudah saya sediakan sesuai dengan nama gambarnya"),
+// public/homepage/icon/*.png -- cocok nama file dengan label item.
 const items = [
-  { label: "Jual Produk Digital", color: "primary", icon: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /> },
-  { label: "Membership", color: "primary", icon: <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" /> },
-  { label: "Affiliator", color: "accent", icon: <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z M2 12h20" /> },
+  { label: "Jual Produk Digital", image: "/homepage/icon/jual-produk-digital.png" },
+  { label: "Membership", image: "/homepage/icon/membership.png" },
+  { label: "Affiliator", image: "/homepage/icon/affiliator.png" },
 ];
-
-const colorMap: Record<string, { bg: string; icon: string }> = {
-  primary: { bg: "bg-primary-subtle", icon: "#1B4D3E" },
-  accent: { bg: "bg-accent-subtle", icon: "#C9A24B" },
-  secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C" },
-};
 
 export default function Monetization() {
   return (
@@ -29,22 +26,16 @@ export default function Monetization() {
             </p>
 
             <div className="grid grid-cols-2 gap-3">
-              {items.map((item) => {
-                const c = colorMap[item.color];
-                return (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-card"
-                  >
-                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${c.bg}`}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c.icon} strokeWidth="2" aria-hidden="true">
-                        {item.icon}
-                      </svg>
-                    </div>
-                    <p className="text-xs font-bold leading-snug text-ink">{item.label}</p>
-                  </div>
-                );
-              })}
+              {items.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-card"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.image} alt="" className="h-12 w-12 flex-shrink-0 object-contain" />
+                  <p className="text-xs font-bold leading-snug text-ink">{item.label}</p>
+                </div>
+              ))}
             </div>
           </div>
 
