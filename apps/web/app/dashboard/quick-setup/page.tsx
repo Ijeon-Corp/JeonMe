@@ -20,7 +20,7 @@ import {
 } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
-import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems } from "@/lib/quick-setup-templates";
+import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 import { IconCheck, IconSearch } from "@/components/icons";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
@@ -51,49 +51,13 @@ const LAYOUT_VARIANT_LABELS: Record<
   portrait: "Portrait (foto tegak dibingkai & berbayang ala poster)",
 };
 
-// buildPreviewData -- SATU fungsi dipakai baik untuk mockup kecil di tiap
-// kartu galeri MAUPUN modal pratinjau, supaya keduanya selalu identik
-// (bukan dua implementasi terpisah yang bisa tidak sinkron). blockData per
-// blockType dipetakan dari OrderedTemplateItem (lib/quick-setup-templates.ts)
-// -- SATU sumber kebenaran urutan & isi, sama dengan yang dipakai
-// applyTemplate untuk benar-benar membuatnya.
-function buildPreviewData(t: QuickSetupTemplate, username: string, displayName: string, avatarUrl: string): PagePreviewData {
-  return {
-    username,
-    // displayName -- permintaan langsung pengguna: "yang tampil di mockup
-    // itu bukan username tapi display name" -- renderBioHeader
-    // (PagePreview.tsx) merender `displayName || username`, jadi SEBELUM
-    // ini nama akun (mis. "namamu") ikut tampil apa adanya di mockup kalau
-    // kreator belum mengisi nama tampilan. displayName di sini SELALU
-    // truthy (myPage?.display_name atau placeholder "Nama Kamu" dari
-    // pemanggil) supaya username mentah tidak pernah lagi jadi yang
-    // tampil di judul nama mockup.
-    displayName,
-    bio: t.bio,
-    avatarUrl,
-    theme: t.theme,
-    layoutVariant: t.layoutVariant ?? "centered",
-    links: orderedTemplateItems(t).map((item) => ({
-      id: item.title,
-      title: item.title,
-      url: item.url,
-      blockType: item.blockType,
-      blockData:
-        item.blockType === "maps"
-          ? { embed: false }
-          : item.blockType === "text"
-          ? { text: item.text }
-          : item.blockType === "faq"
-          ? { items: item.faqItems }
-          : {},
-    })),
-    // products -- susulan permintaan pengguna, 17 Agustus 2026: "tambahkan
-    // template untuk produk yang siap pakai juga". Mockup mockup memakai id
-    // sintetis (nama produk, sama seperti `links` di atas yang pakai title
-    // sebagai id) -- belum tersimpan ke mana pun, cuma representasi visual.
-    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
-  };
-}
+// buildPreviewData -- dipindah ke lib/quick-setup-templates.ts
+// (buildQuickSetupPreviewData) supaya bisa dipakai bareng components/
+// landing/Templates.tsx (homepage) juga, lihat catatan lengkap di sana.
+// displayName di sini SELALU truthy (myPage?.display_name atau placeholder
+// "Nama Kamu" dari pemanggil) -- permintaan langsung pengguna: "yang
+// tampil di mockup itu bukan username tapi display name".
+const buildPreviewData = buildQuickSetupPreviewData;
 
 // pickAutoTokoPage -- Toko PERTAMA/auto tiap akun slug-nya SELALU =
 // username (ensureProdukPage, backend), beda dari Toko ke-2..5 (khusus

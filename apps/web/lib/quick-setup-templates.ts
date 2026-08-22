@@ -30,6 +30,8 @@
 // showcase variasi tanpa mengubah SEMUA template sekaligus (46 template
 // lainnya tetap gradien/warna solid seperti sebelumnya).
 
+import type { PagePreviewData } from "@/components/PagePreview";
+
 export interface QuickSetupCategory {
   key: string;
   label: string;
@@ -351,6 +353,40 @@ export function orderedTemplateItems(t: QuickSetupTemplate): OrderedTemplateItem
     ...t.links.map((l) => ({ title: l.title, blockType: "link" as const, url: l.url })),
     ...otherBlocks.map((b) => ({ title: b.title, blockType: b.type, url: "", text: b.text, faqItems: b.faqItems })),
   ];
+}
+
+// buildQuickSetupPreviewData -- SATU fungsi dipakai baik untuk mockup kecil
+// di galeri /dashboard/quick-setup MAUPUN kartu Template di homepage
+// (components/landing/Templates.tsx, permintaan langsung pengguna 23
+// Agustus 2026: "tampilkan sama persis seperti yang ada di quick template
+// beserta isi blok nya") supaya keduanya selalu identik -- bukan dua
+// implementasi terpisah yang bisa tidak sinkron. Dipindah dari
+// dashboard/quick-setup/page.tsx (SEBELUMNYA lokal di sana) ke sini,
+// SATU sumber kebenaran yang sama seperti orderedTemplateItems di atas.
+export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: string, displayName: string, avatarUrl: string): PagePreviewData {
+  return {
+    username,
+    displayName,
+    bio: t.bio,
+    avatarUrl,
+    theme: t.theme,
+    layoutVariant: t.layoutVariant ?? "centered",
+    links: orderedTemplateItems(t).map((item) => ({
+      id: item.title,
+      title: item.title,
+      url: item.url,
+      blockType: item.blockType,
+      blockData:
+        item.blockType === "maps"
+          ? { embed: false }
+          : item.blockType === "text"
+          ? { text: item.text }
+          : item.blockType === "faq"
+          ? { items: item.faqItems }
+          : {},
+    })),
+    products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
+  };
 }
 
 export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [

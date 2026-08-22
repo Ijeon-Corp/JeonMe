@@ -1,64 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import PagePreview from "@/components/PagePreview";
+import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 
 // Templates -- permintaan langsung pengguna, 23 Agustus 2026: "gunakan
 // template yang sudah ada untuk ditampilkan terutama tampilkan template
-// yang menggunakan bg gambar dan live wallpaper". SEBELUMNYA 6 kartu di
-// sini murni dekoratif (gradien CSS acak, tidak berkaitan dengan template
-// sungguhan mana pun) -- diganti kurasi 6 template ASLI dari
+// yang menggunakan bg gambar dan live wallpaper", lalu susulan "coba
+// tampilkan sama persis seperti yang ada di quick template beserta isi
+// blok nya tetapi dengan data dummy seperti john doe dan jane doe foto
+// profil juga ambil online saja". Kurasi 6 template ASLI dari
 // lib/quick-setup-templates.ts (71 template) yang temanya termasuk
-// WALLPAPER_THEME_NAMES (foto asli, lib/page-themes.ts) atau
-// VIDEO_THEME_NAMES ("live wallpaper", video .mp4 sungguhan) -- bukan
-// tema gradien/warna solid biasa, supaya section ini jadi pratinjau
-// SUNGGUHAN dari apa yang kreator dapat, bukan mockup buatan tangan.
-const templates = [
-  {
-    key: "gamer",
-    title: "Gamer",
-    tag: "Live Wallpaper" as const,
-    kind: "video" as const,
-    src: "/videos/neon.mp4",
-    poster: "/videos/neon-poster.jpg",
-  },
-  {
-    key: "dj",
-    title: "DJ",
-    tag: "Live Wallpaper" as const,
-    kind: "video" as const,
-    src: "/videos/citynight.mp4",
-    poster: "/videos/citynight-poster.jpg",
-  },
-  {
-    key: "musician",
-    title: "Musisi",
-    tag: "Live Wallpaper" as const,
-    kind: "video" as const,
-    src: "/videos/fireplace.mp4",
-    poster: "/videos/fireplace-poster.jpg",
-  },
-  {
-    key: "travel-agency",
-    title: "Agen Wisata",
-    tag: "Wallpaper" as const,
-    kind: "image" as const,
-    src: "/wallpapers/beach.jpg",
-  },
-  {
-    key: "restaurant",
-    title: "Restoran",
-    tag: "Wallpaper" as const,
-    kind: "image" as const,
-    src: "/wallpapers/kilau.jpg",
-  },
-  {
-    key: "photographer",
-    title: "Fotografer",
-    tag: "Wallpaper" as const,
-    kind: "image" as const,
-    src: "/wallpapers/stars.jpg",
-  },
+// WALLPAPER_THEME_NAMES (foto asli) atau VIDEO_THEME_NAMES ("live
+// wallpaper", lib/page-themes.ts) -- dirender pakai KOMPONEN PagePreview
+// SUNGGUHAN (sama persis dipakai halaman publik & dashboard Quick Setup,
+// lihat buildQuickSetupPreviewData) supaya bio/tautan/blok yang tampil di
+// sini benar-benar isi template itu, bukan mockup buatan tangan. Nama &
+// foto profil dummy (John Doe/Jane Doe, foto randomuser.me -- layanan
+// publik foto wajah acak, bebas dipakai tanpa API key) karena template
+// belum terpasang ke akun sungguhan mana pun.
+const CURATED_KEYS = [
+  { key: "gamer", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg" },
+  { key: "dj", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
+  { key: "musician", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
+  { key: "travel-agency", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
+  { key: "restaurant", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/12.jpg" },
+  { key: "photographer", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/26.jpg" },
 ];
+
+const templates = CURATED_KEYS.map((c) => {
+  const t = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
+  return {
+    key: c.key,
+    label: t.label,
+    tag: c.tag,
+    data: buildQuickSetupPreviewData(t, c.key.replace(/-/g, ""), c.displayName, c.avatarUrl),
+  };
+});
 
 const filters = [
   { key: "all", label: "Semua" },
@@ -102,29 +80,23 @@ export default function Templates() {
           {visible.map((t) => (
             <div
               key={t.key}
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-white shadow-card"
+              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-card"
             >
-              <div className="relative w-full overflow-hidden bg-ink" style={{ aspectRatio: "4/3" }}>
-                {t.kind === "video" ? (
-                  <video
-                    src={t.src}
-                    poster={t.poster}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.src} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                )}
+              {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola SAMA
+                  PERSIS dengan galeri /dashboard/quick-setup (lihat catatan
+                  lengkap di buildQuickSetupPreviewData). pointer-events-none
+                  -- mockup MURNI visual, kartu ini tidak punya link tujuan
+                  (beda dari quick-setup yang buka modal saat diklik). */}
+              <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+                <div className="h-full [zoom:0.42]">
+                  <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} />
+                </div>
               </div>
               <div className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 transition-opacity duration-250 group-hover:opacity-100">
                 <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">Lihat Template</span>
               </div>
               <div className="p-4">
-                <h3 className="font-heading text-sm font-bold text-ink">{t.title}</h3>
+                <h3 className="font-heading text-sm font-bold text-ink">{t.label}</h3>
                 <p className="mt-0.5 text-xs text-muted">{t.tag}</p>
               </div>
             </div>
