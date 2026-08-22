@@ -39,6 +39,12 @@ type PageHandler struct {
 	// sendiri lewat soft-fail di fungsi itu.
 	Instagram *instagramoauth.Client
 	TikTok    *tiktokoauth.Client
+	// EncryptionKey -- audit keamanan 22 Agustus 2026, lihat catatan
+	// lengkap di SocialConnectHandler.EncryptionKey (social_connect.go) --
+	// dibutuhkan di sini juga karena fetchInstagramFeed/fetchTikTokFeed
+	// (dipanggil dari GetPublicPage/GetPublicPageBySlug di bawah) yang
+	// mendekripsi access_token/refresh_token, bukan SocialConnectHandler.
+	EncryptionKey []byte
 }
 
 func NewPageHandler(db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Client) *PageHandler {
@@ -715,11 +721,11 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	// token) yang jauh lebih lambat dari query Postgres biasa -- tidak boleh
 	// saling menunggu.
 	g.Go(func() error {
-		resp.InstagramFeed = fetchInstagramFeed(gctx, h.DB, h.RDB, h.Instagram, userID)
+		resp.InstagramFeed = fetchInstagramFeed(gctx, h.DB, h.RDB, h.Instagram, userID, h.EncryptionKey)
 		return nil
 	})
 	g.Go(func() error {
-		resp.TikTokFeed = fetchTikTokFeed(gctx, h.DB, h.RDB, h.TikTok, userID)
+		resp.TikTokFeed = fetchTikTokFeed(gctx, h.DB, h.RDB, h.TikTok, userID, h.EncryptionKey)
 		return nil
 	})
 

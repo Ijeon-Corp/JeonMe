@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/jeonme/api/internal/crypto"
 	"github.com/jeonme/api/internal/instagramoauth"
 	"github.com/jeonme/api/internal/tiktokoauth"
 )
@@ -25,11 +26,31 @@ import (
 // Instagram/TikTok -- di-set terpisah sesudah NewSocialConnectHandler
 // (pola SAMA seperti AuthHandler.GoogleOAuth), selalu non-nil, kredensial
 // kosong ditangani sendiri oleh instagramoauth/tiktokoauth (ErrNotConfigured).
+//
+// EncryptionKey -- audit keamanan 22 Agustus 2026: access_token/
+// refresh_token SEBELUMNYA tersimpan polos (migrasi 000069 menyamakan
+// dengan products.webhook_secret, tapi analoginya salah -- webhook_secret
+// itu SERVER yang menghasilkan, bukan token OAuth pihak ketiga bernilai
+// tinggi yang bisa dipakai langsung terhadap API Instagram/TikTok). Pola
+// sama seperti payout_methods.account_number_encrypted (payment_settings.go)
+// & analytics_settings.fb_access_token_encrypted -- AES-256-GCM lewat
+// internal/crypto, di-set terpisah sesudah NewSocialConnectHandler
+// (pola sama seperti Instagram/TikTok), lihat routes.go.
+//
+// TIDAK ada migrasi backfill utk baris yang SUDAH ada (token polos lama) --
+// crypto.Decrypt akan gagal terhadap nilai polos (bukan format base64+GCM
+// yang valid), fetchInstagramFeed/fetchTikTokFeed sudah soft-fail (return
+// nil) begitu Decrypt gagal, jadi koneksi lama BUKAN error/crash, cuma
+// feed-nya berhenti tampil sampai kreator connect ulang -- trade-off yang
+// wajar utk fitur soft-fail non-inti, konsisten dgn filosofi codebase ini
+// (lihat CLAUDE.md), daripada menulis skrip migrasi Go sekali pakai yang
+// tidak ada pola presedennya di proyek ini (migrasi selalu murni .sql).
 type SocialConnectHandler struct {
-	DB        *pgxpool.Pool
-	RDB       *redis.Client
-	Instagram *instagramoauth.Client
-	TikTok    *tiktokoauth.Client
+	DB            *pgxpool.Pool
+	RDB           *redis.Client
+	Instagram     *instagramoauth.Client
+	TikTok        *tiktokoauth.Client
+	EncryptionKey []byte
 }
 
 func NewSocialConnectHandler(db *pgxpool.Pool, rdb *redis.Client) *SocialConnectHandler {
@@ -108,6 +129,11 @@ func (h *SocialConnectHandler) ConnectInstagram(c *gin.Context) {
 		return
 	}
 
+	encryptedToken, err := crypto.Encrypt(h.EncryptionKey, token.AccessToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengenkripsi token Instagram"})
+		return
+	}
 	if _, err := h.DB.Exec(ctx, `
 		INSERT INTO social_connections (user_id, platform, external_user_id, external_username, access_token, token_expires_at, connected_at)
 		VALUES ($1, 'instagram', $2, $3, $4, $5, now())
@@ -117,7 +143,7 @@ func (h *SocialConnectHandler) ConnectInstagram(c *gin.Context) {
 			access_token = EXCLUDED.access_token,
 			token_expires_at = EXCLUDED.token_expires_at,
 			connected_at = now()
-	`, userID, externalUserID, profile.Username, token.AccessToken, token.ExpiresAt); err != nil {
+	`, userID, externalUserID, profile.Username, encryptedToken, token.ExpiresAt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan koneksi Instagram"})
 		return
 	}
@@ -159,6 +185,16 @@ func (h *SocialConnectHandler) ConnectTikTok(c *gin.Context) {
 		return
 	}
 
+	encryptedAccessToken, err := crypto.Encrypt(h.EncryptionKey, token.AccessToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengenkripsi token TikTok"})
+		return
+	}
+	encryptedRefreshToken, err := crypto.Encrypt(h.EncryptionKey, token.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengenkripsi token TikTok"})
+		return
+	}
 	if _, err := h.DB.Exec(ctx, `
 		INSERT INTO social_connections (user_id, platform, external_user_id, external_username, avatar_url, access_token, refresh_token, token_expires_at, connected_at)
 		VALUES ($1, 'tiktok', $2, $3, $4, $5, $6, $7, now())
@@ -170,7 +206,7 @@ func (h *SocialConnectHandler) ConnectTikTok(c *gin.Context) {
 			refresh_token = EXCLUDED.refresh_token,
 			token_expires_at = EXCLUDED.token_expires_at,
 			connected_at = now()
-	`, userID, token.OpenID, profile.Username, profile.AvatarURL, token.AccessToken, token.RefreshToken, token.ExpiresAt); err != nil {
+	`, userID, token.OpenID, profile.Username, profile.AvatarURL, encryptedAccessToken, encryptedRefreshToken, token.ExpiresAt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan koneksi TikTok"})
 		return
 	}
@@ -242,7 +278,7 @@ const feedCacheTTL = time.Hour
 // halaman publik tetap tampil normal TANPA widget feed, bukan error 500,
 // pola sama seperti soft-fail lain di seluruh kodebase ini (SMTP/S3/
 // WhatsApp/ensureProdukPage).
-func fetchInstagramFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, ig *instagramoauth.Client, userID string) *PublicSocialFeed {
+func fetchInstagramFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, ig *instagramoauth.Client, userID string, encryptionKey []byte) *PublicSocialFeed {
 	cacheKey := "social-feed:instagram:" + userID
 	if rdb != nil {
 		if cached, err := rdb.Get(ctx, cacheKey).Result(); err == nil {
@@ -253,12 +289,16 @@ func fetchInstagramFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client
 		}
 	}
 
-	var accessToken, username string
+	var encryptedToken, username string
 	var expiresAt *time.Time
 	err := db.QueryRow(ctx, `
 		SELECT access_token, external_username, token_expires_at FROM social_connections
 		WHERE user_id = $1 AND platform = 'instagram'
-	`, userID).Scan(&accessToken, &username, &expiresAt)
+	`, userID).Scan(&encryptedToken, &username, &expiresAt)
+	if err != nil {
+		return nil
+	}
+	accessToken, err := crypto.Decrypt(encryptionKey, encryptedToken)
 	if err != nil {
 		return nil
 	}
@@ -271,7 +311,9 @@ func fetchInstagramFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client
 	if expiresAt != nil && time.Until(*expiresAt) < 7*24*time.Hour {
 		if newToken, newExpiry, rerr := ig.Refresh(ctx, accessToken); rerr == nil {
 			accessToken = newToken
-			_, _ = db.Exec(ctx, `UPDATE social_connections SET access_token = $1, token_expires_at = $2 WHERE user_id = $3 AND platform = 'instagram'`, newToken, newExpiry, userID)
+			if newEncrypted, eerr := crypto.Encrypt(encryptionKey, newToken); eerr == nil {
+				_, _ = db.Exec(ctx, `UPDATE social_connections SET access_token = $1, token_expires_at = $2 WHERE user_id = $3 AND platform = 'instagram'`, newEncrypted, newExpiry, userID)
+			}
 		}
 	}
 
@@ -298,7 +340,7 @@ func fetchInstagramFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client
 }
 
 // fetchTikTokFeed -- soft-fail sama seperti fetchInstagramFeed di atas.
-func fetchTikTokFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, tt *tiktokoauth.Client, userID string) *PublicSocialFeed {
+func fetchTikTokFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, tt *tiktokoauth.Client, userID string, encryptionKey []byte) *PublicSocialFeed {
 	cacheKey := "social-feed:tiktok:" + userID
 	if rdb != nil {
 		if cached, err := rdb.Get(ctx, cacheKey).Result(); err == nil {
@@ -309,12 +351,20 @@ func fetchTikTokFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, t
 		}
 	}
 
-	var accessToken, refreshToken, username string
+	var encryptedAccessToken, encryptedRefreshToken, username string
 	var expiresAt *time.Time
 	err := db.QueryRow(ctx, `
 		SELECT access_token, refresh_token, external_username, token_expires_at FROM social_connections
 		WHERE user_id = $1 AND platform = 'tiktok'
-	`, userID).Scan(&accessToken, &refreshToken, &username, &expiresAt)
+	`, userID).Scan(&encryptedAccessToken, &encryptedRefreshToken, &username, &expiresAt)
+	if err != nil {
+		return nil
+	}
+	accessToken, err := crypto.Decrypt(encryptionKey, encryptedAccessToken)
+	if err != nil {
+		return nil
+	}
+	refreshToken, err := crypto.Decrypt(encryptionKey, encryptedRefreshToken)
 	if err != nil {
 		return nil
 	}
@@ -329,10 +379,14 @@ func fetchTikTokFeed(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, t
 		}
 		if newToken, rerr := tt.Refresh(ctx, refreshToken); rerr == nil {
 			accessToken = newToken.AccessToken
-			_, _ = db.Exec(ctx, `
-				UPDATE social_connections SET access_token = $1, refresh_token = $2, token_expires_at = $3
-				WHERE user_id = $4 AND platform = 'tiktok'
-			`, newToken.AccessToken, newToken.RefreshToken, newToken.ExpiresAt, userID)
+			newEncryptedAccess, aerr := crypto.Encrypt(encryptionKey, newToken.AccessToken)
+			newEncryptedRefresh, rerr2 := crypto.Encrypt(encryptionKey, newToken.RefreshToken)
+			if aerr == nil && rerr2 == nil {
+				_, _ = db.Exec(ctx, `
+					UPDATE social_connections SET access_token = $1, refresh_token = $2, token_expires_at = $3
+					WHERE user_id = $4 AND platform = 'tiktok'
+				`, newEncryptedAccess, newEncryptedRefresh, newToken.ExpiresAt, userID)
+			}
 		} else {
 			return nil
 		}

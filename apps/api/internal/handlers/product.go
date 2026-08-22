@@ -154,7 +154,15 @@ type createProductRequest struct {
 	// SERVER (cuma dibuka browser pembeli lewat window.open), jadi TIDAK
 	// perlu netguard.ValidateOutboundURL seperti webhook_url -- SSRF hanya
 	// relevan kalau server sendiri yang melakukan permintaan keluar.
-	ExternalURL string `json:"external_url" binding:"omitempty,url,max=2048"`
+	//
+	// TAPI tetap wajib "http_url" (bukan "url" polos) -- audit keamanan 22
+	// Agustus 2026: "url" menerima skema apa pun ("javascript:"/"data:"),
+	// nilai ini dirender langsung sebagai href kartu produk di halaman
+	// publik -- kreator jahat bisa mencuri token sesi pengunjung lain yang
+	// login begitu link diklik. Beda kelas kerentanan dari SSRF (di sini
+	// BROWSER pengunjung yang jadi korban, bukan server), makanya perbaikannya
+	// beda juga (validasi skema URL, bukan netguard).
+	ExternalURL string `json:"external_url" binding:"omitempty,http_url,max=2048"`
 
 	// Modul Settings §3: opsional, lihat collaborator_split.go.
 	CollaboratorSplits []CollaboratorSplit `json:"collaborator_splits"`
@@ -420,7 +428,7 @@ type updateProductRequest struct {
 	// Update (beda dari ProductKind sendiri yang immutable) -- kreator bisa
 	// memperbaiki tautan yang salah/kedaluwarsa tanpa perlu membuat ulang
 	// produknya dari awal.
-	ExternalURL *string `json:"external_url" binding:"omitempty,url,max=2048"`
+	ExternalURL *string `json:"external_url" binding:"omitempty,http_url,max=2048"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).

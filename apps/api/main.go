@@ -104,8 +104,16 @@ func main() {
 		// (bukan sekali saat migrasi), jadi begitu prefix ini ditambahkan &
 		// di-deploy, object yang SUDAH terunggah lebih dulu ikut otomatis
 		// bisa diakses publik tanpa perlu diunggah ulang.
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio tautan: %v", err)
+		//
+		// SAMA PERSIS terulang lagi 22 Agustus 2026 (ditemukan lewat audit
+		// keamanan/performa menyeluruh, bukan laporan pengguna kali ini) --
+		// "file-blocks" (blok "File & Unduhan", ditambah 20 Agustus 2026)
+		// KETINGGALAN juga dari daftar ini dengan gejala identik (upload
+		// sukses, publik 403). Kalau ada blok baru berikutnya yang punya
+		// endpoint upload sendiri, WAJIB ditambahkan ke daftar ini juga --
+		// bug ini sudah dua kali terulang karena mudah lupa.
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file tautan: %v", err)
 		}
 		cancel()
 	}

@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +40,18 @@ func NewHealthHandler(db *pgxpool.Pool, rdb *redis.Client, version, healthToken 
 // tetap mendapatkan version + checks per-komponen -- dipakai pipeline CI
 // untuk verifikasi versi yang jalan cocok commit yang baru di-deploy (lihat
 // deploy-staging.yml / deploy-production.yml, "Health check" step). Token
-// dibandingkan constant-time lewat strings.EqualFold.
+// dibandingkan constant-time lewat subtle.ConstantTimeCompare.
+//
+// Audit keamanan 22 Agustus 2026: versi sebelumnya di sini memakai
+// strings.EqualFold DAN mengklaim itu "constant-time" -- keduanya salah.
+// EqualFold short-circuit begitu ketemu karakter pertama yang beda (bocor
+// info panjang prefix yang cocok lewat waktu respons, celah timing attack
+// klasik), DAN case-insensitive (mengurangi entropi efektif token acak
+// hex/base64 yang campur besar-kecil huruf, tanpa manfaat apa pun --
+// token ini dikonfigurasi lewat env var, bukan diketik manusia yang perlu
+// toleransi salah kapitalisasi). subtle.ConstantTimeCompare (dipakai juga
+// di internal/midtrans/client.go untuk verifikasi signature webhook)
+// membandingkan SELURUH panjang tanpa short-circuit isi & case-sensitive.
 func (h *HealthHandler) Check(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
@@ -88,7 +99,7 @@ func (h *HealthHandler) Check(c *gin.Context) {
 func (h *HealthHandler) isInternalProbe(c *gin.Context) bool {
 	if h.HealthToken != "" {
 		provided := c.GetHeader("X-Health-Token")
-		if provided != "" && strings.EqualFold(provided, h.HealthToken) {
+		if provided != "" && subtle.ConstantTimeCompare([]byte(provided), []byte(h.HealthToken)) == 1 {
 			return true
 		}
 	}

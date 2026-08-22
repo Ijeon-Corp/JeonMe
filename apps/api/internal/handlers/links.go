@@ -161,7 +161,16 @@ func (h *LinksHandler) List(c *gin.Context) {
 
 type createLinkRequest struct {
 	Title string `json:"title" binding:"required,max=100"`
-	URL   string `json:"url" binding:"required,url,max=2048"`
+	// URL -- audit keamanan 22 Agustus 2026: tag "url" (bukan "http_url")
+	// menerima skema APA PUN yang punya Scheme non-kosong, termasuk
+	// "javascript:"/"data:text/html;base64,..."/"vbscript:" -- dirender
+	// langsung sebagai href tautan biasa di halaman publik (PagePreview.tsx),
+	// jadi kreator jahat bisa membuat tautan yang mencuri token sesi
+	// pengunjung lain yang login (localStorage) begitu diklik. "http_url"
+	// (go-playground/validator, sudah bawaan, bukan tag kustom) memaksa
+	// skema http/https saja -- pola sama diterapkan ke SEMUA field URL
+	// tautan/blok/produk lain di file ini & product.go.
+	URL string `json:"url" binding:"required,http_url,max=2048"`
 }
 
 // Create — REQ-F-202. Tautan baru ditaruh di posisi paling akhir.
@@ -458,7 +467,7 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 type createBlockRequest struct {
 	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file"`
 	Title     string         `json:"title" binding:"required,max=100"`
-	URL       string         `json:"url" binding:"omitempty,url,max=2048"`
+	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
 }
 
@@ -557,7 +566,7 @@ func (h *LinksHandler) insertBlock(ctx context.Context, pageID string, req creat
 
 type updateLinkRequest struct {
 	Title         *string `json:"title" binding:"omitempty,max=100"`
-	URL           *string `json:"url" binding:"omitempty,url,max=2048"`
+	URL           *string `json:"url" binding:"omitempty,http_url,max=2048"`
 	IsActive      *bool   `json:"is_active"`
 	StartsAt      *string `json:"starts_at"`
 	EndsAt        *string `json:"ends_at"`
@@ -659,11 +668,26 @@ func (h *LinksHandler) Update(c *gin.Context) {
 	// terhadap NILAI AKHIR (yang baru diisi ATAU yang sudah tersimpan),
 	// sama seperti pola validasi pwyw/flash sale di ProductHandler.Update.
 	if req.LockType != nil {
-		var currentLockCode string
+		var currentLockCode, currentBlockType string
 		var currentLockMinAge *int
-		if err := h.DB.QueryRow(ctx, `SELECT lock_code, lock_min_age FROM links WHERE id = $1`, linkID).
-			Scan(&currentLockCode, &currentLockMinAge); err != nil {
+		if err := h.DB.QueryRow(ctx, `SELECT lock_code, lock_min_age, block_type FROM links WHERE id = $1`, linkID).
+			Scan(&currentLockCode, &currentLockMinAge, &currentBlockType); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat tautan"})
+			return
+		}
+		// Audit keamanan 22 Agustus 2026: "age"/"code"/"subscribe" MENYEMBUNYIKAN
+		// l.URL dari payload halaman publik (lihat publicLink, page.go) --
+		// gerbang keamanan sungguhan, cuma masuk akal untuk block_type yang
+		// URL-nya memang dibuka lewat Unlock ("link"/"button"). block_type lain
+		// (video/faq/maps/gallery/audio/accordion/text/contact_form) menaruh
+		// isinya di block_data yang TETAP terkirim apa adanya -- mengizinkan
+		// "code"/"subscribe" di sana cuma akan membuat UI mengklaim ada gerbang
+		// padahal isinya sudah bocor duluan (dashboard SEKARANG memang cuma
+		// menawarkan "sensitive" utk block_type ini, tapi endpoint API wajib
+		// menegakkannya sendiri, bukan cuma percaya UI). "sensitive" TETAP
+		// berlaku di block_type apa pun -- itu peringatan santun, bukan gerbang.
+		if *req.LockType != "sensitive" && currentBlockType != "link" && currentBlockType != "button" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "kunci usia/kode/subscribe cuma berlaku untuk tautan atau tombol -- pakai peringatan konten sensitif untuk blok lain"})
 			return
 		}
 		switch *req.LockType {

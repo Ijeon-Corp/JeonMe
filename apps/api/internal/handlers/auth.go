@@ -739,13 +739,19 @@ func (h *AuthHandler) ConfirmSignupVerification(c *gin.Context) {
 	err := h.DB.QueryRow(ctx,
 		`SELECT id, email_verified_at FROM users WHERE email = $1 AND deleted_at IS NULL`, req.Email,
 	).Scan(&userID, &emailVerifiedAt)
-	if err != nil {
+	// Audit keamanan 22 Agustus 2026: cabang "sudah terverifikasi" SEBELUMNYA
+	// mengembalikan pesan BEDA ("akun ini sudah terverifikasi...") tanpa
+	// recordVerifyFailure -- membocorkan status akun (terdaftar+terverifikasi
+	// vs tidak terdaftar/kode salah) ke penyerang tanpa perlu password sama
+	// sekali, PERSIS yang sengaja dihindari endpoint saudaranya
+	// (ResendSignupVerification, lihat genericResp di bawah -- komentarnya
+	// sendiri menyatakan "tidak membocorkan apakah email itu terdaftar atau
+	// sudah terverifikasi"). Disamakan jadi SATU pesan generik + tetap
+	// dihitung sebagai percobaan gagal utk lockout, konsisten dengan cabang
+	// lain di bawah.
+	if err != nil || emailVerifiedAt != nil {
 		recordVerifyFailure(ctx, h.RDB, req.Email)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "kode tidak valid atau sudah kedaluwarsa"})
-		return
-	}
-	if emailVerifiedAt != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini sudah terverifikasi, silakan masuk seperti biasa"})
 		return
 	}
 
@@ -835,6 +841,19 @@ func (h *AuthHandler) ResendSignupVerification(c *gin.Context) {
 
 	rawCode, codeHash, genErr := generateVerificationCode()
 	if genErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+	// Audit keamanan 22 Agustus 2026: batalkan SEMUA kode lama yang belum
+	// dipakai sebelum membuat yang baru -- sebelumnya tiap resend cuma
+	// INSERT baris baru, jadi dengan cooldown 60 detik & masa berlaku 15
+	// menit, sampai ~15 kode 6 digit bisa valid BERSAMAAN untuk satu akun,
+	// menaikkan peluang tebak lurus terhadap checkVerifyLockout (5 percobaan/
+	// 15 menit) -- makin banyak kode valid, makin besar peluang salah satu
+	// tebakan acak kebetulan cocok salah satunya.
+	if _, err := h.DB.Exec(ctx,
+		`UPDATE email_verification_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`, userID,
+	); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
 		return
 	}
