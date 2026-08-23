@@ -58,15 +58,24 @@ export default function Navbar() {
             ))}
           </div>
 
+          {/* Bug link ditemukan langsung pengguna, 23 Agustus 2026:
+              "diklik masih salah link nya" -- SEBELUMNYA "Masuk"/"Mulai
+              Gratis" DUA-DUANYA menuju /dashboard, yang untuk pengunjung
+              belum login akhirnya redirect client-side ke /login (lihat
+              app/dashboard/layout.tsx) -- artinya SETIAP klik "Mulai
+              Gratis" di seluruh homepage (di sini, Hero.tsx, FinalCTA.tsx)
+              malah mendarat di form LOGIN, bukan form DAFTAR, untuk
+              pengunjung baru yang belum py akun. Diperbaiki ke tujuan
+              langsung yang benar. */}
           <div className="flex items-center gap-3">
             <Link
-              href="/dashboard"
+              href="/login"
               className="hidden cursor-pointer text-sm font-bold text-primary transition-colors hover:text-primary-dark sm:block"
             >
               Masuk
             </Link>
             <Link
-              href="/dashboard"
+              href="/register"
               className="btn-primary cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm"
             >
               Mulai Gratis
@@ -99,7 +108,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <Link
-                href="/dashboard"
+                href="/login"
                 onClick={() => setMenuOpen(false)}
                 className="cursor-pointer px-3.5 py-2.5 text-sm font-bold text-primary"
               >

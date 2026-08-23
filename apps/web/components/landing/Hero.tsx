@@ -34,8 +34,13 @@ export default function Hero() {
               className="reveal flex flex-col justify-center gap-3 sm:flex-row lg:justify-start"
               style={{ transitionDelay: "0.15s" }}
             >
+              {/* href -- bug link ditemukan langsung pengguna, 23 Agustus
+                  2026: sebelumnya /dashboard, redirect ke /login untuk
+                  pengunjung belum login (lihat catatan lengkap di
+                  Navbar.tsx), bukan /register yang seharusnya jadi tujuan
+                  CTA pendaftaran baru. */}
               <Link
-                href="/dashboard"
+                href="/register"
                 className="btn-primary shadow-hero cursor-pointer rounded-xl px-7 py-3.5 text-center font-heading text-base font-bold text-white"
               >
                 Mulai Gratis

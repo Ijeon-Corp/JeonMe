@@ -8,17 +8,19 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // template yang sudah ada untuk ditampilkan terutama tampilkan template
 // yang menggunakan bg gambar dan live wallpaper", lalu susulan "coba
 // tampilkan sama persis seperti yang ada di quick template beserta isi
-// blok nya tetapi dengan data dummy seperti john doe dan jane doe foto
-// profil juga ambil online saja". Kurasi template ASLI dari
+// blok nya tetapi dengan data dummy". Kurasi template ASLI dari
 // lib/quick-setup-templates.ts (71 template) yang temanya termasuk
 // WALLPAPER_THEME_NAMES (foto asli) atau VIDEO_THEME_NAMES ("live
 // wallpaper", lib/page-themes.ts) -- dirender pakai KOMPONEN PagePreview
 // SUNGGUHAN (sama persis dipakai halaman publik & dashboard Quick Setup,
 // lihat buildQuickSetupPreviewData) supaya bio/tautan/blok yang tampil di
-// sini benar-benar isi template itu, bukan mockup buatan tangan. Nama &
-// foto profil dummy (John Doe/Jane Doe, foto randomuser.me -- layanan
-// publik foto wajah acak, bebas dipakai tanpa API key) karena template
-// belum terpasang ke akun sungguhan mana pun.
+// sini benar-benar isi template itu, bukan mockup buatan tangan.
+//
+// displayName -- permintaan susulan lain: "nama nama nya random jangan
+// john doe jane doe semua" -- SEBELUMNYA cuma bolak-balik 2 nama itu utk
+// semua 16 kartu, sekarang 16 nama berbeda (dummy juga, template belum
+// terpasang ke akun sungguhan mana pun). Foto profil tetap randomuser.me
+// (layanan publik foto wajah acak, bebas dipakai tanpa API key).
 //
 // 16 item (grid 4x4) -- permintaan langsung pengguna susulan: "buat
 // template 4x4". Dari SELURUH 71 template, HANYA 20 yang temanya
@@ -28,28 +30,30 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // fitness-center), amber (restaurant & food-beverage), lagoon (travel-
 // agency & travel-blogger), dune (tour-guide & fitness-coach). Supaya
 // tepat 16 kartu TANPA gambar/video kembar yang membingungkan, hanya SATU
-// sisi tiap pasangan itu yang dipakai, KECUALI electric (gamer & gym-
-// fitness-center tetap dua-duanya -- 15 tema unik tidak cukup untuk 16,
-// dan nuansa energik electric masuk akal untuk kedua persona itu).
+// sisi tiap pasangan itu yang dipakai. "gamer" (permintaan susulan lain:
+// "ganti template yang di gambar dengan jenis yang lain") ditukar dengan
+// "food-beverage" -- keduanya berbagi tema "amber" dengan "restaurant",
+// jadi total duplikasi visual tetap 1 pasang, cuma pindah dari
+// electric(gamer+gym-fitness-center) ke amber(restaurant+food-beverage).
 const CURATED_KEYS = [
-  // Live Wallpaper (video sungguhan) -- 6 dari 6 VIDEO_THEME_NAMES yang dipakai template.
-  { key: "gamer", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg" },
-  { key: "dj", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
-  { key: "musician", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
-  { key: "education-brand", tag: "Live Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
-  { key: "salon", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/8.jpg" },
-  { key: "gym-fitness-center", tag: "Live Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/12.jpg" },
-  // Wallpaper (foto asli) -- 10 template, tema unik (lihat catatan pasangan di atas).
-  { key: "travel-agency", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
-  { key: "restaurant", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/12.jpg" },
-  { key: "photographer", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/26.jpg" },
-  { key: "tour-guide", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/71.jpg" },
-  { key: "tutor", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/33.jpg" },
-  { key: "artist", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/19.jpg" },
-  { key: "cafe", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/52.jpg" },
-  { key: "homestay-villa", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/64.jpg" },
-  { key: "adventure-guide", tag: "Wallpaper" as const, displayName: "Jane Doe", avatarUrl: "https://randomuser.me/api/portraits/women/17.jpg" },
-  { key: "city-tour", tag: "Wallpaper" as const, displayName: "John Doe", avatarUrl: "https://randomuser.me/api/portraits/men/38.jpg" },
+  // Live Wallpaper (video sungguhan) -- 5 dari 6 VIDEO_THEME_NAMES yang dipakai template + food-beverage (wallpaper).
+  { key: "food-beverage", tag: "Wallpaper" as const, displayName: "Rizky Pratama", avatarUrl: "https://randomuser.me/api/portraits/men/76.jpg" },
+  { key: "dj", tag: "Live Wallpaper" as const, displayName: "Sofia Bennett", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
+  { key: "musician", tag: "Live Wallpaper" as const, displayName: "Daniel Kim", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
+  { key: "education-brand", tag: "Live Wallpaper" as const, displayName: "Aditya Wibowo", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
+  { key: "salon", tag: "Live Wallpaper" as const, displayName: "Michelle Tan", avatarUrl: "https://randomuser.me/api/portraits/women/8.jpg" },
+  { key: "gym-fitness-center", tag: "Live Wallpaper" as const, displayName: "Amara Johnson", avatarUrl: "https://randomuser.me/api/portraits/women/12.jpg" },
+  // Wallpaper (foto asli) -- tema unik (lihat catatan pasangan di atas).
+  { key: "travel-agency", tag: "Wallpaper" as const, displayName: "Putri Ayunda", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
+  { key: "restaurant", tag: "Wallpaper" as const, displayName: "Marco Rossi", avatarUrl: "https://randomuser.me/api/portraits/men/12.jpg" },
+  { key: "photographer", tag: "Wallpaper" as const, displayName: "Hana Kobayashi", avatarUrl: "https://randomuser.me/api/portraits/women/26.jpg" },
+  { key: "tour-guide", tag: "Wallpaper" as const, displayName: "Fajar Nugroho", avatarUrl: "https://randomuser.me/api/portraits/men/71.jpg" },
+  { key: "tutor", tag: "Wallpaper" as const, displayName: "Clara Novak", avatarUrl: "https://randomuser.me/api/portraits/women/33.jpg" },
+  { key: "artist", tag: "Wallpaper" as const, displayName: "Yusuf Ibrahim", avatarUrl: "https://randomuser.me/api/portraits/men/19.jpg" },
+  { key: "cafe", tag: "Wallpaper" as const, displayName: "Nadia Salsabila", avatarUrl: "https://randomuser.me/api/portraits/women/52.jpg" },
+  { key: "homestay-villa", tag: "Wallpaper" as const, displayName: "Thomas Wright", avatarUrl: "https://randomuser.me/api/portraits/men/64.jpg" },
+  { key: "adventure-guide", tag: "Wallpaper" as const, displayName: "Bianca Alves", avatarUrl: "https://randomuser.me/api/portraits/women/17.jpg" },
+  { key: "city-tour", tag: "Wallpaper" as const, displayName: "Kevin Santoso", avatarUrl: "https://randomuser.me/api/portraits/men/38.jpg" },
 ];
 
 const templates = CURATED_KEYS.map((c) => {
