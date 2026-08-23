@@ -24,6 +24,27 @@ function formatRupiah(n: number): string {
 // backend (watermark, latar kustom, batas Halaman Toko/Tambahan, Meta
 // Conversions API) -- bukan tebakan.
 //
+// Daftar Gratis diperluas 4->8 butir -- permintaan langsung pengguna, 23
+// Agustus 2026: "lakukan benchmark ke linktree dan juga lynk id... yang
+// sekarang masih sedikit banget isinya". Riset lapangan (WebSearch/
+// WebFetch situs resmi kedua kompetitor, 23 Agustus 2026): Linktree Free
+// menggerbang custom domain & QR kustom di baliknya paid tier, Lynk.id
+// Free membebankan biaya transaksi lebih tinggi + menggerbang custom
+// domain/Google Analytics/UTM tracking di balik Pro (~Rp99rb/bln). Diaudit
+// ULANG grep MENYELURUH `isPremiumUser`/pesan error "khusus Premium" di
+// SELURUH internal/handlers/*.go (bukan cuma page.go) -- HANYA 4 gerbang
+// yang sungguhan ada (sudah lengkap di daftar Premium di bawah), berarti
+// SEMUA fitur lain (koneksi Instagram/TikTok, kunci tautan, kode QR,
+// Google Analytics/UTM, template Quick Setup) sebenarnya SUDAH gratis
+// tapi belum pernah disebut di sini -- itu sumber "kelihatan sedikit
+// banget" yang sebenarnya. custom_domain.go (baca komentarnya sendiri:
+// "Linktree eksplisit TIDAK menyediakan domain kustom sama sekali...
+// Lynk.id menyediakannya sebagai fitur PRO") SENGAJA TIDAK dimasukkan ke
+// sini walau juga tidak digerbang Premium -- catatan lingkup di file itu
+// bilang wiring infrastruktur produksi (Apache/SSL per domain) belum
+// selesai, jadi mengklaimnya di halaman harga publik sebelum benar-benar
+// bisa dipakai end-to-end akan jadi klaim yang belum akurat.
+//
 // showHeading -- default true (dipakai di homepage sebagai section di
 // antara section lain, butuh judulnya sendiri). false dipakai HANYA oleh
 // app/pricing/page.tsx, yang sudah punya <h1> + intro sendiri di atasnya
@@ -61,8 +82,12 @@ export default async function Pricing({ showHeading = true }: { showHeading?: bo
             <ul className="space-y-3">
               <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Tautan &amp; blok konten tanpa batas</li>
               <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Semua tema (termasuk wallpaper &amp; video)</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>1 Halaman Toko</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Statistik kunjungan &amp; klik</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Puluhan template siap pakai (Quick Setup)</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>1 Halaman Toko -- jual produk digital</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Koneksi Instagram &amp; TikTok otomatis</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Kunci tautan (verifikasi usia/kode/subscribe)</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Statistik kunjungan &amp; klik, Google Analytics</li>
+              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Generator kode QR</li>
             </ul>
           </div>
 
