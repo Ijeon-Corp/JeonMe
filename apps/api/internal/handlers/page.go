@@ -170,6 +170,9 @@ type publicPageResponse struct {
 	SocialLinkedin  string `json:"social_linkedin"`
 	SocialTelegram  string `json:"social_telegram"`
 	SocialEmail     string `json:"social_email"`
+	// SocialGithub/SocialWebsite -- lihat catatan lengkap di updatePageRequest.
+	SocialGithub  string `json:"social_github"`
+	SocialWebsite string `json:"social_website"`
 	// LayoutVariant -- permintaan langsung pengguna, 11 Agustus 2026
 	// (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026
 	// ("tambahkan jenis model layout selain 2 yang sudah ada"), "cover"/
@@ -209,7 +212,7 @@ type publicPageResponse struct {
 	// dalam kolom -- beda dari "hero" yang bleed penuh ke tepi bingkai).
 	// Lihat renderBioHeader di PagePreview.tsx untuk kelima belasnya, &
 	// quick-setup-templates.ts untuk pemetaan kategori->varian terbaru.
-	LayoutVariant string             `json:"layout_variant"`
+	LayoutVariant string `json:"layout_variant"`
 	// ProductLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
 	// pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
 	// 'stacked' (1 kolom penuh lebar). Cuma relevan untuk page_type='produk'
@@ -439,7 +442,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
-			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.layout_variant, p.product_layout,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
+			p.layout_variant, p.product_layout,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -453,7 +457,8 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
-		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.LayoutVariant, &resp.ProductLayout,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
+		&resp.LayoutVariant, &resp.ProductLayout,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -543,7 +548,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
-			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.layout_variant, p.product_layout,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
+			p.layout_variant, p.product_layout,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.slug = $1 AND p.is_published = true
@@ -556,7 +562,8 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
-		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.LayoutVariant, &resp.ProductLayout,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
+		&resp.LayoutVariant, &resp.ProductLayout,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -945,6 +952,8 @@ type myPageResponse struct {
 	SocialLinkedin        string             `json:"social_linkedin"`
 	SocialTelegram        string             `json:"social_telegram"`
 	SocialEmail           string             `json:"social_email"`
+	SocialGithub          string             `json:"social_github"`
+	SocialWebsite         string             `json:"social_website"`
 	LayoutVariant         string             `json:"layout_variant"`
 	Verification          verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
@@ -984,7 +993,8 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
-			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.layout_variant,
+			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
+			p.layout_variant,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -995,7 +1005,8 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
-		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.LayoutVariant,
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
+		&resp.LayoutVariant,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -1144,6 +1155,12 @@ type updatePageRequest struct {
 	SocialLinkedin  *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram  *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail     *string `json:"social_email" binding:"omitempty,max=255"`
+	// SocialGithub/SocialWebsite -- permintaan langsung pengguna, 24 Agustus
+	// 2026 (template "Dimas Dev" bertema developer): 2 platform tambahan di
+	// luar 9 yang sudah ada (migrasi 000061), pola SAMA PERSIS -- lihat
+	// migrasi 000078.
+	SocialGithub  *string `json:"social_github" binding:"omitempty,max=255"`
+	SocialWebsite *string `json:"social_website" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
 	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
 }
@@ -1234,15 +1251,18 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			social_linkedin = COALESCE($27, social_linkedin),
 			social_telegram = COALESCE($28, social_telegram),
 			social_email = COALESCE($29, social_email),
-			layout_variant = COALESCE($30, layout_variant)
-		WHERE user_id = $31 AND is_primary = true
+			social_github = COALESCE($30, social_github),
+			social_website = COALESCE($31, social_website),
+			layout_variant = COALESCE($32, layout_variant)
+		WHERE user_id = $33 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
 		req.HideWatermark,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
-		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail, req.LayoutVariant,
+		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
+		req.SocialGithub, req.SocialWebsite, req.LayoutVariant,
 		userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
@@ -1946,6 +1966,8 @@ type extraPageDetailResponse struct {
 	SocialLinkedin        string        `json:"social_linkedin"`
 	SocialTelegram        string        `json:"social_telegram"`
 	SocialEmail           string        `json:"social_email"`
+	SocialGithub          string        `json:"social_github"`
+	SocialWebsite         string        `json:"social_website"`
 	LayoutVariant         string        `json:"layout_variant"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse.
 	ProductLayout string `json:"product_layout"`
@@ -1978,7 +2000,8 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers,
 			hide_watermark,
 			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
-			social_x, social_linkedin, social_telegram, social_email, layout_variant, product_layout
+			social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
+			layout_variant, product_layout
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
@@ -1987,7 +2010,8 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
-		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.LayoutVariant, &resp.ProductLayout)
+		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
+		&resp.LayoutVariant, &resp.ProductLayout)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	}
@@ -2041,6 +2065,8 @@ type updateExtraPageRequest struct {
 	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
 	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
 	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
+	SocialGithub          *string `json:"social_github" binding:"omitempty,max=255"`
+	SocialWebsite         *string `json:"social_website" binding:"omitempty,max=255"`
 	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse
 	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
@@ -2140,16 +2166,19 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			social_linkedin = COALESCE($29, social_linkedin),
 			social_telegram = COALESCE($30, social_telegram),
 			social_email = COALESCE($31, social_email),
-			layout_variant = COALESCE($32, layout_variant),
-			product_layout = COALESCE($33, product_layout)
-		WHERE id = $34 AND user_id = $35 AND is_primary = false
+			social_github = COALESCE($32, social_github),
+			social_website = COALESCE($33, social_website),
+			layout_variant = COALESCE($34, layout_variant),
+			product_layout = COALESCE($35, product_layout)
+		WHERE id = $36 AND user_id = $37 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
 		req.HideWatermark,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
-		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail, req.LayoutVariant, req.ProductLayout,
+		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
+		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.ProductLayout,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {

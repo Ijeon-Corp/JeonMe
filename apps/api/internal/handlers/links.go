@@ -129,6 +129,14 @@ type linkItem struct {
 	// beda, lihat migrasi 000064.
 	IsFeatured   bool   `json:"is_featured"`
 	ThumbnailURL string `json:"thumbnail_url"`
+	// Description -- permintaan langsung pengguna, 24 Agustus 2026: template
+	// "Dimas Dev" (kartu tautan ikon+judul+deskripsi+panah). Baris subjudul
+	// OPSIONAL di bawah judul -- kosong ("") berarti tetap tampil sebagai
+	// baris judul tunggal seperti sebelumnya (lihat renderLinkOrBlock,
+	// PagePreview.tsx). Dipakai ulang untuk block_type "project_showcase"
+	// sebagai paragraf deskripsi (bukan field terpisah di block_data) --
+	// lihat migrasi 000077 kenapa ini kolom sendiri, bukan block_data.
+	Description string `json:"description"`
 }
 
 // List mengembalikan seluruh tautan & blok konten milik kreator yang sedang
@@ -145,7 +153,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 	rows, err := h.DB.Query(ctx, `
 		SELECT l.id, l.title, l.url, l.position, l.is_active, l.starts_at, l.ends_at,
 			COALESCE(l.lock_type, ''), l.lock_code, l.lock_min_age, l.block_type, l.block_data, l.custom_icon_url,
-			l.icon_key, l.icon_color, l.is_featured, l.thumbnail_url,
+			l.icon_key, l.icon_color, l.is_featured, l.thumbnail_url, l.description,
 			(SELECT COUNT(*) FROM analytics_events ae WHERE ae.link_id = l.id AND ae.event_type = 'click')
 		FROM links l
 		JOIN pages p ON p.id = l.page_id
@@ -163,7 +171,7 @@ func (h *LinksHandler) List(c *gin.Context) {
 		var it linkItem
 		if err := rows.Scan(&it.ID, &it.Title, &it.URL, &it.Position, &it.IsActive, &it.StartsAt, &it.EndsAt,
 			&it.LockType, &it.LockCode, &it.LockMinAge, &it.BlockType, &it.BlockData, &it.CustomIconURL,
-			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.ClickCount); err == nil {
+			&it.IconKey, &it.IconColor, &it.IsFeatured, &it.ThumbnailURL, &it.Description, &it.ClickCount); err == nil {
 			items = append(items, it)
 		}
 	}
@@ -183,6 +191,8 @@ type createLinkRequest struct {
 	// skema http/https saja -- pola sama diterapkan ke SEMUA field URL
 	// tautan/blok/produk lain di file ini & product.go.
 	URL string `json:"url" binding:"required,http_url,max=2048"`
+	// Description -- lihat catatan lengkap di linkItem.Description.
+	Description string `json:"description" binding:"omitempty,max=240"`
 }
 
 // Create — REQ-F-202. Tautan baru ditaruh di posisi paling akhir.
@@ -222,16 +232,16 @@ func (h *LinksHandler) Create(c *gin.Context) {
 
 	id := uuid.NewString()
 	_, err := h.DB.Exec(ctx, `
-		INSERT INTO links (id, page_id, title, url, position, is_active)
-		VALUES ($1, $2, $3, $4, $5, true)
-	`, id, pageID, req.Title, req.URL, nextPosition)
+		INSERT INTO links (id, page_id, title, url, position, is_active, description)
+		VALUES ($1, $2, $3, $4, $5, true, $6)
+	`, id, pageID, req.Title, req.URL, nextPosition, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat tautan"})
 		return
 	}
 
 	h.invalidatePageCacheByID(ctx, pageID)
-	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}")})
+	c.JSON(http.StatusCreated, linkItem{ID: id, Title: req.Title, URL: req.URL, Position: nextPosition, IsActive: true, BlockType: "link", BlockData: json.RawMessage("{}"), Description: req.Description})
 }
 
 // validVideoHosts -- No.77: "auto-embed" dibatasi ke YouTube/TikTok sesuai
@@ -480,15 +490,38 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				}
 			}
 		}
+	case "project_showcase":
+		// "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
+		// kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
+		// Dev") -- gambar + badge + judul (title, kolom yang sudah ada) +
+		// deskripsi (kolom `description`, lihat linkItem) + CTA (url, kolom
+		// yang sudah ada + block_data.cta_text sebagai label tombolnya, mis.
+		// "Lihat studi kasus"). Cuma image_url yang perlu divalidasi di sini
+		// (badge_text/cta_text bebas teks apa saja) -- pola SAMA PERSIS
+		// dengan gallery/audio/file: blok boleh dibuat DULU dengan image_url
+		// kosong (diisi lewat UploadShowcaseImage setelahnya), tapi kalau
+		// TERISI wajib URL valid.
+		if raw, ok := data["image_url"]; ok {
+			imageURL, _ := raw.(string)
+			if imageURL != "" {
+				u, err := url.Parse(imageURL)
+				if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+					return "image_url wajib berupa URL yang valid", false
+				}
+			}
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
+	// Description -- lihat catatan lengkap di linkItem.Description. Dipakai
+	// block_type "project_showcase" sebagai paragraf deskripsi.
+	Description string `json:"description" binding:"omitempty,max=240"`
 }
 
 // CreateBlock — No.77 (Sprint 9): blok konten baru selain tautan biasa
@@ -512,6 +545,10 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	}
 	if req.BlockType == "maps" && req.URL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan Google Maps wajib diisi"})
+		return
+	}
+	if req.BlockType == "project_showcase" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url tujuan (CTA) wajib diisi untuk kartu project unggulan"})
 		return
 	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
@@ -560,7 +597,7 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{
 		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
-		BlockType: req.BlockType, BlockData: blockDataJSON,
+		BlockType: req.BlockType, BlockData: blockDataJSON, Description: req.Description,
 	})
 }
 
@@ -580,9 +617,9 @@ func (h *LinksHandler) insertBlock(ctx context.Context, pageID string, req creat
 
 	id = uuid.NewString()
 	if _, err = h.DB.Exec(ctx, `
-		INSERT INTO links (id, page_id, title, url, position, is_active, block_type, block_data)
-		VALUES ($1, $2, $3, $4, $5, true, $6, $7)
-	`, id, pageID, req.Title, req.URL, position, req.BlockType, blockDataJSON); err != nil {
+		INSERT INTO links (id, page_id, title, url, position, is_active, block_type, block_data, description)
+		VALUES ($1, $2, $3, $4, $5, true, $6, $7, $8)
+	`, id, pageID, req.Title, req.URL, position, req.BlockType, blockDataJSON, req.Description); err != nil {
 		return "", 0, nil, errors.New("gagal membuat blok")
 	}
 
@@ -644,6 +681,10 @@ type updateLinkRequest struct {
 	// tidak pernah menampakkan bug yang sama karena validatornya (max=50)
 	// tetap lolos untuk string kosong apa pun alasannya.
 	IconColor *string `json:"icon_color" binding:"omitempty,max=7"`
+	// Description -- lihat catatan lengkap di linkItem.Description. String
+	// kosong ("") dikirim eksplisit untuk mengosongkan (pola sama seperti
+	// IconKey/IconColor), *string biasa cukup, tidak perlu flag Clear*.
+	Description *string `json:"description" binding:"omitempty,max=240"`
 }
 
 // hexColorPattern -- format PERSIS yang dihasilkan <input type="color">
@@ -861,10 +902,11 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			is_featured = COALESCE($10, is_featured),
 			thumbnail_url = COALESCE($11, thumbnail_url),
 			icon_key = COALESCE($12, icon_key),
-			icon_color = COALESCE($13, icon_color)
-		WHERE id = $14
+			icon_color = COALESCE($13, icon_color),
+			description = COALESCE($14, description)
+		WHERE id = $15
 	`, req.Title, req.URL, req.IsActive, starts, ends, req.LockType, req.LockCode, req.LockMinAge, blockDataJSON,
-		req.IsFeatured, autoThumbnail, req.IconKey, req.IconColor, linkID)
+		req.IsFeatured, autoThumbnail, req.IconKey, req.IconColor, req.Description, linkID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui tautan"})
 		return
@@ -1080,6 +1122,89 @@ func (h *LinksHandler) DeleteThumbnail(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "thumbnail tautan dihapus, kembali ke baris klasik"})
+}
+
+// maxShowcaseImageSize -- sama seperti maxLinkThumbnailSize (5MB), gambar
+// kartu "Project Unggulan" tampil besar (bukan ikon kecil).
+const maxShowcaseImageSize = 5 * 1024 * 1024
+
+// UploadShowcaseImage -- block_type "project_showcase" (permintaan langsung
+// pengguna, 24 Agustus 2026, lihat catatan lengkap di validateBlockData).
+// Pola SAMA PERSIS dengan UploadThumbnail (satu gambar, unggah ulang
+// menimpa key storage yang sama + cache-busting "?v=<timestamp>") -- BEDA
+// hanya disimpan di block_data.image_url (JSONB) lewat jsonb_set, BUKAN
+// kolom khusus, karena field ini spesifik satu block_type (lihat migrasi
+// 000077 kenapa `description` di atas sengaja kolom sendiri sementara ini
+// tetap di block_data).
+func (h *LinksHandler) UploadShowcaseImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxShowcaseImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("link-showcase/%s.webp", linkID)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah gambar"})
+		return
+	}
+
+	imageURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	imageURLJSON, _ := json.Marshal(imageURL)
+	res, err := h.DB.Exec(ctx, `
+		UPDATE links SET block_data = jsonb_set(block_data, '{image_url}', $1::jsonb, true)
+		WHERE id = $2 AND block_type = 'project_showcase'
+	`, imageURLJSON, linkID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+	if res.RowsAffected() == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan kartu project unggulan"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"image_url": imageURL, "message": "gambar kartu berhasil diunggah"})
 }
 
 // maxGalleryImageSize -- sama seperti maxLinkThumbnailSize (5MB), foto
@@ -1824,11 +1949,11 @@ func (h *LinksHandler) Duplicate(c *gin.Context) {
 		INSERT INTO links (
 			id, page_id, title, url, position, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
 		)
 		SELECT $1, page_id, LEFT(title || ' (Salinan)', 100), url, $2, is_active, starts_at, ends_at,
 			lock_type, lock_code, lock_min_age, block_type, block_data,
-			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color
+			custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
 		FROM links WHERE id = $3
 	`, newID, nextPosition, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menduplikasi blok"})
@@ -2097,6 +2222,10 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan Google Maps wajib diisi"})
 		return
 	}
+	if req.BlockType == "project_showcase" && req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url tujuan (CTA) wajib diisi untuk kartu project unggulan"})
+		return
+	}
 	if msg, ok := validateBlockData(req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
@@ -2136,7 +2265,7 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 	h.invalidatePageCacheByID(ctx, pageID)
 	c.JSON(http.StatusCreated, linkItem{
 		ID: id, Title: req.Title, URL: req.URL, Position: position, IsActive: true,
-		BlockType: req.BlockType, BlockData: blockDataJSON,
+		BlockType: req.BlockType, BlockData: blockDataJSON, Description: req.Description,
 	})
 }
 

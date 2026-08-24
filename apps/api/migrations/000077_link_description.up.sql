@@ -1,0 +1,19 @@
+-- Deskripsi (subjudul) per tautan -- permintaan langsung pengguna, 24
+-- Agustus 2026: contoh tangkapan layar template "Dimas Dev" (link-in-bio
+-- developer bertema navy gelap) yang menampilkan tiap tautan sebagai kartu
+-- ikon+judul+DESKRIPSI+panah (mis. "Featured Projects" / "Website, dashboard,
+-- dan aplikasi pilihan"), bukan cuma judul tunggal seperti sebelumnya --
+-- diminta untuk dijadikan salah satu Quick Setup template baru.
+--
+-- Kolom BARU (bukan dimasukkan ke block_data JSONB yang sudah ada) --
+-- mengikuti konvensi repo ini: field yang berlaku UMUM ke baris "link"
+-- MAUPUN "button" (bukan spesifik satu block_type saja) selalu jadi kolom
+-- sendiri, sama seperti icon_key/icon_color/thumbnail_url, BUKAN
+-- ditumpuk di block_data (yang dipakai utk field spesifik-per-tipe seperti
+-- video_url/embed/items[]). Kosong ('') berarti tetap tampil sebagai baris
+-- judul tunggal seperti sebelumnya (tidak ada perubahan visual diam-diam
+-- utk tautan yang sudah ada) -- lihat render bersyarat di PagePreview.tsx.
+-- 240 (bukan ~100 seperti title) -- dipakai ulang jadi paragraf deskripsi
+-- block_type "project_showcase" (lihat validateBlockData, links.go), lebih
+-- panjang dari sekadar subjudul satu baris utk tautan biasa.
+ALTER TABLE links ADD COLUMN description VARCHAR(240) NOT NULL DEFAULT '';

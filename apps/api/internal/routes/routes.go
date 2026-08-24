@@ -285,6 +285,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// audio di atas (satu file per blok).
 				linksGroup.POST("/links/:id/file", links.UploadFile)
 				linksGroup.DELETE("/links/:id/file", links.DeleteFile)
+				// Blok "project_showcase" (permintaan langsung pengguna, 24
+				// Agustus 2026: kartu "Project Unggulan") -- pola upload SAMA
+				// seperti thumbnail di atas, gambar disimpan di block_data
+				// (bukan kolom khusus), lihat UploadShowcaseImage.
+				linksGroup.POST("/links/:id/showcase-image", links.UploadShowcaseImage)
 
 				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
 				// -- baris links yang sama, cuma butuh endpoint create sendiri
