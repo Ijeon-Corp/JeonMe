@@ -128,7 +128,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -148,6 +148,12 @@ export interface PublicLink {
   // kartu thumbnail 16:9 (lihat renderLinkOrBlock, PagePreview.tsx).
   is_featured: boolean;
   thumbnail_url: string;
+  // description -- permintaan langsung pengguna, 24 Agustus 2026: subjudul
+  // opsional di bawah judul tautan (kartu ikon+judul+deskripsi+panah,
+  // contoh template "Dimas Dev"). Kosong = tetap baris judul tunggal
+  // seperti sebelumnya (lihat renderLinkOrBlock, PagePreview.tsx). Dipakai
+  // ulang block_type "project_showcase" sebagai paragraf deskripsi.
+  description: string;
 }
 
 // No.79 (Sprint 9): buka tautan terkunci -- endpoint publik, tanpa akun.
@@ -394,6 +400,11 @@ export interface PublicPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
+  // social_github/social_website -- permintaan langsung pengguna, 24
+  // Agustus 2026 (template "Dimas Dev" bertema developer): 2 platform
+  // tambahan di luar 9 di atas, lihat lib/social-links.ts.
+  social_github: string;
+  social_website: string;
   // layout_variant -- permintaan langsung pengguna, 11 Agustus 2026
   // (susulan Quick Setup), "card"/"spotlight" ditambah 12 Agustus 2026:
   // "centered" (bawaan, avatar+nama+bio di tengah), "banner" (rata kiri
@@ -666,6 +677,9 @@ export interface MyPage {
   social_linkedin: string;
   social_telegram: string;
   social_email: string;
+  // social_github/social_website -- lihat catatan lengkap di PublicPage.
+  social_github: string;
+  social_website: string;
   layout_variant: PageLayoutVariant;
 }
 
@@ -814,6 +828,8 @@ export function updateMyPage(
       | "social_linkedin"
       | "social_telegram"
       | "social_email"
+      | "social_github"
+      | "social_website"
       | "layout_variant"
     >
   >
@@ -893,7 +909,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -913,6 +929,8 @@ export interface LinkItem {
   // lengkap di PublicLink.
   is_featured: boolean;
   thumbnail_url: string;
+  // description -- lihat catatan lengkap di PublicLink.
+  description: string;
 }
 
 // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ) -- baris
@@ -920,10 +938,13 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
+  // description -- lihat catatan lengkap di PublicLink. Dipakai block_type
+  // "project_showcase" sebagai paragraf deskripsi.
+  description?: string;
 }) {
   return apiFetch<LinkItem>("/dashboard/blocks", { method: "POST", body: JSON.stringify(input) }, { auth: true });
 }
@@ -932,7 +953,7 @@ export function listLinks() {
   return apiFetch<LinkItem[]>("/dashboard/links", { method: "GET" }, { auth: true });
 }
 
-export function createLink(input: { title: string; url: string }) {
+export function createLink(input: { title: string; url: string; description?: string }) {
   return apiFetch<LinkItem>("/dashboard/links", { method: "POST", body: JSON.stringify(input) }, { auth: true });
 }
 
@@ -953,6 +974,7 @@ export function updateLink(
     is_featured: boolean;
     icon_key: string;
     icon_color: string;
+    description: string;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -1027,6 +1049,28 @@ export async function uploadLinkThumbnail(id: string, file: File): Promise<{ thu
 
 export function deleteLinkThumbnail(id: string) {
   return apiFetch<{ message: string }>(`/dashboard/links/${id}/thumbnail`, { method: "DELETE" }, { auth: true });
+}
+
+// uploadShowcaseImage -- block_type "project_showcase" (permintaan langsung
+// pengguna, 24 Agustus 2026: kartu "Project Unggulan"). Pola SAMA PERSIS
+// uploadLinkThumbnail (satu gambar, unggah ulang menimpa) -- lihat
+// UploadShowcaseImage, links.go.
+export async function uploadShowcaseImage(id: string, file: File): Promise<{ image_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/showcase-image`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
 }
 
 // uploadGalleryImage/deleteGalleryImage -- blok "gallery" (hasil analisa
@@ -1271,6 +1315,8 @@ export function updateExtraPage(
       | "social_linkedin"
       | "social_telegram"
       | "social_email"
+      | "social_github"
+      | "social_website"
       | "layout_variant"
     >
   >
@@ -1321,10 +1367,11 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;
+    description?: string;
   }
 ) {
   return apiFetch<LinkItem>(

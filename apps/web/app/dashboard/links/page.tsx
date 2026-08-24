@@ -28,6 +28,7 @@ import {
   uploadGalleryImage,
   uploadLinkIcon,
   uploadLinkThumbnail,
+  uploadShowcaseImage,
 } from "@/lib/api-client";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import {
@@ -88,6 +89,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   gallery: "Galeri Foto",
   audio: "Audio/Musik",
   file: "File & Unduhan",
+  project_showcase: "Project Unggulan",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -210,7 +212,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
+  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -250,6 +252,11 @@ const CONTENT_TILES: ContentTile[] = [
   // muncul di kartu blok) -- beda dari produk digital berbayar di Toko,
   // blok ini gratis/lead-magnet (ebook, materi, template), tanpa checkout.
   { key: "file", label: "File & Unduhan", description: "Bagikan PDF/ZIP/EPUB gratis untuk diunduh pengunjung", Icon: IconFileText },
+  // "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
+  // kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
+  // Dev") -- gambar + badge + judul + deskripsi + tombol CTA, cocok utk
+  // menonjolkan SATU karya/studi kasus di antara tautan biasa.
+  { key: "project_showcase", label: "Project Unggulan", description: "Tonjolkan satu karya/studi kasus dengan gambar, badge, dan tombol CTA", Icon: IconCamera },
 ];
 
 // Permintaan langsung pengguna, 14 Agustus 2026: "harusnya semua tipe ini
@@ -300,6 +307,11 @@ export default function DashboardLinksPage() {
   const [addingLink, setAddingLink] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newURL, setNewURL] = useState("");
+  // newDescription -- permintaan langsung pengguna, 24 Agustus 2026: subjudul
+  // opsional di bawah judul (kartu ikon+judul+deskripsi+panah, contoh
+  // template "Dimas Dev"). Kosong = tetap baris judul tunggal seperti
+  // sebelumnya.
+  const [newDescription, setNewDescription] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
 
   // Permintaan langsung pengguna: unggah gambar kustom per tautan
@@ -341,7 +353,7 @@ export default function DashboardLinksPage() {
   // Edit inline judul/URL langsung di kartu (ikon pensil) -- sebelumnya
   // judul/URL tidak bisa diubah sama sekali setelah dibuat, padahal backend
   // (updateLink) sudah mendukungnya sejak awal.
-  const [editingField, setEditingField] = useState<{ id: string; field: "title" | "url" } | null>(null);
+  const [editingField, setEditingField] = useState<{ id: string; field: "title" | "url" | "description" } | null>(null);
   const [editingValue, setEditingValue] = useState("");
 
   // No.78 (Sprint 9): penjadwalan tautan -- pola sama persis seperti
@@ -364,7 +376,9 @@ export default function DashboardLinksPage() {
 
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
-  const [blockType, setBlockType] = useState<"video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file">("video");
+  const [blockType, setBlockType] = useState<
+    "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase"
+  >("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
   // Benchmark Lynk.id: blok Teks -- paragraf polos, TANPA tautan/aksi.
@@ -383,7 +397,17 @@ export default function DashboardLinksPage() {
   // supaya kreator tidak mengira embed langsung aktif sebelum tersimpan.
   const [blockMapsUrl, setBlockMapsUrl] = useState("");
   const [blockMapsEmbed, setBlockMapsEmbed] = useState(true);
+  // "project_showcase" -- kartu "Project Unggulan": url = tautan CTA (field
+  // generik `blockUrl` di handleCreateBlock, state terpisah supaya tidak
+  // nyasar kalau kreator ganti-ganti tipe blok di form yang sama), gambar
+  // diunggah SETELAH blok dibuat (pola sama gallery/audio/file, lihat
+  // showcaseUploadingId di bawah).
+  const [blockShowcaseUrl, setBlockShowcaseUrl] = useState("");
+  const [blockShowcaseDescription, setBlockShowcaseDescription] = useState("");
+  const [blockShowcaseBadge, setBlockShowcaseBadge] = useState("");
+  const [blockShowcaseCta, setBlockShowcaseCta] = useState("");
   const [savingBlock, setSavingBlock] = useState(false);
+  const [showcaseUploadingId, setShowcaseUploadingId] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
   const [editVideoUrl, setEditVideoUrl] = useState("");
@@ -392,6 +416,14 @@ export default function DashboardLinksPage() {
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
   const [editText, setEditText] = useState("");
   const [editAccordionText, setEditAccordionText] = useState("");
+  // "project_showcase" -- 4 field sekaligus (beda dari tipe blok lain yang
+  // cuma butuh 1 textarea/URL), state sendiri-sendiri supaya tidak
+  // tercampur dengan editingField (mekanisme edit inline title/url khusus
+  // tautan biasa di kartu daftar).
+  const [editShowcaseUrl, setEditShowcaseUrl] = useState("");
+  const [editShowcaseDescription, setEditShowcaseDescription] = useState("");
+  const [editShowcaseBadge, setEditShowcaseBadge] = useState("");
+  const [editShowcaseCta, setEditShowcaseCta] = useState("");
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
@@ -440,6 +472,8 @@ export default function DashboardLinksPage() {
       linkedin: page.social_linkedin,
       telegram: page.social_telegram,
       email: page.social_email,
+      github: page.social_github,
+      website: page.social_website,
     });
     setSocialOpen(true);
   }
@@ -457,6 +491,8 @@ export default function DashboardLinksPage() {
       social_linkedin: (socialDraft.linkedin ?? "").trim(),
       social_telegram: (socialDraft.telegram ?? "").trim(),
       social_email: (socialDraft.email ?? "").trim(),
+      social_github: (socialDraft.github ?? "").trim(),
+      social_website: (socialDraft.website ?? "").trim(),
     };
     try {
       await updateMyPage(patch);
@@ -489,10 +525,11 @@ export default function DashboardLinksPage() {
     e.preventDefault();
     if (!newTitle.trim() || !newURL.trim()) return;
     try {
-      const created = await createLink({ title: newTitle, url: newURL });
+      const created = await createLink({ title: newTitle, url: newURL, description: newDescription.trim() });
       setLinks((prev) => [...prev, created]);
       setNewTitle("");
       setNewURL("");
+      setNewDescription("");
       setAddingLink(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat tautan.");
@@ -506,6 +543,7 @@ export default function DashboardLinksPage() {
   function openLinkFormPrefilled(title: string, url: string) {
     setNewTitle(title);
     setNewURL(url);
+    setNewDescription("");
     setAddingLink(true);
     setAddModalOpen(false);
   }
@@ -523,11 +561,20 @@ export default function DashboardLinksPage() {
     setAddModalOpen(false);
   }
 
-  function openBlockFormPrefilled(type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio" | "file", title: string) {
+  function openBlockFormPrefilled(
+    type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase",
+    title: string
+  ) {
     setBlockType(type);
     setBlockTitle(title);
     if (type === "text") setBlockText("");
     if (type === "accordion") setBlockAccordionText("");
+    if (type === "project_showcase") {
+      setBlockShowcaseUrl("");
+      setBlockShowcaseDescription("");
+      setBlockShowcaseBadge("");
+      setBlockShowcaseCta("");
+    }
     setAddingBlock(true);
     setAddModalOpen(false);
   }
@@ -677,6 +724,26 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // handleShowcaseImageUpload -- blok "project_showcase", pola sama seperti
+  // handleThumbnailUpload (satu gambar, unggah ulang menimpa) -- BEDA cuma
+  // disimpan di block_data.image_url (lihat UploadShowcaseImage, links.go).
+  async function handleShowcaseImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setShowcaseUploadingId(link.id);
+    setError(null);
+    try {
+      const { image_url } = await uploadShowcaseImage(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, image_url } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah gambar.");
+    } finally {
+      setShowcaseUploadingId(null);
+    }
+  }
+
   // handleAudioUpload/handleAudioDelete -- blok "audio", pola sama seperti
   // handleIconUpload (unggah ulang menimpa file yang sama, satu audio per
   // blok). Cover art blok ini sengaja TIDAK dapat unggahan sendiri --
@@ -818,9 +885,9 @@ export default function DashboardLinksPage() {
     }
   }
 
-  function startEditField(link: LinkItem, field: "title" | "url") {
+  function startEditField(link: LinkItem, field: "title" | "url" | "description") {
     setEditingField({ id: link.id, field });
-    setEditingValue(field === "title" ? link.title : link.url);
+    setEditingValue(field === "title" ? link.title : field === "url" ? link.url : link.description);
   }
 
   async function saveEditField(link: LinkItem) {
@@ -828,15 +895,21 @@ export default function DashboardLinksPage() {
     const field = editingField.field;
     const value = editingValue.trim();
     setEditingField(null);
-    if (!value || value === (field === "title" ? link.title : link.url)) return;
+    const currentValue = field === "title" ? link.title : field === "url" ? link.url : link.description;
+    // description -- permintaan langsung pengguna, 24 Agustus 2026: BEDA
+    // dari title/url (wajib diisi, string kosong dibatalkan), string
+    // kosong di sini SAH (mengosongkan deskripsi, kembali ke baris judul
+    // tunggal seperti sebelumnya).
+    if (field !== "description" && !value) return;
+    if (value === currentValue) return;
 
     const previous = links;
     setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, [field]: value } : l)));
     try {
-      await updateLink(link.id, field === "title" ? { title: value } : { url: value });
+      await updateLink(link.id, field === "title" ? { title: value } : field === "url" ? { url: value } : { description: value });
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : `Gagal memperbarui ${field === "title" ? "judul" : "URL"}.`);
+      setError(err instanceof ApiError ? err.message : `Gagal memperbarui ${field === "title" ? "judul" : field === "url" ? "URL" : "deskripsi"}.`);
     }
   }
 
@@ -1005,11 +1078,24 @@ export default function DashboardLinksPage() {
         return;
       }
       blockData = { text: blockAccordionText.trim() };
+    } else if (blockType === "project_showcase") {
+      if (!blockShowcaseUrl.trim()) {
+        setError("Tautan tujuan (CTA) wajib diisi.");
+        return;
+      }
+      blockUrl = blockShowcaseUrl.trim();
+      blockData = { badge_text: blockShowcaseBadge.trim(), cta_text: blockShowcaseCta.trim() };
     }
     setError(null);
     setSavingBlock(true);
     try {
-      const created = await createBlock({ block_type: blockType, title: blockTitle.trim(), url: blockUrl, block_data: blockData });
+      const created = await createBlock({
+        block_type: blockType,
+        title: blockTitle.trim(),
+        url: blockUrl,
+        block_data: blockData,
+        description: blockType === "project_showcase" ? blockShowcaseDescription.trim() : undefined,
+      });
       setLinks((prev) => [...prev, created]);
       setAddingBlock(false);
       setBlockTitle("");
@@ -1019,6 +1105,10 @@ export default function DashboardLinksPage() {
       setBlockMapsUrl("");
       setBlockMapsEmbed(true);
       setBlockText("");
+      setBlockShowcaseUrl("");
+      setBlockShowcaseDescription("");
+      setBlockShowcaseBadge("");
+      setBlockShowcaseCta("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat blok.");
     } finally {
@@ -1040,12 +1130,18 @@ export default function DashboardLinksPage() {
       setEditText((link.block_data?.text as string) ?? "");
     } else if (link.block_type === "accordion") {
       setEditAccordionText((link.block_data?.text as string) ?? "");
+    } else if (link.block_type === "project_showcase") {
+      setEditShowcaseUrl(link.url ?? "");
+      setEditShowcaseDescription(link.description ?? "");
+      setEditShowcaseBadge((link.block_data?.badge_text as string) ?? "");
+      setEditShowcaseCta((link.block_data?.cta_text as string) ?? "");
     }
   }
 
   async function handleSaveContent(link: LinkItem) {
     let blockData: Record<string, unknown>;
     let blockUrl: string | undefined;
+    let blockDescription: string | undefined;
     if (link.block_type === "video") {
       if (!editVideoUrl.trim()) {
         setError("Tautan video wajib diisi.");
@@ -1071,6 +1167,14 @@ export default function DashboardLinksPage() {
         return;
       }
       blockData = { text: editAccordionText.trim() };
+    } else if (link.block_type === "project_showcase") {
+      if (!editShowcaseUrl.trim()) {
+        setError("Tautan tujuan (CTA) wajib diisi.");
+        return;
+      }
+      blockUrl = editShowcaseUrl.trim();
+      blockDescription = editShowcaseDescription.trim();
+      blockData = { badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
     } else {
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
@@ -1082,7 +1186,7 @@ export default function DashboardLinksPage() {
     setError(null);
     setSavingContent(true);
     try {
-      await updateLink(link.id, { url: blockUrl, block_data: blockData });
+      await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
       const refreshed = await listLinks();
       setLinks(refreshed);
       setContentEditId(null);
@@ -1329,34 +1433,50 @@ export default function DashboardLinksPage() {
         </button>
 
         {addingLink && (
-          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card sm:flex-row">
+          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="text"
+                required
+                autoFocus
+                placeholder="Judul tautan"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                type="url"
+                required
+                placeholder="https://..."
+                value={newURL}
+                onChange={(e) => setNewURL(e.target.value)}
+                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            {/* description -- permintaan langsung pengguna, 24 Agustus
+                2026: subjudul opsional (kartu ikon+judul+deskripsi+panah,
+                contoh template "Dimas Dev"). Kosong = baris judul tunggal
+                seperti sebelumnya. */}
             <input
               type="text"
-              required
-              autoFocus
-              placeholder="Judul tautan"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              placeholder="Deskripsi singkat (opsional)"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              maxLength={240}
+              className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <input
-              type="url"
-              required
-              placeholder="https://..."
-              value={newURL}
-              onChange={(e) => setNewURL(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
-              Tambah
-            </button>
-            <button
-              type="button"
-              onClick={() => setAddingLink(false)}
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
-            >
-              Batal
-            </button>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setAddingLink(false)}
+                className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+              >
+                Batal
+              </button>
+              <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
+                Tambah
+              </button>
+            </div>
           </form>
         )}
 
@@ -1366,7 +1486,17 @@ export default function DashboardLinksPage() {
               value={blockType}
               onChange={(e) =>
                 setBlockType(
-                  e.target.value as "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file"
+                  e.target.value as
+                    | "video"
+                    | "contact_form"
+                    | "faq"
+                    | "maps"
+                    | "text"
+                    | "accordion"
+                    | "gallery"
+                    | "audio"
+                    | "file"
+                    | "project_showcase"
                 )
               }
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -1380,14 +1510,17 @@ export default function DashboardLinksPage() {
               <option value="gallery">Galeri Foto</option>
               <option value="audio">Audio/Musik</option>
               <option value="file">File & Unduhan (PDF/ZIP/EPUB)</option>
+              <option value="project_showcase">Project Unggulan</option>
             </select>
-            {(blockType === "gallery" || blockType === "audio" || blockType === "file") && (
+            {(blockType === "gallery" || blockType === "audio" || blockType === "file" || blockType === "project_showcase") && (
               <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-muted">
                 {blockType === "gallery"
                   ? "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok."
                   : blockType === "audio"
                   ? "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok."
-                  : "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok."}
+                  : blockType === "file"
+                  ? "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok."
+                  : "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok."}
               </p>
             )}
             <input
@@ -1398,12 +1531,48 @@ export default function DashboardLinksPage() {
                   ? "Judul blok (internal, tidak tampil ke publik)"
                   : blockType === "accordion"
                   ? "Judul yang tampil & diklik pengunjung"
+                  : blockType === "project_showcase"
+                  ? "Judul proyek"
                   : "Judul blok"
               }
               value={blockTitle}
               onChange={(e) => setBlockTitle(e.target.value)}
               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
+            {blockType === "project_showcase" && (
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  placeholder="Badge kecil di atas gambar (opsional, mis. 'Project Unggulan')"
+                  value={blockShowcaseBadge}
+                  onChange={(e) => setBlockShowcaseBadge(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+                <textarea
+                  placeholder="Paragraf deskripsi singkat"
+                  value={blockShowcaseDescription}
+                  onChange={(e) => setBlockShowcaseDescription(e.target.value)}
+                  rows={2}
+                  maxLength={240}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+                <input
+                  type="url"
+                  required
+                  placeholder="https://... (tautan tujuan tombol CTA)"
+                  value={blockShowcaseUrl}
+                  onChange={(e) => setBlockShowcaseUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Teks tombol CTA (opsional, bawaan 'Lihat detail')"
+                  value={blockShowcaseCta}
+                  onChange={(e) => setBlockShowcaseCta(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+            )}
             {blockType === "text" && (
               <textarea
                 placeholder="Isi teks yang tampil di halaman publik"
@@ -1635,6 +1804,40 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
+              {/* description -- permintaan langsung pengguna, 24 Agustus
+                  2026: subjudul opsional di bawah judul (kartu
+                  ikon+judul+deskripsi+panah, contoh template "Dimas Dev"),
+                  diedit inline sama seperti judul/URL di atas. */}
+              {link.block_type === "link" && (
+                <div className="ml-11 flex items-center gap-1.5">
+                  {editingField?.id === link.id && editingField.field === "description" ? (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingValue}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => saveEditField(link)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                      maxLength={240}
+                      placeholder="Deskripsi singkat (opsional)"
+                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-muted focus:outline-none"
+                    />
+                  ) : (
+                    <>
+                      <p className="truncate text-xs italic text-muted">{link.description || "Tanpa deskripsi"}</p>
+                      <button
+                        type="button"
+                        onClick={() => startEditField(link, "description")}
+                        className="flex-shrink-0 text-muted hover:text-primary"
+                        title="Ubah deskripsi"
+                      >
+                        <IconPencil className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Baris ikon aksi -- jadwal/kunci/featured (khusus tautan biasa),
                   kontrol ikon (SEMUA block_type, lihat komentar 14 Agustus 2026
                   di bawah), jumlah klik, hapus. */}
@@ -1787,7 +1990,11 @@ export default function DashboardLinksPage() {
                     <IconStar className="h-4 w-4" />
                   </button>
                 )}
-                {(link.block_type === "video" || link.block_type === "faq" || link.block_type === "maps" || link.block_type === "text") && (
+                {(link.block_type === "video" ||
+                  link.block_type === "faq" ||
+                  link.block_type === "maps" ||
+                  link.block_type === "text" ||
+                  link.block_type === "project_showcase") && (
                   <button
                     type="button"
                     onClick={() => openContentEdit(link)}
@@ -1916,6 +2123,41 @@ export default function DashboardLinksPage() {
                         />
                       </label>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Panel "Kelola gambar" -- blok "project_showcase" (permintaan
+                  langsung pengguna, 24 Agustus 2026: kartu "Project
+                  Unggulan"), pola sama seperti panel Featured Link (satu
+                  gambar, unggah ulang menimpa) -- BEDA disimpan di
+                  block_data.image_url, bukan kolom thumbnail_url. */}
+              {link.block_type === "project_showcase" && (
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  {link.block_data?.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={link.block_data.image_url as string}
+                      alt=""
+                      className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted">
+                      Belum ada
+                    </div>
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="text-[11px] text-muted">Gambar kartu Project Unggulan.</p>
+                    <label className="w-fit cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                      {showcaseUploadingId === link.id ? "Mengunggah..." : link.block_data?.image_url ? "Ganti Gambar" : "Unggah Gambar"}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleShowcaseImageUpload(e, link)}
+                        disabled={showcaseUploadingId === link.id}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 </div>
               )}
@@ -2123,7 +2365,8 @@ export default function DashboardLinksPage() {
                 link.block_type === "faq" ||
                 link.block_type === "maps" ||
                 link.block_type === "text" ||
-                link.block_type === "accordion") &&
+                link.block_type === "accordion" ||
+                link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                   {link.block_type === "video" ? (
@@ -2180,6 +2423,38 @@ export default function DashboardLinksPage() {
                         />
                         Tampilkan peta Google Maps tertanam di profil
                       </label>
+                    </div>
+                  ) : link.block_type === "project_showcase" ? (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        placeholder="Badge kecil di atas gambar (opsional)"
+                        value={editShowcaseBadge}
+                        onChange={(e) => setEditShowcaseBadge(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <textarea
+                        placeholder="Paragraf deskripsi singkat"
+                        value={editShowcaseDescription}
+                        onChange={(e) => setEditShowcaseDescription(e.target.value)}
+                        rows={2}
+                        maxLength={240}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <input
+                        type="url"
+                        placeholder="https://... (tautan tujuan tombol CTA)"
+                        value={editShowcaseUrl}
+                        onChange={(e) => setEditShowcaseUrl(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Teks tombol CTA (opsional)"
+                        value={editShowcaseCta}
+                        onChange={(e) => setEditShowcaseCta(e.target.value)}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">

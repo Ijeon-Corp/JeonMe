@@ -136,6 +136,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             iconColor: l.icon_color || undefined,
             isFeatured: l.is_featured,
             thumbnailUrl: l.thumbnail_url || undefined,
+            description: l.description || undefined,
           })),
           events: page.events.map((e) => ({
             productId: e.product_id,
@@ -235,6 +236,8 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             linkedin: page.social_linkedin,
             telegram: page.social_telegram,
             email: page.social_email,
+            github: page.social_github,
+            website: page.social_website,
           },
           layoutVariant: page.layout_variant,
           productLayout: page.product_layout,

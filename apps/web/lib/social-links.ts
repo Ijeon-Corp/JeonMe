@@ -1,5 +1,7 @@
 import {
   IconFacebook,
+  IconGithub,
+  IconGlobe,
   IconInstagram,
   IconLinkedin,
   IconMail,
@@ -90,6 +92,30 @@ export const SOCIAL_PLATFORMS = [
     placeholder: "username",
     badgeClass: "bg-[#26A5E4] text-white",
     buildHref: (value: string) => normalizeHandle(value, "https://t.me/"),
+  },
+  // github/website -- permintaan langsung pengguna, 24 Agustus 2026 (template
+  // "Dimas Dev" bertema developer): 2 platform tambahan, lihat migrasi
+  // 000078. website TIDAK punya prefiks URL platform (bisa domain apa saja)
+  // -- buildHref cuma menambahkan skema https:// kalau belum ada, beda dari
+  // normalizeHandle di atas yang menempel ke urlPrefix platform tertentu.
+  {
+    key: "github",
+    label: "GitHub",
+    Icon: IconGithub,
+    placeholder: "username",
+    badgeClass: "bg-[#181717] text-white",
+    buildHref: (value: string) => normalizeHandle(value, "https://github.com/"),
+  },
+  {
+    key: "website",
+    label: "Website",
+    Icon: IconGlobe,
+    placeholder: "situsmu.com",
+    badgeClass: "bg-slate-700 text-white",
+    buildHref: (value: string) => {
+      const trimmed = value.trim();
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    },
   },
   {
     key: "email",

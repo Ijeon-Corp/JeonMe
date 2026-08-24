@@ -51,7 +51,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -72,6 +72,12 @@ export interface PagePreviewLink {
   // kartu kosong/rusak).
   isFeatured?: boolean;
   thumbnailUrl?: string;
+  // description -- permintaan langsung pengguna, 24 Agustus 2026: subjudul
+  // opsional di bawah judul (kartu ikon+judul+deskripsi+panah, contoh
+  // template "Dimas Dev"). Kosong = tetap baris judul tunggal seperti
+  // sebelumnya. Dipakai ulang blockType "project_showcase" sebagai
+  // paragraf deskripsi -- lihat renderLinkOrBlock di bawah.
+  description?: string;
 }
 
 export interface PagePreviewProduct {
@@ -348,6 +354,8 @@ interface PreviewSourcePage {
   social_linkedin?: string;
   social_telegram?: string;
   social_email?: string;
+  social_github?: string;
+  social_website?: string;
   layout_variant?:
     | "centered"
     | "banner"
@@ -374,13 +382,14 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
   icon_color?: string;
   is_featured?: boolean;
   thumbnail_url?: string;
+  description?: string;
 }
 
 interface PreviewSourceProduct {
@@ -427,6 +436,8 @@ export function toPreviewData(
       linkedin: page.social_linkedin,
       telegram: page.social_telegram,
       email: page.social_email,
+      github: page.social_github,
+      website: page.social_website,
     },
     layoutVariant: page.layout_variant,
     productLayout: page.product_layout,
@@ -462,6 +473,7 @@ export function toPreviewData(
         iconColor: l.icon_color || undefined,
         isFeatured: l.is_featured,
         thumbnailUrl: l.thumbnail_url || undefined,
+        description: l.description || undefined,
       })),
     products: products
       .filter((p) => p.is_active)
@@ -1805,6 +1817,54 @@ function renderLinkOrBlock(
     );
   }
 
+  if (link.blockType === "project_showcase") {
+    // "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
+    // kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
+    // Dev"). title (kolom yang sudah ada) = judul proyek, link.description
+    // = paragraf deskripsi (dipakai ulang, lihat catatan PagePreviewLink),
+    // link.url (kolom yang sudah ada) = tautan CTA, blockData.badge_text/
+    // cta_text/image_url spesifik blok ini -- lihat validateBlockData
+    // (links.go).
+    const badgeText = (link.blockData?.badge_text as string) ?? "";
+    const imageUrl = (link.blockData?.image_url as string) ?? "";
+    const ctaText = (link.blockData?.cta_text as string) || "Lihat detail";
+    const cardInner = (
+      <>
+        {badgeText && (
+          <span className={`mb-3 inline-block rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${theme.buyButton}`}>
+            {badgeText}
+          </span>
+        )}
+        {imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="" loading="lazy" className="mb-3 aspect-video w-full rounded-lg object-cover" />
+        )}
+        <p className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>
+        {link.description && <p className={`mt-1 text-xs leading-relaxed opacity-75 ${theme.cardTitle}`}>{link.description}</p>}
+        <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.chevron}`}>
+          {ctaText} <IconChevronRight className="h-3.5 w-3.5" />
+        </span>
+      </>
+    );
+    const cardClassName = `block w-full ${theme.cardRounded ?? "rounded-2xl"} p-4 text-left transition-all duration-300 ${theme.card}`;
+    return interactive ? (
+      <TrackedLink
+        key={link.id}
+        username={data.username}
+        pageSlug={data.pageSlug}
+        linkId={link.id}
+        href={buildUtmHref(link.url, link.title, data.utmEnabled)}
+        className={cardClassName}
+      >
+        {cardInner}
+      </TrackedLink>
+    ) : (
+      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className={cardClassName}>
+        {cardInner}
+      </a>
+    );
+  }
+
   // "Featured Link" (permintaan langsung pengguna, referensi "Featured
   // Layout" Linktree sungguhan, hasil analisa benchmark 13 Agustus 2026):
   // tautan tampil sebagai kartu thumbnail 16:9, bukan baris teks klasik
@@ -1894,7 +1954,40 @@ function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
-      return (
+      const iconNode = link.customIconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+      ) : libraryIcon ? (
+        <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
+      ) : (
+        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor ? "" : iconColorClass}`} />
+      );
+      // description -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
+      // template "Dimas Dev"): kalau diisi, kartu "kaya" (ikon + judul +
+      // subjudul rata KIRI + panah kanan) menggantikan baris klasik rata
+      // tengah -- lihat catatan lengkap di PagePreviewLink.description.
+      return link.description ? (
+        <TrackedLink
+          key={link.id}
+          username={data.username}
+          pageSlug={data.pageSlug}
+          linkId={link.id}
+          href={buildUtmHref(link.url, link.title, data.utmEnabled)}
+          className={`group flex w-full items-center gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3 text-left transition-all duration-300 ${theme.card}`}
+        >
+          <span
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
+            style={link.iconColor ? { color: link.iconColor } : undefined}
+          >
+            {iconNode}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={`block truncate text-[12px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
+            <span className={`block truncate text-[10.5px] opacity-70 ${theme.cardTitle}`}>{link.description}</span>
+          </span>
+          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+        </TrackedLink>
+      ) : (
         <TrackedLink
           key={link.id}
           username={data.username}
@@ -1907,14 +2000,7 @@ function renderLinkOrBlock(
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
             style={link.iconColor ? { color: link.iconColor } : undefined}
           >
-            {link.customIconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
-            ) : libraryIcon ? (
-              <libraryIcon.Icon className="h-6 w-6" />
-            ) : (
-              <LinkPlatformIcon className={`h-7 w-7 ${link.iconColor ? "" : iconColorClass}`} />
-            )}
+            {iconNode}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>
         </TrackedLink>
@@ -1924,7 +2010,35 @@ function renderLinkOrBlock(
     (() => {
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
-      return (
+      const iconNode = link.customIconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+      ) : libraryIcon ? (
+        <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
+      ) : (
+        <LinkPlatformIcon className={`${link.description ? "h-5 w-5" : "h-7 w-7"} ${link.iconColor ? "" : iconColorClass}`} />
+      );
+      return link.description ? (
+        <a
+          key={link.id}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`group flex w-full items-center gap-3 ${theme.cardRounded ?? "rounded-xl"} px-4 py-3 text-left transition-all duration-300 ${theme.card}`}
+        >
+          <span
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center"
+            style={link.iconColor ? { color: link.iconColor } : undefined}
+          >
+            {iconNode}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={`block truncate text-[12px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
+            <span className={`block truncate text-[10.5px] opacity-70 ${theme.cardTitle}`}>{link.description}</span>
+          </span>
+          <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />
+        </a>
+      ) : (
         <a
           key={link.id}
           href={link.url}
@@ -1936,14 +2050,7 @@ function renderLinkOrBlock(
             className="absolute left-2 top-1/2 flex h-9 w-9 flex-shrink-0 -translate-y-1/2 items-center justify-center"
             style={link.iconColor ? { color: link.iconColor } : undefined}
           >
-            {link.customIconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
-            ) : libraryIcon ? (
-              <libraryIcon.Icon className="h-6 w-6" />
-            ) : (
-              <LinkPlatformIcon className={`h-7 w-7 ${link.iconColor ? "" : iconColorClass}`} />
-            )}
+            {iconNode}
           </span>
           <span className="w-full break-words px-8 text-center">{link.title}</span>
         </a>
