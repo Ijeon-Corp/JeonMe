@@ -382,6 +382,8 @@ type publicLink struct {
 	// (bukan baris klasik) -- lihat renderLinkOrBlock, PagePreview.tsx.
 	IsFeatured   bool   `json:"is_featured"`
 	ThumbnailURL string `json:"thumbnail_url"`
+	// Description -- lihat catatan lengkap di linkItem.Description (links.go).
+	Description string `json:"description"`
 }
 
 type publicItem struct {
@@ -666,7 +668,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		resp.Links = []publicLink{}
 		rows, err := h.DB.Query(gctx, `
 			SELECT id, title, url, COALESCE(lock_type, ''), lock_min_age, block_type, block_data, custom_icon_url,
-				icon_key, icon_color, is_featured, thumbnail_url
+				icon_key, icon_color, is_featured, thumbnail_url, description
 			FROM links
 			WHERE page_id = $1
 			AND is_active = true
@@ -679,7 +681,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 			for rows.Next() {
 				var l publicLink
 				if err := rows.Scan(&l.ID, &l.Title, &l.URL, &l.LockType, &l.LockMinAge, &l.BlockType, &l.BlockData, &l.CustomIconURL,
-					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL); err == nil {
+					&l.IconKey, &l.IconColor, &l.IsFeatured, &l.ThumbnailURL, &l.Description); err == nil {
 					// No.79: sembunyikan URL asli untuk tautan terkunci -- lihat
 					// komentar di definisi struct publicLink.
 					if l.LockType != "" {
