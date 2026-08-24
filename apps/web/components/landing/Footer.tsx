@@ -19,14 +19,21 @@ import Logo from "./Logo";
 //     Microsoft/dst) sebelumnya di homepage, jangan klaim yang tidak ada.
 //   - "Dokumentasi"/"Tentang Kami"/"Blog"/"Karier" DIHAPUS -- tidak ada
 //     halaman itu di aplikasi ini.
-//   - "Kebijakan Privasi"/"Ketentuan Layanan"/"Cookies" SEKARANG menuju
-//     halaman sungguhan (app/privacy, app/terms, app/cookies -- baru
-//     dibuat bareng perbaikan ini, lihat catatan lengkap di sana).
+//
+// Kolom "Legal" -- permintaan langsung pengguna, 24 Agustus 2026:
+// "tambahkan di footer menu menu untuk page tersebut" (untuk app/privacy,
+// app/terms, app/cookies yang baru diperluas isinya). SEBELUMNYA link ke
+// 3 halaman itu cuma teks kecil abu-abu di bilah bawah (kurang kelihatan
+// sebagai menu navigasi sungguhan, gampang terlewat) -- sekarang jadi
+// kolom menu sendiri, konsisten dengan "Produk"/"Bantuan". Grid diubah
+// lg:grid-cols-4 -> lg:grid-cols-5 supaya kolom baru ini tidak
+// mengorbankan lebar kolom Logo (tetap col-span-2). Link di bilah bawah
+// dihapus (dipindah ke kolom ini) supaya tidak dobel.
 export default function Footer() {
   return (
     <footer className="border-t border-border bg-white" aria-label="Footer">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Logo className="mb-4" />
             <p className="max-w-xs text-sm leading-relaxed text-muted">
@@ -55,15 +62,19 @@ export default function Footer() {
               <li><Link href="/register" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Mulai Gratis</Link></li>
             </ul>
           </div>
+
+          <div>
+            <h3 className="mb-4 font-heading text-sm font-bold text-ink">Legal</h3>
+            <ul className="space-y-2.5">
+              <li><Link href="/privacy" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Kebijakan Privasi</Link></li>
+              <li><Link href="/terms" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Ketentuan Layanan</Link></li>
+              <li><Link href="/cookies" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Cookies</Link></li>
+            </ul>
+          </div>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-4 border-t border-border py-6 sm:flex-row">
+        <div className="border-t border-border py-6 text-center">
           <p className="text-sm text-slate-400">© 2026 Jeon.id. Seluruh hak cipta dilindungi.</p>
-          <div className="flex items-center gap-6">
-            <Link href="/privacy" className="cursor-pointer text-xs text-slate-400 transition-colors hover:text-ink">Kebijakan Privasi</Link>
-            <Link href="/terms" className="cursor-pointer text-xs text-slate-400 transition-colors hover:text-ink">Ketentuan Layanan</Link>
-            <Link href="/cookies" className="cursor-pointer text-xs text-slate-400 transition-colors hover:text-ink">Cookies</Link>
-          </div>
         </div>
       </div>
     </footer>
