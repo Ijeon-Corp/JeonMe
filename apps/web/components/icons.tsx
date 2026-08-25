@@ -297,6 +297,20 @@ export function IconTarget({ className }: IconProps) {
   );
 }
 
+// IconGrid -- permintaan langsung pengguna, 25 Agustus 2026: blok
+// "catalog" (klik -> daftar item -> detail per item, contoh "Jenis
+// Rumah"), 4 kotak melambangkan "kumpulan/koleksi item".
+export function IconGrid({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" stroke="currentColor" strokeWidth={base} />
+      <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" stroke="currentColor" strokeWidth={base} />
+      <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" stroke="currentColor" strokeWidth={base} />
+      <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" stroke="currentColor" strokeWidth={base} />
+    </svg>
+  );
+}
+
 export function IconPlus({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

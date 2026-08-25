@@ -5,12 +5,14 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import {
   ApiError,
+  CatalogItem,
   DashboardProduct,
   LinkItem,
   MyPage,
   createBlock,
   createLink,
   deleteAudioBlock,
+  deleteCatalogItemImage,
   deleteFileBlock,
   deleteGalleryImage,
   deleteLink,
@@ -25,6 +27,7 @@ import {
   updateMyPage,
   uploadAudioBlock,
   uploadAvatar,
+  uploadCatalogItemImage,
   uploadFileBlock,
   uploadGalleryImage,
   uploadLinkIcon,
@@ -42,6 +45,7 @@ import {
   IconCopy,
   IconFacebook,
   IconFileText,
+  IconGrid,
   IconGripVertical,
   IconInstagram,
   IconLink,
@@ -71,6 +75,7 @@ import IconPickerModal from "@/components/IconPickerModal";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
+import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
@@ -85,6 +90,10 @@ const LocationPickerModal = dynamic(() => import("@/components/LocationPickerMod
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
 // sumber kebenaran validasinya.
 const maxGalleryImages = 9;
+// maxCatalogItems/maxCatalogImagesPerItem -- SAMA PERSIS batas backend
+// (maxCatalogItems/maxCatalogImagesPerItem, links.go), murni utk UI.
+const maxCatalogItems = 20;
+const maxCatalogImagesPerItem = 6;
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -97,6 +106,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   audio: "Audio/Musik",
   file: "File & Unduhan",
   project_showcase: "Project Unggulan",
+  catalog: "Katalog",
 };
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -219,7 +229,7 @@ const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
 ];
 
 type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -264,6 +274,13 @@ const CONTENT_TILES: ContentTile[] = [
   // Dev") -- gambar + badge + judul + deskripsi + tombol CTA, cocok utk
   // menonjolkan SATU karya/studi kasus di antara tautan biasa.
   { key: "project_showcase", label: "Project Unggulan", description: "Tonjolkan satu karya/studi kasus dengan gambar, badge, dan tombol CTA", Icon: IconCamera },
+  // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "ada blok
+  // Jenis Rumah ketika di klik akan tampil semua blok dengan isi jenis
+  // jenis rumah yang ada" -- blok drill-down 2 tingkat (daftar item ->
+  // detail per item, gambar bisa multiple), lihat CatalogTakeoverView
+  // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
+  // (bukan buka tautan/expand di tempat seperti tipe lain).
+  { key: "catalog", label: "Katalog", description: "Klik untuk membuka daftar item (mis. jenis produk/paket/menu), tiap item punya deskripsi & galeri foto sendiri", Icon: IconGrid },
 ];
 
 // Permintaan langsung pengguna, 14 Agustus 2026: "harusnya semua tipe ini
@@ -420,7 +437,7 @@ export default function DashboardLinksPage() {
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockType, setBlockType] = useState<
-    "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase"
+    "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog"
   >("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
@@ -458,6 +475,23 @@ export default function DashboardLinksPage() {
   const [blockShowcaseCta, setBlockShowcaseCta] = useState("");
   const [savingBlock, setSavingBlock] = useState(false);
   const [showcaseUploadingId, setShowcaseUploadingId] = useState<string | null>(null);
+
+  // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: blok
+  // drill-down "Jenis Rumah" -> daftar jenis -> detail per jenis, gambar
+  // bisa multiple. Item (judul/deskripsi/foto) dikelola SELURUHNYA lewat
+  // panel "Kelola Katalog" (SELALU tampil, pola sama gallery) -- BUKAN
+  // lewat mekanisme "Edit Konten" (yang dipakai faq/text/dst) supaya
+  // tambah-item, edit teks, & unggah foto ada di SATU tempat yang sama,
+  // bukan terpecah 2 panel.
+  //
+  // catalogNewItemDraft -- di-key per linkId (BUKAN satu state polos)
+  // supaya draft "tambah item" 2 blok katalog berbeda di halaman yang
+  // sama tidak saling tercampur.
+  const [catalogNewItemDraft, setCatalogNewItemDraft] = useState<Record<string, { title: string; description: string }>>({});
+  const [catalogSavingId, setCatalogSavingId] = useState<string | null>(null);
+  // catalogItemImageUploadingKey -- `${linkId}:${itemId}`, satu item bisa
+  // upload sementara item LAIN di blok yang sama tidak ikut disabled.
+  const [catalogItemImageUploadingKey, setCatalogItemImageUploadingKey] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
   const [editVideoUrl, setEditVideoUrl] = useState("");
@@ -612,7 +646,7 @@ export default function DashboardLinksPage() {
   }
 
   function openBlockFormPrefilled(
-    type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase",
+    type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog",
     title: string
   ) {
     setBlockType(type);
@@ -791,6 +825,100 @@ export default function DashboardLinksPage() {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah gambar.");
     } finally {
       setShowcaseUploadingId(null);
+    }
+  }
+
+  // ---------- "catalog" -- panel "Kelola Katalog" ----------
+  // Semua fungsi di bawah PATCH block_data.items UTUH (pola sama FAQ --
+  // array lengkap dikirim ulang tiap perubahan, TIDAK ada endpoint CRUD
+  // item terpisah di backend) KECUALI foto (endpoint upload/hapus
+  // tersendiri, lihat handleCatalogImageUpload/Delete di bawah -- foto
+  // butuh multipart file, tidak cocok dikirim lewat JSON block_data biasa).
+
+  function catalogItemsOf(link: LinkItem): CatalogItem[] {
+    return ((link.block_data?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
+  }
+
+  async function saveCatalogItems(link: LinkItem, items: CatalogItem[]) {
+    setCatalogSavingId(link.id);
+    setError(null);
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, items } } : l)));
+    try {
+      await updateLink(link.id, { block_data: { items } });
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal menyimpan item katalog.");
+    } finally {
+      setCatalogSavingId(null);
+    }
+  }
+
+  async function handleAddCatalogItem(link: LinkItem) {
+    const draft = catalogNewItemDraft[link.id] ?? { title: "", description: "" };
+    if (!draft.title.trim()) return;
+    const newItem: CatalogItem = { id: crypto.randomUUID(), title: draft.title.trim(), description: draft.description.trim(), images: [] };
+    await saveCatalogItems(link, [...catalogItemsOf(link), newItem]);
+    setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: "", description: "" } }));
+  }
+
+  async function handleUpdateCatalogItemText(link: LinkItem, itemId: string, field: "title" | "description", value: string) {
+    const items = catalogItemsOf(link);
+    const current = items.find((it) => it.id === itemId);
+    if (!current || current[field] === value) return;
+    await saveCatalogItems(
+      link,
+      items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it))
+    );
+  }
+
+  async function handleDeleteCatalogItem(link: LinkItem, itemId: string) {
+    const item = catalogItemsOf(link).find((it) => it.id === itemId);
+    const ok = await confirmDelete(
+      `Item "${item?.title ?? ""}" beserta seluruh fotonya akan dihapus permanen.`,
+      { title: "Hapus item katalog?" }
+    );
+    if (!ok) return;
+    await saveCatalogItems(link, catalogItemsOf(link).filter((it) => it.id !== itemId));
+  }
+
+  async function handleCatalogImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, itemId: string) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const key = `${link.id}:${itemId}`;
+    setCatalogItemImageUploadingKey(key);
+    setError(null);
+    try {
+      const { images } = await uploadCatalogItemImage(link.id, itemId, file);
+      setLinks((prev) =>
+        prev.map((l) =>
+          l.id === link.id
+            ? { ...l, block_data: { ...l.block_data, items: catalogItemsOf(l).map((it) => (it.id === itemId ? { ...it, images } : it)) } }
+            : l
+        )
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto.");
+    } finally {
+      setCatalogItemImageUploadingKey(null);
+    }
+  }
+
+  async function handleCatalogImageDelete(link: LinkItem, itemId: string, index: number) {
+    setError(null);
+    try {
+      const { images } = await deleteCatalogItemImage(link.id, itemId, index);
+      setLinks((prev) =>
+        prev.map((l) =>
+          l.id === link.id
+            ? { ...l, block_data: { ...l.block_data, items: catalogItemsOf(l).map((it) => (it.id === itemId ? { ...it, images } : it)) } }
+            : l
+        )
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto.");
     }
   }
 
@@ -1554,6 +1682,7 @@ export default function DashboardLinksPage() {
                       | "audio"
                       | "file"
                       | "project_showcase"
+                      | "catalog"
                   )
                 }
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -1568,9 +1697,14 @@ export default function DashboardLinksPage() {
                 <option value="audio">Audio/Musik</option>
                 <option value="file">File & Unduhan (PDF/ZIP/EPUB)</option>
                 <option value="project_showcase">Project Unggulan</option>
+                <option value="catalog">Katalog (daftar item &amp; detail)</option>
               </select>
             </FormField>
-            {(blockType === "gallery" || blockType === "audio" || blockType === "file" || blockType === "project_showcase") && (
+            {(blockType === "gallery" ||
+              blockType === "audio" ||
+              blockType === "file" ||
+              blockType === "project_showcase" ||
+              blockType === "catalog") && (
               <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-muted">
                 {blockType === "gallery"
                   ? "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok."
@@ -1578,6 +1712,8 @@ export default function DashboardLinksPage() {
                   ? "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok."
                   : blockType === "file"
                   ? "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok."
+                  : blockType === "catalog"
+                  ? "Buat blok dulu, item (jenis/paket/menu) ditambahkan setelahnya lewat panel \"Kelola Katalog\" di kartu blok."
                   : "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok."}
               </p>
             )}
@@ -2262,6 +2398,118 @@ export default function DashboardLinksPage() {
                       />
                     </label>
                   </div>
+                </div>
+              )}
+
+              {/* Panel "Kelola Katalog" -- blok "catalog" (permintaan
+                  langsung pengguna, 25 Agustus 2026: blok drill-down
+                  "Jenis Rumah" -> daftar jenis -> detail per jenis, gambar
+                  bisa multiple). SATU panel utk SEMUA (tambah item, edit
+                  judul/deskripsi, kelola foto per item) -- SENGAJA tidak
+                  dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
+                  supaya tidak terasa terpecah 2 tempat berbeda. */}
+              {link.block_type === "catalog" && (
+                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-muted">Belum ada item -- tambahkan di bawah.</p>}
+                  {catalogItemsOf(link).map((item) => {
+                    const uploadKey = `${link.id}:${item.id}`;
+                    return (
+                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-border bg-white p-2.5">
+                        <div className="flex items-start gap-2">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <input
+                              type="text"
+                              defaultValue={item.title}
+                              placeholder="Judul item"
+                              onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
+                              className="w-full rounded-md border border-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                            />
+                            <textarea
+                              defaultValue={item.description}
+                              placeholder="Deskripsi (opsional)"
+                              rows={2}
+                              onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
+                              className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCatalogItem(link, item.id)}
+                            title="Hapus item"
+                            className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
+                          >
+                            <IconTrash className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.images.map((src, i) => (
+                            <div key={i} className="group relative h-14 w-14 flex-shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                              <button
+                                type="button"
+                                onClick={() => handleCatalogImageDelete(link, item.id, i)}
+                                title="Hapus foto"
+                                className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+                              >
+                                <IconX className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          ))}
+                          {item.images.length < maxCatalogImagesPerItem && (
+                            <label
+                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                                catalogItemImageUploadingKey === uploadKey ? "opacity-60" : ""
+                              }`}
+                            >
+                              {catalogItemImageUploadingKey === uploadKey ? (
+                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                              ) : (
+                                <IconPlus className="h-4 w-4" />
+                              )}
+                              <input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleCatalogImageUpload(e, link, item.id)}
+                                disabled={catalogItemImageUploadingKey === uploadKey}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {catalogItemsOf(link).length < maxCatalogItems && (
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-border p-2.5">
+                      <input
+                        type="text"
+                        placeholder="Judul item baru (mis. Tipe 36)"
+                        value={catalogNewItemDraft[link.id]?.title ?? ""}
+                        onChange={(e) =>
+                          setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
+                        }
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <textarea
+                        placeholder="Deskripsi (opsional)"
+                        rows={2}
+                        value={catalogNewItemDraft[link.id]?.description ?? ""}
+                        onChange={(e) =>
+                          setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
+                        }
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={!catalogNewItemDraft[link.id]?.title.trim() || catalogSavingId === link.id}
+                        onClick={() => handleAddCatalogItem(link)}
+                        className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                      >
+                        {catalogSavingId === link.id ? "Menyimpan..." : "+ Tambah Item"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
