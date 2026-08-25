@@ -1088,6 +1088,19 @@ var availableThemes = map[string]bool{
 	// tema baru yang worth ditambahkan) -- lihat catatan lingkup lengkap
 	// di PAGE_THEMES (apps/web/lib/page-themes.ts).
 	"xmas": true, "pride": true, "retro": true, "kraft": true, "monsoon": true,
+	// 15 preset baru, 21 Agustus 2026 (permintaan langsung pengguna: "saya
+	// mau buatkan lagi tema dan layout quick setup lebih banyak lagi pilihan
+	// nya") -- lihat catatan lingkup lengkap di PageThemeName
+	// (apps/web/lib/page-themes.ts). Bug ditemukan 25 Agustus 2026 (sambil
+	// menambah tema baru lain): SELURUH 15 tema ini SEBELUMNYA cuma
+	// terdaftar di frontend (THEME_PRESETS, api-client.ts) tapi TIDAK
+	// PERNAH ditambahkan ke allowlist backend ini -- akibatnya SETIAP
+	// kreator yang memilih salah satu dari 15 tema ini di dashboard
+	// mendapat error 400 "tema tidak dikenal" saat menyimpan, walau
+	// preview-nya tampil normal (validasi cuma jalan saat submit).
+	"emerald": true, "wine": true, "candy": true, "vapor": true, "matcha": true,
+	"terracotta": true, "champagne": true, "obsidian": true, "holographic": true, "corporate": true,
+	"ivory": true, "lemon": true, "cocoa": true, "azure": true, "blush": true,
 	"custom": true,
 }
 
