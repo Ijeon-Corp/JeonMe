@@ -19,7 +19,7 @@ import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
-import { PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
+import { CatalogItem, PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
 import {
   IconBadgeCheck,
   IconBox,
@@ -37,7 +37,7 @@ import {
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
-import { HelpCircle, Images as GalleryIcon, Video as VideoIcon } from "lucide-react";
+import { ChevronLeft, HelpCircle, Images as GalleryIcon, LayoutGrid, Video as VideoIcon } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
 
 export interface PagePreviewLink {
@@ -51,7 +51,7 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -382,7 +382,7 @@ interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
@@ -1643,7 +1643,18 @@ function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled">,
-  interactive: boolean
+  interactive: boolean,
+  // onOpenCatalog -- permintaan langsung pengguna, 25 Agustus 2026: blok
+  // "catalog" ("Jenis Rumah" -> daftar jenis -> detail per jenis) TIDAK
+  // menuju URL apa pun, dia mengganti ISI HALAMAN dengan
+  // CatalogTakeoverView (dikonfirmasi lewat AskUserQuestion) -- state
+  // takeover-nya HARUS hidup di komponen halaman PALING ATAS (supaya bisa
+  // menyembunyikan avatar/bio/tautan lain sekaligus), bukan di sini,
+  // makanya cuma dioper sebagai callback. undefined = blok ini dirender
+  // di tempat yang belum mendukung takeover (mis. ProdukPagePreview/Toko,
+  // lihat catatan lingkup CatalogTakeoverView) -- baris tetap tampil
+  // tapi TIDAK bisa diklik, alih-alih diam-diam gagal.
+  onOpenCatalog?: (link: PagePreviewLink) => void
 ) {
   // No.77: blok konten baru dirender sepenuhnya terpisah dari tautan biasa
   // (block_type sendiri-sendiri di bawah) -- TIDAK ada gerbang kunci
@@ -1662,7 +1673,7 @@ function renderLinkOrBlock(
       <SensitiveContentGate
         key={link.id}
         theme={theme}
-        renderContent={() => renderLinkOrBlock({ ...link, lockType: undefined }, theme, data, interactive)}
+        renderContent={() => renderLinkOrBlock({ ...link, lockType: undefined }, theme, data, interactive, onOpenCatalog)}
       />
     );
   }
@@ -1865,6 +1876,37 @@ function renderLinkOrBlock(
     );
   }
 
+  if (link.blockType === "catalog") {
+    // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "blok
+    // diklik -> muncul blok blok baru seperti ke page baru... misal nya
+    // ada blok Jenis Rumah ketika di klik akan tampil semua blok dengan
+    // isi jenis jenis rumah yang ada dan keitka di klik masing masing itu
+    // bisa menampilkan gambar dan juga deskripsi dan gambar bisa
+    // multiple". Baris ini CUMA trigger (ikon+judul+panah) -- isi
+    // drill-down-nya dirender CatalogTakeoverView di bawah, dipicu lewat
+    // onOpenCatalog (state-nya hidup di komponen halaman paling atas,
+    // lihat catatan lengkap di parameter fungsi ini). disabled kalau
+    // onOpenCatalog tidak dioper (lihat catatan lingkup di sana) --
+    // TIDAK bisa diklik, alih-alih diam-diam tidak melakukan apa-apa.
+    return (
+      <button
+        key={link.id}
+        type="button"
+        disabled={!onOpenCatalog}
+        onClick={() => onOpenCatalog?.(link)}
+        className={`group relative flex w-full items-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-left transition-all duration-300 ${theme.card} ${
+          onOpenCatalog ? "" : "cursor-default opacity-70"
+        }`}
+      >
+        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center ${theme.cardTitle}`}>
+          <LayoutGrid className="h-5 w-5" />
+        </span>
+        <span className={`min-w-0 flex-1 truncate px-2 text-[11px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
+        {onOpenCatalog && <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />}
+      </button>
+    );
+  }
+
   // "Featured Link" (permintaan langsung pengguna, referensi "Featured
   // Layout" Linktree sungguhan, hasil analisa benchmark 13 Agustus 2026):
   // tautan tampil sebagai kartu thumbnail 16:9, bukan baris teks klasik
@@ -2059,6 +2101,124 @@ function renderLinkOrBlock(
   );
 }
 
+// CatalogTakeoverView -- permintaan langsung pengguna, 25 Agustus 2026:
+// blok "catalog" ("Jenis Rumah" -> daftar jenis -> detail per jenis,
+// gambar bisa multiple). Dikonfirmasi lewat AskUserQuestion: GANTI ISI
+// HALAMAN langsung (bukan overlay/modal di atasnya) -- avatar/bio/tautan
+// lain disembunyikan SEMENTARA, komponen ini menggantikan tempatnya
+// persis, tombol kembali di atas. Ini komponen BARU (belum ada padanannya
+// di repo ini sama sekali -- dicek langsung, satu-satunya yang mirip
+// "klik untuk drill-down" adalah filter kategori produk yang TIDAK ganti
+// isi halaman & TIDAK punya tombol kembali, lihat renderProductGrid).
+//
+// 2 tingkat state lokal (BUKAN view-stack umum) sudah cukup -- drill-down
+// blok ini SELALU persis 2 langkah (daftar item -> detail satu item),
+// tidak ada kebutuhan bertingkat-tingkat lagi:
+//   - selectedItemId null  -> tampilkan grid semua item.
+//   - selectedItemId terisi -> tampilkan detail item itu (deskripsi +
+//     galeri foto, BOLEH lebih dari satu -- permintaan eksplisit
+//     pengguna "gambar bisa multiple").
+// Tombol kembali di kedua tingkat MEMANGGIL FUNGSI YANG SAMA (goBack) --
+// dari detail item kembali ke grid (selectedItemId di-null-kan), dari
+// grid kembali ke halaman biasa (onExit, dioper dari state di PagePreview
+// pemanggil).
+//
+// SENGAJA cuma dipakai di layout bio biasa (lihat pemanggilan di
+// PagePreview di bawah) -- TIDAK di LandingPagePreview (blok manual
+// full-width, arsitektur render blok yang sama sekali terpisah) atau
+// ProdukPagePreview (renderLinkOrBlock di sana dipanggil TANPA
+// onOpenCatalog, lihat komentar parameter itu -- baris tetap tampil tapi
+// tidak bisa diklik). Cakupan awal: kreator yang benar-benar butuh blok
+// ini (contoh nyata: agen properti dgn banyak tipe rumah) pasti
+// memakainya di halaman Bio utama, bukan Toko/Landing.
+function CatalogTakeoverView({
+  link,
+  theme,
+  rootClassName,
+  onExit,
+}: {
+  link: PagePreviewLink;
+  theme: PageTheme;
+  rootClassName: string;
+  onExit: () => void;
+}) {
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const items = ((link.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
+  const selectedItem = items.find((it) => it.id === selectedItemId) ?? null;
+
+  function goBack() {
+    if (selectedItem) setSelectedItemId(null);
+    else onExit();
+  }
+
+  return (
+    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 py-8">
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="Kembali"
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${theme.card}`}
+          >
+            <ChevronLeft className={`h-5 w-5 ${theme.cardTitle}`} />
+          </button>
+          <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>
+            {selectedItem ? selectedItem.title : link.title}
+          </h1>
+        </div>
+
+        {selectedItem ? (
+          <div className="flex flex-col gap-4">
+            {selectedItem.images.length > 0 && (
+              <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
+                {selectedItem.images.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    className={`h-64 w-full flex-shrink-0 snap-center rounded-2xl object-cover ${selectedItem.images.length > 1 ? "w-[85%]" : ""}`}
+                  />
+                ))}
+              </div>
+            )}
+            {selectedItem.description && <p className={`whitespace-pre-wrap text-sm leading-relaxed ${theme.bio}`}>{selectedItem.description}</p>}
+            {selectedItem.images.length === 0 && !selectedItem.description && (
+              <p className={`text-sm ${theme.bio}`}>Belum ada foto/deskripsi untuk item ini.</p>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedItemId(item.id)}
+                className={`flex flex-col overflow-hidden text-left ${theme.cardRounded ?? "rounded-xl"} ${theme.card}`}
+              >
+                <div className="aspect-square w-full overflow-hidden bg-black/10">
+                  {item.images[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <LayoutGrid className={`h-8 w-8 opacity-30 ${theme.cardTitle}`} />
+                    </div>
+                  )}
+                </div>
+                <p className={`truncate px-2.5 py-2 text-xs font-semibold ${theme.cardTitle}`}>{item.title}</p>
+              </button>
+            ))}
+            {items.length === 0 && <p className={`col-span-2 py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
 // Tampilan halaman publik kreator -- dipakai di DUA tempat: halaman publik
 // sungguhan (app/[username]/page.tsx, interactive=true, tautan bisa
 // diklik & dilacak, tombol Beli memicu checkout sungguhan) dan pratinjau
@@ -2104,6 +2264,13 @@ export default function PagePreview({
   // Gap #4 benchmark kompetitif (9 Agustus 2026): item wishlist yang
   // dipilih pendukung untuk "diwujudkan" -- undefined berarti donasi umum.
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
+  // catalogView -- lihat catatan lengkap di CatalogTakeoverView. Blok yang
+  // sedang dibuka (null = tidak ada, halaman tampil normal) -- SENGAJA
+  // hook di sini, SEBELUM cabang pageType landing/produk di bawah, TIDAK
+  // di dalam blok "catalog" SENDIRI (yang cuma fungsi biasa, bukan
+  // komponen) -- state penuh 1 layar hanya bisa hidup di komponen
+  // halaman PALING ATAS.
+  const [catalogView, setCatalogView] = useState<PagePreviewLink | null>(null);
 
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
@@ -2134,6 +2301,15 @@ export default function PagePreview({
         hideFooterChrome={hideFooterChrome}
       />
     );
+  }
+
+  // catalogView aktif -- ganti SELURUH isi halaman (avatar/bio/tautan
+  // lain TIDAK ikut dirender sama sekali selama ini) dengan
+  // CatalogTakeoverView, dikonfirmasi lewat AskUserQuestion. rootClassName
+  // dipertahankan supaya tinggi/scroll-nya tetap konsisten dgn halaman
+  // biasa (dashboard Pratinjau Langsung vs halaman publik sungguhan).
+  if (catalogView) {
+    return <CatalogTakeoverView link={catalogView} theme={theme} rootClassName={rootClassName} onExit={() => setCatalogView(null)} />;
   }
 
   return (
@@ -2210,7 +2386,7 @@ export default function PagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive))}
+            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, setCatalogView))}
           </div>
         )}
 

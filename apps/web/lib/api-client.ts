@@ -128,7 +128,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -910,7 +910,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -939,7 +939,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -1102,6 +1102,48 @@ export async function uploadGalleryImage(id: string, file: File): Promise<{ imag
 export function deleteGalleryImage(id: string, index: number) {
   return apiFetch<{ images: string[]; message: string }>(
     `/dashboard/links/${id}/gallery-images/${index}`,
+    { method: "DELETE" },
+    { auth: true }
+  );
+}
+
+// CatalogItem -- block_type "catalog" (permintaan langsung pengguna, 25
+// Agustus 2026: blok drill-down "Jenis Rumah" -> daftar jenis -> detail per
+// jenis, gambar bisa multiple). id dibuat KLIEN (crypto.randomUUID()) --
+// dipakai backend (UploadCatalogItemImage/DeleteCatalogItemImage) untuk
+// menunjuk item mana yang diubah, TANPA tabel DB terpisah.
+export interface CatalogItem {
+  id: string;
+  title: string;
+  description: string;
+  images: string[];
+}
+
+// uploadCatalogItemImage/deleteCatalogItemImage -- pola SAMA PERSIS
+// uploadGalleryImage/deleteGalleryImage di atas, BEDA disisipkan ke item
+// BERSARANG (block_data.items[].images), lihat UploadCatalogItemImage
+// (links.go).
+export async function uploadCatalogItemImage(linkId: string, itemId: string, file: File): Promise<{ images: string[]; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${linkId}/catalog-items/${itemId}/images`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteCatalogItemImage(linkId: string, itemId: string, index: number) {
+  return apiFetch<{ images: string[]; message: string }>(
+    `/dashboard/links/${linkId}/catalog-items/${itemId}/images/${index}`,
     { method: "DELETE" },
     { auth: true }
   );
@@ -1368,7 +1410,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;
