@@ -26,10 +26,10 @@ test.describe("Onboarding: Checklist Progresif", () => {
     await page.goto("/dashboard/links");
     await page.getByRole("button", { name: "Tambah" }).first().click();
     await page.getByRole("button", { name: "Tautan", exact: true }).click();
-    await page.getByPlaceholder("Judul tautan").fill("Toko Online Saya");
+    await page.getByLabel("Judul").fill("Toko Online Saya");
     await page.getByPlaceholder("https://...").fill("https://example.com/toko");
     await page
-      .locator("form", { has: page.getByPlaceholder("Judul tautan") })
+      .locator("form", { has: page.getByLabel("Judul") })
       .getByRole("button", { name: "Tambah" })
       .click();
     await expect(page.getByRole("listitem").filter({ hasText: "Toko Online Saya" })).toBeVisible({ timeout: 10000 });
@@ -83,10 +83,10 @@ test.describe("Onboarding: Checklist Progresif", () => {
     await expect(page).toHaveURL(/\/dashboard\/links$/);
     await page.getByRole("button", { name: "Tambah" }).first().click();
     await page.getByRole("button", { name: "Tautan", exact: true }).click();
-    await page.getByPlaceholder("Judul tautan").fill("Toko Online Saya");
+    await page.getByLabel("Judul").fill("Toko Online Saya");
     await page.getByPlaceholder("https://...").fill("https://example.com/toko");
     await page
-      .locator("form", { has: page.getByPlaceholder("Judul tautan") })
+      .locator("form", { has: page.getByLabel("Judul") })
       .getByRole("button", { name: "Tambah" })
       .click();
     await expect(page.getByRole("listitem").filter({ hasText: "Toko Online Saya" })).toBeVisible({ timeout: 10000 });

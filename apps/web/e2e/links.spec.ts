@@ -21,12 +21,12 @@ test.describe("Tautan", () => {
 
     const linkTitle = "Toko Online Saya";
     const linkUrl = "https://example.com/toko";
-    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    await page.getByLabel("Judul").fill(linkTitle);
     await page.getByPlaceholder("https://...").fill(linkUrl);
 
     // Submit button ada di dalam form yang sama dengan input "Judul tautan"
     // -- dibedakan dari CTA "Tambah" di atasnya yang juga bertuliskan sama.
-    const addForm = page.locator("form", { has: page.getByPlaceholder("Judul tautan") });
+    const addForm = page.locator("form", { has: page.getByLabel("Judul") });
     await addForm.getByRole("button", { name: "Tambah" }).click();
 
     // Tautan baru harus muncul di daftar dashboard tanpa perlu reload manual
@@ -56,9 +56,9 @@ test.describe("Tautan", () => {
     await page.getByRole("button", { name: "Tautan", exact: true }).click();
 
     const linkTitle = "Tautan Nonaktif";
-    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    await page.getByLabel("Judul").fill(linkTitle);
     await page.getByPlaceholder("https://...").fill("https://example.com/nonaktif");
-    const addForm = page.locator("form", { has: page.getByPlaceholder("Judul tautan") });
+    const addForm = page.locator("form", { has: page.getByLabel("Judul") });
     await addForm.getByRole("button", { name: "Tambah" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
@@ -97,12 +97,12 @@ test.describe("Tautan", () => {
     await page.getByRole("button", { name: "Tautan", exact: true }).click();
 
     const linkTitle = "Kanal Resmi";
-    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    await page.getByLabel("Judul").fill(linkTitle);
     // URL generik SENGAJA (bukan instagram.com/dll) -- membuktikan ikon
     // yang tampil benar-benar dari PILIHAN eksplisit lewat galeri, bukan
     // kebetulan cocok deteksi otomatis detectLinkIcon (lib/link-icons.ts).
     await page.getByPlaceholder("https://...").fill("https://example.com/kanal-resmi");
-    const addForm = page.locator("form", { has: page.getByPlaceholder("Judul tautan") });
+    const addForm = page.locator("form", { has: page.getByLabel("Judul") });
     await addForm.getByRole("button", { name: "Tambah" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
@@ -138,10 +138,10 @@ test.describe("Tautan", () => {
 
     const linkTitle = "Website Saya";
     const linkUrl = "https://example.com/asli";
-    await page.getByPlaceholder("Judul tautan").fill(linkTitle);
+    await page.getByLabel("Judul").fill(linkTitle);
     await page.getByPlaceholder("https://...").fill(linkUrl);
     await page
-      .locator("form", { has: page.getByPlaceholder("Judul tautan") })
+      .locator("form", { has: page.getByLabel("Judul") })
       .getByRole("button", { name: "Tambah" })
       .click();
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
@@ -174,7 +174,7 @@ test.describe("Tautan", () => {
 
     const blockTitle = "Info Internal";
     const blockText = "Isi teks yang cuma boleh dilihat setelah klik lanjut.";
-    await page.getByPlaceholder("Judul blok (internal, tidak tampil ke publik)").fill(blockTitle);
+    await page.getByLabel("Judul Blok").fill(blockTitle);
     await page.getByPlaceholder("Isi teks yang tampil di halaman publik").fill(blockText);
     await page.getByRole("button", { name: "Buat Blok" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: blockTitle })).toBeVisible({ timeout: 10000 });

@@ -1,6 +1,7 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -73,6 +74,12 @@ import Toggle from "@/components/Toggle";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
+
+// LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
+// pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
+// dimuat client-only lewat next/dynamic (ssr:false) -- pola standar
+// Next.js untuk library peta, mencegah error render di server.
+const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), { ssr: false });
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
@@ -267,6 +274,42 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = Object.fromEntries(
   CONTENT_TILES.filter((t) => t.key !== "link").map((t) => [t.key, t.Icon])
 );
 
+// FormField -- permintaan langsung pengguna, 25 Agustus 2026: "saya mau
+// itu ada kejelasan apa yang diubah misal link di blok ataupun
+// description jadi saya mau buat ux dan ui nya diperjelas untuk user
+// jangan membingungkan". SEBELUMNYA form tambah/edit tautan & blok cuma
+// mengandalkan placeholder (hilang begitu diisi, jadi form dengan banyak
+// field -- terutama "Project Unggulan" yang punya 4 field mirip: badge/
+// deskripsi/tautan CTA/teks CTA -- gampang bikin bingung field mana yang
+// mana). Label eksplisit yang TETAP terlihat, dipakai konsisten di form
+// tambah tautan/blok maupun form edit konten, satu komponen kecil supaya
+// gaya labelnya seragam di semua tempat.
+// <label> MEMBUNGKUS input (bukan sekadar elemen bersebelahan) supaya
+// asosiasinya BENAR secara aksesibilitas (screen reader, klik label ikut
+// fokus ke input) tanpa perlu pasangan id/htmlFor manual di tiap
+// pemanggilan -- efek sampingnya juga bagus: getByLabel() Playwright bisa
+// menemukan field ini di e2e test, tidak cuma bergantung ke placeholder.
+// hint SENGAJA di LUAR <label> (bukan ikut dibungkus) -- pernah dicoba di
+// dalam, tapi teks hint (kalimat bebas) jadi ikut MASUK ke accessible
+// name field ini (label membungkus mengumpulkan SELURUH teks di
+// dalamnya), bikin nama field jadi panjang & bisa TIDAK SENGAJA
+// bertabrakan dgn nama field lain (ditemukan lewat regresi e2e sungguhan:
+// hint field Deskripsi kebetulan memuat kata "judul", jadi getByLabel
+// ("Judul") ikut cocok ke field Deskripsi juga). Dipisah -- <label> HANYA
+// membungkus judul+input (accessible name tetap bersih), hint jadi teks
+// biasa di bawahnya, murni visual.
+function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</span>
+        {children}
+      </label>
+      {hint && <p className="text-[10.5px] text-muted">{hint}</p>}
+    </div>
+  );
+}
+
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
 // Linktree sungguhan yang dikirim pengguna: tombol "+ Add" besar & mencolok
 // (bukan trigger teks kecil), tiap kartu tautan punya baris ikon aksi
@@ -397,6 +440,13 @@ export default function DashboardLinksPage() {
   // supaya kreator tidak mengira embed langsung aktif sebelum tersimpan.
   const [blockMapsUrl, setBlockMapsUrl] = useState("");
   const [blockMapsEmbed, setBlockMapsEmbed] = useState(true);
+  // mapsPickerOpenFor -- permintaan langsung pengguna, 25 Agustus 2026:
+  // "user bisa memilih langsung lokasi dia saat ini lewat blok nya
+  // langsung jadi bisa pop up gmaps dan bisa memilih". "add" = form buat
+  // blok baru (isi blockMapsUrl), id tautan = form edit blok yang sudah
+  // ada (isi editMapsUrl) -- satu modal dipakai ulang utk kedua form,
+  // null berarti tertutup.
+  const [mapsPickerOpenFor, setMapsPickerOpenFor] = useState<string | null>(null);
   // "project_showcase" -- kartu "Project Unggulan": url = tautan CTA (field
   // generik `blockUrl` di handleCreateBlock, state terpisah supaya tidak
   // nyasar kalau kreator ganti-ganti tipe blok di form yang sama), gambar
@@ -1435,36 +1485,42 @@ export default function DashboardLinksPage() {
         {addingLink && (
           <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                required
-                autoFocus
-                placeholder="Judul tautan"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <input
-                type="url"
-                required
-                placeholder="https://..."
-                value={newURL}
-                onChange={(e) => setNewURL(e.target.value)}
-                className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
+              <FormField label="Judul" hint="Teks yang tampil di halamanmu.">
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="mis. Website Saya"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </FormField>
+              <FormField label="Tautan (URL)" hint="Alamat halaman tujuan saat diklik.">
+                <input
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={newURL}
+                  onChange={(e) => setNewURL(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </FormField>
             </div>
             {/* description -- permintaan langsung pengguna, 24 Agustus
                 2026: subjudul opsional (kartu ikon+judul+deskripsi+panah,
                 contoh template "Dimas Dev"). Kosong = baris judul tunggal
                 seperti sebelumnya. */}
-            <input
-              type="text"
-              placeholder="Deskripsi singkat (opsional)"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              maxLength={240}
-              className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
+            <FormField label="Deskripsi (opsional)" hint="Baris kecil di bawah judul -- kosongkan untuk tautan biasa tanpa subjudul.">
+              <input
+                type="text"
+                placeholder="mis. Kunjungi toko online saya"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                maxLength={240}
+                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </FormField>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -1482,36 +1538,38 @@ export default function DashboardLinksPage() {
 
         {addingBlock && (
           <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
-            <select
-              value={blockType}
-              onChange={(e) =>
-                setBlockType(
-                  e.target.value as
-                    | "video"
-                    | "contact_form"
-                    | "faq"
-                    | "maps"
-                    | "text"
-                    | "accordion"
-                    | "gallery"
-                    | "audio"
-                    | "file"
-                    | "project_showcase"
-                )
-              }
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              <option value="video">Video (YouTube/TikTok)</option>
-              <option value="contact_form">Formulir Kontak</option>
-              <option value="faq">FAQ</option>
-              <option value="accordion">Accordion (satu judul, klik untuk buka)</option>
-              <option value="maps">Lokasi (Google Maps)</option>
-              <option value="text">Teks</option>
-              <option value="gallery">Galeri Foto</option>
-              <option value="audio">Audio/Musik</option>
-              <option value="file">File & Unduhan (PDF/ZIP/EPUB)</option>
-              <option value="project_showcase">Project Unggulan</option>
-            </select>
+            <FormField label="Jenis Blok">
+              <select
+                value={blockType}
+                onChange={(e) =>
+                  setBlockType(
+                    e.target.value as
+                      | "video"
+                      | "contact_form"
+                      | "faq"
+                      | "maps"
+                      | "text"
+                      | "accordion"
+                      | "gallery"
+                      | "audio"
+                      | "file"
+                      | "project_showcase"
+                  )
+                }
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              >
+                <option value="video">Video (YouTube/TikTok)</option>
+                <option value="contact_form">Formulir Kontak</option>
+                <option value="faq">FAQ</option>
+                <option value="accordion">Accordion (satu judul, klik untuk buka)</option>
+                <option value="maps">Lokasi (Google Maps)</option>
+                <option value="text">Teks</option>
+                <option value="gallery">Galeri Foto</option>
+                <option value="audio">Audio/Musik</option>
+                <option value="file">File & Unduhan (PDF/ZIP/EPUB)</option>
+                <option value="project_showcase">Project Unggulan</option>
+              </select>
+            </FormField>
             {(blockType === "gallery" || blockType === "audio" || blockType === "file" || blockType === "project_showcase") && (
               <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-muted">
                 {blockType === "gallery"
@@ -1523,133 +1581,178 @@ export default function DashboardLinksPage() {
                   : "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok."}
               </p>
             )}
-            <input
-              type="text"
-              required
-              placeholder={
+            <FormField
+              label={blockType === "project_showcase" ? "Judul Proyek" : "Judul Blok"}
+              hint={
                 blockType === "text"
-                  ? "Judul blok (internal, tidak tampil ke publik)"
+                  ? "Internal saja, TIDAK tampil ke pengunjung."
                   : blockType === "accordion"
-                  ? "Judul yang tampil & diklik pengunjung"
+                  ? "Ini yang tampil & diklik pengunjung untuk membuka isinya."
                   : blockType === "project_showcase"
-                  ? "Judul proyek"
-                  : "Judul blok"
+                  ? "Nama proyek/karya yang ditonjolkan."
+                  : undefined
               }
-              value={blockTitle}
-              onChange={(e) => setBlockTitle(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
+            >
+              <input
+                type="text"
+                required
+                placeholder={
+                  blockType === "text"
+                    ? "mis. Pengumuman"
+                    : blockType === "accordion"
+                    ? "mis. Kebijakan Pengembalian"
+                    : blockType === "project_showcase"
+                    ? "mis. Redesain Aplikasi Perbankan"
+                    : "Judul blok"
+                }
+                value={blockTitle}
+                onChange={(e) => setBlockTitle(e.target.value)}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </FormField>
             {blockType === "project_showcase" && (
               <div className="flex flex-col gap-2">
-                <input
-                  type="text"
-                  placeholder="Badge kecil di atas gambar (opsional, mis. 'Project Unggulan')"
-                  value={blockShowcaseBadge}
-                  onChange={(e) => setBlockShowcaseBadge(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
-                <textarea
-                  placeholder="Paragraf deskripsi singkat"
-                  value={blockShowcaseDescription}
-                  onChange={(e) => setBlockShowcaseDescription(e.target.value)}
-                  rows={2}
-                  maxLength={240}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
-                <input
-                  type="url"
-                  required
-                  placeholder="https://... (tautan tujuan tombol CTA)"
-                  value={blockShowcaseUrl}
-                  onChange={(e) => setBlockShowcaseUrl(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Teks tombol CTA (opsional, bawaan 'Lihat detail')"
-                  value={blockShowcaseCta}
-                  onChange={(e) => setBlockShowcaseCta(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
+                <FormField label="Badge (opsional)" hint="Label kecil di atas gambar.">
+                  <input
+                    type="text"
+                    placeholder="mis. Project Unggulan"
+                    value={blockShowcaseBadge}
+                    onChange={(e) => setBlockShowcaseBadge(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </FormField>
+                <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
+                  <textarea
+                    placeholder="mis. Studi kasus peningkatan conversion rate lewat riset pengguna..."
+                    value={blockShowcaseDescription}
+                    onChange={(e) => setBlockShowcaseDescription(e.target.value)}
+                    rows={2}
+                    maxLength={240}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </FormField>
+                <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://..."
+                    value={blockShowcaseUrl}
+                    onChange={(e) => setBlockShowcaseUrl(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </FormField>
+                <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
+                  <input
+                    type="text"
+                    placeholder="mis. Lihat studi kasus"
+                    value={blockShowcaseCta}
+                    onChange={(e) => setBlockShowcaseCta(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </FormField>
               </div>
             )}
             {blockType === "text" && (
-              <textarea
-                placeholder="Isi teks yang tampil di halaman publik"
-                value={blockText}
-                onChange={(e) => setBlockText(e.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
+              <FormField label="Isi Teks">
+                <textarea
+                  placeholder="Isi teks yang tampil di halaman publik"
+                  value={blockText}
+                  onChange={(e) => setBlockText(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
             )}
             {blockType === "accordion" && (
-              <textarea
-                placeholder="Isi teks yang muncul saat judul di atas diklik"
-                value={blockAccordionText}
-                onChange={(e) => setBlockAccordionText(e.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
+              <FormField label="Isi Saat Diklik">
+                <textarea
+                  placeholder="Isi teks yang muncul saat judul di atas diklik"
+                  value={blockAccordionText}
+                  onChange={(e) => setBlockAccordionText(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
             )}
             {blockType === "video" && (
-              <input
-                type="url"
-                placeholder="https://youtube.com/... atau https://tiktok.com/..."
-                value={blockVideoUrl}
-                onChange={(e) => setBlockVideoUrl(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
+              <FormField label="Tautan Video">
+                <input
+                  type="url"
+                  placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                  value={blockVideoUrl}
+                  onChange={(e) => setBlockVideoUrl(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
             )}
             {blockType === "maps" && (
               <div className="flex flex-col gap-2">
-                <input
-                  type="url"
-                  placeholder="Tempel tautan berbagi lokasi Google Maps (mis. https://maps.app.goo.gl/...)"
-                  value={blockMapsUrl}
-                  onChange={(e) => setBlockMapsUrl(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
-                <p className="text-[11px] font-semibold text-muted">Saat pengunjung berinteraksi dengan tautan ini:</p>
-                <label className="flex items-start gap-2 text-xs text-ink">
-                  <input
-                    type="radio"
-                    name="blockMapsEmbed"
-                    checked={!blockMapsEmbed}
-                    onChange={() => setBlockMapsEmbed(false)}
-                    className="mt-0.5"
-                  />
-                  Buka tautan Google Maps langsung
-                </label>
-                <label className="flex items-start gap-2 text-xs text-ink">
-                  <input
-                    type="radio"
-                    name="blockMapsEmbed"
-                    checked={blockMapsEmbed}
-                    onChange={() => setBlockMapsEmbed(true)}
-                    className="mt-0.5"
-                  />
-                  Tampilkan peta Google Maps tertanam di profil
-                </label>
+                <FormField label="Tautan Google Maps">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="Tempel tautan berbagi lokasi (mis. https://maps.app.goo.gl/...)"
+                      value={blockMapsUrl}
+                      onChange={(e) => setBlockMapsUrl(e.target.value)}
+                      className="w-full min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMapsPickerOpenFor("add")}
+                      className="flex-shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:border-primary"
+                    >
+                      Pilih di Peta
+                    </button>
+                  </div>
+                </FormField>
+                <FormField label="Perilaku Saat Diklik Pengunjung">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex items-start gap-2 text-xs text-ink">
+                      <input
+                        type="radio"
+                        name="blockMapsEmbed"
+                        checked={!blockMapsEmbed}
+                        onChange={() => setBlockMapsEmbed(false)}
+                        className="mt-0.5"
+                      />
+                      Buka tautan Google Maps langsung
+                    </label>
+                    <label className="flex items-start gap-2 text-xs text-ink">
+                      <input
+                        type="radio"
+                        name="blockMapsEmbed"
+                        checked={blockMapsEmbed}
+                        onChange={() => setBlockMapsEmbed(true)}
+                        className="mt-0.5"
+                      />
+                      Tampilkan peta Google Maps tertanam di profil
+                    </label>
+                  </div>
+                </FormField>
               </div>
             )}
             {blockType === "faq" && (
               <div className="flex flex-col gap-2">
                 {blockFaqItems.map((item, i) => (
-                  <div key={i} className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
-                    <input
-                      type="text"
-                      placeholder="Pertanyaan"
-                      value={item.question}
-                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                    <textarea
-                      placeholder="Jawaban"
-                      value={item.answer}
-                      onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
-                      rows={2}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
+                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-border p-2.5">
+                    <FormField label={`Pertanyaan ${i + 1}`}>
+                      <input
+                        type="text"
+                        placeholder="Pertanyaan"
+                        value={item.question}
+                        onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
+                    <FormField label="Jawaban">
+                      <textarea
+                        placeholder="Jawaban"
+                        value={item.answer}
+                        onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
+                        rows={2}
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
                   </div>
                 ))}
                 <button
@@ -2369,111 +2472,144 @@ export default function DashboardLinksPage() {
                 link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Mengedit: {BLOCK_TYPE_LABEL[link.block_type]}</p>
                   {link.block_type === "video" ? (
-                    <input
-                      type="url"
-                      placeholder="https://youtube.com/... atau https://tiktok.com/..."
-                      value={editVideoUrl}
-                      onChange={(e) => setEditVideoUrl(e.target.value)}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                  ) : link.block_type === "text" ? (
-                    <textarea
-                      placeholder="Isi teks yang tampil di halaman publik"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                  ) : link.block_type === "accordion" ? (
-                    <textarea
-                      placeholder="Isi teks yang muncul saat judul diklik"
-                      value={editAccordionText}
-                      onChange={(e) => setEditAccordionText(e.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                  ) : link.block_type === "maps" ? (
-                    <div className="flex flex-col gap-2">
+                    <FormField label="Tautan Video">
                       <input
                         type="url"
-                        placeholder="Tempel tautan berbagi lokasi Google Maps"
-                        value={editMapsUrl}
-                        onChange={(e) => setEditMapsUrl(e.target.value)}
+                        placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                        value={editVideoUrl}
+                        onChange={(e) => setEditVideoUrl(e.target.value)}
                         className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
-                      <p className="text-[10px] font-semibold text-muted">Saat pengunjung berinteraksi dengan tautan ini:</p>
-                      <label className="flex items-start gap-2 text-xs text-ink">
-                        <input
-                          type="radio"
-                          name={`editMapsEmbed-${link.id}`}
-                          checked={!editMapsEmbed}
-                          onChange={() => setEditMapsEmbed(false)}
-                          className="mt-0.5"
-                        />
-                        Buka tautan Google Maps langsung
-                      </label>
-                      <label className="flex items-start gap-2 text-xs text-ink">
-                        <input
-                          type="radio"
-                          name={`editMapsEmbed-${link.id}`}
-                          checked={editMapsEmbed}
-                          onChange={() => setEditMapsEmbed(true)}
-                          className="mt-0.5"
-                        />
-                        Tampilkan peta Google Maps tertanam di profil
-                      </label>
+                    </FormField>
+                  ) : link.block_type === "text" ? (
+                    <FormField label="Isi Teks">
+                      <textarea
+                        placeholder="Isi teks yang tampil di halaman publik"
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={3}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
+                  ) : link.block_type === "accordion" ? (
+                    <FormField label="Isi Saat Diklik">
+                      <textarea
+                        placeholder="Isi teks yang muncul saat judul diklik"
+                        value={editAccordionText}
+                        onChange={(e) => setEditAccordionText(e.target.value)}
+                        rows={3}
+                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
+                  ) : link.block_type === "maps" ? (
+                    <div className="flex flex-col gap-2">
+                      <FormField label="Tautan Google Maps">
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="Tempel tautan berbagi lokasi Google Maps"
+                            value={editMapsUrl}
+                            onChange={(e) => setEditMapsUrl(e.target.value)}
+                            className="w-full min-w-0 flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setMapsPickerOpenFor(link.id)}
+                            className="flex-shrink-0 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-bold text-primary hover:border-primary"
+                          >
+                            Pilih di Peta
+                          </button>
+                        </div>
+                      </FormField>
+                      <FormField label="Perilaku Saat Diklik Pengunjung">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="flex items-start gap-2 text-xs text-ink">
+                            <input
+                              type="radio"
+                              name={`editMapsEmbed-${link.id}`}
+                              checked={!editMapsEmbed}
+                              onChange={() => setEditMapsEmbed(false)}
+                              className="mt-0.5"
+                            />
+                            Buka tautan Google Maps langsung
+                          </label>
+                          <label className="flex items-start gap-2 text-xs text-ink">
+                            <input
+                              type="radio"
+                              name={`editMapsEmbed-${link.id}`}
+                              checked={editMapsEmbed}
+                              onChange={() => setEditMapsEmbed(true)}
+                              className="mt-0.5"
+                            />
+                            Tampilkan peta Google Maps tertanam di profil
+                          </label>
+                        </div>
+                      </FormField>
                     </div>
                   ) : link.block_type === "project_showcase" ? (
                     <div className="flex flex-col gap-2">
-                      <input
-                        type="text"
-                        placeholder="Badge kecil di atas gambar (opsional)"
-                        value={editShowcaseBadge}
-                        onChange={(e) => setEditShowcaseBadge(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <textarea
-                        placeholder="Paragraf deskripsi singkat"
-                        value={editShowcaseDescription}
-                        onChange={(e) => setEditShowcaseDescription(e.target.value)}
-                        rows={2}
-                        maxLength={240}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <input
-                        type="url"
-                        placeholder="https://... (tautan tujuan tombol CTA)"
-                        value={editShowcaseUrl}
-                        onChange={(e) => setEditShowcaseUrl(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Teks tombol CTA (opsional)"
-                        value={editShowcaseCta}
-                        onChange={(e) => setEditShowcaseCta(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
+                      <FormField label="Badge (opsional)" hint="Label kecil di atas gambar.">
+                        <input
+                          type="text"
+                          placeholder="mis. Project Unggulan"
+                          value={editShowcaseBadge}
+                          onChange={(e) => setEditShowcaseBadge(e.target.value)}
+                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
+                        <textarea
+                          placeholder="Paragraf deskripsi singkat"
+                          value={editShowcaseDescription}
+                          onChange={(e) => setEditShowcaseDescription(e.target.value)}
+                          rows={2}
+                          maxLength={240}
+                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={editShowcaseUrl}
+                          onChange={(e) => setEditShowcaseUrl(e.target.value)}
+                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
+                        <input
+                          type="text"
+                          placeholder="mis. Lihat studi kasus"
+                          value={editShowcaseCta}
+                          onChange={(e) => setEditShowcaseCta(e.target.value)}
+                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">
                       {editFaqItems.map((item, i) => (
-                        <div key={i} className="flex flex-col gap-1 rounded-md border border-border p-2">
-                          <input
-                            type="text"
-                            placeholder="Pertanyaan"
-                            value={item.question}
-                            onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                            className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
-                          />
-                          <textarea
-                            placeholder="Jawaban"
-                            value={item.answer}
-                            onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
-                            rows={2}
-                            className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
-                          />
+                        <div key={i} className="flex flex-col gap-2 rounded-md border border-border p-2">
+                          <FormField label={`Pertanyaan ${i + 1}`}>
+                            <input
+                              type="text"
+                              placeholder="Pertanyaan"
+                              value={item.question}
+                              onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
+                              className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                            />
+                          </FormField>
+                          <FormField label="Jawaban">
+                            <textarea
+                              placeholder="Jawaban"
+                              value={item.answer}
+                              onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
+                              rows={2}
+                              className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                            />
+                          </FormField>
                           <button
                             type="button"
                             onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
@@ -2551,6 +2687,17 @@ export default function DashboardLinksPage() {
             />
           );
         })()}
+
+      {mapsPickerOpenFor && (
+        <LocationPickerModal
+          onSelect={(url) => {
+            if (mapsPickerOpenFor === "add") setBlockMapsUrl(url);
+            else setEditMapsUrl(url);
+            setMapsPickerOpenFor(null);
+          }}
+          onClose={() => setMapsPickerOpenFor(null)}
+        />
+      )}
 
       {/* Dialog konfirmasi hapus -- permintaan langsung pengguna, 14 Agustus
           2026: "kalau mau hapus tampilkan toast peringatan dulu". Berlaku

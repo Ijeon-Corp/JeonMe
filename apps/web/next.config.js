@@ -86,6 +86,16 @@ const PUBLIC_PAGE_CSP = [
   "base-uri 'self'",
 ].join('; ');
 
+// NOMINATIM_ORIGIN -- permintaan langsung pengguna, 25 Agustus 2026:
+// "user bisa memilih langsung lokasi dia saat ini lewat blok nya
+// langsung jadi bisa pop up gmaps dan bisa memilih" (blok Lokasi/Maps) --
+// LocationPickerModal.tsx cari alamat lewat Nominatim (geocoding
+// OpenStreetMap, GRATIS tanpa API key -- dikonfirmasi lewat
+// AskUserQuestion, alternatif Google Maps JS API perlu billing GCP baru).
+// Tile peta sendiri TIDAK butuh entri baru (img-src di bawah sudah
+// mengizinkan https: apa saja).
+const NOMINATIM_ORIGIN = 'https://nominatim.openstreetmap.org';
+
 const STRICT_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -93,7 +103,7 @@ const STRICT_CSP = [
   "img-src 'self' https: data: blob:",
   MEDIA_SRC,
   "font-src 'self' data:",
-  `connect-src ${CONNECT_SRC}`,
+  `connect-src ${CONNECT_SRC} ${NOMINATIM_ORIGIN}`,
   `frame-src ${VIDEO_EMBED_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
@@ -113,6 +123,21 @@ const COMMON_SECURITY_HEADERS = [
   // sensitif. '=()' = tolak semua origin, termasuk same-origin.
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()' },
 ];
+
+// DASHBOARD_SECURITY_HEADERS -- permintaan langsung pengguna, 25 Agustus
+// 2026: tombol "Lokasi Saya Saat Ini" di LocationPickerModal.tsx (blok
+// Maps) BUTUH navigator.geolocation.getCurrentPosition() sungguhan --
+// beda dari asumsi 15 Agustus di atas ("TIDAK memakai API geolokasi
+// browser") yang sekarang sudah tidak berlaku LAGI khusus di dashboard.
+// 'self' saja (bukan '*') -- kreator memberi izin ke jeon.id sendiri,
+// BUKAN mengizinkan skrip pihak ketiga mana pun. Halaman publik/login/
+// admin/register TIDAK ikut berubah (tetap pakai COMMON_SECURITY_HEADERS,
+// geolocation=() ditolak) -- fitur ini murni dashboard kreator.
+const DASHBOARD_SECURITY_HEADERS = COMMON_SECURITY_HEADERS.map((h) =>
+  h.key === 'Permissions-Policy'
+    ? { key: h.key, value: h.value.replace('geolocation=()', 'geolocation=(self)') }
+    : h
+);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -147,7 +172,7 @@ const nextConfig = {
       { source: '/checkout/:id', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
     ];
     const strictRoutes = [
-      { source: '/dashboard/:path*', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
+      { source: '/dashboard/:path*', headers: [...DASHBOARD_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
       { source: '/admin/:path*', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
       { source: '/login', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },
       { source: '/register', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: STRICT_CSP }] },

@@ -282,6 +282,21 @@ export function IconMapPin({ className }: IconProps) {
   );
 }
 
+// IconTarget -- permintaan langsung pengguna, 25 Agustus 2026: tombol
+// "Lokasi Saya Saat Ini" di LocationPickerModal, ikon crosshair/target
+// standar utk aksi deteksi lokasi (dipakai berdampingan IconMapPin di
+// atas, bukan pengganti -- keduanya makna beda: IconMapPin = alamat
+// tersimpan, IconTarget = "deteksi posisiku sekarang").
+export function IconTarget({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth={base} />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconPlus({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
