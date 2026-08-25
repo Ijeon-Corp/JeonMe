@@ -135,6 +135,13 @@ export type PageThemeName =
   | "cocoa"
   | "azure"
   | "blush"
+  // "console" -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
+  // tangkapan layar template link-in-bio developer bertema navy gelap,
+  // "Dimas Dev"): navy-hitam pekat + aksen teal, BEDA dari "corporate"
+  // (navy tapi aksen putih/sky, kesan korporat/finance) dan "midnight"
+  // (hijau-hitam + aksen emas, kesan mewah) -- ini condong ke estetika
+  // terminal/kode, cocok developer/tech/SaaS.
+  | "console"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -2774,6 +2781,28 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fecdd3 100%)",
     previewIsDark: false,
     pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  console: {
+    // Navy-hitam pekat + aksen teal -- lihat catatan lengkap di
+    // PageThemeName kenapa ini beda dari "corporate"/"midnight".
+    label: "Console",
+    page: "bg-gradient-to-br from-[#050B14] via-[#0B1524] to-[#0F1F2E]",
+    glow: "bg-gradient-to-br from-teal-400/30 via-emerald-500/15 to-transparent",
+    avatarRing: "ring-4 ring-teal-400/50 shadow-[0_0_70px_-12px_rgba(45,212,191,0.5)]",
+    name: "text-white",
+    bio: "text-white/60",
+    card: "border border-white/10 bg-white/[0.05] backdrop-blur hover:bg-white/[0.09] hover:-translate-y-0.5",
+    cardTitle: "text-white",
+    chevron: "text-teal-300/60",
+    productCard: "border border-white/10 bg-white/[0.05] backdrop-blur",
+    productTitle: "text-white",
+    productPrice: "text-teal-300",
+    buyButton: "bg-teal-400 text-[#04140F] font-bold hover:brightness-110",
+    footer: "text-white/25 hover:text-teal-300",
+    swatch: "#0B1524",
+    previewBg: "linear-gradient(150deg, #050B14 0%, #0B1524 55%, #0F1F2E 100%)",
+    previewIsDark: true,
+    pageStyle: { fontFamily: "var(--font-body)" },
   },
 };
 

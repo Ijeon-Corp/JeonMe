@@ -789,6 +789,7 @@ export const THEME_PRESETS = [
   "cocoa",
   "azure",
   "blush",
+  "console",
 ] as const;
 
 export function getMyPage() {

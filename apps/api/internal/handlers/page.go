@@ -1101,7 +1101,11 @@ var availableThemes = map[string]bool{
 	"emerald": true, "wine": true, "candy": true, "vapor": true, "matcha": true,
 	"terracotta": true, "champagne": true, "obsidian": true, "holographic": true, "corporate": true,
 	"ivory": true, "lemon": true, "cocoa": true, "azure": true, "blush": true,
-	"custom": true,
+	// "console" -- permintaan langsung pengguna, 24 Agustus 2026 (template
+	// developer bertema navy gelap), lihat catatan lengkap di PageThemeName
+	// (apps/web/lib/page-themes.ts).
+	"console": true,
+	"custom":  true,
 }
 
 // availableCustomFonts -- "Desain 2.0": diperluas dari 5 jadi 9 pilihan font
