@@ -31,6 +31,7 @@
 // lainnya tetap gradien/warna solid seperti sebelumnya).
 
 import type { PagePreviewData } from "@/components/PagePreview";
+import type { SocialPlatformKey } from "@/lib/social-links";
 
 export interface QuickSetupCategory {
   key: string;
@@ -94,6 +95,12 @@ type PlatformKey = keyof typeof PLATFORM_URL;
 export interface QuickSetupTemplateLink {
   title: string;
   url: string;
+  // description -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
+  // tangkapan layar template "Dimas Dev"): subjudul opsional di bawah
+  // judul (kartu ikon+judul+deskripsi+panah). Kosong/undefined = baris
+  // judul tunggal seperti template lain -- lihat linkItem.Description
+  // (links.go) & PagePreviewLink.description.
+  description?: string;
 }
 
 export interface QuickSetupTemplateFaqItem {
@@ -115,11 +122,24 @@ export interface QuickSetupTemplateBlock {
   // page_type="landing" (builder blok terpisah), BUKAN di halaman bio
   // (lihat catatan cakupan lengkap di atas file ini & renderLinkOrBlock,
   // PagePreview.tsx -- tidak ada case untuk keduanya di situ).
-  type: "text" | "contact_form" | "maps" | "faq";
+  // project_showcase -- permintaan langsung pengguna, 24 Agustus 2026
+  // (contoh tangkapan layar template "Dimas Dev"): kartu "Project
+  // Unggulan" (badge+gambar+judul+deskripsi+CTA). AMAN dibuat otomatis
+  // (beda dari image/video/dst yang butuh media pengguna nyata) karena
+  // gambarnya aset statis milik Jeonme sendiri (showcaseImagePath, pola
+  // SAMA PERSIS coverImagePath produk di bawah) -- placeholder yang
+  // JELAS contoh, kreator tinggal ganti lewat panel "Kelola gambar".
+  type: "text" | "contact_form" | "maps" | "faq" | "project_showcase";
   title: string;
   text?: string;
   url?: string;
   faqItems?: QuickSetupTemplateFaqItem[];
+  // description/badgeText/ctaText/showcaseImagePath -- khusus
+  // "project_showcase", lihat catatan di atas.
+  description?: string;
+  badgeText?: string;
+  ctaText?: string;
+  showcaseImagePath?: string;
 }
 
 // QuickSetupTemplateProduct -- permintaan langsung pengguna, 17 Agustus
@@ -175,6 +195,13 @@ export interface QuickSetupTemplate {
   // tidak pernah menghancurkan data monetisasi" yang sudah ada.
   products?: QuickSetupTemplateProduct[];
   monetizationHint?: string;
+  // social -- permintaan langsung pengguna, 24 Agustus 2026 (contoh
+  // tangkapan layar template "Dimas Dev": baris ikon GitHub/LinkedIn/
+  // Website/Email di bawah bio). Sama semangatnya dengan PLATFORM_URL.website
+  // di atas -- nilai PLACEHOLDER jelas contoh (mis. "username"), kreator
+  // tinggal lengkapi lewat panel Kontak Sosial. Opsional, kosong = baris
+  // sosial tidak ikut diisi (perilaku lama, mayoritas template).
+  social?: Partial<Record<SocialPlatformKey, string>>;
   // layoutVariant -- permintaan langsung pengguna: "yang saya minta
   // layouting nya juga berbeda", lalu susulan "tambahkan jenis model
   // layout selain 2 yang sudah ada" (jadi 4), lalu susulan lagi "tambahkan
@@ -327,6 +354,29 @@ function faqBlock(items: QuickSetupTemplateFaqItem[], title = "Pertanyaan Umum")
   return { type: "faq", title, faqItems: items };
 }
 
+// showcaseBlock -- lihat catatan lengkap di QuickSetupTemplateBlock.type
+// ("project_showcase"). url WAJIB host asli (placeholder domain sama
+// seperti PLATFORM_URL.website di atas, "https://" polos ditolak
+// validator backend).
+function showcaseBlock(args: {
+  title: string;
+  description: string;
+  badgeText?: string;
+  ctaText?: string;
+  url?: string;
+  imagePath?: string;
+}): QuickSetupTemplateBlock {
+  return {
+    type: "project_showcase",
+    title: args.title,
+    description: args.description,
+    badgeText: args.badgeText,
+    ctaText: args.ctaText,
+    url: args.url ?? "https://websitekamu.com/studi-kasus",
+    showcaseImagePath: args.imagePath ?? "/quick-setup-showcase/dashboard-mockup.jpg",
+  };
+}
+
 // OrderedTemplateItem -- bentuk SIAP RENDER (dipakai LANGSUNG oleh
 // quick-setup/page.tsx untuk membangun PagePreviewData/payload createLink/
 // createBlock, tidak perlu logika pemetaan block_data terpisah lagi di
@@ -334,24 +384,39 @@ function faqBlock(items: QuickSetupTemplateFaqItem[], title = "Pertanyaan Umum")
 // dengan yang benar-benar dibuat applyTemplate.
 export interface OrderedTemplateItem {
   title: string;
-  blockType: "link" | "text" | "contact_form" | "maps" | "faq";
+  blockType: "link" | "text" | "contact_form" | "maps" | "faq" | "project_showcase";
   url: string;
   text?: string;
   faqItems?: QuickSetupTemplateFaqItem[];
+  description?: string;
+  badgeText?: string;
+  ctaText?: string;
+  showcaseImagePath?: string;
 }
 
 // orderedTemplateItems -- SATU sumber kebenaran urutan tampil: blok
 // "maps" ("Lokasi Kami") PALING ATAS, lalu tautan biasa, lalu blok lain
-// (text/faq/contact_form) PALING BAWAH -- pola yang sama persis dengan
-// referensi Linktree sungguhan yang diberikan pengguna (lokasi di atas,
-// kontak/sosial di tengah, formulir "Kritik dan Saran" di bawah).
+// (text/faq/contact_form/project_showcase) PALING BAWAH -- pola yang sama
+// persis dengan referensi Linktree sungguhan yang diberikan pengguna
+// (lokasi di atas, kontak/sosial di tengah, formulir "Kritik dan Saran"
+// di bawah).
 export function orderedTemplateItems(t: QuickSetupTemplate): OrderedTemplateItem[] {
   const mapsBlocks = (t.blocks ?? []).filter((b) => b.type === "maps");
   const otherBlocks = (t.blocks ?? []).filter((b) => b.type !== "maps");
   return [
     ...mapsBlocks.map((b) => ({ title: b.title, blockType: "maps" as const, url: b.url ?? "" })),
-    ...t.links.map((l) => ({ title: l.title, blockType: "link" as const, url: l.url })),
-    ...otherBlocks.map((b) => ({ title: b.title, blockType: b.type, url: "", text: b.text, faqItems: b.faqItems })),
+    ...t.links.map((l) => ({ title: l.title, blockType: "link" as const, url: l.url, description: l.description })),
+    ...otherBlocks.map((b) => ({
+      title: b.title,
+      blockType: b.type,
+      url: b.url ?? "",
+      text: b.text,
+      faqItems: b.faqItems,
+      description: b.description,
+      badgeText: b.badgeText,
+      ctaText: b.ctaText,
+      showcaseImagePath: b.showcaseImagePath,
+    })),
   ];
 }
 
@@ -383,9 +448,16 @@ export function buildQuickSetupPreviewData(t: QuickSetupTemplate, username: stri
           ? { text: item.text }
           : item.blockType === "faq"
           ? { items: item.faqItems }
+          : item.blockType === "project_showcase"
+          ? { badge_text: item.badgeText, cta_text: item.ctaText, image_url: item.showcaseImagePath }
           : {},
+      // description -- dipakai ulang utk tautan biasa (subjudul) MAUPUN
+      // "project_showcase" (paragraf) -- lihat catatan lengkap di
+      // QuickSetupTemplateLink.description.
+      description: item.description,
     })),
     products: (t.products ?? []).map((p) => ({ id: p.name, name: p.name, price_idr: p.priceIDR, cover_image_url: p.coverImagePath })),
+    social: t.social,
   };
 }
 
@@ -1569,5 +1641,95 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Jadwal Kegiatan", text: "Tuliskan jadwal kajian/kegiatan rutin komunitas di sini." },
       faqBlock([{ question: "Bagaimana cara ikut kegiatan?", answer: "Gabung grup WhatsApp untuk info jadwal terbaru, semua kegiatan terbuka untuk umum." }]),
     ],
+  },
+  // 3 template baru, 24 Agustus 2026 (permintaan langsung pengguna, contoh
+  // tangkapan layar template link-in-bio developer bertema navy gelap
+  // "Dimas Dev": kartu tautan ikon+judul+deskripsi+panah, kartu "Project
+  // Unggulan" bergambar+badge+CTA, baris ikon sosial GitHub/Website) --
+  // mendorong 3 fitur baru sekaligus: links[].description (subjudul kartu
+  // kaya), block_type "project_showcase", dan platform sosial GitHub/
+  // Website (lihat migrasi 000077/000078, linkItem.Description,
+  // validateBlockData "project_showcase" di links.go). Tema "console"
+  // (page-themes.ts) dibuat bareng batch ini -- navy-hitam + aksen teal,
+  // dipakai 2 dari 3 template di bawah; "obsidian" (sudah ada, hitam matte
+  // polos) dipakai template ke-2 supaya tidak monoton satu tema yang sama
+  // 3x. Kategori "business" -- portofolio profesional developer/desainer/
+  // founder, sejalan dgn "professional-cv"/"consultant"/"agency" yang
+  // sudah ada di kategori ini, BUKAN kategori baru terpisah.
+  {
+    key: "fullstack-developer",
+    category: "business",
+    layoutVariant: "spotlight",
+    label: "Full-Stack Developer",
+    description: "Proyek unggulan, GitHub, CV, kartu kaya + Project Unggulan",
+    theme: "console",
+    bio: "Full-Stack Developer -- proyek, GitHub, dan CV dalam satu tautan.",
+    social: { github: "username", linkedin: "username", website: "websitekamu.com", email: "kamu@email.com" },
+    links: [
+      { title: "Tentang Saya", url: "https://websitekamu.com/tentang", description: "Tech stack, pengalaman, dan fokus kerja" },
+      { title: "Featured Projects", url: "https://websitekamu.com/proyek", description: "Website, dashboard, dan aplikasi pilihan" },
+      { title: "GitHub", url: "https://github.com/username", description: "Lihat repository dan kontribusi terbaru" },
+      { title: "Download CV", url: "https://websitekamu.com/cv.pdf", description: "CV terbaru dalam format PDF" },
+      { title: "Hubungi Saya", url: "https://wa.me/62", description: "Kolaborasi, freelance, dan konsultasi" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "SaaS Analytics Dashboard",
+        description: "Dashboard analytics real-time untuk monitoring KPI bisnis dan performa produk. Dibangun dengan Next.js, Tailwind CSS, dan PostgreSQL.",
+        badgeText: "Project Unggulan",
+        ctaText: "Lihat studi kasus",
+      }),
+    ],
+    monetizationHint: "Tambahkan Konsultasi Berbayar di menu Produk & Monetisasi kalau mau menawarkan sesi review kode/arsitektur berbayar.",
+  },
+  {
+    key: "ui-ux-designer",
+    category: "business",
+    layoutVariant: "portrait",
+    label: "UI/UX Designer",
+    description: "Case study, portfolio visual, dan booking konsultasi",
+    theme: "obsidian",
+    bio: "UI/UX Designer -- case study, portfolio, dan kolaborasi.",
+    social: { website: "websitekamu.com", instagram: "username", linkedin: "username", email: "kamu@email.com" },
+    links: [
+      { title: "Portfolio Lengkap", url: "https://websitekamu.com/portfolio", description: "Seluruh studi kasus & proses desain" },
+      { title: "Behance", url: "https://behance.net/username", description: "Galeri visual dan eksplorasi desain" },
+      { title: "Dribbble", url: "https://dribbble.com/username", description: "Shot harian & eksperimen UI" },
+      { title: "Booking Konsultasi", url: "https://wa.me/62", description: "Diskusi kebutuhan desain produkmu" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Redesain Aplikasi Perbankan",
+        description: "Studi kasus peningkatan conversion rate 34% lewat riset pengguna & desain ulang alur onboarding.",
+        badgeText: "Studi Kasus",
+        ctaText: "Baca selengkapnya",
+      }),
+    ],
+    monetizationHint: "Tambahkan Produk Digital (template Figma/UI kit) di menu Toko untuk monetisasi tambahan dari portofolio ini.",
+  },
+  {
+    key: "startup-founder",
+    category: "business",
+    layoutVariant: "hero",
+    label: "Startup Founder",
+    description: "Progres produk, investor deck, dan insight",
+    theme: "console",
+    bio: "Startup Founder -- membangun produk, berbagi insight.",
+    social: { github: "username", x: "username", linkedin: "username", website: "websitekamu.com" },
+    links: [
+      { title: "Tentang Produk Saya", url: "https://websitekamu.com/produk", description: "Visi, misi, dan progres terbaru startup" },
+      { title: "Newsletter Insight", url: "https://websitekamu.com/newsletter", description: "Pelajaran membangun startup tiap minggu" },
+      { title: "Investor Deck", url: "https://websitekamu.com/deck.pdf", description: "Ringkasan bisnis untuk calon investor/mitra" },
+      { title: "Follow di X", url: "https://x.com/", description: "Update harian & thread insight" },
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Peluncuran MVP",
+        description: "Dari ide sampai 1.000 pengguna pertama dalam 90 hari -- pelajaran validasi produk & growth awal.",
+        badgeText: "Studi Kasus",
+        ctaText: "Baca ceritanya",
+      }),
+    ],
+    monetizationHint: "Aktifkan Dukungan (Donasi) kalau audiensmu ingin membantu biaya operasional produk secara sukarela.",
   },
 ];

@@ -17,6 +17,7 @@ import {
   updateMyPage,
   updateProduct,
   uploadProductCover,
+  uploadShowcaseImage,
 } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
@@ -189,8 +190,19 @@ export default function QuickSetupPage() {
       // layout_variant SELALU ikut diterapkan (bukan cuma kalau bio
       // kosong) -- ini bagian dari "bentuk" template, sama seperti tema.
       const layoutVariant = t.layoutVariant ?? "centered";
+      // social -- permintaan langsung pengguna, 24 Agustus 2026 (baris
+      // ikon GitHub/LinkedIn/Website/Email, contoh template "Dimas Dev").
+      // Nilai PLACEHOLDER jelas contoh (sama semangatnya dengan bio/tautan
+      // starter di atas) -- kreator tinggal lengkapi lewat panel Kontak
+      // Sosial. Object.fromEntries -- t.social pakai key pendek ("github"),
+      // updateMyPage butuh key kolom DB ("social_github").
+      const socialPatch = t.social
+        ? Object.fromEntries(Object.entries(t.social).map(([k, v]) => [`social_${k}`, v]))
+        : {};
       await updateMyPage(
-        page.bio.trim() ? { theme: t.theme, layout_variant: layoutVariant } : { theme: t.theme, bio: t.bio, layout_variant: layoutVariant }
+        page.bio.trim()
+          ? { theme: t.theme, layout_variant: layoutVariant, ...socialPatch }
+          : { theme: t.theme, bio: t.bio, layout_variant: layoutVariant, ...socialPatch }
       );
 
       // Sequential (bukan Promise.all) -- posisi tautan dihitung server-side
@@ -203,11 +215,38 @@ export default function QuickSetupPage() {
       // di data template).
       for (const item of orderedTemplateItems(t)) {
         if (item.blockType === "link") {
-          await createLink({ title: item.title, url: item.url });
+          await createLink({ title: item.title, url: item.url, description: item.description });
         } else if (item.blockType === "maps") {
           await createBlock({ block_type: "maps", title: item.title, url: item.url, block_data: { embed: false } });
         } else if (item.blockType === "faq") {
           await createBlock({ block_type: "faq", title: item.title, block_data: { items: item.faqItems } });
+        } else if (item.blockType === "project_showcase") {
+          // "project_showcase" -- gambarnya aset statis milik Jeonme
+          // sendiri (showcaseImagePath), TIDAK bisa dikirim langsung
+          // sebagai block_data.image_url (backend mewajibkan URL http(s)
+          // absolut, path relatif ditolak validator) -- pola SAMA PERSIS
+          // dengan cover produk di bawah: buat blok DULU (tanpa gambar),
+          // fetch aset statis sebagai blob, lalu unggah ulang lewat
+          // endpoint yang mengembalikan URL storage absolut.
+          const created = await createBlock({
+            block_type: "project_showcase",
+            title: item.title,
+            url: item.url,
+            block_data: { badge_text: item.badgeText ?? "", cta_text: item.ctaText ?? "" },
+            description: item.description,
+          });
+          if (item.showcaseImagePath) {
+            try {
+              const res = await fetch(item.showcaseImagePath);
+              const blob = await res.blob();
+              const file = new File([blob], `${item.title}.jpg`, { type: blob.type || "image/jpeg" });
+              await uploadShowcaseImage(created.id, file);
+            } catch {
+              // diamkan -- blok "Project Unggulan" yang SUDAH dibuat di atas
+              // tetap berhasil walau gambarnya gagal terpasang, sama seperti
+              // soft-fail sampul produk di bawah.
+            }
+          }
         } else {
           await createBlock({
             block_type: item.blockType,

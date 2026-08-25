@@ -3,6 +3,7 @@ import {
   IconApplePodcasts,
   IconDiscord,
   IconFacebook,
+  IconGithub,
   IconGoogleMaps,
   IconInstagram,
   IconLink,
@@ -120,6 +121,11 @@ const PATTERNS: { test: RegExp; Icon: LinkIconComponent; label: string; badgeCla
     badgeClass: "bg-[#4285F4] text-white",
     iconColorClass: "text-[#4285F4]",
   },
+  // Susulan 24 Agustus 2026 (bareng platform sosial GitHub baru,
+  // lib/social-links.ts) -- sama alasannya dengan Discord/Twitch/dst di
+  // atas, tautan biasa ke github.com (bukan cuma baris ikon sosial)
+  // sebelumnya selalu jatuh ke IconLink generik.
+  { test: /github\.com/i, Icon: IconGithub, label: "GitHub", badgeClass: "bg-[#181717] text-white", iconColorClass: "text-[#181717]" },
 ];
 
 const FALLBACK_BADGE_CLASS = "bg-primary-subtle text-primary";
