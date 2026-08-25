@@ -510,12 +510,70 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 				}
 			}
 		}
+	case "catalog":
+		// "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "blok
+		// diklik -> muncul blok blok baru seperti ke page baru... misal nya
+		// gini, ada blok Jenis Rumah ketika di klik akan tampil semua blok
+		// dengan isi jenis jenis rumah yang ada dan keitka di klik masing
+		// masing itu bisa menampilkan gambar dan juga deskripsi dan gambar
+		// bisa multiple" -- drill-down 2 tingkat (daftar item -> detail
+		// item), dikonfirmasi lewat AskUserQuestion tampil sebagai
+		// penggantian ISI HALAMAN penuh (bukan overlay), lihat
+		// CatalogTakeoverView (PagePreview.tsx).
+		//
+		// items[] BOLEH kosong saat blok dibuat (pola sama gallery/audio/
+		// file: blok dibuat dulu, item ditambah lewat panel "Kelola
+		// Katalog" di kartu blok) -- kalau TERISI, tiap item wajib id
+		// (dibuat klien, string apa saja asal tidak kosong -- dipakai
+		// UploadCatalogItemImage/DeleteCatalogItemImage di bawah untuk
+		// menunjuk item mana yang diubah, TANPA perlu tabel DB terpisah)
+		// & title tidak kosong; images (kalau ada) divalidasi format URL --
+		// isinya sendiri SELALU diisi lewat upload (UploadCatalogItemImage),
+		// tidak pernah dikirim mentah lewat JSON di sini.
+		if raw, ok := data["items"]; ok {
+			items, isSlice := raw.([]any)
+			if !isSlice {
+				return "items wajib berupa daftar", false
+			}
+			if len(items) > maxCatalogItems {
+				return fmt.Sprintf("maksimal %d item per katalog", maxCatalogItems), false
+			}
+			seenIDs := map[string]bool{}
+			for _, raw := range items {
+				item, ok := raw.(map[string]any)
+				if !ok {
+					return "setiap item katalog wajib berupa objek", false
+				}
+				id, _ := item["id"].(string)
+				title, _ := item["title"].(string)
+				if strings.TrimSpace(id) == "" || strings.TrimSpace(title) == "" {
+					return "setiap item katalog wajib punya id dan judul", false
+				}
+				if seenIDs[id] {
+					return "id item katalog tidak boleh duplikat", false
+				}
+				seenIDs[id] = true
+				if imagesRaw, ok := item["images"]; ok {
+					images, isSlice := imagesRaw.([]any)
+					if !isSlice {
+						return "images pada item katalog wajib berupa daftar", false
+					}
+					for _, img := range images {
+						imgURL, isStr := img.(string)
+						u, err := url.Parse(imgURL)
+						if !isStr || err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+							return "setiap foto item katalog wajib URL yang valid", false
+						}
+					}
+				}
+			}
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -1765,6 +1823,211 @@ func storageKeyFromPublicURL(s *storage.Client, publicURL string) string {
 		return ""
 	}
 	return strings.TrimPrefix(publicURL, prefix)
+}
+
+// maxCatalogItems -- batas wajar jumlah item per blok "catalog" (permintaan
+// langsung pengguna, 25 Agustus 2026: blok "Jenis Rumah" -> daftar jenis ->
+// detail per jenis) supaya daftar item tidak jadi katalog tak terbatas yang
+// memberatkan muat halaman publik -- sama semangatnya dgn maxGalleryImages.
+const maxCatalogItems = 20
+
+// maxCatalogImagesPerItem -- LEBIH KECIL dari maxGalleryImages (9) --
+// katalog ini punya BANYAK item, masing-masing punya galerinya sendiri,
+// 6 foto/item x 20 item tetap wajar, 9 foto/item akan berlebihan.
+const maxCatalogImagesPerItem = 6
+
+// maxCatalogImageSize -- sama seperti maxGalleryImageSize (5MB).
+const maxCatalogImageSize = 5 * 1024 * 1024
+
+// findCatalogItem -- cari item di block_data.items berdasarkan id (dibuat
+// klien, lihat catatan validateBlockData case "catalog") -- dipakai kedua
+// handler upload/hapus foto di bawah supaya logikanya tidak diduplikasi.
+// Mengembalikan (items mentah, index item, item map, ok).
+func findCatalogItem(blockData map[string]any, itemID string) ([]any, int, map[string]any, bool) {
+	items, _ := blockData["items"].([]any)
+	for i, raw := range items {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if id, _ := item["id"].(string); id == itemID {
+			return items, i, item, true
+		}
+	}
+	return items, -1, nil, false
+}
+
+// UploadCatalogItemImage -- blok "catalog" (permintaan langsung pengguna, 25
+// Agustus 2026): SATU foto per panggilan, DITAMBAHKAN ke array
+// block_data.items[itemIndex].images (pola SAMA PERSIS dengan
+// UploadGalleryImage -- append, bukan timpa) -- BEDA ditulis ke item
+// BERSARANG di dalam items[], bukan ke block_data.images langsung, karena
+// blok ini punya BANYAK sub-item yang masing-masing butuh galerinya sendiri.
+func (h *LinksHandler) UploadCatalogItemImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	itemID := c.Param("itemId")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockType string
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&blockType, &blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	if blockType != "catalog" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan ini bukan blok katalog"})
+		return
+	}
+
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	if blockData == nil {
+		blockData = map[string]any{}
+	}
+	items, itemIndex, item, ok := findCatalogItem(blockData, itemID)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "item katalog tidak ditemukan"})
+		return
+	}
+	images, _ := item["images"].([]any)
+	if len(images) >= maxCatalogImagesPerItem {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("maksimal %d foto per item", maxCatalogImagesPerItem)})
+		return
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxCatalogImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("catalog-images/%s/%s/%s.webp", linkID, itemID, uuid.NewString())
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah foto"})
+		return
+	}
+
+	imageURL := h.Storage.PublicURL(key)
+	images = append(images, imageURL)
+	item["images"] = images
+	items[itemIndex] = item
+	blockData["items"] = items
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto berhasil ditambahkan ke item katalog"})
+}
+
+// DeleteCatalogItemImage -- menghapus SATU foto dari
+// block_data.items[itemIndex].images lewat indeksnya (pola sama
+// DeleteGalleryImage). Soft-fail utk penghapusan objek storage.
+func (h *LinksHandler) DeleteCatalogItemImage(c *gin.Context) {
+	linkID := c.Param("id")
+	itemID := c.Param("itemId")
+	userID := c.GetString("userID")
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil || index < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "indeks foto tidak valid"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	var blockDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var blockData map[string]any
+	if len(blockDataRaw) > 0 {
+		_ = json.Unmarshal(blockDataRaw, &blockData)
+	}
+	items, itemIndex, item, ok := findCatalogItem(blockData, itemID)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "item katalog tidak ditemukan"})
+		return
+	}
+	images, _ := item["images"].([]any)
+	if index >= len(images) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "foto tidak ditemukan"})
+		return
+	}
+
+	removedURL, _ := images[index].(string)
+	images = append(images[:index], images[index+1:]...)
+	item["images"] = images
+	items[itemIndex] = item
+	blockData["items"] = items
+	encoded, err := json.Marshal(blockData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus foto"})
+		return
+	}
+
+	if h.Storage != nil && removedURL != "" {
+		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
+			_ = h.Storage.Delete(ctx, key)
+		}
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari item katalog"})
 }
 
 // Unlock — No.79 (Sprint 9): endpoint PUBLIK, dipanggil dari halaman publik

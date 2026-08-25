@@ -290,6 +290,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// seperti thumbnail di atas, gambar disimpan di block_data
 				// (bukan kolom khusus), lihat UploadShowcaseImage.
 				linksGroup.POST("/links/:id/showcase-image", links.UploadShowcaseImage)
+				// Blok "catalog" (permintaan langsung pengguna, 25 Agustus
+				// 2026: blok drill-down "Jenis Rumah" -> daftar jenis ->
+				// detail per jenis) -- pola upload SAMA seperti gallery di
+				// atas, tapi disisipkan ke item BERSARANG di dalam
+				// block_data.items (bukan array datar), lihat
+				// UploadCatalogItemImage.
+				linksGroup.POST("/links/:id/catalog-items/:itemId/images", links.UploadCatalogItemImage)
+				linksGroup.DELETE("/links/:id/catalog-items/:itemId/images/:index", links.DeleteCatalogItemImage)
 
 				// No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ)
 				// -- baris links yang sama, cuma butuh endpoint create sendiri
