@@ -22,15 +22,13 @@ import {
 import { confirmDelete } from "@/lib/confirm";
 import { PAGE_THEMES } from "@/lib/page-themes";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
-import { IconCheck, IconSearch } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
+import ThemeGallery from "@/components/ThemeGallery";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
 
-// LAYOUT_VARIANT_LABELS -- label deskriptif per varian untuk modal
-// pratinjau (lihat renderBioHeader, PagePreview.tsx, untuk detail visual
-// tiap varian). "hero"/"polaroid" sempat KETINGGALAN di sini (ditambah ke
-// renderBioHeader/QuickSetupTemplate.layoutVariant tapi lupa disusulkan ke
-// map ini) -- ditemukan & diperbaiki 13 Agustus 2026 saat memberi tiap
-// kategori Quick Setup varian layout unik.
+// LAYOUT_VARIANT_LABELS -- label deskriptif per varian utk ringkasan di
+// panel pratinjau (lihat renderBioHeader, PagePreview.tsx, utk detail
+// visual tiap varian).
 const LAYOUT_VARIANT_LABELS: Record<
   "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid" | "split" | "ticket" | "headline" | "ribbon" | "duo" | "masthead" | "portrait",
   string
@@ -71,11 +69,7 @@ function pickAutoTokoPage(pages: ExtraPage[], username: string): ExtraPage | nul
 
 // fetchMyPageAndToko -- pengambil-data MURNI (tanpa setState), dipisah dari
 // efek yang memanggilnya supaya lolos aturan react-hooks/set-state-in-effect
-// (lihat pola resmi di CLAUDE.md) -- dipakai HANYA untuk memberi tahu di
-// modal pratinjau kalau kreator ini sudah punya Toko auto, yang berarti
-// temanya juga akan ikut disesuaikan begitu template diterapkan (lihat
-// applyTemplate). Cek ULANG yang OTORITATIF (bukan pakai state basi ini)
-// tetap dilakukan di applyTemplate sendiri saat benar-benar diterapkan.
+// (lihat pola resmi di CLAUDE.md).
 async function fetchMyPageAndToko(): Promise<{ page: MyPage | null; tokoPage: ExtraPage | null }> {
   const page = await getMyPage().catch(() => null);
   if (!page) return { page: null, tokoPage: null };
@@ -88,31 +82,53 @@ async function fetchMyPageAndToko(): Promise<{ page: MyPage | null; tokoPage: Ex
 // template ini bukan hanya visual tapi juga blok layout dll". Lihat catatan
 // lingkup lengkap di lib/quick-setup-templates.ts (kenapa fitur monetisasi
 // TIDAK dibuat otomatis, cuma disarankan lewat monetizationHint).
+//
+// Revisi 27 Agustus 2026 (permintaan langsung pengguna, dicontohkan lewat
+// tangkapan layar alur "Microsite" s.id): dirombak dari satu halaman datar
+// (search + chip kategori + grid gabungan + modal detail) jadi wizard 3
+// langkah -- (1) pilih SATU kategori dulu di layar penuh, (2) tab
+// "Template" (layout sesuai kategori) & "Theme" (opsional, ganti warna
+// SAJA setelah template dipilih -- lihat previewTemplate di bawah kenapa
+// ini aman: theme & layoutVariant sudah dua field independen sejak awal,
+// tidak ada kopling tersembunyi), pratinjau persisten di kanan, (3) layar
+// "generating" singkat lalu auto-redirect ke /dashboard/links (BUKAN
+// tombol manual seperti sebelumnya) -- /dashboard/links sendiri sudah
+// punya semua yang ditunjukkan editor komponen s.id (reorder drag, toggle
+// aktif/nonaktif, hapus, "+ Tambah blok"), jadi tidak perlu UI editor
+// baru di sini, cukup diarahkan ke sana. Pola auto-redirect-setelah-sukses
+// diambil dari app/auth/instagram/callback & app/auth/tiktok/callback
+// (satu-satunya preset yang sudah ada di proyek ini utk pola ini).
 export default function QuickSetupPage() {
   const router = useRouter();
-  const [category, setCategory] = useState("all");
+  const [step, setStep] = useState<"category" | "build" | "generating">("category");
+  const [category, setCategory] = useState<string | null>(null);
+  const [tab, setTab] = useState<"template" | "theme">("template");
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<QuickSetupTemplate | null>(null);
-  const [applying, setApplying] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<QuickSetupTemplate | null>(null);
+  // themeOverride -- null berarti "pakai tema bawaan template ini apa
+  // adanya". Direset ke null tiap kali template BERBEDA dipilih -- template
+  // "membawa" tema bawaannya sendiri, override cuma langkah tambahan yang
+  // sengaja dilakukan kreator, bukan sesuatu yang harusnya "menempel" ke
+  // template lain yang belum tentu cocok warnanya.
+  const [themeOverride, setThemeOverride] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [generateSuccess, setGenerateSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [applied, setApplied] = useState<QuickSetupTemplate | null>(null);
+  const [tokoSynced, setTokoSynced] = useState(false);
+  const [appliedMonetizationHint, setAppliedMonetizationHint] = useState<string | null>(null);
   // myPage -- dipakai HANYA supaya mockup pratinjau template pakai
-  // username/nama tampilan/avatar akun sendiri (bukan placeholder generik),
-  // tidak dipakai untuk apa pun selain itu di halaman ini (pengecekan
-  // bio-kosong saat menerapkan tetap fetch ulang di applyTemplate supaya
-  // datanya terbaru). display_name -- permintaan langsung pengguna: "yang
-  // tampil di mockup itu bukan username tapi display name" -- kalau
-  // kreator belum mengisi nama tampilan, jatuh ke placeholder "Nama Kamu"
-  // (lihat buildPreviewData), BUKAN ke username seperti sebelumnya.
+  // username/nama tampilan/avatar akun sendiri (bukan placeholder generik).
+  // display_name -- permintaan langsung pengguna: "yang tampil di mockup
+  // itu bukan username tapi display name" -- kalau kreator belum mengisi
+  // nama tampilan, jatuh ke placeholder "Nama Kamu" (lihat buildPreviewData).
   const [myPage, setMyPage] = useState<MyPage | null>(null);
   // tokoPage -- permintaan langsung pengguna, 19 Agustus 2026: "karena page
   // link bio dan toko terpisah saya mau buatkan juga template quick setup
   // untuk page toko nya". Toko AUTO kreator ini (kalau sudah ada) -- cuma
-  // dipakai untuk catatan informatif di modal pratinjau ("tema Toko-mu juga
+  // dipakai untuk catatan informatif di panel pratinjau ("tema Toko-mu juga
   // akan disesuaikan"), logika penerapan sesungguhnya di applyTemplate cek
   // ulang sendiri, tidak mengandalkan state ini.
   const [tokoPage, setTokoPage] = useState<ExtraPage | null>(null);
-  const [tokoSynced, setTokoSynced] = useState(false);
 
   const applyMyPageAndToko = useCallback((result: { page: MyPage | null; tokoPage: ExtraPage | null }) => {
     setMyPage(result.page);
@@ -123,28 +139,61 @@ export default function QuickSetupPage() {
     fetchMyPageAndToko().then(applyMyPageAndToko);
   }, [applyMyPageAndToko]);
 
-  // Permintaan langsung pengguna: "harusnya saat pilih template kasih
-  // liat preview nyaa" -- mockup VISUAL (komponen PagePreview yang sama
-  // dipakai Pratinjau Langsung di seluruh dashboard), bukan cuma daftar
-  // teks tema/tautan seperti sebelumnya. Dibangun langsung dari data
-  // template (belum tersimpan ke mana pun) supaya bisa dilihat SEBELUM
-  // memutuskan menerapkan.
-  const previewData: PagePreviewData | null = useMemo(() => {
-    if (!selected) return null;
-    return buildPreviewData(selected, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "");
-  }, [selected, myPage]);
+  // Auto-redirect setelah berhasil -- pola SAMA PERSIS dgn
+  // app/auth/instagram/callback & app/auth/tiktok/callback (satu-satunya
+  // preset "sukses lalu otomatis pindah halaman" yang sudah ada di proyek
+  // ini). Timer dibersihkan di cleanup supaya tidak nyasar redirect kalau
+  // komponen sempat unmount sebelum 1.5 detik berlalu.
+  useEffect(() => {
+    if (!generateSuccess) return;
+    const timer = setTimeout(() => router.push("/dashboard/links"), 1500);
+    return () => clearTimeout(timer);
+  }, [generateSuccess, router]);
 
-  const filtered = useMemo(() => {
+  // previewTemplate -- template terpilih dengan `theme` ditimpa override
+  // (kalau ada). Ini SATU-SATUNYA sumber kebenaran baik untuk pratinjau
+  // visual MAUPUN payload yang benar-benar diterapkan (applyTemplate
+  // dipanggil dengan objek ini, bukan selectedTemplate mentah) -- supaya
+  // apa yang kreator lihat di pratinjau selalu 100% sama dengan apa yang
+  // tersimpan.
+  const previewTemplate: QuickSetupTemplate | null = useMemo(() => {
+    if (!selectedTemplate) return null;
+    return themeOverride ? { ...selectedTemplate, theme: themeOverride } : selectedTemplate;
+  }, [selectedTemplate, themeOverride]);
+
+  const previewData: PagePreviewData | null = useMemo(() => {
+    if (!previewTemplate) return null;
+    return buildPreviewData(previewTemplate, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "");
+  }, [previewTemplate, myPage]);
+
+  const categoryTemplates = useMemo(() => {
+    if (!category) return [];
     const q = query.trim().toLowerCase();
     return QUICK_SETUP_TEMPLATES.filter((t) => {
-      if (category !== "all" && t.category !== category) return false;
+      if (t.category !== category) return false;
       if (!q) return true;
       return t.label.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
     });
   }, [category, query]);
 
+  function openCategory(key: string) {
+    setCategory(key);
+    setStep("build");
+    setTab("template");
+    setSelectedTemplate(null);
+    setThemeOverride(null);
+    setQuery("");
+    setError(null);
+  }
+
+  function pickTemplate(t: QuickSetupTemplate) {
+    setSelectedTemplate(t);
+    setThemeOverride(null);
+  }
+
   async function applyTemplate(t: QuickSetupTemplate) {
     setError(null);
+    setSubmitting(true);
     try {
       // Bug dilaporkan pengguna: memilih template SEBELUMNYA cuma
       // MENAMBAH tautan/blok baru di atas yang sudah ada -- kalau kreator
@@ -165,40 +214,37 @@ export default function QuickSetupPage() {
         // sesuatu yang "diganti" -- beda dari tautan/blok, produk baru
         // MENAMBAH ke daftar produk yang sudah ada, bukan menimpanya.
         const productNote = t.products && t.products.length > 0 ? ` Template ini juga akan menambah ${t.products.length} produk contoh (draft) di menu Toko.` : "";
-        // tokoNote -- permintaan langsung pengguna: "buatkan juga template
-        // quick setup untuk page toko nya" -- lihat catatan lengkap di
-        // pickAutoTokoPage/fetchMyPageAndToko soal kenapa cuma Toko auto.
         const tokoNote = tokoBefore ? " Tema Halaman Toko-mu juga akan ikut disesuaikan mengikuti tema template ini." : "";
         const ok = await confirmDelete(
           `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.${productNote}${tokoNote}`,
           { title: "Ganti semua tautan?", confirmButtonText: "Ya, Ganti" }
         );
-        if (!ok) return;
+        if (!ok) {
+          setSubmitting(false);
+          return;
+        }
       }
 
-      setApplying(true);
+      // Begitu dikonfirmasi (atau tidak ada yang perlu dikonfirmasi),
+      // langsung pindah ke layar "generating" -- sisa proses di bawah
+      // berjalan di baliknya.
+      setStep("generating");
 
       for (const l of existing) {
         await deleteLink(l.id);
       }
 
       // Bio kreator yang SUDAH diisi tidak boleh ditimpa diam-diam --
-      // saran bio template cuma dipakai kalau bio masih kosong. `page`
-      // dari fetch di atas (sebelum dialog konfirmasi) dipakai lagi di sini
-      // -- bio tidak realistis berubah selagi dialog konfirmasi terbuka di
-      // tab yang sama, jadi tidak perlu fetch ulang.
+      // saran bio template cuma dipakai kalau bio masih kosong.
       // layout_variant SELALU ikut diterapkan (bukan cuma kalau bio
       // kosong) -- ini bagian dari "bentuk" template, sama seperti tema.
       const layoutVariant = t.layoutVariant ?? "centered";
       // social -- permintaan langsung pengguna, 24 Agustus 2026 (baris
       // ikon GitHub/LinkedIn/Website/Email, contoh template "Dimas Dev").
-      // Nilai PLACEHOLDER jelas contoh (sama semangatnya dengan bio/tautan
-      // starter di atas) -- kreator tinggal lengkapi lewat panel Kontak
-      // Sosial. Object.fromEntries -- t.social pakai key pendek ("github"),
-      // updateMyPage butuh key kolom DB ("social_github").
-      const socialPatch = t.social
-        ? Object.fromEntries(Object.entries(t.social).map(([k, v]) => [`social_${k}`, v]))
-        : {};
+      // Nilai PLACEHOLDER jelas contoh -- kreator tinggal lengkapi lewat
+      // panel Kontak Sosial. Object.fromEntries -- t.social pakai key
+      // pendek ("github"), updateMyPage butuh key kolom DB ("social_github").
+      const socialPatch = t.social ? Object.fromEntries(Object.entries(t.social).map(([k, v]) => [`social_${k}`, v])) : {};
       await updateMyPage(
         page.bio.trim()
           ? { theme: t.theme, layout_variant: layoutVariant, ...socialPatch }
@@ -210,9 +256,7 @@ export default function QuickSetupPage() {
       // position yang sama di tabel `links`), permintaan paralel berisiko
       // dua item kebetulan dapat posisi yang sama. Satu loop mengikuti
       // orderedTemplateItems APA ADANYA -- SATU sumber kebenaran urutan,
-      // sama persis dengan yang ditampilkan pratinjau (maps di atas,
-      // tautan di tengah, blok lain di bawah, bukan urutan array mentah
-      // di data template).
+      // sama persis dengan yang ditampilkan pratinjau.
       for (const item of orderedTemplateItems(t)) {
         if (item.blockType === "link") {
           await createLink({ title: item.title, url: item.url, description: item.description });
@@ -265,12 +309,10 @@ export default function QuickSetupPage() {
         const created = await createProduct({ name: p.name, description: p.description, price_idr: p.priceIDR, product_kind: p.productKind });
         // Sampul produk -- susulan permintaan pengguna: "buat gambar
         // product nya ambil dari sumber online yang free saja" -- aset
-        // statis SAMA ORIGIN (public/quick-setup-products/*.jpg, lihat
-        // catatan lengkap di QuickSetupTemplateProduct.coverImagePath),
-        // di-fetch sebagai blob lalu diunggah ulang lewat endpoint cover
-        // yang sudah ada (backend butuh multipart file, bukan URL
-        // eksternal). Soft-fail -- produk yang SUDAH dibuat di atas tetap
-        // berhasil walau foto sampulnya gagal terpasang.
+        // statis SAMA ORIGIN, di-fetch sebagai blob lalu diunggah ulang
+        // lewat endpoint cover yang sudah ada (backend butuh multipart
+        // file, bukan URL eksternal). Soft-fail -- produk yang SUDAH
+        // dibuat di atas tetap berhasil walau foto sampulnya gagal terpasang.
         let coverUploaded = false;
         if (p.coverImagePath) {
           try {
@@ -283,14 +325,10 @@ export default function QuickSetupPage() {
             // diamkan -- lihat catatan soft-fail di atas.
           }
         }
-        // Aktivasi payment_link -- perbaikan 19 Agustus 2026: sebelumnya
-        // produk payment_link (satu-satunya template food-beverage) aktif
-        // OTOMATIS begitu dibuat, tidak butuh file. Sejak sampul jadi wajib
-        // untuk SEMUA jenis produk (product.go, permintaan langsung
-        // pengguna "sampul jangan dijadikan opsional"), Create tidak lagi
-        // mengaktifkan payment_link otomatis -- tanpa baris ini, produk
-        // contoh food-beverage akan diam-diam jadi draft (regresi dari
-        // perilaku sebelumnya), padahal sampulnya SUDAH ada di sini.
+        // Aktivasi payment_link -- sejak sampul jadi wajib untuk SEMUA
+        // jenis produk, Create tidak lagi mengaktifkan payment_link
+        // otomatis -- tanpa baris ini, produk contoh food-beverage akan
+        // diam-diam jadi draft, padahal sampulnya SUDAH ada di sini.
         if (p.productKind === "payment_link" && coverUploaded) {
           try {
             await updateProduct(created.id, { is_active: true });
@@ -302,17 +340,9 @@ export default function QuickSetupPage() {
       }
 
       // Sinkron tema Halaman Toko -- permintaan langsung pengguna, 19
-      // Agustus 2026: "karena page link bio dan toko terpisah saya mau
-      // buatkan juga template quick setup untuk page toko nya". Toko punya
-      // theme/layout_variant sendiri (page_type='produk', paritas penuh
-      // dengan builder Bio lewat ProdukPageEditor, lihat CLAUDE.md) --
-      // begitu template diterapkan ke Bio, Toko AUTO kreator ini (kalau
-      // sudah ada, lihat pickAutoTokoPage) ikut disamakan temanya supaya
-      // kedua halaman tetap satu identitas visual walau sekarang route-nya
-      // terpisah. Lookup diulang di sini (bukan pakai tokoBefore) supaya
-      // Toko yang BARU SAJA otomatis terbuat (ensureProdukPage, dipicu
-      // produk pertama loop di atas) juga tercakup, bukan cuma yang sudah
-      // ada sebelum template ini diterapkan.
+      // Agustus 2026. Lookup diulang di sini (bukan pakai tokoBefore)
+      // supaya Toko yang BARU SAJA otomatis terbuat (ensureProdukPage,
+      // dipicu produk pertama loop di atas) juga tercakup.
       const extraPagesAfter = await listMyExtraPages().catch(() => [] as ExtraPage[]);
       const tokoAfter = pickAutoTokoPage(extraPagesAfter, page.username);
       if (tokoAfter) {
@@ -324,262 +354,270 @@ export default function QuickSetupPage() {
         }
       }
       setTokoSynced(tokoAfter !== null);
-
-      setApplied(t);
-      setSelected(null);
+      setAppliedMonetizationHint(t.monetizationHint ?? null);
+      setGenerateSuccess(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menerapkan template, coba lagi.");
+      setStep("build");
     } finally {
-      setApplying(false);
+      setSubmitting(false);
     }
   }
 
-  if (applied) {
+  // ---------- Step 1: pilih kategori ----------
+  if (step === "category") {
     return (
-      <div className="mx-auto max-w-lg py-10 text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
-          <IconCheck className="h-6 w-6" />
-        </span>
-        <h1 className="mt-4 font-heading text-2xl font-bold text-ink">Template &quot;{applied.label}&quot; diterapkan</h1>
-        <p className="mt-2 text-sm text-muted">
-          Tema, bio (kalau sebelumnya kosong), dan {applied.links.length} tautan starter sudah ditambahkan. Buka Link Bio untuk
-          melengkapi link asli kamu ke tiap platform.
+      <div className="mx-auto max-w-4xl">
+        <p className="mt-1 text-sm text-muted">
+          Pilih kategori yang paling cocok dengan halamanmu -- template & tema di langkah berikutnya disaring sesuai kategori ini.
         </p>
-        {applied.products && applied.products.length > 0 && (
-          <p className="mt-2 text-sm text-muted">
-            {applied.products.length} produk contoh (draft) juga sudah dibuat di menu Toko -- belum aktif/bisa dibeli sampai kamu
-            unggah file & sesuaikan nama/harganya.
-          </p>
-        )}
-        {tokoSynced && (
-          <p className="mt-2 text-sm text-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan mengikuti template ini.</p>
-        )}
-        {applied.monetizationHint && (
-          <p className="mt-3 rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{applied.monetizationHint}</p>
-        )}
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard/links")}
-            className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-card hover:-translate-y-0.5"
-          >
-            Buka Link Bio
-          </button>
-          <button type="button" onClick={() => setApplied(null)} className="text-sm font-semibold text-muted hover:text-ink">
-            Pilih template lain
-          </button>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {QUICK_SETUP_CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => openCategory(c.key)}
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-border bg-white p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-primary"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                <c.Icon className="h-5 w-5" />
+              </span>
+              <span className="text-sm font-bold text-ink">{c.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     );
   }
 
+  // ---------- Step 3: generating + auto-redirect ----------
+  if (step === "generating") {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
+        {!generateSuccess ? (
+          <>
+            <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary-subtle border-t-primary" aria-hidden />
+            <p className="mt-4 font-heading text-lg font-bold text-ink">Menyiapkan halamanmu...</p>
+            <p className="mt-1 text-sm text-muted">Menerapkan tema, tautan, dan blok starter.</p>
+          </>
+        ) : (
+          <>
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+              <IconCheck className="h-6 w-6" />
+            </span>
+            <p className="mt-4 font-heading text-lg font-bold text-ink">Template diterapkan!</p>
+            <p className="mt-1 text-sm text-muted">Mengalihkan ke Link Bio untuk melengkapi tautan asli kamu...</p>
+            {tokoSynced && <p className="mt-2 text-xs text-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan.</p>}
+            {appliedMonetizationHint && (
+              <p className="mt-3 max-w-sm rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{appliedMonetizationHint}</p>
+            )}
+          </>
+        )}
+        {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      </div>
+    );
+  }
+
+  // ---------- Step 2: pilih Template lalu (opsional) Theme ----------
+  const activeCategory = QUICK_SETUP_CATEGORIES.find((c) => c.key === category);
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <p className="mt-1 text-sm text-muted">
-        Pilih template sesuai jenis halamanmu -- tema, saran bio, dan tautan starter langsung diterapkan sekaligus. Tinggal lengkapi
-        link asli kamu setelahnya.
+    <div className="mx-auto max-w-6xl">
+      <button
+        type="button"
+        onClick={() => setStep("category")}
+        className="mb-1 inline-flex items-center gap-1 rounded-full bg-primary-subtle px-3 py-1.5 text-xs font-bold text-primary transition-transform hover:-translate-x-0.5"
+      >
+        <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
+        Ganti Kategori
+      </button>
+      <p className="mt-2 text-sm text-muted">
+        Kategori: <span className="font-semibold text-ink">{activeCategory?.label}</span> -- pilih template, lalu opsional ganti temanya
+        di tab Theme.
       </p>
-
-      <div className="relative mt-5">
-        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari template (mis. streamer, toko, guru)..."
-          className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-ink focus:border-primary focus:outline-none"
-        />
-      </div>
-
-      <div className="scroll-row -mx-1 mt-4 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        <button
-          type="button"
-          onClick={() => setCategory("all")}
-          className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-            category === "all" ? "bg-primary text-white" : "bg-primary-subtle text-primary hover:bg-primary/15"
-          }`}
-        >
-          Semua
-        </button>
-        {QUICK_SETUP_CATEGORIES.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setCategory(c.key)}
-            className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-              category === c.key ? "bg-primary text-white" : "bg-primary-subtle text-primary hover:bg-primary/15"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((t) => (
-          // div role="button" -- BUKAN <button> sungguhan: PagePreview di
-          // dalamnya merender ShareButton (elemen <button> sendiri), dan
-          // <button> di dalam <button> itu HTML TIDAK VALID (ditemukan
-          // lewat error hydration React sungguhan saat verifikasi) --
-          // browser otomatis "meratakan" nesting itu, event klik jadi
-          // kacau. tabIndex+onKeyDown menjaga tetap bisa diakses keyboard.
-          <div
-            key={t.key}
-            role="button"
-            tabIndex={0}
-            onClick={() => setSelected(t)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setSelected(t);
-              }
-            }}
-            className="flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
-          >
-            {/* Mockup mini -- permintaan langsung pengguna: "yang
-                ditampilkan itu... langsung terlihat bentuknya... tanpa
-                harus diklik dulu" -- SEBELUMNYA cuma pil warna berisi teks
-                (mendekati tapi masih bukan bentuk asli), sekarang komponen
-                PagePreview SUNGGUHAN (sama persis dipakai modal & Pratinjau
-                Langsung dashboard) dirender LANGSUNG di kartu, bukan
-                representasi buatan tangan -- kreator lihat bentuk PERSIS
-                halaman publik SEBELUM klik apa pun, pola zoom+crop sama
-                seperti LivePreviewPanel (cuma lebih kecil & tanpa scroll,
-                overflow-hidden supaya jadi cuplikan bagian atas saja).
-                pointer-events-none -- mockup MURNI visual, semua klik di
-                area ini harus jatuh ke div pembungkus (buka modal), bukan
-                ke tombol ShareButton/tautan sungguhan di dalam PagePreview. */}
-            {/* Permintaan langsung pengguna: "dibuat card lebih tinggi"
-                supaya bentuknya lebih mirip pratinjau sungguhan (bukan
-                cuma cuplikan sempit) -- tinggi & zoom dinaikkan supaya
-                lebih banyak konten (avatar+bio+beberapa tautan) terlihat
-                proporsional, pola sama seperti kotak pratinjau modal/
-                LivePreviewPanel, cuma disesuaikan untuk kartu galeri. */}
-            <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-              <div className="h-full [zoom:0.42]">
-                <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")} />
-              </div>
-            </div>
-            <div className="p-3.5">
-              <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
-              <p className="mt-1 text-xs text-muted">{t.description}</p>
-            </div>
+      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
+        <div>
+          <div className="flex gap-2 border-b border-border">
+            <button
+              type="button"
+              onClick={() => setTab("template")}
+              className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+                tab === "template" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              }`}
+            >
+              Template
+            </button>
+            {/* Tab "Theme" sengaja dikunci sampai template dipilih --
+                permintaan langsung pengguna: "setelah pilih template user
+                baru bisa pindah ke tab theme (optional)". */}
+            <button
+              type="button"
+              disabled={!selectedTemplate}
+              onClick={() => selectedTemplate && setTab("theme")}
+              title={!selectedTemplate ? "Pilih template dulu" : undefined}
+              className={`border-b-2 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+                tab === "theme" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              }`}
+            >
+              Theme
+            </button>
           </div>
-        ))}
-        {filtered.length === 0 && (
-          <p className="col-span-full rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
-            Tidak ada template yang cocok dengan pencarianmu.
-          </p>
-        )}
-      </div>
 
-      {selected && previewData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={() => !applying && setSelected(null)}>
-          <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-hero sm:grid sm:grid-cols-[260px_1fr] sm:gap-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Mockup visual -- komponen PagePreview yang SAMA dipakai
-                Pratinjau Langsung di seluruh dashboard (LivePreviewPanel),
-                dibangun langsung dari data template (belum tersimpan).
-                Pola zoom+kotak tetap sama persis dengan LivePreviewPanel
-                supaya proporsinya konsisten di seluruh dashboard. */}
-            <div className="mx-auto h-[520px] w-full max-w-[260px] flex-shrink-0 overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="h-full [zoom:0.65]">
+          {tab === "template" && (
+            <>
+              <div className="relative mt-4">
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cari template di kategori ini..."
+                  className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-ink focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {categoryTemplates.map((t) => (
+                  // div role="button" -- BUKAN <button> sungguhan: PagePreview
+                  // di dalamnya merender ShareButton (elemen <button>
+                  // sendiri), dan <button> di dalam <button> itu HTML TIDAK
+                  // VALID -- browser otomatis "meratakan" nesting itu, event
+                  // klik jadi kacau. tabIndex+onKeyDown menjaga tetap bisa
+                  // diakses keyboard.
+                  <div
+                    key={t.key}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => pickTemplate(t)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        pickTemplate(t);
+                      }
+                    }}
+                    className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5 ${
+                      selectedTemplate?.key === t.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
+                    }`}
+                  >
+                    <div className="relative h-64 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+                      <div className="h-full [zoom:0.36]">
+                        <PagePreview
+                          interactive={false}
+                          rootClassName="min-h-full"
+                          data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")}
+                        />
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
+                      <p className="mt-1 text-xs text-muted">{t.description}</p>
+                    </div>
+                  </div>
+                ))}
+                {categoryTemplates.length === 0 && (
+                  <p className="col-span-full rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
+                    Tidak ada template yang cocok dengan pencarianmu.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "theme" && selectedTemplate && (
+            <div className="mt-4">
+              <ThemeGallery value={previewTemplate?.theme ?? selectedTemplate.theme} onChange={setThemeOverride} />
+            </div>
+          )}
+        </div>
+
+        {/* Panel pratinjau persisten -- permintaan langsung pengguna:
+            "dibagian kanan nya ditampilkan bentuk template dan theme yang
+            dipilih seperti pratinjau yang sudah ada". Beda dari modal
+            sebelumnya, panel ini SELALU terlihat di kolom kanan sepanjang
+            step ini, memperbarui diri begitu template ATAU tema berganti. */}
+        <div className="lg:sticky lg:top-4">
+          <div className="mx-auto h-[420px] w-full max-w-[220px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {previewData ? (
+              <div className="h-full [zoom:0.55]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />
               </div>
-            </div>
+            ) : (
+              <div className="flex h-full items-center justify-center p-6 text-center text-xs text-muted">
+                Pilih template di sebelah kiri untuk lihat pratinjaunya di sini.
+              </div>
+            )}
+          </div>
 
-            <div className="mt-4 sm:mt-0">
-              <p className="font-heading text-lg font-bold text-ink">{selected.label}</p>
-              <p className="mt-1 text-sm text-muted">{selected.description}</p>
-
-              <div className="mt-4 flex flex-col gap-3 text-sm">
+          {selectedTemplate && (
+            <div className="mt-4 flex flex-col gap-3 text-sm">
+              <div>
+                <p className="font-heading text-base font-bold text-ink">{selectedTemplate.label}</p>
+                <p className="mt-1 text-xs text-muted">{selectedTemplate.description}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Tema</p>
+                <p className="mt-0.5 text-ink">{PAGE_THEMES[(previewTemplate?.theme ?? selectedTemplate.theme) as keyof typeof PAGE_THEMES]?.label ?? selectedTemplate.theme}</p>
+                {tokoPage && <p className="mt-0.5 text-[11px] text-muted">Tema Halaman Toko-mu juga akan ikut disesuaikan.</p>}
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
+                <p className="mt-0.5 text-ink">{LAYOUT_VARIANT_LABELS[selectedTemplate.layoutVariant ?? "centered"]}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">Tautan Starter ({selectedTemplate.links.length})</p>
+                <p className="mt-0.5 text-[11px] text-muted">Menggantikan SEMUA tautan/blok yang sudah ada saat ini di Link Bio.</p>
+                <ul className="mt-1 flex flex-wrap gap-1.5">
+                  {selectedTemplate.links.map((l) => (
+                    <li key={l.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
+                      {l.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {selectedTemplate.blocks && selectedTemplate.blocks.length > 0 && (
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Tema</p>
-                  <p className="mt-0.5 text-ink">{PAGE_THEMES[selected.theme as keyof typeof PAGE_THEMES]?.label ?? selected.theme}</p>
-                  {tokoPage && (
-                    <p className="mt-0.5 text-[11px] text-muted">Tema Halaman Toko-mu juga akan ikut disesuaikan.</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
-                  <p className="mt-0.5 text-ink">{LAYOUT_VARIANT_LABELS[selected.layoutVariant ?? "centered"]}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Saran Bio</p>
-                  <p className="mt-0.5 text-ink">{selected.bio}</p>
-                  <p className="mt-0.5 text-[11px] text-muted">Hanya dipakai kalau bio kamu masih kosong.</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Tautan Starter ({selected.links.length})</p>
-                  <p className="mt-0.5 text-[11px] text-muted">
-                    Menggantikan SEMUA tautan/blok yang sudah ada saat ini di Link Bio -- bukan ditambahkan di atasnya.
-                  </p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Blok Konten</p>
                   <ul className="mt-1 flex flex-wrap gap-1.5">
-                    {selected.links.map((l) => (
-                      <li key={l.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
-                        {l.title}
+                    {selectedTemplate.blocks.map((b) => (
+                      <li key={b.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
+                        {b.title}
                       </li>
                     ))}
                   </ul>
                 </div>
-                {selected.blocks && selected.blocks.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Blok Konten</p>
-                    <ul className="mt-1 flex flex-wrap gap-1.5">
-                      {selected.blocks.map((b) => (
-                        <li key={b.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
-                          {b.title}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {selected.products && selected.products.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted">Produk Siap Pakai</p>
-                    <ul className="mt-1 flex flex-wrap gap-1.5">
-                      {selected.products.map((p) => (
-                        <li key={p.name} className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-dark">
-                          {p.name}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-1 text-[11px] text-muted">
-                      Dibuat sebagai draft di menu Toko -- belum aktif/bisa dibeli sampai kamu unggah file & sesuaikan harga.
-                    </p>
-                  </div>
-                )}
-                {selected.monetizationHint && (
-                  <p className="rounded-xl bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-dark">{selected.monetizationHint}</p>
-                )}
-              </div>
-
-              <div className="mt-5 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => applyTemplate(selected)}
-                  disabled={applying}
-                  className="flex-1 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-                >
-                  {applying ? "Menerapkan..." : "Terapkan Template"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelected(null)}
-                  disabled={applying}
-                  className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink disabled:opacity-60"
-                >
-                  Batal
-                </button>
-              </div>
+              )}
+              {selectedTemplate.products && selectedTemplate.products.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Produk Siap Pakai</p>
+                  <ul className="mt-1 flex flex-wrap gap-1.5">
+                    {selectedTemplate.products.map((p) => (
+                      <li key={p.name} className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-dark">
+                        {p.name}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-[11px] text-muted">Dibuat sebagai draft di menu Toko -- belum aktif/bisa dibeli.</p>
+                </div>
+              )}
+              {selectedTemplate.monetizationHint && (
+                <p className="rounded-xl bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-dark">{selectedTemplate.monetizationHint}</p>
+              )}
             </div>
-          </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => selectedTemplate && applyTemplate(previewTemplate ?? selectedTemplate)}
+            disabled={!selectedTemplate || submitting}
+            className="mt-4 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+          >
+            {submitting ? "Memeriksa..." : "Terapkan Template"}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

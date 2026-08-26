@@ -6,29 +6,48 @@ import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
 // template ini bukan hanya visual tapi juga blok layout dll". Satu klik
 // "Terapkan Template" harus langsung memasang tema + bio (kalau kosong) +
 // tautan starter + blok konten sekaligus, bukan cuma mengganti tampilan.
+//
+// Revisi 27 Agustus 2026 (permintaan langsung pengguna, dicontohkan lewat
+// tangkapan layar alur "Microsite" s.id): dirombak jadi wizard 3 langkah
+// (pilih kategori -> tab Template/Theme -> generating & auto-redirect).
+// Seluruh test di bawah disusulkan mengikuti alur baru ini -- lihat
+// catatan lengkap di dashboard/quick-setup/page.tsx.
+async function openCategory(page: import("@playwright/test").Page, categoryLabel: string) {
+  await page.goto("/dashboard/quick-setup");
+  await page.getByRole("button", { name: categoryLabel }).click();
+}
+
 test.describe("Quick Setup", () => {
   test("terapkan template Streamer langsung mengisi tema, bio, dan tautan starter", async ({ page }) => {
     const { username } = await registerAndLogin(page, "quicksetup");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Creator & Personal Brand");
+    // Theme tab TERKUNCI sampai template dipilih -- permintaan langsung
+    // pengguna: "setelah pilih template user baru bisa pindah ke tab
+    // theme (optional)".
+    await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeDisabled();
+
     await page.getByPlaceholder(/cari template/i).fill("streamer");
     await page.getByText("Streamer", { exact: true }).click();
+    await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeEnabled();
 
-    // Modal pratinjau menampilkan tema + tautan SEBELUM diterapkan --
-    // termasuk mockup visual (PagePreview), jadi "Nonton di Twitch" muncul
-    // dua kali (chip detail + tombol tautan di mockup), .first() cukup
-    // untuk memastikan setidaknya salah satunya benar-benar tampil. Judul
-    // "Nonton di Twitch" (bukan cuma "Twitch") -- permintaan langsung
-    // pengguna: judul tautan starter dibuat CTA/deskriptif ala referensi
-    // Linktree sungguhan, bukan nama platform polos.
+    // Panel pratinjau persisten (kanan) menampilkan tema + tautan SEBELUM
+    // diterapkan -- termasuk mockup visual (PagePreview), jadi "Nonton di
+    // Twitch" muncul dua kali (chip ringkasan + tombol tautan di mockup),
+    // .first() cukup untuk memastikan setidaknya salah satunya benar-benar
+    // tampil. Judul "Nonton di Twitch" (bukan cuma "Twitch") -- permintaan
+    // langsung pengguna: judul tautan starter dibuat CTA/deskriptif ala
+    // referensi Linktree sungguhan, bukan nama platform polos.
     await expect(page.getByText("Cyber")).toBeVisible();
     await expect(page.getByText("Nonton di Twitch", { exact: true }).first()).toBeVisible();
 
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
-
-    await page.getByRole("button", { name: /buka link bio/i }).click();
-    await expect(page).toHaveURL(/\/dashboard\/links/);
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    // Layar "generating" -> sukses SINGKAT sebelum auto-redirect (pola
+    // sama dgn app/auth/instagram/callback) -- dicek di sini supaya
+    // membuktikan UI ini sungguhan render, bukan cuma percaya redirect
+    // akhirnya terjadi.
+    await expect(page.getByText("Template diterapkan!")).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     // Bio tersimpan (sebelumnya kosong -- akun baru dari registerAndLogin).
     // .first() -- teks yang sama muncul dua kali (baris profil + panel
@@ -59,28 +78,25 @@ test.describe("Quick Setup", () => {
     // template KEDUA diterapkan (bukan tercampur).
     await registerAndLogin(page, "quicksetup2");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Creator & Personal Brand");
     await page.getByPlaceholder(/cari template/i).fill("streamer");
     await page.getByText("Streamer", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
-    await page.getByRole("button", { name: /pilih template lain/i }).click();
+    // Wizard mulai dari awal lagi (step kategori) -- tidak ada lagi
+    // "Pilih template lain" karena sudah auto-redirect ke editor.
+    await openCategory(page, "Local Business");
     await page.getByPlaceholder(/cari template/i).fill("restaurant");
     await page.getByText("Restaurant", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
 
     // Dialog konfirmasi destruktif muncul karena sudah ada 6 tautan/blok dari
     // Streamer (3 tautan + 3 blok "Project Unggulan"/"Jadwal Live"/FAQ,
-    // lihat quick-setup-templates.ts -- jumlah naik dari 5 ke 6 sejak
-    // revisi 26 Agustus 2026 menambah showcaseBlock() ke template ini)
-    // -- konfirmasi penggantian.
+    // lihat quick-setup-templates.ts) -- konfirmasi penggantian.
     await expect(page.getByText(/akan menghapus 6 tautan/i)).toBeVisible({ timeout: 5000 });
     await page.getByRole("button", { name: "Ya, Ganti" }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
-
-    await page.getByRole("button", { name: /buka link bio/i }).click();
-    await expect(page).toHaveURL(/\/dashboard\/links/);
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     // Tautan Streamer (Twitch/Discord) sudah HILANG, cuma tautan Restaurant
     // yang tersisa: "Lokasi Kami" (blok maps, PALING ATAS -- lihat
@@ -125,20 +141,19 @@ test.describe("Quick Setup", () => {
     const pageErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Business & Professional");
     // Mockup tiap kartu galeri (SEBELUM diklik apa pun) sudah menampilkan
-    // konten template sungguhan -- bukan cuma placeholder/bar warna.
+    // konten template sungguhan -- bukan cuma placeholder/bar warna
+    // ("Agency", template lain di kategori yang sama, pakai link()
+    // instagram berlabel default).
     await expect(page.getByText("Follow di Instagram", { exact: true }).first()).toBeVisible();
 
     await page.getByPlaceholder(/cari template/i).fill("company");
     await page.getByText("Company", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     expect(pageErrors).toEqual([]);
-
-    await page.getByRole("button", { name: /buka link bio/i }).click();
-    await expect(page).toHaveURL(/\/dashboard\/links/);
 
     // Tautan website tersimpan dengan URL placeholder yang VALID (bukan
     // "https://" polos yang dulu ditolak backend).
@@ -161,11 +176,11 @@ test.describe("Quick Setup", () => {
     // tidak rapuh kalau susunan class Tailwind berubah).
     const { username } = await registerAndLogin(page, "quicksetup4");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Business & Professional");
     await page.getByPlaceholder(/cari template/i).fill("company");
     await page.getByText("Company", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -207,11 +222,11 @@ test.describe("Quick Setup", () => {
     // avatar, bukan nama kelas CSS.
     const { username } = await registerAndLogin(page, "quicksetup5");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Entertainment");
     await page.getByPlaceholder(/cari template/i).fill("content creator");
     await page.getByText("Content Creator", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -237,11 +252,11 @@ test.describe("Quick Setup", () => {
       .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
     await expect(page.getByText("Mengunggah...")).toHaveCount(0, { timeout: 15000 });
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Creator & Personal Brand");
     await page.getByPlaceholder(/cari template/i).fill("creator profile");
     await page.getByText("Creator Profile", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -265,11 +280,11 @@ test.describe("Quick Setup", () => {
     // untuk varian ini, bukan nama kelas yang gampang berubah.
     const { username } = await registerAndLogin(page, "quicksetup9");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Lifestyle");
     await page.getByPlaceholder(/cari template/i).fill("travel blogger");
     await page.getByText("Travel Blogger", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -294,11 +309,11 @@ test.describe("Quick Setup", () => {
     // bukan cuma mockup dashboard yang sudah dizoom/dipotong duluan.
     const { username } = await registerAndLogin(page, "quicksetup6");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Local Business");
     await page.getByPlaceholder(/cari template/i).fill("restaurant");
     await page.getByText("Restaurant", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(async () => {
@@ -324,11 +339,11 @@ test.describe("Quick Setup", () => {
     // bukan nama kelas CSS, sama seperti test varian lain.
     const { username } = await registerAndLogin(page, "quicksetup7");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Education");
     await page.getByPlaceholder(/cari template/i).fill("teacher");
     await page.getByText("Teacher", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -351,11 +366,11 @@ test.describe("Quick Setup", () => {
     // langsung di halaman Toko publik /p/{username}, bukan cuma Bio.
     const { username } = await registerAndLogin(page, "quicksetup10");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Online Shop");
     await page.getByPlaceholder(/cari template/i).fill("online store");
     await page.getByText("Online Store", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     // Tema Peach -- "bg-gradient-to-b from-orange-50 via-amber-50 to-white"
     // (lib/page-themes.ts) -- ikut tersalin ke Toko AUTO begitu terbuat
@@ -367,20 +382,21 @@ test.describe("Quick Setup", () => {
       expect(html).toContain("from-orange-50");
     }).toPass({ timeout: 75000, intervals: [5000] });
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Online Shop");
     await page.getByPlaceholder(/cari template/i).fill("small business");
     await page.getByText("Small Business", { exact: true }).click();
 
-    // Modal pratinjau HARUS sudah memberi tahu soal ini SEBELUM diterapkan
-    // (tokoPage dari fetchMyPageAndToko sudah menemukan Toko auto di atas).
+    // Panel pratinjau persisten HARUS sudah memberi tahu soal ini SEBELUM
+    // diterapkan (tokoPage dari fetchMyPageAndToko sudah menemukan Toko
+    // auto di atas).
     await expect(page.getByText(/tema halaman toko-mu juga akan ikut disesuaikan/i)).toBeVisible();
 
-    await page.getByRole("button", { name: /terapkan template/i }).click();
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
     // Dialog konfirmasi destruktif muncul (sudah ada tautan dari Online
     // Store sebelumnya).
     await page.getByRole("button", { name: "Ya, Ganti" }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/tema halaman toko-mu juga sudah ikut disesuaikan/i)).toBeVisible();
+    await expect(page.getByText(/tema halaman toko-mu juga sudah ikut disesuaikan/i)).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     // Tema Mint -- "bg-gradient-to-br from-emerald-800 via-teal-800 to-cyan-800"
     // -- Toko yang SUDAH ADA (bukan baru dibuat kali ini) ikut berubah,
@@ -410,11 +426,11 @@ test.describe("Quick Setup", () => {
     // ikut membuktikan bentuknya benar-benar persegi, bukan cuma posisi.
     const { username } = await registerAndLogin(page, "quicksetup11");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Business & Professional");
     await page.getByPlaceholder(/cari template/i).fill("consultant");
     await page.getByText("Consultant", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -436,11 +452,11 @@ test.describe("Quick Setup", () => {
     // pemisah putus-putus di antara avatar+nama & bio).
     const { username } = await registerAndLogin(page, "quicksetup12");
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Special Purpose");
     await page.getByPlaceholder(/cari template/i).fill("event");
     await page.getByText("Event", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -470,11 +486,11 @@ test.describe("Quick Setup", () => {
       .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
     await expect(page.getByText("Mengunggah...")).toHaveCount(0, { timeout: 15000 });
 
-    await page.goto("/dashboard/quick-setup");
+    await openCategory(page, "Creator & Personal Brand");
     await page.getByPlaceholder(/cari template/i).fill("streamer");
     await page.getByText("Streamer", { exact: true }).click();
-    await page.getByRole("button", { name: /terapkan template/i }).click();
-    await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
     await expect(async () => {
       await page.goto(`/${username}`);
@@ -486,6 +502,50 @@ test.describe("Quick Setup", () => {
       expect(box!.width).toBeLessThan(200);
       expect(box!.x).toBeGreaterThan(20);
       expect(box!.x + box!.width).toBeLessThan(viewportWidth - 20);
+    }).toPass({ timeout: 75000, intervals: [5000] });
+  });
+
+  // Wizard baru (27 Agustus 2026) -- test khusus utk fitur BARU yang tidak
+  // ada padanannya sebelum redesain ala alur "Microsite" s.id: tab "Theme"
+  // yang bisa mengganti WARNA SAJA tanpa mengubah template (tautan/blok/
+  // layout) yang sudah dipilih.
+  test("tab Theme mengganti warna tema TANPA mengubah tautan/blok/layout template yang sudah dipilih", async ({ page }) => {
+    const { username } = await registerAndLogin(page, "quicksetup14");
+
+    await openCategory(page, "Local Business");
+    await page.getByPlaceholder(/cari template/i).fill("cafe");
+    await page.getByText("Cafe", { exact: true }).click();
+
+    // Ganti ke tab Theme, pilih tema doodle "Latte" -- SENGAJA beda dari
+    // tema bawaan Cafe ("Brew", wallpaper foto cafe) supaya perubahan
+    // jelas terlihat/terverifikasi.
+    await page.getByRole("button", { name: "Theme", exact: true }).click();
+    await page.getByRole("button", { name: "Doodle", exact: true }).click();
+    await page.getByText("Latte", { exact: true }).click();
+
+    // Panel ringkasan menunjukkan tema BERGANTI ("Latte") tapi layout
+    // TETAP milik Cafe ("Cover").
+    await expect(page.getByText("Latte", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/Cover \(pita sampul/i)).toBeVisible();
+
+    await page.getByRole("button", { name: "Terapkan Template" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
+
+    // Tautan/blok Cafe tetap ada apa adanya (bukan diganti jadi kosong
+    // atau template lain) -- membuktikan override tema tidak menyentuh
+    // konten sama sekali.
+    await expect(page.getByText("Ikuti Update Kami", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Lokasi Kami", { exact: true }).first()).toBeVisible();
+
+    // Halaman publik SUNGGUHAN pakai pola doodle Latte (bukan wallpaper
+    // Brew bawaan Cafe), sambil bio Cafe ("Ngopi santai di sini") tetap
+    // tersimpan -- bukti theme & konten diterapkan dari objek yang sama
+    // (previewTemplate) secara konsisten.
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      const html = await page.content();
+      expect(html).toContain("/doodles/latte.svg");
+      expect(html).toContain("Ngopi santai di sini");
     }).toPass({ timeout: 75000, intervals: [5000] });
   });
 });

@@ -63,12 +63,30 @@
 // justru menyesatkan pengunjung, beda dari mockup dashboard SaaS abstrak
 // yang dari awal memang tidak mengklaim proyek/tempat sungguhan tertentu.
 
+import type { ReactElement } from "react";
 import type { PagePreviewData } from "@/components/PagePreview";
 import type { SocialPlatformKey } from "@/lib/social-links";
+import {
+  IconBook,
+  IconBriefcase,
+  IconGift,
+  IconHeart,
+  IconMapPin,
+  IconMusicNote,
+  IconPlane,
+  IconShoppingBag,
+  IconSparkle,
+} from "@/components/icons";
 
 export interface QuickSetupCategory {
   key: string;
   label: string;
+  // Icon -- permintaan langsung pengguna, 27 Agustus 2026 (redesain Quick
+  // Setup ala alur "Microsite" s.id: layar pertama "Specify Your Microsite
+  // Type" menampilkan grid kategori ikon+label, bukan chip filter seperti
+  // sebelumnya). Referensi bentuk {key,label,Icon} SAMA PERSIS dengan
+  // CONTENT_TILES (dashboard/links/page.tsx).
+  Icon: (props: { className?: string }) => ReactElement;
 }
 
 // Kategori "tourism" ditambahkan 17 Agustus 2026 (permintaan langsung
@@ -80,15 +98,15 @@ export interface QuickSetupCategory {
 // warga lokal (barbershop/salon/fotografer), bukan agen wisata/pemandu yang
 // melayani wisatawan.
 export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
-  { key: "creator", label: "Creator & Personal Brand" },
-  { key: "business", label: "Business & Professional" },
-  { key: "shop", label: "Online Shop" },
-  { key: "education", label: "Education" },
-  { key: "entertainment", label: "Entertainment" },
-  { key: "local", label: "Local Business" },
-  { key: "tourism", label: "Tourism & Travel" },
-  { key: "lifestyle", label: "Lifestyle" },
-  { key: "special", label: "Special Purpose" },
+  { key: "creator", label: "Creator & Personal Brand", Icon: IconSparkle },
+  { key: "business", label: "Business & Professional", Icon: IconBriefcase },
+  { key: "shop", label: "Online Shop", Icon: IconShoppingBag },
+  { key: "education", label: "Education", Icon: IconBook },
+  { key: "entertainment", label: "Entertainment", Icon: IconMusicNote },
+  { key: "local", label: "Local Business", Icon: IconMapPin },
+  { key: "tourism", label: "Tourism & Travel", Icon: IconPlane },
+  { key: "lifestyle", label: "Lifestyle", Icon: IconHeart },
+  { key: "special", label: "Special Purpose", Icon: IconGift },
 ];
 
 // PLATFORM_URL -- URL dasar starter per platform (pola sama seperti

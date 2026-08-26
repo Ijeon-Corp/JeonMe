@@ -762,3 +762,43 @@ export function IconFileText({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconBriefcase/IconShoppingBag/IconPlane -- 3 ikon baru, 27 Agustus 2026
+// (permintaan langsung pengguna, redesain Quick Setup ala flow "Microsite"
+// s.id): kategori Quick Setup (QUICK_SETUP_CATEGORIES, quick-setup-
+// templates.ts) sebelumnya cuma {key,label} tanpa ikon -- kategori Business
+// & Professional/Online Shop/Tourism & Travel belum punya padanan ikon yang
+// masuk akal di antara yang sudah ada (IconBook/IconMapPin/IconHeart/
+// IconGift/IconSparkle/IconMusicNote dipakai ulang utk 6 kategori lain).
+export function IconBriefcase({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="7.5" width="17" height="12" rx="1.5" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M8.5 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5v2" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M3.5 12.5h17" stroke="currentColor" strokeWidth={base} />
+    </svg>
+  );
+}
+
+export function IconShoppingBag({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M6 8h12l-1 12H7L6 8Z" stroke="currentColor" strokeWidth={base} strokeLinejoin="round" />
+      <path d="M9 8V6.5a3 3 0 0 1 6 0V8" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconPlane({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="m3.5 14.5 6-1.7-1-5.3 1.7-.5 2.6 4.8 5-1.4a1.6 1.6 0 0 1 1.2 3l-5.3 2.4.6 5-1.7.5-2.4-4.4-5.2 1.5-1.5-3.9Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
