@@ -64,6 +64,19 @@ jobs:
       # language version ... is lower than the targeted Go version").
       # goinstall build dari source pakai toolchain Go 1.26 yang sudah
       # disiapkan actions/setup-go di atas, jadi versinya selalu cocok.
+      #
+      # verify: false -- job gagal (26 Agustus 2026) BUKAN karena temuan
+      # lint sungguhan, tapi langkah "config verify" bawaan action ini
+      # (default verify=true) gagal FETCH skema JSON dari
+      # golangci-lint.run lewat jaringan ("context deadline exceeded"
+      # saat runner GitHub tidak bisa menjangkau host itu tepat waktu) --
+      # ketergantungan jaringan ke host eksternal di luar kendali kita,
+      # tidak terkait sama sekali dengan analisis kode sungguhan (lihat
+      # golangci/golangci-lint-action#560/#1176/#1179, isu terbuka
+      # golangci/golangci-lint#4864: belum ada opsi validasi skema
+      # offline). Mematikan verify TIDAK melewatkan lint sungguhan sama
+      # sekali -- kalau .golangci.yml benar-benar rusak, golangci-lint
+      # sendiri tetap gagal keras saat memuat konfigurasi untuk analisis.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -71,6 +84,7 @@ jobs:
           install-mode: goinstall
           working-directory: apps/api
           args: --timeout=3m
+          verify: false
 
       - name: Build binary
         working-directory: apps/api
