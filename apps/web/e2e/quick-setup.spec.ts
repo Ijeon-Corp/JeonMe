@@ -70,10 +70,12 @@ test.describe("Quick Setup", () => {
     await page.getByText("Restaurant", { exact: true }).click();
     await page.getByRole("button", { name: /terapkan template/i }).click();
 
-    // Dialog konfirmasi destruktif muncul karena sudah ada 5 tautan/blok dari
-    // Streamer (3 tautan + 2 blok "Jadwal Live"/FAQ, lihat quick-setup-
-    // templates.ts) -- konfirmasi penggantian.
-    await expect(page.getByText(/akan menghapus 5 tautan/i)).toBeVisible({ timeout: 5000 });
+    // Dialog konfirmasi destruktif muncul karena sudah ada 6 tautan/blok dari
+    // Streamer (3 tautan + 3 blok "Project Unggulan"/"Jadwal Live"/FAQ,
+    // lihat quick-setup-templates.ts -- jumlah naik dari 5 ke 6 sejak
+    // revisi 26 Agustus 2026 menambah showcaseBlock() ke template ini)
+    // -- konfirmasi penggantian.
+    await expect(page.getByText(/akan menghapus 6 tautan/i)).toBeVisible({ timeout: 5000 });
     await page.getByRole("button", { name: "Ya, Ganti" }).click();
     await expect(page.getByRole("heading", { name: /diterapkan/i })).toBeVisible({ timeout: 10000 });
 
