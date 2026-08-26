@@ -29,6 +29,39 @@
 // "DJ" -> "downtown" (video kota malam). Satu template per tema baru --
 // showcase variasi tanpa mengubah SEMUA template sekaligus (46 template
 // lainnya tetap gradien/warna solid seperti sebelumnya).
+//
+// Revisi 26 Agustus 2026 (permintaan langsung pengguna): "saya mau ubah
+// semua isi dari quick template tiap template ikuti bloknya seperti yang
+// ada di full-stack developer sebagai referensi jangan ikuti sama persis
+// tapi ikuti blok sesuai kebutuhan tiap kategori nya" -- pola 3 elemen
+// yang tadinya CUMA dipakai 3 template developer/desainer (24 Agustus
+// 2026, lihat catatan "Dimas Dev" di bawah) diperluas ke SELURUH 74
+// template: (1) deskripsi di tiap kartu tautan (param ke-3 baru di
+// link()), (2) baris ikon sosial di bawah bio (social{}), (3) kartu
+// "Unggulan" bergambar (project_showcase, lewat showcaseBlock()).
+// Dikonfirmasi lewat AskUserQuestion: deskripsi tautan + baris sosial
+// ditambahkan ke SEMUA template (selalu relevan, tidak ada downside),
+// TAPI kartu showcase HANYA ke kategori yang punya "satu karya/layanan/
+// paket unggulan" yang masuk akal ditonjolkan sendirian -- Business/
+// Creator/Entertainment/Local/Tourism/sebagian Special. Shop/Education/
+// Lifestyle SENGAJA dilewati: Shop sudah punya kartu produk ASLI
+// (products[], gambar sungguhan) yang lebih pas jadi sorotan utama --
+// showcase generik di situ jadi redundan; Education & Lifestyle isinya
+// sudah cukup terwakili lewat kartu tautan+FAQ yang sudah diperkaya
+// deskripsi. Dalam kategori yang termasuk cakupan, 3 template dengan
+// tujuan SENGAJA sangat minimalis (link-hub/seasonal-greeting/coming-soon
+// -- gestur "cuma butuh tautan", bukan "punya karya untuk dipamerkan")
+// juga dilewati -- menambah kartu di situ melawan tujuan desainnya.
+//
+// showcaseBlock() TIDAK lagi otomatis fallback ke gambar dashboard-mockup
+// generik (beda dari 3 template developer/desainer yang tetap eksplisit
+// memakainya) -- imagePath dibiarkan kosong utk template baru ini supaya
+// kartu tampil TANPA gambar (badge+judul+deskripsi+CTA saja, lihat
+// `imageUrl && (...)` di PagePreview.tsx yang sudah menangani image_url
+// kosong dengan baik) sampai kreator unggah FOTO ASLI lewat panel "Kelola
+// gambar" -- foto generik/asal comot utk restoran/villa/gym sungguhan
+// justru menyesatkan pengunjung, beda dari mockup dashboard SaaS abstrak
+// yang dari awal memang tidak mengklaim proyek/tempat sungguhan tertentu.
 
 import type { PagePreviewData } from "@/components/PagePreview";
 import type { SocialPlatformKey } from "@/lib/social-links";
@@ -99,7 +132,9 @@ export interface QuickSetupTemplateLink {
   // tangkapan layar template "Dimas Dev"): subjudul opsional di bawah
   // judul (kartu ikon+judul+deskripsi+panah). Kosong/undefined = baris
   // judul tunggal seperti template lain -- lihat linkItem.Description
-  // (links.go) & PagePreviewLink.description.
+  // (links.go) & PagePreviewLink.description. Diperluas ke SEMUA template
+  // 26 Agustus 2026 (lihat catatan revisi di atas) lewat parameter ke-3
+  // baru di link().
   description?: string;
 }
 
@@ -126,9 +161,10 @@ export interface QuickSetupTemplateBlock {
   // (contoh tangkapan layar template "Dimas Dev"): kartu "Project
   // Unggulan" (badge+gambar+judul+deskripsi+CTA). AMAN dibuat otomatis
   // (beda dari image/video/dst yang butuh media pengguna nyata) karena
-  // gambarnya aset statis milik Jeonme sendiri (showcaseImagePath, pola
-  // SAMA PERSIS coverImagePath produk di bawah) -- placeholder yang
-  // JELAS contoh, kreator tinggal ganti lewat panel "Kelola gambar".
+  // gambarnya OPSIONAL (lihat showcaseBlock() & catatan revisi 26 Agustus
+  // di atas) -- 3 template developer/desainer memakai aset statis Jeonme
+  // sendiri (showcaseImagePath), template lain sengaja dibiarkan tanpa
+  // gambar sampai kreator unggah foto asli lewat panel "Kelola gambar".
   type: "text" | "contact_form" | "maps" | "faq" | "project_showcase";
   title: string;
   text?: string;
@@ -199,8 +235,11 @@ export interface QuickSetupTemplate {
   // tangkapan layar template "Dimas Dev": baris ikon GitHub/LinkedIn/
   // Website/Email di bawah bio). Sama semangatnya dengan PLATFORM_URL.website
   // di atas -- nilai PLACEHOLDER jelas contoh (mis. "username"), kreator
-  // tinggal lengkapi lewat panel Kontak Sosial. Opsional, kosong = baris
-  // sosial tidak ikut diisi (perilaku lama, mayoritas template).
+  // tinggal lengkapi lewat panel Kontak Sosial. Diperluas ke SEMUA 74
+  // template 26 Agustus 2026 (lihat catatan revisi di atas) -- key HARUS
+  // salah satu dari SocialPlatformKey (social-links.ts), platform lain
+  // (Twitch/Discord/Spotify/dll, cuma valid di PLATFORM_URL/`links`) TIDAK
+  // bisa dipakai di sini.
   social?: Partial<Record<SocialPlatformKey, string>>;
   // layoutVariant -- permintaan langsung pengguna: "yang saya minta
   // layouting nya juga berbeda", lalu susulan "tambahkan jenis model
@@ -314,8 +353,11 @@ export interface QuickSetupTemplate {
 // referensi ("Ikuti Update Kami", "Chat via WhatsApp"), bukan cuma nama
 // platform. Template masih bisa override lewat argumen kedua `link()`
 // untuk konteks yang lebih spesifik per template (mis. "Pesan Menu" utk
-// F&B, bukan "Chat via WhatsApp" generik).
-function link(platform: PlatformKey, title?: string): QuickSetupTemplateLink {
+// F&B, bukan "Chat via WhatsApp" generik). Argumen ke-3 (description) --
+// susulan revisi 26 Agustus 2026, lihat catatan lengkap di atas file ini
+// & QuickSetupTemplateLink.description -- subjudul kartu, konteksnya
+// beda-beda tiap template walau platformnya sama.
+function link(platform: PlatformKey, title?: string, description?: string): QuickSetupTemplateLink {
   const labels: Record<PlatformKey, string> = {
     instagram: "Follow di Instagram",
     tiktok: "Follow di TikTok",
@@ -336,7 +378,7 @@ function link(platform: PlatformKey, title?: string): QuickSetupTemplateLink {
     googleMaps: "Lihat Lokasi",
     website: "Kunjungi Website",
   };
-  return { title: title ?? labels[platform], url: PLATFORM_URL[platform] };
+  return { title: title ?? labels[platform], url: PLATFORM_URL[platform], description };
 }
 
 // mapsBlock -- lihat catatan lengkap di QuickSetupTemplateBlock.type di
@@ -357,13 +399,19 @@ function faqBlock(items: QuickSetupTemplateFaqItem[], title = "Pertanyaan Umum")
 // showcaseBlock -- lihat catatan lengkap di QuickSetupTemplateBlock.type
 // ("project_showcase"). url WAJIB host asli (placeholder domain sama
 // seperti PLATFORM_URL.website di atas, "https://" polos ditolak
-// validator backend).
+// validator backend). imagePath OPSIONAL -- beda dari sebelumnya (24
+// Agustus 2026) yang otomatis fallback ke dashboard-mockup.jpg kalau tidak
+// diisi, sejak revisi 26 Agustus 2026 (lihat catatan lengkap di atas file
+// ini) dibiarkan kosong APA ADANYA kalau tidak dioper: 3 template
+// developer/desainer tetap eksplisit mengoper path aset statisnya sendiri,
+// template lain sengaja TANPA gambar (kartu badge+judul+deskripsi+CTA
+// saja) sampai kreator unggah foto asli.
 function showcaseBlock(args: {
   title: string;
   description: string;
   badgeText?: string;
   ctaText?: string;
-  url?: string;
+  url: string;
   imagePath?: string;
 }): QuickSetupTemplateBlock {
   return {
@@ -372,8 +420,8 @@ function showcaseBlock(args: {
     description: args.description,
     badgeText: args.badgeText,
     ctaText: args.ctaText,
-    url: args.url ?? "https://websitekamu.com/studi-kasus",
-    showcaseImagePath: args.imagePath ?? "/quick-setup-showcase/dashboard-mockup.jpg",
+    url: args.url,
+    showcaseImagePath: args.imagePath,
   };
 }
 
@@ -471,8 +519,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Foto profil, bio, media sosial, YouTube, TikTok",
     theme: "bloom",
     bio: "Content creator | Berbagi konten setiap hari ✨",
-    links: [link("instagram"), link("tiktok"), link("youtube")],
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Konten harian & momen keseharian"),
+      link("tiktok", undefined, "Video pendek yang lagi rame ditonton"),
+      link("youtube", undefined, "Vlog & konten durasi panjang"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Sehari Jadi Content Creator",
+        description: "Proses bikin konten dari riset ide, syuting, sampai editing -- video paling banyak ditonton bulan ini.",
+        badgeText: "Konten Favorit",
+        ctaText: "Tonton videonya",
+        url: PLATFORM_URL.youtube,
+      }),
       { type: "text", title: "Tentang Aku", text: "Tuliskan cerita singkat tentangmu & jenis konten yang kamu buat di sini." },
       faqBlock([
         { question: "Terbuka untuk kerja sama brand?", answer: "Terbuka banget! DM lewat Instagram untuk diskusi kolaborasi & rate card." },
@@ -488,8 +548,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Media sosial + afiliasi + produk",
     theme: "blaze",
     bio: "Influencer & Content Creator",
-    links: [link("instagram"), link("tiktok"), link("youtube")],
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Konten kolaborasi & keseharian"),
+      link("tiktok", undefined, "Video promosi & konten viral"),
+      link("youtube", undefined, "Review produk & vlog kolaborasi"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Kolaborasi Brand Skincare Lokal",
+        description: "Review jujur produk skincare lokal -- proses pakai 2 minggu sampai hasil akhirnya.",
+        badgeText: "Campaign Terbaru",
+        ctaText: "Lihat hasilnya",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Rate Card & Kerja Sama", text: "Tuliskan jenis konten & rate endorse/kerja sama yang kamu tawarkan di sini." },
       faqBlock([{ question: "Bagaimana cara kerja sama endorse/promosi?", answer: "Kirim proposal kerja sama lewat DM Instagram, aku balas secepatnya dengan rate card & ketentuan." }]),
     ],
@@ -503,8 +575,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, pencapaian, kontak",
     theme: "minimal",
     bio: "Membangun personal brand, satu langkah setiap hari.",
-    links: [link("linkedin"), link("instagram")],
+    social: { linkedin: "username", instagram: "username", email: "kamu@email.com" },
+    links: [
+      link("linkedin", undefined, "Pengalaman profesional & koneksi karier"),
+      link("instagram", undefined, "Cerita di balik proses & keseharian kerja"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Terpilih Jadi Pembicara Konferensi Industri",
+        description: "Ringkasan pencapaian & momen penting dalam perjalanan membangun personal brand tahun ini.",
+        badgeText: "Pencapaian Terbaru",
+        ctaText: "Baca selengkapnya",
+        url: PLATFORM_URL.linkedin,
+      }),
       { type: "text", title: "Pencapaian", text: "Tuliskan pencapaian & penghargaanmu di sini." },
       { type: "contact_form", title: "Hubungi Saya" },
     ],
@@ -517,8 +600,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Media sosial, event, merchandise",
     theme: "golden",
     bio: "Figur publik | Info kegiatan & kolaborasi",
-    links: [link("instagram"), link("x"), link("youtube")],
+    social: { instagram: "username", x: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Update kegiatan & momen terbaru"),
+      link("x", undefined, "Opini & tanggapan isu terkini"),
+      link("youtube", undefined, "Wawancara & liputan kegiatan"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Liputan Kegiatan Sosial Bulan Ini",
+        description: "Dokumentasi kegiatan & kolaborasi terbaru yang mendapat banyak sorotan publik.",
+        badgeText: "Sorotan Media",
+        ctaText: "Lihat liputannya",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Kegiatan Mendatang", text: "Tuliskan jadwal kegiatan, kolaborasi, atau kemunculan publik terbarumu di sini." },
       faqBlock([
         { question: "Bagaimana cara mengundang untuk acara/kolaborasi?", answer: "Kirim detail acara & undangan lewat DM Instagram, tim kami akan meninjau & menghubungi balik." },
@@ -536,8 +631,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Twitch, YouTube, Discord, donasi",
     theme: "cyber",
     bio: "Live streaming rutin -- mabar yuk!",
-    links: [link("twitch"), link("youtube"), link("discord")],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("twitch", undefined, "Nonton live streaming mabar"),
+      link("youtube", undefined, "VOD & highlight stream"),
+      link("discord", undefined, "Gabung komunitas & obrolan game"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Highlight Push Rank Bareng Subscriber",
+        description: "Cuplikan momen seru & clutch terbaik dari sesi live streaming minggu ini.",
+        badgeText: "Momen Stream",
+        ctaText: "Tonton highlight",
+        url: PLATFORM_URL.youtube,
+      }),
       { type: "text", title: "Jadwal Live", text: "Tuliskan jadwal live streaming mingguanmu di sini." },
       faqBlock([{ question: "Ada perk khusus buat subscriber/donatur?", answer: "Ada! Emote khusus, shoutout, dan akses channel Discord eksklusif -- info lengkap ada di stream." }]),
     ],
@@ -551,8 +658,22 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Profil game, Discord, YouTube, Twitch",
     theme: "electric",
     bio: "Gamer | Main bareng di sini",
-    links: [link("discord"), link("youtube"), link("twitch")],
-    blocks: [{ type: "text", title: "Game yang Dimainkan", text: "Tuliskan game favorit yang sering kamu mainkan & rank/level saat ini di sini." }],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("discord", undefined, "Gabung server & main bareng"),
+      link("youtube", undefined, "Gameplay & highlight terbaru"),
+      link("twitch", undefined, "Live streaming main game"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Clutch Moment Ranked Match Terbaik",
+        description: "Momen paling epic dari sesi push rank minggu ini -- lengkap sama reaksi tim.",
+        badgeText: "Highlight Game",
+        ctaText: "Tonton clip-nya",
+        url: PLATFORM_URL.youtube,
+      }),
+      { type: "text", title: "Game yang Dimainkan", text: "Tuliskan game favorit yang sering kamu mainkan & rank/level saat ini di sini." },
+    ],
   },
   // 2 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
   // villa (kategori Tourism).
@@ -564,8 +685,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Konten dakwah, media sosial, kolaborasi",
     theme: "ivory",
     bio: "Konten dakwah & inspirasi -- semoga bermanfaat",
-    links: [link("instagram"), link("youtube"), link("tiktok")],
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Kajian singkat & motivasi harian"),
+      link("youtube", undefined, "Kajian lengkap & ceramah"),
+      link("tiktok", undefined, "Tips ibadah dalam video pendek"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Kajian Rutin: Ikhlas dalam Beramal",
+        description: "Salah satu kajian paling banyak diminati -- bahas cara menjaga niat ikhlas sehari-hari.",
+        badgeText: "Kajian Pilihan",
+        ctaText: "Tonton kajiannya",
+        url: PLATFORM_URL.youtube,
+      }),
       { type: "text", title: "Tentang Konten Ini", text: "Tuliskan fokus kontenmu (kajian, motivasi, tips ibadah sehari-hari) di sini." },
       faqBlock([{ question: "Terbuka untuk kolaborasi kajian/event?", answer: "Terbuka, DM lewat Instagram untuk diskusi jadwal & tema kolaborasi." }]),
     ],
@@ -578,8 +711,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Buku terbaru, website, media sosial",
     theme: "cocoa",
     bio: "Penulis buku -- cerita yang lahir dari kata demi kata",
-    links: [link("instagram"), link("website", "Kunjungi Website Kami")],
+    social: { instagram: "username", website: "websitekamu.com", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Cuplikan tulisan & proses menulis"),
+      link("website", "Kunjungi Website Kami", "Katalog lengkap semua buku"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Ketika Kata Menemukan Rumahnya",
+        description: "Novel terbaru yang bercerita tentang pencarian makna lewat kata demi kata -- sudah tersedia di toko buku favoritmu.",
+        badgeText: "Buku Terbaru",
+        ctaText: "Baca sinopsis lengkap",
+        url: PLATFORM_URL.website,
+      }),
       { type: "text", title: "Buku Terbaru", text: "Tuliskan judul & sinopsis singkat buku terbarumu di sini." },
       faqBlock([{ question: "Apakah menerima undangan bedah buku?", answer: "Menerima, kirim detail acara lewat DM Instagram untuk diskusi jadwal." }]),
     ],
@@ -594,9 +738,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Website, WhatsApp, lokasi, kontak",
     theme: "ocean",
     bio: "Profil bisnis resmi kami.",
-    links: [link("website", "Kunjungi Website Kami"), link("whatsapp", "Chat Admin Kami")],
+    social: { website: "websitekamu.com", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("website", "Kunjungi Website Kami", "Info lengkap produk & layanan kami"),
+      link("whatsapp", "Chat Admin Kami", "Respon cepat untuk pertanyaan kamu"),
+    ],
     blocks: [
       mapsBlock(),
+      showcaseBlock({
+        title: "Konsultasi Gratis untuk Klien Baru",
+        description: "Sesi konsultasi awal tanpa biaya untuk memahami kebutuhanmu sebelum memulai kerja sama.",
+        badgeText: "Layanan Unggulan",
+        ctaText: "Jadwalkan sekarang",
+        url: PLATFORM_URL.whatsapp,
+      }),
       faqBlock([{ question: "Bagaimana cara menghubungi kami?", answer: "Chat lewat WhatsApp atau isi formulir di bawah, tim kami akan segera merespons." }]),
       { type: "contact_form", title: "Kritik dan Saran" },
     ],
@@ -609,9 +764,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Tentang, layanan, portofolio, kontak",
     theme: "minimal",
     bio: "Tentang perusahaan kami.",
-    links: [link("website", "Kunjungi Website Kami"), link("linkedin")],
+    social: { website: "websitekamu.com", linkedin: "username", email: "kamu@email.com" },
+    links: [
+      link("website", "Kunjungi Website Kami", "Profil & portofolio perusahaan lengkap"),
+      link("linkedin", undefined, "Update perusahaan & lowongan kerja"),
+    ],
     blocks: [
       mapsBlock("Kantor Kami"),
+      showcaseBlock({
+        title: "Solusi Digital untuk Bisnis Menengah",
+        description: "Layanan andalan yang paling banyak dipercaya klien kami tahun ini.",
+        badgeText: "Layanan Kami",
+        ctaText: "Pelajari layanan ini",
+        url: PLATFORM_URL.website,
+      }),
       { type: "text", title: "Layanan Kami", text: "Tuliskan daftar layanan perusahaanmu di sini." },
       faqBlock([{ question: "Bagaimana proses kerja sama dengan kami?", answer: "Mulai dari konsultasi kebutuhan, proposal, sampai eksekusi -- hubungi kami untuk mulai diskusi." }]),
       { type: "contact_form", title: "Hubungi Kami" },
@@ -625,8 +791,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, layanan, harga, kontak",
     theme: "forest",
     bio: "Freelancer | Siap bantu proyekmu",
-    links: [link("linkedin"), link("instagram", "Lihat Portofolio")],
+    social: { linkedin: "username", instagram: "username", email: "kamu@email.com" },
+    links: [
+      link("linkedin", undefined, "Rekam jejak & pengalaman kerja"),
+      link("instagram", "Lihat Portofolio", "Contoh hasil kerja terbaru"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Redesain Landing Page Konversi 2x Lipat",
+        description: "Studi kasus singkat proyek terbaru -- dari brief awal sampai hasil akhir yang bikin klien puas.",
+        badgeText: "Proyek Terbaru",
+        ctaText: "Lihat studi kasus",
+        url: PLATFORM_URL.linkedin,
+      }),
       { type: "text", title: "Layanan & Harga", text: "Tuliskan daftar layanan dan harga di sini." },
       faqBlock([{ question: "Berapa lama waktu pengerjaan?", answer: "Tergantung kompleksitas proyek, biasanya 3-14 hari kerja. Chat dulu buat estimasi lebih pasti." }]),
       { type: "contact_form", title: "Hubungi Saya" },
@@ -640,8 +817,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, booking, testimoni",
     theme: "noir",
     bio: "Konsultan | Booking sesi konsultasi",
-    links: [link("linkedin")],
+    social: { linkedin: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [link("linkedin", undefined, "Latar belakang & jam terbang konsultasi")],
     blocks: [
+      showcaseBlock({
+        title: "Pendampingan Strategi Bisnis 3 Bulan",
+        description: "Hasil pendampingan klien yang berhasil menaikkan omzet lewat perbaikan strategi operasional.",
+        badgeText: "Studi Kasus",
+        ctaText: "Baca ceritanya",
+        url: PLATFORM_URL.linkedin,
+      }),
       faqBlock([{ question: "Bagaimana proses konsultasinya?", answer: "Booking slot yang tersedia, lalu kita diskusi via video call sesuai kebutuhanmu." }]),
       { type: "contact_form", title: "Hubungi Saya" },
     ],
@@ -655,8 +840,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, portofolio, daftar klien",
     theme: "midnight",
     bio: "Agency kreatif | Lihat portofolio kami",
-    links: [link("website"), link("instagram"), link("linkedin")],
+    social: { website: "websitekamu.com", instagram: "username", linkedin: "username", email: "kamu@email.com" },
+    links: [
+      link("website", undefined, "Portofolio lengkap semua proyek kami"),
+      link("instagram", undefined, "Cuplikan proses kerja & hasil karya"),
+      link("linkedin", undefined, "Profil tim & rekam jejak agency"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Rebranding Total untuk Klien F&B Nasional",
+        description: "Salah satu proyek favorit tim kami -- dari riset brand sampai peluncuran identitas baru.",
+        badgeText: "Proyek Unggulan",
+        ctaText: "Lihat portofolio lengkap",
+        url: PLATFORM_URL.website,
+      }),
       { type: "text", title: "Klien Kami", text: "Tuliskan daftar klien/mitra di sini." },
       faqBlock([
         { question: "Bagaimana memulai proyek dengan agency ini?", answer: "Hubungi kami lewat website atau LinkedIn di atas, kita mulai dari sesi diskusi kebutuhanmu." },
@@ -672,8 +869,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Pengalaman, keahlian, pendidikan, kontak",
     theme: "minimal",
     bio: "CV digital -- pengalaman, keahlian, & kontak.",
-    links: [link("linkedin")],
+    social: { linkedin: "username", email: "kamu@email.com" },
+    links: [link("linkedin", undefined, "Riwayat karier & rekomendasi kolega")],
     blocks: [
+      showcaseBlock({
+        title: "Memimpin Proyek Lintas Tim Tepat Waktu",
+        description: "Pencapaian profesional yang paling ingin aku tonjolkan -- konteks lengkap ada di CV.",
+        badgeText: "Pencapaian",
+        ctaText: "Lihat detail CV",
+        url: PLATFORM_URL.linkedin,
+      }),
       { type: "text", title: "Pengalaman & Keahlian", text: "Tuliskan pengalaman kerja dan keahlianmu di sini." },
       { type: "contact_form", title: "Hubungi Saya" },
     ],
@@ -688,8 +893,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk asuransi, konsultasi, kontak",
     theme: "corporate",
     bio: "Agen asuransi -- lindungi masa depanmu",
-    links: [link("whatsapp", "Konsultasi Gratis"), link("linkedin")],
+    social: { whatsapp: "62812xxxxxxxx", linkedin: "username", email: "kamu@email.com" },
+    links: [
+      link("whatsapp", "Konsultasi Gratis", "Konsultasi kebutuhan asuransi gratis"),
+      link("linkedin", undefined, "Profil & lisensi agen resmi"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Asuransi Kesehatan Keluarga Plus",
+        description: "Produk paling banyak dipilih klienku -- proteksi kesehatan lengkap untuk seluruh keluarga.",
+        badgeText: "Produk Favorit",
+        ctaText: "Tanya detail produk",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Produk Asuransi", text: "Tuliskan jenis produk asuransi (jiwa, kesehatan, pendidikan) yang kamu tawarkan di sini." },
       faqBlock([{ question: "Bagaimana cara klaim asuransi?", answer: "Aku bantu proses klaim dari awal sampai selesai -- hubungi langsung begitu ada kejadian." }]),
       { type: "contact_form", title: "Konsultasi Asuransi" },
@@ -703,9 +919,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Paket, fasilitas, booking",
     theme: "obsidian",
     bio: "Coworking space -- kerja produktif, kolaborasi maksimal",
-    links: [link("whatsapp", "Booking Ruang"), link("instagram", "Lihat Fasilitas Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("whatsapp", "Booking Ruang", "Booking ruang & tanya ketersediaan"),
+      link("instagram", "Lihat Fasilitas Kami", "Suasana ruang kerja & fasilitas"),
+    ],
     blocks: [
       mapsBlock("Lokasi Kami"),
+      showcaseBlock({
+        title: "Private Office untuk Tim hingga 10 Orang",
+        description: "Paket paling diminati bulan ini -- ruang privat lengkap dengan meeting room & internet cepat.",
+        badgeText: "Fasilitas Unggulan",
+        ctaText: "Cek ketersediaan",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Paket & Harga", text: "Tuliskan paket membership (harian/bulanan) & fasilitas yang didapat di sini." },
       faqBlock([{ question: "Apakah ada meeting room?", answer: "Ada, bisa disewa terpisah per jam -- booking dulu via WhatsApp supaya tidak bentrok jadwal." }]),
     ],
@@ -719,7 +946,10 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   // produk contoh (affiliate-store SENGAJA tidak -- intinya justru
   // mempromosikan produk ORANG LAIN, bukan produk sendiri). Blok konten
   // juga dirapikan supaya tidak semua template berbentuk sama (jumlah item
-  // FAQ & kombinasi blok bervariasi, bukan selalu "1 text + 1 FAQ").
+  // FAQ & kombinasi blok bervariasi, bukan selalu "1 text + 1 FAQ"). TIDAK
+  // dapat kartu showcase (revisi 26 Agustus 2026, lihat catatan lengkap di
+  // atas file ini) -- kartu produk ASLI (products[], gambar sungguhan)
+  // sudah jadi sorotan utama, showcase generik di sini jadi redundan.
   {
     key: "online-store",
     category: "shop",
@@ -728,7 +958,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, marketplace, promosi",
     theme: "peach",
     bio: "Toko online -- produk terbaik untukmu",
-    links: [link("shopee", "Belanja di Shopee Kami"), link("tokopedia", "Belanja di Tokopedia Kami"), link("whatsapp", "Chat Admin Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("shopee", "Belanja di Shopee Kami", "Belanja aman dengan proteksi Shopee"),
+      link("tokopedia", "Belanja di Tokopedia Kami", "Belanja praktis lewat Tokopedia"),
+      link("whatsapp", "Chat Admin Kami", "Tanya stok & rekomendasi produk"),
+    ],
     blocks: [
       faqBlock([
         { question: "Bagaimana cara pembayaran?", answer: "Kami terima transfer bank & e-wallet, konfirmasi pesanan lewat WhatsApp." },
@@ -758,7 +993,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Katalog, Instagram, Shopee/Tokopedia",
     theme: "rose",
     bio: "Fashion store | Koleksi terbaru tiap minggu",
-    links: [link("instagram", "Lihat Koleksi Terbaru"), link("shopee"), link("tokopedia")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", "Lihat Koleksi Terbaru", "Lookbook koleksi terbaru tiap minggu"),
+      link("shopee", undefined, "Belanja aman dengan proteksi Shopee"),
+      link("tokopedia", undefined, "Belanja praktis lewat Tokopedia"),
+    ],
     blocks: [
       { type: "text", title: "Panduan Ukuran", text: "Tuliskan tabel ukuran (S/M/L/XL dst) di sini supaya pembeli tidak salah pilih." },
       faqBlock([{ question: "Apakah bisa tukar ukuran?", answer: "Bisa, selama barang belum dipakai & masih dalam 3 hari sejak diterima. Hubungi kami via WhatsApp." }]),
@@ -786,7 +1026,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, katalog, booking",
     theme: "peach",
     bio: "Beauty store | Produk kecantikan pilihan",
-    links: [link("instagram", "Lihat Produk Kami"), link("whatsapp", "Tanya-Tanya Produk")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", "Lihat Produk Kami", "Review & tutorial pakai produk kami"),
+      link("whatsapp", "Tanya-Tanya Produk", "Konsultasi produk sesuai jenis kulit"),
+    ],
     blocks: [mapsBlock()],
     products: [
       {
@@ -812,7 +1056,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, pemesanan, lokasi",
     theme: "amber",
     bio: "Food & beverage | Order sekarang",
-    links: [link("whatsapp", "Pesan via WhatsApp"), link("instagram", "Ikuti Update Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Pesan via WhatsApp", "Pesan cepat, langsung diproses"),
+      link("instagram", "Ikuti Update Kami", "Menu baru & promo mingguan"),
+    ],
     blocks: [
       mapsBlock(),
       { type: "text", title: "Menu", text: "Tuliskan daftar menu & harga di sini." },
@@ -845,7 +1093,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, WhatsApp, marketplace",
     theme: "mint",
     bio: "Usaha kecil, kualitas besar.",
-    links: [link("whatsapp", "Pesan via WhatsApp"), link("shopee")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Pesan via WhatsApp", "Tanya produk & cara pemesanan"),
+      link("shopee", undefined, "Belanja aman lewat marketplace"),
+    ],
     blocks: [mapsBlock(), faqBlock([{ question: "Apakah bisa pesan custom?", answer: "Bisa banget, chat kami dulu buat diskusi kebutuhanmu." }])],
     products: [
       {
@@ -870,7 +1122,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Rekomendasi produk + tautan afiliasi",
     theme: "bloom",
     bio: "Rekomendasi produk pilihanku",
-    links: [link("instagram"), link("tiktok")],
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", undefined, "Review jujur produk favoritku"),
+      link("tiktok", undefined, "Demo produk dalam video singkat"),
+    ],
     blocks: [
       { type: "text", title: "Rekomendasi Produk", text: "Tuliskan kategori produk yang kamu rekomendasikan & kenapa kamu pakai/suka di sini." },
       faqBlock([
@@ -893,7 +1149,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Katalog, cerita produk, marketplace",
     theme: "kraft",
     bio: "Batik & kerajinan tradisional -- karya asli tangan lokal",
-    links: [link("instagram", "Lihat Koleksi Batik"), link("whatsapp", "Pesan via WhatsApp"), link("shopee")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", "Lihat Koleksi Batik", "Koleksi motif & proses pembuatan"),
+      link("whatsapp", "Pesan via WhatsApp", "Tanya motif & request custom"),
+      link("shopee", undefined, "Belanja aman lewat marketplace"),
+    ],
     blocks: [
       { type: "text", title: "Proses Pembuatan", text: "Ceritakan proses pembuatan batik/kerajinanmu (tulis tangan, cap, motif khas) di sini." },
       faqBlock([{ question: "Apakah bisa custom motif?", answer: "Bisa, chat dulu buat diskusi motif & warna sesuai keinginanmu." }]),
@@ -907,7 +1168,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, katalog, pemesanan",
     theme: "matcha",
     bio: "Jamu & herbal -- sehat alami ala nenek moyang",
-    links: [link("whatsapp", "Pesan via WhatsApp"), link("instagram", "Lihat Produk Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Pesan via WhatsApp", "Konsultasi & pemesanan langsung"),
+      link("instagram", "Lihat Produk Kami", "Manfaat bahan & testimoni pelanggan"),
+    ],
     blocks: [faqBlock([{ question: "Apakah aman dikonsumsi rutin?", answer: "Aman, semua bahan alami tanpa pengawet -- tetap konsultasi dulu kalau kamu punya kondisi kesehatan khusus." }])],
   },
   {
@@ -918,7 +1183,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk, lokasi, grooming",
     theme: "lemon",
     bio: "Pet shop -- semua kebutuhan hewan kesayanganmu",
-    links: [link("whatsapp", "Chat Admin Kami"), link("instagram", "Lihat Produk Kami"), link("shopee")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Chat Admin Kami", "Tanya stok & booking grooming"),
+      link("instagram", "Lihat Produk Kami", "Produk terbaru & tips rawat hewan"),
+      link("shopee", undefined, "Belanja aman lewat marketplace"),
+    ],
     blocks: [
       mapsBlock("Lokasi Toko"),
       faqBlock([{ question: "Apakah ada layanan grooming?", answer: "Ada, booking dulu via WhatsApp supaya tidak perlu antre lama." }]),
@@ -926,6 +1196,9 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   },
 
   // ---------- Education ----------
+  // TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat catatan
+  // lengkap di atas file ini) -- kartu tautan+FAQ yang sudah diperkaya
+  // deskripsi dinilai sudah cukup mewakili kategori ini.
   {
     key: "teacher",
     category: "education",
@@ -934,7 +1207,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Info kelas, materi, kontak",
     theme: "ocean",
     bio: "Guru | Info kelas & materi belajar",
-    links: [link("whatsapp")],
+    social: { whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [link("whatsapp", undefined, "Tanya jadwal & materi belajar")],
     blocks: [
       { type: "text", title: "Info Kelas", text: "Tuliskan jadwal & info kelasmu di sini." },
       faqBlock([{ question: "Apa saja yang diajarkan?", answer: "Lihat info kelas di atas, atau hubungi saya untuk tanya-tanya lebih detail." }]),
@@ -949,7 +1223,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, jadwal, booking",
     theme: "maple",
     bio: "Tutor privat | Booking jadwal belajar",
-    links: [link("whatsapp", "Booking via WhatsApp")],
+    social: { whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [link("whatsapp", "Booking via WhatsApp", "Booking jadwal les sesuai waktumu")],
     blocks: [faqBlock([{ question: "Bagaimana jadwal lesnya?", answer: "Fleksibel sesuai kesepakatan -- chat dulu buat atur jadwal yang cocok." }])],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -961,7 +1236,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, testimoni, pendaftaran",
     theme: "golden",
     bio: "Kelas online -- belajar bareng aku",
-    links: [link("instagram"), link("youtube")],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Cuplikan materi & testimoni peserta"),
+      link("youtube", undefined, "Video pembelajaran gratis contoh kelas"),
+    ],
     blocks: [
       { type: "text", title: "Testimoni Peserta", text: "Tuliskan kesan/hasil peserta kelas sebelumnya di sini." },
       faqBlock([{ question: "Apakah ada sertifikat setelah selesai?", answer: "Ada, kamu dapat sertifikat digital setelah menyelesaikan semua modul kelas." }]),
@@ -976,7 +1255,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, proyek, media sosial",
     theme: "minimal",
     bio: "Mahasiswa/pelajar | Kumpulan proyekku",
-    links: [link("instagram"), link("linkedin")],
+    social: { instagram: "username", linkedin: "username" },
+    links: [
+      link("instagram", undefined, "Dokumentasi proyek & keseharian kuliah"),
+      link("linkedin", undefined, "Pengalaman organisasi & magang"),
+    ],
     blocks: [{ type: "text", title: "Proyek", text: "Tuliskan proyek-proyek yang pernah kamu kerjakan di sini." }],
   },
   {
@@ -987,7 +1270,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, event, komunitas",
     theme: "atmos",
     bio: "Belajar bareng komunitas kami",
-    links: [link("instagram"), link("whatsapp", "Gabung Grup WhatsApp")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Info kelas & kegiatan komunitas"),
+      link("whatsapp", "Gabung Grup WhatsApp", "Gabung grup info kelas terbaru"),
+    ],
     blocks: [
       faqBlock([{ question: "Bagaimana cara bergabung?", answer: "Klik salah satu tautan di atas untuk gabung WhatsApp/Instagram, info kelas & event rutin kami bagikan di sana." }]),
       { type: "contact_form", title: "Daftar Kelas" },
@@ -1006,7 +1293,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas bahasa, jadwal, pendaftaran",
     theme: "candy",
     bio: "Kursus bahasa -- lancar berbahasa, buka peluang baru",
-    links: [link("whatsapp", "Daftar Kelas")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [link("whatsapp", "Daftar Kelas", "Daftar & tanya jadwal kelas")],
     blocks: [
       { type: "text", title: "Kelas Tersedia", text: "Tuliskan bahasa yang diajarkan & level kelas (pemula-mahir) di sini." },
       faqBlock([{ question: "Kelas online atau tatap muka?", answer: "Tersedia keduanya -- pilih sesuai kenyamananmu saat mendaftar." }]),
@@ -1023,8 +1311,21 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Spotify, YouTube, Apple Music, media sosial",
     theme: "ember",
     bio: "Musisi | Dengerin lagu terbaruku",
-    links: [link("spotify"), link("youtube"), link("appleMusic"), link("instagram")],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("spotify", undefined, "Dengerin album & single terbaru"),
+      link("youtube", undefined, "Music video & live session"),
+      link("appleMusic", undefined, "Streaming lengkap di Apple Music"),
+      link("instagram", undefined, "Cerita di balik proses bikin lagu"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Single Terbaru: Pulang",
+        description: "Lagu terbaru yang bercerita tentang rindu rumah -- sudah bisa didengarkan di semua platform musik.",
+        badgeText: "Rilisan Terbaru",
+        ctaText: "Dengerin sekarang",
+        url: PLATFORM_URL.spotify,
+      }),
       { type: "text", title: "Rilisan Terbaru", text: "Tuliskan single/album terbarumu, plus jadwal tur/manggung kalau ada, di sini." },
       faqBlock([
         { question: "Bisa booking untuk manggung?", answer: "Bisa, DM lewat Instagram untuk diskusi jadwal & rate manggung." },
@@ -1040,8 +1341,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, commission, media sosial",
     theme: "sakura",
     bio: "Seniman | Open commission",
-    links: [link("instagram")],
+    social: { instagram: "username", email: "kamu@email.com" },
+    links: [link("instagram", undefined, "Galeri karya & proses menggambar")],
     blocks: [
+      showcaseBlock({
+        title: "Ilustrasi Digital: Potret Senja Kota",
+        description: "Karya terbaru yang paling banyak mendapat apresiasi -- proses pengerjaan sekitar 12 jam.",
+        badgeText: "Karya Terbaru",
+        ctaText: "Lihat detail karya",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Open Commission", text: "Tuliskan info & harga commission di sini." },
       faqBlock([{ question: "Berapa lama proses pengerjaan commission?", answer: "Tergantung kompleksitas, biasanya 3-10 hari kerja. DM dulu buat estimasi lebih pasti." }]),
       { type: "contact_form", title: "Request Commission" },
@@ -1055,8 +1364,21 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Mix, event, booking",
     theme: "downtown",
     bio: "DJ | Booking untuk acara kamu",
-    links: [link("spotify"), link("instagram")],
-    blocks: [faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }])],
+    social: { instagram: "username", email: "kamu@email.com" },
+    links: [
+      link("spotify", undefined, "Playlist mix & rilisan terbaru"),
+      link("instagram", undefined, "Cuplikan set & keseruan panggung"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Live Set: Sunset Session Vol. 3",
+        description: "Rekaman set paling diminati pendengar -- perpaduan house & tropical vibes buat santai sore.",
+        badgeText: "Set Favorit",
+        ctaText: "Dengerin set-nya",
+        url: PLATFORM_URL.spotify,
+      }),
+      faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }]),
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking dan Event -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -1067,8 +1389,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Episode, platform, media sosial",
     theme: "noir",
     bio: "Podcast baru tiap minggu -- dengerin sekarang",
-    links: [link("spotify"), link("applePodcasts"), link("youtube")],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("spotify", undefined, "Episode terbaru & arsip lengkap"),
+      link("applePodcasts", undefined, "Dengerin langsung di Apple Podcasts"),
+      link("youtube", undefined, "Versi video tiap episode"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Eps. 42: Belajar dari Kegagalan Bisnis",
+        description: "Episode paling banyak didengarkan bulan ini -- ngobrol soal bangkit setelah bisnis pertama gagal.",
+        badgeText: "Episode Favorit",
+        ctaText: "Dengerin episodenya",
+        url: PLATFORM_URL.spotify,
+      }),
       { type: "text", title: "Episode Terbaru", text: "Tuliskan judul & topik episode terbarumu di sini." },
       faqBlock([
         { question: "Bagaimana cara jadi bintang tamu?", answer: "Kirim DM lewat salah satu kanal di atas dengan topik yang ingin kamu bahas." },
@@ -1084,8 +1418,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Konten terbaru + media sosial",
     theme: "bloom",
     bio: "Konten terbaru setiap hari",
-    links: [link("instagram"), link("tiktok"), link("youtube")],
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Konten harian & momen keseharian"),
+      link("tiktok", undefined, "Video pendek paling ramai ditonton"),
+      link("youtube", undefined, "Series & konten durasi panjang"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Series: Eksperimen Konten 30 Hari",
+        description: "Series eksperimen paling seru bulan ini -- dari ide gagal sampai konten yang akhirnya viral.",
+        badgeText: "Series Terbaru",
+        ctaText: "Tonton series-nya",
+        url: PLATFORM_URL.youtube,
+      }),
       { type: "text", title: "Konten Terbaru", text: "Tuliskan konten atau series terbarumu di sini." },
       { type: "contact_form", title: "Ajak Kolaborasi" },
     ],
@@ -1100,8 +1446,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Topik seminar, booking, media sosial",
     theme: "vapor",
     bio: "Motivator & pembicara publik -- bangkitkan semangatmu",
-    links: [link("instagram"), link("youtube"), link("whatsapp", "Booking Jadi Pembicara")],
+    social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Kutipan motivasi & cuplikan seminar"),
+      link("youtube", undefined, "Rekaman seminar & talkshow lengkap"),
+      link("whatsapp", "Booking Jadi Pembicara", "Tanya jadwal & booking acara"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Bangkit Setelah Titik Terendah",
+        description: "Materi paling diminati penyelenggara acara -- membahas cara bangkit dari kegagalan jadi motivasi baru.",
+        badgeText: "Topik Andalan",
+        ctaText: "Lihat detail materi",
+        url: PLATFORM_URL.youtube,
+      }),
       { type: "text", title: "Topik Favorit", text: "Tuliskan topik seminar/talkshow yang biasa kamu bawakan di sini." },
       faqBlock([{ question: "Bagaimana cara booking untuk event?", answer: "Kirim detail acara (tanggal, tema, jumlah peserta) lewat WhatsApp, tim akan konfirmasi ketersediaan." }]),
     ],
@@ -1117,9 +1475,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, reservasi, lokasi, WhatsApp",
     theme: "amber",
     bio: "Restoran | Reservasi sekarang",
-    links: [link("whatsapp", "Reservasi via WhatsApp"), link("instagram", "Ikuti Update Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Reservasi via WhatsApp", "Reservasi meja langsung tanpa antre"),
+      link("instagram", "Ikuti Update Kami", "Menu favorit & suasana restoran"),
+    ],
     blocks: [
       mapsBlock(),
+      showcaseBlock({
+        title: "Paket Spesial Makan Berdua",
+        description: "Menu paling laris bulan ini -- porsi pas untuk berdua dengan harga bersahabat.",
+        badgeText: "Menu Andalan",
+        ctaText: "Lihat menu lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Menu", text: "Tuliskan menu andalan restoranmu di sini." },
       { type: "contact_form", title: "Kritik dan Saran" },
     ],
@@ -1132,8 +1501,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Menu, Instagram, Google Maps",
     theme: "brew",
     bio: "Cafe | Ngopi santai di sini",
-    links: [link("instagram", "Ikuti Update Kami")],
-    blocks: [mapsBlock(), { type: "text", title: "Menu", text: "Tuliskan menu andalan cafemu di sini." }],
+    social: { instagram: "username" },
+    links: [link("instagram", "Ikuti Update Kami", "Menu favorit & suasana cafe")],
+    blocks: [
+      mapsBlock(),
+      showcaseBlock({
+        title: "Kopi Susu Gula Aren Signature",
+        description: "Menu paling dicari pelanggan -- racikan kopi susu gula aren khas cafe kami.",
+        badgeText: "Menu Favorit",
+        ctaText: "Lihat menu lengkap",
+        url: PLATFORM_URL.instagram,
+      }),
+      { type: "text", title: "Menu", text: "Tuliskan menu andalan cafemu di sini." },
+    ],
   },
   {
     key: "barbershop",
@@ -1143,9 +1523,17 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, daftar harga, booking",
     theme: "noir",
     bio: "Barbershop | Booking potong rambut",
-    links: [link("whatsapp", "Booking via WhatsApp")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("whatsapp", "Booking via WhatsApp", "Booking jadwal potong rambut")],
     blocks: [
       mapsBlock(),
+      showcaseBlock({
+        title: "Paket Potong + Cukur + Creambath",
+        description: "Paket paling laris pelanggan -- kombinasi lengkap perawatan rambut & wajah dalam satu sesi.",
+        badgeText: "Layanan Favorit",
+        ctaText: "Cek harga lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." },
       faqBlock([{ question: "Perlu booking dulu atau bisa walk-in?", answer: "Bisa walk-in, tapi disarankan booking dulu via WhatsApp supaya tidak antre lama." }]),
     ],
@@ -1159,8 +1547,22 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, portofolio, booking",
     theme: "surge",
     bio: "Salon kecantikan | Booking treatment",
-    links: [link("instagram", "Lihat Hasil Treatment"), link("whatsapp", "Booking via WhatsApp")],
-    blocks: [mapsBlock(), { type: "text", title: "Layanan & Treatment", text: "Tuliskan daftar treatment & harga yang kamu tawarkan di sini." }],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", "Lihat Hasil Treatment", "Hasil treatment pelanggan sebelumnya"),
+      link("whatsapp", "Booking via WhatsApp", "Booking jadwal treatment favoritmu"),
+    ],
+    blocks: [
+      mapsBlock(),
+      showcaseBlock({
+        title: "Hair Spa & Smoothing Package",
+        description: "Treatment paling diminati bulan ini -- rambut lembut & rapi tahan berbulan-bulan.",
+        badgeText: "Treatment Favorit",
+        ctaText: "Lihat paket lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
+      { type: "text", title: "Layanan & Treatment", text: "Tuliskan daftar treatment & harga yang kamu tawarkan di sini." },
+    ],
     monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
   },
   {
@@ -1171,9 +1573,17 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Portofolio, harga, booking",
     theme: "nova",
     bio: "Fotografer | Booking sesi foto",
-    links: [link("instagram", "Lihat Portofolio")],
+    social: { instagram: "username", email: "kamu@email.com" },
+    links: [link("instagram", "Lihat Portofolio", "Portofolio hasil jepretan terbaik")],
     blocks: [
       mapsBlock("Lokasi Studio"),
+      showcaseBlock({
+        title: "Prewedding Golden Hour di Pantai",
+        description: "Salah satu sesi foto favorit klien -- momen golden hour yang bikin hasil foto makin dramatis.",
+        badgeText: "Karya Favorit",
+        ctaText: "Lihat galeri lengkap",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." },
       faqBlock([{ question: "Apakah harga sudah termasuk edit foto?", answer: "Ya, semua paket sudah termasuk edit dasar. Edit lanjutan tersedia dengan biaya tambahan." }]),
     ],
@@ -1187,8 +1597,21 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Event, portofolio, kontak",
     theme: "golden",
     bio: "Event organizer | Wujudkan acaramu",
-    links: [link("instagram", "Lihat Portofolio Acara"), link("whatsapp", "Konsultasi via WhatsApp")],
-    blocks: [{ type: "contact_form", title: "Hubungi Kami" }],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", "Lihat Portofolio Acara", "Dokumentasi acara yang sudah kami tangani"),
+      link("whatsapp", "Konsultasi via WhatsApp", "Konsultasi konsep acara impianmu"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Gala Dinner Perusahaan 300 Tamu",
+        description: "Salah satu acara terbesar yang kami tangani -- dari konsep sampai eksekusi hari-H berjalan lancar.",
+        badgeText: "Acara Favorit",
+        ctaText: "Lihat dokumentasinya",
+        url: PLATFORM_URL.instagram,
+      }),
+      { type: "contact_form", title: "Hubungi Kami" },
+    ],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
   // "sports-facility"/"nightlife-venue" -- hasil analisa galeri tema
@@ -1204,9 +1627,17 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Sewa lapangan, jadwal, booking",
     theme: "forest",
     bio: "Sewa lapangan -- booking jadwal main sekarang",
-    links: [link("whatsapp", "Booking Lapangan")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("whatsapp", "Booking Lapangan", "Booking jadwal & cek slot kosong")],
     blocks: [
       mapsBlock("Lokasi Lapangan"),
+      showcaseBlock({
+        title: "Lapangan Futsal Indoor Standar Turnamen",
+        description: "Fasilitas paling banyak dibooking -- rumput sintetis kualitas turnamen dengan pencahayaan lengkap.",
+        badgeText: "Fasilitas Favorit",
+        ctaText: "Cek jadwal kosong",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Jadwal & Harga Sewa", text: "Tuliskan jam operasional & harga sewa per jam di sini." },
       faqBlock([{ question: "Apakah bisa booking harian atau harus langganan?", answer: "Bisa booking harian atau paket langganan bulanan -- chat WhatsApp buat cek slot kosong." }]),
     ],
@@ -1220,9 +1651,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Event, reservasi meja, lokasi",
     theme: "noir",
     bio: "Tempat nongkrong malam -- reservasi meja sekarang",
-    links: [link("whatsapp", "Reservasi Meja"), link("instagram", "Lihat Event Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Reservasi Meja", "Reservasi meja untuk malam ini"),
+      link("instagram", "Lihat Event Kami", "Line-up DJ & suasana malam ini"),
+    ],
     blocks: [
       mapsBlock(),
+      showcaseBlock({
+        title: "Ladies Night: DJ Set & Promo Spesial",
+        description: "Event mingguan paling ramai dikunjungi -- line-up DJ lokal dengan promo minuman spesial.",
+        badgeText: "Event Malam Ini",
+        ctaText: "Reservasi sekarang",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Event Malam Ini", text: "Tuliskan jadwal DJ/live music/tema malam mingguan di sini." },
       { type: "contact_form", title: "Reservasi Meja" },
     ],
@@ -1240,8 +1682,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Listing properti, konsultasi, kontak",
     theme: "corporate",
     bio: "Agen properti -- bantu wujudkan rumah impianmu",
-    links: [link("whatsapp", "Konsultasi Properti"), link("instagram", "Lihat Listing Rumah")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("whatsapp", "Konsultasi Properti", "Konsultasi properti & simulasi KPR"),
+      link("instagram", "Lihat Listing Rumah", "Listing terbaru & tur virtual rumah"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Rumah Minimalis 2 Lantai di Kawasan Strategis",
+        description: "Listing paling banyak ditanyakan bulan ini -- lokasi strategis dekat akses tol & sekolah.",
+        badgeText: "Listing Favorit",
+        ctaText: "Lihat detail listing",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Listing Terbaru", text: "Tuliskan properti yang sedang kamu tawarkan (lokasi, harga, tipe) di sini." },
       faqBlock([{ question: "Apakah bisa bantu proses KPR?", answer: "Bisa, aku bantu proses dari awal sampai akad -- termasuk simulasi & pengajuan KPR ke bank rekanan." }]),
       { type: "contact_form", title: "Konsultasi Gratis" },
@@ -1256,8 +1709,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Paket nikah, portofolio, konsultasi",
     theme: "champagne",
     bio: "Wedding organizer -- wujudkan hari bahagiamu",
-    links: [link("whatsapp", "Konsultasi Paket Nikah"), link("instagram", "Lihat Portofolio Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("whatsapp", "Konsultasi Paket Nikah", "Konsultasi konsep & cek jadwal tersedia"),
+      link("instagram", "Lihat Portofolio Kami", "Portofolio pernikahan yang sudah kami tangani"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Konsep Garden Wedding Rustic",
+        description: "Salah satu konsep pernikahan favorit klien -- nuansa outdoor hangat dengan dekorasi rustic.",
+        badgeText: "Portofolio Favorit",
+        ctaText: "Lihat portofolio lengkap",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Paket Pernikahan", text: "Tuliskan paket WO (harga, vendor, layanan) yang kamu tawarkan di sini." },
       faqBlock([{ question: "Berapa lama sebelum hari-H sebaiknya booking?", answer: "Idealnya 6-12 bulan sebelumnya supaya vendor favorit masih tersedia -- tapi tetap hubungi kami untuk cek jadwal terdekat." }]),
       { type: "contact_form", title: "Konsultasi Pernikahan" },
@@ -1271,9 +1735,17 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Layanan, harga, antar-jemput",
     theme: "azure",
     bio: "Laundry -- bersih, wangi, cepat selesai",
-    links: [link("whatsapp", "Order Antar-Jemput")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("whatsapp", "Order Antar-Jemput", "Order antar-jemput sekarang")],
     blocks: [
       mapsBlock(),
+      showcaseBlock({
+        title: "Paket Cuci Setrika Kilat 6 Jam",
+        description: "Layanan paling sering dipesan pelanggan -- cocok untuk kebutuhan mendadak, selesai hari yang sama.",
+        badgeText: "Layanan Favorit",
+        ctaText: "Lihat harga lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Layanan & Harga", text: "Tuliskan jenis layanan (kiloan/satuan/setrika) & harga per kg di sini." },
       faqBlock([{ question: "Apakah ada layanan antar-jemput?", answer: "Ada, gratis untuk area sekitar -- chat WhatsApp untuk cek jangkauan & jadwal jemput." }]),
     ],
@@ -1286,9 +1758,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kelas, membership, booking",
     theme: "electric",
     bio: "Gym & fitness center -- mulai transformasi tubuhmu",
-    links: [link("whatsapp", "Daftar Member"), link("instagram", "Lihat Fasilitas Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Daftar Member", "Daftar member & tanya jadwal kelas"),
+      link("instagram", "Lihat Fasilitas Kami", "Suasana gym & momen member"),
+    ],
     blocks: [
       mapsBlock("Lokasi Gym"),
+      showcaseBlock({
+        title: "HIIT Class: Transformasi 30 Hari",
+        description: "Program kelas paling diminati member baru -- hasil terlihat nyata dalam 30 hari konsisten latihan.",
+        badgeText: "Kelas Favorit",
+        ctaText: "Lihat jadwal kelas",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Kelas & Membership", text: "Tuliskan jenis kelas (yoga, HIIT, angkat beban) & harga membership di sini." },
       faqBlock([{ question: "Ada trial gratis?", answer: "Ada, trial 1 hari gratis untuk member baru -- datang langsung atau daftar via WhatsApp dulu." }]),
     ],
@@ -1308,8 +1791,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Paket wisata, booking, lokasi",
     theme: "lagoon",
     bio: "Agen wisata, wujudkan liburan impianmu",
-    links: [link("whatsapp", "Booking Paket Wisata"), link("instagram", "Lihat Destinasi Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Paket Wisata", "Booking paket & tanya ketersediaan"),
+      link("instagram", "Lihat Destinasi Kami", "Dokumentasi trip & testimoni peserta"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Open Trip 3D2N Labuan Bajo",
+        description: "Paket paling laris bulan ini -- island hopping, snorkeling, dan sunset di Pulau Padar.",
+        badgeText: "Paket Favorit",
+        ctaText: "Lihat detail paket",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Paket Wisata", text: "Tuliskan paket wisata & harga yang kamu tawarkan di sini." },
       mapsBlock("Kantor Kami"),
       faqBlock([{ question: "Apakah harga sudah termasuk penginapan?", answer: "Tergantung paket -- detail sudah dicantumkan di masing-masing paket, atau tanya langsung via WhatsApp." }]),
@@ -1323,8 +1817,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Rute wisata, cerita perjalanan, booking",
     theme: "dune",
     bio: "Pemandu wisata lokal -- jelajahi bareng aku",
-    links: [link("whatsapp", "Booking Tur"), link("instagram", "Lihat Cerita Perjalanan")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Tur", "Booking jadwal tur bareng aku"),
+      link("instagram", "Lihat Cerita Perjalanan", "Cerita perjalanan & spot tersembunyi"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Susur Kota Tua: Jejak Sejarah Tersembunyi",
+        description: "Rute paling diminati peserta tur -- jalan kaki santai sambil dengerin cerita sejarah tiap sudut kota.",
+        badgeText: "Rute Favorit",
+        ctaText: "Lihat rute lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Rute & Destinasi", text: "Tuliskan rute/destinasi favorit yang biasa kamu pandu di sini." },
       faqBlock([{ question: "Berapa orang maksimal per grup tur?", answer: "Fleksibel sesuai permintaan -- chat WhatsApp buat diskusi jumlah peserta & jadwal." }]),
     ],
@@ -1343,9 +1848,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Fasilitas, lokasi, booking",
     theme: "tide",
     bio: "Homestay & villa -- nginap nyaman ala rumah sendiri",
-    links: [link("whatsapp", "Booking Sekarang"), link("instagram", "Lihat Villa Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Sekarang", "Booking langsung, cek ketersediaan tanggal"),
+      link("instagram", "Lihat Villa Kami", "Suasana villa & review tamu"),
+    ],
     blocks: [
       mapsBlock("Lokasi Villa"),
+      showcaseBlock({
+        title: "Villa 3 Kamar dengan Private Pool",
+        description: "Unit paling sering dibooking -- kolam renang privat & pemandangan langsung ke sawah.",
+        badgeText: "Villa Favorit",
+        ctaText: "Cek ketersediaan",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Fasilitas", text: "Tuliskan fasilitas villa/homestay (kolam renang, dapur, WiFi, dst) di sini." },
       faqBlock([{ question: "Berapa lama minimal menginap?", answer: "Minimal 1 malam, tapi ada diskon khusus untuk booking mingguan -- tanya via WhatsApp." }]),
     ],
@@ -1358,8 +1874,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Paket diving, spot, booking",
     theme: "azure",
     bio: "Diving center -- jelajahi bawah laut bareng kami",
-    links: [link("whatsapp", "Booking Trip Diving"), link("instagram", "Lihat Spot Diving")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Trip Diving", "Booking trip & tanya jadwal terdekat"),
+      link("instagram", "Lihat Spot Diving", "Dokumentasi bawah laut & spot favorit"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Trip Diving: Coral Garden Bunaken",
+        description: "Spot paling favorit peserta trip -- terumbu karang berwarna-warni dengan visibilitas air jernih.",
+        badgeText: "Spot Favorit",
+        ctaText: "Lihat detail trip",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Paket Diving", text: "Tuliskan paket diving (open water, spot favorit, sewa alat) & harga di sini." },
       faqBlock([{ question: "Perlu sertifikat diving dulu?", answer: "Untuk pemula tersedia paket trial diving tanpa sertifikat, didampingi instruktur bersertifikat." }]),
     ],
@@ -1372,8 +1899,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Rute kuliner, jadwal, booking",
     theme: "terracotta",
     bio: "Wisata kuliner -- jelajahi rasa autentik daerah ini",
-    links: [link("whatsapp", "Booking Tur Kuliner"), link("instagram", "Lihat Menu Tur")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Tur Kuliner", "Booking jadwal tur kuliner terdekat"),
+      link("instagram", "Lihat Menu Tur", "Cuplikan tiap pemberhentian tur"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Tur Malam: 5 Jajanan Legendaris Kota",
+        description: "Rute paling laris -- lima tempat makan legendaris dalam satu tur malam yang bikin kenyang.",
+        badgeText: "Rute Favorit",
+        ctaText: "Lihat rute lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Rute Kuliner", text: "Tuliskan tempat makan/jajanan khas yang dikunjungi selama tur di sini." },
       faqBlock([{ question: "Harga tur sudah termasuk makanan?", answer: "Sudah, semua paket termasuk cicip makanan di setiap pemberhentian -- tinggal siapkan perut kosong!" }]),
     ],
@@ -1386,8 +1924,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Trekking, camping, booking",
     theme: "highland",
     bio: "Trekking & camping guide -- taklukkan alam bareng aku",
-    links: [link("whatsapp", "Booking Trip"), link("instagram", "Lihat Dokumentasi Trip")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Trip", "Booking trip & tanya perlengkapan"),
+      link("instagram", "Lihat Dokumentasi Trip", "Dokumentasi pendakian & camping ground"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Pendakian Sunrise: Puncak Terbaik Akhir Pekan",
+        description: "Trip paling diminati akhir pekan -- summit attack dini hari buat kejar momen sunrise di puncak.",
+        badgeText: "Trip Favorit",
+        ctaText: "Lihat detail trip",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Rute & Gunung", text: "Tuliskan jalur pendakian/camping ground favorit yang biasa kamu pandu di sini." },
       faqBlock([{ question: "Perlu bawa alat sendiri?", answer: "Tenda & alat masak bisa disewa, tinggal bawa perlengkapan pribadi -- detail lengkap dikirim setelah booking." }]),
     ],
@@ -1400,15 +1949,29 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Destinasi, titik kumpul, booking",
     theme: "skyline",
     bio: "City tour -- kenali kota ini lebih dekat",
-    links: [link("whatsapp", "Booking City Tour"), link("instagram", "Lihat Destinasi Tur")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking City Tour", "Booking jadwal city tour terdekat"),
+      link("instagram", "Lihat Destinasi Tur", "Cuplikan destinasi tiap tur"),
+    ],
     blocks: [
       mapsBlock("Titik Kumpul"),
+      showcaseBlock({
+        title: "Tur Sore: Landmark & Sunset Point",
+        description: "Rute paling diminati peserta -- kunjungi landmark bersejarah lalu ditutup dengan sunset point terbaik kota.",
+        badgeText: "Destinasi Favorit",
+        ctaText: "Lihat rute lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Destinasi Wajib", text: "Tuliskan landmark/tempat bersejarah yang dikunjungi selama tur di sini." },
       faqBlock([{ question: "Tur jalan kaki atau naik kendaraan?", answer: "Tergantung paket -- ada opsi jalan kaki santai atau naik kendaraan untuk jarak lebih jauh." }]),
     ],
   },
 
   // ---------- Lifestyle ----------
+  // TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat catatan
+  // lengkap di atas file ini) -- kartu tautan+FAQ yang sudah diperkaya
+  // deskripsi dinilai sudah cukup mewakili kategori ini.
   {
     key: "travel-blogger",
     category: "lifestyle",
@@ -1417,7 +1980,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Destinasi, panduan perjalanan, media sosial",
     theme: "lagoon",
     bio: "Travel blogger | Cerita dari berbagai destinasi",
-    links: [link("instagram"), link("youtube"), link("tiktok")],
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username" },
+    links: [
+      link("instagram", undefined, "Foto destinasi & cerita perjalanan"),
+      link("youtube", undefined, "Vlog perjalanan durasi panjang"),
+      link("tiktok", undefined, "Tips traveling dalam video singkat"),
+    ],
     blocks: [
       { type: "text", title: "Destinasi Terbaru", text: "Tuliskan destinasi yang baru kamu kunjungi & tips perjalanannya di sini." },
       faqBlock([
@@ -1434,7 +2002,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Latihan, program, booking",
     theme: "dune",
     bio: "Fitness coach | Program latihan bareng aku",
-    links: [link("instagram"), link("whatsapp")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", undefined, "Progress member & tips latihan"),
+      link("whatsapp", undefined, "Konsultasi program sesuai tujuanmu"),
+    ],
     blocks: [
       { type: "text", title: "Program Latihan", text: "Tuliskan jenis program latihan yang kamu tawarkan (durasi, target, harga) di sini." },
       { type: "contact_form", title: "Konsultasi Gratis" },
@@ -1449,7 +2021,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Tutorial, produk, media sosial",
     theme: "rose",
     bio: "Beauty creator | Tutorial makeup & skincare",
-    links: [link("instagram"), link("tiktok"), link("youtube")],
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel" },
+    links: [
+      link("instagram", undefined, "Tutorial makeup & rekomendasi produk"),
+      link("tiktok", undefined, "Tutorial singkat paling sering ditonton"),
+      link("youtube", undefined, "Tutorial lengkap step-by-step"),
+    ],
     blocks: [
       { type: "text", title: "Produk Favorit", text: "Tuliskan produk makeup/skincare favoritmu yang sering direkomendasikan di sini." },
       faqBlock([
@@ -1466,7 +2043,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Konten, rekomendasi, afiliasi",
     theme: "peach",
     bio: "Lifestyle creator | Rekomendasi favoritku",
-    links: [link("instagram"), link("tiktok")],
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", undefined, "Rekomendasi tempat & produk favorit"),
+      link("tiktok", undefined, "Konten singkat kebiasaan sehari-hari"),
+    ],
     blocks: [{ type: "text", title: "Rekomendasi Favorit", text: "Tuliskan produk, tempat, atau kebiasaan favorit yang sering kamu bagikan di sini." }],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -1478,7 +2059,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Outfit, tautan belanja, media sosial",
     theme: "rose",
     bio: "Fashion creator | Inspirasi outfit harian",
-    links: [link("instagram"), link("tiktok")],
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", undefined, "Inspirasi outfit harian & mix-match"),
+      link("tiktok", undefined, "OOTD dalam video singkat"),
+    ],
     blocks: [
       { type: "text", title: "Outfit Guide", text: "Tuliskan gaya/kategori outfit yang sering kamu bagikan (kasual, kerja, formal, dst) di sini." },
       faqBlock([{ question: "Baju di outfit kamu beli di mana?", answer: "Cek deskripsi tautan produk di atas -- link belanja selalu aku cantumkan di sana." }]),
@@ -1495,8 +2080,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Proyek + keahlian + kontak",
     theme: "minimal",
     bio: "Portofolio -- proyek & keahlianku",
-    links: [link("linkedin")],
+    social: { linkedin: "username", email: "kamu@email.com" },
+    links: [link("linkedin", undefined, "Pengalaman kerja & rekomendasi kolega")],
     blocks: [
+      showcaseBlock({
+        title: "Studi Kasus: Optimasi Alur Kerja Tim",
+        description: "Proyek yang paling ingin aku tonjolkan -- dari identifikasi masalah sampai solusi yang diterapkan.",
+        badgeText: "Proyek Unggulan",
+        ctaText: "Baca studi kasus",
+        url: PLATFORM_URL.linkedin,
+      }),
       { type: "text", title: "Proyek", text: "Tuliskan proyek-proyekmu di sini." },
       faqBlock([{ question: "Proyek seperti apa yang bisa kamu kerjakan?", answer: "Lihat pengalaman & keahlian di atas, atau hubungi saya langsung untuk diskusi proyekmu." }]),
       { type: "contact_form", title: "Hubungi Saya" },
@@ -1509,7 +2102,17 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Kumpulan semua tautanmu",
     theme: "default",
     bio: "Semua link pentingku, di satu tempat.",
-    links: [link("instagram"), link("tiktok"), link("youtube"), link("whatsapp")],
+    // Sengaja TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat
+    // catatan lengkap di atas file ini) -- "Link Hub" tujuannya SANGAT
+    // minimalis, cuma kumpulan tautan, menambah kartu di sini melawan
+    // tujuan desainnya sendiri.
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", undefined, "Semua update ada di sini"),
+      link("tiktok", undefined, "Konten video terbaru"),
+      link("youtube", undefined, "Video lengkap & playlist"),
+      link("whatsapp", undefined, "Chat langsung denganku"),
+    ],
   },
   {
     key: "event",
@@ -1519,8 +2122,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Info acara + tiket + lokasi",
     theme: "golden",
     bio: "Info acara -- jangan sampai ketinggalan!",
-    links: [link("instagram")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("instagram", undefined, "Info tiket & update terbaru acara")],
     blocks: [
+      showcaseBlock({
+        title: "Grand Opening: Malam Puncak Perayaan",
+        description: "Momen utama acara yang paling dinanti -- jangan sampai lewatkan sesi ini.",
+        badgeText: "Acara Utama",
+        ctaText: "Lihat detail acara",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Info Acara", text: "Tuliskan tanggal, lokasi, dan info acara di sini." },
       faqBlock([{ question: "Bagaimana cara beli tiket?", answer: "Info tiket & harga akan diumumkan lewat Instagram -- pantau terus supaya tidak ketinggalan." }]),
     ],
@@ -1533,8 +2144,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "WhatsApp, Discord, Telegram, pendaftaran",
     theme: "ocean",
     bio: "Gabung komunitas kami",
-    links: [link("whatsapp", "Gabung Grup WhatsApp"), link("discord"), link("telegram")],
+    social: { whatsapp: "62812xxxxxxxx", telegram: "username", instagram: "username" },
+    links: [
+      link("whatsapp", "Gabung Grup WhatsApp", "Gabung grup diskusi utama"),
+      link("discord", undefined, "Ngobrol & main bareng member lain"),
+      link("telegram", undefined, "Info & pengumuman tercepat"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Sharing Session Mingguan",
+        description: "Kegiatan rutin paling seru yang bikin komunitas ini makin solid -- terbuka untuk semua member.",
+        badgeText: "Kegiatan Rutin",
+        ctaText: "Lihat jadwal lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       faqBlock([{ question: "Gratis atau berbayar gabung komunitasnya?", answer: "Gratis! Klik salah satu tautan di atas untuk langsung gabung." }]),
       { type: "contact_form", title: "Daftar Sekarang" },
     ],
@@ -1546,8 +2169,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Platform donasi + media sosial",
     theme: "mint",
     bio: "Dukung perjuanganku",
-    links: [link("instagram")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("instagram", undefined, "Update progress & kabar terbaru")],
     blocks: [
+      showcaseBlock({
+        title: "Perjuangan yang Sedang Aku Jalani",
+        description: "Cerita lengkap kenapa dukunganmu berarti banget buatku saat ini.",
+        badgeText: "Progress Donasi",
+        ctaText: "Baca cerita lengkap",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Tentang Perjuangan Ini", text: "Ceritakan kenapa kamu butuh dukungan & untuk apa dana yang terkumpul dipakai di sini." },
       faqBlock([{ question: "Dana yang terkumpul dipakai untuk apa?", answer: "Lihat cerita di atas untuk rinciannya -- setiap dukungan sangat berarti, terima kasih!" }]),
     ],
@@ -1565,7 +2196,15 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     // preset yang nongkrong di galeri tanpa konteks pemakaian.
     theme: "xmas",
     bio: "Selamat merayakan! Semoga hari-harimu penuh kehangatan.",
-    links: [link("instagram"), link("whatsapp")],
+    // Sengaja TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat
+    // catatan lengkap di atas file ini) -- template ucapan musiman ini
+    // sengaja dibuat SANGAT sederhana (satu paragraf ucapan), menambah
+    // kartu di sini melawan tujuan desainnya.
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("instagram", undefined, "Ucapan & momen hangat musim ini"),
+      link("whatsapp", undefined, "Kirim ucapan balik langsung"),
+    ],
     blocks: [{ type: "text", title: "Ucapan Untukmu", text: "Tuliskan ucapan hangat musim ini untuk pengunjung halamanmu di sini." }],
   },
   {
@@ -1575,7 +2214,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Teaser + email/WhatsApp",
     theme: "polaris",
     bio: "Sesuatu yang seru segera hadir. Nantikan!",
-    links: [link("whatsapp")],
+    // Sengaja TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat
+    // catatan lengkap di atas file ini) -- "Coming Soon" secara harfiah
+    // BELUM ada yang bisa ditonjolkan, menambah kartu detail malah
+    // bertentangan dengan konsep teaser-nya.
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [link("whatsapp", undefined, "Jadi yang pertama tahu saat rilis")],
     blocks: [{ type: "contact_form", title: "Beri Tahu Aku" }],
   },
   {
@@ -1585,8 +2229,16 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Produk + CTA + social proof",
     theme: "blaze",
     bio: "Produk baru sudah hadir!",
-    links: [link("instagram")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [link("instagram", undefined, "Sneak peek & update peluncuran")],
     blocks: [
+      showcaseBlock({
+        title: "Produk Andalan Edisi Perdana",
+        description: "Produk utama yang kami luncurkan -- kombinasi kualitas terbaik dengan harga peluncuran spesial.",
+        badgeText: "Baru Diluncurkan",
+        ctaText: "Lihat detail produk",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Tentang Produk Ini", text: "Tuliskan keunggulan & alasan kenapa produk ini wajib dicoba di sini." },
       faqBlock([{ question: "Kapan produk ini bisa dibeli?", answer: "Cek tombol beli di Toko halaman ini, atau pantau Instagram kami untuk info stok terbaru." }]),
     ],
@@ -1619,8 +2271,19 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Program sosial, donasi, relawan",
     theme: "blush",
     bio: "Yayasan -- bersama kita bisa berbuat lebih banyak",
-    links: [link("instagram"), link("whatsapp", "Hubungi Kami")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
+    links: [
+      link("instagram", undefined, "Dokumentasi program & penyaluran bantuan"),
+      link("whatsapp", "Hubungi Kami", "Tanya program & cara bergabung"),
+    ],
     blocks: [
+      showcaseBlock({
+        title: "Program Beasiswa Anak Yatim & Dhuafa",
+        description: "Program paling banyak didukung donatur -- bantu wujudkan pendidikan layak untuk anak-anak binaan kami.",
+        badgeText: "Program Unggulan",
+        ctaText: "Lihat detail program",
+        url: PLATFORM_URL.instagram,
+      }),
       { type: "text", title: "Program Kami", text: "Tuliskan program/kegiatan sosial yang sedang berjalan di sini." },
       faqBlock([{ question: "Bagaimana cara donasi/menjadi relawan?", answer: "Klik tautan di atas atau isi formulir di bawah, tim kami akan menghubungi balik." }]),
       { type: "contact_form", title: "Gabung Jadi Relawan" },
@@ -1635,9 +2298,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     description: "Jadwal kegiatan, info, kontak",
     theme: "emerald",
     bio: "Info kegiatan & jadwal komunitas kami",
-    links: [link("whatsapp", "Gabung Grup Info"), link("instagram")],
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Gabung Grup Info", "Gabung grup info kegiatan"),
+      link("instagram", undefined, "Dokumentasi kajian & kegiatan rutin"),
+    ],
     blocks: [
       mapsBlock("Lokasi Kami"),
+      showcaseBlock({
+        title: "Kajian Rutin Selepas Maghrib",
+        description: "Kegiatan paling rutin diikuti jamaah -- kajian ringan bertema kehidupan sehari-hari selepas maghrib.",
+        badgeText: "Kegiatan Favorit",
+        ctaText: "Lihat jadwal lengkap",
+        url: PLATFORM_URL.whatsapp,
+      }),
       { type: "text", title: "Jadwal Kegiatan", text: "Tuliskan jadwal kajian/kegiatan rutin komunitas di sini." },
       faqBlock([{ question: "Bagaimana cara ikut kegiatan?", answer: "Gabung grup WhatsApp untuk info jadwal terbaru, semua kegiatan terbuka untuk umum." }]),
     ],
@@ -1655,7 +2329,11 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   // polos) dipakai template ke-2 supaya tidak monoton satu tema yang sama
   // 3x. Kategori "business" -- portofolio profesional developer/desainer/
   // founder, sejalan dgn "professional-cv"/"consultant"/"agency" yang
-  // sudah ada di kategori ini, BUKAN kategori baru terpisah.
+  // sudah ada di kategori ini, BUKAN kategori baru terpisah. Ketiga
+  // template ini TETAP eksplisit memakai showcaseImagePath (dashboard-
+  // mockup.jpg) -- beda dari perluasan showcase ke template lain 26
+  // Agustus 2026 (lihat catatan revisi lengkap di atas file ini) yang
+  // sengaja TANPA gambar.
   {
     key: "fullstack-developer",
     category: "business",
@@ -1678,6 +2356,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         description: "Dashboard analytics real-time untuk monitoring KPI bisnis dan performa produk. Dibangun dengan Next.js, Tailwind CSS, dan PostgreSQL.",
         badgeText: "Project Unggulan",
         ctaText: "Lihat studi kasus",
+        url: "https://websitekamu.com/studi-kasus",
+        imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
       }),
     ],
     monetizationHint: "Tambahkan Konsultasi Berbayar di menu Produk & Monetisasi kalau mau menawarkan sesi review kode/arsitektur berbayar.",
@@ -1703,6 +2383,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         description: "Studi kasus peningkatan conversion rate 34% lewat riset pengguna & desain ulang alur onboarding.",
         badgeText: "Studi Kasus",
         ctaText: "Baca selengkapnya",
+        url: "https://websitekamu.com/studi-kasus",
+        imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
       }),
     ],
     monetizationHint: "Tambahkan Produk Digital (template Figma/UI kit) di menu Toko untuk monetisasi tambahan dari portofolio ini.",
@@ -1728,6 +2410,8 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         description: "Dari ide sampai 1.000 pengguna pertama dalam 90 hari -- pelajaran validasi produk & growth awal.",
         badgeText: "Studi Kasus",
         ctaText: "Baca ceritanya",
+        url: "https://websitekamu.com/studi-kasus",
+        imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
       }),
     ],
     monetizationHint: "Aktifkan Dukungan (Donasi) kalau audiensmu ingin membantu biaya operasional produk secara sukarela.",
