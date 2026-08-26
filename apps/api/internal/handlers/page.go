@@ -1105,7 +1105,18 @@ var availableThemes = map[string]bool{
 	// developer bertema navy gelap), lihat catatan lengkap di PageThemeName
 	// (apps/web/lib/page-themes.ts).
 	"console": true,
-	"custom":  true,
+	// 6 preset DOODLE, 26 Agustus 2026 (permintaan langsung pengguna:
+	// "perbanyak tema doodle") -- lihat catatan lingkup lengkap di
+	// DOODLE_THEME_NAMES (apps/web/lib/page-themes.ts). Ditambahkan
+	// LANGSUNG di sini bersamaan dengan frontend (bukan menyusul) --
+	// persis bug yang sudah dua kali terjadi sebelumnya (15 tema batch 21
+	// Agustus, lalu diperbaiki 25 Agustus): tema baru cuma terdaftar di
+	// THEME_PRESETS (frontend) tapi lupa ditambahkan ke allowlist ini,
+	// kreator dapat error 400 "tema tidak dikenal" saat menyimpan walau
+	// preview tampil normal.
+	"scrawl": true, "notebook": true, "meadow": true,
+	"voyage": true, "latte": true, "confetti": true,
+	"custom": true,
 }
 
 // availableCustomFonts -- "Desain 2.0": diperluas dari 5 jadi 9 pilihan font

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <defs>
+    <symbol id="twinkle" viewBox="-10 -10 20 20">
+      <path d="M0,-9 L0,9 M-8.6,-2.8 L8.6,2.8 M8.6,-2.8 L-8.6,2.8 M-5.3,7.3 L5.3,-7.3 M5.3,7.3 L-5.3,-7.3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="tick" viewBox="-9 -8 18 16">
+      <path d="M-6,0 L-1,6 L7,-7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="curl-arrow" viewBox="-10 -10 20 20">
+      <path d="M-8,5 Q-2,-9 8,1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8,1 L3,-2 M8,1 L4,4" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  <rect width="260" height="260" fill="#EFF5FC"/>
+  <g stroke="#5B7FA6" stroke-width="1" opacity="0.18">
+    <line x1="0" y1="30" x2="260" y2="30"/>
+    <line x1="0" y1="60" x2="260" y2="60"/>
+    <line x1="0" y1="90" x2="260" y2="90"/>
+    <line x1="0" y1="120" x2="260" y2="120"/>
+    <line x1="0" y1="150" x2="260" y2="150"/>
+    <line x1="0" y1="180" x2="260" y2="180"/>
+    <line x1="0" y1="210" x2="260" y2="210"/>
+    <line x1="0" y1="240" x2="260" y2="240"/>
+  </g>
+  <g fill="none" stroke="#5B7FA6" stroke-width="2.4" opacity="0.55">
+    <use href="#twinkle" width="20" height="20" x="-10" y="-10" transform="translate(45,45) scale(0.9)"/>
+    <use href="#tick" width="18" height="16" x="-9" y="-8" transform="translate(150,35) rotate(-6)"/>
+    <use href="#curl-arrow" width="20" height="20" x="-10" y="-10" transform="translate(220,70)"/>
+    <use href="#twinkle" width="20" height="20" x="-10" y="-10" transform="translate(35,140) rotate(15)"/>
+    <use href="#tick" width="18" height="16" x="-9" y="-8" transform="translate(190,140) scale(1.1)"/>
+    <use href="#curl-arrow" width="20" height="20" x="-10" y="-10" transform="translate(90,190) rotate(-25)"/>
+    <use href="#twinkle" width="20" height="20" x="-10" y="-10" transform="translate(215,215) scale(0.8)"/>
+    <use href="#tick" width="18" height="16" x="-9" y="-8" transform="translate(60,230) rotate(10)"/>
+  </g>
+</svg>

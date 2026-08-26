@@ -790,6 +790,15 @@ export const THEME_PRESETS = [
   "azure",
   "blush",
   "console",
+  // 6 preset DOODLE, 26 Agustus 2026 (permintaan langsung pengguna:
+  // "perbanyak tema doodle") -- lihat catatan lingkup lengkap di
+  // DOODLE_THEME_NAMES (page-themes.ts).
+  "scrawl",
+  "notebook",
+  "meadow",
+  "voyage",
+  "latte",
+  "confetti",
 ] as const;
 
 export function getMyPage() {

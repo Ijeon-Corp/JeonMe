@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <defs>
+    <symbol id="cup" viewBox="-8 -7 16 17">
+      <path d="M-7,-6 L7,-6 L5,9 L-5,9 Z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7,-3 C13,-3 13,4 7,4" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="steam" viewBox="-4 -12 8 12">
+      <path d="M-2,-1 C-4,-5 0,-7 -2,-11" fill="none" stroke-linecap="round"/>
+      <path d="M2,-1 C0,-5 4,-7 2,-11" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="bean" viewBox="-7 -9 14 18">
+      <path d="M0,-8 C6,-8 6,0 0,8 C-6,0 -6,-8 0,-8 Z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M0,-6 C-2,-2 2,2 0,6" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  <rect width="260" height="260" fill="#F3E6D6"/>
+  <g fill="none" stroke="#6B4A34" stroke-width="2.3" opacity="0.5">
+    <use href="#cup" width="16" height="17" x="-8" y="-7" transform="translate(50,55) scale(1.2)"/>
+    <use href="#steam" width="8" height="12" x="-4" y="-12" transform="translate(50,32)"/>
+    <use href="#bean" width="14" height="18" x="-7" y="-9" transform="translate(170,45) rotate(20)"/>
+    <use href="#cup" width="16" height="17" x="-8" y="-7" transform="translate(220,130)"/>
+    <use href="#steam" width="8" height="12" x="-4" y="-12" transform="translate(220,110)"/>
+    <use href="#bean" width="14" height="18" x="-7" y="-9" transform="translate(60,150) rotate(-15) scale(0.9)"/>
+    <use href="#bean" width="14" height="18" x="-7" y="-9" transform="translate(130,190) rotate(35)"/>
+    <use href="#cup" width="16" height="17" x="-8" y="-7" transform="translate(70,225) scale(0.95)"/>
+    <use href="#steam" width="8" height="12" x="-4" y="-12" transform="translate(70,204)"/>
+  </g>
+</svg>

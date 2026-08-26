@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { THEME_PRESETS } from "@/lib/api-client";
-import { PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
+import { DOODLE_THEME_NAMES, PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
 import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 
 // Permintaan langsung pengguna: galeri tema dipisah 2 tab -- "Warna &
@@ -19,12 +19,21 @@ import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 // "background yang bergerak seperti menggunakan mov atau gif") -- TERPISAH
 // dari "3D/Live" karena ini <video> sungguhan (file .mp4, ukuran jauh
 // lebih besar dari animasi CSS flow/pulse/drift), lihat VIDEO_THEME_NAMES.
+// Tab kelima "Doodle" (permintaan langsung pengguna, 26 Agustus 2026:
+// "saya mau perbanyak tema doodle") -- pola ikon garis tangan di-tile
+// (SVG statis, lihat DOODLE_THEME_NAMES), beda dari "Wallpaper" (foto
+// komposisi tunggal) maupun preset gradien CSS murni di tab pertama.
 const GRADIENT_PRESETS = THEME_PRESETS.filter(
-  (t) => !WALLPAPER_THEME_NAMES.includes(t) && !THREE_D_THEME_NAMES.includes(t) && !VIDEO_THEME_NAMES.includes(t)
+  (t) =>
+    !WALLPAPER_THEME_NAMES.includes(t) &&
+    !THREE_D_THEME_NAMES.includes(t) &&
+    !VIDEO_THEME_NAMES.includes(t) &&
+    !DOODLE_THEME_NAMES.includes(t)
 );
 const WALLPAPER_PRESETS = THEME_PRESETS.filter((t) => WALLPAPER_THEME_NAMES.includes(t));
 const THREE_D_PRESETS = THEME_PRESETS.filter((t) => THREE_D_THEME_NAMES.includes(t));
 const VIDEO_PRESETS = THEME_PRESETS.filter((t) => VIDEO_THEME_NAMES.includes(t));
+const DOODLE_PRESETS = THEME_PRESETS.filter((t) => DOODLE_THEME_NAMES.includes(t));
 
 function ThemeTile({
   active,
@@ -73,7 +82,7 @@ function ThemeTile({
 
 export default function DesignThemePage() {
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
-  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video">("gradien");
+  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video" | "doodle">("gradien");
   const router = useRouter();
 
   if (loading || !page) return <PageSkeleton />;
@@ -127,6 +136,15 @@ export default function DesignThemePage() {
           >
             Video
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("doodle")}
+            className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              tab === "doodle" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            Doodle
+          </button>
         </div>
 
         {/* Kartu galeri portrait ala Linktree: sampel huruf "Aa" di kiri atas
@@ -167,7 +185,9 @@ export default function DesignThemePage() {
             ? WALLPAPER_PRESETS
             : tab === "3d"
             ? THREE_D_PRESETS
-            : VIDEO_PRESETS
+            : tab === "video"
+            ? VIDEO_PRESETS
+            : DOODLE_PRESETS
           ).map((theme) => {
             const meta = PAGE_THEMES[theme];
             // "Live Wallpaper" (permintaan susulan): 3 preset flow/pulse/drift

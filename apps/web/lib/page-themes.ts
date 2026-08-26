@@ -142,6 +142,26 @@ export type PageThemeName =
   // (hijau-hitam + aksen emas, kesan mewah) -- ini condong ke estetika
   // terminal/kode, cocok developer/tech/SaaS.
   | "console"
+  // 6 preset DOODLE baru (permintaan langsung pengguna, 26 Agustus 2026:
+  // "saya mau perbanyak tema doodle dengan backgorund tema doodle bisa
+  // dari buat sendiri ataupun ambil gambar dari yang gratis") -- BEDA dari
+  // WALLPAPER_THEME_NAMES (foto asli, komposisi tunggal, bg-cover) dan
+  // dari "grid"/"mesh"/"aurora" (pola MURNI CSS gradient, tidak bisa
+  // membentuk ikon garis tangan seperti bunga/pesawat kertas). Ini pola
+  // ikon GARIS TANGAN (SVG, digambar sendiri -- bukan diunduh, supaya
+  // bebas lisensi sepenuhnya) yang di-TILE berulang lewat `bg-repeat`,
+  // disimpan statis di public/doodles/*.svg (pola aset SAMA seperti
+  // wallpaper: file statis, bukan digenerate saat runtime). Tiap preset
+  // motif ikon BEDA supaya cocok kebutuhan kategori berbeda (lihat
+  // catatan di tiap entri PAGE_THEMES di bawah), gambarnya sendiri
+  // OPSIONAL diisi image_url TERPISAH dari gambar dekoratif kreator --
+  // ini murni latar tema, bukan sesuatu yang bisa diganti kreator.
+  | "scrawl"
+  | "notebook"
+  | "meadow"
+  | "voyage"
+  | "latte"
+  | "confetti"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -227,6 +247,20 @@ export const THREE_D_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "flow",
   "pulse",
   "drift",
+];
+
+// DOODLE_THEME_NAMES -- tab GALERI kelima (dashboard/design/theme/page.tsx,
+// persis di sebelah "Video"), permintaan langsung pengguna, 26 Agustus 2026:
+// "saya mau perbanyak tema doodle" -- lihat catatan lingkup lengkap di
+// PageThemeName di atas file ini soal kenapa ini pola SVG garis tangan
+// (di-tile berulang), bukan foto wallpaper atau gradient CSS murni.
+export const DOODLE_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
+  "scrawl",
+  "notebook",
+  "meadow",
+  "voyage",
+  "latte",
+  "confetti",
 ];
 
 export type PageTheme = {
@@ -2803,6 +2837,149 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "linear-gradient(150deg, #050B14 0%, #0B1524 55%, #0F1F2E 100%)",
     previewIsDark: true,
     pageStyle: { fontFamily: "var(--font-body)" },
+  },
+  // 6 preset DOODLE (permintaan langsung pengguna, 26 Agustus 2026 --
+  // lihat catatan lingkup lengkap di PageThemeName/DOODLE_THEME_NAMES di
+  // atas file ini). previewBg mengecilkan ukuran tile SVG (110px, aslinya
+  // 260px) supaya pengulangan pola benar-benar TERLIHAT di kartu galeri
+  // yang kecil -- kalau dibiarkan ukuran asli, kartu pratinjau cuma
+  // menampilkan sebagian kecil satu tile, bukan tekstur doodle-nya.
+  scrawl: {
+    // Motif coretan/asterisk generik -- serbaguna, cocok kreator/personal
+    // brand apa pun yang mau kesan playful tanpa tema spesifik.
+    label: "Scrawl",
+    page: "bg-[url('/doodles/scrawl.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#C89B6D]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#C89B6D]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#8A6238]",
+    buyButton: "bg-[#C89B6D] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#C89B6D",
+    previewBg: "url('/doodles/scrawl.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  notebook: {
+    // Motif garis buku catatan (kertas bergaris) + centang/bintang/panah
+    // lengkung -- kesan planner/rapor, cocok Teacher/Tutor/Student/Course
+    // Creator (kategori Education).
+    label: "Notebook",
+    page: "bg-[url('/doodles/notebook.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#5B7FA6]/25 bg-white/75 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#5B7FA6]/25 bg-white/75 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#3E5C7D]",
+    buyButton: "bg-[#5B7FA6] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#5B7FA6",
+    previewBg: "url('/doodles/notebook.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+  },
+  meadow: {
+    // Motif bunga 5 kelopak + daun garis tangan -- kesan feminin/lembut,
+    // cocok Beauty Creator/Fashion Creator/Wedding Organizer (kategori
+    // Lifestyle & Local), beda dari "blush" (gradien polos TANPA ikon).
+    label: "Meadow",
+    page: "bg-[url('/doodles/meadow.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#C77B99]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#C77B99]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#A8496A]",
+    buyButton: "bg-[#C77B99] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#C77B99",
+    previewBg: "url('/doodles/meadow.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  voyage: {
+    // Motif pesawat kertas + pin peta + kompas -- cocok Travel Agency/
+    // Tour Guide/City Tour (kategori Tourism), beda dari wallpaper foto
+    // destinasi (lagoon/dune/skyline dst) yang pakai foto sungguhan.
+    label: "Voyage",
+    page: "bg-[url('/doodles/voyage.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#3E6E8E]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#3E6E8E]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#2C4F65]",
+    buyButton: "bg-[#3E6E8E] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#3E6E8E",
+    previewBg: "url('/doodles/voyage.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  latte: {
+    // Motif cangkir kopi + uap + biji kopi -- cocok Cafe/Food & Beverage
+    // (kategori Local/Shop), beda dari "brew" (foto wallpaper cafe
+    // sungguhan) -- ini ilustrasi garis tangan, kesan lebih playful/kasual.
+    label: "Latte",
+    page: "bg-[url('/doodles/latte.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#6B4A34]/25 bg-white/75 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#6B4A34]/25 bg-white/75 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#6B4A34]",
+    buyButton: "bg-[#6B4A34] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#6B4A34",
+    previewBg: "url('/doodles/latte.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+  },
+  confetti: {
+    // Motif balon + kembang api/percikan + serpihan confetti, 3 warna
+    // pastel campur -- kesan perayaan, cocok Event/Product Launch/
+    // Nightlife Venue (kategori Special/Local).
+    label: "Confetti",
+    page: "bg-[url('/doodles/confetti.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#C77BC7]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#C77BC7]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#9C4F9C]",
+    buyButton: "bg-gradient-to-r from-[#C77BC7] to-[#6FB3B8] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#C77BC7",
+    previewBg: "url('/doodles/confetti.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
 };
 
