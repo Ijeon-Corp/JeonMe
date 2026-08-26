@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
@@ -134,36 +134,14 @@ export default function QuickSetupPage() {
     return buildPreviewData(selected, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "");
   }, [selected, myPage]);
 
-  // Urutan tampil di grid -- permintaan langsung pengguna, 26 Agustus
-  // 2026: "yang tampil per baris itu harus sama semua tipe layout jangan
-  // random perbaris beda beda karna bikin jelek". Grid galeri di bawah
-  // responsif (2/3/4 kolom) & merender mockup PagePreview SUNGGUHAN per
-  // kartu -- tanpa pengurutan, dua template BERSEBELAHAN di array bisa
-  // punya layoutVariant BEDA (mis. kategori Creator: creator-profile/
-  // influencer/personal-branding/public-figure semua "hero", TAPI
-  // islamic-creator (juga "hero") muncul SETELAH sepasang "portrait"
-  // streamer/gamer -- baris ke-2 di grid 4 kolom jadi campur
-  // portrait+portrait+hero+headline, bentuk mockup beda-beda dalam satu
-  // baris, persis keluhan pengguna). category tetap jadi kunci urutan
-  // UTAMA (pakai urutan QUICK_SETUP_CATEGORIES, bukan alfabet) supaya
-  // kategori tidak ikut tercampur saat filter "Semua" aktif -- layoutVariant
-  // jadi kunci KEDUA supaya template berbentuk mockup sama selalu
-  // bersebelahan, apa pun jumlah kolom grid saat ini.
-  const categoryRank = useMemo(() => new Map(QUICK_SETUP_CATEGORIES.map((c, i) => [c.key, i])), []);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const matched = QUICK_SETUP_TEMPLATES.filter((t) => {
+    return QUICK_SETUP_TEMPLATES.filter((t) => {
       if (category !== "all" && t.category !== category) return false;
       if (!q) return true;
       return t.label.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
     });
-    return [...matched].sort((a, b) => {
-      const catDiff = (categoryRank.get(a.category) ?? 0) - (categoryRank.get(b.category) ?? 0);
-      if (catDiff !== 0) return catDiff;
-      return (a.layoutVariant ?? "centered").localeCompare(b.layoutVariant ?? "centered");
-    });
-  }, [category, query, categoryRank]);
+  }, [category, query]);
 
   async function applyTemplate(t: QuickSetupTemplate) {
     setError(null);
@@ -440,44 +418,26 @@ export default function QuickSetupPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((t, i) => {
-          // Pemutus baris eksplisit -- susulan permintaan pengguna: sort
-          // by (category, layoutVariant) di atas TIDAK CUKUP sendirian
-          // untuk menjamin "satu baris = satu bentuk mockup" di grid
-          // responsif ini (2/3/4 kolom) -- kalau jumlah anggota satu
-          // grup layoutVariant bukan kelipatan jumlah kolom yang sedang
-          // aktif (mis. 5 template "hero" di grid 4 kolom), sisa anggota
-          // grup itu meluber ke baris berikutnya & bercampur dengan grup
-          // layoutVariant lain yang mulai di baris yang sama. col-span-full
-          // di sini memaksa kartu PERTAMA tiap grup baru SELALU mulai
-          // dari kolom pertama (baris baru) apa pun lebar layar/jumlah
-          // kolom aktif saat ini -- baris terakhir satu grup boleh tidak
-          // penuh (mis. cuma 1-3 kartu), tapi tidak akan pernah campur
-          // bentuk dengan grup lain lagi.
-          const prev = filtered[i - 1];
-          const startsNewGroup =
-            i > 0 && prev !== undefined && (prev.category !== t.category || (prev.layoutVariant ?? "centered") !== (t.layoutVariant ?? "centered"));
-          return (
-            <Fragment key={t.key}>
-              {startsNewGroup && <div className="col-span-full h-0 w-0" aria-hidden="true" />}
-              {/* div role="button" -- BUKAN <button> sungguhan: PagePreview di
-                  dalamnya merender ShareButton (elemen <button> sendiri), dan
-                  <button> di dalam <button> itu HTML TIDAK VALID (ditemukan
-                  lewat error hydration React sungguhan saat verifikasi) --
-                  browser otomatis "meratakan" nesting itu, event klik jadi
-                  kacau. tabIndex+onKeyDown menjaga tetap bisa diakses keyboard. */}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelected(t)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelected(t);
-                  }
-                }}
-                className="flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
-              >
+        {filtered.map((t) => (
+          // div role="button" -- BUKAN <button> sungguhan: PagePreview di
+          // dalamnya merender ShareButton (elemen <button> sendiri), dan
+          // <button> di dalam <button> itu HTML TIDAK VALID (ditemukan
+          // lewat error hydration React sungguhan saat verifikasi) --
+          // browser otomatis "meratakan" nesting itu, event klik jadi
+          // kacau. tabIndex+onKeyDown menjaga tetap bisa diakses keyboard.
+          <div
+            key={t.key}
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelected(t)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setSelected(t);
+              }
+            }}
+            className="flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5"
+          >
             {/* Mockup mini -- permintaan langsung pengguna: "yang
                 ditampilkan itu... langsung terlihat bentuknya... tanpa
                 harus diklik dulu" -- SEBELUMNYA cuma pil warna berisi teks
@@ -497,19 +457,17 @@ export default function QuickSetupPage() {
                 lebih banyak konten (avatar+bio+beberapa tautan) terlihat
                 proporsional, pola sama seperti kotak pratinjau modal/
                 LivePreviewPanel, cuma disesuaikan untuk kartu galeri. */}
-                <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-                  <div className="h-full [zoom:0.42]">
-                    <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")} />
-                  </div>
-                </div>
-                <div className="p-3.5">
-                  <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
-                  <p className="mt-1 text-xs text-muted">{t.description}</p>
-                </div>
+            <div className="relative h-80 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+              <div className="h-full [zoom:0.42]">
+                <PagePreview interactive={false} rootClassName="min-h-full" data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")} />
               </div>
-            </Fragment>
-          );
-        })}
+            </div>
+            <div className="p-3.5">
+              <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
+              <p className="mt-1 text-xs text-muted">{t.description}</p>
+            </div>
+          </div>
+        ))}
         {filtered.length === 0 && (
           <p className="col-span-full rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
             Tidak ada template yang cocok dengan pencarianmu.
