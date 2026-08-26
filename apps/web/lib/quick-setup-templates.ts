@@ -517,7 +517,12 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "hero",
     label: "Creator Profile",
     description: "Foto profil, bio, media sosial, YouTube, TikTok",
-    theme: "bloom",
+    // theme "bloom" (gradien ungu-fuchsia vivid) diganti "lemon" 26
+    // Agustus 2026 (permintaan langsung pengguna, tangkapan layar
+    // "sangat jelek dan menggangu mata") -- lihat catatan lengkap di
+    // motivational-speaker (kategori Entertainment) soal cakupan
+    // perubahan ini.
+    theme: "lemon",
     bio: "Content creator | Berbagi konten setiap hari ✨",
     social: { instagram: "username", tiktok: "username", youtube: "@namachannel", email: "kamu@email.com" },
     links: [
@@ -1120,7 +1125,9 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "masthead",
     label: "Affiliate Store",
     description: "Rekomendasi produk + tautan afiliasi",
-    theme: "bloom",
+    // theme "bloom" -> "golden", lihat catatan lengkap di motivational-
+    // speaker (kategori Entertainment).
+    theme: "golden",
     bio: "Rekomendasi produk pilihanku",
     social: { instagram: "username", tiktok: "username" },
     links: [
@@ -1416,7 +1423,9 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     layoutVariant: "spotlight",
     label: "Content Creator",
     description: "Konten terbaru + media sosial",
-    theme: "bloom",
+    // theme "bloom" -> "azure", lihat catatan lengkap di motivational-
+    // speaker di bawah.
+    theme: "azure",
     bio: "Konten terbaru setiap hari",
     social: { instagram: "username", tiktok: "username", youtube: "@namachannel", email: "kamu@email.com" },
     links: [
@@ -1438,13 +1447,26 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   },
   // 1 template baru, 21 Agustus 2026 -- lihat catatan lengkap di homestay-
   // villa (kategori Tourism).
+  //
+  // theme "vapor" (gradien fuchsia-ungu-cyan vivid) diganti "terracotta"
+  // 26 Agustus 2026 (permintaan langsung pengguna, tangkapan layar
+  // sungguhan halaman ini: "hilangkan semua template yang berwarna
+  // gradient ungu seperti ini, sangat jelek dan menggangu mata") -- 3
+  // template lain yang memakai gradien ungu vivid serupa ("bloom": creator-
+  // profile/affiliate-store/content-creator) ikut diganti bersamaan (lihat
+  // masing-masing). "blaze" (orange-pink-ungu, TAPI shade 800 gelap/kalem,
+  // beda karakter dari vapor/bloom yang neon-terang) SENGAJA tidak ikut
+  // diubah -- bukan yang dimaksud "seperti ini" di tangkapan layar (gradien
+  // vivid magenta-cyan terang). Tema "vapor"/"bloom" itu SENDIRI tidak
+  // dihapus dari page-themes.ts (masih valid dipilih manual lewat menu
+  // Tema) -- yang diubah cuma pilihan DEFAULT template quick-setup ini.
   {
     key: "motivational-speaker",
     category: "entertainment",
     layoutVariant: "spotlight",
     label: "Motivational Speaker",
     description: "Topik seminar, booking, media sosial",
-    theme: "vapor",
+    theme: "terracotta",
     bio: "Motivator & pembicara publik -- bangkitkan semangatmu",
     social: { instagram: "username", youtube: "@namachannel", email: "kamu@email.com" },
     links: [
