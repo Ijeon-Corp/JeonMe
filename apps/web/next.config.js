@@ -96,6 +96,15 @@ const PUBLIC_PAGE_CSP = [
 // mengizinkan https: apa saja).
 const NOMINATIM_ORIGIN = 'https://nominatim.openstreetmap.org';
 
+// Bug ditemukan 26 Agustus 2026 (pengguna: "link youtube maps error tidak
+// bisa tampil" saat menguji semua blok di dashboard): STRICT_CSP di sini
+// TIDAK PERNAH memasukkan https://www.google.com ke frame-src (beda dari
+// PUBLIC_PAGE_CSP di atas yang sudah benar sejak 17 Agustus) -- blok
+// "maps" dengan embed=true SELALU gagal tampil di pratinjau dashboard
+// (LivePreviewPanel, lewat PagePreview.tsx yang sama), sementara YouTube/
+// TikTok sudah lama benar (VIDEO_EMBED_FRAME_SRC). Halaman publik
+// sungguhan TIDAK terdampak (sudah benar), makanya bug ini baru ketahuan
+// sekarang saat kreator menguji lewat pratinjau dashboard.
 const STRICT_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -104,7 +113,7 @@ const STRICT_CSP = [
   MEDIA_SRC,
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC} ${NOMINATIM_ORIGIN}`,
-  `frame-src ${VIDEO_EMBED_FRAME_SRC}`,
+  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",

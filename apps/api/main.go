@@ -112,8 +112,17 @@ func main() {
 		// sukses, publik 403). Kalau ada blok baru berikutnya yang punya
 		// endpoint upload sendiri, WAJIB ditambahkan ke daftar ini juga --
 		// bug ini sudah dua kali terulang karena mudah lupa.
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file tautan: %v", err)
+		//
+		// TERULANG KETIGA KALINYA, 26 Agustus 2026 (laporan pengguna: "403
+		// Forbidden" nyata di console browser saat menguji upload gambar
+		// blok baru) -- "link-showcase" (blok "project_showcase", 24
+		// Agustus) & "catalog-images" (blok "catalog", 25 Agustus) SAMA-SAMA
+		// ketinggalan dari daftar ini persis seperti 2 kejadian sebelumnya.
+		// Catatan di atas sudah eksplisit memperingatkan ini, tapi tetap
+		// terlewat lagi -- kalau nanti masih ada blok baru berikutnya, CEK
+		// DAFTAR INI DULU sebelum melaporkan fitur upload "selesai".
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file/showcase/katalog tautan: %v", err)
 		}
 		cancel()
 	}
