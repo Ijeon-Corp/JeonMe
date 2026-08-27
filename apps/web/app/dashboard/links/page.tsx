@@ -1,8 +1,9 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
+import { CatalogBlocksEditor } from "@/components/CatalogBlocksEditor";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   CatalogItem,
@@ -342,6 +343,16 @@ function FormField({ label, hint, children }: { label: string; hint?: string; ch
 export default function DashboardLinksPage() {
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
+  // catalogSaveQueueRef -- antrean promise PER link, dipakai saveCatalogItems
+  // di bawah. Tanpa ini, 2+ PATCH block_data.items beruntun cepat (mis. isi
+  // pertanyaan lalu jawaban FAQ tertanam, atau tambah blok lalu langsung isi
+  // field-nya) bisa TIBA/diproses server TIDAK berurutan (goroutine Gin
+  // konkuren) -- request yang dikirim LEBIH DULU (payload belum lengkap)
+  // bisa selesai diproses BELAKANGAN, menimpa balik hasil request berikutnya
+  // yang payload-nya lebih lengkap. Antrean ini memaksa network call kedua
+  // baru dikirim SETELAH network call pertama (untuk link yang sama) beres,
+  // sementara update optimistic UI (setLinks) tetap instan tanpa nunggu.
+  const catalogSaveQueueRef = useRef<Record<string, Promise<unknown>>>({});
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -844,8 +855,17 @@ export default function DashboardLinksPage() {
     setError(null);
     const previous = links;
     setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, items } } : l)));
+    // Antrean PER link -- PATCH kedua baru dikirim SETELAH PATCH pertama
+    // (link yang sama) beres, supaya urutan tulis di backend sama dengan
+    // urutan sebenarnya di client (goroutine Gin konkuren bisa saja
+    // MEMPROSES 2 request yang tiba hampir bersamaan tidak berurutan kalau
+    // dikirim paralel -- payload lebih lama yang selesai belakangan bisa
+    // menimpa balik payload lebih baru).
+    const queuedBefore = catalogSaveQueueRef.current[link.id] ?? Promise.resolve();
+    const thisSave = queuedBefore.catch(() => {}).then(() => updateLink(link.id, { block_data: { items } }));
+    catalogSaveQueueRef.current[link.id] = thisSave.catch(() => {});
     try {
-      await updateLink(link.id, { block_data: { items } });
+      await thisSave;
     } catch (err) {
       setLinks(previous);
       setError(err instanceof ApiError ? err.message : "Gagal menyimpan item katalog.");
@@ -869,6 +889,21 @@ export default function DashboardLinksPage() {
     await saveCatalogItems(
       link,
       items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it))
+    );
+  }
+
+  // handleUpdateCatalogItemBlocks -- permintaan langsung pengguna, 27
+  // Agustus 2026: "saya mau di blok katalog bisa menambahkan semua blok
+  // yang sudah ada di web ini di dalam katalog" -- lihat CatalogBlocksEditor
+  // (components/CatalogBlocksEditor.tsx), dipasang di JSX bawah untuk tiap
+  // item. Pola sama PERSIS dengan handleUpdateCatalogItemText -- PATCH
+  // block_data.items UTUH lewat saveCatalogItems, cuma field `blocks` yang
+  // diganti (bukan title/description).
+  async function handleUpdateCatalogItemBlocks(link: LinkItem, itemId: string, blocks: CatalogItem["blocks"]) {
+    const items = catalogItemsOf(link);
+    await saveCatalogItems(
+      link,
+      items.map((it) => (it.id === itemId ? { ...it, blocks } : it))
     );
   }
 
@@ -2477,6 +2512,22 @@ export default function DashboardLinksPage() {
                             </label>
                           )}
                         </div>
+                        {/* Blok tertanam -- permintaan langsung pengguna,
+                            27 Agustus 2026: "saya mau di blok katalog bisa
+                            menambahkan semua blok yang sudah ada di web
+                            ini di dalam katalog, dan juga sub blok ini
+                            bisa lebih dari 2, 3 untuk user premium" --
+                            lihat CatalogBlocksEditor (components/
+                            CatalogBlocksEditor.tsx). depth=2 -- tingkat 1
+                            adalah blok katalog ITU SENDIRI, item di sini
+                            sudah tingkat 2, blok tertanam bertipe
+                            "katalog" (kalau ada) membuka tingkat 3, dst. */}
+                        <CatalogBlocksEditor
+                          blocks={item.blocks ?? []}
+                          isPremium={page?.is_premium ?? false}
+                          depth={2}
+                          onChange={(blocks) => handleUpdateCatalogItemBlocks(link, item.id, blocks)}
+                        />
                       </div>
                     );
                   })}

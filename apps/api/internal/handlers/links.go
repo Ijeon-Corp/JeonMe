@@ -401,29 +401,179 @@ func resolveMapsEmbedCoords(ctx context.Context, rawURL string) (lat, lng float6
 // case ini, cuma beda block_type supaya frontend tahu harus dirender
 // sebagai accordion (lihat renderLinkOrBlock, PagePreview.tsx -- dipakai
 // ulang lewat FaqBlock dengan array 1 item, title kosong).
+// maxCatalogDepth/maxCatalogItemBlocks/allowedCatalogEmbeddedBlockTypes --
+// permintaan langsung pengguna, 27 Agustus 2026: "saya mau di blok katalog
+// bisa menambahkan semua blok yang sudah ada di web ini di dalam katalog,
+// dan juga sub blok ini bisa lebih dari 2, 3 untuk user premium" (contoh:
+// Perumahan -> Tipe A -> [galeri foto ATAU blok lain apa saja]). Tiap item
+// katalog sekarang boleh punya `blocks[]` opsional -- daftar blok TERTANAM
+// (bentuknya SAMA seperti blok biasa: id+block_type+title+url?+
+// description?+block_data), divalidasi lewat validateBlockData ITU SENDIRI
+// secara rekursif (bukan sistem validasi terpisah) karena block_type
+// "catalog" boleh muncul lagi sebagai blok tertanam -- begitulah nesting
+// bertingkat-tingkat dicapai, tanpa konsep "children" terpisah sama sekali.
+//
+// Cakupan v1 (dikonfirmasi lewat AskUserQuestion): HANYA block_type yang
+// TIDAK butuh endpoint upload file sendiri boleh ditanam -- text/faq/video/
+// maps/catalog. gallery/audio/file/project_showcase BELUM didukung sebagai
+// blok tertanam (butuh skema upload baru yang jauh lebih kompleks: key
+// storage per item+blok, findCatalogItem jadi pencarian rekursif, dst --
+// menyusul di iterasi berikutnya kalau dibutuhkan). Foto multi-gambar
+// tetap terlayani lewat field `images` yang SUDAH ada per item (di luar
+// mekanisme blocks[] ini sama sekali).
+//
+// Gratis vs Premium (dikonfirmasi lewat AskUserQuestion): gratis boleh
+// menanam SEMUA tipe di atas KECUALI "catalog" (jadi tetap persis 2
+// tingkat seperti sebelumnya: blok -> daftar item -> detail item, detail
+// boleh berisi teks/FAQ/video/maps apa saja, tapi TIDAK BOLEH ada katalog
+// baru lagi di dalamnya). Premium boleh menanam "catalog" lagi di dalam
+// blocks[], sehingga bisa terus bercabang lebih dalam. Pengecekan Premium
+// SENGAJA dilakukan di HANDLER (CreateBlock/Update/CreateBlockForPage),
+// BUKAN di sini -- fungsi ini murni pengecekan struktur (pure, tanpa akses
+// DB), konsisten dengan validateBlockData yang sudah ada.
+//
+// maxCatalogDepth=5 -- batas MUTLAK tetap berlaku bahkan untuk Premium
+// (dicek DI SINI, bukan cuma di handler, supaya payload yang sangat dalam
+// gagal cepat sebelum pemrosesan lain) supaya halaman publik tidak jadi
+// sangat berat/berantakan -- contoh 5 tingkat: blok Katalog paling atas
+// (tingkat 1) -> detail item "Tipe A" (tingkat 2) -> blok katalog
+// tertanam "Unit" (tingkat 3) -> detail "Unit 1" (tingkat 4) -> blok
+// katalog tertanam lagi (tingkat 5, TIDAK BOLEH ada blok katalog lagi di
+// dalam detail tingkat 5).
+const maxCatalogDepth = 5
+const maxCatalogItemBlocks = 10
+
+var allowedCatalogEmbeddedBlockTypes = map[string]bool{
+	"text":    true,
+	"faq":     true,
+	"video":   true,
+	"maps":    true,
+	"catalog": true,
+}
+
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
+	return validateBlockDataAtDepth(blockType, data, 1)
+}
+
+// catalogHasNestedCatalog -- dipanggil dari HANDLER (CreateBlock/Update/
+// CreateBlockForPage, yang punya akses DB) SETELAH validateBlockData
+// (struktur) lolos, untuk menentukan apakah payload katalog ini perlu
+// gerbang Premium (lihat catatan lengkap di atas validateBlockDataAtDepth).
+// Cukup mengecek ADA-TIDAKNYA block_type "catalog" di mana pun di dalam
+// blocks[] tiap item -- kalau ada SATU saja, itu sudah berarti kreator
+// menaruh minimal 1 tingkat nesting tambahan (di luar 2 tingkat gratis),
+// tidak perlu tahu SEBERAPA dalam nesting-nya (itu urusan maxCatalogDepth
+// di atas, sudah dijamin pure validator).
+func catalogHasNestedCatalog(items []any) bool {
+	for _, raw := range items {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		blocks, _ := item["blocks"].([]any)
+		for _, rawBlock := range blocks {
+			block, ok := rawBlock.(map[string]any)
+			if !ok {
+				continue
+			}
+			if blockType, _ := block["block_type"].(string); blockType == "catalog" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// checkCatalogPremiumGate -- helper bersama dipanggil dari ketiga call site
+// validateBlockData (CreateBlock/Update/CreateBlockForPage) SETELAH
+// validasi struktur lolos, SEBELUM data disimpan. Mengembalikan pesan
+// error (kalau ada) supaya caller cukup satu baris `if msg, ok :=
+// checkCatalogPremiumGate(...); !ok { ... }`.
+func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, blockType string, blockData map[string]any) (string, bool) {
+	if blockType != "catalog" {
+		return "", true
+	}
+	items, _ := blockData["items"].([]any)
+	if !catalogHasNestedCatalog(items) {
+		return "", true
+	}
+	if !isPremiumUser(ctx, db, userID) {
+		return "menaruh blok Katalog di dalam item katalog (drill-down lebih dalam) khusus kreator Premium -- upgrade dulu di Pengaturan > Langganan", false
+	}
+	return "", true
+}
+
+// validateBlockDataAtDepth -- lihat catatan lengkap di atas fungsi ini
+// (maxCatalogDepth dkk). `depth` HANYA relevan untuk block_type "catalog"
+// (dimulai dari 1 di validateBlockData) -- tipe lain mengabaikannya
+// sepenuhnya, tetap identik dengan validateBlockData yang lama.
+func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) (string, bool) {
 	switch blockType {
 	case "video":
+		// depth==1 -- blok video TINGKAT ATAS (dibuat lewat form "Buat Blok"
+		// yang sudah mewajibkan URL diisi SEBELUM submit, lihat dashboard/
+		// links/page.tsx) tetap wajib video_url valid seperti sebelumnya.
+		// depth>1 -- blok video TERTANAM (CatalogBlocksEditor, komponen
+		// baru) SENGAJA dibuat KOSONG dulu lalu diisi belakangan (pola SAMA
+		// dgn gallery/audio/file: "buat shell dulu, isi menyusul") --
+		// video_url kosong DIBOLEHKAN, tapi kalau TERISI tetap wajib valid.
 		videoURL, _ := data["video_url"].(string)
-		if !isValidVideoEmbedURL(videoURL) {
+		if videoURL == "" {
+			if depth == 1 {
+				return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
+			}
+		} else if !isValidVideoEmbedURL(videoURL) {
 			return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
 		}
 	case "faq":
+		// Sama semangatnya dengan "video" di atas -- depth>1 (blok FAQ
+		// tertanam) boleh dibuat dengan items kosong. TAPI beda dari
+		// percobaan pertama (yang cuma melonggarkan baris yang BENAR-BENAR
+		// kosong keduanya): CatalogBlocksEditor.tsx menyimpan question dan
+		// answer LEWAT onBlur TERPISAH per field (menghindari race kondisi
+		// lain -- lihat komentar di file itu), jadi urutan wajar "isi
+		// Pertanyaan, pindah ke Jawaban" MEMANG mengirim SATU PATCH
+		// perantara dengan question terisi tapi answer MASIH kosong sebelum
+		// PATCH kedua melengkapinya. Kalau depth>1 tetap mewajibkan
+		// "lengkap keduanya begitu salah satu diisi", PATCH perantara yang
+		// sah itu malah ditolak 400 -- ujungnya pertanyaan yang sudah
+		// diketik hilang lagi. Jadi depth>1 SENGAJA tidak menegakkan
+		// kelengkapan field FAQ sama sekali (baris kosong, separuh terisi,
+		// atau penuh -- semua diterima); depth==1 (form buat blok di
+		// dashboard, yang sudah menyaring baris kosong sebelum submit)
+		// tetap menegakkan wajib lengkap seperti semula.
 		items, ok := data["items"].([]any)
-		if !ok || len(items) == 0 {
+		if !ok {
+			items = []any{}
+		}
+		if depth == 1 && len(items) == 0 {
 			return "isi minimal 1 pertanyaan FAQ", false
 		}
-		for _, raw := range items {
-			item, ok := raw.(map[string]any)
-			q, _ := item["question"].(string)
-			a, _ := item["answer"].(string)
-			if !ok || strings.TrimSpace(q) == "" || strings.TrimSpace(a) == "" {
-				return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
+		if depth == 1 {
+			for _, raw := range items {
+				item, ok := raw.(map[string]any)
+				if !ok {
+					return "setiap item FAQ wajib berupa objek", false
+				}
+				q, _ := item["question"].(string)
+				a, _ := item["answer"].(string)
+				if strings.TrimSpace(q) == "" || strings.TrimSpace(a) == "" {
+					return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
+				}
+			}
+		} else {
+			for _, raw := range items {
+				if _, ok := raw.(map[string]any); !ok {
+					return "setiap item FAQ wajib berupa objek", false
+				}
 			}
 		}
 	case "heading", "text", "accordion":
+		// depth>1 -- blok teks/accordion tertanam boleh kosong dulu (pola
+		// sama seperti video/faq di atas), diisi belakangan lewat textarea
+		// inline di CatalogBlocksEditor.
 		text, _ := data["text"].(string)
-		if strings.TrimSpace(text) == "" {
+		if depth == 1 && strings.TrimSpace(text) == "" {
 			return "isi teks blok ini", false
 		}
 	case "image":
@@ -530,6 +680,9 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 		// & title tidak kosong; images (kalau ada) divalidasi format URL --
 		// isinya sendiri SELALU diisi lewat upload (UploadCatalogItemImage),
 		// tidak pernah dikirim mentah lewat JSON di sini.
+		if depth > maxCatalogDepth {
+			return fmt.Sprintf("katalog maksimal %d tingkat kedalaman", maxCatalogDepth), false
+		}
 		if raw, ok := data["items"]; ok {
 			items, isSlice := raw.([]any)
 			if !isSlice {
@@ -563,6 +716,61 @@ func validateBlockData(blockType string, data map[string]any) (string, bool) {
 						u, err := url.Parse(imgURL)
 						if !isStr || err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 							return "setiap foto item katalog wajib URL yang valid", false
+						}
+					}
+				}
+				// blocks[] -- lihat catatan lengkap di atas fungsi ini
+				// (maxCatalogDepth dkk). Divalidasi REKURSIF lewat
+				// validateBlockDataAtDepth ITU SENDIRI supaya block_type
+				// "catalog" tertanam otomatis kena aturan yang SAMA persis
+				// (termasuk batas kedalaman) tanpa duplikasi logika.
+				if blocksRaw, ok := item["blocks"]; ok {
+					blocks, isSlice := blocksRaw.([]any)
+					if !isSlice {
+						return "blocks pada item katalog wajib berupa daftar", false
+					}
+					if len(blocks) > maxCatalogItemBlocks {
+						return fmt.Sprintf("maksimal %d blok tertanam per item katalog", maxCatalogItemBlocks), false
+					}
+					seenBlockIDs := map[string]bool{}
+					for _, rawBlock := range blocks {
+						block, ok := rawBlock.(map[string]any)
+						if !ok {
+							return "setiap blok tertanam item katalog wajib berupa objek", false
+						}
+						blockID, _ := block["id"].(string)
+						blockTitle, _ := block["title"].(string)
+						embeddedType, _ := block["block_type"].(string)
+						if strings.TrimSpace(blockID) == "" || strings.TrimSpace(blockTitle) == "" {
+							return "setiap blok tertanam item katalog wajib punya id dan judul", false
+						}
+						if seenBlockIDs[blockID] {
+							return "id blok tertanam item katalog tidak boleh duplikat", false
+						}
+						seenBlockIDs[blockID] = true
+						if !allowedCatalogEmbeddedBlockTypes[embeddedType] {
+							return fmt.Sprintf("tipe blok %q belum bisa ditanam di dalam item katalog", embeddedType), false
+						}
+						// maps tertanam -- v1 sengaja TIDAK mendukung mode
+						// tertanam (embed=true, butuh resolusi koordinat via
+						// HTTP keluar yang belum diterapkan rekursif) --
+						// cuma tautan langsung, sama seperti blok maps biasa
+						// yang embed=false. url SENGAJA boleh kosong (pola
+						// sama seperti video/faq/text di atas -- blok dibuat
+						// dulu, tautan diisi belakangan lewat CatalogBlocksEditor),
+						// TIDAK seperti blok maps TINGKAT ATAS yang formnya
+						// sudah mewajibkan tautan diisi sebelum submit.
+						embeddedData, _ := block["block_data"].(map[string]any)
+						if embeddedData == nil {
+							embeddedData = map[string]any{}
+						}
+						if embeddedType == "maps" {
+							if embed, _ := embeddedData["embed"].(bool); embed {
+								return "blok maps tertanam belum mendukung mode tertanam (embed) -- gunakan tautan langsung", false
+							}
+						}
+						if msg, ok := validateBlockDataAtDepth(embeddedType, embeddedData, depth+1); !ok {
+							return msg, false
 						}
 					}
 				}
@@ -622,6 +830,11 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	// query DB biasa.
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
+
+	if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": msg})
+		return
+	}
 
 	if res := h.Moderation.Check(ctx, req.URL, req.Title); res.Blocked {
 		c.JSON(http.StatusBadRequest, gin.H{"error": res.Message})
@@ -896,6 +1109,10 @@ func (h *LinksHandler) Update(c *gin.Context) {
 		}
 		if msg, ok := validateBlockData(currentBlockType, req.BlockData); !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
+		}
+		if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, currentBlockType, req.BlockData); !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
 			return
 		}
 		// "maps" (permintaan langsung pengguna): resolusi koordinat ulang
@@ -2499,6 +2716,11 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 
 	if !h.ownsPage(ctx, pageID, userID) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+		return
+	}
+
+	if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": msg})
 		return
 	}
 

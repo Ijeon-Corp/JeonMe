@@ -2101,27 +2101,33 @@ function renderLinkOrBlock(
   );
 }
 
+// CatalogFrame -- satu "layar" dalam tumpukan drill-down katalog (lihat
+// catatan lengkap di CatalogTakeoverView di bawah soal kenapa ini berubah
+// dari state 2-tingkat tetap jadi tumpukan/stack).
+interface CatalogFrame {
+  title: string;
+  items: CatalogItem[];
+  selectedItemId: string | null;
+}
+
 // CatalogTakeoverView -- permintaan langsung pengguna, 25 Agustus 2026:
 // blok "catalog" ("Jenis Rumah" -> daftar jenis -> detail per jenis,
 // gambar bisa multiple). Dikonfirmasi lewat AskUserQuestion: GANTI ISI
 // HALAMAN langsung (bukan overlay/modal di atasnya) -- avatar/bio/tautan
 // lain disembunyikan SEMENTARA, komponen ini menggantikan tempatnya
-// persis, tombol kembali di atas. Ini komponen BARU (belum ada padanannya
-// di repo ini sama sekali -- dicek langsung, satu-satunya yang mirip
-// "klik untuk drill-down" adalah filter kategori produk yang TIDAK ganti
-// isi halaman & TIDAK punya tombol kembali, lihat renderProductGrid).
+// persis, tombol kembali di atas.
 //
-// 2 tingkat state lokal (BUKAN view-stack umum) sudah cukup -- drill-down
-// blok ini SELALU persis 2 langkah (daftar item -> detail satu item),
-// tidak ada kebutuhan bertingkat-tingkat lagi:
-//   - selectedItemId null  -> tampilkan grid semua item.
-//   - selectedItemId terisi -> tampilkan detail item itu (deskripsi +
-//     galeri foto, BOLEH lebih dari satu -- permintaan eksplisit
-//     pengguna "gambar bisa multiple").
-// Tombol kembali di kedua tingkat MEMANGGIL FUNGSI YANG SAMA (goBack) --
-// dari detail item kembali ke grid (selectedItemId di-null-kan), dari
-// grid kembali ke halaman biasa (onExit, dioper dari state di PagePreview
-// pemanggil).
+// Revisi 27 Agustus 2026 (permintaan langsung pengguna: "sub blok ini
+// bisa lebih dari 2, 3 untuk user premium"): state 2-tingkat TETAP
+// (selectedItemId tunggal) diganti TUMPUKAN `stack: CatalogFrame[]` --
+// item boleh punya `blocks[]` tertanam (EmbeddedCatalogBlock, lihat
+// api-client.ts), salah satunya boleh bertipe "catalog" lagi (Premium,
+// lihat validateBlockDataAtDepth/checkCatalogPremiumGate di links.go),
+// yang membuka FRAME BARU di atas tumpukan alih-alih mengganti
+// selectedItemId tunggal -- begitulah kedalaman jadi dinamis (bukan
+// selalu persis 2 langkah lagi), dibatasi maxCatalogDepth=5 di backend.
+// goBack() SEKARANG punya 3 kemungkinan (bukan 2): detail item -> grid
+// frame ini -> frame sebelumnya (pop stack) -> onExit (stack kosong).
 //
 // SENGAJA cuma dipakai di layout bio biasa (lihat pemanggilan di
 // PagePreview di bawah) -- TIDAK di LandingPagePreview (blok manual
@@ -2134,21 +2140,45 @@ function renderLinkOrBlock(
 function CatalogTakeoverView({
   link,
   theme,
+  data,
+  interactive,
   rootClassName,
   onExit,
 }: {
   link: PagePreviewLink;
   theme: PageTheme;
+  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled">;
+  interactive: boolean;
   rootClassName: string;
   onExit: () => void;
 }) {
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const items = ((link.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
-  const selectedItem = items.find((it) => it.id === selectedItemId) ?? null;
+  const rootItems = ((link.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
+  const [stack, setStack] = useState<CatalogFrame[]>([{ title: link.title, items: rootItems, selectedItemId: null }]);
+  const frame = stack[stack.length - 1];
+  const selectedItem = frame.items.find((it) => it.id === frame.selectedItemId) ?? null;
 
   function goBack() {
-    if (selectedItem) setSelectedItemId(null);
-    else onExit();
+    if (selectedItem) {
+      setStack((s) => {
+        const next = [...s];
+        next[next.length - 1] = { ...frame, selectedItemId: null };
+        return next;
+      });
+    } else if (stack.length > 1) {
+      setStack((s) => s.slice(0, -1));
+    } else {
+      onExit();
+    }
+  }
+
+  // openNestedCatalog -- dioper sebagai `onOpenCatalog` ke renderLinkOrBlock
+  // saat merender blok tertanam bertipe "catalog" (lihat pemetaan
+  // EmbeddedCatalogBlock -> PagePreviewLink sintetis di bawah) -- MENDORONG
+  // frame baru ke tumpukan, bukan mengganti isi frame saat ini, supaya
+  // "Kembali" tetap bisa naik satu tingkat demi satu tingkat.
+  function openNestedCatalog(nestedLink: PagePreviewLink) {
+    const nestedItems = ((nestedLink.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
+    setStack((s) => [...s, { title: nestedLink.title, items: nestedItems, selectedItemId: null }]);
   }
 
   return (
@@ -2164,7 +2194,7 @@ function CatalogTakeoverView({
             <ChevronLeft className={`h-5 w-5 ${theme.cardTitle}`} />
           </button>
           <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>
-            {selectedItem ? selectedItem.title : link.title}
+            {selectedItem ? selectedItem.title : frame.title}
           </h1>
         </div>
 
@@ -2185,17 +2215,40 @@ function CatalogTakeoverView({
               </div>
             )}
             {selectedItem.description && <p className={`whitespace-pre-wrap text-sm leading-relaxed ${theme.bio}`}>{selectedItem.description}</p>}
-            {selectedItem.images.length === 0 && !selectedItem.description && (
+            {/* blocks[] -- permintaan langsung pengguna: "bisa menambahkan
+                semua blok yang sudah ada di web ini di dalam katalog".
+                Tiap blok tertanam dipetakan jadi PagePreviewLink SINTETIS
+                (bukan baris `links` sungguhan -- id gabungan cuma untuk
+                React key, TIDAK pernah dipakai buat tracking/analitik
+                karena tipe v1 -- text/faq/video/maps/catalog -- semuanya
+                TIDAK memanggil TrackedLink sama sekali, dicek langsung di
+                renderLinkOrBlock sebelum pola ini dipakai) lalu dirender
+                lewat renderLinkOrBlock APA ADANYA -- satu sumber kebenaran
+                tampilan yang sama dengan blok tingkat atas, tidak perlu
+                logika render terpisah. onOpenCatalog=openNestedCatalog di
+                sini (bukan dari prop) -- blok tertanam bertipe "catalog"
+                (Premium) membuka FRAME BARU di tumpukan komponen ini
+                sendiri, terlepas dari trigger awal takeover ini. */}
+            {(selectedItem.blocks ?? []).map((b) =>
+              renderLinkOrBlock(
+                { id: `${link.id}:${b.id}`, title: b.title, url: b.url ?? "", blockType: b.block_type, blockData: b.block_data, description: b.description },
+                theme,
+                data,
+                interactive,
+                openNestedCatalog
+              )
+            )}
+            {selectedItem.images.length === 0 && !selectedItem.description && (selectedItem.blocks ?? []).length === 0 && (
               <p className={`text-sm ${theme.bio}`}>Belum ada foto/deskripsi untuk item ini.</p>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {items.map((item) => (
+            {frame.items.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setSelectedItemId(item.id)}
+                onClick={() => setStack((s) => { const next = [...s]; next[next.length - 1] = { ...frame, selectedItemId: item.id }; return next; })}
                 className={`flex flex-col overflow-hidden text-left ${theme.cardRounded ?? "rounded-xl"} ${theme.card}`}
               >
                 <div className="aspect-square w-full overflow-hidden bg-black/10">
@@ -2211,7 +2264,7 @@ function CatalogTakeoverView({
                 <p className={`truncate px-2.5 py-2 text-xs font-semibold ${theme.cardTitle}`}>{item.title}</p>
               </button>
             ))}
-            {items.length === 0 && <p className={`col-span-2 py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
+            {frame.items.length === 0 && <p className={`col-span-2 py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
           </div>
         )}
       </div>
@@ -2309,7 +2362,16 @@ export default function PagePreview({
   // dipertahankan supaya tinggi/scroll-nya tetap konsisten dgn halaman
   // biasa (dashboard Pratinjau Langsung vs halaman publik sungguhan).
   if (catalogView) {
-    return <CatalogTakeoverView link={catalogView} theme={theme} rootClassName={rootClassName} onExit={() => setCatalogView(null)} />;
+    return (
+      <CatalogTakeoverView
+        link={catalogView}
+        theme={theme}
+        data={data}
+        interactive={interactive}
+        rootClassName={rootClassName}
+        onExit={() => setCatalogView(null)}
+      />
+    );
   }
 
   return (

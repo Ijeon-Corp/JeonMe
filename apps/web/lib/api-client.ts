@@ -1116,16 +1116,40 @@ export function deleteGalleryImage(id: string, index: number) {
   );
 }
 
+// EmbeddedCatalogBlock -- permintaan langsung pengguna, 27 Agustus 2026:
+// "saya mau di blok katalog bisa menambahkan semua blok yang sudah ada di
+// web ini di dalam katalog, dan juga sub blok ini bisa lebih dari 2, 3
+// untuk user premium". Bentuknya SENGAJA mini dari blok biasa (id+
+// block_type+title+url?+description?+block_data) -- divalidasi REKURSIF
+// oleh validateBlockDataAtDepth (links.go) lewat block_type yang SAMA,
+// termasuk "catalog" itu sendiri (begitulah nesting bertingkat dicapai,
+// tanpa konsep "children" terpisah).
+//
+// Cakupan v1 (dikonfirmasi via AskUserQuestion): HANYA 5 tipe yang TIDAK
+// butuh endpoint upload file sendiri -- gallery/audio/file/project_showcase
+// belum didukung sebagai blok tertanam (menyusul kalau dibutuhkan). id
+// dibuat KLIEN (crypto.randomUUID()), sama seperti CatalogItem.id di bawah.
+export interface EmbeddedCatalogBlock {
+  id: string;
+  block_type: "text" | "faq" | "video" | "maps" | "catalog";
+  title: string;
+  url?: string;
+  description?: string;
+  block_data: Record<string, unknown>;
+}
+
 // CatalogItem -- block_type "catalog" (permintaan langsung pengguna, 25
 // Agustus 2026: blok drill-down "Jenis Rumah" -> daftar jenis -> detail per
 // jenis, gambar bisa multiple). id dibuat KLIEN (crypto.randomUUID()) --
 // dipakai backend (UploadCatalogItemImage/DeleteCatalogItemImage) untuk
 // menunjuk item mana yang diubah, TANPA tabel DB terpisah.
+// blocks -- opsional, lihat EmbeddedCatalogBlock di atas.
 export interface CatalogItem {
   id: string;
   title: string;
   description: string;
   images: string[];
+  blocks?: EmbeddedCatalogBlock[];
 }
 
 // uploadCatalogItemImage/deleteCatalogItemImage -- pola SAMA PERSIS
