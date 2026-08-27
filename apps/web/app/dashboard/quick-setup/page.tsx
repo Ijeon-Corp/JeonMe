@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
@@ -20,35 +20,10 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
-import { PAGE_THEMES } from "@/lib/page-themes";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
 import ThemeGallery from "@/components/ThemeGallery";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
-
-// LAYOUT_VARIANT_LABELS -- label deskriptif per varian utk ringkasan di
-// panel pratinjau (lihat renderBioHeader, PagePreview.tsx, utk detail
-// visual tiap varian).
-const LAYOUT_VARIANT_LABELS: Record<
-  "centered" | "banner" | "card" | "spotlight" | "cover" | "minimal" | "hero" | "polaroid" | "split" | "ticket" | "headline" | "ribbon" | "duo" | "masthead" | "portrait",
-  string
-> = {
-  centered: "Centered (di tengah)",
-  banner: "Banner (rata kiri sebaris)",
-  card: "Card (dibungkus kartu, avatar menonjol)",
-  spotlight: "Spotlight (avatar besar + badge nama)",
-  cover: "Cover (pita sampul, avatar menindih tepi bawah)",
-  minimal: "Minimal (avatar kecil sebaris nama)",
-  hero: "Hero (foto profil besar edge-to-edge)",
-  polaroid: "Polaroid (avatar kotak dibingkai & dimiringkan)",
-  split: "Split (2 kolom, foto persegi kiri + identitas kanan)",
-  ticket: "Ticket (dua bagian dipisah garis putus-putus ala tiket)",
-  headline: "Headline (teks dulu, foto kecil menyusul di bawah)",
-  ribbon: "Ribbon (badge aksen + nama dalam pita selebar penuh)",
-  duo: "Duo (avatar+nama jadi satu chip pil ringkas)",
-  masthead: "Masthead (pita warna berisi identitas langsung di dalamnya)",
-  portrait: "Portrait (foto tegak dibingkai & berbayang ala poster)",
-};
 
 // buildPreviewData -- dipindah ke lib/quick-setup-templates.ts
 // (buildQuickSetupPreviewData) supaya bisa dipakai bareng components/
@@ -67,14 +42,11 @@ function pickAutoTokoPage(pages: ExtraPage[], username: string): ExtraPage | nul
   return pages.find((p) => p.page_type === "produk" && p.slug === username) ?? null;
 }
 
-// fetchMyPageAndToko -- pengambil-data MURNI (tanpa setState), dipisah dari
-// efek yang memanggilnya supaya lolos aturan react-hooks/set-state-in-effect
+// fetchMyPage -- pengambil-data MURNI (tanpa setState), dipisah dari efek
+// yang memanggilnya supaya lolos aturan react-hooks/set-state-in-effect
 // (lihat pola resmi di CLAUDE.md).
-async function fetchMyPageAndToko(): Promise<{ page: MyPage | null; tokoPage: ExtraPage | null }> {
-  const page = await getMyPage().catch(() => null);
-  if (!page) return { page: null, tokoPage: null };
-  const pages = await listMyExtraPages().catch(() => [] as ExtraPage[]);
-  return { page, tokoPage: pickAutoTokoPage(pages, page.username) };
+async function fetchMyPage(): Promise<MyPage | null> {
+  return getMyPage().catch(() => null);
 }
 
 // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: "buatkan 1
@@ -122,22 +94,10 @@ export default function QuickSetupPage() {
   // itu bukan username tapi display name" -- kalau kreator belum mengisi
   // nama tampilan, jatuh ke placeholder "Nama Kamu" (lihat buildPreviewData).
   const [myPage, setMyPage] = useState<MyPage | null>(null);
-  // tokoPage -- permintaan langsung pengguna, 19 Agustus 2026: "karena page
-  // link bio dan toko terpisah saya mau buatkan juga template quick setup
-  // untuk page toko nya". Toko AUTO kreator ini (kalau sudah ada) -- cuma
-  // dipakai untuk catatan informatif di panel pratinjau ("tema Toko-mu juga
-  // akan disesuaikan"), logika penerapan sesungguhnya di applyTemplate cek
-  // ulang sendiri, tidak mengandalkan state ini.
-  const [tokoPage, setTokoPage] = useState<ExtraPage | null>(null);
-
-  const applyMyPageAndToko = useCallback((result: { page: MyPage | null; tokoPage: ExtraPage | null }) => {
-    setMyPage(result.page);
-    setTokoPage(result.tokoPage);
-  }, []);
 
   useEffect(() => {
-    fetchMyPageAndToko().then(applyMyPageAndToko);
-  }, [applyMyPageAndToko]);
+    fetchMyPage().then(setMyPage);
+  }, []);
 
   // Auto-redirect setelah berhasil -- pola SAMA PERSIS dgn
   // app/auth/instagram/callback & app/auth/tiktok/callback (satu-satunya
@@ -438,7 +398,7 @@ export default function QuickSetupPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
+      <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>
           <div className="flex gap-2 border-b border-border">
             <button
@@ -537,11 +497,20 @@ export default function QuickSetupPage() {
             "dibagian kanan nya ditampilkan bentuk template dan theme yang
             dipilih seperti pratinjau yang sudah ada". Beda dari modal
             sebelumnya, panel ini SELALU terlihat di kolom kanan sepanjang
-            step ini, memperbarui diri begitu template ATAU tema berganti. */}
+            step ini, memperbarui diri begitu template ATAU tema berganti.
+            Ringkasan tema/layout/tautan/blok/produk di bawah pratinjau
+            DIHAPUS TOTAL (permintaan susulan langsung pengguna: "hilangkan
+            semua ini yang ada di bawah pratinjau, hanya ada tombol
+            terapkan template saja, dan buat pratinjau jadi lebih besar")
+            -- cuma tombol "Terapkan Template" yang tersisa, kotak
+            pratinjau dilebarkan/ditinggikan mengisi ruang yang kosong
+            (rasio zoom:tinggi kotak dijaga SAMA -- 400px lebar layout
+            efektif -- supaya PagePreview tetap merender proporsional,
+            cuma fisiknya lebih besar). */}
         <div className="lg:sticky lg:top-4">
-          <div className="mx-auto h-[420px] w-full max-w-[220px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {previewData ? (
-              <div className="h-full [zoom:0.55]">
+              <div className="h-full [zoom:0.75]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />
               </div>
             ) : (
@@ -550,63 +519,6 @@ export default function QuickSetupPage() {
               </div>
             )}
           </div>
-
-          {selectedTemplate && (
-            <div className="mt-4 flex flex-col gap-3 text-sm">
-              <div>
-                <p className="font-heading text-base font-bold text-ink">{selectedTemplate.label}</p>
-                <p className="mt-1 text-xs text-muted">{selectedTemplate.description}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">Tema</p>
-                <p className="mt-0.5 text-ink">{PAGE_THEMES[(previewTemplate?.theme ?? selectedTemplate.theme) as keyof typeof PAGE_THEMES]?.label ?? selectedTemplate.theme}</p>
-                {tokoPage && <p className="mt-0.5 text-[11px] text-muted">Tema Halaman Toko-mu juga akan ikut disesuaikan.</p>}
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">Layout</p>
-                <p className="mt-0.5 text-ink">{LAYOUT_VARIANT_LABELS[selectedTemplate.layoutVariant ?? "centered"]}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">Tautan Starter ({selectedTemplate.links.length})</p>
-                <p className="mt-0.5 text-[11px] text-muted">Menggantikan SEMUA tautan/blok yang sudah ada saat ini di Link Bio.</p>
-                <ul className="mt-1 flex flex-wrap gap-1.5">
-                  {selectedTemplate.links.map((l) => (
-                    <li key={l.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
-                      {l.title}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {selectedTemplate.blocks && selectedTemplate.blocks.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Blok Konten</p>
-                  <ul className="mt-1 flex flex-wrap gap-1.5">
-                    {selectedTemplate.blocks.map((b) => (
-                      <li key={b.title} className="rounded-full bg-primary-subtle px-2.5 py-1 text-xs font-semibold text-primary">
-                        {b.title}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {selectedTemplate.products && selectedTemplate.products.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Produk Siap Pakai</p>
-                  <ul className="mt-1 flex flex-wrap gap-1.5">
-                    {selectedTemplate.products.map((p) => (
-                      <li key={p.name} className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-dark">
-                        {p.name}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-1 text-[11px] text-muted">Dibuat sebagai draft di menu Toko -- belum aktif/bisa dibeli.</p>
-                </div>
-              )}
-              {selectedTemplate.monetizationHint && (
-                <p className="rounded-xl bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-dark">{selectedTemplate.monetizationHint}</p>
-              )}
-            </div>
-          )}
 
           <button
             type="button"

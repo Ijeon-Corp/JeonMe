@@ -31,14 +31,15 @@ test.describe("Quick Setup", () => {
     await page.getByText("Streamer", { exact: true }).click();
     await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeEnabled();
 
-    // Panel pratinjau persisten (kanan) menampilkan tema + tautan SEBELUM
-    // diterapkan -- termasuk mockup visual (PagePreview), jadi "Nonton di
-    // Twitch" muncul dua kali (chip ringkasan + tombol tautan di mockup),
-    // .first() cukup untuk memastikan setidaknya salah satunya benar-benar
-    // tampil. Judul "Nonton di Twitch" (bukan cuma "Twitch") -- permintaan
-    // langsung pengguna: judul tautan starter dibuat CTA/deskriptif ala
-    // referensi Linktree sungguhan, bukan nama platform polos.
-    await expect(page.getByText("Cyber")).toBeVisible();
+    // Panel pratinjau persisten (kanan) menampilkan mockup PagePreview
+    // SEBENARNYA sebelum diterapkan -- ringkasan teks tema/tautan/blok di
+    // bawah pratinjau DIHAPUS (permintaan susulan langsung pengguna:
+    // "hilangkan semua ini yang ada di bawah pratinjau, hanya ada tombol
+    // terapkan template saja"), jadi cukup cek tautan starter tampil di
+    // mockup itu sendiri. Judul "Nonton di Twitch" (bukan cuma "Twitch")
+    // -- permintaan langsung pengguna: judul tautan starter dibuat CTA/
+    // deskriptif ala referensi Linktree sungguhan, bukan nama platform
+    // polos.
     await expect(page.getByText("Nonton di Twitch", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Terapkan Template" }).click();
@@ -386,15 +387,14 @@ test.describe("Quick Setup", () => {
     await page.getByPlaceholder(/cari template/i).fill("small business");
     await page.getByText("Small Business", { exact: true }).click();
 
-    // Panel pratinjau persisten HARUS sudah memberi tahu soal ini SEBELUM
-    // diterapkan (tokoPage dari fetchMyPageAndToko sudah menemukan Toko
-    // auto di atas).
-    await expect(page.getByText(/tema halaman toko-mu juga akan ikut disesuaikan/i)).toBeVisible();
-
     await page.getByRole("button", { name: "Terapkan Template" }).click();
     // Dialog konfirmasi destruktif muncul (sudah ada tautan dari Online
     // Store sebelumnya).
     await page.getByRole("button", { name: "Ya, Ganti" }).click();
+    // Layar generating memberi tahu Toko ikut disesuaikan (tokoSynced,
+    // ditentukan applyTemplate saat itu juga -- BEDA dari catatan
+    // informatif SEBELUM apply yang dulu ada di panel ringkasan, sudah
+    // dihapus bersama seluruh ringkasan itu).
     await expect(page.getByText(/tema halaman toko-mu juga sudah ikut disesuaikan/i)).toBeVisible({ timeout: 5000 });
     await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
 
@@ -523,10 +523,11 @@ test.describe("Quick Setup", () => {
     await page.getByRole("button", { name: "Doodle", exact: true }).click();
     await page.getByText("Latte", { exact: true }).click();
 
-    // Panel ringkasan menunjukkan tema BERGANTI ("Latte") tapi layout
-    // TETAP milik Cafe ("Cover").
-    await expect(page.getByText("Latte", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/Cover \(pita sampul/i)).toBeVisible();
+    // Ringkasan teks tema/layout di bawah pratinjau sudah dihapus
+    // (permintaan susulan langsung pengguna) -- bukti "tema berganti,
+    // layout & konten Cafe tidak tersentuh" sekarang murni dari hasil
+    // akhir sungguhan (tautan Cafe + pola Latte di halaman publik) di
+    // bawah, bukan dari teks ringkasan yang sudah tidak ada lagi.
 
     await page.getByRole("button", { name: "Terapkan Template" }).click();
     await expect(page).toHaveURL(/\/dashboard\/links/, { timeout: 15000 });
