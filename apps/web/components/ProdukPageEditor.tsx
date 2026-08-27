@@ -379,6 +379,31 @@ export default function ProdukPageEditor({
 }
 // ---------- Blok & Tautan ----------
 
+// FormField -- permintaan langsung pengguna, 27 Agustus 2026: "perbaiki ui
+// dan ux semua blok yang ada di link bio dan juga toko seperti kasih label
+// url atau desc dsb" -- field bertumpuk (mis. Judul lalu Tautan) tanpa
+// label bikin bingung mana yang teks tampil vs mana yang URL tujuan,
+// terutama setelah field terisi (placeholder hilang begitu ada teks).
+// Disalin APA ADANYA dari dashboard/links/page.tsx (BUKAN diimpor dari satu
+// sumber) -- konsisten dengan pola "dua jalur kode berbeda" yang sudah
+// dipakai proyek ini untuk paritas halaman utama/Toko (lihat catatan
+// LAYOUT_OPTIONS di atas). label dibungkus DI DALAM <label> (asosiasi a11y
+// otomatis, tanpa id/htmlFor manual, juga kebaca getByLabel() di test) --
+// hint SENGAJA di LUAR <label> supaya prosa hint tidak ikut masuk ke nama
+// aksesibel elemen (kalau hint kebetulan memuat kata yang sama dengan
+// label lain, getByLabel() bisa salah tangkap).
+function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</span>
+        {children}
+      </label>
+      {hint && <p className="text-[10.5px] text-muted">{hint}</p>}
+    </div>
+  );
+}
+
 function BlockSection({
   pageId,
   links,
@@ -635,45 +660,64 @@ function BlockSection({
               ))}
             </div>
 
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Judul"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
+            <FormField
+              label={blockType === "link" ? "Judul" : "Judul Blok"}
+              hint={
+                blockType === "link"
+                  ? "Teks yang tampil di halamanmu."
+                  : blockType === "text"
+                  ? "Internal saja, TIDAK tampil ke pengunjung."
+                  : blockType === "accordion"
+                  ? "Ini yang tampil & diklik pengunjung untuk membuka isinya."
+                  : undefined
+              }
+            >
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Judul"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </FormField>
 
             {blockType === "link" && (
-              <input
-                type="url"
-                required
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            )}
-            {blockType === "video" && (
-              <input
-                type="url"
-                required
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="Tautan YouTube/TikTok"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            )}
-            {blockType === "maps" && (
-              <>
+              <FormField label="Tautan (URL)" hint="Alamat halaman tujuan saat diklik.">
                 <input
                   type="url"
                   required
-                  value={mapsUrl}
-                  onChange={(e) => setMapsUrl(e.target.value)}
-                  placeholder="Tautan Google Maps"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://..."
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
+              </FormField>
+            )}
+            {blockType === "video" && (
+              <FormField label="Tautan Video">
+                <input
+                  type="url"
+                  required
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="Tautan YouTube/TikTok"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
+            )}
+            {blockType === "maps" && (
+              <>
+                <FormField label="Tautan Google Maps">
+                  <input
+                    type="url"
+                    required
+                    value={mapsUrl}
+                    onChange={(e) => setMapsUrl(e.target.value)}
+                    placeholder="Tautan Google Maps"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </FormField>
                 <label className="flex items-center gap-2 text-xs font-semibold text-ink">
                   <input type="checkbox" checked={mapsEmbed} onChange={(e) => setMapsEmbed(e.target.checked)} />
                   Tampilkan tertanam (embed), bukan cuma tautan
@@ -681,43 +725,51 @@ function BlockSection({
               </>
             )}
             {blockType === "text" && (
-              <textarea
-                required
-                rows={3}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Isi teks..."
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
+              <FormField label="Isi Teks">
+                <textarea
+                  required
+                  rows={3}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Isi teks..."
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
             )}
             {blockType === "accordion" && (
-              <textarea
-                required
-                rows={3}
-                value={accordionText}
-                onChange={(e) => setAccordionText(e.target.value)}
-                placeholder="Isi teks yang muncul saat judul di atas diklik..."
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
+              <FormField label="Isi Saat Diklik">
+                <textarea
+                  required
+                  rows={3}
+                  value={accordionText}
+                  onChange={(e) => setAccordionText(e.target.value)}
+                  placeholder="Isi teks yang muncul saat judul di atas diklik..."
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </FormField>
             )}
             {blockType === "faq" && (
               <div className="flex flex-col gap-2">
                 {faqItems.map((item, idx) => (
                   <div key={idx} className="flex flex-col gap-1.5 rounded-lg border border-border p-2.5">
-                    <input
-                      type="text"
-                      value={item.question}
-                      onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)))}
-                      placeholder="Pertanyaan"
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
-                    <textarea
-                      rows={2}
-                      value={item.answer}
-                      onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)))}
-                      placeholder="Jawaban"
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                    />
+                    <FormField label={`Pertanyaan ${idx + 1}`}>
+                      <input
+                        type="text"
+                        value={item.question}
+                        onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)))}
+                        placeholder="Pertanyaan"
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
+                    <FormField label="Jawaban">
+                      <textarea
+                        rows={2}
+                        value={item.answer}
+                        onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)))}
+                        placeholder="Jawaban"
+                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </FormField>
                   </div>
                 ))}
                 <button
@@ -1161,6 +1213,7 @@ function HeaderSection({
                     value={socialDraft[p.key] ?? ""}
                     onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                     placeholder={`${p.label} · ${p.placeholder}`}
+                    aria-label={p.label}
                     className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
                   />
                 </div>

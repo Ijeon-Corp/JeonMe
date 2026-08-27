@@ -1568,6 +1568,7 @@ export default function DashboardLinksPage() {
                         value={socialDraft[p.key] ?? ""}
                         onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                         placeholder={`${p.label} · ${p.placeholder}`}
+                        aria-label={p.label}
                         className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
                       />
                     </div>
@@ -2452,20 +2453,24 @@ export default function DashboardLinksPage() {
                       <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-border bg-white p-2.5">
                         <div className="flex items-start gap-2">
                           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <input
-                              type="text"
-                              defaultValue={item.title}
-                              placeholder="Judul item"
-                              onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
-                              className="w-full rounded-md border border-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
-                            />
-                            <textarea
-                              defaultValue={item.description}
-                              placeholder="Deskripsi (opsional)"
-                              rows={2}
-                              onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
-                              className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                            />
+                            <FormField label="Judul Item">
+                              <input
+                                type="text"
+                                defaultValue={item.title}
+                                placeholder="Judul item"
+                                onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
+                                className="w-full rounded-md border border-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                              />
+                            </FormField>
+                            <FormField label="Deskripsi Item (opsional)">
+                              <textarea
+                                defaultValue={item.description}
+                                placeholder="Deskripsi (opsional)"
+                                rows={2}
+                                onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
+                                className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                              />
+                            </FormField>
                           </div>
                           <button
                             type="button"
@@ -2533,24 +2538,28 @@ export default function DashboardLinksPage() {
                   })}
                   {catalogItemsOf(link).length < maxCatalogItems && (
                     <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-border p-2.5">
-                      <input
-                        type="text"
-                        placeholder="Judul item baru (mis. Tipe 36)"
-                        value={catalogNewItemDraft[link.id]?.title ?? ""}
-                        onChange={(e) =>
-                          setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
-                        }
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <textarea
-                        placeholder="Deskripsi (opsional)"
-                        rows={2}
-                        value={catalogNewItemDraft[link.id]?.description ?? ""}
-                        onChange={(e) =>
-                          setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
-                        }
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
+                      <FormField label="Judul Item Baru">
+                        <input
+                          type="text"
+                          placeholder="Judul item baru (mis. Tipe 36)"
+                          value={catalogNewItemDraft[link.id]?.title ?? ""}
+                          onChange={(e) =>
+                            setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
+                          }
+                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label="Deskripsi Item Baru (opsional)">
+                        <textarea
+                          placeholder="Deskripsi (opsional)"
+                          rows={2}
+                          value={catalogNewItemDraft[link.id]?.description ?? ""}
+                          onChange={(e) =>
+                            setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
+                          }
+                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
                       <button
                         type="button"
                         disabled={!catalogNewItemDraft[link.id]?.title.trim() || catalogSavingId === link.id}
@@ -2647,18 +2656,22 @@ export default function DashboardLinksPage() {
                 (scheduleEditId === link.id ? (
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
-                      <input
-                        type="datetime-local"
-                        value={scheduleStart}
-                        onChange={(e) => setScheduleStart(e.target.value)}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
-                      <input
-                        type="datetime-local"
-                        value={scheduleEnd}
-                        onChange={(e) => setScheduleEnd(e.target.value)}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-                      />
+                      <FormField label="Mulai Tampil">
+                        <input
+                          type="datetime-local"
+                          value={scheduleStart}
+                          onChange={(e) => setScheduleStart(e.target.value)}
+                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label="Berhenti Tampil">
+                        <input
+                          type="datetime-local"
+                          value={scheduleEnd}
+                          onChange={(e) => setScheduleEnd(e.target.value)}
+                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        />
+                      </FormField>
                     </div>
                     <div className="flex gap-1.5">
                       <button
