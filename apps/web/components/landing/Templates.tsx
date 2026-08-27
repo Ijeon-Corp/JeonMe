@@ -32,12 +32,21 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // SAMA SEKALI lagi -- keluhan langsung pengguna: "saya mau ubah bg yang
 // tema game jadi yang lain" (gym-fitness-center masih mewarisi video
 // neon bekas Gamer, kelihatan seperti tema gaming padahal personanya gym).
+//
+// Revisi 27 Agustus 2026 (permintaan langsung pengguna: "jangan tampilkan
+// quick template dengan tipe header hero dan juga background gamer atau
+// kayu"): baris "Hero" (layoutVariant "hero" -- foto profil besar
+// edge-to-edge) DIGANTI SELURUHNYA jadi baris "Cover" (layoutVariant
+// "cover" -- foto sampul lanskap penuh di atas, avatar bulat menumpuk di
+// bawahnya). Tema "kraft" (dipakai batik-craft) juga tetap TIDAK pernah
+// dipakai di kurasi ini -- sama seperti "electric" di atas, dicek ulang
+// supaya tidak kebawa lagi kalau daftar Quick Setup bertambah ke depannya.
 const CURATED_KEYS = [
-  // Baris 1 -- layout "hero" (foto profil besar edge-to-edge).
-  { key: "public-figure", tag: "Hero" as const, displayName: "Farrell Adinata", avatarUrl: "https://randomuser.me/api/portraits/men/83.jpg" },
-  { key: "travel-agency", tag: "Hero" as const, displayName: "Putri Ayunda", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
-  { key: "city-tour", tag: "Hero" as const, displayName: "Kevin Santoso", avatarUrl: "https://randomuser.me/api/portraits/men/38.jpg" },
-  { key: "islamic-creator", tag: "Hero" as const, displayName: "Ahmad Zaky", avatarUrl: "https://randomuser.me/api/portraits/men/29.jpg" },
+  // Baris 1 -- layout "cover" (foto sampul lanskap + avatar bulat menumpuk).
+  { key: "restaurant", tag: "Cover" as const, displayName: "Bagus Prasetyo", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
+  { key: "homestay-villa", tag: "Cover" as const, displayName: "Ratna Dewi", avatarUrl: "https://randomuser.me/api/portraits/women/32.jpg" },
+  { key: "event-organizer", tag: "Cover" as const, displayName: "Dimas Wirawan", avatarUrl: "https://randomuser.me/api/portraits/men/91.jpg" },
+  { key: "nonprofit-charity", tag: "Cover" as const, displayName: "Sari Wulandari", avatarUrl: "https://randomuser.me/api/portraits/women/54.jpg" },
   // Baris 2 -- layout "portrait" (foto tegak dibingkai & berbayang ala poster).
   { key: "musician", tag: "Portrait" as const, displayName: "Daniel Kim", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
   { key: "streamer", tag: "Portrait" as const, displayName: "Vanya Kirana", avatarUrl: "https://randomuser.me/api/portraits/women/61.jpg" },
@@ -67,7 +76,7 @@ const templates = CURATED_KEYS.map((c) => {
 
 const filters = [
   { key: "all", label: "Semua" },
-  { key: "Hero", label: "Hero" },
+  { key: "Cover", label: "Cover" },
   { key: "Portrait", label: "Portrait" },
   { key: "Spotlight", label: "Spotlight" },
   { key: "Masthead", label: "Masthead" },
