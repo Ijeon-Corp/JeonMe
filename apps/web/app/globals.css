@@ -74,6 +74,33 @@
   }
 }
 
+/* Reset background native <input>/<textarea>/<select> di dalam SHELL
+   aplikasi sendiri (.app-shell -- dashboard/admin/auth, lihat className di
+   dashboard/layout.tsx, admin/layout.tsx, AuthShell.tsx) -- ditemukan lewat
+   audit visual dark mode (permintaan pengguna, 29 Agustus 2026): field
+   seperti input USERNAME di /dashboard/settings/profile TIDAK PERNAH diberi
+   class bg-* eksplisit (mengandalkan wrapper div-nya yang sudah bg-app-
+   surface), jadi selama ini diam-diam tampil dengan background PUTIH bawaan
+   browser (bukan transparan seperti dikira). Di light mode tidak kelihatan
+   bedanya (putih di atas putih), tapi begitu dark mode aktif, teks
+   text-app-ink di atasnya ikut jadi terang -- teks terang di atas kotak
+   putih bawaan = nyaris tidak kelihatan.
+   @layer base (BUKAN ditulis lepas) supaya kalah dari utility bg-* apa pun
+   yang mungkin dipasang langsung di elemen input (Tailwind SELALU
+   memprioritaskan @layer utilities di atas @layer base, terlepas dari
+   spesifisitas selector) -- aman kalau nanti ada input yang butuh warna
+   sendiri. Discoped ke .app-shell (BUKAN <input> global) supaya form
+   PUBLIK pembeli/pengunjung (ContactFormBlock, LeadCaptureForm, CardActions,
+   dst -- semua sudah punya bg-white/bg-border eksplisit sendiri lewat
+   sistem tema kreator di lib/page-themes.ts) tidak ikut berubah. */
+@layer base {
+  .app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  .app-shell textarea,
+  .app-shell select {
+    background-color: transparent;
+  }
+}
+
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   scrollbar-width: thin;

@@ -420,7 +420,7 @@ export default function DashboardLayout({
             bubble/blob. pointer-events-none supaya tidak menghalangi
             klik ke konten. */}
         <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
-        <div className="flex min-h-screen">
+        <div className="app-shell flex min-h-screen">
           {/* Sidebar desktop -- "glass" (dipinjam dari landing, lihat
               globals.css) menggantikan border+bg putih polos, supaya
               sidebar terasa mengambang tipis di atas latar bg-mesh di

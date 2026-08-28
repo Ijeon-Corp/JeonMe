@@ -108,7 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           lihat catatan panjang di sana soal overflow-hidden terpisah
           supaya tidak mematikan sticky. */}
       <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
-      <div className="flex min-h-screen">
+      <div className="app-shell flex min-h-screen">
         {/* Sidebar desktop */}
         <aside className="bg-primary-dark sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 shadow-refined-lg md:flex">
           {sidebarContent}
