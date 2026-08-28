@@ -3,32 +3,44 @@
 import PageSkeleton from "@/components/Skeleton";
 import { CatalogBlocksEditor } from "@/components/CatalogBlocksEditor";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   CatalogItem,
   DashboardProduct,
+  ExtraPage,
   LinkItem,
   MyPage,
   createBlock,
+  createExtraPage,
+  createExtraPageBlock,
+  createExtraPageLink,
   createLink,
   deleteAudioBlock,
   deleteCatalogItemImage,
+  deleteExtraPage,
   deleteFileBlock,
   deleteGalleryImage,
   deleteLink,
   deleteLinkIcon,
   deleteLinkThumbnail,
   duplicateLink,
+  getExtraPage,
   getMyPage,
+  listExtraPageLinks,
   listLinks,
+  listMyExtraPages,
   listProducts,
+  reorderExtraPageLinks,
   reorderLinks,
+  updateExtraPage,
   updateLink,
   updateMyPage,
   uploadAudioBlock,
   uploadAvatar,
   uploadCatalogItemImage,
+  uploadExtraPageAvatar,
   uploadFileBlock,
   uploadGalleryImage,
   uploadLinkIcon,
@@ -36,6 +48,8 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
+import { SITE_URL } from "@/lib/site";
+import { slugifyTitle } from "@/lib/slug";
 import {
   IconBook,
   IconCamera,
@@ -95,6 +109,10 @@ const maxGalleryImages = 9;
 // (maxCatalogItems/maxCatalogImagesPerItem, links.go), murni utk UI.
 const maxCatalogItems = 20;
 const maxCatalogImagesPerItem = 6;
+// PREMIUM_EXTRA_PAGE_LIMIT -- SAMA PERSIS batas backend (premiumExtraPageLimit,
+// page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
+// terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
+const PREMIUM_EXTRA_PAGE_LIMIT = 5;
 
 const BLOCK_TYPE_LABEL: Record<string, string> = {
   video: "Video",
@@ -341,6 +359,7 @@ function FormField({ label, hint, children }: { label: string; hint?: string; ch
 // terhapus, membuat tombol untuk fitur yang tidak ada bukan tujuan
 // permintaan ini.
 export default function DashboardLinksPage() {
+  const router = useRouter();
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
   // catalogSaveQueueRef -- antrean promise PER link, dipakai saveCatalogItems
@@ -356,6 +375,26 @@ export default function DashboardLinksPage() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modul Halaman Tambahan Fase 2 (permintaan langsung pengguna, 28 Agustus
+  // 2026, referensi UI kompetitor "+ Page" + navigation pill): editor Link
+  // Bio ini sekarang jadi editor untuk SEMUA halaman bio/landing akun, bukan
+  // cuma halaman utama. activePage null = sedang mengedit halaman utama
+  // (Home), berisi {id,slug,pageType} = sedang mengedit salah satu halaman
+  // tambahan yang dibuat lewat tombol "+ Page" di bawah. Halaman Toko
+  // (page_type "produk", termasuk multi-toko Premium) SENGAJA tidak masuk
+  // extraPages/pill di sini -- pembuatannya tetap lewat menu Toko (Produk &
+  // Monetisasi), keputusan langsung pengguna supaya tidak campur dengan
+  // mekanisme pill bio/landing yang baru ini.
+  const [activePage, setActivePage] = useState<{ id: string; slug: string; pageType: "bio" | "landing" } | null>(null);
+  const [accountUsername, setAccountUsername] = useState("");
+  const [extraPages, setExtraPages] = useState<ExtraPage[]>([]);
+  const [switchingPage, setSwitchingPage] = useState(false);
+  const [creatingPage, setCreatingPage] = useState(false);
+  const [newPageTitle, setNewPageTitle] = useState("");
+  const [savingNewPage, setSavingNewPage] = useState(false);
+  const [renamingPage, setRenamingPage] = useState(false);
+  const [renamePageValue, setRenamePageValue] = useState("");
 
   // Profil bisa diedit langsung dari sini (permintaan langsung pengguna) --
   // sebelumnya baris ini cuma pratinjau baca-saja, mengedit harus lewat
@@ -522,15 +561,155 @@ export default function DashboardLinksPage() {
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
-    Promise.all([getMyPage(), listLinks(), listProducts()])
-      .then(([p, l, prod]) => {
+    Promise.all([getMyPage(), listLinks(), listProducts(), listMyExtraPages()])
+      .then(([p, l, prod, extras]) => {
         setPage(p);
         setLinks(l);
         setProducts(prod);
+        setAccountUsername(p.username);
+        setExtraPages(extras.filter((ep) => ep.page_type !== "produk"));
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data."))
       .finally(() => setLoading(false));
   }, []);
+
+  // Wrapper tipis -- mengarahkan mutasi ke endpoint halaman UTAMA atau
+  // halaman TAMBAHAN tergantung activePage, supaya seluruh handler di bawah
+  // (yang jumlahnya banyak & sudah ada sebelum modul ini) TIDAK perlu
+  // masing-masing tahu/bercabang sendiri soal halaman mana yang aktif.
+  function currentPagePatch(patch: Parameters<typeof updateMyPage>[0]) {
+    return activePage ? updateExtraPage(activePage.id, patch) : updateMyPage(patch);
+  }
+  function currentUploadAvatar(file: File) {
+    return activePage ? uploadExtraPageAvatar(activePage.id, file) : uploadAvatar(file);
+  }
+  function currentCreateLink(input: { title: string; url: string; description?: string }) {
+    return activePage ? createExtraPageLink(activePage.id, input) : createLink(input);
+  }
+  function currentCreateBlock(input: Parameters<typeof createBlock>[0]) {
+    return activePage ? createExtraPageBlock(activePage.id, input) : createBlock(input);
+  }
+  function currentReorderLinks(items: { id: string; position: number }[]) {
+    return activePage ? reorderExtraPageLinks(activePage.id, items) : reorderLinks(items);
+  }
+  function refreshLinks() {
+    return activePage ? listExtraPageLinks(activePage.id) : listLinks();
+  }
+
+  // switchToPage -- dipanggil dari pill "Home"/nama halaman tambahan. target
+  // null berarti balik ke halaman utama. Men-shim ExtraPageDetail (tidak
+  // punya field username sendiri, warisan dari akun) jadi bentuk MyPage
+  // seperti pola tokoPreviewPage di dashboard/products/page.tsx, supaya
+  // seluruh JSX profil/blok di bawah (baca `page.xxx`) tidak perlu tahu
+  // apakah ini halaman utama atau tambahan.
+  async function switchToPage(target: { id: string; slug: string; pageType: "bio" | "landing" } | null) {
+    if (switchingPage) return;
+    setSwitchingPage(true);
+    setError(null);
+    try {
+      if (target === null) {
+        const [p, l] = await Promise.all([getMyPage(), listLinks()]);
+        setActivePage(null);
+        setPage(p);
+        setLinks(l);
+      } else {
+        const [detail, l] = await Promise.all([getExtraPage(target.id), listExtraPageLinks(target.id)]);
+        setActivePage(target);
+        setPage({
+          ...detail,
+          username: accountUsername,
+          verification: { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
+        });
+        setLinks(l);
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat halaman.");
+    } finally {
+      setSwitchingPage(false);
+    }
+  }
+
+  async function handleCreatePage(e: React.FormEvent) {
+    e.preventDefault();
+    const title = newPageTitle.trim();
+    if (!title || savingNewPage) return;
+    setSavingNewPage(true);
+    setError(null);
+    const baseSlug = slugifyTitle(title);
+    let slug = baseSlug;
+    try {
+      let created: { id: string; message: string } | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          created = await createExtraPage({ name: title, slug, page_type: "bio" });
+          break;
+        } catch (err) {
+          const isSlugTaken = err instanceof ApiError && err.status === 409;
+          if (!isSlugTaken || attempt === 4) throw err;
+          slug = `${baseSlug}-${Math.floor(1000 + attempt * 137 + title.length * 7).toString(36)}`;
+        }
+      }
+      if (!created) return;
+      const freshExtras = await listMyExtraPages();
+      setExtraPages(freshExtras.filter((ep) => ep.page_type !== "produk"));
+      setNewPageTitle("");
+      setCreatingPage(false);
+      await switchToPage({ id: created.id, slug, pageType: "bio" });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal membuat halaman.");
+    } finally {
+      setSavingNewPage(false);
+    }
+  }
+
+  async function handleTogglePagePublish(target: ExtraPage) {
+    const next = !target.is_published;
+    setExtraPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: next } : p)));
+    if (activePage?.id === target.id) setPage((prev) => (prev ? { ...prev, is_published: next } : prev));
+    try {
+      await updateExtraPage(target.id, { is_published: next });
+    } catch (err) {
+      setExtraPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: !next } : p)));
+      if (activePage?.id === target.id) setPage((prev) => (prev ? { ...prev, is_published: !next } : prev));
+      setError(err instanceof ApiError ? err.message : "Gagal mengubah status terbit halaman.");
+    }
+  }
+
+  async function handleDeletePage(target: ExtraPage) {
+    const ok = await confirmDelete(`Hapus halaman "${target.name}"? Semua tautan/blok di halaman ini ikut terhapus.`, {
+      confirmButtonText: "Ya, Hapus Halaman",
+    });
+    if (!ok) return;
+    const previous = extraPages;
+    setExtraPages((prev) => prev.filter((p) => p.id !== target.id));
+    try {
+      await deleteExtraPage(target.id);
+      if (activePage?.id === target.id) await switchToPage(null);
+    } catch (err) {
+      setExtraPages(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal menghapus halaman.");
+    }
+  }
+
+  function startRenamePage(current: ExtraPage) {
+    setRenamePageValue(current.name);
+    setRenamingPage(true);
+  }
+
+  async function saveRenamePage() {
+    if (!activePage) return;
+    const name = renamePageValue.trim();
+    setRenamingPage(false);
+    if (!name) return;
+    const previous = extraPages;
+    setExtraPages((prev) => prev.map((p) => (p.id === activePage.id ? { ...p, name } : p)));
+    try {
+      await updateExtraPage(activePage.id, { name });
+    } catch (err) {
+      setExtraPages(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal mengubah judul halaman.");
+    }
+  }
 
   function startEditProfileField(field: "name" | "bio") {
     if (!page) return;
@@ -548,7 +727,7 @@ export default function DashboardLinksPage() {
     const patch = field === "name" ? { display_name: value } : { bio: value };
     setPage({ ...page, ...patch });
     try {
-      await updateMyPage(patch);
+      await currentPagePatch(patch);
     } catch (err) {
       setPage(previous);
       setError(err instanceof ApiError ? err.message : `Gagal menyimpan ${field === "name" ? "nama tampilan" : "bio"}.`);
@@ -590,7 +769,7 @@ export default function DashboardLinksPage() {
       social_website: (socialDraft.website ?? "").trim(),
     };
     try {
-      await updateMyPage(patch);
+      await currentPagePatch(patch);
       setPage({ ...page, ...patch });
       setSocialOpen(false);
     } catch (err) {
@@ -607,7 +786,7 @@ export default function DashboardLinksPage() {
 
     setAvatarUploading(true);
     try {
-      const { avatar_url } = await uploadAvatar(file);
+      const { avatar_url } = await currentUploadAvatar(file);
       setPage({ ...page, avatar_url });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
@@ -620,7 +799,7 @@ export default function DashboardLinksPage() {
     e.preventDefault();
     if (!newTitle.trim() || !newURL.trim()) return;
     try {
-      const created = await createLink({ title: newTitle, url: newURL, description: newDescription.trim() });
+      const created = await currentCreateLink({ title: newTitle, url: newURL, description: newDescription.trim() });
       setLinks((prev) => [...prev, created]);
       setNewTitle("");
       setNewURL("");
@@ -1058,7 +1237,7 @@ export default function DashboardLinksPage() {
     setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: nextFeatured } : l)));
     try {
       await updateLink(link.id, { is_featured: nextFeatured });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: link.is_featured } : l)));
@@ -1147,7 +1326,7 @@ export default function DashboardLinksPage() {
     setSavingSchedule(true);
     try {
       await updateLink(link.id, { starts_at: startsAt, ends_at: endsAt });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
       setScheduleEditId(null);
     } catch (err) {
@@ -1161,7 +1340,7 @@ export default function DashboardLinksPage() {
     setError(null);
     try {
       await updateLink(link.id, { clear_schedule: true });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membatalkan jadwal.");
@@ -1192,7 +1371,7 @@ export default function DashboardLinksPage() {
         lock_code: lockTypeInput === "code" ? lockCodeInput.trim() : undefined,
         lock_min_age: lockTypeInput === "age" ? Number(lockMinAgeInput) : undefined,
       });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
       setLockEditId(null);
     } catch (err) {
@@ -1206,7 +1385,7 @@ export default function DashboardLinksPage() {
     setError(null);
     try {
       await updateLink(link.id, { clear_lock: true });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuka kunci tautan.");
@@ -1228,7 +1407,7 @@ export default function DashboardLinksPage() {
       } else {
         await updateLink(link.id, { lock_type: "sensitive" });
       }
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menandai konten sensitif.");
@@ -1244,7 +1423,7 @@ export default function DashboardLinksPage() {
     setError(null);
     try {
       await duplicateLink(link.id);
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal menduplikasi blok.");
@@ -1302,7 +1481,7 @@ export default function DashboardLinksPage() {
     setError(null);
     setSavingBlock(true);
     try {
-      const created = await createBlock({
+      const created = await currentCreateBlock({
         block_type: blockType,
         title: blockTitle.trim(),
         url: blockUrl,
@@ -1400,7 +1579,7 @@ export default function DashboardLinksPage() {
     setSavingContent(true);
     try {
       await updateLink(link.id, { url: blockUrl, block_data: blockData, description: blockDescription });
-      const refreshed = await listLinks();
+      const refreshed = await refreshLinks();
       setLinks(refreshed);
       setContentEditId(null);
     } catch (err) {
@@ -1423,7 +1602,7 @@ export default function DashboardLinksPage() {
     setLinks(withPositions);
     setDragId(null);
 
-    reorderLinks(withPositions.map((l) => ({ id: l.id, position: l.position }))).catch((err) => {
+    currentReorderLinks(withPositions.map((l) => ({ id: l.id, position: l.position }))).catch((err) => {
       setError(err instanceof ApiError ? err.message : "Gagal menyimpan urutan tautan.");
     });
   }
@@ -1452,7 +1631,99 @@ export default function DashboardLinksPage() {
           intrinsik itu, grid dipaksa melebar melebihi kontainer, mendorong
           kolom pratinjau (360px) & seluruh halaman ikut rusak/overflow. */}
       <div className="min-w-0">
-        <p className="mt-1 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
+        {/* Pill navigasi halaman -- Modul Halaman Tambahan Fase 2 (permintaan
+            langsung pengguna, 28 Agustus 2026, referensi UI kompetitor "+
+            Page" + navigation pill): "Home" = halaman utama, satu pill per
+            halaman tambahan (bio/landing) yang dibuat lewat "+ Page" di
+            bawah. Mengeklik pill mengganti SELURUH state page/links yang
+            dirender di bawah (lihat switchToPage) -- builder blok, baris
+            profil, & pratinjau semuanya otomatis ikut halaman yang aktif,
+            TIDAK ada UI terpisah. Halaman Toko (page_type "produk") sengaja
+            TIDAK muncul di sini -- keputusan langsung pengguna, tetap
+            dikelola lewat menu Toko (Produk & Monetisasi). */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => switchToPage(null)}
+            disabled={switchingPage || activePage === null}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
+              activePage === null ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+            }`}
+          >
+            Home
+          </button>
+          {extraPages.map((ep) => (
+            <button
+              key={ep.id}
+              type="button"
+              onClick={() => switchToPage({ id: ep.id, slug: ep.slug, pageType: ep.page_type === "landing" ? "landing" : "bio" })}
+              disabled={switchingPage || activePage?.id === ep.id}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
+                activePage?.id === ep.id ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+              }`}
+            >
+              {ep.name}
+              {!ep.is_published && (
+                <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">Draf</span>
+              )}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              if (!page?.is_premium) {
+                router.push("/dashboard/settings/subscription");
+                return;
+              }
+              if (extraPages.length >= PREMIUM_EXTRA_PAGE_LIMIT) {
+                setError(`Sudah mencapai batas ${PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan.`);
+                return;
+              }
+              setNewPageTitle("");
+              setCreatingPage(true);
+            }}
+            title={!page?.is_premium ? "Halaman tambahan khusus kreator Premium" : undefined}
+            className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-bold text-muted hover:border-primary hover:text-primary"
+          >
+            <IconPlus className="h-3.5 w-3.5" />
+            Page
+            {!page?.is_premium && <IconStar className="h-3 w-3 text-secondary-dark" />}
+          </button>
+        </div>
+
+        {activePage &&
+          (() => {
+            const activeExtraPage = extraPages.find((p) => p.id === activePage.id);
+            if (!activeExtraPage) return null;
+            return (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                {renamingPage ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    value={renamePageValue}
+                    onChange={(e) => setRenamePageValue(e.target.value)}
+                    onBlur={saveRenamePage}
+                    onKeyDown={(e) => e.key === "Enter" && saveRenamePage()}
+                    className="rounded-md border border-primary px-2 py-0.5 text-xs text-ink focus:outline-none"
+                  />
+                ) : (
+                  <button type="button" onClick={() => startRenamePage(activeExtraPage)} className="flex items-center gap-1 hover:text-primary">
+                    <IconPencil className="h-3 w-3" /> Ganti judul halaman
+                  </button>
+                )}
+                <label className="flex items-center gap-1.5">
+                  <Toggle checked={activeExtraPage.is_published} onChange={() => handleTogglePagePublish(activeExtraPage)} />
+                  Terbitkan
+                </label>
+                <button type="button" onClick={() => handleDeletePage(activeExtraPage)} className="flex items-center gap-1 text-red-500 hover:underline">
+                  <IconTrash className="h-3 w-3" /> Hapus halaman
+                </button>
+              </div>
+            );
+          })()}
+
+        <p className="mt-3 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -3064,7 +3335,58 @@ export default function DashboardLinksPage() {
           );
         })()}
 
-      <LivePreviewPanel page={page} links={links} products={products} />
+      {/* Modal "+ Page" -- hanya minta judul (permintaan langsung pengguna:
+          "menambah halaman dengan isi an hanya title nya saja"). Slug
+          diturunkan otomatis dari judul (slugifyTitle) dengan retry
+          tabrakan di handleCreatePage -- kreator tidak perlu tahu/pilih
+          slug sama sekali, beda dari form dashboard/pages/page.tsx yang
+          digantikan modul ini. */}
+      {creatingPage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreatingPage(false)}>
+          <form
+            onSubmit={handleCreatePage}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <h2 className="font-heading text-sm font-bold text-ink">Halaman Baru</h2>
+            <p className="mt-1 text-xs text-muted">Beri judul halamannya. Kamu bisa isi tautan/blok setelah dibuat.</p>
+            <input
+              type="text"
+              autoFocus
+              value={newPageTitle}
+              onChange={(e) => setNewPageTitle(e.target.value)}
+              placeholder="Contoh: Promo Agustus"
+              maxLength={80}
+              className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCreatingPage(false)}
+                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={!newPageTitle.trim() || savingNewPage}
+                className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
+              >
+                {savingNewPage ? "Membuat..." : "Buat Halaman"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <LivePreviewPanel
+        page={page}
+        links={links}
+        products={products}
+        pageType={activePage?.pageType}
+        pageSlug={activePage?.slug}
+        openUrl={activePage ? `${SITE_URL}/${accountUsername}/${activePage.slug}` : undefined}
+      />
     </div>
   );
 }

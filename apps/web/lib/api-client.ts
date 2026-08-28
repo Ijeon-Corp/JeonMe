@@ -1445,7 +1445,7 @@ export function listExtraPageLinks(pageId: string) {
   return apiFetch<LinkItem[]>(`/dashboard/pages/${pageId}/links`, { method: "GET" }, { auth: true });
 }
 
-export function createExtraPageLink(pageId: string, input: { title: string; url: string }) {
+export function createExtraPageLink(pageId: string, input: { title: string; url: string; description?: string }) {
   return apiFetch<LinkItem>(
     `/dashboard/pages/${pageId}/links`,
     { method: "POST", body: JSON.stringify(input) },

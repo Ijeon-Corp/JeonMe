@@ -8,6 +8,7 @@ import {
   CollaboratorSplit,
   DashboardCollaborator,
   DashboardProduct,
+  ExtraPage,
   ExtraPageDetail,
   LinkItem,
   MyPage,
@@ -15,6 +16,7 @@ import {
   RecentOrder,
   createExtraPage,
   createProduct,
+  deleteExtraPage,
   deleteProduct,
   getAnalyticsSummary,
   getExtraPage,
@@ -26,6 +28,7 @@ import {
   listMyExtraPages,
   listProducts,
   listRecentOrders,
+  updateExtraPage,
   updateExtraPageStickers,
   updateProduct,
   uploadProductCover,
@@ -60,6 +63,8 @@ import TransactionPanel from "@/components/TransactionPanel";
 import ProdukPageEditor, { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/site";
+import { slugifyTitle } from "@/lib/slug";
+import { useRouter } from "next/navigation";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -102,7 +107,14 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
   );
 }
 
+// PREMIUM_PRODUK_PAGE_LIMIT -- SAMA PERSIS batas backend
+// (premiumProdukPageLimit, page.go): 1 Toko gratis (canonical, otomatis),
+// sampai 5 total (termasuk canonical) untuk Premium (multi-brand). Murni
+// utk UI, backend tetap sumber kebenaran validasinya.
+const PREMIUM_PRODUK_PAGE_LIMIT = 5;
+
 export default function DashboardProductsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<
     | "halaman_toko"
     | "overview"
@@ -230,24 +242,43 @@ export default function DashboardProductsPage() {
   // bawah tahu kapan harus menyalakan editableStickers (tab Stiker aktif).
   const [tokoSection, setTokoSection] = useState<DesignSection>("blok");
 
+  // Modul multi-Toko Fase 2 (permintaan langsung pengguna, 28 Agustus 2026:
+  // "Tetap di menu Toko (Produk & Monetisasi)" -- jawaban AskUserQuestion
+  // soal ke mana perpindah pembuatan Toko ke-2..5 setelah /dashboard/pages
+  // dihapus & digantikan pill "+ Page" di Link Bio KHUSUS Bio/Landing).
+  // allTokoPages -- SEMUA halaman page_type "produk" milik akun (canonical +
+  // multi-brand Premium), activeTokoPageId null berarti sedang menampilkan
+  // canonical (perilaku default, sama seperti sebelum modul ini ada).
+  const [allTokoPages, setAllTokoPages] = useState<ExtraPage[]>([]);
+  const [activeTokoPageId, setActiveTokoPageId] = useState<string | null>(null);
+  const [creatingTokoPage, setCreatingTokoPage] = useState(false);
+  const [newTokoPageTitle, setNewTokoPageTitle] = useState("");
+  const [savingNewTokoPage, setSavingNewTokoPage] = useState(false);
+
   // loadTokoData -- murni ambil & kembalikan data, TANPA setState di
   // dalamnya (aturan lint react-hooks/set-state-in-effect, lihat catatan
-  // yang sama di commit sebelumnya).
-  async function loadTokoData() {
+  // yang sama di commit sebelumnya). targetId -- Toko mana yang mau
+  // ditampilkan; kosong/tidak ketemu jatuh balik ke canonical (slug ===
+  // username, Toko pertama yang otomatis dibuat begitu produk pertama ada).
+  async function loadTokoData(targetId?: string | null) {
     const profile = await getSettingsProfile();
     const pages = await listMyExtraPages();
-    const canonical = pages.find((p) => p.page_type === "produk" && p.slug === profile.username);
-    if (!canonical) {
-      return { username: profile.username, page: null as ExtraPageDetail | null, links: [] as LinkItem[] };
+    const tokoPages = pages.filter((p) => p.page_type === "produk");
+    const canonical = tokoPages.find((p) => p.slug === profile.username) ?? null;
+    const target = (targetId && tokoPages.find((p) => p.id === targetId)) || canonical;
+    if (!target) {
+      return { username: profile.username, page: null as ExtraPageDetail | null, links: [] as LinkItem[], tokoPages, activeId: null as string | null };
     }
-    const [detail, pageLinks] = await Promise.all([getExtraPage(canonical.id), listExtraPageLinks(canonical.id)]);
-    return { username: profile.username, page: detail, links: pageLinks };
+    const [detail, pageLinks] = await Promise.all([getExtraPage(target.id), listExtraPageLinks(target.id)]);
+    return { username: profile.username, page: detail, links: pageLinks, tokoPages, activeId: target.id };
   }
 
   const applyTokoResult = useCallback((result: Awaited<ReturnType<typeof loadTokoData>>) => {
     setTokoUsername(result.username);
     setTokoPage(result.page);
     setTokoLinks(result.links);
+    setAllTokoPages(result.tokoPages);
+    setActiveTokoPageId(result.activeId);
   }, []);
 
   useEffect(() => {
@@ -267,6 +298,79 @@ export default function DashboardProductsPage() {
       setTokoError(err instanceof ApiError ? err.message : "Gagal membuat Halaman Toko.");
     } finally {
       setTokoCreating(false);
+    }
+  }
+
+  async function switchToTokoPage(id: string) {
+    if (tokoLoading || id === activeTokoPageId) return;
+    setTokoLoading(true);
+    setTokoError(null);
+    try {
+      applyTokoResult(await loadTokoData(id));
+    } catch (err) {
+      setTokoError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko.");
+    } finally {
+      setTokoLoading(false);
+    }
+  }
+
+  async function handleCreateAdditionalToko(e: React.FormEvent) {
+    e.preventDefault();
+    const title = newTokoPageTitle.trim();
+    if (!title || savingNewTokoPage) return;
+    setSavingNewTokoPage(true);
+    setTokoError(null);
+    const baseSlug = slugifyTitle(title, "toko");
+    let slug = baseSlug;
+    try {
+      let created: { id: string; message: string } | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          created = await createExtraPage({ name: title, slug, page_type: "produk" });
+          break;
+        } catch (err) {
+          const isSlugTaken = err instanceof ApiError && err.status === 409;
+          if (!isSlugTaken || attempt === 4) throw err;
+          slug = `${baseSlug}-${Math.floor(1000 + attempt * 137 + title.length * 7).toString(36)}`;
+        }
+      }
+      if (!created) return;
+      setNewTokoPageTitle("");
+      setCreatingTokoPage(false);
+      applyTokoResult(await loadTokoData(created.id));
+    } catch (err) {
+      setTokoError(err instanceof ApiError ? err.message : "Gagal membuat Toko baru.");
+    } finally {
+      setSavingNewTokoPage(false);
+    }
+  }
+
+  async function handleTogglePagePublish(target: ExtraPage) {
+    const next = !target.is_published;
+    setAllTokoPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: next } : p)));
+    if (activeTokoPageId === target.id) setTokoPage((prev) => (prev ? { ...prev, is_published: next } : prev));
+    try {
+      await updateExtraPage(target.id, { is_published: next });
+    } catch (err) {
+      setAllTokoPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: !next } : p)));
+      if (activeTokoPageId === target.id) setTokoPage((prev) => (prev ? { ...prev, is_published: !next } : prev));
+      setTokoError(err instanceof ApiError ? err.message : "Gagal mengubah status terbit Toko.");
+    }
+  }
+
+  async function handleDeleteAdditionalToko(target: ExtraPage) {
+    const ok = await confirmDelete(`Hapus Toko "${target.name}"? Semua produk tetap ada, tapi halaman & tautannya hilang.`, {
+      confirmButtonText: "Ya, Hapus Toko",
+    });
+    if (!ok) return;
+    const previous = allTokoPages;
+    setAllTokoPages((prev) => prev.filter((p) => p.id !== target.id));
+    try {
+      await deleteExtraPage(target.id);
+      if (activeTokoPageId === target.id) applyTokoResult(await loadTokoData());
+    } catch (err) {
+      setAllTokoPages(previous);
+      setTokoError(err instanceof ApiError ? err.message : "Gagal menghapus Toko.");
     }
   }
 
@@ -828,6 +932,80 @@ export default function DashboardProductsPage() {
 
         {tab === "halaman_toko" ? (
           <div className="mt-4">
+            {/* Pill switcher multi-Toko -- Modul Halaman Tambahan Fase 2
+                (jawaban AskUserQuestion langsung pengguna, 28 Agustus 2026:
+                "Tetap di menu Toko (Produk & Monetisasi)"). Disembunyikan
+                kalau cuma ada 1 Toko (canonical) DAN akun bukan Premium --
+                supaya kreator gratis dengan 1 Toko biasa tidak melihat UI
+                switcher yang tidak relevan untuk mereka. Syarat length >= 1
+                MENCEGAH tombol "+ Toko" muncul SEBELUM Toko canonical ada
+                sama sekali (mis. akun Premium yang belum pernah menambahkan
+                produk) -- kalau dibolehkan, klik "+ Toko" bisa membuat Toko
+                PERTAMA dengan slug bebas (bukan slug=username), bentrok
+                dengan alur canonical "Buat Halaman Toko sekarang" di bawah
+                yang sengaja slug-nya SELALU = username. */}
+            {allTokoPages.length >= 1 && (allTokoPages.length > 1 || page?.is_premium) && (
+              <>
+                <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                  {allTokoPages.map((tp) => (
+                    <button
+                      key={tp.id}
+                      type="button"
+                      onClick={() => switchToTokoPage(tp.id)}
+                      disabled={tokoLoading || activeTokoPageId === tp.id}
+                      className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
+                        activeTokoPageId === tp.id ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+                      }`}
+                    >
+                      {tp.name}
+                      {!tp.is_published && (
+                        <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">Draf</span>
+                      )}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!page?.is_premium) {
+                        router.push("/dashboard/settings/subscription");
+                        return;
+                      }
+                      if (allTokoPages.length >= PREMIUM_PRODUK_PAGE_LIMIT) {
+                        setTokoError(`Sudah mencapai batas ${PREMIUM_PRODUK_PAGE_LIMIT} Toko.`);
+                        return;
+                      }
+                      setNewTokoPageTitle("");
+                      setCreatingTokoPage(true);
+                    }}
+                    title={!page?.is_premium ? "Toko tambahan khusus kreator Premium" : undefined}
+                    className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-bold text-muted hover:border-primary hover:text-primary"
+                  >
+                    <IconPlus className="h-3.5 w-3.5" />
+                    Toko
+                    {!page?.is_premium && <IconSparkle className="h-3 w-3 text-secondary-dark" />}
+                  </button>
+                </div>
+                {(() => {
+                  const activeTp = allTokoPages.find((p) => p.id === activeTokoPageId);
+                  if (!activeTp) return null;
+                  return (
+                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                      <label className="flex items-center gap-1.5">
+                        <Toggle checked={activeTp.is_published} onChange={() => handleTogglePagePublish(activeTp)} />
+                        Terbitkan
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAdditionalToko(activeTp)}
+                        className="flex items-center gap-1 text-red-500 hover:underline"
+                      >
+                        <IconTrash className="h-3 w-3" /> Hapus Toko ini
+                      </button>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
             <ProdukPageEditor
               loading={tokoLoading}
               username={tokoUsername}
@@ -1344,6 +1522,47 @@ export default function DashboardProductsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal "+ Toko" -- hanya minta judul (pola sama "+ Page" Link Bio),
+          slug diturunkan otomatis (slugifyTitle) dengan retry tabrakan di
+          handleCreateAdditionalToko. Toko ke-2..5 (Premium, multi-brand). */}
+      {creatingTokoPage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreatingTokoPage(false)}>
+          <form
+            onSubmit={handleCreateAdditionalToko}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <h2 className="font-heading text-sm font-bold text-ink">Toko Baru</h2>
+            <p className="mt-1 text-xs text-muted">Beri nama Toko-nya. Kamu bisa tambahkan produk & atur tampilannya setelah dibuat.</p>
+            <input
+              type="text"
+              autoFocus
+              value={newTokoPageTitle}
+              onChange={(e) => setNewTokoPageTitle(e.target.value)}
+              placeholder="Contoh: Toko Skincare"
+              maxLength={80}
+              className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCreatingTokoPage(false)}
+                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={!newTokoPageTitle.trim() || savingNewTokoPage}
+                className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
+              >
+                {savingNewTokoPage ? "Membuat..." : "Buat Toko"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <LivePreviewPanel
         page={tokoPreviewPage}
