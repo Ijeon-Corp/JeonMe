@@ -162,6 +162,19 @@ export type PageThemeName =
   | "voyage"
   | "latte"
   | "confetti"
+  // 10 doodle baru -- permintaan langsung pengguna, 28 Agustus 2026: "saya
+  // mau tambahkan 10 wallpaper doodle". Motif+niche masing-masing dijelaskan
+  // di entri PAGE_THEMES-nya sendiri di bawah.
+  | "pixel"
+  | "sweat"
+  | "snip"
+  | "paws"
+  | "mic"
+  | "herb"
+  | "thread"
+  | "lens"
+  | "kind"
+  | "code"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -261,6 +274,18 @@ export const DOODLE_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "voyage",
   "latte",
   "confetti",
+  // 10 doodle baru -- permintaan langsung pengguna, 28 Agustus 2026: "saya
+  // mau tambahkan 10 wallpaper doodle".
+  "pixel",
+  "sweat",
+  "snip",
+  "paws",
+  "mic",
+  "herb",
+  "thread",
+  "lens",
+  "kind",
+  "code",
 ];
 
 export type PageTheme = {
@@ -2980,6 +3005,243 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "url('/doodles/confetti.svg') left top/110px 110px repeat",
     previewIsDark: false,
     pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  // 10 doodle baru -- permintaan langsung pengguna, 28 Agustus 2026: "saya
+  // mau tambahkan 10 wallpaper doodle". Mengikuti pola PERSIS 6 doodle di
+  // atas: SVG garis tangan di-tile (public/doodles/<nama>.svg), swatch =
+  // warna aksen yang sama dipakai di card/productPrice/buyButton, font
+  // custom Google BEDA per tema (disebar merata di 8 font yang tersedia,
+  // lihat layout.tsx) supaya tetap variatif walau beberapa terpaksa berbagi
+  // font dengan tema lain (10 tema baru > 8 pilihan font yang ada).
+  pixel: {
+    // Motif kontroler game + koin/token -- cocok Streamer/Gamer (kategori
+    // Creator), beda dari "electric" (video neon, sudah tidak dipakai lagi
+    // di kurasi manapun -- lihat catatan di landing/Templates.tsx) --
+    // ilustrasi garis tangan playful, bukan video neon agresif.
+    label: "Pixel",
+    page: "bg-[url('/doodles/pixel.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#6B5FD9]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#6B5FD9]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#4A3F9E]",
+    buyButton: "bg-[#6B5FD9] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#6B5FD9",
+    previewBg: "url('/doodles/pixel.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
+  },
+  sweat: {
+    // Motif dumbbell + tetes keringat -- cocok Gym/Fitness Coach (kategori
+    // Local/Lifestyle), beda dari "electric" (video neon bekas Gamer yang
+    // sebelumnya "diwarisi" gym-fitness-center secara tidak sengaja).
+    label: "Sweat",
+    page: "bg-[url('/doodles/sweat.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#E2664B]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#E2664B]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#B84B34]",
+    buyButton: "bg-[#E2664B] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#E2664B",
+    previewBg: "url('/doodles/sweat.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-space-grotesk)" },
+  },
+  snip: {
+    // Motif gunting + sisir -- cocok Barbershop/Salon (kategori Local),
+    // beda dari "noir" (gradien polos TANPA ikon) yang dipakai barbershop
+    // hari ini.
+    label: "Snip",
+    page: "bg-[url('/doodles/snip.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#3E5866]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#3E5866]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#2B3E48]",
+    buyButton: "bg-[#3E5866] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#3E5866",
+    previewBg: "url('/doodles/snip.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-montserrat)" },
+  },
+  paws: {
+    // Motif tapak kaki + tulang -- cocok Petshop (kategori Shop), niche
+    // yang belum punya wallpaper doodle sama sekali sebelumnya.
+    label: "Paws",
+    page: "bg-[url('/doodles/paws.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#B9823E]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#B9823E]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#8C6329]",
+    buyButton: "bg-[#B9823E] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#B9823E",
+    previewBg: "url('/doodles/paws.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-quicksand)" },
+  },
+  mic: {
+    // Motif mikrofon + gelombang suara -- cocok Podcaster/DJ/Musician
+    // (kategori Entertainment), ilustrasi garis tangan sebagai alternatif
+    // yang lebih kalem dari tema gradien/video yang sudah ada di niche ini.
+    label: "Mic",
+    page: "bg-[url('/doodles/mic.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#8C4FB0]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#8C4FB0]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#6B3A87]",
+    buyButton: "bg-[#8C4FB0] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#8C4FB0",
+    previewBg: "url('/doodles/mic.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  herb: {
+    // Motif daun + tetes ekstrak -- cocok Herbal/Jamu (kategori Shop), niche
+    // wellness yang sebelumnya cuma punya "matcha" (gradien polos TANPA
+    // ikon).
+    label: "Herb",
+    page: "bg-[url('/doodles/herb.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#5F8556]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#5F8556]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#456140]",
+    buyButton: "bg-[#5F8556] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#5F8556",
+    previewBg: "url('/doodles/herb.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-merriweather)" },
+  },
+  thread: {
+    // Motif jarum+benang + kancing -- cocok Batik/Kerajinan/Fashion Store
+    // (kategori Shop), ilustrasi garis tangan sebagai alternatif dari
+    // "kraft" (tekstur kertas foto sungguhan) untuk niche yang sama.
+    label: "Thread",
+    page: "bg-[url('/doodles/thread.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#B5654A]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#B5654A]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#8C4B36]",
+    buyButton: "bg-[#B5654A] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#B5654A",
+    previewBg: "url('/doodles/thread.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-playfair)" },
+  },
+  lens: {
+    // Motif kamera + aperture -- cocok Photographer (kategori Local), beda
+    // dari "nova" (gradien polos TANPA ikon) yang dipakai photographer hari
+    // ini.
+    label: "Lens",
+    page: "bg-[url('/doodles/lens.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#3D7D7A]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#3D7D7A]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#2B5B59]",
+    buyButton: "bg-[#3D7D7A] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#3D7D7A",
+    previewBg: "url('/doodles/lens.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-lora)" },
+  },
+  kind: {
+    // Motif hati + pita -- cocok Nonprofit & Charity/Donation (kategori
+    // Special), beda dari "blush" (gradien polos TANPA ikon) yang dipakai
+    // nonprofit-charity hari ini.
+    label: "Kind",
+    page: "bg-[url('/doodles/kind.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#C2557B]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#C2557B]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#973F5E]",
+    buyButton: "bg-[#C2557B] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#C2557B",
+    previewBg: "url('/doodles/kind.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  code: {
+    // Motif kurung sudut kode + kursor -- cocok Full-Stack Developer/UI-UX
+    // Designer/Startup Founder (kategori Business), niche teknis yang
+    // sebelumnya cuma punya "console" (gradien polos TANPA ikon).
+    label: "Code",
+    page: "bg-[url('/doodles/code.svg')] bg-repeat",
+    glow: "hidden",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border border-[#4A5FBF]/25 bg-white/70 backdrop-blur hover:bg-white/90 hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border border-[#4A5FBF]/25 bg-white/70 backdrop-blur",
+    productTitle: "text-ink",
+    productPrice: "text-[#374890]",
+    buyButton: "bg-[#4A5FBF] text-white font-bold hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#4A5FBF",
+    previewBg: "url('/doodles/code.svg') left top/110px 110px repeat",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
   },
 };
 

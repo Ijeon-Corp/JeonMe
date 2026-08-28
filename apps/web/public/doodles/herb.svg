@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <defs>
+    <symbol id="leaf" viewBox="-8 -10 16 20">
+      <path d="M0,-9 C6,-6 7,2 0,9 C-7,2 -6,-6 0,-9 Z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M0,-7 L0,7" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="drop" viewBox="-4 -7 8 15">
+      <path d="M0,-7 C3,-2 4,1 4,3 C4,6 2,8 0,8 C-2,8 -4,6 -4,3 C-4,1 -3,-2 0,-7 Z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="260" height="260" fill="#EEF5EC"/>
+  <g fill="none" stroke="#5F8556" stroke-width="2.4" opacity="0.5" color="#5F8556">
+    <use href="#leaf" width="16" height="20" x="-8" y="-10" transform="translate(40,45) rotate(-8)"/>
+    <use href="#drop" width="8" height="15" x="-4" y="-7" transform="translate(140,30) rotate(12) scale(0.9)"/>
+    <use href="#leaf" width="16" height="20" x="-8" y="-10" transform="translate(220,80) rotate(15) scale(1.1)"/>
+    <use href="#drop" width="8" height="15" x="-4" y="-7" transform="translate(30,130)"/>
+    <use href="#leaf" width="16" height="20" x="-8" y="-10" transform="translate(120,140) rotate(-20)"/>
+    <use href="#drop" width="8" height="15" x="-4" y="-7" transform="translate(210,175) rotate(-15) scale(0.85)"/>
+    <use href="#leaf" width="16" height="20" x="-8" y="-10" transform="translate(55,215) rotate(6) scale(0.95)"/>
+    <use href="#drop" width="8" height="15" x="-4" y="-7" transform="translate(180,235) rotate(30)"/>
+    <circle cx="95" cy="80" r="2.4" fill="#5F8556" stroke="none"/>
+    <circle cx="245" cy="140" r="2" fill="#5F8556" stroke="none"/>
+    <circle cx="165" cy="105" r="1.8" fill="#5F8556" stroke="none"/>
+    <circle cx="15" cy="175" r="2.2" fill="#5F8556" stroke="none"/>
+  </g>
+</svg>

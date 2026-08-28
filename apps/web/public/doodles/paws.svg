@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <defs>
+    <symbol id="paw" viewBox="-9 -9 18 18">
+      <ellipse cx="0" cy="3" rx="6" ry="5" fill="none"/>
+      <circle cx="-6" cy="-5" r="2.2" fill="none"/>
+      <circle cx="-2" cy="-8" r="2.2" fill="none"/>
+      <circle cx="2" cy="-8" r="2.2" fill="none"/>
+      <circle cx="6" cy="-5" r="2.2" fill="none"/>
+    </symbol>
+    <symbol id="bone" viewBox="-12 -5 24 10">
+      <path d="M-9,-3 C-11,-3 -11,3 -9,3 C-7,3 -7,1 -5,1 L5,1 C7,1 7,3 9,3 C11,3 11,-3 9,-3 C7,-3 7,-1 5,-1 L-5,-1 C-7,-1 -7,-3 -9,-3 Z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="260" height="260" fill="#FBF1E4"/>
+  <g fill="none" stroke="#B9823E" stroke-width="2.4" opacity="0.5" color="#B9823E">
+    <use href="#paw" width="18" height="18" x="-9" y="-9" transform="translate(40,45) rotate(-8)"/>
+    <use href="#bone" width="24" height="10" x="-12" y="-5" transform="translate(140,30) rotate(12) scale(0.9)"/>
+    <use href="#paw" width="18" height="18" x="-9" y="-9" transform="translate(220,80) rotate(15) scale(1.1)"/>
+    <use href="#bone" width="24" height="10" x="-12" y="-5" transform="translate(30,130)"/>
+    <use href="#paw" width="18" height="18" x="-9" y="-9" transform="translate(120,140) rotate(-20)"/>
+    <use href="#bone" width="24" height="10" x="-12" y="-5" transform="translate(210,175) rotate(-15) scale(0.85)"/>
+    <use href="#paw" width="18" height="18" x="-9" y="-9" transform="translate(55,215) rotate(6) scale(0.95)"/>
+    <use href="#bone" width="24" height="10" x="-12" y="-5" transform="translate(180,235) rotate(30)"/>
+    <circle cx="95" cy="80" r="2.4" fill="#B9823E" stroke="none"/>
+    <circle cx="245" cy="140" r="2" fill="#B9823E" stroke="none"/>
+    <circle cx="165" cy="105" r="1.8" fill="#B9823E" stroke="none"/>
+    <circle cx="15" cy="175" r="2.2" fill="#B9823E" stroke="none"/>
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <defs>
+    <symbol id="brackets" viewBox="-10 -8 20 16">
+      <path d="M-2,-7 L-9,0 L-2,7 M2,-7 L9,0 L2,7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="cursor" viewBox="-5 -7 10 14">
+      <path d="M0,-6 L0,4" stroke-linecap="round"/>
+      <path d="M-3,6 L3,6" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  <rect width="260" height="260" fill="#EEF0FA"/>
+  <g fill="none" stroke="#4A5FBF" stroke-width="2.4" opacity="0.5" color="#4A5FBF">
+    <use href="#brackets" width="20" height="16" x="-10" y="-8" transform="translate(40,45) rotate(-8)"/>
+    <use href="#cursor" width="10" height="14" x="-5" y="-7" transform="translate(140,30) rotate(12) scale(0.9)"/>
+    <use href="#brackets" width="20" height="16" x="-10" y="-8" transform="translate(220,80) rotate(15) scale(1.1)"/>
+    <use href="#cursor" width="10" height="14" x="-5" y="-7" transform="translate(30,130)"/>
+    <use href="#brackets" width="20" height="16" x="-10" y="-8" transform="translate(120,140) rotate(-20)"/>
+    <use href="#cursor" width="10" height="14" x="-5" y="-7" transform="translate(210,175) rotate(-15) scale(0.85)"/>
+    <use href="#brackets" width="20" height="16" x="-10" y="-8" transform="translate(55,215) rotate(6) scale(0.95)"/>
+    <use href="#cursor" width="10" height="14" x="-5" y="-7" transform="translate(180,235) rotate(30)"/>
+    <circle cx="95" cy="80" r="2.4" fill="#4A5FBF" stroke="none"/>
+    <circle cx="245" cy="140" r="2" fill="#4A5FBF" stroke="none"/>
+    <circle cx="165" cy="105" r="1.8" fill="#4A5FBF" stroke="none"/>
+    <circle cx="15" cy="175" r="2.2" fill="#4A5FBF" stroke="none"/>
+  </g>
+</svg>

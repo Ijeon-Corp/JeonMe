@@ -1144,6 +1144,12 @@ var availableThemes = map[string]bool{
 	// preview tampil normal.
 	"scrawl": true, "notebook": true, "meadow": true,
 	"voyage": true, "latte": true, "confetti": true,
+	// 10 preset DOODLE TAMBAHAN, 28 Agustus 2026 (permintaan langsung
+	// pengguna: "saya mau tambahkan 10 wallpaper doodle") -- ditambahkan
+	// LANGSUNG di sini bersamaan dengan frontend, mengikuti pelajaran yang
+	// sama seperti catatan di atas (batch 6 preset doodle 26 Agustus).
+	"pixel": true, "sweat": true, "snip": true, "paws": true, "mic": true,
+	"herb": true, "thread": true, "lens": true, "kind": true, "code": true,
 	"custom": true,
 }
 

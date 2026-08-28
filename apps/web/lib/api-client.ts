@@ -807,6 +807,21 @@ export const THEME_PRESETS = [
   "voyage",
   "latte",
   "confetti",
+  // 10 doodle baru -- permintaan langsung pengguna, 28 Agustus 2026: "saya
+  // mau tambahkan 10 wallpaper doodle". TIDAK type-checked terhadap
+  // PageThemeName (array ini cuma daftar string biasa) -- lihat catatan di
+  // page-themes.ts soal kenapa lupa menambah di sini TIDAK memicu error
+  // compile, cuma bikin tema itu tidak muncul di galeri manapun.
+  "pixel",
+  "sweat",
+  "snip",
+  "paws",
+  "mic",
+  "herb",
+  "thread",
+  "lens",
+  "kind",
+  "code",
 ] as const;
 
 export function getMyPage() {
