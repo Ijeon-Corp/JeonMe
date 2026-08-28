@@ -2469,7 +2469,7 @@ export default function PagePreview({
             />
           )}
           <div className={`relative ${data.layoutVariant === "banner" || data.layoutVariant === "minimal" ? "" : "flex flex-col items-center"}`}>
-            {renderBioHeader(data, theme)}
+            {data.showProfileHeader !== false && renderBioHeader(data, theme)}
           </div>
         </div>
 

@@ -1752,9 +1752,9 @@ export default function DashboardLinksPage() {
                   <Toggle checked={activeExtraPage.is_published} onChange={() => handleTogglePagePublish(activeExtraPage)} />
                   Terbitkan
                 </label>
-                <label className="flex items-center gap-1.5">
+                <label className="flex items-center gap-1.5" title="Foto profil, nama, bio, dan ikon sosial akan disembunyikan sekaligus kalau dimatikan.">
                   <Toggle checked={page?.show_profile_header ?? true} onChange={handleToggleShowProfileHeader} />
-                  Tampilkan foto profil &amp; nama
+                  Tampilkan foto, nama, bio &amp; ikon sosial
                 </label>
                 <button type="button" onClick={() => handleDeletePage(activeExtraPage)} className="flex items-center gap-1 text-red-500 hover:underline">
                   <IconTrash className="h-3 w-3" /> Hapus halaman

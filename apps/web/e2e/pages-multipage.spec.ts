@@ -89,13 +89,15 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await expect(duplicatedPagePill).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
-    // Toggle "Tampilkan foto profil & nama" (permintaan langsung pengguna:
-    // "biasanya page baru untuk landing page biasanya bisa juga tidak
-    // menampilkan foto profile nama dsb gitu") -- default ON, mematikannya
-    // menyembunyikan renderBioHeader di halaman publik. Locator DIBATASI ke
-    // <label> yang membungkus toggle ini -- getByRole("switch") polos juga
-    // akan cocok dengan toggle is_active tiap kartu tautan di daftar bawah.
-    await page.locator("label", { hasText: "Tampilkan foto profil & nama" }).getByRole("switch").click();
+    // Toggle "Tampilkan foto, nama, bio & ikon sosial" (permintaan langsung
+    // pengguna: "saya mau fungsinya tidak menampikan foto nama desc dan
+    // juga ikon sosial ketika tidak diaktifkan") -- default ON, mematikannya
+    // menyembunyikan SELURUH renderBioHeader (avatar/nama/bio/ikon sosial
+    // sekaligus, semuanya dirender di dalam satu fungsi yang sama) di
+    // halaman publik. Locator DIBATASI ke <label> yang membungkus toggle
+    // ini -- getByRole("switch") polos juga akan cocok dengan toggle
+    // is_active tiap kartu tautan di daftar bawah.
+    await page.locator("label", { hasText: "Tampilkan foto, nama, bio & ikon sosial" }).getByRole("switch").click();
 
     // Terbitkan kedua halaman tambahan supaya muncul di site_pages/hamburger
     // halaman publik.
@@ -120,9 +122,16 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await expect(page.getByRole("link", { name: /Link Bio/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Promo Agustus E2E/ })).toBeVisible();
 
+    // Kontras: "Promo Agustus E2E" TIDAK pernah menyentuh toggle ini
+    // (default ON) -- headernya (nama tampilan, jatuh balik ke username)
+    // HARUS tetap tampil, membuktikan toggle sungguhan mengubah sesuatu
+    // (bukan cuma selalu tersembunyi/selalu tampil apa pun nilainya).
+    await page.goto(`/${username}/promo-agustus-e2e`);
+    await expect(page.getByRole("heading", { name: username })).toBeVisible({ timeout: 10000 });
+
     // Halaman "Duplikat Promo E2E" -- header profil disembunyikan (toggle
-    // dimatikan di atas): nama tampilan TIDAK dirender sebagai heading di
-    // halaman publiknya.
+    // dimatikan di atas): nama tampilan TIDAK dirender sebagai heading, dan
+    // tautan/blok biasa TETAP tampil seperti biasa (cuma header yang hilang).
     await page.goto(`/${username}/duplikat-promo-e2e`);
     await expect(page.getByText(linkTitle)).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("heading", { name: username })).toHaveCount(0);
