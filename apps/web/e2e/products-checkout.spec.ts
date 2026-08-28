@@ -38,7 +38,7 @@ test.describe("Toko & Checkout", () => {
     // Belum ada file & belum aktif -- TIDAK boleh muncul di halaman Toko
     // publik sama sekali (GetPublicPage/list backend filter is_active=true,
     // lihat riset alur checkout sebelum test ini ditulis).
-    await page.goto(`/p/${username}`);
+    await page.goto(`/${username}/${username}`);
     await expect(page.getByText(productName)).toHaveCount(0);
 
     await page.goto("/dashboard/products");
@@ -65,7 +65,7 @@ test.describe("Toko & Checkout", () => {
 
     // Sekarang HARUS tampil di Toko publik lengkap dengan harga & tombol Beli.
     await expect(async () => {
-      await page.goto(`/p/${username}`);
+      await page.goto(`/${username}/${username}`);
       await expect(page.getByText(productName)).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 30000, intervals: [3000] });
     await expect(page.getByText(`Rp ${priceIDR.toLocaleString("id-ID")}`)).toBeVisible();
@@ -84,7 +84,7 @@ test.describe("Toko & Checkout", () => {
     // Toko sebelum mengklik "Beli" di bawah -- tombolnya memang tidak
     // pernah ada di Bio (baru saja dibuktikan barisnya sendiri), jadi klik
     // itu selalu timeout menunggu elemen yang tidak akan pernah muncul.
-    await page.goto(`/p/${username}`);
+    await page.goto(`/${username}/${username}`);
 
     // Alur beli: buka form, isi email pembeli, submit -- ini SUNGGUHAN
     // memanggil Midtrans (server-to-server dari API Go) untuk membuat

@@ -113,10 +113,14 @@ func (h *AnalyticsHandler) Track(c *gin.Context) {
 }
 
 // TrackBySlug — No.98 (Sprint 14): sama seperti Track, tapi untuk halaman
-// bio TAMBAHAN (diresolusi lewat slug, bukan username+is_primary) --
-// mencegah klik/kunjungan di halaman tambahan salah tercatat ke halaman
+// bio TAMBAHAN (diresolusi lewat username+slug, bukan username+is_primary)
+// -- mencegah klik/kunjungan di halaman tambahan salah tercatat ke halaman
 // utama kreator yang sama (keduanya berbagi users.username yang sama).
+// :username WAJIB ikut dicocokkan sejak 28 Agustus 2026 (migrasi 000079) --
+// slug sekarang cuma unik PER-USER, bukan lagi global, jadi query tanpa
+// username bisa salah menemukan slug milik akun LAIN yang kebetulan sama.
 func (h *AnalyticsHandler) TrackBySlug(c *gin.Context) {
+	username := c.Param("username")
 	slug := c.Param("slug")
 
 	var req trackEventRequest
@@ -129,12 +133,14 @@ func (h *AnalyticsHandler) TrackBySlug(c *gin.Context) {
 	defer cancel()
 
 	var pageID string
-	if err := h.DB.QueryRow(ctx, `SELECT id FROM pages WHERE slug = $1`, slug).Scan(&pageID); err != nil {
+	if err := h.DB.QueryRow(ctx, `
+		SELECT p.id FROM pages p JOIN users u ON u.id = p.user_id WHERE u.username = $1 AND p.slug = $2
+	`, username, slug).Scan(&pageID); err != nil {
 		c.Status(http.StatusNoContent)
 		return
 	}
 
-	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), h.PublicWebURL+"/p/"+slug)
+	h.insertTrackEvent(ctx, pageID, req, c.Request.UserAgent(), c.ClientIP(), h.PublicWebURL+"/"+username+"/"+slug)
 	c.Status(http.StatusNoContent)
 }
 

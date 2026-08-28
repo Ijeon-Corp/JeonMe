@@ -540,14 +540,18 @@ function renderCategoryTabs(categories: string[], selected: string, onSelect: (c
 // sungguhan (bukan fungsi render biasa seperti renderCategoryTabs) karena
 // butuh state buka/tutup sendiri.
 //
-// Slug Toko SENGAJA dibangun langsung dari username (${SITE_URL}/p/
-// ${username}), BUKAN dari field pageSlug yang sudah ada di
+// Slug Toko SENGAJA dibangun langsung dari username (${SITE_URL}/
+// ${username}/${username}), BUKAN dari field pageSlug yang sudah ada di
 // PagePreviewData -- Toko PERTAMA/otomatis tiap akun SELALU memakai
 // slug = username (bukan slug bebas, lihat ensureProdukPage & catatan
 // arsitektur di CLAUDE.md), jadi tidak perlu endpoint tambahan hanya
 // untuk menemukan alamat Toko dari halaman Bio. Kreator Premium dengan
 // beberapa Toko (slug bebas) tetap diarahkan ke Toko PERTAMA ini --
 // cukup untuk kasus yang digambarkan pengguna ("1 akun 2 halaman").
+// Revisi 28 Agustus 2026: URL pindah dari /p/{slug} ke /{username}/{slug}
+// (lihat migrasi 000079) -- karena slug Toko auto = username, hasilnya
+// jadi /{username}/{username} (tampak berulang, tapi memang begitu
+// konsekuensi skema baru untuk kasus khusus ini).
 //
 // showToko dikontrol dari products.length > 0 di pemanggil (bukan
 // query terpisah) -- Toko otomatis TIDAK PERNAH ada sebelum produk
@@ -580,7 +584,7 @@ function PageSwitcher({ username, showToko, current, theme }: { username: string
               <IconLink className="h-3.5 w-3.5" /> Link Bio
             </a>
             <a
-              href={`${SITE_URL}/p/${username}`}
+              href={`${SITE_URL}/${username}/${username}`}
               className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
                 current === "produk" ? "opacity-100" : "opacity-70 hover:opacity-100"
               }`}
@@ -633,7 +637,7 @@ function renderProductGrid(
 
   function trackProductClick(productId: string) {
     if (data.pageSlug) {
-      trackEventBySlug(data.pageSlug, { event_type: "product_click", product_id: productId });
+      trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productId });
     } else {
       trackEvent(data.username, { event_type: "product_click", product_id: productId });
     }
@@ -2406,7 +2410,7 @@ export default function PagePreview({
             ml-auto SELALU mendorong tombol ini ke kanan terlepas dari
             PageSwitcher merender apa pun. */}
         <div className="ml-auto">
-          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
       </div>
       {/* Bug dilaporkan pengguna (8 Agustus 2026): "hasil stiker yang dibuat
@@ -2738,7 +2742,7 @@ function LandingPagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
       <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {data.links.map((block) => {
@@ -2997,7 +3001,7 @@ function ProdukPagePreview({
             products.length dulu). */}
         <PageSwitcher username={data.username} showToko current="produk" theme={theme} />
         <div className="ml-auto">
-          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/p/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
       </div>
       {/* StickerOverlay dipindah jadi anak kolom max-w-md (bukan lagi anak

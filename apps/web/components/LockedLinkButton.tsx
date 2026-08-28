@@ -53,7 +53,7 @@ export default function LockedLinkButton({
         whatsapp_number: lockType === "subscribe" ? whatsapp.trim() || undefined : undefined,
       });
       if (pageSlug) {
-        trackEventBySlug(pageSlug, { event_type: "click", link_id: linkId });
+        trackEventBySlug(username, pageSlug, { event_type: "click", link_id: linkId });
       } else {
         trackEvent(username, { event_type: "click", link_id: linkId });
       }

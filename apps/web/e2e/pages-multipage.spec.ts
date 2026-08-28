@@ -21,7 +21,7 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.locator('input[type="text"]').first().fill("Toko Utama E2E");
     await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
     await expect(page.getByText("Toko Utama E2E")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(`jeon.id/p/${username}`)).toBeVisible();
+    await expect(page.getByText(`jeon.id/${username}/${username}`)).toBeVisible();
 
     // Jatah gratis (1 Halaman Produk, 0 Bio/Landing) sudah habis -- tombol
     // "Buat Halaman Baru" digantikan blok "jatah habis" + CTA upgrade
@@ -47,17 +47,18 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.getByRole("button", { name: "Buat Halaman Baru" }).click();
     await expect(page.getByRole("button", { name: "Halaman Bio" })).toBeEnabled();
     const pageName = "Bio Kedua E2E";
-    // Slug UNIK per run (bukan literal "bio-kedua-e2e") -- slug bersifat
-    // global lintas SEMUA akun (bukan per-user), jadi string tetap akan
-    // bentrok "slug ini sudah dipakai" begitu test ini dijalankan lebih
-    // dari sekali (ditemukan lewat run berulang sesi ini sendiri).
+    // Slug tetap dibuat unik per run (walau sejak migrasi 000079, 28
+    // Agustus 2026, slug cuma unik PER-USER, bukan lagi global lintas
+    // SEMUA akun) -- setiap run memakai akun baru (registerAndLogin di
+    // atas), jadi ini murni kebiasaan aman, bukan lagi keharusan untuk
+    // menghindari bentrok lintas akun seperti sebelumnya.
     const slug = `bio-kedua-${username}`;
     await page.locator('input[type="text"]').first().fill(pageName);
     await page.getByPlaceholder("toko-skincare").fill(slug);
     await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
 
     await expect(page.getByText(pageName)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(`jeon.id/p/${slug}`)).toBeVisible();
+    await expect(page.getByText(`jeon.id/${username}/${slug}`)).toBeVisible();
     await expect(page.getByText("1/5 Bio/Landing")).toBeVisible();
   });
 });

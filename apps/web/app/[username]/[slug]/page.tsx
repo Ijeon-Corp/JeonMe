@@ -7,13 +7,13 @@ import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
 
 type PageParams = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ username: string; slug: string }>;
   searchParams: Promise<{ ref?: string }>;
 };
 
 export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
-  const { slug } = await params;
-  const page = await getPublicPageBySlug(slug);
+  const { username, slug } = await params;
+  const page = await getPublicPageBySlug(username, slug);
 
   if (!page) {
     return { title: "Halaman tidak ditemukan — Jeon.id" };
@@ -37,15 +37,21 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   };
 }
 
-// No.98 (Sprint 14): halaman bio TAMBAHAN, diakses lewat jeon.id/p/{slug}
-// -- namespace terpisah dari jeon.id/{username} (halaman utama). Memakai
-// ulang PagePreview yang SAMA seperti halaman utama -- produk/event/booking/
-// dst yang tampil SAMA persis (monetisasi tetap per-akun, bukan per-halaman),
-// hanya bio/avatar/tema/tautan yang berbeda per halaman.
+// No.98 (Sprint 14): halaman bio TAMBAHAN, diakses lewat
+// jeon.id/{username}/{slug} -- namespace terpisah dari jeon.id/{username}
+// (halaman utama, satu segmen saja). Revisi 28 Agustus 2026 (permintaan
+// langsung pengguna): sebelumnya jeon.id/p/{slug} dengan slug unik GLOBAL
+// (lihat riwayat file app/p/[slug]/page.tsx, DIHAPUS di revisi ini) --
+// slug sekarang cuma unik PER-USER (migrasi 000079), jadi username wajib
+// ikut jadi bagian URL supaya dua akun berbeda bisa pakai slug yang sama
+// tanpa tabrakan. Memakai ulang PagePreview yang SAMA seperti halaman
+// utama -- produk/event/booking/dst yang tampil SAMA persis (monetisasi
+// tetap per-akun, bukan per-halaman), hanya bio/avatar/tema/tautan yang
+// berbeda per halaman.
 export default async function ExtraBioPage({ params, searchParams }: PageParams) {
-  const { slug } = await params;
+  const { username, slug } = await params;
   const { ref } = await searchParams;
-  const page = await getPublicPageBySlug(slug);
+  const page = await getPublicPageBySlug(username, slug);
 
   if (!page) {
     notFound();

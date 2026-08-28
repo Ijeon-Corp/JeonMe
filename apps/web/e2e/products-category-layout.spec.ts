@@ -54,7 +54,7 @@ test.describe("Toko: layout Blok Kategori", () => {
     // Toko publik: SEBELUM klik blok apa pun, harus tampil blok kategori
     // ("Sepatu"/"Baju" + jumlah produk), BUKAN nama produk individual.
     await expect(async () => {
-      await page.goto(`/p/${username}`);
+      await page.goto(`/${username}/${username}`);
       await expect(page.getByText("Sepatu", { exact: true })).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 75000, intervals: [5000] });
     await expect(page.getByText("Baju", { exact: true })).toBeVisible();

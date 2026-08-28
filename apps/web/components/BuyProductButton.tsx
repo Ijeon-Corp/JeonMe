@@ -112,7 +112,7 @@ export default function BuyProductButton({
   function handleOpen() {
     if (username) {
       if (pageSlug) {
-        trackEventBySlug(pageSlug, { event_type: "product_click", product_id: productId });
+        trackEventBySlug(username, pageSlug, { event_type: "product_click", product_id: productId });
       } else {
         trackEvent(username, { event_type: "product_click", product_id: productId });
       }

@@ -53,7 +53,7 @@ func NewLinksHandler(db *pgxpool.Pool, queueClient *asynq.Client, rdb *redis.Cli
 
 // invalidatePageCacheByID — sama seperti invalidateUserPageCache (cache.go),
 // tapi tautan bisa berada di halaman UTAMA (cache "page:<username>") ATAU
-// halaman TAMBAHAN No.98 (cache "page-slug:<slug>") -- Update/Delete/Unlock
+// halaman TAMBAHAN No.98 (cache "page-slug:<username>:<slug>") -- Update/Delete/Unlock
 // bekerja untuk tautan di halaman MANA PUN milik kreator (lihat komentar
 // ownsLink di bawah), jadi perlu resolusi cache key yang benar dari pageID,
 // tidak boleh asumsi selalu halaman utama.
@@ -72,7 +72,7 @@ func (h *LinksHandler) invalidatePageCacheByID(ctx context.Context, pageID strin
 	if isPrimary {
 		h.RDB.Del(ctx, "page:"+username)
 	} else if slug != nil {
-		h.RDB.Del(ctx, "page-slug:"+*slug)
+		h.RDB.Del(ctx, "page-slug:"+username+":"+*slug)
 	}
 }
 

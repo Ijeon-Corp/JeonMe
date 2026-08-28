@@ -30,7 +30,7 @@ export default function TrackedLink({
       className={className}
       onClick={() =>
         pageSlug
-          ? trackEventBySlug(pageSlug, { event_type: "click", link_id: linkId })
+          ? trackEventBySlug(username, pageSlug, { event_type: "click", link_id: linkId })
           : trackEvent(username, { event_type: "click", link_id: linkId })
       }
     >

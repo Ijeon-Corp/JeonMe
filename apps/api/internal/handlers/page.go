@@ -515,13 +515,16 @@ func (h *PageHandler) ResolveUsernameRedirect(c *gin.Context) {
 }
 
 // GetPublicPageBySlug — No.98 (Sprint 14): diakses tanpa login di
-// jeon.id/p/{slug}, namespace terpisah dari username akun supaya tidak
-// bentrok. Halaman tambahan berbagi katalog produk/monetisasi yang SAMA
-// dengan kreatornya (lihat catatan lingkup di migrasi 000029) -- cuma
-// bio/avatar/tema/tautan yang independen per halaman.
+// jeon.id/{username}/{slug} (sebelum 28 Agustus 2026: jeon.id/p/{slug},
+// slug unik GLOBAL -- lihat migrasi 000079 untuk kenapa sekarang wajib
+// dicocokkan BERSAMA username, bukan slug sendirian, karena slug kini
+// cuma unik PER-USER). Halaman tambahan berbagi katalog produk/monetisasi
+// yang SAMA dengan kreatornya (lihat catatan lingkup di migrasi 000029) --
+// cuma bio/avatar/tema/tautan yang independen per halaman.
 func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
+	username := c.Param("username")
 	slug := c.Param("slug")
-	cacheKey := "page-slug:" + slug
+	cacheKey := "page-slug:" + username + ":" + slug
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
@@ -554,10 +557,10 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.layout_variant, p.product_layout,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
-		WHERE p.slug = $1 AND p.is_published = true
+		WHERE u.username = $1 AND p.slug = $2 AND p.is_published = true
 			AND u.deactivated_at IS NULL
 			AND NOT EXISTS (SELECT 1 FROM account_deletion_requests d WHERE d.user_id = u.id AND d.status = 'pending')
-	`, slug).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
+	`, username, slug).Scan(&userID, &pageID, &resp.Username, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
@@ -578,7 +581,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 	_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	resp.ID = pageID
 
-	h.finishPublicPageResponse(c, ctx, "page-slug:"+slug, userID, pageID, emailVerified, &resp)
+	h.finishPublicPageResponse(c, ctx, cacheKey, userID, pageID, emailVerified, &resp)
 }
 
 // servePublicPageFromCache — dicek SEBELUM query DB apa pun (username/slug
@@ -1612,15 +1615,16 @@ func (h *PageHandler) UploadAvatarForPage(c *gin.Context) {
 
 	// "?v=<timestamp>" -- lihat catatan panjang di UploadAvatar, alasannya sama.
 	avatarURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
-	var slug string
+	var slug, ownerUsername string
 	if err := h.DB.QueryRow(ctx, `
-		UPDATE pages SET avatar_url = $1 WHERE id = $2 RETURNING COALESCE(slug, '')
-	`, avatarURL, pageID).Scan(&slug); err != nil {
+		UPDATE pages SET avatar_url = $1 WHERE id = $2
+		RETURNING COALESCE(slug, ''), (SELECT username FROM users WHERE id = pages.user_id)
+	`, avatarURL, pageID).Scan(&slug, &ownerUsername); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "foto terunggah tapi gagal menyimpan referensinya"})
 		return
 	}
 	if h.RDB != nil && slug != "" {
-		h.RDB.Del(ctx, "page-slug:"+slug)
+		h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL, "message": "foto profil berhasil diunggah"})
@@ -1683,16 +1687,16 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 	}
 
 	backgroundURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
-	var slug string
+	var slug, ownerUsername string
 	if err := h.DB.QueryRow(ctx, `
 		UPDATE pages SET custom_background_type = 'image', custom_background_value = $1
-		WHERE id = $2 RETURNING COALESCE(slug, '')
-	`, backgroundURL, pageID).Scan(&slug); err != nil {
+		WHERE id = $2 RETURNING COALESCE(slug, ''), (SELECT username FROM users WHERE id = pages.user_id)
+	`, backgroundURL, pageID).Scan(&slug, &ownerUsername); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
 		return
 	}
 	if h.RDB != nil && slug != "" {
-		h.RDB.Del(ctx, "page-slug:"+slug)
+		h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"custom_background_value": backgroundURL, "message": "gambar latar berhasil diunggah"})
@@ -1707,8 +1711,9 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 // catatan lingkup lengkap di migrasi 000029). Halaman UTAMA (is_primary=true,
 // dibuat otomatis saat registrasi) TIDAK BERUBAH sama sekali -- semua route
 // di atas (/dashboard/page, /dashboard/links, dst) tetap hanya menjangkau
-// halaman utama. Halaman tambahan diakses publik lewat jeon.id/p/{slug},
-// namespace terpisah dari username akun.
+// halaman utama. Halaman tambahan diakses publik lewat
+// jeon.id/{username}/{slug} (sebelum 28 Agustus 2026: jeon.id/p/{slug},
+// slug unik GLOBAL -- lihat migrasi 000079).
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$`)
 
@@ -1837,7 +1842,7 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	}
 
 	if rdb != nil {
-		rdb.Del(ctx, "page-slug:"+username)
+		rdb.Del(ctx, "page-slug:"+username+":"+username)
 	}
 }
 
@@ -2224,9 +2229,11 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	}
 
 	if h.RDB != nil {
-		var currentSlug string
-		if scanErr := h.DB.QueryRow(ctx, `SELECT slug FROM pages WHERE id = $1`, pageID).Scan(&currentSlug); scanErr == nil && currentSlug != "" {
-			h.RDB.Del(ctx, "page-slug:"+currentSlug)
+		var currentSlug, ownerUsername string
+		if scanErr := h.DB.QueryRow(ctx, `
+			SELECT p.slug, u.username FROM pages p JOIN users u ON u.id = p.user_id WHERE p.id = $1
+		`, pageID).Scan(&currentSlug, &ownerUsername); scanErr == nil && currentSlug != "" {
+			h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+currentSlug)
 		}
 	}
 
@@ -2268,7 +2275,10 @@ func (h *PageHandler) UpdatePageStickers(c *gin.Context) {
 		return
 	}
 	if h.RDB != nil && slug != "" {
-		h.RDB.Del(ctx, "page-slug:"+slug)
+		var ownerUsername string
+		if scanErr := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&ownerUsername); scanErr == nil {
+			h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "stiker disimpan"})
@@ -2321,7 +2331,10 @@ func (h *PageHandler) DeletePage(c *gin.Context) {
 	}
 
 	if h.RDB != nil && slug != "" {
-		h.RDB.Del(ctx, "page-slug:"+slug)
+		var ownerUsername string
+		if scanErr := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&ownerUsername); scanErr == nil {
+			h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "halaman dihapus"})

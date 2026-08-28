@@ -160,9 +160,16 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// Halaman publik -- TIDAK memerlukan auth, ini titik trafik tertinggi.
 		api.GET("/pages/:username", page.GetPublicPage)
 
-		// No.98 (Sprint 14): halaman bio TAMBAHAN, namespace slug terpisah
-		// dari username akun -- lihat catatan lingkup di PageHandler.
-		api.GET("/p/:slug", page.GetPublicPageBySlug)
+		// No.98 (Sprint 14): halaman bio TAMBAHAN. Revisi 28 Agustus 2026
+		// (permintaan langsung pengguna): URL publik pindah dari
+		// jeonme.com/p/{slug} (slug unik GLOBAL) ke
+		// jeonme.com/{username}/{slug} (slug unik PER-USER, lihat migrasi
+		// 000079) -- endpoint API ini SENGAJA tetap berprefiks "/p/"
+		// (bukan jadi "/:username/:slug" telanjang di root) supaya tidak
+		// bentrok dengan segmen statis rute lain di grup yang sama (/auth,
+		// /dashboard, dst) -- path API publik tidak wajib sama persis
+		// dengan URL halaman publik di Next.js.
+		api.GET("/p/:username/:slug", page.GetPublicPageBySlug)
 
 		// No.92 (Sprint 11): daftar slot booking yang tersedia -- dimuat
 		// pengunjung saat memilih jadwal sebelum checkout.
@@ -194,8 +201,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// REQ-F-601: tracking klik/kunjungan, publik & ringan (fail-silent).
 		api.POST("/pages/:username/track", trackRateLimit, analytics.Track)
 
-		// No.98 (Sprint 14): tracking klik/kunjungan untuk halaman bio TAMBAHAN.
-		api.POST("/p/:slug/track", trackRateLimit, analytics.TrackBySlug)
+		// No.98 (Sprint 14): tracking klik/kunjungan untuk halaman bio
+		// TAMBAHAN -- :username ditambahkan 28 Agustus 2026 sejalan dengan
+		// perubahan URL publik di atas.
+		api.POST("/p/:username/:slug/track", trackRateLimit, analytics.TrackBySlug)
 
 		// REQ-F-702 (bagian publik): siapa pun bisa melaporkan halaman/produk
 		// tanpa perlu akun.

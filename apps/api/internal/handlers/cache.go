@@ -27,12 +27,19 @@ import (
 // tetap tidak muncul di halaman Toko publik sampai TTL 30 detik penuh
 // habis, padahal DB & toggle "Aktifkan" sudah benar): fungsi ini HANYA
 // pernah menghapus cache "page:<username>" (halaman utama/bio,
-// GetPublicPage), tidak pernah menyentuh "page-slug:<slug>" (GetPublicPageBySlug,
-// dipakai /p/{slug} -- Toko DAN semua halaman tambahan). Katalog produk
-// dibagi lintas SEMUA halaman satu akun (lihat CLAUDE.md), jadi perubahan
-// produk harus membatalkan cache SETIAP halaman non-utama juga, bukan cuma
-// halaman utama. Dipanggil best-effort: kegagalan invalidasi cache TIDAK
-// menggagalkan request utama (mis. Redis sedang down).
+// GetPublicPage), tidak pernah menyentuh "page-slug:<username>:<slug>"
+// (GetPublicPageBySlug, dipakai {username}/{slug} -- Toko DAN semua
+// halaman tambahan). Katalog produk dibagi lintas SEMUA halaman satu akun
+// (lihat CLAUDE.md), jadi perubahan produk harus membatalkan cache SETIAP
+// halaman non-utama juga, bukan cuma halaman utama. Dipanggil best-effort:
+// kegagalan invalidasi cache TIDAK menggagalkan request utama (mis. Redis
+// sedang down).
+//
+// Format cache key "page-slug:<username>:<slug>" ikut "username:" sejak
+// 28 Agustus 2026 (migrasi 000079, slug jadi unik PER-USER bukan lagi
+// global) -- kalau cuma "page-slug:<slug>" dua akun berbeda yang PERNAH
+// pakai slug sama (sebelum migrasi ini) bisa saling menghapus/salah kena
+// cache satu sama lain.
 func invalidateUserPageCache(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, userID string) {
 	if rdb == nil {
 		return
@@ -40,6 +47,8 @@ func invalidateUserPageCache(ctx context.Context, db *pgxpool.Pool, rdb *redis.C
 	var username string
 	if err := db.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err == nil {
 		rdb.Del(ctx, "page:"+username)
+	} else {
+		return
 	}
 
 	rows, err := db.Query(ctx, `SELECT slug FROM pages WHERE user_id = $1 AND is_primary = false AND slug != ''`, userID)
@@ -50,7 +59,7 @@ func invalidateUserPageCache(ctx context.Context, db *pgxpool.Pool, rdb *redis.C
 	for rows.Next() {
 		var slug string
 		if err := rows.Scan(&slug); err == nil {
-			rdb.Del(ctx, "page-slug:"+slug)
+			rdb.Del(ctx, "page-slug:"+username+":"+slug)
 		}
 	}
 }

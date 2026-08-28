@@ -140,9 +140,9 @@ func TestSettingsProfile_UsernameChange_RecordsHistoryAndRedirects(t *testing.T)
 
 // Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
 // Toko auto (slug = username lama) ikut disinkronkan begitu kreator ganti
-// username, supaya jeon.id/p/{slug} tetap konsisten dengan identitas
-// akun terbaru -- BUKAN halaman produk custom lain (Premium) yang slug-nya
-// sengaja tidak mengikuti username.
+// username, supaya jeon.id/{username}/{slug} tetap konsisten dengan
+// identitas akun terbaru -- BUKAN halaman produk custom lain (Premium)
+// yang slug-nya sengaja tidak mengikuti username.
 func TestSettingsProfile_UsernameChange_SyncsAutoProdukPageSlug(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	settings, auth, page := newTestSettingsProfileHandler(t)

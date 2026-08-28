@@ -1458,13 +1458,17 @@ export function createExtraPageBlock(
 }
 
 /**
- * Mengambil data halaman bio TAMBAHAN publik lewat slug (jeon.id/p/{slug}).
+ * Mengambil data halaman bio TAMBAHAN publik lewat username+slug
+ * (jeon.id/{username}/{slug}). Revisi 28 Agustus 2026 (permintaan langsung
+ * pengguna): sebelumnya jeon.id/p/{slug} dengan slug unik GLOBAL -- slug
+ * sekarang cuma unik PER-USER (migrasi 000079), jadi username WAJIB ikut
+ * dikirim supaya tidak salah menemukan slug milik akun lain.
  * Mengembalikan null kalau tidak ditemukan (404), sama seperti getPublicPage.
  */
-export async function getPublicPageBySlug(slug: string): Promise<PublicPage | null> {
+export async function getPublicPageBySlug(username: string, slug: string): Promise<PublicPage | null> {
   // cache: "no-store", bukan ISR -- lihat catatan panjang di getPublicPage
   // (bug ISR + notFound() macet permanen).
-  const res = await fetch(`${API_BASE_URL}/p/${slug}`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE_URL}/p/${username}/${slug}`, { cache: "no-store" });
 
   if (res.status === 404) {
     return null;
@@ -2883,13 +2887,16 @@ export function trackEvent(
 }
 
 // No.98 (Sprint 14): tracking untuk halaman bio TAMBAHAN, diresolusi lewat
-// slug (bukan username) supaya tidak salah tercatat ke halaman utama
-// kreator yang sama -- lihat AnalyticsHandler.TrackBySlug (backend).
+// username+slug supaya tidak salah tercatat ke halaman utama kreator yang
+// sama -- lihat AnalyticsHandler.TrackBySlug (backend). username WAJIB
+// ikut dikirim sejak 28 Agustus 2026 (migrasi 000079) -- slug cuma unik
+// PER-USER, bukan lagi global.
 export function trackEventBySlug(
+  username: string,
   slug: string,
   input: { event_type: "view" | "click" | "product_click"; link_id?: string; product_id?: string; referrer?: string }
 ) {
-  fetch(`${API_BASE_URL}/p/${slug}/track`, {
+  fetch(`${API_BASE_URL}/p/${username}/${slug}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

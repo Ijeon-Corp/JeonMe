@@ -3,7 +3,7 @@
 // langsung) -- tidak ada middleware.ts maupun headers() di file ini sama
 // sekali. Dua tingkat CSP dipisah SENGAJA (bukan satu CSP longgar utk
 // semua rute):
-// - Halaman publik kreator (username/p/slug/card, MEMUAT script pihak
+// - Halaman publik kreator (username/username/slug/card, MEMUAT script pihak
 //   ketiga sungguhan kalau kreator mengisi Facebook Pixel/GA4 di
 //   AnalyticsScripts.tsx, dan meng-iframe embed peta Google Maps kalau
 //   blok "maps" dibuat dgn mode tertanam) -- allowlist eksplisit host yang
@@ -176,7 +176,12 @@ const nextConfig = {
       { source: '/pricing', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/features', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/:username', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
-      { source: '/p/:slug', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
+      // /:username/:slug -- revisi 28 Agustus 2026 (permintaan langsung
+      // pengguna): URL halaman tambahan pindah dari /p/{slug} (slug unik
+      // GLOBAL) ke /{username}/{slug} (slug unik PER-USER, migrasi 000079).
+      // Path 2 segmen ini TIDAK bentrok dengan "/:username" 1 segmen di
+      // atas (matcher headers() cocok berdasar JUMLAH segmen persis).
+      { source: '/:username/:slug', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/card/:username', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
       { source: '/checkout/:id', headers: [...COMMON_SECURITY_HEADERS, { key: 'Content-Security-Policy', value: PUBLIC_PAGE_CSP }] },
     ];

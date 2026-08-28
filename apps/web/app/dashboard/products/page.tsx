@@ -1351,7 +1351,7 @@ export default function DashboardProductsPage() {
         products={products}
         pageType="produk"
         pageSlug={tokoPage?.slug}
-        openUrl={tokoPage ? `${SITE_URL}/p/${tokoPage.slug}` : undefined}
+        openUrl={tokoPage ? `${SITE_URL}/${tokoUsername}/${tokoPage.slug}` : undefined}
         editableStickers={tab === "halaman_toko" && tokoSection === "stiker"}
         onStickersChange={handleTokoStickersChange}
       />

@@ -220,10 +220,13 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 
 	// Modul Halaman Produk: Toko pertama (auto) pakai slug = username --
 	// kalau username-nya baru saja diganti, ikutkan slug Toko supaya
-	// tetap konsisten (jeon.id/p/{username baru}). Cek "slug = username
-	// LAMA" sebagai penanda "ini memang Toko auto", bukan Toko ke-2..5
-	// Premium yang sengaja dikustomisasi slugnya sendiri -- best-effort,
-	// gagal diam-diam kalau slug baru kebetulan sudah dipakai halaman lain.
+	// tetap konsisten (jeon.id/{username baru}/{username baru}). Cek
+	// "slug = username LAMA" sebagai penanda "ini memang Toko auto", bukan
+	// Toko ke-2..5 Premium yang sengaja dikustomisasi slugnya sendiri --
+	// best-effort, gagal diam-diam kalau slug baru kebetulan sudah dipakai
+	// halaman lain milik akun yang SAMA (unik PER-USER sejak migrasi
+	// 000079, jadi username baru = username lama tidak akan pernah bentrok
+	// dengan akun lain).
 	if usernameChanged {
 		var newSlug string
 		if err := h.DB.QueryRow(ctx, `
@@ -231,8 +234,8 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 			WHERE user_id = $2 AND page_type = 'produk' AND slug = $3
 			RETURNING slug
 		`, newUsername, userID, oldUsername).Scan(&newSlug); err == nil && h.RDB != nil {
-			h.RDB.Del(ctx, "page-slug:"+oldUsername)
-			h.RDB.Del(ctx, "page-slug:"+newUsername)
+			h.RDB.Del(ctx, "page-slug:"+oldUsername+":"+oldUsername)
+			h.RDB.Del(ctx, "page-slug:"+newUsername+":"+newUsername)
 		}
 	}
 

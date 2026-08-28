@@ -378,7 +378,7 @@ test.describe("Quick Setup", () => {
     // (ensureProdukPage menyalin tema Bio saat itu juga), jadi harusnya
     // SUDAH Peach sejak awal, sebelum template kedua di bawah sama sekali.
     await expect(async () => {
-      await page.goto(`/p/${username}`);
+      await page.goto(`/${username}/${username}`);
       const html = await page.content();
       expect(html).toContain("from-orange-50");
     }).toPass({ timeout: 75000, intervals: [5000] });
@@ -404,7 +404,7 @@ test.describe("Quick Setup", () => {
     // mengandalkan penyalinan awal ensureProdukPage (yang tidak akan
     // terpicu lagi -- Toko-nya sudah ada dari langkah sebelumnya).
     await expect(async () => {
-      await page.goto(`/p/${username}`);
+      await page.goto(`/${username}/${username}`);
       const html = await page.content();
       expect(html).toContain("from-emerald-800");
     }).toPass({ timeout: 75000, intervals: [5000] });

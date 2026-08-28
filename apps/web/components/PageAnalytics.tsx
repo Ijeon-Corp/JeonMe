@@ -11,7 +11,7 @@ import { trackEvent, trackEventBySlug } from "@/lib/api-client";
 export default function PageAnalytics({ username, slug }: { username: string; slug?: string }) {
   useEffect(() => {
     if (slug) {
-      trackEventBySlug(slug, { event_type: "view", referrer: document.referrer });
+      trackEventBySlug(username, slug, { event_type: "view", referrer: document.referrer });
     } else {
       trackEvent(username, { event_type: "view", referrer: document.referrer });
     }
