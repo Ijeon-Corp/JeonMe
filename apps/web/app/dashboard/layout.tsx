@@ -41,6 +41,7 @@ import {
   IconQrCode,
   IconSettings,
   IconSparkle,
+  IconStar,
   IconWallet,
 } from "@/components/icons";
 
@@ -154,6 +155,12 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
+  // isPremium -- permintaan langsung pengguna, 28 Agustus 2026: "akun saya
+  // kan sudah berlangganan premium tapi gada informasi nya ... kasih badge
+  // di profile". Sebelum ini status Premium HANYA terlihat kalau kreator
+  // sengaja membuka /dashboard/settings/subscription -- tidak ada penanda
+  // apa pun di chip akun top bar (terlihat di SEMUA halaman dashboard).
+  const [isPremium, setIsPremium] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -194,6 +201,7 @@ export default function DashboardLayout({
       .then((p) => {
         setUsername(p.username);
         setAvatarUrl(p.avatar_url);
+        setIsPremium(p.is_premium);
       })
       .catch(() => {
         // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
@@ -538,18 +546,41 @@ export default function DashboardLayout({
                 {username && (
                   <Link
                     href="/dashboard/settings/profile"
-                    title="Profil & Akun"
+                    title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
                     className="ml-0.5 flex flex-shrink-0 items-center gap-2 rounded-full border border-border bg-white py-1 pl-1 pr-2.5 hover:border-primary"
                   >
-                    {avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
-                    ) : (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
-                        {username.slice(0, 1).toUpperCase()}
-                      </span>
-                    )}
-                    <span className="hidden text-[11px] font-semibold text-ink lg:inline">@{username}</span>
+                    {/* Lencana bintang di sudut avatar + pil "Premium" di
+                        sebelah @username -- permintaan langsung pengguna:
+                        "kasih badge di profile". Chip ini terlihat di SEMUA
+                        halaman dashboard (bukan cuma /settings/subscription),
+                        jadi status Premium langsung kelihatan tanpa perlu
+                        buka menu Langganan sama sekali. */}
+                    <span className="relative flex-shrink-0">
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
+                          {username.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                      {isPremium && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-white ring-2 ring-white"
+                        >
+                          <IconStar className="h-2 w-2" />
+                        </span>
+                      )}
+                    </span>
+                    <span className="hidden items-center gap-1 text-[11px] font-semibold text-ink lg:flex">
+                      @{username}
+                      {isPremium && (
+                        <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+                          Premium
+                        </span>
+                      )}
+                    </span>
                   </Link>
                 )}
               </div>

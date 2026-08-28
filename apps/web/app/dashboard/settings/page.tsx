@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { getMyPage } from "@/lib/api-client";
 import {
   IconChart,
   IconChevronRight,
@@ -45,6 +46,14 @@ type SettingsItem = {
   description: string;
   icon: (props: { className?: string }) => React.ReactElement;
   badgeClass: string;
+  // statusPill -- opsional, ditambahkan lewat resolveItem() di bawah untuk
+  // menandai status YANG SEDANG AKTIF (bukan cuma deskripsi statis) --
+  // permintaan langsung pengguna, 28 Agustus 2026: "akun saya kan sudah
+  // berlangganan premium tapi gada informasi nya, harusnya ada info
+  // tentang langganan premium nya di setting akun". Sebelum ini kartu
+  // "Langganan Premium" SELALU menampilkan teks upsell yang sama persis
+  // baik untuk kreator gratis MAUPUN yang sudah Premium.
+  statusPill?: string;
 };
 
 const SETTINGS_GROUPS: { label: string; items: SettingsItem[] }[] = [
@@ -163,7 +172,14 @@ function SettingsCard({ item }: { item: SettingsItem }) {
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold text-ink">{item.title}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="block truncate text-sm font-bold text-ink">{item.title}</span>
+          {item.statusPill && (
+            <span className="flex-shrink-0 rounded-full bg-secondary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-secondary-dark">
+              {item.statusPill}
+            </span>
+          )}
+        </span>
         <span className="block truncate text-xs text-muted">{item.description}</span>
       </span>
       <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
@@ -173,6 +189,26 @@ function SettingsCard({ item }: { item: SettingsItem }) {
 
 export default function DashboardSettingsPage() {
   const [query, setQuery] = useState("");
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    getMyPage()
+      .then((p) => setIsPremium(p.is_premium))
+      .catch(() => {
+        // Cuma penanda status di kartu -- kalau gagal dimuat, biarkan
+        // kartu tampil dengan teks upsell bawaan, jangan ganggu halaman
+        // dengan pesan error untuk hal sekunder ini.
+      });
+  }, []);
+
+  // resolveItem -- menimpa description/statusPill kartu "Langganan
+  // Premium" kalau kreator ini SUDAH Premium, supaya kartu itu sendiri
+  // langsung menunjukkan status aktif (bukan cuma teks upsell generik yang
+  // sama untuk semua orang) tanpa perlu buka halamannya.
+  function resolveItem(item: SettingsItem): SettingsItem {
+    if (item.href !== "/dashboard/settings/subscription" || !isPremium) return item;
+    return { ...item, description: "Watermark disembunyikan, latar kustom aktif.", statusPill: "Aktif" };
+  }
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -206,7 +242,7 @@ export default function DashboardSettingsPage() {
             </p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {g.items.map((s) => (
-                <SettingsCard key={s.href} item={s} />
+                <SettingsCard key={s.href} item={resolveItem(s)} />
               ))}
             </div>
           </div>
