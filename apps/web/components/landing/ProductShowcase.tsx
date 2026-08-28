@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Carousel, { CarouselArrows, type CarouselHandle } from "./Carousel";
 import PagePreview from "@/components/PagePreview";
 import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
+import { useLocale } from "@/lib/locale-context";
 
 // items -- permintaan langsung pengguna, 28 Agustus 2026: "ganti semua isi
 // product showcase pakai template di quick setup yang tema nya bagus bagus
@@ -52,9 +53,16 @@ const items = CURATED_KEYS.map((c) => {
 
 export default function ProductShowcase() {
   const carouselRef = useRef<CarouselHandle>(null);
+  const { t } = useLocale();
 
   return (
-    <section className="dot-grid relative overflow-hidden bg-primary-subtle/40 py-20 md:py-28" aria-label="Contoh halaman">
+    // bg-app-surface-2 (BUKAN bg-primary-subtle/40 lagi) -- Modul Dark/Light
+    // Mode: token app-* ikut tema aktif, bg-primary-subtle TIDAK (dia warna
+    // brand tetap, lihat catatan lengkap di globals.css) -- section
+    // alternating background di homepage sekarang pakai token app-* supaya
+    // ikut gelap/terang bersama section lain, bukan tetap hijau muda kalau
+    // dark mode aktif.
+    <section className="dot-grid relative overflow-hidden bg-app-surface-2 py-20 md:py-28" aria-label="Contoh halaman">
       <div
         className="absolute inset-0 opacity-[0.5]"
         aria-hidden="true"
@@ -63,10 +71,10 @@ export default function ProductShowcase() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div className="max-w-xl">
-            <h2 className="font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
-              Satu Halaman untuk Setiap
+            <h2 className="font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+              {t("productShowcase.heading1")}
               <br />
-              <span className="text-gradient">Jenis Kreator</span>
+              <span className="text-gradient">{t("productShowcase.headingGradient")}</span>
             </h2>
           </div>
           <CarouselArrows carouselRef={carouselRef} />
@@ -76,14 +84,23 @@ export default function ProductShowcase() {
           {items.map((item) => (
             <div
               key={item.key}
-              className="tilt-card w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-3xl border border-border bg-white shadow-card"
+              className="tilt-card w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-card"
             >
               {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola & ukuran
                   SAMA PERSIS dengan galeri Templates.tsx di bawah section
                   ini (h-[26rem] + zoom:0.5 -- 448px lebar asli PagePreview
                   jadi 224px, pas dengan lebar kartu w-56 tanpa sisa
                   ruang kosong di kiri/kanan). pointer-events-none -- mockup
-                  MURNI visual, kartu ini tidak punya link tujuan. */}
+                  MURNI visual, kartu ini tidak punya link tujuan.
+
+                  bg-white DI SINI (bukan bg-app-surface) SENGAJA tetap
+                  hardcode -- Modul Dark/Light Mode: kotak ini membungkus
+                  <PagePreview> SUNGGUHAN (tema pilihan KREATOR di template
+                  itu sendiri, mis. "console"/"ocean"), bukan cangkang
+                  aplikasi kita -- HARUS tampil identik apa pun preferensi
+                  dark/light PENGUNJUNG situs pemasaran, persis seperti
+                  screenshot. Lihat catatan besar soal batas ini di
+                  globals.css (token app-*). */}
               <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
                 <div className="h-full [zoom:0.5]">
                   <PagePreview interactive={false} rootClassName="min-h-full" data={item.data} hideFooterChrome />
@@ -91,12 +108,14 @@ export default function ProductShowcase() {
                 {/* Fade bawah -- konten template panjangnya beda-beda,
                     menyamarkan garis potong di tengah kalimat jadi transisi
                     halus ke area putih judul kartu (lihat catatan sama di
-                    Templates.tsx). */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    Templates.tsx). from-app-surface (BUKAN from-white) --
+                    memudar ke background KARTU (bg-app-surface di atas),
+                    bukan ke background mockup di dalamnya. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-app-surface to-transparent" />
               </div>
               <div className="p-5 pt-3">
-                <h3 className="font-heading text-sm font-bold text-ink">{item.label}</h3>
-                <p className="mt-1 text-xs text-muted">{item.description}</p>
+                <h3 className="font-heading text-sm font-bold text-app-ink">{item.label}</h3>
+                <p className="mt-1 text-xs text-app-muted">{item.description}</p>
               </div>
             </div>
           ))}

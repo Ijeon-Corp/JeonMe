@@ -1,11 +1,5 @@
-import Link from "next/link";
 import { getPlans } from "@/lib/api-client";
-
-const check = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="mt-0.5 flex-shrink-0" aria-hidden="true">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
+import PricingCards from "./PricingCards";
 
 function formatRupiah(n: number): string {
   return "Rp" + n.toLocaleString("id-ID");
@@ -24,26 +18,11 @@ function formatRupiah(n: number): string {
 // backend (watermark, latar kustom, batas Halaman Toko/Tambahan, Meta
 // Conversions API) -- bukan tebakan.
 //
-// Daftar Gratis diperluas 4->8 butir -- permintaan langsung pengguna, 23
-// Agustus 2026: "lakukan benchmark ke linktree dan juga lynk id... yang
-// sekarang masih sedikit banget isinya". Riset lapangan (WebSearch/
-// WebFetch situs resmi kedua kompetitor, 23 Agustus 2026): Linktree Free
-// menggerbang custom domain & QR kustom di baliknya paid tier, Lynk.id
-// Free membebankan biaya transaksi lebih tinggi + menggerbang custom
-// domain/Google Analytics/UTM tracking di balik Pro (~Rp99rb/bln). Diaudit
-// ULANG grep MENYELURUH `isPremiumUser`/pesan error "khusus Premium" di
-// SELURUH internal/handlers/*.go (bukan cuma page.go) -- HANYA 4 gerbang
-// yang sungguhan ada (sudah lengkap di daftar Premium di bawah), berarti
-// SEMUA fitur lain (koneksi Instagram/TikTok, kunci tautan, kode QR,
-// Google Analytics/UTM, template Quick Setup) sebenarnya SUDAH gratis
-// tapi belum pernah disebut di sini -- itu sumber "kelihatan sedikit
-// banget" yang sebenarnya. custom_domain.go (baca komentarnya sendiri:
-// "Linktree eksplisit TIDAK menyediakan domain kustom sama sekali...
-// Lynk.id menyediakannya sebagai fitur PRO") SENGAJA TIDAK dimasukkan ke
-// sini walau juga tidak digerbang Premium -- catatan lingkup di file itu
-// bilang wiring infrastruktur produksi (Apache/SSL per domain) belum
-// selesai, jadi mengklaimnya di halaman harga publik sebelum benar-benar
-// bisa dipakai end-to-end akan jadi klaim yang belum akurat.
+// Modul Dark/Light Mode + Pilihan Bahasa (permintaan langsung pengguna,
+// 29 Agustus 2026): JSX/teks sekarang dipisah ke PricingCards.tsx (Client
+// Component, butuh useLocale()) -- komponen INI tetap Server Component
+// murni, hanya mengambil data harga (SSR utuh, TIDAK ada perubahan
+// perilaku fetch dari sebelumnya).
 //
 // showHeading -- default true (dipakai di homepage sebagai section di
 // antara section lain, butuh judulnya sendiri). false dipakai HANYA oleh
@@ -55,68 +34,5 @@ export default async function Pricing({ showHeading = true }: { showHeading?: bo
   const monthly = plans ? formatRupiah(plans.monthly_price_idr) : "Rp99.000";
   const yearly = plans ? formatRupiah(plans.yearly_price_idr) : "Rp999.000";
 
-  return (
-    <section id="pricing" className="relative overflow-hidden bg-white py-20 md:py-28" aria-label="Harga">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {showHeading && (
-          <div className="reveal mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
-              Harga Sederhana untuk
-              <br />
-              <span className="text-gradient">Setiap Tahap Pertumbuhan</span>
-            </h2>
-            <p className="text-lg leading-relaxed text-muted">Mulai gratis. Upgrade ke Premium saat kamu siap memonetisasi lebih besar.</p>
-          </div>
-        )}
-
-        <div className="mx-auto grid max-w-3xl items-start gap-6 md:grid-cols-2">
-          <div className="reveal rounded-3xl border border-border bg-white p-8 shadow-card">
-            <h3 className="mb-1 font-heading text-lg font-bold text-ink">Gratis</h3>
-            <p className="mb-5 text-sm text-muted">Untuk kreator yang baru memulai</p>
-            <p className="mb-1 font-heading text-4xl font-extrabold text-ink">
-              Rp0<span className="text-base font-medium text-muted">/bln</span>
-            </p>
-            <Link href="/register" className="btn-ghost mb-7 mt-6 block cursor-pointer rounded-xl border border-border px-5 py-3 text-center text-sm font-bold text-ink">
-              Mulai Sekarang
-            </Link>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Tautan &amp; blok konten tanpa batas</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Semua tema (termasuk wallpaper &amp; video)</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Puluhan template siap pakai (Quick Setup)</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>1 Halaman Toko -- jual produk digital</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Koneksi Instagram &amp; TikTok otomatis</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Kunci tautan (verifikasi usia/kode/subscribe)</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Statistik kunjungan &amp; klik, Google Analytics</li>
-              <li className="flex items-start gap-2.5 text-sm text-ink"><span className="text-green-600">{check}</span>Generator kode QR</li>
-            </ul>
-          </div>
-
-          <div
-            className="reveal relative rounded-3xl p-8 text-white shadow-hero"
-            style={{ background: "linear-gradient(160deg,#1B4D3E,#145C52 60%,#C9A24B)", transitionDelay: "0.1s" }}
-          >
-            <span className="absolute -top-3 right-8 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-bold text-amber-900 shadow-md">
-              Paling Populer
-            </span>
-            <h3 className="mb-1 font-heading text-lg font-bold">Premium</h3>
-            <p className="mb-5 text-sm text-white/70">Untuk kreator siap memonetisasi lebih besar</p>
-            <p className="mb-1 font-heading text-4xl font-extrabold">
-              {monthly}<span className="text-base font-medium text-white/70">/bln</span>
-            </p>
-            <p className="mb-1 text-xs text-white/60">atau {yearly}/tahun</p>
-            <Link href="/register" className="mb-7 mt-6 block cursor-pointer rounded-xl bg-white px-5 py-3 text-center font-heading text-sm font-bold text-primary transition-shadow hover:shadow-lg">
-              Coba Premium
-            </Link>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Semua fitur Gratis</li>
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Hapus watermark Jeon.id</li>
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Latar belakang kustom (warna/gradien/gambar)</li>
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Sampai 5 Halaman Toko &amp; Halaman Tambahan</li>
-              <li className="flex items-start gap-2.5 text-sm"><span className="text-yellow-300">{check}</span>Integrasi Meta Conversions API</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  return <PricingCards monthly={monthly} yearly={yearly} showHeading={showHeading} />;
 }

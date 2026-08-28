@@ -414,6 +414,36 @@ export function IconGlobe({ className }: IconProps) {
   );
 }
 
+// IconSun/IconMoon -- Modul Dark/Light Mode (permintaan langsung
+// pengguna, 29 Agustus 2026), dipakai ThemeToggle.
+export function IconSun({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth={base} />
+      <path
+        d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function IconMoon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M20.5 14.2a8.7 8.7 0 0 1-10.7-10.7 8.7 8.7 0 1 0 10.7 10.7Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconGift({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

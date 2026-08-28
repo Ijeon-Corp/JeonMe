@@ -44,6 +44,20 @@ const config: Config = {
           pink: { DEFAULT: "#FF5A79", tint: "#FFE7EC" },
           lilac: { DEFAULT: "#B98CFF", tint: "#F2E9FF" },
         },
+        // app-* -- Modul Dark/Light Mode (permintaan langsung pengguna, 29
+        // Agustus 2026). Nilai sebenarnya ada di variable CSS (globals.css,
+        // lihat catatan lengkap di sana soal kenapa token BARU & TERPISAH
+        // dari ink/muted/border di atas, bukan menimpanya). Dipakai HANYA
+        // di komponen cangkang aplikasi (navbar/footer pemasaran, shell
+        // dashboard) -- JANGAN dipakai di PagePreview.tsx/page-themes.ts.
+        app: {
+          bg: "var(--app-bg)",
+          surface: "var(--app-surface)",
+          surface2: "var(--app-surface-2)",
+          ink: "var(--app-ink)",
+          muted: "var(--app-muted)",
+          border: "var(--app-border)",
+        },
       },
       animation: {
         "fade-up": "fadeUp 0.7s ease-out forwards",

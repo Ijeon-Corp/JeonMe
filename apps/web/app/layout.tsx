@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme-context";
+import { LocaleProvider } from "@/lib/locale-context";
 
 // SEMUA font di file ini di-self-host (next/font/local), TIDAK ADA lagi yang
 // pakai next/font/google. Akar masalah: Quicksand lalu Space Grotesk
@@ -109,8 +111,21 @@ export default function RootLayout({
     <html
       lang="id"
       className={`${body.variable} ${heading.variable} ${customPlayfair.variable} ${customLora.variable} ${customMontserrat.variable} ${customRobotoMono.variable} ${customPoppins.variable} ${customQuicksand.variable} ${customMerriweather.variable} ${customSpaceGrotesk.variable} scroll-smooth`}
+      suppressHydrationWarning
     >
-      <body className="font-body antialiased">{children}</body>
+      {/* THEME_INIT_SCRIPT -- pola standar "no-flash dark mode": jalan
+          SEBELUM <body> dirender, membaca preferensi tersimpan & men-set
+          atribut data-theme di <html> sebelum cat pertama browser -- lihat
+          catatan lengkap di lib/theme-context.tsx. suppressHydrationWarning
+          di <html> WAJIB ada berdampingan dengan skrip ini -- tanpanya
+          React mencatat peringatan hydration mismatch tiap kali skrip ini
+          menambah atribut data-theme sebelum React sempat merender. */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      <body className="bg-app-bg font-body text-app-ink antialiased">
+        <ThemeProvider>
+          <LocaleProvider>{children}</LocaleProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

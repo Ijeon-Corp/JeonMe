@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import Logo from "./Logo";
+import { useLocale } from "@/lib/locale-context";
 
 // Footer -- perbaikan link ditemukan langsung pengguna, 23 Agustus 2026:
 // "perbaiki semua link yang ada di footer karna ada beberapa yang diklik
@@ -29,52 +32,57 @@ import Logo from "./Logo";
 // lg:grid-cols-4 -> lg:grid-cols-5 supaya kolom baru ini tidak
 // mengorbankan lebar kolom Logo (tetap col-span-2). Link di bilah bawah
 // dihapus (dipindah ke kolom ini) supaya tidak dobel.
+//
+// Halaman /privacy /terms /cookies SENGAJA TIDAK ikut diterjemahkan EN
+// (lihat catatan lingkup lengkap di lib/i18n/dictionaries.ts) -- link
+// di kolom Legal cuma labelnya yang ikut locale, isi halamannya sendiri
+// tetap Bahasa Indonesia apa pun locale aktif.
 export default function Footer() {
+  const { t, dict } = useLocale();
+
   return (
-    <footer className="border-t border-border bg-white" aria-label="Footer">
+    <footer className="border-t border-app-border bg-app-surface" aria-label="Footer">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Logo className="mb-4" />
-            <p className="max-w-xs text-sm leading-relaxed text-muted">
-              Satu link, peluang tanpa batas. Platform all-in-one bagi kreator untuk berbagi, menjual, dan bertumbuh.
-            </p>
+            <p className="max-w-xs text-sm leading-relaxed text-app-muted">{dict.footer.tagline}</p>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-ink">Produk</h3>
+            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.product}</h3>
             <ul className="space-y-2.5">
               {/* Fitur & Harga -- perbaikan SEO (temuan audit, 15 Agustus
                   2026): halaman terpisah, bukan anchor scroll lagi (lihat
                   komentar Navbar.tsx). Footer ini juga dipakai ulang di
                   /features & /pricing sendiri, jadi anchor polos tidak
                   akan berfungsi benar dari sana. */}
-              <li><Link href="/features" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Fitur</Link></li>
-              <li><Link href="/pricing" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Harga</Link></li>
-              <li><Link href="/#templates" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Template</Link></li>
+              <li><Link href="/features" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.features")}</Link></li>
+              <li><Link href="/pricing" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.pricing")}</Link></li>
+              <li><Link href="/#templates" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.templates")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-ink">Bantuan</h3>
+            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.help}</h3>
             <ul className="space-y-2.5">
-              <li><Link href="/#faq" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">FAQ</Link></li>
-              <li><Link href="/register" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Mulai Gratis</Link></li>
+              <li><Link href="/#faq" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.faq")}</Link></li>
+              <li><Link href="/register" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.getStarted")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-ink">Legal</h3>
+            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.legal}</h3>
             <ul className="space-y-2.5">
-              <li><Link href="/privacy" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Kebijakan Privasi</Link></li>
-              <li><Link href="/terms" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Ketentuan Layanan</Link></li>
-              <li><Link href="/cookies" className="cursor-pointer text-sm text-slate-500 transition-colors hover:text-primary">Cookies</Link></li>
+              <li><Link href="/privacy" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.privacy")}</Link></li>
+              <li><Link href="/terms" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.terms")}</Link></li>
+              <li><Link href="/cookies" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.cookies")}</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-border py-6 text-center">
-          <p className="text-sm text-slate-400">© 2026 Jeon.id. Seluruh hak cipta dilindungi.</p>
+        <div className="border-t border-app-border py-6 text-center">
+          <p className="text-sm text-app-muted">{dict.footer.copyright}</p>
         </div>
       </div>
     </footer>

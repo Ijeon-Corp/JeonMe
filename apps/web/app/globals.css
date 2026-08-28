@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Token dark/light mode -- permintaan langsung pengguna, 29 Agustus 2026:
+   "buatkan mode dark mode dan light mode". Token app-* ini SENGAJA BARU &
+   TERPISAH dari ink/muted/border/primary/dst yang sudah ada (tailwind.
+   config.ts) -- token lama itu dipakai bersama oleh lib/page-themes.ts
+   (386 pemakaian, sistem tema HALAMAN PUBLIK KREATOR, mis. "bg-white"/
+   "text-ink" di preset tema "default") yang HARUS TETAP TAMPIL PERSIS
+   sesuai tema pilihan kreator, terlepas dari preferensi dark/light
+   PENGUNJUNG. Kalau ink/muted/border diubah jadi variable CSS di sini,
+   SEMUA preset tema halaman publik kreator ikut berubah warna cuma karena
+   pengunjungnya pakai OS dark mode -- regresi besar yang tidak diminta.
+   Token app-* di bawah ini HANYA dipakai komponen "cangkang" aplikasi
+   sendiri (navbar/footer pemasaran, shell dashboard, dst) -- TIDAK PERNAH
+   dipakai di dalam PagePreview.tsx/page-themes.ts.
+
+   Pola 3 lapis (bukan cuma @media prefers-color-scheme) -- supaya toggle
+   manual SELALU menang dari preferensi sistem, tapi tanpa toggle apa pun
+   (localStorage kosong) halaman ikut preferensi OS pengunjung:
+   1. :root -- nilai LIGHT (default kalau tidak ada apa-apa lain).
+   2. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+      -- override ke DARK kalau OS gelap, KECUALI pengguna eksplisit pilih
+      "light" (data-theme="light" menang lawan preferensi OS).
+   3. [data-theme="dark"] -- override ke DARK lagi di sini supaya toggle
+      manual "dark" tetap menang WALAU OS-nya terang (media query di atas
+      tidak match kalau OS light, jadi butuh jalur eksplisit sendiri). */
+:root {
+  --app-bg: #ffffff;
+  --app-surface: #ffffff;
+  --app-surface-2: #f4f7f5;
+  --app-ink: #1c2b25;
+  --app-muted: #5b6b63;
+  --app-border: #d8ddd9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --app-bg: #0b1512;
+    --app-surface: #101d18;
+    --app-surface-2: #16241e;
+    --app-ink: #eaf3ef;
+    --app-muted: #9db3a9;
+    --app-border: #24352c;
+  }
+}
+
+[data-theme="dark"] {
+  --app-bg: #0b1512;
+  --app-surface: #101d18;
+  --app-surface-2: #16241e;
+  --app-ink: #eaf3ef;
+  --app-muted: #9db3a9;
+  --app-border: #24352c;
+}
+
 /* Reskin fokus form premium (permintaan langsung pengguna, "design
    dashboard ini terlalu biasa"): glow lembut warna brand di SEMUA
    input/select/textarea saat fokus, menggantikan garis/outline default
@@ -88,6 +141,21 @@ h1, h2, h3, h4, h5 {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(216, 221, 217, 0.8);
+}
+
+/* .nav-glass gelap -- Modul Dark/Light Mode (permintaan langsung
+   pengguna, 29 Agustus 2026). Pola 2 lapis SAMA seperti token --app-*
+   di atas (media query utk preferensi OS, [data-theme] utk toggle
+   manual) -- lihat catatan lengkap di sana. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nav-glass {
+    background: rgba(11, 21, 18, 0.78);
+    border-bottom: 1px solid rgba(36, 53, 44, 0.8);
+  }
+}
+[data-theme="dark"] .nav-glass {
+  background: rgba(11, 21, 18, 0.78);
+  border-bottom: 1px solid rgba(36, 53, 44, 0.8);
 }
 
 .blob {

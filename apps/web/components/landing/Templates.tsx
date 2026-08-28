@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PagePreview from "@/components/PagePreview";
 import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
+import { useLocale } from "@/lib/locale-context";
 
 // Templates -- dirender pakai KOMPONEN PagePreview SUNGGUHAN (sama persis
 // dipakai halaman publik & dashboard Quick Setup, lihat
@@ -84,27 +85,28 @@ const templates = CURATED_KEYS.map((c) => {
 });
 
 const filters = [
-  { key: "all", label: "Semua" },
-  { key: "Cover", label: "Cover" },
-  { key: "Portrait", label: "Portrait" },
-  { key: "Spotlight", label: "Spotlight" },
-  { key: "Masthead", label: "Masthead" },
+  { key: "all", labelKey: "all" },
+  { key: "Cover", labelKey: "cover" },
+  { key: "Portrait", labelKey: "portrait" },
+  { key: "Spotlight", labelKey: "spotlight" },
+  { key: "Masthead", labelKey: "masthead" },
 ] as const;
 
 export default function Templates() {
   const [active, setActive] = useState<(typeof filters)[number]["key"]>("all");
   const visible = templates.filter((t) => active === "all" || t.tag === active);
+  const { t: tr } = useLocale();
 
   return (
-    <section id="templates" className="relative overflow-hidden bg-primary-subtle/40 py-20 md:py-28" aria-label="Template">
+    <section id="templates" className="relative overflow-hidden bg-app-surface-2 py-20 md:py-28" aria-label="Template">
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-ink sm:text-4xl">
-            Mulai dari
+          <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+            {tr("templates.heading1")}
             <br />
-            <span className="text-gradient">Template yang Indah</span>
+            <span className="text-gradient">{tr("templates.headingGradient")}</span>
           </h2>
-          <p className="text-lg leading-relaxed text-muted">Pilih dari puluhan template siap pakai, sesuaikan dalam hitungan menit, dan publikasikan halamanmu sendiri.</p>
+          <p className="text-lg leading-relaxed text-app-muted">{tr("templates.subtitle")}</p>
         </div>
 
         <div className="reveal mb-10 flex flex-wrap justify-center gap-2">
@@ -115,10 +117,10 @@ export default function Templates() {
               className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                 active === f.key
                   ? "bg-primary text-white"
-                  : "border border-border bg-white text-muted hover:border-primary hover:text-primary"
+                  : "border border-app-border bg-app-surface text-app-muted hover:border-primary hover:text-primary"
               }`}
             >
-              {f.label}
+              {tr(`templates.filters.${f.labelKey}`)}
             </button>
           ))}
         </div>
@@ -127,7 +129,7 @@ export default function Templates() {
           {visible.map((t) => (
             <div
               key={t.key}
-              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-card"
+              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-card"
             >
               {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola SAMA
                   PERSIS dengan galeri /dashboard/quick-setup (lihat catatan
@@ -139,7 +141,13 @@ export default function Templates() {
                   Privasi/dst) yang biasanya SELALU tampil di pratinjau
                   dashboard jadi teks kecil tak terbaca & berantakan di
                   thumbnail sekecil ini, dipotong khusus di sini (lihat
-                  prop-nya, PagePreview.tsx). */}
+                  prop-nya, PagePreview.tsx).
+
+                  bg-white DI SINI SENGAJA tetap hardcode (bukan bg-app-
+                  surface) -- lihat catatan besar soal batas token app-* vs
+                  isi <PagePreview> di ProductShowcase.tsx: mockup ini
+                  menampilkan tema PILIHAN TEMPLATE itu sendiri, harus
+                  identik apa pun preferensi dark/light pengunjung. */}
               <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
                 <div className="h-full [zoom:0.5]">
                   <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} hideFooterChrome />
@@ -149,16 +157,16 @@ export default function Templates() {
                     Konten asli tetap beda panjang per template (walau kini
                     dikurasi supaya sama-sama kaya blok), fade ini
                     menyamarkan garis potong itu jadi transisi halus ke
-                    area putih judul kartu di bawahnya, apa pun warna latar
-                    tema (gelap/terang) di baliknya. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
+                    area kartu (bg-app-surface) di bawahnya, apa pun warna
+                    latar tema (gelap/terang) di baliknya. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-app-surface to-transparent" />
               </div>
               <div className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 transition-opacity duration-250 group-hover:opacity-100">
-                <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">Lihat Template</span>
+                <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">{tr("templates.viewTemplate")}</span>
               </div>
               <div className="p-4">
-                <h3 className="font-heading text-sm font-bold text-ink">{t.label}</h3>
-                <p className="mt-0.5 text-xs text-muted">{t.tag}</p>
+                <h3 className="font-heading text-sm font-bold text-app-ink">{t.label}</h3>
+                <p className="mt-0.5 text-xs text-app-muted">{t.tag}</p>
               </div>
             </div>
           ))}

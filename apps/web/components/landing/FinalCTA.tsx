@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useLocale } from "@/lib/locale-context";
 
 export default function FinalCTA() {
+  const { t } = useLocale();
+
   return (
     <section
       className="relative overflow-hidden py-20 md:py-28"
@@ -13,16 +18,16 @@ export default function FinalCTA() {
 
       <div className="reveal relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
         <h2 className="mb-5 font-heading text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-          Mulai Bangun Kehadiran
+          {t("finalCta.title1")}
           <br />
-          Digitalmu Hari Ini.
+          {t("finalCta.title2")}
         </h2>
-        <p className="mx-auto mb-9 max-w-xl text-lg text-white/75">Bergabunglah dengan ribuan kreator yang bertumbuh bersama Jeon.id.</p>
+        <p className="mx-auto mb-9 max-w-xl text-lg text-white/75">{t("finalCta.subtitle")}</p>
         {/* href -- bug link ditemukan langsung pengguna, 23 Agustus 2026,
             lihat catatan lengkap di Navbar.tsx (sebelumnya /dashboard,
             redirect ke /login untuk pengunjung belum login). */}
         <Link href="/register" className="btn-primary shadow-hero inline-flex cursor-pointer rounded-xl px-9 py-4 font-heading text-base font-bold text-white">
-          Mulai Gratis
+          {t("finalCta.cta")}
         </Link>
       </div>
     </section>

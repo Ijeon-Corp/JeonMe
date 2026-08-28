@@ -8,6 +8,7 @@ import Footer from "@/components/landing/Footer";
 import ScrollReveal from "@/components/landing/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { faqPageSchema } from "@/lib/structured-data";
+import PricingPageHero from "./PricingPageHero";
 
 // Perbaikan SEO (temuan audit, 15 Agustus 2026): sebelumnya /pricing 404
 // walau ditautkan dari nav -- harga cuma section anchor (#pricing) dalam
@@ -43,21 +44,7 @@ export default function PricingPage() {
       <ScrollReveal />
       <Navbar />
       <main>
-        <section className="relative overflow-hidden bg-white pb-4 pt-36 md:pt-44">
-          <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-            <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
-              Harga
-            </span>
-            <h1 className="mb-4 font-heading text-4xl font-bold leading-tight text-ink sm:text-5xl">
-              Harga Sederhana untuk
-              <br />
-              <span className="text-gradient">Setiap Tahap Pertumbuhan</span>
-            </h1>
-            <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted">
-              Mulai gratis. Upgrade ke Premium saat kamu siap memonetisasi lebih besar, tanpa biaya tersembunyi.
-            </p>
-          </div>
-        </section>
+        <PricingPageHero />
         <Pricing showHeading={false} />
         <FAQ />
         <FinalCTA />

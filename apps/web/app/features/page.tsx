@@ -7,6 +7,7 @@ import Analytics from "@/components/landing/Analytics";
 import FinalCTA from "@/components/landing/FinalCTA";
 import Footer from "@/components/landing/Footer";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import FeaturesPageHero from "./FeaturesPageHero";
 
 // Perbaikan SEO (temuan audit, 15 Agustus 2026): sebelumnya /features
 // 404 walau ditautkan dari nav -- fitur cuma section anchor (#features)
@@ -28,22 +29,7 @@ export default function FeaturesPage() {
       <ScrollReveal />
       <Navbar />
       <main>
-        <section className="relative overflow-hidden bg-white pb-4 pt-36 md:pt-44">
-          <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-            <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
-              Fitur
-            </span>
-            <h1 className="mb-4 font-heading text-4xl font-bold leading-tight text-ink sm:text-5xl">
-              Semua yang Dibutuhkan Kreator,
-              <br />
-              <span className="text-gradient">Ada di Satu Halaman</span>
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted">
-              Dari manajemen tautan hingga monetisasi penuh, Jeon.id memberimu toolkit lengkap untuk bertumbuh,
-              tanpa perlu menyambungkan banyak tools terpisah.
-            </p>
-          </div>
-        </section>
+        <FeaturesPageHero />
         <Features showHeading={false} />
         <ProductShowcase />
         <Monetization />

@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useLocale } from "@/lib/locale-context";
 
 export default function Hero() {
+  const { t } = useLocale();
+
   return (
     <section className="bg-mesh relative overflow-hidden pb-20 pt-32 md:pb-28 md:pt-40" aria-label="Hero">
       <div className="blob absolute left-[-100px] top-10 h-72 w-72 bg-primary/10" aria-hidden="true" />
@@ -16,18 +21,18 @@ export default function Hero() {
         <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-10">
           <div className="text-center lg:text-left">
             <h1
-              className="reveal mb-6 font-heading text-4xl font-extrabold leading-[1.12] tracking-tight text-ink sm:text-5xl lg:text-[3.3rem]"
+              className="reveal mb-6 font-heading text-4xl font-extrabold leading-[1.12] tracking-tight text-app-ink sm:text-5xl lg:text-[3.3rem]"
               style={{ transitionDelay: "0.05s" }}
             >
-              Semua yang Kamu Butuhkan dalam
-              <span className="text-gradient"> Satu Link Cantik.</span>
+              {t("hero.title1")}
+              <span className="text-gradient"> {t("hero.titleGradient")}</span>
             </h1>
 
             <p
-              className="reveal mx-auto mb-8 max-w-lg text-lg leading-relaxed text-muted sm:text-xl lg:mx-0"
+              className="reveal mx-auto mb-8 max-w-lg text-lg leading-relaxed text-app-muted sm:text-xl lg:mx-0"
               style={{ transitionDelay: "0.1s" }}
             >
-              Buat halaman bio yang menawan, jual produk digital, bagikan kontenmu, dan kembangkan audiensmu dari satu tempat.
+              {t("hero.subtitle")}
             </p>
 
             <div
@@ -43,17 +48,17 @@ export default function Hero() {
                 href="/register"
                 className="btn-primary shadow-hero cursor-pointer rounded-xl px-7 py-3.5 text-center font-heading text-base font-bold text-white"
               >
-                Mulai Gratis
+                {t("hero.ctaPrimary")}
               </Link>
               <a
                 href="#features"
-                className="btn-ghost flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border px-7 py-3.5 text-center text-base font-semibold text-ink"
+                className="btn-ghost flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-app-border px-7 py-3.5 text-center text-base font-semibold text-app-ink"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="10 8 16 12 10 16 10 8" />
                 </svg>
-                Lihat Demo
+                {t("hero.ctaSecondary")}
               </a>
             </div>
 
@@ -74,7 +79,7 @@ export default function Hero() {
                     </svg>
                   ))}
                 </div>
-                <p className="text-xs font-medium text-muted">Dipercaya 10.000+ kreator</p>
+                <p className="text-xs font-medium text-app-muted">{t("hero.trustedBy")}</p>
               </div>
             </div>
           </div>
