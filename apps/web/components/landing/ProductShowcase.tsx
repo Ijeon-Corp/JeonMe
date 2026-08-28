@@ -19,15 +19,25 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // tetap mencakup ragam persona yang mirip susunan lama (kreator, developer,
 // kelas, freelancer, toko, coach) + 2 tambahan (wedding organizer, travel
 // agency) supaya carousel ini terasa penuh dengan 8 kartu.
+//
+// Revisi susulan (permintaan langsung pengguna): "ganti template dengan
+// layout hero dengan yang lain ganti 2 itu dan juga course creator yang
+// warna bg kuning ini dengan yang lain" -- "influencer" & "travel-agency"
+// (keduanya layoutVariant "hero") diganti "book-author"/"culinary-tour",
+// dan "course-creator" (tema "golden", latar kekuningan) diganti "teacher"
+// (tema "ocean", biru). Ketiga pengganti sengaja dipilih dengan
+// layoutVariant & tema yang BEDA dari 5 kartu yang tidak berubah (spotlight/
+// banner/card/duo/ticket, console/forest/peach/dune/champagne) supaya
+// kedelapan kartu tetap tidak ada yang kembar layout maupun temanya.
 const CURATED_KEYS = [
   { key: "fullstack-developer", displayName: "Dimas Aditya", avatarUrl: "https://randomuser.me/api/portraits/men/34.jpg" },
-  { key: "influencer", displayName: "Rian Saputra", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
-  { key: "course-creator", displayName: "Sinta Nuraini", avatarUrl: "https://randomuser.me/api/portraits/women/28.jpg" },
+  { key: "book-author", displayName: "Rian Saputra", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
+  { key: "teacher", displayName: "Sinta Nuraini", avatarUrl: "https://randomuser.me/api/portraits/women/28.jpg" },
   { key: "freelancer", displayName: "Farah W.", avatarUrl: "https://randomuser.me/api/portraits/women/65.jpg" },
   { key: "online-store", displayName: "Toko Senja", avatarUrl: "https://randomuser.me/api/portraits/women/50.jpg" },
   { key: "fitness-coach", displayName: "Coach Budi", avatarUrl: "https://randomuser.me/api/portraits/men/58.jpg" },
   { key: "wedding-organizer", displayName: "Amara Wedding", avatarUrl: "https://randomuser.me/api/portraits/women/41.jpg" },
-  { key: "travel-agency", displayName: "Jelajah Nusantara", avatarUrl: "https://randomuser.me/api/portraits/men/22.jpg" },
+  { key: "culinary-tour", displayName: "Jelajah Nusantara", avatarUrl: "https://randomuser.me/api/portraits/men/22.jpg" },
 ] as const;
 
 const items = CURATED_KEYS.map((c) => {
