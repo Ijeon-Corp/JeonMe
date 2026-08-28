@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useMemo, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   DashboardProduct,
@@ -20,6 +21,7 @@ import { confirmDelete } from "@/lib/confirm";
 type Mode = "single" | "bulk";
 
 export default function DashboardVouchersPage() {
+  const { t } = useLocale();
   const [vouchers, setVouchers] = useState<DashboardVoucher[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function DashboardVouchersPage() {
         setVouchers(v);
         setProducts(p);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat voucher."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.vouchers.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -68,11 +70,11 @@ export default function DashboardVouchersPage() {
     e.preventDefault();
     const value = Number(discountValue);
     if (!value || value <= 0) {
-      setError("Nilai diskon wajib diisi.");
+      setError(t("dashboard.pages.vouchers.errors.discountValueRequired"));
       return;
     }
     if (mode === "bulk" && !batchLabel.trim()) {
-      setError("Nama batch wajib diisi untuk generate kode massal.");
+      setError(t("dashboard.pages.vouchers.errors.batchLabelRequired"));
       return;
     }
     setError(null);
@@ -95,7 +97,7 @@ export default function DashboardVouchersPage() {
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat voucher.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.vouchers.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -108,12 +110,12 @@ export default function DashboardVouchersPage() {
       await updateVoucher(voucher.id, { is_active: nextActive });
     } catch (err) {
       setVouchers((prev) => prev.map((v) => (v.id === voucher.id ? { ...v, is_active: voucher.is_active } : v)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui voucher.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.vouchers.errors.updateFailed"));
     }
   }
 
   async function handleDelete(voucher: DashboardVoucher) {
-    if (!(await confirmDelete(`Hapus kode voucher "${voucher.code}"? Aksi ini tidak bisa dibatalkan.`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.vouchers.confirmDeleteText").replace("{code}", voucher.code)))) return;
     const previous = vouchers;
     setVouchers((prev) => prev.filter((v) => v.id !== voucher.id));
     setBusyId(voucher.id);
@@ -121,7 +123,7 @@ export default function DashboardVouchersPage() {
       await deleteVoucher(voucher.id);
     } catch (err) {
       setVouchers(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus voucher.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.vouchers.errors.deleteFailed"));
     } finally {
       setBusyId(null);
     }
@@ -143,7 +145,7 @@ export default function DashboardVouchersPage() {
   }, [vouchers]);
 
   function productNames(ids: string[]) {
-    if (ids.length === 0) return "Semua produk";
+    if (ids.length === 0) return t("dashboard.pages.vouchers.allProducts");
     return ids
       .map((id) => products.find((p) => p.id === id)?.name ?? id)
       .join(", ");
@@ -158,8 +160,7 @@ export default function DashboardVouchersPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Buat kode diskon untuk produkmu -- kode tunggal (dipakai berkali-kali) atau generate banyak kode sekali pakai
-        untuk afiliasi/influencer.
+        {t("dashboard.pages.vouchers.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -172,7 +173,7 @@ export default function DashboardVouchersPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Buat Voucher
+            {t("dashboard.pages.vouchers.createButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
@@ -184,7 +185,7 @@ export default function DashboardVouchersPage() {
                   mode === "single" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
                 }`}
               >
-                Kode Tunggal
+                {t("dashboard.pages.vouchers.modeSingle")}
               </button>
               <button
                 type="button"
@@ -193,36 +194,36 @@ export default function DashboardVouchersPage() {
                   mode === "bulk" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
                 }`}
               >
-                Generate Massal
+                {t("dashboard.pages.vouchers.modeBulk")}
               </button>
             </div>
 
             {mode === "single" ? (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Kode (kosongkan untuk acak)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.codeLabel")}</label>
                 <input
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="DISKON10"
+                  placeholder={t("dashboard.pages.vouchers.codePlaceholder")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Batch</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.batchLabelLabel")}</label>
                   <input
                     type="text"
                     required
                     value={batchLabel}
                     onChange={(e) => setBatchLabel(e.target.value)}
-                    placeholder="Afiliasi Oktober"
+                    placeholder={t("dashboard.pages.vouchers.batchLabelPlaceholder")}
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-app-ink">Jumlah Kode (maks 200)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.quantityLabel")}</label>
                   <input
                     type="number"
                     required
@@ -238,19 +239,19 @@ export default function DashboardVouchersPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Tipe Diskon</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.discountTypeLabel")}</label>
                 <select
                   value={discountType}
                   onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="percentage">Persentase (%)</option>
-                  <option value="fixed">Nominal (Rp)</option>
+                  <option value="percentage">{t("dashboard.pages.vouchers.discountTypePercentage")}</option>
+                  <option value="fixed">{t("dashboard.pages.vouchers.discountTypeFixed")}</option>
                 </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-app-ink">
-                  Nilai Diskon {discountType === "percentage" ? "(%)" : "(Rp)"}
+                  {discountType === "percentage" ? t("dashboard.pages.vouchers.discountValuePercent") : t("dashboard.pages.vouchers.discountValueFixed")}
                 </label>
                 <input
                   type="number"
@@ -267,7 +268,7 @@ export default function DashboardVouchersPage() {
             <div className="grid grid-cols-2 gap-3">
               {discountType === "percentage" && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-app-ink">Maks. Diskon (Rp, opsional)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.maxDiscountLabel")}</label>
                   <input
                     type="number"
                     min={1}
@@ -278,7 +279,7 @@ export default function DashboardVouchersPage() {
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Min. Pembelian (Rp, opsional)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.minPurchaseLabel")}</label>
                 <input
                   type="number"
                   min={0}
@@ -289,19 +290,19 @@ export default function DashboardVouchersPage() {
               </div>
               {mode === "single" && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-app-ink">Batas Pemakaian (opsional)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.maxUsesLabel")}</label>
                   <input
                     type="number"
                     min={1}
                     value={maxUses}
                     onChange={(e) => setMaxUses(e.target.value)}
-                    placeholder="Tak terbatas"
+                    placeholder={t("dashboard.pages.vouchers.maxUsesPlaceholder")}
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Kedaluwarsa (opsional)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.vouchers.expiresLabel")}</label>
                 <input
                   type="date"
                   value={expiresAt}
@@ -313,10 +314,10 @@ export default function DashboardVouchersPage() {
 
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-app-ink">
-                Berlaku untuk produk (kosongkan = semua produk)
+                {t("dashboard.pages.vouchers.applicableProductsLabel")}
               </label>
               <div className="flex flex-col gap-1.5 rounded-lg border border-app-border p-3">
-                {products.length === 0 && <p className="text-xs text-app-muted">Belum ada produk.</p>}
+                {products.length === 0 && <p className="text-xs text-app-muted">{t("dashboard.pages.vouchers.noProducts")}</p>}
                 {products.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 text-xs text-app-ink">
                     <input
@@ -344,14 +345,14 @@ export default function DashboardVouchersPage() {
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.vouchers.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Voucher"}
+                {creating ? t("dashboard.pages.vouchers.creating") : t("dashboard.pages.vouchers.createButton")}
               </button>
             </div>
           </form>
@@ -378,7 +379,7 @@ export default function DashboardVouchersPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-app-ink">{label}</p>
                 <p className="text-xs font-semibold text-app-muted">
-                  {usedTotal}/{list.length} kode terpakai &middot; {discountLabel(list[0])}
+                  {usedTotal}/{list.length} {t("dashboard.pages.vouchers.codesUsedLabel")} &middot; {discountLabel(list[0])}
                 </p>
               </div>
               <p className="mt-1 text-xs text-app-muted">{productNames(list[0].product_ids)}</p>
@@ -398,7 +399,7 @@ export default function DashboardVouchersPage() {
           );
         })}
 
-        {vouchers.length === 0 && <EmptyState text='Belum ada voucher -- klik "Buat Voucher" di atas untuk membuat yang pertama.' />}
+        {vouchers.length === 0 && <EmptyState text={t("dashboard.pages.vouchers.emptyVouchers")} />}
       </div>
     </div>
   );
@@ -421,6 +422,7 @@ function VoucherRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
@@ -435,17 +437,17 @@ function VoucherRow({
         {subtitle && <p className="truncate text-xs text-app-muted">{subtitle}</p>}
         <p className="text-[11px] text-app-muted">
           {voucher.used_count}
-          {voucher.max_uses ? `/${voucher.max_uses}` : ""} dipakai
-          {voucher.expires_at ? ` · berlaku sampai ${new Date(voucher.expires_at).toLocaleDateString("id-ID")}` : ""}
+          {voucher.max_uses ? `/${voucher.max_uses}` : ""} {t("dashboard.pages.vouchers.usedLabel")}
+          {voucher.expires_at ? ` · ${t("dashboard.pages.vouchers.validUntilLabel")} ${new Date(voucher.expires_at).toLocaleDateString("id-ID")}` : ""}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
-        <Toggle checked={voucher.is_active} onChange={onToggle} label={`Aktifkan ${voucher.code}`} />
+        <Toggle checked={voucher.is_active} onChange={onToggle} label={t("dashboard.pages.vouchers.activateAria").replace("{code}", voucher.code)} />
         <button
           type="button"
           onClick={onDelete}
           disabled={busy}
-          title="Hapus voucher"
+          title={t("dashboard.pages.vouchers.deleteTitle")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-60"
         >
           <IconTrash className="h-4 w-4" />

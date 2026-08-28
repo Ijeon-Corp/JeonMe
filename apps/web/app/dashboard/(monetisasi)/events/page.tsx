@@ -7,17 +7,18 @@ import { IconCalendar, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 // Indonesia TIDAK memakai daylight saving time -- offset per zona waktu
 // TETAP sepanjang tahun, jadi cukup peta statis ke offset UTC tanpa
 // pustaka timezone. Dipakai untuk membangun string RFC3339 langsung dari
 // <input type="datetime-local"> (yang cuma memberi jam-dinding tanpa info
 // zona) sesuai zona yang dipilih kreator, BUKAN zona waktu browser pengunjung.
-const TIMEZONE_OPTIONS: { value: string; label: string; offset: string }[] = [
-  { value: "Asia/Jakarta", label: "WIB (Jakarta)", offset: "+07:00" },
-  { value: "Asia/Makassar", label: "WITA (Makassar)", offset: "+08:00" },
-  { value: "Asia/Jayapura", label: "WIT (Jayapura)", offset: "+09:00" },
-  { value: "UTC", label: "UTC (event internasional/online)", offset: "+00:00" },
+const TIMEZONE_OPTIONS: { value: string; offset: string }[] = [
+  { value: "Asia/Jakarta", offset: "+07:00" },
+  { value: "Asia/Makassar", offset: "+08:00" },
+  { value: "Asia/Jayapura", offset: "+09:00" },
+  { value: "UTC", offset: "+00:00" },
 ];
 
 function toRFC3339(localDateTime: string, timezone: string): string {
@@ -26,6 +27,13 @@ function toRFC3339(localDateTime: string, timezone: string): string {
 }
 
 export default function DashboardEventsPage() {
+  const { t } = useLocale();
+  const timezoneLabels: Record<string, string> = {
+    "Asia/Jakarta": t("dashboard.pages.events.timezones.wib"),
+    "Asia/Makassar": t("dashboard.pages.events.timezones.wita"),
+    "Asia/Jayapura": t("dashboard.pages.events.timezones.wit"),
+    UTC: t("dashboard.pages.events.timezones.utc"),
+  };
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +57,7 @@ export default function DashboardEventsPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat event."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.events.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -69,11 +77,11 @@ export default function DashboardEventsPage() {
     e.preventDefault();
     const price = Number(priceIDR);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama event wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.events.errors.nameAndPriceRequired"));
       return;
     }
     if (!startsAt || !endsAt) {
-      setError("Isi waktu mulai dan berakhir event.");
+      setError(t("dashboard.pages.events.errors.datesRequired"));
       return;
     }
     setError(null);
@@ -94,7 +102,7 @@ export default function DashboardEventsPage() {
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat event.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.events.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -107,12 +115,12 @@ export default function DashboardEventsPage() {
       await updateProduct(event.id, { is_active: nextActive });
     } catch (err) {
       setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, is_active: event.is_active } : e)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui status event.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.events.errors.updateStatusFailed"));
     }
   }
 
   async function handleDelete(event: DashboardEvent) {
-    if (!(await confirmDelete(`Hapus event "${event.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.events.confirmDeleteText").replace("{name}", event.name)))) return;
     const previous = events;
     setEvents((prev) => prev.filter((e) => e.id !== event.id));
     setBusyId(event.id);
@@ -120,7 +128,7 @@ export default function DashboardEventsPage() {
       await deleteProduct(event.id);
     } catch (err) {
       setEvents(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus event.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.events.errors.deleteFailed"));
     } finally {
       setBusyId(null);
     }
@@ -131,7 +139,7 @@ export default function DashboardEventsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Jual tiket event online/offline dengan tanggal, waktu, zona waktu, dan kuota peserta.
+        {t("dashboard.pages.events.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -144,23 +152,23 @@ export default function DashboardEventsPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Buat Event
+            {t("dashboard.pages.events.createButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Event</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.nameLabel")}</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Workshop Fotografi Dasar"
+                placeholder={t("dashboard.pages.events.namePlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.descriptionLabel")}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -169,7 +177,7 @@ export default function DashboardEventsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga Tiket (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.priceLabel")}</label>
               <input
                 type="number"
                 required
@@ -181,7 +189,7 @@ export default function DashboardEventsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Mulai</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.startsLabel")}</label>
                 <input
                   type="datetime-local"
                   required
@@ -191,7 +199,7 @@ export default function DashboardEventsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Berakhir</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.endsLabel")}</label>
                 <input
                   type="datetime-local"
                   required
@@ -202,7 +210,7 @@ export default function DashboardEventsPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Zona Waktu</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.timezoneLabel")}</label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
@@ -210,29 +218,29 @@ export default function DashboardEventsPage() {
               >
                 {TIMEZONE_OPTIONS.map((tz) => (
                   <option key={tz.value} value={tz.value}>
-                    {tz.label}
+                    {timezoneLabels[tz.value]}
                   </option>
                 ))}
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <Toggle checked={isOnline} onChange={() => setIsOnline((v) => !v)} label="Event online" />
-              <span className="text-xs font-semibold text-app-ink">{isOnline ? "Online" : "Offline (tatap muka)"}</span>
+              <Toggle checked={isOnline} onChange={() => setIsOnline((v) => !v)} label={t("dashboard.pages.events.onlineAria")} />
+              <span className="text-xs font-semibold text-app-ink">{isOnline ? t("dashboard.pages.events.online") : t("dashboard.pages.events.offline")}</span>
             </div>
             {!isOnline && (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Lokasi</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.locationLabel")}</label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Jl. Contoh No. 1, Jakarta"
+                  placeholder={t("dashboard.pages.events.locationPlaceholder")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             )}
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Kuota Peserta (kosongkan untuk tanpa batas)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.capacityLabel")}</label>
               <input
                 type="number"
                 min={1}
@@ -250,14 +258,14 @@ export default function DashboardEventsPage() {
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.events.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Event"}
+                {creating ? t("dashboard.pages.events.creating") : t("dashboard.pages.events.createButton")}
               </button>
             </div>
           </form>
@@ -276,21 +284,22 @@ export default function DashboardEventsPage() {
             </div>
             <p className="mt-1 text-xs text-app-muted">
               {new Date(ev.starts_at).toLocaleString("id-ID")} ({ev.timezone}) &middot;{" "}
-              {ev.is_online ? "Online" : ev.location || "Offline"}
+              {ev.is_online ? t("dashboard.pages.events.online") : ev.location || t("dashboard.pages.events.offlineShort")}
             </p>
             <p className="mt-1 text-xs text-app-muted">
-              {ev.attendee_count} pendaftar{ev.capacity !== null ? ` / ${ev.capacity} slot` : " (tanpa batas kuota)"}
+              {ev.attendee_count} {t("dashboard.pages.events.attendeesLabel")}
+              {ev.capacity !== null ? ` ${t("dashboard.pages.events.slotSuffix").replace("{capacity}", String(ev.capacity))}` : ` ${t("dashboard.pages.events.noCapacityLabel")}`}
             </p>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Toggle checked={ev.is_active} onChange={() => handleToggleActive(ev)} label={`Aktifkan ${ev.name}`} />
-                <span className="text-xs font-semibold text-app-muted">Aktif</span>
+                <Toggle checked={ev.is_active} onChange={() => handleToggleActive(ev)} label={t("dashboard.pages.events.activateAria").replace("{name}", ev.name)} />
+                <span className="text-xs font-semibold text-app-muted">{t("dashboard.pages.events.activeLabel")}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleDelete(ev)}
                 disabled={busyId === ev.id}
-                title="Hapus event"
+                title={t("dashboard.pages.events.deleteTitle")}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
                 <IconTrash className="h-4 w-4" />
@@ -299,7 +308,7 @@ export default function DashboardEventsPage() {
           </div>
         ))}
 
-        {events.length === 0 && <EmptyState text='Belum ada event -- klik "Buat Event" di atas untuk membuat yang pertama.' />}
+        {events.length === 0 && <EmptyState text={t("dashboard.pages.events.emptyEvents")} />}
       </div>
     </div>
   );

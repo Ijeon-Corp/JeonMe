@@ -153,7 +153,7 @@ export default function AdminKycPage() {
         ))}
 
         {items.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             {filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."}
           </div>

@@ -19,10 +19,12 @@ import {
 import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Settings §3 (Payment / Payout). Rekening baru WAJIB verifikasi
 // (kode OTP) sebelum bisa jadi utama -- lihat PayoutMethodHandler backend.
 export default function SettingsPaymentPage() {
+  const { t } = useLocale();
   const { showToast } = useToast();
 
   const [methods, setMethods] = useState<PayoutMethod[] | null>(null);
@@ -54,13 +56,14 @@ export default function SettingsPaymentPage() {
   }
 
   useEffect(() => {
-    reload().catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat metode pembayaran."));
+    reload().catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.loadError")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!provider.trim() || !accountNumber.trim() || !accountName.trim()) {
-      setError("Semua kolom wajib diisi.");
+      setError(t("dashboard.pages.settingsPayment.allFieldsRequired"));
       return;
     }
     setError(null);
@@ -72,9 +75,9 @@ export default function SettingsPaymentPage() {
       setAccountName("");
       setAdding(false);
       await reload();
-      showToast("Metode pembayaran ditambahkan, verifikasi dulu sebelum dipakai.");
+      showToast(t("dashboard.pages.settingsPayment.addSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal menambahkan metode pembayaran.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.addError"), "error");
     } finally {
       setCreating(false);
     }
@@ -85,9 +88,13 @@ export default function SettingsPaymentPage() {
       const res = await requestPayoutMethodVerification(id);
       setVerifyingId(id);
       setVerifyCode(res.dev_otp ?? "");
-      showToast(res.dev_otp ? `Mode dev, kode: ${res.dev_otp}` : "Kode verifikasi dikirim.");
+      showToast(
+        res.dev_otp
+          ? t("dashboard.pages.settingsPayment.devOtpToast").replace("{otp}", res.dev_otp)
+          : t("dashboard.pages.settingsPayment.verifyCodeSent")
+      );
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal meminta kode verifikasi.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.requestVerifyError"), "error");
     }
   }
 
@@ -100,9 +107,9 @@ export default function SettingsPaymentPage() {
       setVerifyingId(null);
       setVerifyCode("");
       await reload();
-      showToast("Metode pembayaran terverifikasi.");
+      showToast(t("dashboard.pages.settingsPayment.verifySuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Kode verifikasi salah.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.verifyError"), "error");
     } finally {
       setVerifyBusy(false);
     }
@@ -114,24 +121,24 @@ export default function SettingsPaymentPage() {
     setMethods(methods.map((m) => ({ ...m, is_primary: m.id === id })));
     try {
       await setPayoutMethodPrimary(id);
-      showToast("Metode pembayaran utama diperbarui.");
+      showToast(t("dashboard.pages.settingsPayment.setPrimarySuccess"));
     } catch (err) {
       setMethods(previous);
-      showToast(err instanceof ApiError ? err.message : "Gagal menjadikan metode utama.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.setPrimaryError"), "error");
     }
   }
 
   async function handleDelete(id: string) {
     if (!methods) return;
-    if (!(await confirmDelete("Hapus metode pembayaran ini?"))) return;
+    if (!(await confirmDelete(t("dashboard.pages.settingsPayment.deleteConfirmText")))) return;
     const previous = methods;
     setMethods(methods.filter((m) => m.id !== id));
     try {
       await deletePayoutMethod(id);
-      showToast("Metode pembayaran dihapus.");
+      showToast(t("dashboard.pages.settingsPayment.deleteSuccess"));
     } catch (err) {
       setMethods(previous);
-      showToast(err instanceof ApiError ? err.message : "Gagal menghapus metode pembayaran.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.deleteError"), "error");
     }
   }
 
@@ -140,10 +147,10 @@ export default function SettingsPaymentPage() {
     setSavingSchedule(true);
     try {
       await updatePayoutSchedule({ frequency, min_threshold_idr: Number(minThreshold) || 0 });
-      showToast("Jadwal penarikan disimpan.");
+      showToast(t("dashboard.pages.settingsPayment.scheduleSaveSuccess"));
       setSchedule({ frequency, min_threshold_idr: Number(minThreshold) || 0 });
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal menyimpan jadwal penarikan.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsPayment.scheduleSaveError"), "error");
     } finally {
       setSavingSchedule(false);
     }
@@ -160,14 +167,14 @@ export default function SettingsPaymentPage() {
         className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        Pengaturan
+        {t("dashboard.pages.settingsPayment.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Pembayaran & Penarikan</h1>
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsPayment.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
-        Kelola rekening/e-wallet dan jadwal auto-withdraw. Lihat saldo & ajukan penarikan manual di{" "}
+        {t("dashboard.pages.settingsPayment.subtitlePrefix")}{" "}
         <Link href="/dashboard/balance" className="font-semibold text-primary hover:underline">
-          Saldo & Penarikan
+          {t("dashboard.pages.settingsPayment.balanceLinkLabel")}
         </Link>
         .
       </p>
@@ -175,7 +182,7 @@ export default function SettingsPaymentPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Metode Pembayaran</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.methodsTitle")}</h2>
 
         <div className="mt-3 flex flex-col gap-2">
           {methods.map((m) => (
@@ -190,7 +197,7 @@ export default function SettingsPaymentPage() {
                 <div className="flex flex-shrink-0 items-center gap-1.5">
                   {m.is_primary && (
                     <span className="rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
-                      Utama
+                      {t("dashboard.pages.settingsPayment.primaryBadge")}
                     </span>
                   )}
                   <span
@@ -198,13 +205,13 @@ export default function SettingsPaymentPage() {
                       m.verified ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-app-muted"
                     }`}
                   >
-                    {m.verified ? "Terverifikasi" : "Belum verifikasi"}
+                    {m.verified ? t("dashboard.pages.settingsPayment.verifiedBadge") : t("dashboard.pages.settingsPayment.unverifiedBadge")}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleDelete(m.id)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                    title="Hapus"
+                    title={t("dashboard.pages.settingsPayment.deleteTitle")}
                   >
                     <IconTrash className="h-3.5 w-3.5" />
                   </button>
@@ -218,7 +225,7 @@ export default function SettingsPaymentPage() {
                     onClick={() => handleStartVerify(m.id)}
                     className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-primary hover:border-primary"
                   >
-                    Verifikasi
+                    {t("dashboard.pages.settingsPayment.verifyButton")}
                   </button>
                 )}
                 {m.verified && !m.is_primary && (
@@ -227,7 +234,7 @@ export default function SettingsPaymentPage() {
                     onClick={() => handleSetPrimary(m.id)}
                     className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary"
                   >
-                    Jadikan Utama
+                    {t("dashboard.pages.settingsPayment.makePrimaryButton")}
                   </button>
                 )}
               </div>
@@ -238,7 +245,7 @@ export default function SettingsPaymentPage() {
                     type="text"
                     inputMode="numeric"
                     required
-                    placeholder="Kode 6 digit"
+                    placeholder={t("dashboard.pages.settingsPayment.sixDigitCodePlaceholder")}
                     value={verifyCode}
                     onChange={(e) => setVerifyCode(e.target.value)}
                     className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -248,13 +255,13 @@ export default function SettingsPaymentPage() {
                     disabled={verifyBusy}
                     className="rounded-md bg-primary px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                   >
-                    {verifyBusy ? "..." : "Konfirmasi"}
+                    {verifyBusy ? "..." : t("dashboard.pages.settingsPayment.confirmButton")}
                   </button>
                 </form>
               )}
             </div>
           ))}
-          {methods.length === 0 && <p className="text-xs text-app-muted">Belum ada metode pembayaran.</p>}
+          {methods.length === 0 && <p className="text-xs text-app-muted">{t("dashboard.pages.settingsPayment.noMethods")}</p>}
         </div>
 
         {!adding ? (
@@ -263,7 +270,7 @@ export default function SettingsPaymentPage() {
             onClick={() => setAdding(true)}
             className="mt-3 rounded-xl border border-dashed border-app-border px-4 py-2.5 text-sm font-semibold text-primary hover:border-primary"
           >
-            + Tambah Metode Pembayaran
+            {t("dashboard.pages.settingsPayment.addMethodButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="mt-3 flex flex-col gap-2 rounded-xl border border-app-border p-3">
@@ -272,13 +279,13 @@ export default function SettingsPaymentPage() {
               onChange={(e) => setType(e.target.value as "bank_transfer" | "ewallet")}
               className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
-              <option value="bank_transfer">Transfer Bank</option>
-              <option value="ewallet">E-Wallet</option>
+              <option value="bank_transfer">{t("dashboard.pages.settingsPayment.bankTransferOption")}</option>
+              <option value="ewallet">{t("dashboard.pages.settingsPayment.ewalletOption")}</option>
             </select>
             <input
               type="text"
               required
-              placeholder="Penyedia (mis. BCA, GoPay)"
+              placeholder={t("dashboard.pages.settingsPayment.providerPlaceholder")}
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
               className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -286,7 +293,7 @@ export default function SettingsPaymentPage() {
             <input
               type="text"
               required
-              placeholder="Nomor rekening/e-wallet"
+              placeholder={t("dashboard.pages.settingsPayment.accountNumberPlaceholder")}
               value={accountNumber}
               onChange={(e) => setAccountNumber(e.target.value)}
               className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -294,7 +301,7 @@ export default function SettingsPaymentPage() {
             <input
               type="text"
               required
-              placeholder="Nama pemilik rekening"
+              placeholder={t("dashboard.pages.settingsPayment.accountNamePlaceholder")}
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
               className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -305,14 +312,14 @@ export default function SettingsPaymentPage() {
                 disabled={creating}
                 className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Menyimpan..." : "Simpan"}
+                {creating ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
               </button>
               <button
                 type="button"
                 onClick={() => setAdding(false)}
                 className="rounded-lg border border-app-border px-4 py-2 text-xs font-semibold text-app-ink"
               >
-                Batal
+                {t("dashboard.pages.settingsPayment.cancel")}
               </button>
             </div>
           </form>
@@ -320,11 +327,8 @@ export default function SettingsPaymentPage() {
       </section>
 
       <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Auto-Withdraw Terjadwal</h2>
-        <p className="mt-1 text-xs text-app-muted">
-          Butuh metode pembayaran utama yang sudah terverifikasi. Penarikan otomatis berjalan kalau saldo tersedia
-          sudah mencapai jumlah minimum.
-        </p>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.autoWithdrawTitle")}</h2>
+        <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsPayment.autoWithdrawDescription")}</p>
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): baris ini jadi
             flex-row mulai sm: (640px), tapi <select> (lebar minimalnya
             ditentukan opsi terpanjang "Manual (tidak otomatis)") tidak
@@ -336,14 +340,14 @@ export default function SettingsPaymentPage() {
             onChange={(e) => setFrequency(e.target.value as PayoutSchedule["frequency"])}
             className="min-w-0 rounded-lg border border-app-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
           >
-            <option value="manual">Manual (tidak otomatis)</option>
-            <option value="weekly">Mingguan</option>
-            <option value="monthly">Bulanan</option>
+            <option value="manual">{t("dashboard.pages.settingsPayment.frequencyManual")}</option>
+            <option value="weekly">{t("dashboard.pages.settingsPayment.frequencyWeekly")}</option>
+            <option value="monthly">{t("dashboard.pages.settingsPayment.frequencyMonthly")}</option>
           </select>
           <input
             type="number"
             min={0}
-            placeholder="Saldo minimum (Rp)"
+            placeholder={t("dashboard.pages.settingsPayment.minThresholdPlaceholder")}
             value={minThreshold}
             onChange={(e) => setMinThreshold(e.target.value)}
             className="min-w-0 flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
@@ -353,7 +357,7 @@ export default function SettingsPaymentPage() {
             disabled={savingSchedule}
             className="flex-shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {savingSchedule ? "Menyimpan..." : "Simpan"}
+            {savingSchedule ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
           </button>
         </form>
       </section>

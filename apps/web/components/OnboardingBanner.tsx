@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { OnboardingChecklistItem, dismissOnboarding, getOnboardingStatus } from "@/lib/api-client";
 import { IconCheck, IconChevronRight, IconClose, IconSparkle } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Onboarding, redesain checklist progresif (Gap #5 benchmark
 // kompetitif, permintaan langsung pengguna, 9 Agustus 2026): pita statis
@@ -23,6 +24,7 @@ import { IconCheck, IconChevronRight, IconClose, IconSparkle } from "@/component
 // dimuat sekali, fail-silent kalau gagal (jangan tampilkan dari data
 // yang tidak pasti).
 export default function OnboardingBanner() {
+  const { t } = useLocale();
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(true);
   const [checklist, setChecklist] = useState<OnboardingChecklistItem[]>([]);
@@ -95,7 +97,8 @@ export default function OnboardingBanner() {
           </span>
           <div className="min-w-0">
             <p className="text-xs font-bold text-app-ink">
-              {allDone ? "Setup akunmu selesai!" : "Lengkapi setup akunmu"} -- {doneCount}/{total} selesai
+              {allDone ? t("dashboard.components.onboardingBanner.doneTitle") : t("dashboard.components.onboardingBanner.inProgressTitle")} --{" "}
+              {doneCount}/{total} {t("dashboard.components.onboardingBanner.completedSuffix")}
             </p>
             <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-white/70 sm:w-48">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
@@ -114,14 +117,14 @@ export default function OnboardingBanner() {
             onClick={() => setExpanded((v) => !v)}
             className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
           >
-            {expanded ? "Sembunyikan" : "Lihat semua"}
+            {expanded ? t("dashboard.components.onboardingBanner.hideButton") : t("dashboard.components.onboardingBanner.showAllButton")}
             <IconChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
           </button>
           <button
             type="button"
             onClick={handleDismiss}
             disabled={busy}
-            title="Tutup"
+            title={t("dashboard.components.onboardingBanner.closeTitle")}
             className="flex h-6 w-6 items-center justify-center rounded-full text-app-muted hover:bg-black/5"
           >
             <IconClose className="h-3.5 w-3.5" />

@@ -9,6 +9,7 @@ import { IconCheck, IconChevronRight, IconClose, IconQrCode } from "@/components
 import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
+import { useLocale } from "@/lib/locale-context";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -24,6 +25,7 @@ function formatCooldownDate(iso: string): string {
 // Foto profil tetap diatur di halaman Desain (PageHandler.UploadAvatar),
 // cuma dipratinjau di sini sebagai referensi.
 export default function SettingsProfilePage() {
+  const { t } = useLocale();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,9 +52,9 @@ export default function SettingsProfilePage() {
         setDisplayName(p.display_name);
         setBio(p.bio);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat profil."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsProfile.loadError")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const usernameChanged = original !== null && username.trim() !== original.username;
   const cooldownUntil = original?.username_change_available_at ?? null;
@@ -94,13 +96,15 @@ export default function SettingsProfilePage() {
 
     const trimmedUsername = username.trim();
     if (!USERNAME_PATTERN.test(trimmedUsername)) {
-      setError("Username harus 3-30 karakter, hanya huruf/angka/underscore.");
+      setError(t("dashboard.pages.settingsProfile.usernamePatternError"));
       return;
     }
     if (usernameChanged) {
       const confirmed = await confirmAction(
-        `Ganti username dari @${original.username} ke @${trimmedUsername}? Alamat lama tetap dialihkan otomatis selama 90 hari, tapi tautan yang sudah kamu bagikan sebaiknya tetap diperbarui.`,
-        { confirmButtonText: "Ya, Ganti Username" }
+        t("dashboard.pages.settingsProfile.changeUsernameConfirm")
+          .replace("{old}", original.username)
+          .replace("{new}", trimmedUsername),
+        { confirmButtonText: t("dashboard.pages.settingsProfile.changeUsernameConfirmButton") }
       );
       if (!confirmed) return;
     }
@@ -129,9 +133,9 @@ export default function SettingsProfilePage() {
           : original.username_change_available_at,
       });
       setUsername(res.username);
-      showToast("Profil berhasil disimpan.");
+      showToast(t("dashboard.pages.settingsProfile.saveSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal menyimpan profil.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsProfile.saveError"), "error");
     } finally {
       setSaving(false);
     }
@@ -148,14 +152,14 @@ export default function SettingsProfilePage() {
         className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        Pengaturan
+        {t("dashboard.pages.settingsProfile.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Profil & Akun</h1>
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsProfile.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
-        Foto profil & tema halaman diatur lewat halaman{" "}
+        {t("dashboard.pages.settingsProfile.subtitlePrefix")}{" "}
         <Link href="/dashboard/design" className="font-semibold text-primary hover:underline">
-          Desain
+          {t("dashboard.pages.settingsProfile.designLinkLabel")}
         </Link>
         .
       </p>
@@ -189,7 +193,7 @@ export default function SettingsProfilePage() {
             className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary"
           >
             <IconQrCode className="h-4 w-4" />
-            Lihat Kode QR
+            {t("dashboard.pages.settingsProfile.viewQrCode")}
           </button>
         )}
       </div>
@@ -197,7 +201,7 @@ export default function SettingsProfilePage() {
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         <div>
           <label htmlFor="settings-username" className="text-xs font-bold uppercase tracking-wider text-app-muted">
-            Username
+            {t("dashboard.pages.settingsProfile.usernameLabel")}
           </label>
           <div
             className={`mt-1 flex items-center rounded-xl border bg-app-surface transition-colors focus-within:ring-2 ${
@@ -228,7 +232,7 @@ export default function SettingsProfilePage() {
           </div>
           {cooldownActive && cooldownUntil ? (
             <p className="mt-1 text-xs text-app-muted">
-              Username cuma bisa diganti sekali per 30 hari -- kamu bisa ganti lagi mulai {formatCooldownDate(cooldownUntil)}.
+              {t("dashboard.pages.settingsProfile.cooldownActive").replace("{date}", formatCooldownDate(cooldownUntil))}
             </p>
           ) : (
             <>
@@ -242,30 +246,31 @@ export default function SettingsProfilePage() {
                       : "text-app-muted"
                   }`}
                 >
-                  {usernameState === "checking" && "Memeriksa ketersediaan..."}
+                  {usernameState === "checking" && t("dashboard.pages.settingsProfile.checkingAvailability")}
                   {usernameState === "available" && (
                     <>
-                      <IconCheck className="h-3.5 w-3.5 flex-shrink-0" /> Username tersedia
+                      <IconCheck className="h-3.5 w-3.5 flex-shrink-0" /> {t("dashboard.pages.settingsProfile.usernameAvailable")}
                     </>
                   )}
                   {usernameState === "unavailable" && (
                     <>
+                      {/* usernameCheck.message berasal LANGSUNG dari respons API
+                          (endpoint publik /auth/check-username) -- teksnya
+                          dihasilkan backend, sengaja TIDAK diterjemahkan di sini
+                          (di luar cakupan, butuh perubahan backend). */}
                       <IconClose className="h-3.5 w-3.5 flex-shrink-0" /> {usernameCheck.message}
                     </>
                   )}
                 </p>
               )}
-              <p className="mt-1 text-xs text-app-muted">
-                Ganti username tetap mengalihkan pengunjung dari alamat lama selama 90 hari, jadi tautan yang sudah
-                dibagikan tidak langsung 404.
-              </p>
+              <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsProfile.usernameChangeHelper")}</p>
             </>
           )}
         </div>
 
         <div>
           <label htmlFor="settings-display-name" className="text-xs font-bold uppercase tracking-wider text-app-muted">
-            Nama Tampilan
+            {t("dashboard.pages.settingsProfile.displayNameLabel")}
           </label>
           <input
             id="settings-display-name"
@@ -279,7 +284,7 @@ export default function SettingsProfilePage() {
 
         <div>
           <label htmlFor="settings-bio" className="text-xs font-bold uppercase tracking-wider text-app-muted">
-            Bio
+            {t("dashboard.pages.settingsProfile.bioLabel")}
           </label>
           <textarea
             id="settings-bio"
@@ -294,14 +299,14 @@ export default function SettingsProfilePage() {
 
         <div>
           <label htmlFor="settings-category" className="text-xs font-bold uppercase tracking-wider text-app-muted">
-            Kategori
+            {t("dashboard.pages.settingsProfile.categoryLabel")}
           </label>
           <input
             id="settings-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             maxLength={50}
-            placeholder="mis. Musik, Pendidikan, Kuliner"
+            placeholder={t("dashboard.pages.settingsProfile.categoryPlaceholder")}
             className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
           />
         </div>
@@ -311,7 +316,7 @@ export default function SettingsProfilePage() {
           disabled={saving}
           className="mt-2 self-start rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
         >
-          {saving ? "Menyimpan..." : "Simpan Perubahan"}
+          {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>
       </form>
 

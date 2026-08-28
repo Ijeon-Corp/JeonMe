@@ -94,6 +94,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
+import { useLocale } from "@/lib/locale-context";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -114,19 +115,23 @@ const maxCatalogImagesPerItem = 6;
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
 const PREMIUM_EXTRA_PAGE_LIMIT = 5;
 
-const BLOCK_TYPE_LABEL: Record<string, string> = {
-  video: "Video",
-  contact_form: "Formulir Kontak",
-  faq: "FAQ",
-  maps: "Lokasi",
-  text: "Teks",
-  accordion: "Accordion",
-  gallery: "Galeri Foto",
-  audio: "Audio/Musik",
-  file: "File & Unduhan",
-  project_showcase: "Project Unggulan",
-  catalog: "Katalog",
-};
+// buildBlockTypeLabel -- FUNGSI (bukan konstanta modul) supaya labelnya ikut
+// berganti bahasa, sama seperti pola buildNavItems(t) di dashboard/layout.tsx.
+function buildBlockTypeLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    video: t("dashboard.pages.links.blockTypes.video"),
+    contact_form: t("dashboard.pages.links.blockTypes.contactForm"),
+    faq: t("dashboard.pages.links.blockTypes.faq"),
+    maps: t("dashboard.pages.links.blockTypes.maps"),
+    text: t("dashboard.pages.links.blockTypes.text"),
+    accordion: t("dashboard.pages.links.blockTypes.accordion"),
+    gallery: t("dashboard.pages.links.blockTypes.gallery"),
+    audio: t("dashboard.pages.links.blockTypes.audio"),
+    file: t("dashboard.pages.links.blockTypes.file"),
+    project_showcase: t("dashboard.pages.links.blockTypes.projectShowcase"),
+    catalog: t("dashboard.pages.links.blockTypes.catalog"),
+  };
+}
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
 
@@ -154,98 +159,102 @@ const DISARANKAN_KEYS = ["instagram", "tiktok", "youtube", "whatsapp", "spotify"
 // badgeClass -- samakan persis dengan warna brand di lib/link-icons.ts
 // (dipakai di daftar tautan & pratinjau publik) supaya modal ini pun
 // menampilkan warna platform yang sama, bukan abu-abu netral generik.
-const SUGGESTED_PLATFORMS: PlatformQuickAdd[] = [
-  {
-    key: "instagram",
-    label: "Instagram",
-    description: "Tautkan profil Instagram kamu",
-    Icon: IconInstagram,
-    kind: "link",
-    urlTemplate: "https://instagram.com/",
-    badgeClass: "bg-gradient-to-br from-[#FEDA75] via-[#D62976] to-[#4F5BD5] text-white",
-  },
-  {
-    key: "tiktok",
-    label: "TikTok",
-    description: "Tampilkan video TikTok sebagai embed",
-    Icon: IconTiktok,
-    kind: "video",
-    urlTemplate: "",
-    badgeClass: "bg-black text-white",
-  },
-  {
-    key: "youtube",
-    label: "YouTube",
-    description: "Tampilkan video YouTube sebagai embed",
-    Icon: IconYoutube,
-    kind: "video",
-    urlTemplate: "",
-    badgeClass: "bg-[#FF0000] text-white",
-  },
-  {
-    key: "whatsapp",
-    label: "WhatsApp",
-    description: "Tautkan nomor WhatsApp kamu",
-    Icon: IconWhatsapp,
-    kind: "link",
-    urlTemplate: "https://wa.me/62",
-    badgeClass: "bg-[#25D366] text-white",
-  },
-  {
-    key: "spotify",
-    label: "Spotify",
-    description: "Tautkan profil atau album Spotify",
-    Icon: IconSpotify,
-    kind: "link",
-    urlTemplate: "https://open.spotify.com/",
-    badgeClass: "bg-[#1DB954] text-white",
-  },
-  {
-    key: "telegram",
-    label: "Telegram",
-    description: "Tautkan akun Telegram kamu",
-    Icon: IconTelegram,
-    kind: "link",
-    urlTemplate: "https://t.me/",
-    badgeClass: "bg-[#26A5E4] text-white",
-  },
-  {
-    key: "x",
-    label: "X (Twitter)",
-    description: "Tautkan profil X kamu",
-    Icon: IconX,
-    kind: "link",
-    urlTemplate: "https://x.com/",
-    badgeClass: "bg-black text-white",
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    description: "Tautkan halaman atau profil Facebook",
-    Icon: IconFacebook,
-    kind: "link",
-    urlTemplate: "https://facebook.com/",
-    badgeClass: "bg-[#1877F2] text-white",
-  },
-  {
-    key: "linkedin",
-    label: "LinkedIn",
-    description: "Tautkan profil LinkedIn",
-    Icon: IconLinkedin,
-    kind: "link",
-    urlTemplate: "https://linkedin.com/in/",
-    badgeClass: "bg-[#0A66C2] text-white",
-  },
-  {
-    key: "email",
-    label: "Email",
-    description: "Tautkan alamat email kamu",
-    Icon: IconMail,
-    kind: "link",
-    urlTemplate: "mailto:",
-    badgeClass: "bg-slate-600 text-white",
-  },
-];
+// buildSuggestedPlatforms -- FUNGSI (bukan konstanta modul) supaya label/
+// deskripsinya ikut berganti bahasa, pola sama seperti buildBlockTypeLabel.
+function buildSuggestedPlatforms(t: (key: string) => string): PlatformQuickAdd[] {
+  return [
+    {
+      key: "instagram",
+      label: "Instagram",
+      description: t("dashboard.pages.links.suggestedPlatforms.instagram"),
+      Icon: IconInstagram,
+      kind: "link",
+      urlTemplate: "https://instagram.com/",
+      badgeClass: "bg-gradient-to-br from-[#FEDA75] via-[#D62976] to-[#4F5BD5] text-white",
+    },
+    {
+      key: "tiktok",
+      label: "TikTok",
+      description: t("dashboard.pages.links.suggestedPlatforms.tiktok"),
+      Icon: IconTiktok,
+      kind: "video",
+      urlTemplate: "",
+      badgeClass: "bg-black text-white",
+    },
+    {
+      key: "youtube",
+      label: "YouTube",
+      description: t("dashboard.pages.links.suggestedPlatforms.youtube"),
+      Icon: IconYoutube,
+      kind: "video",
+      urlTemplate: "",
+      badgeClass: "bg-[#FF0000] text-white",
+    },
+    {
+      key: "whatsapp",
+      label: "WhatsApp",
+      description: t("dashboard.pages.links.suggestedPlatforms.whatsapp"),
+      Icon: IconWhatsapp,
+      kind: "link",
+      urlTemplate: "https://wa.me/62",
+      badgeClass: "bg-[#25D366] text-white",
+    },
+    {
+      key: "spotify",
+      label: "Spotify",
+      description: t("dashboard.pages.links.suggestedPlatforms.spotify"),
+      Icon: IconSpotify,
+      kind: "link",
+      urlTemplate: "https://open.spotify.com/",
+      badgeClass: "bg-[#1DB954] text-white",
+    },
+    {
+      key: "telegram",
+      label: "Telegram",
+      description: t("dashboard.pages.links.suggestedPlatforms.telegram"),
+      Icon: IconTelegram,
+      kind: "link",
+      urlTemplate: "https://t.me/",
+      badgeClass: "bg-[#26A5E4] text-white",
+    },
+    {
+      key: "x",
+      label: "X (Twitter)",
+      description: t("dashboard.pages.links.suggestedPlatforms.x"),
+      Icon: IconX,
+      kind: "link",
+      urlTemplate: "https://x.com/",
+      badgeClass: "bg-black text-white",
+    },
+    {
+      key: "facebook",
+      label: "Facebook",
+      description: t("dashboard.pages.links.suggestedPlatforms.facebook"),
+      Icon: IconFacebook,
+      kind: "link",
+      urlTemplate: "https://facebook.com/",
+      badgeClass: "bg-[#1877F2] text-white",
+    },
+    {
+      key: "linkedin",
+      label: "LinkedIn",
+      description: t("dashboard.pages.links.suggestedPlatforms.linkedin"),
+      Icon: IconLinkedin,
+      kind: "link",
+      urlTemplate: "https://linkedin.com/in/",
+      badgeClass: "bg-[#0A66C2] text-white",
+    },
+    {
+      key: "email",
+      label: "Email",
+      description: t("dashboard.pages.links.suggestedPlatforms.email"),
+      Icon: IconMail,
+      kind: "link",
+      urlTemplate: "mailto:",
+      badgeClass: "bg-slate-600 text-white",
+    },
+  ];
+}
 
 type ContentTile = {
   key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
@@ -254,61 +263,76 @@ type ContentTile = {
   Icon: IconComponent;
 };
 
-const CONTENT_TILES: ContentTile[] = [
-  { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
-  { key: "video", label: "Video", description: "Tampilkan video YouTube/TikTok sebagai embed", Icon: IconPlayCircle },
-  { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan pengunjung", Icon: IconBook },
-  // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
-  // lalu keluar text, bukan hanya untuk faq saja" -- SATU judul klik-untuk-
-  // buka bebas dari framing tanya-jawab (beda dari FAQ yang daftar Q&A),
-  // cocok untuk kebijakan/detail/catatan tambahan apa pun.
-  { key: "accordion", label: "Accordion", description: "Satu judul yang bisa diklik untuk membuka isi teksnya", Icon: IconChevronRight },
-  { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan pengunjung", Icon: IconMail },
-  // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
-  // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
-  // sebagai tautan langsung -- lihat "Link behavior" di form.
-  { key: "maps", label: "Lokasi", description: "Tampilkan lokasi di Google Maps (tertanam atau tautan langsung)", Icon: IconMapPin },
-  // Permintaan langsung pengguna (benchmark Lynk.id -- blok Teks sudah ada
-  // di halaman utama mereka sejak awal, Jeonme sebelumnya cuma punya ini di
-  // Halaman Tambahan). Paragraf polos, TANPA tautan/aksi -- murni konten
-  // (pengumuman, deskripsi singkat, dsb) di antara blok-blok lain.
-  { key: "text", label: "Teks", description: "Tambahkan paragraf teks bebas di antara tautan", Icon: IconTextLines },
-  // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
-  // 2026 (template portofolio/wisata s.id pakai grid multi-foto, mockup
-  // "Music" kompetitor lain pakai pemutar audio tertanam -- keduanya belum
-  // ada padanan di Jeonme). Foto/audio diunggah SETELAH blok dibuat (lihat
-  // panel "Kelola foto"/"Kelola audio" yang muncul di kartu blok), bukan
-  // lewat form pembuatan blok biasa -- beda dari tipe lain yang isinya
-  // teks/URL, unggah file butuh multipart terpisah dari JSON create.
-  { key: "gallery", label: "Galeri Foto", description: "Grid beberapa foto sekaligus (portofolio, dokumentasi acara, dst)", Icon: IconPhotoLibrary },
-  { key: "audio", label: "Audio/Musik", description: "Pemutar audio tertanam di bio (rilisan musik, voice note, dst)", Icon: IconMusicNote },
-  // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
-  // file pdf download". Pola upload sama seperti gallery/audio di atas
-  // (file diunggah SETELAH blok dibuat, lewat panel "Kelola file" yang
-  // muncul di kartu blok) -- beda dari produk digital berbayar di Toko,
-  // blok ini gratis/lead-magnet (ebook, materi, template), tanpa checkout.
-  { key: "file", label: "File & Unduhan", description: "Bagikan PDF/ZIP/EPUB gratis untuk diunduh pengunjung", Icon: IconFileText },
-  // "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
-  // kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
-  // Dev") -- gambar + badge + judul + deskripsi + tombol CTA, cocok utk
-  // menonjolkan SATU karya/studi kasus di antara tautan biasa.
-  { key: "project_showcase", label: "Project Unggulan", description: "Tonjolkan satu karya/studi kasus dengan gambar, badge, dan tombol CTA", Icon: IconCamera },
-  // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "ada blok
-  // Jenis Rumah ketika di klik akan tampil semua blok dengan isi jenis
-  // jenis rumah yang ada" -- blok drill-down 2 tingkat (daftar item ->
-  // detail per item, gambar bisa multiple), lihat CatalogTakeoverView
-  // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
-  // (bukan buka tautan/expand di tempat seperti tipe lain).
-  { key: "catalog", label: "Katalog", description: "Klik untuk membuka daftar item (mis. jenis produk/paket/menu), tiap item punya deskripsi & galeri foto sendiri", Icon: IconGrid },
-];
+// buildContentTiles -- FUNGSI (bukan konstanta modul) supaya label/
+// deskripsinya ikut berganti bahasa, pola sama seperti buildBlockTypeLabel.
+function buildContentTiles(t: (key: string) => string): ContentTile[] {
+  return [
+    { key: "link", label: t("dashboard.pages.links.contentTiles.link.label"), description: t("dashboard.pages.links.contentTiles.link.description"), Icon: IconLink },
+    { key: "video", label: t("dashboard.pages.links.contentTiles.video.label"), description: t("dashboard.pages.links.contentTiles.video.description"), Icon: IconPlayCircle },
+    { key: "faq", label: t("dashboard.pages.links.contentTiles.faq.label"), description: t("dashboard.pages.links.contentTiles.faq.description"), Icon: IconBook },
+    // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+    // lalu keluar text, bukan hanya untuk faq saja" -- SATU judul klik-untuk-
+    // buka bebas dari framing tanya-jawab (beda dari FAQ yang daftar Q&A),
+    // cocok untuk kebijakan/detail/catatan tambahan apa pun.
+    { key: "accordion", label: t("dashboard.pages.links.contentTiles.accordion.label"), description: t("dashboard.pages.links.contentTiles.accordion.description"), Icon: IconChevronRight },
+    { key: "contact_form", label: t("dashboard.pages.links.contentTiles.contactForm.label"), description: t("dashboard.pages.links.contentTiles.contactForm.description"), Icon: IconMail },
+    // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
+    // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
+    // sebagai tautan langsung -- lihat "Link behavior" di form.
+    { key: "maps", label: t("dashboard.pages.links.contentTiles.maps.label"), description: t("dashboard.pages.links.contentTiles.maps.description"), Icon: IconMapPin },
+    // Permintaan langsung pengguna (benchmark Lynk.id -- blok Teks sudah ada
+    // di halaman utama mereka sejak awal, Jeonme sebelumnya cuma punya ini di
+    // Halaman Tambahan). Paragraf polos, TANPA tautan/aksi -- murni konten
+    // (pengumuman, deskripsi singkat, dsb) di antara blok-blok lain.
+    { key: "text", label: t("dashboard.pages.links.contentTiles.text.label"), description: t("dashboard.pages.links.contentTiles.text.description"), Icon: IconTextLines },
+    // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
+    // 2026 (template portofolio/wisata s.id pakai grid multi-foto, mockup
+    // "Music" kompetitor lain pakai pemutar audio tertanam -- keduanya belum
+    // ada padanan di Jeonme). Foto/audio diunggah SETELAH blok dibuat (lihat
+    // panel "Kelola foto"/"Kelola audio" yang muncul di kartu blok), bukan
+    // lewat form pembuatan blok biasa -- beda dari tipe lain yang isinya
+    // teks/URL, unggah file butuh multipart terpisah dari JSON create.
+    { key: "gallery", label: t("dashboard.pages.links.contentTiles.gallery.label"), description: t("dashboard.pages.links.contentTiles.gallery.description"), Icon: IconPhotoLibrary },
+    { key: "audio", label: t("dashboard.pages.links.contentTiles.audio.label"), description: t("dashboard.pages.links.contentTiles.audio.description"), Icon: IconMusicNote },
+    // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+    // file pdf download". Pola upload sama seperti gallery/audio di atas
+    // (file diunggah SETELAH blok dibuat, lewat panel "Kelola file" yang
+    // muncul di kartu blok) -- beda dari produk digital berbayar di Toko,
+    // blok ini gratis/lead-magnet (ebook, materi, template), tanpa checkout.
+    { key: "file", label: t("dashboard.pages.links.contentTiles.file.label"), description: t("dashboard.pages.links.contentTiles.file.description"), Icon: IconFileText },
+    // "project_showcase" -- permintaan langsung pengguna, 24 Agustus 2026:
+    // kartu "Project Unggulan" (contoh tangkapan layar template "Dimas
+    // Dev") -- gambar + badge + judul + deskripsi + tombol CTA, cocok utk
+    // menonjolkan SATU karya/studi kasus di antara tautan biasa.
+    { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: IconCamera },
+    // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: "ada blok
+    // Jenis Rumah ketika di klik akan tampil semua blok dengan isi jenis
+    // jenis rumah yang ada" -- blok drill-down 2 tingkat (daftar item ->
+    // detail per item, gambar bisa multiple), lihat CatalogTakeoverView
+    // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
+    // (bukan buka tautan/expand di tempat seperti tipe lain).
+    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconGrid },
+  ];
+}
 
 // Permintaan langsung pengguna, 14 Agustus 2026: "harusnya semua tipe ini
 // [judul bisa diedit, ganti ikon, dst]" -- ikon default per block_type utk
-// badge di kartu daftar, dipakai ULANG dari CONTENT_TILES di atas (sama
-// persis dengan ikon tile "Tambah") supaya konsisten, bukan set ikon baru.
-const BLOCK_TYPE_ICON: Record<string, IconComponent> = Object.fromEntries(
-  CONTENT_TILES.filter((t) => t.key !== "link").map((t) => [t.key, t.Icon])
-);
+// badge di kartu daftar. Dipisah dari label (buildBlockTypeLabel di atas)
+// murni supaya ikonnya TIDAK perlu dihitung ulang tiap render bahasa
+// berganti (Icon component-nya konstan, cuma teksnya yang berubah).
+const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
+  video: IconPlayCircle,
+  faq: IconBook,
+  accordion: IconChevronRight,
+  contact_form: IconMail,
+  maps: IconMapPin,
+  text: IconTextLines,
+  gallery: IconPhotoLibrary,
+  audio: IconMusicNote,
+  file: IconFileText,
+  project_showcase: IconCamera,
+  catalog: IconGrid,
+};
 
 // FormField -- permintaan langsung pengguna, 25 Agustus 2026: "saya mau
 // itu ada kejelasan apa yang diubah misal link di blok ataupun
@@ -360,6 +384,9 @@ function FormField({ label, hint, children }: { label: string; hint?: string; ch
 // permintaan ini.
 export default function DashboardLinksPage() {
   const router = useRouter();
+  const { t } = useLocale();
+  const blockTypeLabel = buildBlockTypeLabel(t);
+  const contentTiles = buildContentTiles(t);
   const [page, setPage] = useState<MyPage | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
   // catalogSaveQueueRef -- antrean promise PER link, dipakai saveCatalogItems
@@ -573,8 +600,9 @@ export default function DashboardLinksPage() {
         setAccountUsername(p.username);
         setExtraPages(extras.filter((ep) => ep.page_type !== "produk"));
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.loadFailed")))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
   // Wrapper tipis -- mengarahkan mutasi ke endpoint halaman UTAMA atau
@@ -627,7 +655,7 @@ export default function DashboardLinksPage() {
         setLinks(l);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat halaman.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.loadPageFailed"));
     } finally {
       setSwitchingPage(false);
     }
@@ -670,7 +698,7 @@ export default function DashboardLinksPage() {
       setCreatingPage(false);
       await switchToPage({ id: created.id, slug, pageType: resolvedPageType });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat halaman.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.createPageFailed"));
     } finally {
       setSavingNewPage(false);
     }
@@ -685,13 +713,13 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setExtraPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: !next } : p)));
       if (activePage?.id === target.id) setPage((prev) => (prev ? { ...prev, is_published: !next } : prev));
-      setError(err instanceof ApiError ? err.message : "Gagal mengubah status terbit halaman.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.togglePagePublishFailed"));
     }
   }
 
   async function handleDeletePage(target: ExtraPage) {
-    const ok = await confirmDelete(`Hapus halaman "${target.name}"? Semua tautan/blok di halaman ini ikut terhapus.`, {
-      confirmButtonText: "Ya, Hapus Halaman",
+    const ok = await confirmDelete(t("dashboard.pages.links.deletePageConfirm.text").replace("{name}", target.name), {
+      confirmButtonText: t("dashboard.pages.links.deletePageConfirm.confirmButton"),
     });
     if (!ok) return;
     const previous = extraPages;
@@ -701,7 +729,7 @@ export default function DashboardLinksPage() {
       if (activePage?.id === target.id) await switchToPage(null);
     } catch (err) {
       setExtraPages(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus halaman.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deletePageFailed"));
     }
   }
 
@@ -721,7 +749,7 @@ export default function DashboardLinksPage() {
       await updateExtraPage(activePage.id, { name });
     } catch (err) {
       setExtraPages(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal mengubah judul halaman.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.renamePageFailed"));
     }
   }
 
@@ -741,7 +769,7 @@ export default function DashboardLinksPage() {
       await updateExtraPage(activePage.id, { show_profile_header: next });
     } catch (err) {
       setPage(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal mengubah tampilan header profil.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.toggleProfileHeaderFailed"));
     }
   }
 
@@ -764,7 +792,14 @@ export default function DashboardLinksPage() {
       await currentPagePatch(patch);
     } catch (err) {
       setPage(previous);
-      setError(err instanceof ApiError ? err.message : `Gagal menyimpan ${field === "name" ? "nama tampilan" : "bio"}.`);
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : t("dashboard.pages.links.errors.saveProfileFieldFailed").replace(
+              "{field}",
+              field === "name" ? t("dashboard.pages.links.profile.displayNameLabel") : t("dashboard.pages.links.profile.bioLabel")
+            )
+      );
     }
   }
 
@@ -807,7 +842,7 @@ export default function DashboardLinksPage() {
       setPage({ ...page, ...patch });
       setSocialOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan kontak sosial.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveSocialFailed"));
     } finally {
       setSavingSocial(false);
     }
@@ -823,7 +858,7 @@ export default function DashboardLinksPage() {
       const { avatar_url } = await currentUploadAvatar(file);
       setPage({ ...page, avatar_url });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadAvatarFailed"));
     } finally {
       setAvatarUploading(false);
     }
@@ -840,7 +875,7 @@ export default function DashboardLinksPage() {
       setNewDescription("");
       setAddingLink(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.createLinkFailed"));
     }
   }
 
@@ -890,7 +925,7 @@ export default function DashboardLinksPage() {
   // openMapsFormPrefilled -- tile "Lokasi" (permintaan langsung pengguna).
   function openMapsFormPrefilled() {
     setBlockType("maps");
-    setBlockTitle("Lokasi Kami");
+    setBlockTitle(t("dashboard.pages.links.defaultMapsTitle"));
     setBlockMapsUrl("");
     setBlockMapsEmbed(true);
     setAddingBlock(true);
@@ -899,7 +934,7 @@ export default function DashboardLinksPage() {
 
   function handleSelectPlatform(platform: PlatformQuickAdd) {
     if (platform.kind === "video") {
-      openVideoFormPrefilled(`Video ${platform.label}`);
+      openVideoFormPrefilled(t("dashboard.pages.links.videoTitleTemplate").replace("{platform}", platform.label));
     } else {
       openLinkFormPrefilled(platform.label, platform.urlTemplate);
     }
@@ -919,7 +954,7 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, { is_active: nextActive });
     } catch (err) {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_active: link.is_active } : l)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateLinkFailed"));
     }
   }
 
@@ -930,7 +965,7 @@ export default function DashboardLinksPage() {
       await deleteLink(id);
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteLinkFailed"));
     }
   }
 
@@ -948,7 +983,7 @@ export default function DashboardLinksPage() {
       const { custom_icon_url } = await uploadLinkIcon(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah ikon tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadIconFailed"));
     } finally {
       setIconUploadingId(null);
     }
@@ -968,7 +1003,7 @@ export default function DashboardLinksPage() {
       await Promise.all([deleteLinkIcon(link.id), updateLink(link.id, { icon_key: "" })]);
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus ikon tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteIconFailed"));
     }
   }
 
@@ -985,7 +1020,7 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, { icon_color: color });
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal mengubah warna ikon.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeIconColorFailed"));
     }
   }
 
@@ -996,7 +1031,7 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, { icon_color: "" });
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal mengatur ulang warna ikon.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.resetIconColorFailed"));
     }
   }
 
@@ -1016,7 +1051,7 @@ export default function DashboardLinksPage() {
       const { images } = await uploadGalleryImage(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto galeri.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadGalleryPhotoFailed"));
     } finally {
       setGalleryUploadingId(null);
     }
@@ -1028,7 +1063,7 @@ export default function DashboardLinksPage() {
       const { images } = await deleteGalleryImage(link.id, index);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto galeri.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteGalleryPhotoFailed"));
     }
   }
 
@@ -1046,7 +1081,7 @@ export default function DashboardLinksPage() {
       const { image_url } = await uploadShowcaseImage(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, image_url } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah gambar.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadImageFailed"));
     } finally {
       setShowcaseUploadingId(null);
     }
@@ -1081,7 +1116,7 @@ export default function DashboardLinksPage() {
       await thisSave;
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan item katalog.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveCatalogItemFailed"));
     } finally {
       setCatalogSavingId(null);
     }
@@ -1123,8 +1158,8 @@ export default function DashboardLinksPage() {
   async function handleDeleteCatalogItem(link: LinkItem, itemId: string) {
     const item = catalogItemsOf(link).find((it) => it.id === itemId);
     const ok = await confirmDelete(
-      `Item "${item?.title ?? ""}" beserta seluruh fotonya akan dihapus permanen.`,
-      { title: "Hapus item katalog?" }
+      t("dashboard.pages.links.deleteCatalogItemConfirm.text").replace("{title}", item?.title ?? ""),
+      { title: t("dashboard.pages.links.deleteCatalogItemConfirm.title") }
     );
     if (!ok) return;
     await saveCatalogItems(link, catalogItemsOf(link).filter((it) => it.id !== itemId));
@@ -1148,7 +1183,7 @@ export default function DashboardLinksPage() {
         )
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadPhotoFailed"));
     } finally {
       setCatalogItemImageUploadingKey(null);
     }
@@ -1166,7 +1201,7 @@ export default function DashboardLinksPage() {
         )
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deletePhotoFailed"));
     }
   }
 
@@ -1186,7 +1221,7 @@ export default function DashboardLinksPage() {
       const { audio_url, title } = await uploadAudioBlock(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title, block_data: { ...l.block_data, audio_url } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah audio.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadAudioFailed"));
     } finally {
       setAudioUploadingId(null);
     }
@@ -1198,7 +1233,7 @@ export default function DashboardLinksPage() {
       await deleteAudioBlock(link.id);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url: "" } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus audio.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteAudioFailed"));
     }
   }
 
@@ -1220,7 +1255,7 @@ export default function DashboardLinksPage() {
         prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url, file_name, file_size_bytes } } : l))
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadFileFailed"));
     } finally {
       setFileUploadingId(null);
     }
@@ -1234,7 +1269,7 @@ export default function DashboardLinksPage() {
         prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url: "", file_name: "", file_size_bytes: 0 } } : l))
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus file.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteFileFailed"));
     }
   }
 
@@ -1254,7 +1289,7 @@ export default function DashboardLinksPage() {
       }
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal memilih ikon.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.selectIconFailed"));
     }
   }
 
@@ -1275,7 +1310,7 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
     } catch (err) {
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: link.is_featured } : l)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateLinkFailed"));
     }
   }
 
@@ -1290,7 +1325,7 @@ export default function DashboardLinksPage() {
       const { thumbnail_url } = await uploadLinkThumbnail(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, thumbnail_url, is_featured: true } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah thumbnail tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadThumbnailFailed"));
     } finally {
       setThumbnailUploadingId(null);
     }
@@ -1307,7 +1342,7 @@ export default function DashboardLinksPage() {
       await deleteLinkThumbnail(link.id);
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus thumbnail tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteThumbnailFailed"));
     }
   }
 
@@ -1335,7 +1370,18 @@ export default function DashboardLinksPage() {
       await updateLink(link.id, field === "title" ? { title: value } : field === "url" ? { url: value } : { description: value });
     } catch (err) {
       setLinks(previous);
-      setError(err instanceof ApiError ? err.message : `Gagal memperbarui ${field === "title" ? "judul" : field === "url" ? "URL" : "deskripsi"}.`);
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : t("dashboard.pages.links.errors.updateFieldFailed").replace(
+              "{field}",
+              field === "title"
+                ? t("dashboard.pages.links.fieldNames.title")
+                : field === "url"
+                ? t("dashboard.pages.links.fieldNames.url")
+                : t("dashboard.pages.links.fieldNames.description")
+            )
+      );
     }
   }
 
@@ -1347,13 +1393,13 @@ export default function DashboardLinksPage() {
 
   async function handleSaveSchedule(link: LinkItem) {
     if (!scheduleStart || !scheduleEnd) {
-      setError("Waktu mulai dan berakhir jadwal wajib diisi.");
+      setError(t("dashboard.pages.links.errors.scheduleRequired"));
       return;
     }
     const startsAt = new Date(scheduleStart).toISOString();
     const endsAt = new Date(scheduleEnd).toISOString();
     if (new Date(endsAt) <= new Date(startsAt)) {
-      setError("Waktu berakhir jadwal harus setelah waktu mulai.");
+      setError(t("dashboard.pages.links.errors.scheduleEndAfterStart"));
       return;
     }
     setError(null);
@@ -1364,7 +1410,7 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
       setScheduleEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menjadwalkan tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.scheduleFailed"));
     } finally {
       setSavingSchedule(false);
     }
@@ -1377,7 +1423,7 @@ export default function DashboardLinksPage() {
       const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membatalkan jadwal.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.cancelScheduleFailed"));
     }
   }
 
@@ -1390,11 +1436,11 @@ export default function DashboardLinksPage() {
 
   async function handleSaveLock(link: LinkItem) {
     if (lockTypeInput === "code" && !lockCodeInput.trim()) {
-      setError("Kode akses wajib diisi untuk kunci kode.");
+      setError(t("dashboard.pages.links.errors.lockCodeRequired"));
       return;
     }
     if (lockTypeInput === "age" && (!lockMinAgeInput || Number(lockMinAgeInput) < 13)) {
-      setError("Batas usia minimal 13 tahun.");
+      setError(t("dashboard.pages.links.errors.lockMinAge"));
       return;
     }
     setError(null);
@@ -1409,7 +1455,7 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
       setLockEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunci tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.lockLinkFailed"));
     } finally {
       setSavingLock(false);
     }
@@ -1422,7 +1468,7 @@ export default function DashboardLinksPage() {
       const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuka kunci tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.unlockLinkFailed"));
     }
   }
 
@@ -1444,7 +1490,7 @@ export default function DashboardLinksPage() {
       const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menandai konten sensitif.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.markSensitiveFailed"));
     }
   }
 
@@ -1460,53 +1506,53 @@ export default function DashboardLinksPage() {
       const refreshed = await refreshLinks();
       setLinks(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menduplikasi blok.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.duplicateFailed"));
     }
   }
 
   async function handleCreateBlock(e: React.FormEvent) {
     e.preventDefault();
     if (!blockTitle.trim()) {
-      setError("Judul blok wajib diisi.");
+      setError(t("dashboard.pages.links.errors.blockTitleRequired"));
       return;
     }
     let blockData: Record<string, unknown> = {};
     let blockUrl: string | undefined;
     if (blockType === "video") {
       if (!blockVideoUrl.trim()) {
-        setError("Tautan video wajib diisi.");
+        setError(t("dashboard.pages.links.errors.videoUrlRequired"));
         return;
       }
       blockData = { video_url: blockVideoUrl.trim() };
     } else if (blockType === "faq") {
       const items = blockFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
-        setError("Isi minimal 1 pertanyaan FAQ (pertanyaan & jawaban).");
+        setError(t("dashboard.pages.links.errors.faqRequired"));
         return;
       }
       blockData = { items };
     } else if (blockType === "maps") {
       if (!blockMapsUrl.trim()) {
-        setError("Tautan Google Maps wajib diisi.");
+        setError(t("dashboard.pages.links.errors.mapsUrlRequired"));
         return;
       }
       blockUrl = blockMapsUrl.trim();
       blockData = { embed: blockMapsEmbed };
     } else if (blockType === "text") {
       if (!blockText.trim()) {
-        setError("Isi teksnya dulu.");
+        setError(t("dashboard.pages.links.errors.textRequired"));
         return;
       }
       blockData = { text: blockText.trim() };
     } else if (blockType === "accordion") {
       if (!blockAccordionText.trim()) {
-        setError("Isi teks yang muncul saat diklik.");
+        setError(t("dashboard.pages.links.errors.accordionTextRequired"));
         return;
       }
       blockData = { text: blockAccordionText.trim() };
     } else if (blockType === "project_showcase") {
       if (!blockShowcaseUrl.trim()) {
-        setError("Tautan tujuan (CTA) wajib diisi.");
+        setError(t("dashboard.pages.links.errors.ctaUrlRequired"));
         return;
       }
       blockUrl = blockShowcaseUrl.trim();
@@ -1536,7 +1582,7 @@ export default function DashboardLinksPage() {
       setBlockShowcaseBadge("");
       setBlockShowcaseCta("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat blok.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.createBlockFailed"));
     } finally {
       setSavingBlock(false);
     }
@@ -1570,32 +1616,32 @@ export default function DashboardLinksPage() {
     let blockDescription: string | undefined;
     if (link.block_type === "video") {
       if (!editVideoUrl.trim()) {
-        setError("Tautan video wajib diisi.");
+        setError(t("dashboard.pages.links.errors.videoUrlRequired"));
         return;
       }
       blockData = { video_url: editVideoUrl.trim() };
     } else if (link.block_type === "maps") {
       if (!editMapsUrl.trim()) {
-        setError("Tautan Google Maps wajib diisi.");
+        setError(t("dashboard.pages.links.errors.mapsUrlRequired"));
         return;
       }
       blockUrl = editMapsUrl.trim();
       blockData = { embed: editMapsEmbed };
     } else if (link.block_type === "text") {
       if (!editText.trim()) {
-        setError("Isi teksnya dulu.");
+        setError(t("dashboard.pages.links.errors.textRequired"));
         return;
       }
       blockData = { text: editText.trim() };
     } else if (link.block_type === "accordion") {
       if (!editAccordionText.trim()) {
-        setError("Isi teks yang muncul saat diklik.");
+        setError(t("dashboard.pages.links.errors.accordionTextRequired"));
         return;
       }
       blockData = { text: editAccordionText.trim() };
     } else if (link.block_type === "project_showcase") {
       if (!editShowcaseUrl.trim()) {
-        setError("Tautan tujuan (CTA) wajib diisi.");
+        setError(t("dashboard.pages.links.errors.ctaUrlRequired"));
         return;
       }
       blockUrl = editShowcaseUrl.trim();
@@ -1604,7 +1650,7 @@ export default function DashboardLinksPage() {
     } else {
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
-        setError("Isi minimal 1 pertanyaan FAQ (pertanyaan & jawaban).");
+        setError(t("dashboard.pages.links.errors.faqRequired"));
         return;
       }
       blockData = { items };
@@ -1617,7 +1663,7 @@ export default function DashboardLinksPage() {
       setLinks(refreshed);
       setContentEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan konten blok.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
     } finally {
       setSavingContent(false);
     }
@@ -1637,7 +1683,7 @@ export default function DashboardLinksPage() {
     setDragId(null);
 
     currentReorderLinks(withPositions.map((l) => ({ id: l.id, position: l.position }))).catch((err) => {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan urutan tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.reorderFailed"));
     });
   }
 
@@ -1675,7 +1721,7 @@ export default function DashboardLinksPage() {
             TIDAK ada UI terpisah. Halaman Toko (page_type "produk") sengaja
             TIDAK muncul di sini -- keputusan langsung pengguna, tetap
             dikelola lewat menu Toko (Produk & Monetisasi). */}
-        <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">Halaman</p>
+        <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.links.pageNav.heading")}</p>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
@@ -1699,7 +1745,7 @@ export default function DashboardLinksPage() {
             >
               {ep.name}
               {!ep.is_published && (
-                <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">Draf</span>
+                <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">{t("dashboard.pages.links.pageNav.draft")}</span>
               )}
             </button>
           ))}
@@ -1711,14 +1757,14 @@ export default function DashboardLinksPage() {
                 return;
               }
               if (extraPages.length >= PREMIUM_EXTRA_PAGE_LIMIT) {
-                setError(`Sudah mencapai batas ${PREMIUM_EXTRA_PAGE_LIMIT} halaman tambahan.`);
+                setError(t("dashboard.pages.links.errors.extraPageLimitReached").replace("{limit}", String(PREMIUM_EXTRA_PAGE_LIMIT)));
                 return;
               }
               setNewPageTitle("");
               setDuplicateFromId("");
               setCreatingPage(true);
             }}
-            title={!page?.is_premium ? "Halaman tambahan khusus kreator Premium" : undefined}
+            title={!page?.is_premium ? t("dashboard.pages.links.pageNav.premiumOnly") : undefined}
             className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
           >
             <IconPlus className="h-3.5 w-3.5" />
@@ -1745,25 +1791,25 @@ export default function DashboardLinksPage() {
                   />
                 ) : (
                   <button type="button" onClick={() => startRenamePage(activeExtraPage)} className="flex items-center gap-1 hover:text-primary">
-                    <IconPencil className="h-3 w-3" /> Ganti judul halaman
+                    <IconPencil className="h-3 w-3" /> {t("dashboard.pages.links.pageNav.renamePage")}
                   </button>
                 )}
                 <label className="flex items-center gap-1.5">
                   <Toggle checked={activeExtraPage.is_published} onChange={() => handleTogglePagePublish(activeExtraPage)} />
-                  Terbitkan
+                  {t("dashboard.pages.links.pageNav.publish")}
                 </label>
-                <label className="flex items-center gap-1.5" title="Foto profil, nama, bio, dan ikon sosial akan disembunyikan sekaligus kalau dimatikan.">
+                <label className="flex items-center gap-1.5" title={t("dashboard.pages.links.pageNav.showProfileHeaderHint")}>
                   <Toggle checked={page?.show_profile_header ?? true} onChange={handleToggleShowProfileHeader} />
-                  Tampilkan foto, nama, bio &amp; ikon sosial
+                  {t("dashboard.pages.links.pageNav.showProfileHeader")}
                 </label>
                 <button type="button" onClick={() => handleDeletePage(activeExtraPage)} className="flex items-center gap-1 text-red-500 hover:underline">
-                  <IconTrash className="h-3 w-3" /> Hapus halaman
+                  <IconTrash className="h-3 w-3" /> {t("dashboard.pages.links.pageNav.deletePage")}
                 </button>
               </div>
             );
           })()}
 
-        <p className="mt-3 text-sm text-app-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
+        <p className="mt-3 text-sm text-app-muted">{t("dashboard.pages.links.dragToReorderHint")}</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -1779,7 +1825,7 @@ export default function DashboardLinksPage() {
               type="button"
               disabled={avatarUploading}
               onClick={() => document.getElementById("links-avatar-input")?.click()}
-              title="Ganti foto profil"
+              title={t("dashboard.pages.links.profile.changeAvatar")}
               className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-card disabled:opacity-60"
             >
               {page.avatar_url ? (
@@ -1817,7 +1863,7 @@ export default function DashboardLinksPage() {
               ) : (
                 <div className="flex items-center gap-1.5">
                   <p className="truncate font-heading text-base font-bold text-app-ink">{page.display_name || page.username}</p>
-                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah nama tampilan">
+                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.profile.editDisplayName")}>
                     <IconPencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -1831,14 +1877,14 @@ export default function DashboardLinksPage() {
                   onChange={(e) => setProfileEditValue(e.target.value)}
                   onBlur={saveEditProfileField}
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
-                  placeholder="Tambahkan deskripsi singkat"
+                  placeholder={t("dashboard.pages.links.profile.addBioPlaceholder")}
                   maxLength={160}
                   className="mt-1 w-full rounded-md border border-primary px-2 py-1 text-sm text-app-muted focus:outline-none"
                 />
               ) : (
                 <div className="mt-1 flex items-center gap-1.5">
-                  <p className="truncate text-sm text-app-muted">{page.bio || "Tambahkan deskripsi singkat"}</p>
-                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah deskripsi">
+                  <p className="truncate text-sm text-app-muted">{page.bio || t("dashboard.pages.links.profile.addBioPlaceholder")}</p>
+                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.profile.editBio")}>
                     <IconPencil className="h-3 w-3" />
                   </button>
                 </div>
@@ -1863,7 +1909,7 @@ export default function DashboardLinksPage() {
               onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
               className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-app-ink"
             >
-              Kontak Sosial
+              {t("dashboard.pages.links.social.heading")}
               <IconChevronRight className={`h-3.5 w-3.5 text-app-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
             </button>
             {socialOpen && (
@@ -1886,7 +1932,7 @@ export default function DashboardLinksPage() {
                   ))}
                 </div>
                 <p className="mt-2 text-[11px] text-app-muted">
-                  Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
+                  {t("dashboard.pages.links.social.hint")}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <button
@@ -1895,10 +1941,10 @@ export default function DashboardLinksPage() {
                     disabled={savingSocial}
                     className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
                   >
-                    {savingSocial ? "Menyimpan..." : "Simpan"}
+                    {savingSocial ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                   </button>
                   <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
-                    Batal
+                    {t("dashboard.pages.links.common.cancel")}
                   </button>
                 </div>
               </div>
@@ -1913,9 +1959,9 @@ export default function DashboardLinksPage() {
             Jeonme belum punya blok galeri gambar/koleksi di halaman utama. */}
         <div className="mt-3 flex items-center gap-2">
           {[
-            { tile: CONTENT_TILES.find((t) => t.key === "video")!, key: "video" },
-            { tile: CONTENT_TILES.find((t) => t.key === "faq")!, key: "faq" },
-            { tile: CONTENT_TILES.find((t) => t.key === "contact_form")!, key: "contact_form" },
+            { tile: contentTiles.find((tile) => tile.key === "video")!, key: "video" },
+            { tile: contentTiles.find((tile) => tile.key === "faq")!, key: "faq" },
+            { tile: contentTiles.find((tile) => tile.key === "contact_form")!, key: "contact_form" },
           ].map(({ tile, key }) => (
             <button
               key={key}
@@ -1937,7 +1983,7 @@ export default function DashboardLinksPage() {
               setAddSearch("");
               setAddModalOpen(true);
             }}
-            title="Lihat semua pilihan"
+            title={t("dashboard.pages.links.quickAdd.viewAllOptions")}
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-app-ink hover:bg-gray-200"
           >
             <IconPlus className="h-4 w-4" />
@@ -1954,24 +2000,24 @@ export default function DashboardLinksPage() {
           className="btn-primary mt-4 flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
         >
           <IconPlus className="h-4 w-4" />
-          Tambah
+          {t("dashboard.pages.links.quickAdd.addButton")}
         </button>
 
         {addingLink && (
           <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <FormField label="Judul" hint="Teks yang tampil di halamanmu.">
+              <FormField label={t("dashboard.pages.links.addLinkForm.titleLabel")} hint={t("dashboard.pages.links.addLinkForm.titleHint")}>
                 <input
                   type="text"
                   required
                   autoFocus
-                  placeholder="mis. Website Saya"
+                  placeholder={t("dashboard.pages.links.addLinkForm.titlePlaceholder")}
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </FormField>
-              <FormField label="Tautan (URL)" hint="Alamat halaman tujuan saat diklik.">
+              <FormField label={t("dashboard.pages.links.addLinkForm.urlLabel")} hint={t("dashboard.pages.links.addLinkForm.urlHint")}>
                 <input
                   type="url"
                   required
@@ -1986,10 +2032,10 @@ export default function DashboardLinksPage() {
                 2026: subjudul opsional (kartu ikon+judul+deskripsi+panah,
                 contoh template "Dimas Dev"). Kosong = baris judul tunggal
                 seperti sebelumnya. */}
-            <FormField label="Deskripsi (opsional)" hint="Baris kecil di bawah judul -- kosongkan untuk tautan biasa tanpa subjudul.">
+            <FormField label={t("dashboard.pages.links.addLinkForm.descriptionLabel")} hint={t("dashboard.pages.links.addLinkForm.descriptionHint")}>
               <input
                 type="text"
-                placeholder="mis. Kunjungi toko online saya"
+                placeholder={t("dashboard.pages.links.addLinkForm.descriptionPlaceholder")}
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 maxLength={240}
@@ -2002,10 +2048,10 @@ export default function DashboardLinksPage() {
                 onClick={() => setAddingLink(false)}
                 className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.links.common.cancel")}
               </button>
               <button type="submit" className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white">
-                Tambah
+                {t("dashboard.pages.links.quickAdd.addButton")}
               </button>
             </div>
           </form>
@@ -2013,7 +2059,7 @@ export default function DashboardLinksPage() {
 
         {addingBlock && (
           <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
-            <FormField label="Jenis Blok">
+            <FormField label={t("dashboard.pages.links.addBlockForm.blockTypeLabel")}>
               <select
                 value={blockType}
                 onChange={(e) =>
@@ -2034,17 +2080,17 @@ export default function DashboardLinksPage() {
                 }
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               >
-                <option value="video">Video (YouTube/TikTok)</option>
-                <option value="contact_form">Formulir Kontak</option>
-                <option value="faq">FAQ</option>
-                <option value="accordion">Accordion (satu judul, klik untuk buka)</option>
-                <option value="maps">Lokasi (Google Maps)</option>
-                <option value="text">Teks</option>
-                <option value="gallery">Galeri Foto</option>
-                <option value="audio">Audio/Musik</option>
-                <option value="file">File & Unduhan (PDF/ZIP/EPUB)</option>
-                <option value="project_showcase">Project Unggulan</option>
-                <option value="catalog">Katalog (daftar item &amp; detail)</option>
+                <option value="video">{t("dashboard.pages.links.blockForm.options.video")}</option>
+                <option value="contact_form">{t("dashboard.pages.links.blockForm.options.contactForm")}</option>
+                <option value="faq">{t("dashboard.pages.links.blockForm.options.faq")}</option>
+                <option value="accordion">{t("dashboard.pages.links.blockForm.options.accordion")}</option>
+                <option value="maps">{t("dashboard.pages.links.blockForm.options.maps")}</option>
+                <option value="text">{t("dashboard.pages.links.blockForm.options.text")}</option>
+                <option value="gallery">{t("dashboard.pages.links.blockForm.options.gallery")}</option>
+                <option value="audio">{t("dashboard.pages.links.blockForm.options.audio")}</option>
+                <option value="file">{t("dashboard.pages.links.blockForm.options.file")}</option>
+                <option value="project_showcase">{t("dashboard.pages.links.blockForm.options.projectShowcase")}</option>
+                <option value="catalog">{t("dashboard.pages.links.blockForm.options.catalog")}</option>
               </select>
             </FormField>
             {(blockType === "gallery" ||
@@ -2054,25 +2100,25 @@ export default function DashboardLinksPage() {
               blockType === "catalog") && (
               <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-app-muted">
                 {blockType === "gallery"
-                  ? "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok."
+                  ? t("dashboard.pages.links.blockForm.uploadHints.gallery")
                   : blockType === "audio"
-                  ? "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok."
+                  ? t("dashboard.pages.links.blockForm.uploadHints.audio")
                   : blockType === "file"
-                  ? "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok."
+                  ? t("dashboard.pages.links.blockForm.uploadHints.file")
                   : blockType === "catalog"
-                  ? "Buat blok dulu, item (jenis/paket/menu) ditambahkan setelahnya lewat panel \"Kelola Katalog\" di kartu blok."
-                  : "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok."}
+                  ? t("dashboard.pages.links.blockForm.uploadHints.catalog")
+                  : t("dashboard.pages.links.blockForm.uploadHints.projectShowcase")}
               </p>
             )}
             <FormField
-              label={blockType === "project_showcase" ? "Judul Proyek" : "Judul Blok"}
+              label={blockType === "project_showcase" ? t("dashboard.pages.links.blockForm.titleLabel.project") : t("dashboard.pages.links.blockForm.titleLabel.default")}
               hint={
                 blockType === "text"
-                  ? "Internal saja, TIDAK tampil ke pengunjung."
+                  ? t("dashboard.pages.links.blockForm.titleHint.text")
                   : blockType === "accordion"
-                  ? "Ini yang tampil & diklik pengunjung untuk membuka isinya."
+                  ? t("dashboard.pages.links.blockForm.titleHint.accordion")
                   : blockType === "project_showcase"
-                  ? "Nama proyek/karya yang ditonjolkan."
+                  ? t("dashboard.pages.links.blockForm.titleHint.projectShowcase")
                   : undefined
               }
             >
@@ -2081,12 +2127,12 @@ export default function DashboardLinksPage() {
                 required
                 placeholder={
                   blockType === "text"
-                    ? "mis. Pengumuman"
+                    ? t("dashboard.pages.links.blockForm.titlePlaceholder.text")
                     : blockType === "accordion"
-                    ? "mis. Kebijakan Pengembalian"
+                    ? t("dashboard.pages.links.blockForm.titlePlaceholder.accordion")
                     : blockType === "project_showcase"
-                    ? "mis. Redesain Aplikasi Perbankan"
-                    : "Judul blok"
+                    ? t("dashboard.pages.links.blockForm.titlePlaceholder.projectShowcase")
+                    : t("dashboard.pages.links.blockForm.titlePlaceholder.default")
                 }
                 value={blockTitle}
                 onChange={(e) => setBlockTitle(e.target.value)}
@@ -2095,18 +2141,18 @@ export default function DashboardLinksPage() {
             </FormField>
             {blockType === "project_showcase" && (
               <div className="flex flex-col gap-2">
-                <FormField label="Badge (opsional)" hint="Label kecil di atas gambar.">
+                <FormField label={t("dashboard.pages.links.blockForm.showcase.badgeLabel")} hint={t("dashboard.pages.links.blockForm.showcase.badgeHint")}>
                   <input
                     type="text"
-                    placeholder="mis. Project Unggulan"
+                    placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
                     value={blockShowcaseBadge}
                     onChange={(e) => setBlockShowcaseBadge(e.target.value)}
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
-                <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
+                <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
                   <textarea
-                    placeholder="mis. Studi kasus peningkatan conversion rate lewat riset pengguna..."
+                    placeholder={t("dashboard.pages.links.blockForm.showcase.descriptionPlaceholder")}
                     value={blockShowcaseDescription}
                     onChange={(e) => setBlockShowcaseDescription(e.target.value)}
                     rows={2}
@@ -2114,7 +2160,7 @@ export default function DashboardLinksPage() {
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
-                <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
+                <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
                   <input
                     type="url"
                     required
@@ -2124,10 +2170,10 @@ export default function DashboardLinksPage() {
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
-                <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
+                <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaTextLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaTextHint")}>
                   <input
                     type="text"
-                    placeholder="mis. Lihat studi kasus"
+                    placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
                     value={blockShowcaseCta}
                     onChange={(e) => setBlockShowcaseCta(e.target.value)}
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -2136,9 +2182,9 @@ export default function DashboardLinksPage() {
               </div>
             )}
             {blockType === "text" && (
-              <FormField label="Isi Teks">
+              <FormField label={t("dashboard.pages.links.blockForm.text.label")}>
                 <textarea
-                  placeholder="Isi teks yang tampil di halaman publik"
+                  placeholder={t("dashboard.pages.links.blockForm.text.placeholder")}
                   value={blockText}
                   onChange={(e) => setBlockText(e.target.value)}
                   rows={3}
@@ -2147,9 +2193,9 @@ export default function DashboardLinksPage() {
               </FormField>
             )}
             {blockType === "accordion" && (
-              <FormField label="Isi Saat Diklik">
+              <FormField label={t("dashboard.pages.links.blockForm.accordion.label")}>
                 <textarea
-                  placeholder="Isi teks yang muncul saat judul di atas diklik"
+                  placeholder={t("dashboard.pages.links.blockForm.accordion.placeholderAdd")}
                   value={blockAccordionText}
                   onChange={(e) => setBlockAccordionText(e.target.value)}
                   rows={3}
@@ -2158,10 +2204,10 @@ export default function DashboardLinksPage() {
               </FormField>
             )}
             {blockType === "video" && (
-              <FormField label="Tautan Video">
+              <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
                 <input
                   type="url"
-                  placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                  placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
                   value={blockVideoUrl}
                   onChange={(e) => setBlockVideoUrl(e.target.value)}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -2170,11 +2216,11 @@ export default function DashboardLinksPage() {
             )}
             {blockType === "maps" && (
               <div className="flex flex-col gap-2">
-                <FormField label="Tautan Google Maps">
+                <FormField label={t("dashboard.pages.links.blockForm.maps.label")}>
                   <div className="flex gap-2">
                     <input
                       type="url"
-                      placeholder="Tempel tautan berbagi lokasi (mis. https://maps.app.goo.gl/...)"
+                      placeholder={t("dashboard.pages.links.blockForm.maps.placeholderAdd")}
                       value={blockMapsUrl}
                       onChange={(e) => setBlockMapsUrl(e.target.value)}
                       className="w-full min-w-0 flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -2184,11 +2230,11 @@ export default function DashboardLinksPage() {
                       onClick={() => setMapsPickerOpenFor("add")}
                       className="flex-shrink-0 rounded-lg border border-app-border px-3 py-2 text-xs font-bold text-primary hover:border-primary"
                     >
-                      Pilih di Peta
+                      {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                     </button>
                   </div>
                 </FormField>
-                <FormField label="Perilaku Saat Diklik Pengunjung">
+                <FormField label={t("dashboard.pages.links.blockForm.maps.behaviorLabel")}>
                   <div className="flex flex-col gap-1.5">
                     <label className="flex items-start gap-2 text-xs text-app-ink">
                       <input
@@ -2198,7 +2244,7 @@ export default function DashboardLinksPage() {
                         onChange={() => setBlockMapsEmbed(false)}
                         className="mt-0.5"
                       />
-                      Buka tautan Google Maps langsung
+                      {t("dashboard.pages.links.blockForm.maps.openDirect")}
                     </label>
                     <label className="flex items-start gap-2 text-xs text-app-ink">
                       <input
@@ -2208,7 +2254,7 @@ export default function DashboardLinksPage() {
                         onChange={() => setBlockMapsEmbed(true)}
                         className="mt-0.5"
                       />
-                      Tampilkan peta Google Maps tertanam di profil
+                      {t("dashboard.pages.links.blockForm.maps.embedInline")}
                     </label>
                   </div>
                 </FormField>
@@ -2218,18 +2264,18 @@ export default function DashboardLinksPage() {
               <div className="flex flex-col gap-2">
                 {blockFaqItems.map((item, i) => (
                   <div key={i} className="flex flex-col gap-2 rounded-lg border border-app-border p-2.5">
-                    <FormField label={`Pertanyaan ${i + 1}`}>
+                    <FormField label={t("dashboard.pages.links.blockForm.faq.questionLabel").replace("{n}", String(i + 1))}>
                       <input
                         type="text"
-                        placeholder="Pertanyaan"
+                        placeholder={t("dashboard.pages.links.blockForm.faq.questionPlaceholder")}
                         value={item.question}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
                         className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
-                    <FormField label="Jawaban">
+                    <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
                       <textarea
-                        placeholder="Jawaban"
+                        placeholder={t("dashboard.pages.links.blockForm.faq.answerPlaceholder")}
                         value={item.answer}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                         rows={2}
@@ -2243,7 +2289,7 @@ export default function DashboardLinksPage() {
                   onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
                   className="self-start text-xs font-bold text-primary hover:underline"
                 >
-                  + Tambah pertanyaan
+                  {t("dashboard.pages.links.blockForm.faq.addQuestion")}
                 </button>
               </div>
             )}
@@ -2253,10 +2299,10 @@ export default function DashboardLinksPage() {
                 onClick={() => setAddingBlock(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.links.common.cancel")}
               </button>
               <button type="submit" disabled={savingBlock} className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60">
-                {savingBlock ? "Membuat..." : "Buat Blok"}
+                {savingBlock ? t("dashboard.pages.links.blockForm.creating") : t("dashboard.pages.links.blockForm.createBlock")}
               </button>
             </div>
           </form>
@@ -2286,7 +2332,7 @@ export default function DashboardLinksPage() {
                   <img
                     src={link.custom_icon_url}
                     alt=""
-                    title="Ikon kustom"
+                    title={t("dashboard.pages.links.linkCard.customIcon")}
                     className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
                   />
                 ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
@@ -2315,7 +2361,7 @@ export default function DashboardLinksPage() {
                     const DefaultIcon = BLOCK_TYPE_ICON[link.block_type];
                     return (
                       <span
-                        title={BLOCK_TYPE_LABEL[link.block_type]}
+                        title={blockTypeLabel[link.block_type]}
                         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
                       >
                         <DefaultIcon className="h-4 w-4" />
@@ -2345,7 +2391,7 @@ export default function DashboardLinksPage() {
                         type="button"
                         onClick={() => startEditField(link, "title")}
                         className="flex-shrink-0 text-app-muted hover:text-primary"
-                        title="Ubah judul"
+                        title={t("dashboard.pages.links.linkCard.editTitle")}
                       >
                         <IconPencil className="h-3.5 w-3.5" />
                       </button>
@@ -2353,7 +2399,7 @@ export default function DashboardLinksPage() {
                   )}
                   {link.block_type !== "link" && (
                     <span className="mt-1 inline-block rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
-                      {BLOCK_TYPE_LABEL[link.block_type]}
+                      {blockTypeLabel[link.block_type]}
                     </span>
                   )}
                 </div>
@@ -2364,7 +2410,7 @@ export default function DashboardLinksPage() {
                     className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
                   />
                 )}
-                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={`Aktifkan ${link.title}`} />
+                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
               </div>
 
               {link.block_type === "link" && (
@@ -2382,7 +2428,7 @@ export default function DashboardLinksPage() {
                   ) : (
                     <>
                       <p className="truncate text-xs text-app-muted">{link.url}</p>
-                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah URL">
+                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.linkCard.editUrl")}>
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
@@ -2405,17 +2451,17 @@ export default function DashboardLinksPage() {
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
                       maxLength={240}
-                      placeholder="Deskripsi singkat (opsional)"
+                      placeholder={t("dashboard.pages.links.linkCard.descriptionPlaceholder")}
                       className="w-full rounded-md border border-primary px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : (
                     <>
-                      <p className="truncate text-xs italic text-app-muted">{link.description || "Tanpa deskripsi"}</p>
+                      <p className="truncate text-xs italic text-app-muted">{link.description || t("dashboard.pages.links.linkCard.noDescription")}</p>
                       <button
                         type="button"
                         onClick={() => startEditField(link, "description")}
                         className="flex-shrink-0 text-app-muted hover:text-primary"
-                        title="Ubah deskripsi"
+                        title={t("dashboard.pages.links.linkCard.editDescription")}
                       >
                         <IconPencil className="h-3 w-3" />
                       </button>
@@ -2433,7 +2479,7 @@ export default function DashboardLinksPage() {
                     <button
                       type="button"
                       onClick={() => openScheduleForm(link)}
-                      title="Jadwalkan tampil/sembunyi"
+                      title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
                       className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         link.starts_at && link.ends_at ? "text-primary" : "text-app-muted"
                       }`}
@@ -2443,7 +2489,7 @@ export default function DashboardLinksPage() {
                     <button
                       type="button"
                       onClick={() => openLockForm(link)}
-                      title="Kunci tautan"
+                      title={t("dashboard.pages.links.linkCard.lockTooltip")}
                       className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         link.lock_type ? "text-primary" : "text-app-muted"
                       }`}
@@ -2462,7 +2508,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => handleToggleSensitive(link)}
-                    title={link.lock_type === "sensitive" ? "Batalkan peringatan konten sensitif" : "Tandai konten sensitif"}
+                    title={link.lock_type === "sensitive" ? t("dashboard.pages.links.linkCard.unmarkSensitive") : t("dashboard.pages.links.linkCard.markSensitive")}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                       link.lock_type === "sensitive" ? "text-primary" : "text-app-muted"
                     }`}
@@ -2477,7 +2523,7 @@ export default function DashboardLinksPage() {
                     backend & updateLink icon_key sudah generik per-row, tidak
                     peduli block_type). */}
                 <label
-                  title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
+                  title={link.custom_icon_url ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
                   className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
                     link.custom_icon_url ? "text-primary" : "text-app-muted"
                   }`}
@@ -2498,7 +2544,7 @@ export default function DashboardLinksPage() {
                 <button
                   type="button"
                   onClick={() => setIconPickerLinkId(link.id)}
-                  title="Pilih dari galeri ikon"
+                  title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
                   className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                     link.icon_key ? "text-primary" : "text-app-muted"
                   }`}
@@ -2517,7 +2563,7 @@ export default function DashboardLinksPage() {
                     browser -- pola sama seperti label unggah file di atas. */}
                 {!link.custom_icon_url && (
                   <label
-                    title={link.icon_color ? "Ganti warna ikon" : "Pilih warna ikon"}
+                    title={link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
                     className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle"
                   >
                     {link.icon_color ? (
@@ -2541,7 +2587,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => handleClearIconColor(link)}
-                    title="Hapus warna ikon (kembali ke warna tema)"
+                    title={t("dashboard.pages.links.linkCard.clearIconColor")}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                   >
                     <IconClose className="h-4 w-4" />
@@ -2551,7 +2597,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => handleRemoveIcon(link)}
-                    title="Hapus ikon (kembali ke deteksi/ikon default)"
+                    title={t("dashboard.pages.links.linkCard.removeIcon")}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                   >
                     <IconClose className="h-4 w-4" />
@@ -2568,7 +2614,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => handleToggleFeatured(link)}
-                    title={link.is_featured ? "Matikan Featured (kembali ke baris klasik)" : "Jadikan Featured (kartu thumbnail besar)"}
+                    title={link.is_featured ? t("dashboard.pages.links.linkCard.unfeature") : t("dashboard.pages.links.linkCard.makeFeatured")}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                       link.is_featured ? "text-primary" : "text-app-muted"
                     }`}
@@ -2586,7 +2632,7 @@ export default function DashboardLinksPage() {
                     onClick={() => openContentEdit(link)}
                     className="rounded-lg px-2 py-1.5 text-xs font-bold text-primary hover:bg-primary-subtle"
                   >
-                    Edit Konten
+                    {t("dashboard.pages.links.linkCard.editContent")}
                   </button>
                 )}
                 <div className="flex-1" />
@@ -2600,7 +2646,7 @@ export default function DashboardLinksPage() {
                 <button
                   type="button"
                   onClick={() => handleDuplicate(link)}
-                  title="Duplikat"
+                  title={t("dashboard.pages.links.linkCard.duplicate")}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle hover:text-primary"
                 >
                   <IconCopy className="h-4 w-4" />
@@ -2613,7 +2659,7 @@ export default function DashboardLinksPage() {
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteId(link.id)}
-                  title="Hapus"
+                  title={t("dashboard.pages.links.common.delete")}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -2627,18 +2673,18 @@ export default function DashboardLinksPage() {
                     <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
                   ) : (
                     <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
-                      Belum ada
+                      {t("dashboard.pages.links.common.noneYet")}
                     </div>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="text-[11px] text-app-muted">
                       {link.thumbnail_url
-                        ? "Thumbnail kartu Featured."
-                        : "Belum ada thumbnail -- untuk tautan YouTube akan otomatis terisi, tautan lain unggah manual di bawah."}
+                        ? t("dashboard.pages.links.featuredPanel.hasThumbnail")
+                        : t("dashboard.pages.links.featuredPanel.noThumbnail")}
                     </p>
                     <div className="flex items-center gap-2">
                       <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                        {thumbnailUploadingId === link.id ? "Mengunggah..." : link.thumbnail_url ? "Ganti Thumbnail" : "Unggah Thumbnail"}
+                        {thumbnailUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.thumbnail_url ? t("dashboard.pages.links.featuredPanel.changeThumbnail") : t("dashboard.pages.links.featuredPanel.uploadThumbnail")}
                         <input
                           type="file"
                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
@@ -2653,7 +2699,7 @@ export default function DashboardLinksPage() {
                           onClick={() => handleRemoveThumbnail(link)}
                           className="text-[11px] font-semibold text-red-600 hover:underline"
                         >
-                          Hapus
+                          {t("dashboard.pages.links.common.delete")}
                         </button>
                       )}
                     </div>
@@ -2669,7 +2715,7 @@ export default function DashboardLinksPage() {
               {link.block_type === "gallery" && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   <p className="text-[11px] font-semibold text-app-muted">
-                    {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
+                    {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} {t("dashboard.pages.links.galleryPanel.photoCountSuffix")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {((link.block_data?.images as string[]) ?? []).map((src, i) => (
@@ -2679,7 +2725,7 @@ export default function DashboardLinksPage() {
                         <button
                           type="button"
                           onClick={() => handleGalleryImageDelete(link, i)}
-                          title="Hapus foto"
+                          title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
                           className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
                         >
                           <IconX className="h-3 w-3" />
@@ -2697,7 +2743,7 @@ export default function DashboardLinksPage() {
                         ) : (
                           <>
                             <IconPlus className="h-4 w-4" />
-                            <span className="text-[9px] font-semibold">Tambah</span>
+                            <span className="text-[9px] font-semibold">{t("dashboard.pages.links.quickAdd.addButton")}</span>
                           </>
                         )}
                         <input
@@ -2729,13 +2775,13 @@ export default function DashboardLinksPage() {
                     />
                   ) : (
                     <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
-                      Belum ada
+                      {t("dashboard.pages.links.common.noneYet")}
                     </div>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="text-[11px] text-app-muted">Gambar kartu Project Unggulan.</p>
+                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.showcasePanel.imageHint")}</p>
                     <label className="w-fit cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                      {showcaseUploadingId === link.id ? "Mengunggah..." : link.block_data?.image_url ? "Ganti Gambar" : "Unggah Gambar"}
+                      {showcaseUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.block_data?.image_url ? t("dashboard.pages.links.showcasePanel.changeImage") : t("dashboard.pages.links.showcasePanel.uploadImage")}
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
@@ -2757,26 +2803,26 @@ export default function DashboardLinksPage() {
                   supaya tidak terasa terpecah 2 tempat berbeda. */}
               {link.block_type === "catalog" && (
                 <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">Belum ada item -- tambahkan di bawah.</p>}
+                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.catalogPanel.noItems")}</p>}
                   {catalogItemsOf(link).map((item) => {
                     const uploadKey = `${link.id}:${item.id}`;
                     return (
                       <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
                         <div className="flex items-start gap-2">
                           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <FormField label="Judul Item">
+                            <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
                               <input
                                 type="text"
                                 defaultValue={item.title}
-                                placeholder="Judul item"
+                                placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
                                 className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
                               />
                             </FormField>
-                            <FormField label="Deskripsi Item (opsional)">
+                            <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
                               <textarea
                                 defaultValue={item.description}
-                                placeholder="Deskripsi (opsional)"
+                                placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
                                 rows={2}
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
                                 className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -2786,7 +2832,7 @@ export default function DashboardLinksPage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteCatalogItem(link, item.id)}
-                            title="Hapus item"
+                            title={t("dashboard.pages.links.catalogPanel.deleteItem")}
                             className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
                           >
                             <IconTrash className="h-3.5 w-3.5" />
@@ -2800,7 +2846,7 @@ export default function DashboardLinksPage() {
                               <button
                                 type="button"
                                 onClick={() => handleCatalogImageDelete(link, item.id, i)}
-                                title="Hapus foto"
+                                title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
                                 className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
                               >
                                 <IconX className="h-2.5 w-2.5" />
@@ -2849,10 +2895,10 @@ export default function DashboardLinksPage() {
                   })}
                   {catalogItemsOf(link).length < maxCatalogItems && (
                     <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-app-border p-2.5">
-                      <FormField label="Judul Item Baru">
+                      <FormField label={t("dashboard.pages.links.catalogPanel.newItemTitleLabel")}>
                         <input
                           type="text"
-                          placeholder="Judul item baru (mis. Tipe 36)"
+                          placeholder={t("dashboard.pages.links.catalogPanel.newItemTitlePlaceholder")}
                           value={catalogNewItemDraft[link.id]?.title ?? ""}
                           onChange={(e) =>
                             setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
@@ -2860,9 +2906,9 @@ export default function DashboardLinksPage() {
                           className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
-                      <FormField label="Deskripsi Item Baru (opsional)">
+                      <FormField label={t("dashboard.pages.links.catalogPanel.newItemDescriptionLabel")}>
                         <textarea
-                          placeholder="Deskripsi (opsional)"
+                          placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
                           rows={2}
                           value={catalogNewItemDraft[link.id]?.description ?? ""}
                           onChange={(e) =>
@@ -2877,7 +2923,7 @@ export default function DashboardLinksPage() {
                         onClick={() => handleAddCatalogItem(link)}
                         className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                       >
-                        {catalogSavingId === link.id ? "Menyimpan..." : "+ Tambah Item"}
+                        {catalogSavingId === link.id ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.catalogPanel.addItem")}
                       </button>
                     </div>
                   )}
@@ -2896,12 +2942,12 @@ export default function DashboardLinksPage() {
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="text-[11px] text-app-muted">
                       {(link.block_data?.audio_url as string)
-                        ? "Audio terunggah, siap tampil di halaman publik."
-                        : "Belum ada audio -- unggah file mp3/wav/m4a/ogg (maks 15MB)."}
+                        ? t("dashboard.pages.links.audioPanel.hasAudio")
+                        : t("dashboard.pages.links.audioPanel.noAudio")}
                     </p>
                     <div className="flex items-center gap-2">
                       <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                        {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti Audio" : "Unggah Audio"}
+                        {audioUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.audio_url as string) ? t("dashboard.pages.links.audioPanel.changeAudio") : t("dashboard.pages.links.audioPanel.uploadAudio")}
                         <input
                           type="file"
                           accept=".mp3,.wav,.m4a,.ogg,audio/mpeg,audio/wav,audio/mp4,audio/ogg"
@@ -2916,7 +2962,7 @@ export default function DashboardLinksPage() {
                           onClick={() => handleAudioDelete(link)}
                           className="text-[11px] font-semibold text-red-600 hover:underline"
                         >
-                          Hapus
+                          {t("dashboard.pages.links.common.delete")}
                         </button>
                       )}
                     </div>
@@ -2935,12 +2981,12 @@ export default function DashboardLinksPage() {
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="truncate text-[11px] text-app-muted">
                       {(link.block_data?.file_url as string)
-                        ? `${(link.block_data?.file_name as string) ?? "File"} terunggah, siap diunduh pengunjung.`
-                        : "Belum ada file -- unggah PDF/ZIP/EPUB (maks 20MB)."}
+                        ? t("dashboard.pages.links.filePanel.hasFile").replace("{name}", (link.block_data?.file_name as string) ?? t("dashboard.pages.links.filePanel.fallbackFileName"))
+                        : t("dashboard.pages.links.filePanel.noFile")}
                     </p>
                     <div className="flex items-center gap-2">
                       <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                        {fileUploadingId === link.id ? "Mengunggah..." : (link.block_data?.file_url as string) ? "Ganti File" : "Unggah File"}
+                        {fileUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.file_url as string) ? t("dashboard.pages.links.filePanel.changeFile") : t("dashboard.pages.links.filePanel.uploadFile")}
                         <input
                           type="file"
                           accept=".pdf,.zip,.epub,application/pdf,application/zip,application/epub+zip"
@@ -2955,7 +3001,7 @@ export default function DashboardLinksPage() {
                           onClick={() => handleFileDelete(link)}
                           className="text-[11px] font-semibold text-red-600 hover:underline"
                         >
-                          Hapus
+                          {t("dashboard.pages.links.common.delete")}
                         </button>
                       )}
                     </div>
@@ -2967,7 +3013,7 @@ export default function DashboardLinksPage() {
                 (scheduleEditId === link.id ? (
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
-                      <FormField label="Mulai Tampil">
+                      <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
                         <input
                           type="datetime-local"
                           value={scheduleStart}
@@ -2975,7 +3021,7 @@ export default function DashboardLinksPage() {
                           className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
-                      <FormField label="Berhenti Tampil">
+                      <FormField label={t("dashboard.pages.links.schedulePanel.endLabel")}>
                         <input
                           type="datetime-local"
                           value={scheduleEnd}
@@ -2990,7 +3036,7 @@ export default function DashboardLinksPage() {
                         onClick={() => setScheduleEditId(null)}
                         className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
                       >
-                        Batal
+                        {t("dashboard.pages.links.common.cancel")}
                       </button>
                       <button
                         type="button"
@@ -2998,7 +3044,7 @@ export default function DashboardLinksPage() {
                         onClick={() => handleSaveSchedule(link)}
                         className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                       >
-                        {savingSchedule ? "Menyimpan..." : "Simpan"}
+                        {savingSchedule ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                       </button>
                     </div>
                   </div>
@@ -3007,10 +3053,10 @@ export default function DashboardLinksPage() {
                   link.ends_at && (
                     <div className="ml-11 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
                       <span className="text-[11px] font-semibold text-accent-dark">
-                        Terjadwal {new Date(link.starts_at).toLocaleString("id-ID")} s/d {new Date(link.ends_at).toLocaleString("id-ID")}
+                        {t("dashboard.pages.links.schedulePanel.scheduledLabel")} {new Date(link.starts_at).toLocaleString("id-ID")} {t("dashboard.pages.links.schedulePanel.until")} {new Date(link.ends_at).toLocaleString("id-ID")}
                       </span>
                       <button type="button" onClick={() => handleClearSchedule(link)} className="text-[11px] font-bold text-red-600 hover:underline">
-                        Batalkan
+                        {t("dashboard.pages.links.schedulePanel.cancelSchedule")}
                       </button>
                     </div>
                   )
@@ -3024,15 +3070,15 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
                       className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     >
-                      <option value="code">Kode akses</option>
-                      <option value="age">Konfirmasi usia</option>
-                      <option value="subscribe">Wajib subscribe (email/WhatsApp)</option>
-                      <option value="sensitive">Peringatan konten sensitif</option>
+                      <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
+                      <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
+                      <option value="subscribe">{t("dashboard.pages.links.lockPanel.types.subscribe")}</option>
+                      <option value="sensitive">{t("dashboard.pages.links.lockPanel.types.sensitive")}</option>
                     </select>
                     {lockTypeInput === "code" && (
                       <input
                         type="text"
-                        placeholder="Kode akses"
+                        placeholder={t("dashboard.pages.links.lockPanel.codePlaceholder")}
                         value={lockCodeInput}
                         onChange={(e) => setLockCodeInput(e.target.value)}
                         className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -3043,7 +3089,7 @@ export default function DashboardLinksPage() {
                         type="number"
                         min={13}
                         max={99}
-                        placeholder="Batas usia"
+                        placeholder={t("dashboard.pages.links.lockPanel.minAgePlaceholder")}
                         value={lockMinAgeInput}
                         onChange={(e) => setLockMinAgeInput(e.target.value)}
                         className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -3055,7 +3101,7 @@ export default function DashboardLinksPage() {
                         onClick={() => setLockEditId(null)}
                         className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
                       >
-                        Batal
+                        {t("dashboard.pages.links.common.cancel")}
                       </button>
                       <button
                         type="button"
@@ -3063,7 +3109,7 @@ export default function DashboardLinksPage() {
                         onClick={() => handleSaveLock(link)}
                         className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                       >
-                        {savingLock ? "Menyimpan..." : "Simpan"}
+                        {savingLock ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                       </button>
                     </div>
                   </div>
@@ -3071,17 +3117,17 @@ export default function DashboardLinksPage() {
                   link.lock_type && (
                     <div className="ml-11 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
                       <span className="text-[11px] font-semibold text-secondary-dark">
-                        Terkunci --{" "}
+                        {t("dashboard.pages.links.lockPanel.lockedLabel")}{" "}
                         {link.lock_type === "code"
-                          ? "kode akses"
+                          ? t("dashboard.pages.links.lockPanel.statusTypes.code")
                           : link.lock_type === "age"
-                          ? `usia ${link.lock_min_age ?? 18}+`
+                          ? t("dashboard.pages.links.lockPanel.statusTypes.age").replace("{age}", String(link.lock_min_age ?? 18))
                           : link.lock_type === "sensitive"
-                          ? "peringatan konten sensitif"
-                          : "wajib subscribe"}
+                          ? t("dashboard.pages.links.lockPanel.statusTypes.sensitive")
+                          : t("dashboard.pages.links.lockPanel.statusTypes.subscribe")}
                       </span>
                       <button type="button" onClick={() => handleClearLock(link)} className="text-[11px] font-bold text-red-600 hover:underline">
-                        Buka Kunci
+                        {t("dashboard.pages.links.lockPanel.unlock")}
                       </button>
                     </div>
                   )
@@ -3095,21 +3141,21 @@ export default function DashboardLinksPage() {
                 link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Mengedit: {BLOCK_TYPE_LABEL[link.block_type]}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-primary">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
                   {link.block_type === "video" ? (
-                    <FormField label="Tautan Video">
+                    <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
                       <input
                         type="url"
-                        placeholder="https://youtube.com/... atau https://tiktok.com/..."
+                        placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
                         value={editVideoUrl}
                         onChange={(e) => setEditVideoUrl(e.target.value)}
                         className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "text" ? (
-                    <FormField label="Isi Teks">
+                    <FormField label={t("dashboard.pages.links.blockForm.text.label")}>
                       <textarea
-                        placeholder="Isi teks yang tampil di halaman publik"
+                        placeholder={t("dashboard.pages.links.blockForm.text.placeholder")}
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         rows={3}
@@ -3117,9 +3163,9 @@ export default function DashboardLinksPage() {
                       />
                     </FormField>
                   ) : link.block_type === "accordion" ? (
-                    <FormField label="Isi Saat Diklik">
+                    <FormField label={t("dashboard.pages.links.blockForm.accordion.label")}>
                       <textarea
-                        placeholder="Isi teks yang muncul saat judul diklik"
+                        placeholder={t("dashboard.pages.links.blockForm.accordion.placeholderEdit")}
                         value={editAccordionText}
                         onChange={(e) => setEditAccordionText(e.target.value)}
                         rows={3}
@@ -3128,11 +3174,11 @@ export default function DashboardLinksPage() {
                     </FormField>
                   ) : link.block_type === "maps" ? (
                     <div className="flex flex-col gap-2">
-                      <FormField label="Tautan Google Maps">
+                      <FormField label={t("dashboard.pages.links.blockForm.maps.label")}>
                         <div className="flex gap-2">
                           <input
                             type="url"
-                            placeholder="Tempel tautan berbagi lokasi Google Maps"
+                            placeholder={t("dashboard.pages.links.blockForm.maps.placeholderEdit")}
                             value={editMapsUrl}
                             onChange={(e) => setEditMapsUrl(e.target.value)}
                             className="w-full min-w-0 flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -3142,11 +3188,11 @@ export default function DashboardLinksPage() {
                             onClick={() => setMapsPickerOpenFor(link.id)}
                             className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-primary hover:border-primary"
                           >
-                            Pilih di Peta
+                            {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                           </button>
                         </div>
                       </FormField>
-                      <FormField label="Perilaku Saat Diklik Pengunjung">
+                      <FormField label={t("dashboard.pages.links.blockForm.maps.behaviorLabel")}>
                         <div className="flex flex-col gap-1.5">
                           <label className="flex items-start gap-2 text-xs text-app-ink">
                             <input
@@ -3156,7 +3202,7 @@ export default function DashboardLinksPage() {
                               onChange={() => setEditMapsEmbed(false)}
                               className="mt-0.5"
                             />
-                            Buka tautan Google Maps langsung
+                            {t("dashboard.pages.links.blockForm.maps.openDirect")}
                           </label>
                           <label className="flex items-start gap-2 text-xs text-app-ink">
                             <input
@@ -3166,25 +3212,25 @@ export default function DashboardLinksPage() {
                               onChange={() => setEditMapsEmbed(true)}
                               className="mt-0.5"
                             />
-                            Tampilkan peta Google Maps tertanam di profil
+                            {t("dashboard.pages.links.blockForm.maps.embedInline")}
                           </label>
                         </div>
                       </FormField>
                     </div>
                   ) : link.block_type === "project_showcase" ? (
                     <div className="flex flex-col gap-2">
-                      <FormField label="Badge (opsional)" hint="Label kecil di atas gambar.">
+                      <FormField label={t("dashboard.pages.links.blockForm.showcase.badgeLabel")} hint={t("dashboard.pages.links.blockForm.showcase.badgeHint")}>
                         <input
                           type="text"
-                          placeholder="mis. Project Unggulan"
+                          placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
                           value={editShowcaseBadge}
                           onChange={(e) => setEditShowcaseBadge(e.target.value)}
                           className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
-                      <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
+                      <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
                         <textarea
-                          placeholder="Paragraf deskripsi singkat"
+                          placeholder={t("dashboard.pages.links.contentEdit.showcaseDescriptionPlaceholder")}
                           value={editShowcaseDescription}
                           onChange={(e) => setEditShowcaseDescription(e.target.value)}
                           rows={2}
@@ -3192,7 +3238,7 @@ export default function DashboardLinksPage() {
                           className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
-                      <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
+                      <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
                         <input
                           type="url"
                           placeholder="https://..."
@@ -3201,10 +3247,10 @@ export default function DashboardLinksPage() {
                           className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
-                      <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
+                      <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaTextLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaTextHint")}>
                         <input
                           type="text"
-                          placeholder="mis. Lihat studi kasus"
+                          placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
                           value={editShowcaseCta}
                           onChange={(e) => setEditShowcaseCta(e.target.value)}
                           className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -3215,18 +3261,18 @@ export default function DashboardLinksPage() {
                     <div className="flex flex-col gap-2">
                       {editFaqItems.map((item, i) => (
                         <div key={i} className="flex flex-col gap-2 rounded-md border border-app-border p-2">
-                          <FormField label={`Pertanyaan ${i + 1}`}>
+                          <FormField label={t("dashboard.pages.links.blockForm.faq.questionLabel").replace("{n}", String(i + 1))}>
                             <input
                               type="text"
-                              placeholder="Pertanyaan"
+                              placeholder={t("dashboard.pages.links.blockForm.faq.questionPlaceholder")}
                               value={item.question}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
                               className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
                             />
                           </FormField>
-                          <FormField label="Jawaban">
+                          <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
                             <textarea
-                              placeholder="Jawaban"
+                              placeholder={t("dashboard.pages.links.blockForm.faq.answerPlaceholder")}
                               value={item.answer}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                               rows={2}
@@ -3238,7 +3284,7 @@ export default function DashboardLinksPage() {
                             onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
                             className="self-end text-[10px] font-bold text-red-600 hover:underline"
                           >
-                            Hapus item
+                            {t("dashboard.pages.links.contentEdit.deleteItem")}
                           </button>
                         </div>
                       ))}
@@ -3247,13 +3293,13 @@ export default function DashboardLinksPage() {
                         onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
                         className="self-start text-[11px] font-bold text-primary hover:underline"
                       >
-                        + Tambah pertanyaan
+                        {t("dashboard.pages.links.blockForm.faq.addQuestion")}
                       </button>
                     </div>
                   )}
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
-                      Batal
+                      {t("dashboard.pages.links.common.cancel")}
                     </button>
                     <button
                       type="button"
@@ -3261,7 +3307,7 @@ export default function DashboardLinksPage() {
                       onClick={() => handleSaveContent(link)}
                       className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                     >
-                      {savingContent ? "Menyimpan..." : "Simpan"}
+                      {savingContent ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                     </button>
                   </div>
                 </div>
@@ -3276,11 +3322,11 @@ export default function DashboardLinksPage() {
                   sudah dihitung backend untuk semuanya), bukan cuma tautan biasa. */}
               <div className="ml-11 flex items-center gap-1.5 border-t border-app-border/70 pt-2 text-xs text-app-muted">
                 <IconChart className="h-3.5 w-3.5" />
-                {link.click_count.toLocaleString("id-ID")} klik
+                {link.click_count.toLocaleString("id-ID")} {t("dashboard.pages.links.clickCountSuffix")}
               </div>
             </li>
           ))}
-          {links.length === 0 && <EmptyState as="li" text='Belum ada tautan -- klik "Tambah" di atas.' />}
+          {links.length === 0 && <EmptyState as="li" text={t("dashboard.pages.links.emptyState")} />}
         </ul>
 
       </div>
@@ -3330,7 +3376,7 @@ export default function DashboardLinksPage() {
         (() => {
           const target = links.find((l) => l.id === confirmDeleteId);
           if (!target) return null;
-          const noun = target.block_type === "link" ? "tautan" : BLOCK_TYPE_LABEL[target.block_type]?.toLowerCase() ?? "blok";
+          const noun = target.block_type === "link" ? t("dashboard.pages.links.deleteConfirm.linkNoun") : blockTypeLabel[target.block_type]?.toLowerCase() ?? t("dashboard.pages.links.deleteConfirm.blockNoun");
           return (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -3345,9 +3391,10 @@ export default function DashboardLinksPage() {
                     <TriangleAlert className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-heading text-sm font-bold text-app-ink">Hapus {noun} ini?</h2>
+                    <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.links.deleteConfirm.title").replace("{noun}", noun)}</h2>
                     <p className="mt-1 text-xs text-app-muted">
-                      &ldquo;{target.title || "(tanpa judul)"}&rdquo; akan hilang dari halaman publikmu. Tindakan ini tidak bisa dibatalkan.
+                      {t("dashboard.pages.links.deleteConfirm.body")
+                        .replace("{title}", target.title || t("dashboard.pages.links.deleteConfirm.untitled"))}
                     </p>
                   </div>
                 </div>
@@ -3357,7 +3404,7 @@ export default function DashboardLinksPage() {
                     onClick={() => setConfirmDeleteId(null)}
                     className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
                   >
-                    Batal
+                    {t("dashboard.pages.links.common.cancel")}
                   </button>
                   <button
                     type="button"
@@ -3367,7 +3414,7 @@ export default function DashboardLinksPage() {
                     }}
                     className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700"
                   >
-                    Ya, Hapus
+                    {t("dashboard.pages.links.deleteConfirm.confirmButton")}
                   </button>
                 </div>
               </div>
@@ -3392,19 +3439,19 @@ export default function DashboardLinksPage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
           >
-            <h2 className="font-heading text-sm font-bold text-app-ink">Halaman Baru</h2>
-            <p className="mt-1 text-xs text-app-muted">Beri judul halamannya. Kamu bisa isi tautan/blok setelah dibuat.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.links.createPageModal.title")}</h2>
+            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.links.createPageModal.subtitle")}</p>
             <input
               type="text"
               autoFocus
               value={newPageTitle}
               onChange={(e) => setNewPageTitle(e.target.value)}
-              placeholder="Contoh: Promo Agustus"
+              placeholder={t("dashboard.pages.links.createPageModal.titlePlaceholder")}
               maxLength={80}
               className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             />
             <label htmlFor="new-page-duplicate-from" className="mb-1 mt-3 block text-xs font-semibold text-app-ink">
-              Mulai dari
+              {t("dashboard.pages.links.createPageModal.startFromLabel")}
             </label>
             <select
               id="new-page-duplicate-from"
@@ -3412,11 +3459,11 @@ export default function DashboardLinksPage() {
               onChange={(e) => setDuplicateFromId(e.target.value)}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             >
-              <option value="">Halaman kosong</option>
-              <option value="primary">Duplikat dari Home (Link Bio)</option>
+              <option value="">{t("dashboard.pages.links.createPageModal.blankPage")}</option>
+              <option value="primary">{t("dashboard.pages.links.createPageModal.duplicateFromHome")}</option>
               {extraPages.map((ep) => (
                 <option key={ep.id} value={ep.id}>
-                  Duplikat dari &quot;{ep.name}&quot;
+                  {t("dashboard.pages.links.createPageModal.duplicateFromPage").replace("{name}", ep.name)}
                 </option>
               ))}
             </select>
@@ -3426,14 +3473,14 @@ export default function DashboardLinksPage() {
                 onClick={() => setCreatingPage(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
-                Batal
+                {t("dashboard.pages.links.common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={!newPageTitle.trim() || savingNewPage}
                 className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {savingNewPage ? "Membuat..." : "Buat Halaman"}
+                {savingNewPage ? t("dashboard.pages.links.createPageModal.creating") : t("dashboard.pages.links.createPageModal.createButton")}
               </button>
             </div>
           </form>
@@ -3452,11 +3499,18 @@ export default function DashboardLinksPage() {
   );
 }
 
-const ADD_CATEGORIES = [
-  { key: "disarankan", label: "Disarankan" },
-  { key: "sosial", label: "Sosial Media" },
-  { key: "konten", label: "Konten" },
-] as const;
+// buildAddCategories -- FUNGSI (bukan konstanta modul) supaya labelnya ikut
+// berganti bahasa, pola sama seperti buildBlockTypeLabel di atas. "key" tetap
+// dalam bahasa Indonesia ("disarankan"/"sosial"/"konten") -- itu ID INTERNAL
+// state (addCategory), BUKAN teks yang tampil ke pengguna, jadi TIDAK perlu
+// ikut diterjemahkan.
+function buildAddCategories(t: (key: string) => string) {
+  return [
+    { key: "disarankan" as const, label: t("dashboard.pages.links.addModal.categories.suggested") },
+    { key: "sosial" as const, label: t("dashboard.pages.links.addModal.categories.social") },
+    { key: "konten" as const, label: t("dashboard.pages.links.addModal.categories.content") },
+  ];
+}
 
 function isUrlLike(value: string): boolean {
   return /^https?:\/\/\S+\.\S+/i.test(value.trim());
@@ -3481,36 +3535,40 @@ function AddModal({
   onSelectContentTile: (t: ContentTile) => void;
   onQuickPasteLink: (url: string) => void;
 }) {
+  const { t } = useLocale();
+  const addCategories = buildAddCategories(t);
+  const contentTiles = buildContentTiles(t);
+  const suggestedPlatforms = buildSuggestedPlatforms(t);
   const searchLower = search.trim().toLowerCase();
   const pastedUrl = isUrlLike(search);
 
   const contentRows = searchLower
-    ? CONTENT_TILES.filter((t) => t.label.toLowerCase().includes(searchLower))
+    ? contentTiles.filter((tile) => tile.label.toLowerCase().includes(searchLower))
     : category === "konten"
-      ? CONTENT_TILES
+      ? contentTiles
       : [];
 
   const platformRows = searchLower
-    ? SUGGESTED_PLATFORMS.filter((p) => p.label.toLowerCase().includes(searchLower))
+    ? suggestedPlatforms.filter((p) => p.label.toLowerCase().includes(searchLower))
     : category === "sosial"
-      ? SUGGESTED_PLATFORMS
+      ? suggestedPlatforms
       : category === "disarankan"
-        ? SUGGESTED_PLATFORMS.filter((p) => DISARANKAN_KEYS.includes(p.key))
+        ? suggestedPlatforms.filter((p) => DISARANKAN_KEYS.includes(p.key))
         : [];
 
   const sectionLabel = searchLower
-    ? "Hasil Pencarian"
+    ? t("dashboard.pages.links.addModal.searchResults")
     : category === "disarankan"
-      ? "Disarankan"
+      ? t("dashboard.pages.links.addModal.categories.suggested")
       : category === "sosial"
-        ? "Sosial Media"
-        : "Konten";
+        ? t("dashboard.pages.links.addModal.categories.social")
+        : t("dashboard.pages.links.addModal.categories.content");
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
-          <h2 className="font-heading text-lg font-bold text-app-ink">Tambah</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.links.addModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
           </button>
@@ -3522,7 +3580,7 @@ function AddModal({
             <input
               type="text"
               autoFocus
-              placeholder="Tempel atau cari tautan"
+              placeholder={t("dashboard.pages.links.addModal.searchPlaceholder")}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full bg-transparent text-sm outline-none"
@@ -3539,7 +3597,7 @@ function AddModal({
             >
               <IconLink className="h-5 w-5 flex-shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-app-ink">Tambahkan tautan ini</p>
+                <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.links.addModal.addThisLink")}</p>
                 <p className="truncate text-xs text-app-muted">{search.trim()}</p>
               </div>
             </button>
@@ -3548,7 +3606,7 @@ function AddModal({
           {!searchLower && (
             <>
               <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
-                {ADD_CATEGORIES.map((cat) => (
+                {addCategories.map((cat) => (
                   <button
                     key={cat.key}
                     type="button"
@@ -3563,7 +3621,7 @@ function AddModal({
               </div>
 
               <div className="mb-4 grid grid-cols-4 gap-2">
-                {CONTENT_TILES.map((tile) => (
+                {contentTiles.map((tile) => (
                   <button
                     key={tile.key}
                     type="button"

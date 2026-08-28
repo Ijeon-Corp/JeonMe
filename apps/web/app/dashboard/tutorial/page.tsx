@@ -1,41 +1,53 @@
+"use client";
+
 import Link from "next/link";
 import { IconBox, IconLink, IconSparkle } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Onboarding: halaman Tutorial STATIS (dipilih pengguna lewat
 // AskUserQuestion, bukan tur interaktif spotlight/tooltip) -- dua alur
 // utama yang ditanyakan langsung: "cara membuat link bio ataupun product".
-// Tidak butuh data dinamis apa pun, jadi server component biasa (tidak
-// perlu "use client").
-const LINK_BIO_STEPS = [
-  {
-    title: "Atur profil halamanmu",
-    body: "Buka Desain untuk mengisi nama tampilan, bio, foto profil, dan memilih tema (warna/gradien/wallpaper).",
-    href: "/dashboard/design",
-  },
-  {
-    title: "Tambahkan tautan",
-    body: "Buka Link Bio, klik \"+ Tambah Tautan\", isi judul dan URL (Instagram, WhatsApp, YouTube, dll). Susun ulang urutannya dengan drag-and-drop. Halamanmu sudah bisa diakses langsung di jeon.id/username-mu sejak akun dibuat.",
-    href: "/dashboard/links",
-  },
-];
+// Tidak butuh data dinamis apa pun -- SEBELUMNYA server component biasa,
+// diubah jadi "use client" (permintaan susulan pengguna, 29 Agustus 2026:
+// terjemahkan seluruh isi halaman dashboard) supaya bisa memanggil
+// useLocale() untuk t(), sama seperti pola buildNavItems(t) di
+// dashboard/layout.tsx -- LINK_BIO_STEPS/PRODUCT_STEPS dipindah jadi
+// fungsi pembangun yang dipanggil di dalam komponen (bukan konstanta
+// modul lagi) supaya labelnya ikut berganti begitu locale berubah.
+function buildLinkBioSteps(t: (key: string) => string) {
+  return [
+    {
+      title: t("dashboard.pages.tutorial.linkBio.step1.title"),
+      body: t("dashboard.pages.tutorial.linkBio.step1.body"),
+      href: "/dashboard/design",
+    },
+    {
+      title: t("dashboard.pages.tutorial.linkBio.step2.title"),
+      body: t("dashboard.pages.tutorial.linkBio.step2.body"),
+      href: "/dashboard/links",
+    },
+  ];
+}
 
-const PRODUCT_STEPS = [
-  {
-    title: "Buka menu Toko",
-    body: "Toko adalah tempat mengelola semua produk digital yang kamu jual (e-book, template, kelas, dll).",
-    href: "/dashboard/products",
-  },
-  {
-    title: "Tambahkan produk",
-    body: "Klik \"+ Tambah Produk\", isi nama, harga, dan unggah file yang akan dikirim ke pembeli setelah pembayaran berhasil, lalu unggah gambar sampul.",
-    href: "/dashboard/products",
-  },
-  {
-    title: "Aktifkan produk",
-    body: "Produk baru otomatis muncul di halaman publikmu setelah file selesai diunggah dan produk diaktifkan. Pembeli membayar lewat Midtrans, kamu terima dana lewat Saldo & Penarikan.",
-    href: "/dashboard/balance",
-  },
-];
+function buildProductSteps(t: (key: string) => string) {
+  return [
+    {
+      title: t("dashboard.pages.tutorial.product.step1.title"),
+      body: t("dashboard.pages.tutorial.product.step1.body"),
+      href: "/dashboard/products",
+    },
+    {
+      title: t("dashboard.pages.tutorial.product.step2.title"),
+      body: t("dashboard.pages.tutorial.product.step2.body"),
+      href: "/dashboard/products",
+    },
+    {
+      title: t("dashboard.pages.tutorial.product.step3.title"),
+      body: t("dashboard.pages.tutorial.product.step3.body"),
+      href: "/dashboard/balance",
+    },
+  ];
+}
 
 function StepCard({ index, title, body, href }: { index: number; title: string; body: string; href: string }) {
   return (
@@ -55,23 +67,25 @@ function StepCard({ index, title, body, href }: { index: number; title: string; 
 }
 
 export default function TutorialPage() {
+  const { t } = useLocale();
+  const linkBioSteps = buildLinkBioSteps(t);
+  const productSteps = buildProductSteps(t);
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
         <IconSparkle className="h-6 w-6 text-primary" />
-        Tutorial
+        {t("dashboard.pages.tutorial.pageHeading")}
       </h1>
-      <p className="mt-1 text-sm text-app-muted">
-        Panduan singkat membuat link bio dan produk pertamamu di Jeon.id.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.tutorial.intro")}</p>
 
       <section className="mt-6">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
           <IconLink className="h-4 w-4 text-primary" />
-          Membuat Link Bio
+          {t("dashboard.pages.tutorial.linkBioHeading")}
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
-          {LINK_BIO_STEPS.map((s, i) => (
+          {linkBioSteps.map((s, i) => (
             <StepCard key={s.title} index={i + 1} title={s.title} body={s.body} href={s.href} />
           ))}
         </div>
@@ -80,21 +94,21 @@ export default function TutorialPage() {
       <section className="mt-8">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
           <IconBox className="h-4 w-4 text-primary" />
-          Menjual Produk
+          {t("dashboard.pages.tutorial.sellProductsHeading")}
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
-          {PRODUCT_STEPS.map((s, i) => (
+          {productSteps.map((s, i) => (
             <StepCard key={s.title} index={i + 1} title={s.title} body={s.body} href={s.href} />
           ))}
         </div>
       </section>
 
       <p className="mt-8 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
-        Butuh bantuan lebih lanjut? Hubungi kami lewat halaman{" "}
+        {t("dashboard.pages.tutorial.helpPrefix")}{" "}
         <Link href="/dashboard/audience" className="font-semibold text-primary hover:underline">
-          Audiens
+          {t("dashboard.pages.tutorial.audienceLinkText")}
         </Link>{" "}
-        atau email support Jeon.id.
+        {t("dashboard.pages.tutorial.helpSuffix")}
       </p>
     </div>
   );

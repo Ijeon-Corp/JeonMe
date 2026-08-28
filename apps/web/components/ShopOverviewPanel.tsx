@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnalyticsSummary, RecentOrder, getBalance } from "@/lib/api-client";
 import { IconBox, IconChart, IconInbox, IconTrendArrow, IconWallet } from "@/components/icons";
 import StatCard from "@/components/StatCard";
+import { useLocale } from "@/lib/locale-context";
 
 // ShopOverviewPanel -- ringkasan performa Toko (Transaksi, Pendapatan,
 // grafik 7 hari, Produk Terlaris, Transaksi Terbaru), dipakai di DUA
@@ -16,20 +17,30 @@ import StatCard from "@/components/StatCard";
 // getBalance() di sini (bukan prop) -- kedua pemanggil butuh angka yang
 // sama, mengambilnya sendiri sekali di sini lebih sederhana daripada
 // menduplikasi pemanggilan di 2 tempat.
-const WEEKDAY_LABEL = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-const ORDER_STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  paid: { label: "Lunas", className: "bg-secondary-subtle text-secondary-dark" },
-  pending: { label: "Menunggu", className: "bg-amber-50 text-amber-700" },
-  expired: { label: "Kedaluwarsa", className: "bg-gray-100 text-app-muted" },
-  failed: { label: "Gagal", className: "bg-red-50 text-red-600" },
-};
+// buildOrderStatusLabels -- sama seperti buildStatusLabels di
+// TransactionPanel.tsx (dipanggil ulang tiap render lewat t(), bukan
+// konstanta modul lagi) supaya ikut berganti bahasa.
+function buildOrderStatusLabels(t: (key: string) => string): Record<string, { label: string; className: string }> {
+  return {
+    paid: { label: t("dashboard.components.shopOverviewPanel.statusLabels.paid"), className: "bg-secondary-subtle text-secondary-dark" },
+    pending: { label: t("dashboard.components.shopOverviewPanel.statusLabels.pending"), className: "bg-amber-50 text-amber-700" },
+    expired: { label: t("dashboard.components.shopOverviewPanel.statusLabels.expired"), className: "bg-gray-100 text-app-muted" },
+    failed: { label: t("dashboard.components.shopOverviewPanel.statusLabels.failed"), className: "bg-red-50 text-red-600" },
+  };
+}
 
 function formatRupiah(n: number): string {
   return "Rp" + n.toLocaleString("id-ID");
 }
 
 export default function ShopOverviewPanel({ summary, recentOrders }: { summary: AnalyticsSummary; recentOrders: RecentOrder[] | null }) {
+  const { t } = useLocale();
+  const ORDER_STATUS_LABEL = buildOrderStatusLabels(t);
+  // weekdayLabel -- lewat t() dengan path dinamis (bukan akses langsung
+  // dict.xxx) supaya tetap type-check WALAU dictionaries.ts belum berisi
+  // key ini (t() cuma menerima string apa pun, lihat catatan mekanisme di
+  // signature useLocale()).
+  const weekdayLabel = [0, 1, 2, 3, 4, 5, 6].map((i) => t(`dashboard.components.shopOverviewPanel.weekdayLabels.${i}`));
   const weeklyMax = Math.max(1, ...summary.weekly_revenue.map((d) => d.revenue_idr));
   const [availableIDR, setAvailableIDR] = useState<number | null>(null);
 
@@ -49,55 +60,83 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
   return (
     <>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard tone="blue" icon={<IconBox className="h-4 w-4" />} label="Transaksi" value={summary.total_orders.toLocaleString("id-ID")} sub="" />
-        <StatCard tone="brand" icon={<IconWallet className="h-4 w-4" />} label="Pendapatan" value={formatRupiah(summary.total_revenue_idr)} sub="" />
+        <StatCard
+          tone="blue"
+          icon={<IconBox className="h-4 w-4" />}
+          label={t("dashboard.components.shopOverviewPanel.statTransactions")}
+          value={summary.total_orders.toLocaleString("id-ID")}
+          sub=""
+        />
+        <StatCard
+          tone="brand"
+          icon={<IconWallet className="h-4 w-4" />}
+          label={t("dashboard.components.shopOverviewPanel.statRevenue")}
+          value={formatRupiah(summary.total_revenue_idr)}
+          sub=""
+        />
         {availableIDR !== null && (
-          <StatCard tone="lilac" icon={<IconWallet className="h-4 w-4" />} label="Saldo Tersedia" value={formatRupiah(availableIDR)} sub="" />
+          <StatCard
+            tone="lilac"
+            icon={<IconWallet className="h-4 w-4" />}
+            label={t("dashboard.components.shopOverviewPanel.statAvailableBalance")}
+            value={formatRupiah(availableIDR)}
+            sub=""
+          />
         )}
-        <StatCard tone="yellow" icon={<IconChart className="h-4 w-4" />} label="Klik Beli" value={summary.total_product_clicks.toLocaleString("id-ID")} sub="" />
-        <StatCard tone="pink" icon={<IconBox className="h-4 w-4" />} label="Checkout" value={summary.total_checkouts.toLocaleString("id-ID")} sub="" />
+        <StatCard
+          tone="yellow"
+          icon={<IconChart className="h-4 w-4" />}
+          label={t("dashboard.components.shopOverviewPanel.statProductClicks")}
+          value={summary.total_product_clicks.toLocaleString("id-ID")}
+          sub=""
+        />
+        <StatCard
+          tone="pink"
+          icon={<IconBox className="h-4 w-4" />}
+          label={t("dashboard.components.shopOverviewPanel.statCheckout")}
+          value={summary.total_checkouts.toLocaleString("id-ID")}
+          sub=""
+        />
         <StatCard
           tone="blue"
           icon={<IconTrendArrow className="h-4 w-4" />}
-          label="Tingkat Konversi"
+          label={t("dashboard.components.shopOverviewPanel.statConversionRate")}
           value={conversionRate !== null ? `${conversionRate.toFixed(1)}%` : "--"}
           sub=""
         />
       </section>
-      <p className="mt-2 text-[11px] text-app-muted">
-        Checkout = pembeli sampai ke proses bayar (lunas atau tidak). Tingkat Konversi = Transaksi lunas &divide; Checkout.
-      </p>
+      <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.shopOverviewPanel.conversionHint")}</p>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Pendapatan 7 Hari Terakhir</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.weeklyRevenueTitle")}</h2>
         <p className="mt-2 font-heading text-xl font-bold text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
           {summary.weekly_revenue.map((d) => (
             <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
               <div className="w-full rounded-t bg-secondary transition-all" style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }} />
-              <span className="text-[10px] text-app-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
+              <span className="text-[10px] text-app-muted">{weekdayLabel[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
             </div>
           ))}
         </div>
       </div>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Produk Terlaris</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.topProductsTitle")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {summary.top_products.map((p) => (
             <li key={p.product_id} className="flex justify-between text-xs">
               <span className="truncate text-app-ink">{p.name}</span>
               <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">
-                {p.sold_count} terjual &middot; {formatRupiah(p.revenue_idr)}
+                {p.sold_count} {t("dashboard.components.shopOverviewPanel.soldCountSuffix")} &middot; {formatRupiah(p.revenue_idr)}
               </span>
             </li>
           ))}
-          {summary.top_products.length === 0 && <EmptyRow text="Belum ada penjualan." />}
+          {summary.top_products.length === 0 && <EmptyRow text={t("dashboard.components.shopOverviewPanel.emptyTopProducts")} />}
         </ul>
       </div>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Transaksi Terbaru</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.recentTransactionsTitle")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {(recentOrders ?? []).map((o) => {
             const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-app-muted" };
@@ -109,7 +148,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
               </li>
             );
           })}
-          {(recentOrders ?? []).length === 0 && <EmptyRow text="Belum ada transaksi." />}
+          {(recentOrders ?? []).length === 0 && <EmptyRow text={t("dashboard.components.shopOverviewPanel.emptyRecentTransactions")} />}
         </ul>
       </div>
     </>

@@ -65,6 +65,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import { useRouter } from "next/navigation";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -91,11 +92,11 @@ import { useRouter } from "next/navigation";
 // validasi UX utamanya lewat pengecekan `if (!coverFile)` eksplisit di
 // masing-masing handler (pesan error lebih jelas & konsisten dengan
 // validasi nama/harga lain di form yang sama).
-function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void) {
+function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void, t: (key: string) => string) {
   return (
     <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-app-border px-3.5 py-2.5 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary">
       <IconCamera className="h-4 w-4 flex-shrink-0" />
-      <span className="min-w-0 truncate">{coverFile ? coverFile.name : "Pilih gambar sampul (wajib)"}</span>
+      <span className="min-w-0 truncate">{coverFile ? coverFile.name : t("dashboard.pages.products.coverPicker.placeholder")}</span>
       <input
         type="file"
         required
@@ -115,6 +116,7 @@ const PREMIUM_PRODUK_PAGE_LIMIT = 5;
 
 export default function DashboardProductsPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [tab, setTab] = useState<
     | "halaman_toko"
     | "overview"
@@ -220,7 +222,7 @@ export default function DashboardProductsPage() {
         setProducts(prod);
         setActiveCollaborators(collabs.filter((c) => c.status === "active" && c.collaborator_user_id));
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat produk."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.loadProducts")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -284,7 +286,7 @@ export default function DashboardProductsPage() {
   useEffect(() => {
     loadTokoData()
       .then(applyTokoResult)
-      .catch((err) => setTokoError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko."))
+      .catch((err) => setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.loadTokoPage")))
       .finally(() => setTokoLoading(false));
   }, [applyTokoResult]);
 
@@ -295,7 +297,7 @@ export default function DashboardProductsPage() {
       await createExtraPage({ name: `Toko ${tokoUsername}`, slug: tokoUsername, page_type: "produk" });
       applyTokoResult(await loadTokoData());
     } catch (err) {
-      setTokoError(err instanceof ApiError ? err.message : "Gagal membuat Halaman Toko.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createTokoPage"));
     } finally {
       setTokoCreating(false);
     }
@@ -308,7 +310,7 @@ export default function DashboardProductsPage() {
     try {
       applyTokoResult(await loadTokoData(id));
     } catch (err) {
-      setTokoError(err instanceof ApiError ? err.message : "Gagal memuat Halaman Toko.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.loadTokoPage"));
     } finally {
       setTokoLoading(false);
     }
@@ -339,7 +341,7 @@ export default function DashboardProductsPage() {
       setCreatingTokoPage(false);
       applyTokoResult(await loadTokoData(created.id));
     } catch (err) {
-      setTokoError(err instanceof ApiError ? err.message : "Gagal membuat Toko baru.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createNewToko"));
     } finally {
       setSavingNewTokoPage(false);
     }
@@ -354,14 +356,17 @@ export default function DashboardProductsPage() {
     } catch (err) {
       setAllTokoPages((prev) => prev.map((p) => (p.id === target.id ? { ...p, is_published: !next } : p)));
       if (activeTokoPageId === target.id) setTokoPage((prev) => (prev ? { ...prev, is_published: !next } : prev));
-      setTokoError(err instanceof ApiError ? err.message : "Gagal mengubah status terbit Toko.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.togglePublish"));
     }
   }
 
   async function handleDeleteAdditionalToko(target: ExtraPage) {
-    const ok = await confirmDelete(`Hapus Toko "${target.name}"? Semua produk tetap ada, tapi halaman & tautannya hilang.`, {
-      confirmButtonText: "Ya, Hapus Toko",
-    });
+    const ok = await confirmDelete(
+      t("dashboard.pages.products.confirm.deleteTokoTitle").replace("{name}", target.name),
+      {
+        confirmButtonText: t("dashboard.pages.products.confirm.deleteTokoButton"),
+      }
+    );
     if (!ok) return;
     const previous = allTokoPages;
     setAllTokoPages((prev) => prev.filter((p) => p.id !== target.id));
@@ -370,7 +375,7 @@ export default function DashboardProductsPage() {
       if (activeTokoPageId === target.id) applyTokoResult(await loadTokoData());
     } catch (err) {
       setAllTokoPages(previous);
-      setTokoError(err instanceof ApiError ? err.message : "Gagal menghapus Toko.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.deleteToko"));
     }
   }
 
@@ -382,7 +387,7 @@ export default function DashboardProductsPage() {
       await updateExtraPageStickers(tokoPage.id, stickers);
     } catch (err) {
       setTokoPage(previous);
-      setTokoError(err instanceof ApiError ? err.message : "Gagal menyimpan stiker.");
+      setTokoError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.saveStickers"));
     }
   }
 
@@ -405,18 +410,18 @@ export default function DashboardProductsPage() {
         setSummary(s);
         setRecentOrders(orders);
       })
-      .catch((err) => setOverviewError(err instanceof ApiError ? err.message : "Gagal memuat ringkasan toko."));
+      .catch((err) => setOverviewError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.loadOverview")));
   }, [overviewRangeDays]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     const price = Number(priceIDR);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama produk wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.products.errors.nameAndPriceRequired"));
       return;
     }
     if (!coverFile) {
-      setError("Gambar sampul wajib diunggah.");
+      setError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
     setError(null);
@@ -447,7 +452,7 @@ export default function DashboardProductsPage() {
       setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat produk.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createProduct"));
     } finally {
       setCreating(false);
     }
@@ -462,11 +467,11 @@ export default function DashboardProductsPage() {
     e.preventDefault();
     const price = Number(priceIDR);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.products.errors.nameAndPriceRequiredShort"));
       return;
     }
     if (!coverFile) {
-      setError("Gambar sampul wajib diunggah.");
+      setError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
     setError(null);
@@ -500,7 +505,7 @@ export default function DashboardProductsPage() {
       setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat payment link.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createPaymentLink"));
     } finally {
       setCreating(false);
     }
@@ -522,19 +527,19 @@ export default function DashboardProductsPage() {
     const priceTrimmed = priceIDR.trim();
     const price = priceTrimmed ? Number(priceTrimmed) : undefined;
     if (!name.trim()) {
-      setError("Nama wajib diisi.");
+      setError(t("dashboard.pages.products.errors.nameRequired"));
       return;
     }
     if (price !== undefined && price < 1000) {
-      setError("Kalau harga diisi, minimal Rp1.000 -- atau kosongkan saja kalau tidak ingin menampilkan harga.");
+      setError(t("dashboard.pages.products.errors.priceOptionalMin"));
       return;
     }
     if (!externalUrl.trim()) {
-      setError("Tautan produk (mis. link Shopee/Tokopedia) wajib diisi.");
+      setError(t("dashboard.pages.products.errors.productUrlRequired"));
       return;
     }
     if (!coverFile) {
-      setError("Gambar sampul wajib diunggah.");
+      setError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
     setError(null);
@@ -559,7 +564,7 @@ export default function DashboardProductsPage() {
       setCoverFile(null);
       setAddMode("closed");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat produk link eksternal.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createExternalLink"));
     } finally {
       setCreating(false);
     }
@@ -569,7 +574,7 @@ export default function DashboardProductsPage() {
   // ada (lewat modal Kelola) -- lihat catatan di externalUrlEditId.
   async function handleSaveExternalUrl(product: DashboardProduct) {
     if (!externalUrlDraft.trim()) {
-      setError("Tautan produk tidak boleh kosong.");
+      setError(t("dashboard.pages.products.errors.urlCannotBeEmpty"));
       return;
     }
     setError(null);
@@ -579,7 +584,7 @@ export default function DashboardProductsPage() {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, external_url: externalUrlDraft.trim() } : p)));
       setExternalUrlEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan tautan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.saveUrl"));
     } finally {
       setSavingExternalUrl(false);
     }
@@ -593,7 +598,7 @@ export default function DashboardProductsPage() {
       const isPdf = file.name.toLowerCase().endsWith(".pdf");
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, has_file: true, is_pdf: isPdf } : p)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.uploadFile"));
     } finally {
       setBusyId(null);
     }
@@ -606,7 +611,7 @@ export default function DashboardProductsPage() {
       const { cover_image_url } = await uploadProductCover(product.id, file);
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, cover_image_url } : p)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah sampul.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.uploadCover"));
     } finally {
       setCoverBusyId(null);
     }
@@ -614,7 +619,7 @@ export default function DashboardProductsPage() {
 
   async function handleToggleActive(product: DashboardProduct) {
     if (!product.has_file && !product.is_active) {
-      setError("Unggah file dulu sebelum mengaktifkan produk.");
+      setError(t("dashboard.pages.products.errors.uploadFileBeforeActivate"));
       return;
     }
     const nextActive = !product.is_active;
@@ -624,7 +629,7 @@ export default function DashboardProductsPage() {
       await updateProduct(product.id, { is_active: nextActive });
     } catch (err) {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, is_active: product.is_active } : p)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui status produk.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateProductStatus"));
     }
   }
 
@@ -638,7 +643,7 @@ export default function DashboardProductsPage() {
       await updateProduct(product.id, { watermark_enabled: next });
     } catch (err) {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, watermark_enabled: product.watermark_enabled } : p)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui pengaturan watermark.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateWatermark"));
     }
   }
 
@@ -663,14 +668,14 @@ export default function DashboardProductsPage() {
       setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, category: categoryDraft.trim() } : x)));
       setCategoryEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan kategori.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.saveCategory"));
     } finally {
       setSavingCategory(false);
     }
   }
 
   async function handleDelete(product: DashboardProduct) {
-    if (!(await confirmDelete(`Hapus produk "${product.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.products.confirm.deleteProductTitle").replace("{name}", product.name)))) return;
     const previous = products;
     setProducts((prev) => prev.filter((p) => p.id !== product.id));
     closeManageModal();
@@ -678,7 +683,7 @@ export default function DashboardProductsPage() {
       await deleteProduct(product.id);
     } catch (err) {
       setProducts(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus produk.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.deleteProduct"));
     }
   }
 
@@ -692,17 +697,17 @@ export default function DashboardProductsPage() {
   async function handleSaveFlashSale(product: DashboardProduct) {
     const flashPriceValue = Number(flashPrice);
     if (!flashPriceValue || flashPriceValue >= product.price_idr) {
-      setError("Harga flash sale wajib diisi dan harus lebih murah dari harga produk.");
+      setError(t("dashboard.pages.products.errors.flashPriceInvalid"));
       return;
     }
     if (!flashStart || !flashEnd) {
-      setError("Waktu mulai dan berakhir flash sale wajib diisi.");
+      setError(t("dashboard.pages.products.errors.flashTimeRequired"));
       return;
     }
     const startsAt = new Date(flashStart).toISOString();
     const endsAt = new Date(flashEnd).toISOString();
     if (new Date(endsAt) <= new Date(startsAt)) {
-      setError("Waktu berakhir flash sale harus setelah waktu mulai.");
+      setError(t("dashboard.pages.products.errors.flashTimeOrder"));
       return;
     }
     setError(null);
@@ -717,7 +722,7 @@ export default function DashboardProductsPage() {
       setProducts(refreshed);
       setFlashSaleEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menjadwalkan flash sale.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.scheduleFlashSale"));
     } finally {
       setSavingFlashSale(false);
     }
@@ -730,7 +735,7 @@ export default function DashboardProductsPage() {
       const refreshed = await listProducts();
       setProducts(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membatalkan flash sale.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.cancelFlashSale"));
     }
   }
 
@@ -742,7 +747,7 @@ export default function DashboardProductsPage() {
   async function handleSavePwyw(product: DashboardProduct) {
     const minPrice = Number(pwywMinPrice);
     if (!minPrice || minPrice < 1000) {
-      setError("Harga minimum wajib diisi, minimal Rp1.000.");
+      setError(t("dashboard.pages.products.errors.pwywMinRequired"));
       return;
     }
     setError(null);
@@ -753,7 +758,7 @@ export default function DashboardProductsPage() {
       setProducts(refreshed);
       setPwywEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengaktifkan bayar seikhlasnya.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.enablePwyw"));
     } finally {
       setSavingPwyw(false);
     }
@@ -766,7 +771,7 @@ export default function DashboardProductsPage() {
       const refreshed = await listProducts();
       setProducts(refreshed);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menonaktifkan bayar seikhlasnya.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.disablePwyw"));
     }
   }
 
@@ -789,7 +794,7 @@ export default function DashboardProductsPage() {
       setProducts(refreshed);
       setSplitsEditId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan split kolaborator.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.saveSplits"));
     } finally {
       setSavingSplits(false);
     }
@@ -801,7 +806,7 @@ export default function DashboardProductsPage() {
       const { download_url } = await getProductDownloadURL(id);
       window.open(download_url, "_blank", "noopener,noreferrer");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat tautan unduhan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createDownloadLink"));
     }
   }
 
@@ -854,7 +859,7 @@ export default function DashboardProductsPage() {
               tab === "halaman_toko" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Halaman Toko
+            {t("dashboard.pages.products.tabs.halamanToko")}
           </button>
           <button
             type="button"
@@ -863,7 +868,7 @@ export default function DashboardProductsPage() {
               tab === "overview" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Overview
+            {t("dashboard.pages.products.tabs.overview")}
           </button>
           <button
             type="button"
@@ -872,7 +877,7 @@ export default function DashboardProductsPage() {
               tab === "manage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Manage Items
+            {t("dashboard.pages.products.tabs.manageItems")}
           </button>
           <button
             type="button"
@@ -881,7 +886,7 @@ export default function DashboardProductsPage() {
               tab === "reviews" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Reviews
+            {t("dashboard.pages.products.tabs.reviews")}
           </button>
           <button
             type="button"
@@ -890,7 +895,7 @@ export default function DashboardProductsPage() {
               tab === "listing" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Listing
+            {t("dashboard.pages.products.tabs.listing")}
           </button>
           <button
             type="button"
@@ -899,7 +904,7 @@ export default function DashboardProductsPage() {
               tab === "storage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Storage & Files
+            {t("dashboard.pages.products.tabs.storage")}
           </button>
           <button
             type="button"
@@ -908,7 +913,7 @@ export default function DashboardProductsPage() {
               tab === "webhook_events" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Webhook Events
+            {t("dashboard.pages.products.tabs.webhookEvents")}
           </button>
           <button
             type="button"
@@ -917,7 +922,7 @@ export default function DashboardProductsPage() {
               tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Shop Settings
+            {t("dashboard.pages.products.tabs.shopSettings")}
           </button>
           <button
             type="button"
@@ -926,7 +931,7 @@ export default function DashboardProductsPage() {
               tab === "transaction" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
-            Transaction
+            {t("dashboard.pages.products.tabs.transaction")}
           </button>
         </div>
 
@@ -946,7 +951,7 @@ export default function DashboardProductsPage() {
                 yang sengaja slug-nya SELALU = username. */}
             {allTokoPages.length >= 1 && (allTokoPages.length > 1 || page?.is_premium) && (
               <>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-app-muted">Toko</p>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.products.tokoLabel")}</p>
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                   {allTokoPages.map((tp) => (
                     <button
@@ -960,7 +965,9 @@ export default function DashboardProductsPage() {
                     >
                       {tp.name}
                       {!tp.is_published && (
-                        <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">Draf</span>
+                        <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
+                          {t("dashboard.pages.products.draft")}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -972,17 +979,19 @@ export default function DashboardProductsPage() {
                         return;
                       }
                       if (allTokoPages.length >= PREMIUM_PRODUK_PAGE_LIMIT) {
-                        setTokoError(`Sudah mencapai batas ${PREMIUM_PRODUK_PAGE_LIMIT} Toko.`);
+                        setTokoError(
+                          t("dashboard.pages.products.errors.tokoLimitReached").replace("{limit}", String(PREMIUM_PRODUK_PAGE_LIMIT))
+                        );
                         return;
                       }
                       setNewTokoPageTitle("");
                       setCreatingTokoPage(true);
                     }}
-                    title={!page?.is_premium ? "Toko tambahan khusus kreator Premium" : undefined}
+                    title={!page?.is_premium ? t("dashboard.pages.products.premiumOnlyTitle") : undefined}
                     className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
                   >
                     <IconPlus className="h-3.5 w-3.5" />
-                    Toko
+                    {t("dashboard.pages.products.tokoLabel")}
                     {!page?.is_premium && <IconSparkle className="h-3 w-3 text-secondary-dark" />}
                   </button>
                 </div>
@@ -993,14 +1002,14 @@ export default function DashboardProductsPage() {
                     <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-muted">
                       <label className="flex items-center gap-1.5">
                         <Toggle checked={activeTp.is_published} onChange={() => handleTogglePagePublish(activeTp)} />
-                        Terbitkan
+                        {t("dashboard.pages.products.publish")}
                       </label>
                       <button
                         type="button"
                         onClick={() => handleDeleteAdditionalToko(activeTp)}
                         className="flex items-center gap-1 text-red-500 hover:underline"
                       >
-                        <IconTrash className="h-3 w-3" /> Hapus Toko ini
+                        <IconTrash className="h-3 w-3" /> {t("dashboard.pages.products.deleteThisToko")}
                       </button>
                     </div>
                   );
@@ -1076,7 +1085,7 @@ export default function DashboardProductsPage() {
                       : "border-app-border text-app-muted hover:border-primary/50"
                   }`}
                 >
-                  {d} hari
+                  {t("dashboard.pages.products.rangeDays").replace("{days}", String(d))}
                 </button>
               ))}
             </div>
@@ -1088,10 +1097,7 @@ export default function DashboardProductsPage() {
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-sm text-app-muted">
-              Unggah file (pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB) sebelum mengaktifkan produk. Tambahkan sampul
-              (jpg/png/webp, maks 5MB) supaya tampil menarik di halaman publik.
-            </p>
+            <p className="text-sm text-app-muted">{t("dashboard.pages.products.uploadHint")}</p>
 
             {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -1106,7 +1112,7 @@ export default function DashboardProductsPage() {
                       setQuery(e.target.value);
                       setItemsPage(1);
                     }}
-                    placeholder="Cari produk..."
+                    placeholder={t("dashboard.pages.products.searchPlaceholder")}
                     className="w-full rounded-lg border border-app-border bg-app-surface py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
                   />
                 </div>
@@ -1119,7 +1125,7 @@ export default function DashboardProductsPage() {
                     }}
                     className="rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs focus:border-primary focus:outline-none"
                   >
-                    <option value="">Semua Kategori</option>
+                    <option value="">{t("dashboard.pages.products.allCategories")}</option>
                     {categories.map((c) => (
                       <option key={c} value={c}>
                         {c}
@@ -1135,7 +1141,7 @@ export default function DashboardProductsPage() {
                   className="btn-primary flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
-                  Tambah Produk
+                  {t("dashboard.pages.products.addProduct")}
                 </button>
               )}
             </div>
@@ -1150,8 +1156,8 @@ export default function DashboardProductsPage() {
                   className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconUpload className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-app-ink">Digital Product</span>
-                  <span className="text-[11px] text-app-muted">Jual produk digital seperti file, e-book, software, template.</span>
+                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
+                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
                 </button>
                 <button
                   type="button"
@@ -1159,8 +1165,8 @@ export default function DashboardProductsPage() {
                   className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconWallet className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-app-ink">Payment Link</span>
-                  <span className="text-[11px] text-app-muted">Terima pembayaran untuk jasa, donasi, atau tujuan khusus lain.</span>
+                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
+                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
                 </button>
                 {/* Link Eksternal -- permintaan langsung pengguna, 17
                     Agustus 2026: "saya mau untuk produk bisa untuk
@@ -1174,8 +1180,8 @@ export default function DashboardProductsPage() {
                   className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconExternal className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-app-ink">Link Eksternal</span>
-                  <span className="text-[11px] text-app-muted">Tombol Beli membuka listing di Shopee/Tokopedia/toko lain (boleh link affiliate).</span>
+                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
+                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
                 </button>
               </div>
             )}
@@ -1187,7 +1193,7 @@ export default function DashboardProductsPage() {
                     type="text"
                     autoFocus
                     required
-                    placeholder="Nama produk"
+                    placeholder={t("dashboard.pages.products.form.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1195,7 +1201,7 @@ export default function DashboardProductsPage() {
                   <input
                     type="number"
                     required
-                    placeholder="Harga (IDR)"
+                    placeholder={t("dashboard.pages.products.form.pricePlaceholder")}
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
@@ -1203,16 +1209,16 @@ export default function DashboardProductsPage() {
                   />
                   <input
                     type="text"
-                    placeholder="Kategori (opsional)"
+                    placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                {renderCoverPicker(coverFile, setCoverFile)}
+                {renderCoverPicker(coverFile, setCoverFile, t)}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? "Membuat..." : "Buat"}
+                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.create")}
                   </button>
                   <button
                     type="button"
@@ -1225,7 +1231,7 @@ export default function DashboardProductsPage() {
                     }}
                     className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
-                    Batal
+                    {t("dashboard.pages.products.form.cancel")}
                   </button>
                 </div>
               </form>
@@ -1238,7 +1244,7 @@ export default function DashboardProductsPage() {
                     type="text"
                     autoFocus
                     required
-                    placeholder="Judul (mis. Konsultasi 1 Jam)"
+                    placeholder={t("dashboard.pages.products.form.titlePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1246,7 +1252,7 @@ export default function DashboardProductsPage() {
                   <input
                     type="number"
                     required
-                    placeholder="Harga (IDR)"
+                    placeholder={t("dashboard.pages.products.form.pricePlaceholder")}
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
@@ -1254,7 +1260,7 @@ export default function DashboardProductsPage() {
                   />
                 </div>
                 <textarea
-                  placeholder="Pesan sukses untuk pembeli (opsional) -- ditampilkan setelah pembayaran berhasil"
+                  placeholder={t("dashboard.pages.products.form.successMessagePlaceholder")}
                   value={successMessage}
                   onChange={(e) => setSuccessMessage(e.target.value)}
                   rows={2}
@@ -1264,7 +1270,7 @@ export default function DashboardProductsPage() {
                   <input
                     type="number"
                     min={1}
-                    placeholder="Batas jumlah pembayaran (opsional)"
+                    placeholder={t("dashboard.pages.products.form.paymentLimitPlaceholder")}
                     value={paymentLimitCount}
                     onChange={(e) => setPaymentLimitCount(e.target.value)}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1273,14 +1279,14 @@ export default function DashboardProductsPage() {
                     type="datetime-local"
                     value={linkExpiresAt}
                     onChange={(e) => setLinkExpiresAt(e.target.value)}
-                    title="Kedaluwarsa link (opsional)"
+                    title={t("dashboard.pages.products.form.linkExpiresTitle")}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                {renderCoverPicker(coverFile, setCoverFile)}
+                {renderCoverPicker(coverFile, setCoverFile, t)}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? "Membuat..." : "Buat Payment Link"}
+                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.createPaymentLink")}
                   </button>
                   <button
                     type="button"
@@ -1295,7 +1301,7 @@ export default function DashboardProductsPage() {
                     }}
                     className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
-                    Batal
+                    {t("dashboard.pages.products.form.cancel")}
                   </button>
                 </div>
               </form>
@@ -1308,14 +1314,14 @@ export default function DashboardProductsPage() {
                     type="text"
                     autoFocus
                     required
-                    placeholder="Nama produk"
+                    placeholder={t("dashboard.pages.products.form.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="number"
-                    placeholder="Harga (IDR, opsional)"
+                    placeholder={t("dashboard.pages.products.form.priceOptionalPlaceholder")}
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
@@ -1325,22 +1331,22 @@ export default function DashboardProductsPage() {
                 <input
                   type="url"
                   required
-                  placeholder="Tautan produk (mis. https://shopee.co.id/... atau link affiliate kamu)"
+                  placeholder={t("dashboard.pages.products.form.externalUrlPlaceholder")}
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
                   className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <input
                   type="text"
-                  placeholder="Kategori (opsional)"
+                  placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
-                {renderCoverPicker(coverFile, setCoverFile)}
+                {renderCoverPicker(coverFile, setCoverFile, t)}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? "Membuat..." : "Buat Produk"}
+                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.createProductButton")}
                   </button>
                   <button
                     type="button"
@@ -1354,7 +1360,7 @@ export default function DashboardProductsPage() {
                     }}
                     className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
-                    Batal
+                    {t("dashboard.pages.products.form.cancel")}
                   </button>
                 </div>
               </form>
@@ -1365,9 +1371,9 @@ export default function DashboardProductsPage() {
                 <table className="w-full min-w-[520px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
-                      <th className="px-4 py-3">Item</th>
-                      <th className="px-4 py-3">Harga</th>
-                      <th className="px-4 py-3">Terjual</th>
+                      <th className="px-4 py-3">{t("dashboard.pages.products.table.item")}</th>
+                      <th className="px-4 py-3">{t("dashboard.pages.products.table.price")}</th>
+                      <th className="px-4 py-3">{t("dashboard.pages.products.table.sold")}</th>
                       {/* Diklik -- permintaan langsung pengguna, 13 Agustus
                           2026: "di link bio dan juga product tambahkan
                           dibagian bawah statistik berapa kali jumlah klik
@@ -1375,8 +1381,8 @@ export default function DashboardProductsPage() {
                           analytics_events (event_type="product_click"),
                           kolom baru di sebelah "Terjual", pola sama persis
                           (dihitung backend, bukan angka rekaan). */}
-                      <th className="px-4 py-3">Diklik</th>
-                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">{t("dashboard.pages.products.table.clicked")}</th>
+                      <th className="px-4 py-3">{t("dashboard.pages.products.table.status")}</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -1397,7 +1403,9 @@ export default function DashboardProductsPage() {
                               <p className="truncate font-semibold text-app-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
                                 {p.product_kind === "payment_link" && (
-                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Payment Link</span>
+                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                    {t("dashboard.pages.products.badges.paymentLink")}
+                                  </span>
                                 )}
                                 {p.product_kind === "external_link" && (
                                   // Diklik langsung ke tautan afiliasinya --
@@ -1415,23 +1423,25 @@ export default function DashboardProductsPage() {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-0.5 rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary hover:underline"
                                   >
-                                    Link Eksternal <IconExternal className="h-2.5 w-2.5" />
+                                    {t("dashboard.pages.products.badges.externalLink")} <IconExternal className="h-2.5 w-2.5" />
                                   </a>
                                 )}
                                 {p.category && (
                                   <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-app-muted">{p.category}</span>
                                 )}
                                 {p.is_flash_sale_active && (
-                                  <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">Flash Sale</span>
+                                  <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">
+                                    {t("dashboard.pages.products.badges.flashSale")}
+                                  </span>
                                 )}
                                 {p.pwyw_enabled && (
                                   <span className="rounded-full bg-secondary-subtle px-1.5 py-0.5 text-[9px] font-bold text-secondary-dark">
-                                    Bayar Seikhlasnya
+                                    {t("dashboard.pages.products.badges.pwyw")}
                                   </span>
                                 )}
                                 {p.collaborator_splits.length > 0 && (
                                   <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">
-                                    {p.collaborator_splits.length} kolaborator
+                                    {t("dashboard.pages.products.badges.collaboratorsCount").replace("{count}", String(p.collaborator_splits.length))}
                                   </span>
                                 )}
                               </div>
@@ -1440,7 +1450,9 @@ export default function DashboardProductsPage() {
                         </td>
                         <td className="px-4 py-3 align-top">
                           {p.pwyw_enabled ? (
-                            <span className="font-bold text-secondary-dark">Min Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}</span>
+                            <span className="font-bold text-secondary-dark">
+                              {t("dashboard.pages.products.minPriceLabel")} Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
+                            </span>
                           ) : p.is_flash_sale_active ? (
                             <span>
                               <span className="mr-1 text-app-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</span>
@@ -1451,7 +1463,7 @@ export default function DashboardProductsPage() {
                             // langsung pengguna, 20 Agustus 2026) -- 0 di sini
                             // berarti sengaja tidak diisi, bukan produk gratis
                             // Rp0 sungguhan (jenis lain harga tetap wajib >= 1000).
-                            <span className="text-app-muted">Tidak ditampilkan</span>
+                            <span className="text-app-muted">{t("dashboard.pages.products.notShown")}</span>
                           ) : (
                             <span className="font-bold text-app-ink">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                           )}
@@ -1463,7 +1475,7 @@ export default function DashboardProductsPage() {
                             checked={p.is_active}
                             onChange={() => handleToggleActive(p)}
                             disabled={!p.has_file && !p.is_active}
-                            label={`Aktifkan ${p.name}`}
+                            label={t("dashboard.pages.products.activateToggleLabel").replace("{name}", p.name)}
                           />
                         </td>
                         <td className="px-4 py-3 align-top text-right">
@@ -1472,7 +1484,7 @@ export default function DashboardProductsPage() {
                             onClick={() => setManageProductId(p.id)}
                             className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary"
                           >
-                            Kelola
+                            {t("dashboard.pages.products.manage")}
                           </button>
                         </td>
                       </tr>
@@ -1482,10 +1494,10 @@ export default function DashboardProductsPage() {
               </div>
             ) : products.length > 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
-                Tidak ada produk yang cocok dengan pencarian/filter ini.
+                {t("dashboard.pages.products.noProductsMatch")}
               </p>
             ) : (
-              <EmptyState className="mt-4" text='Belum ada produk -- klik "Tambah Produk" di atas untuk membuat yang pertama.' />
+              <EmptyState className="mt-4" text={t("dashboard.pages.products.emptyState")} />
             )}
 
             {totalPages > 1 && (
@@ -1496,7 +1508,7 @@ export default function DashboardProductsPage() {
                   onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
                 >
-                  Sebelumnya
+                  {t("dashboard.pages.products.pagination.previous")}
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                   <button
@@ -1516,7 +1528,7 @@ export default function DashboardProductsPage() {
                   onClick={() => setItemsPage((p) => Math.min(totalPages, p + 1))}
                   className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
                 >
-                  Berikutnya
+                  {t("dashboard.pages.products.pagination.next")}
                 </button>
               </div>
             )}
@@ -1534,14 +1546,14 @@ export default function DashboardProductsPage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
           >
-            <h2 className="font-heading text-sm font-bold text-app-ink">Toko Baru</h2>
-            <p className="mt-1 text-xs text-app-muted">Beri nama Toko-nya. Kamu bisa tambahkan produk & atur tampilannya setelah dibuat.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.products.newTokoModal.title")}</h2>
+            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.products.newTokoModal.description")}</p>
             <input
               type="text"
               autoFocus
               value={newTokoPageTitle}
               onChange={(e) => setNewTokoPageTitle(e.target.value)}
-              placeholder="Contoh: Toko Skincare"
+              placeholder={t("dashboard.pages.products.newTokoModal.namePlaceholder")}
               maxLength={80}
               className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             />
@@ -1551,14 +1563,14 @@ export default function DashboardProductsPage() {
                 onClick={() => setCreatingTokoPage(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
-                Batal
+                {t("dashboard.pages.products.newTokoModal.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={!newTokoPageTitle.trim() || savingNewTokoPage}
                 className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {savingNewTokoPage ? "Membuat..." : "Buat Toko"}
+                {savingNewTokoPage ? t("dashboard.pages.products.newTokoModal.creating") : t("dashboard.pages.products.newTokoModal.create")}
               </button>
             </div>
           </form>
@@ -1586,12 +1598,14 @@ export default function DashboardProductsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
-              <h2 className="font-heading text-sm font-bold text-app-ink">Kelola: {manageProduct.name}</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">
+                {t("dashboard.pages.products.manageModal.title").replace("{name}", manageProduct.name)}
+              </h2>
               <button
                 type="button"
                 onClick={closeManageModal}
                 className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
-                aria-label="Tutup"
+                aria-label={t("dashboard.pages.products.manageModal.close")}
               >
                 <IconClose className="h-4 w-4" />
               </button>
@@ -1602,13 +1616,13 @@ export default function DashboardProductsPage() {
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Kategori"
+                  placeholder={t("dashboard.pages.products.manageModal.categoryPlaceholder")}
                   value={categoryDraft}
                   onChange={(e) => setCategoryDraft(e.target.value)}
                   className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                 />
                 <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
-                  Batal
+                  {t("dashboard.pages.products.manageModal.cancel")}
                 </button>
                 <button
                   type="button"
@@ -1616,12 +1630,14 @@ export default function DashboardProductsPage() {
                   onClick={() => handleSaveCategory(manageProduct)}
                   className="btn-primary rounded-md px-2.5 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                 >
-                  {savingCategory ? "..." : "Simpan"}
+                  {savingCategory ? "..." : t("dashboard.pages.products.manageModal.save")}
                 </button>
               </div>
             ) : (
               <button type="button" onClick={() => openCategoryForm(manageProduct)} className="mt-2 text-[11px] font-semibold text-primary hover:underline">
-                {manageProduct.category ? `Kategori: ${manageProduct.category}` : "+ Atur kategori"}
+                {manageProduct.category
+                  ? t("dashboard.pages.products.manageModal.setCategoryPrefix").replace("{category}", manageProduct.category)
+                  : t("dashboard.pages.products.manageModal.setCategoryButton")}
               </button>
             )}
 
@@ -1643,10 +1659,10 @@ export default function DashboardProductsPage() {
                 gerbang aktivasi backend (product.go) menolak keduanya kalau
                 salah satu kosong. */}
             <p className="mt-4 text-[11px] leading-relaxed text-app-muted">
-              <strong className="text-app-ink">File Produk</strong> (pdf/zip/epub/mp4/mp3/mov/gambar) wajib diunggah
-              supaya bisa diaktifkan -- ini yang akan diterima pembeli (kecuali Payment Link/Link Eksternal, tidak
-              butuh file). <strong className="text-app-ink">Sampul</strong> WAJIB untuk semua jenis produk -- gambar
-              yang tampil di kartu produk halaman publik.
+              <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintProductFile")}</strong>{" "}
+              {t("dashboard.pages.products.manageModal.fileHintMiddle")}{" "}
+              <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintCover")}</strong>{" "}
+              {t("dashboard.pages.products.manageModal.fileHintEnd")}
             </p>
             <div className="mt-2.5 flex items-end gap-3">
               <div className="flex flex-shrink-0 flex-col items-center gap-1">
@@ -1654,7 +1670,11 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={coverBusyId === manageProduct.id}
                   onClick={() => coverInputRefs.current[manageProduct.id]?.click()}
-                  title={manageProduct.cover_image_url ? "Ganti sampul" : "Tambah sampul"}
+                  title={
+                    manageProduct.cover_image_url
+                      ? t("dashboard.pages.products.manageModal.changeCoverTitle")
+                      : t("dashboard.pages.products.manageModal.addCoverTitle")
+                  }
                   className="relative h-14 w-14 overflow-hidden rounded-xl bg-primary-subtle disabled:opacity-60"
                 >
                   {manageProduct.cover_image_url ? (
@@ -1669,7 +1689,7 @@ export default function DashboardProductsPage() {
                     <IconCamera className="h-2.5 w-2.5" />
                   </span>
                 </button>
-                <span className="text-[10px] font-semibold text-app-muted">Sampul (wajib)</span>
+                <span className="text-[10px] font-semibold text-app-muted">{t("dashboard.pages.products.manageModal.coverRequiredLabel")}</span>
               </div>
               <input
                 ref={(el) => {
@@ -1708,13 +1728,15 @@ export default function DashboardProductsPage() {
                     }`}
                   >
                     {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
-                    {manageProduct.has_file ? "File Produk terunggah" : "Unggah File Produk (wajib)"}
+                    {manageProduct.has_file
+                      ? t("dashboard.pages.products.manageModal.fileUploaded")
+                      : t("dashboard.pages.products.manageModal.uploadFileRequired")}
                   </button>
                   {manageProduct.has_file && (
                     <button
                       type="button"
                       onClick={() => handleGetDownloadLink(manageProduct.id)}
-                      title="Lihat file"
+                      title={t("dashboard.pages.products.manageModal.viewFileTitle")}
                       className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
                     >
                       <IconExternal className="h-4 w-4" />
@@ -1724,7 +1746,7 @@ export default function DashboardProductsPage() {
                     <button
                       type="button"
                       onClick={() => handleToggleWatermark(manageProduct)}
-                      title="Watermark otomatis (email pembeli + ID pesanan)"
+                      title={t("dashboard.pages.products.manageModal.watermarkTitle")}
                       className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-primary-subtle ${
                         manageProduct.watermark_enabled ? "text-primary" : "text-app-muted"
                       }`}
@@ -1740,11 +1762,11 @@ export default function DashboardProductsPage() {
               {flashSaleEditId === manageProduct.id ? (
                 <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                    <IconSparkle className="h-3.5 w-3.5" /> Flash Sale
+                    <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.flashSaleLabel")}
                   </p>
                   <input
                     type="number"
-                    placeholder="Harga flash sale (Rp)"
+                    placeholder={t("dashboard.pages.products.manageModal.flashPricePlaceholder")}
                     value={flashPrice}
                     onChange={(e) => setFlashPrice(e.target.value)}
                     className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
@@ -1765,7 +1787,7 @@ export default function DashboardProductsPage() {
                   </div>
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
-                      Batal
+                      {t("dashboard.pages.products.manageModal.cancel")}
                     </button>
                     <button
                       type="button"
@@ -1773,17 +1795,20 @@ export default function DashboardProductsPage() {
                       onClick={() => handleSaveFlashSale(manageProduct)}
                       className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                     >
-                      {savingFlashSale ? "Menyimpan..." : "Simpan"}
+                      {savingFlashSale ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
                     </button>
                   </div>
                 </div>
               ) : manageProduct.is_flash_sale_active ? (
                 <div className="flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
                   <span className="text-[11px] font-semibold text-accent-dark">
-                    Flash sale sampai {manageProduct.flash_sale_ends_at && new Date(manageProduct.flash_sale_ends_at).toLocaleString("id-ID")}
+                    {t("dashboard.pages.products.manageModal.flashSaleUntil").replace(
+                      "{date}",
+                      manageProduct.flash_sale_ends_at ? new Date(manageProduct.flash_sale_ends_at).toLocaleString("id-ID") : ""
+                    )}
                   </span>
                   <button type="button" onClick={() => handleClearFlashSale(manageProduct)} className="text-[11px] font-bold text-red-600 hover:underline">
-                    Batalkan
+                    {t("dashboard.pages.products.manageModal.cancelAction")}
                   </button>
                 </div>
               ) : (
@@ -1792,25 +1817,25 @@ export default function DashboardProductsPage() {
                   onClick={() => openFlashSaleForm(manageProduct)}
                   className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                 >
-                  <IconSparkle className="h-3.5 w-3.5" /> Jadwalkan Flash Sale
+                  <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.scheduleFlashSale")}
                 </button>
               )}
 
               {pwywEditId === manageProduct.id ? (
                 <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                    <IconWallet className="h-3.5 w-3.5" /> Bayar Seikhlasnya
+                    <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.pwywLabel")}
                   </p>
                   <input
                     type="number"
-                    placeholder="Harga minimum (Rp)"
+                    placeholder={t("dashboard.pages.products.manageModal.pwywMinPricePlaceholder")}
                     value={pwywMinPrice}
                     onChange={(e) => setPwywMinPrice(e.target.value)}
                     className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
-                      Batal
+                      {t("dashboard.pages.products.manageModal.cancel")}
                     </button>
                     <button
                       type="button"
@@ -1818,17 +1843,20 @@ export default function DashboardProductsPage() {
                       onClick={() => handleSavePwyw(manageProduct)}
                       className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                     >
-                      {savingPwyw ? "Menyimpan..." : "Simpan"}
+                      {savingPwyw ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
                     </button>
                   </div>
                 </div>
               ) : manageProduct.pwyw_enabled ? (
                 <div className="flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
                   <span className="text-[11px] font-semibold text-secondary-dark">
-                    Bayar seikhlasnya aktif, min Rp{(manageProduct.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
+                    {t("dashboard.pages.products.manageModal.pwywActiveMin").replace(
+                      "{amount}",
+                      (manageProduct.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")
+                    )}
                   </span>
                   <button type="button" onClick={() => handleClearPwyw(manageProduct)} className="text-[11px] font-bold text-red-600 hover:underline">
-                    Batalkan
+                    {t("dashboard.pages.products.manageModal.cancelAction")}
                   </button>
                 </div>
               ) : (
@@ -1837,16 +1865,14 @@ export default function DashboardProductsPage() {
                   onClick={() => openPwywForm(manageProduct)}
                   className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                 >
-                  <IconWallet className="h-3.5 w-3.5" /> Aktifkan Bayar Seikhlasnya
+                  <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.activatePwyw")}
                 </button>
               )}
 
               {activeCollaborators.length > 0 &&
                 (splitsEditId === manageProduct.id ? (
                   <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                    <p className="text-[11px] text-app-muted">
-                      Bagian pendapatan otomatis ke kolaborator setiap produk ini terjual (dipotong dari bagianmu).
-                    </p>
+                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>
                     {splitRows.map((row, i) => (
                       <div key={i} className="flex gap-1.5">
                         <select
@@ -1854,7 +1880,7 @@ export default function DashboardProductsPage() {
                           onChange={(e) => updateSplitRow(i, { user_id: e.target.value })}
                           className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         >
-                          <option value="">Pilih kolaborator</option>
+                          <option value="">{t("dashboard.pages.products.manageModal.chooseCollaborator")}</option>
                           {activeCollaborators.map((c) => (
                             <option key={c.collaborator_user_id} value={c.collaborator_user_id}>
                               {c.email}
@@ -1885,11 +1911,11 @@ export default function DashboardProductsPage() {
                       onClick={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
                       className="self-start text-[11px] font-semibold text-primary hover:underline"
                     >
-                      + Tambah kolaborator
+                      {t("dashboard.pages.products.manageModal.addCollaborator")}
                     </button>
                     <div className="flex gap-1.5">
                       <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
-                        Batal
+                        {t("dashboard.pages.products.manageModal.cancel")}
                       </button>
                       <button
                         type="button"
@@ -1897,18 +1923,19 @@ export default function DashboardProductsPage() {
                         onClick={() => handleSaveSplits(manageProduct)}
                         className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                       >
-                        {savingSplits ? "Menyimpan..." : "Simpan"}
+                        {savingSplits ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
                       </button>
                     </div>
                   </div>
                 ) : manageProduct.collaborator_splits.length > 0 ? (
                   <div className="flex items-center justify-between rounded-lg bg-primary-subtle px-2.5 py-1.5">
                     <span className="text-[11px] font-semibold text-primary">
-                      {manageProduct.collaborator_splits.length} kolaborator berbagi{" "}
-                      {manageProduct.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)}% pendapatan
+                      {t("dashboard.pages.products.manageModal.collaboratorsShare")
+                        .replace("{count}", String(manageProduct.collaborator_splits.length))
+                        .replace("{percent}", String(manageProduct.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)))}
                     </span>
                     <button type="button" onClick={() => openSplitsForm(manageProduct)} className="text-[11px] font-bold text-primary hover:underline">
-                      Ubah
+                      {t("dashboard.pages.products.manageModal.change")}
                     </button>
                   </div>
                 ) : (
@@ -1917,7 +1944,7 @@ export default function DashboardProductsPage() {
                     onClick={() => openSplitsForm(manageProduct)}
                     className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                   >
-                    <IconUsers className="h-3.5 w-3.5" /> Atur Split Kolaborator
+                    <IconUsers className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.setSplits")}
                   </button>
                 ))}
             </div>
@@ -1928,7 +1955,7 @@ export default function DashboardProductsPage() {
             {manageProduct.product_kind === "external_link" && (
               <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                 <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                  <IconExternal className="h-3.5 w-3.5" /> Tautan Produk
+                  <IconExternal className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.productLinkLabel")}
                 </p>
                 {externalUrlEditId === manageProduct.id ? (
                   <>
@@ -1946,14 +1973,14 @@ export default function DashboardProductsPage() {
                         onClick={() => handleSaveExternalUrl(manageProduct)}
                         className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                       >
-                        {savingExternalUrl ? "Menyimpan..." : "Simpan"}
+                        {savingExternalUrl ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setExternalUrlEditId(null)}
                         className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted hover:border-ink/30"
                       >
-                        Batal
+                        {t("dashboard.pages.products.manageModal.cancel")}
                       </button>
                     </div>
                   </>
@@ -1968,7 +1995,7 @@ export default function DashboardProductsPage() {
                       }}
                       className="flex-shrink-0 text-[11px] font-bold text-primary hover:underline"
                     >
-                      Ubah
+                      {t("dashboard.pages.products.manageModal.change")}
                     </button>
                   </div>
                 )}
@@ -1990,7 +2017,7 @@ export default function DashboardProductsPage() {
               className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               <IconTrash className="h-3.5 w-3.5" />
-              Hapus Produk
+              {t("dashboard.pages.products.manageModal.deleteProduct")}
             </button>
           </div>
         </div>

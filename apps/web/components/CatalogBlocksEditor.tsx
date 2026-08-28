@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { CatalogItem, EmbeddedCatalogBlock } from "@/lib/api-client";
 import { IconBook, IconGrid, IconLock, IconMapPin, IconPlayCircle, IconPlus, IconTextLines, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 // CatalogBlocksEditor/CatalogNodeEditor -- permintaan langsung pengguna, 27
 // Agustus 2026: "saya mau di blok katalog bisa menambahkan semua blok yang
@@ -34,13 +35,26 @@ import { confirmDelete } from "@/lib/confirm";
 // huruf yang diketik memicu PATCH block_data.items UTUH ke backend --
 // boros, dan kalau 2 field diketik nyaris bersamaan bisa saling balapan.
 // onBlur cuma terpicu sekali per field, setelah kreator selesai mengetik.
-const EMBEDDABLE_TYPES: { type: EmbeddedCatalogBlock["block_type"]; label: string; Icon: (p: { className?: string }) => React.ReactElement; premiumOnly?: boolean }[] = [
-  { type: "text", label: "Teks", Icon: IconTextLines },
-  { type: "faq", label: "FAQ", Icon: IconBook },
-  { type: "video", label: "Video", Icon: IconPlayCircle },
-  { type: "maps", label: "Lokasi", Icon: IconMapPin },
-  { type: "catalog", label: "Katalog (bersarang)", Icon: IconGrid, premiumOnly: true },
-];
+type EmbeddableTypeOption = {
+  type: EmbeddedCatalogBlock["block_type"];
+  label: string;
+  Icon: (p: { className?: string }) => React.ReactElement;
+  premiumOnly?: boolean;
+};
+
+// buildEmbeddableTypes -- fungsi (bukan konstanta modul lagi), mengikuti
+// pola buildNavItems() di dashboard/layout.tsx: dipanggil ulang tiap
+// render di dalam komponen yang sudah punya akses ke t(), supaya label
+// tipe blok ikut berganti bahasa.
+function buildEmbeddableTypes(t: (key: string) => string): EmbeddableTypeOption[] {
+  return [
+    { type: "text", label: t("dashboard.components.catalogBlocksEditor.typeText"), Icon: IconTextLines },
+    { type: "faq", label: t("dashboard.components.catalogBlocksEditor.typeFaq"), Icon: IconBook },
+    { type: "video", label: t("dashboard.components.catalogBlocksEditor.typeVideo"), Icon: IconPlayCircle },
+    { type: "maps", label: t("dashboard.components.catalogBlocksEditor.typeMaps"), Icon: IconMapPin },
+    { type: "catalog", label: t("dashboard.components.catalogBlocksEditor.typeCatalog"), Icon: IconGrid, premiumOnly: true },
+  ];
+}
 
 // maxCatalogDepth/maxCatalogItemBlocks -- SATU sumber kebenaran ANGKA di
 // backend (links.go), nilai di sini HANYA untuk teks/progres UI & mencegah
@@ -72,25 +86,37 @@ function CatalogBlockTypePicker({
   onPick: (type: EmbeddedCatalogBlock["block_type"]) => void;
 }) {
   const router = useRouter();
+  const { t } = useLocale();
+  const embeddableTypes = buildEmbeddableTypes(t);
   return (
     <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-      {EMBEDDABLE_TYPES.map((t) => {
-        const locked = !!t.premiumOnly && !isPremium;
+      {embeddableTypes.map((opt) => {
+        const locked = !!opt.premiumOnly && !isPremium;
         return (
           <button
-            key={t.type}
+            key={opt.type}
             type="button"
             disabled={disabled && !locked}
-            onClick={() => (locked ? router.push("/dashboard/settings/subscription") : onPick(t.type))}
-            title={locked ? "Khusus kreator Premium" : disabled ? "Sudah mencapai batas" : undefined}
+            onClick={() => (locked ? router.push("/dashboard/settings/subscription") : onPick(opt.type))}
+            title={
+              locked
+                ? t("dashboard.components.catalogBlocksEditor.premiumOnlyTitle")
+                : disabled
+                  ? t("dashboard.components.catalogBlocksEditor.atLimitTitle")
+                  : undefined
+            }
             className={`flex flex-col items-center gap-1 rounded-xl border border-app-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 ${
               locked ? "relative" : ""
             }`}
           >
-            {locked ? <IconLock className="h-4 w-4 text-app-muted" /> : <t.Icon className="h-4 w-4" />}
+            {locked ? <IconLock className="h-4 w-4 text-app-muted" /> : <opt.Icon className="h-4 w-4" />}
             <span>
-              {t.label}
-              {locked && <span className="block text-[9px] text-app-muted">Premium</span>}
+              {opt.label}
+              {locked && (
+                <span className="block text-[9px] text-app-muted">
+                  {t("dashboard.components.catalogBlocksEditor.premiumBadge")}
+                </span>
+              )}
             </span>
           </button>
         );
@@ -116,11 +142,14 @@ export function CatalogBlocksEditor({
   depth: number;
   onChange: (blocks: EmbeddedCatalogBlock[]) => void;
 }) {
+  const { t } = useLocale();
+  const embeddableTypes = buildEmbeddableTypes(t);
+
   function addBlock(type: EmbeddedCatalogBlock["block_type"]) {
     const next: EmbeddedCatalogBlock = {
       id: crypto.randomUUID(),
       block_type: type,
-      title: EMBEDDABLE_TYPES.find((t) => t.type === type)?.label ?? type,
+      title: embeddableTypes.find((opt) => opt.type === type)?.label ?? type,
       url: type === "maps" ? "" : undefined,
       block_data: emptyBlockData(type),
     };
@@ -132,7 +161,9 @@ export function CatalogBlocksEditor({
   }
 
   async function removeBlock(id: string) {
-    const ok = await confirmDelete("Hapus blok ini dari item katalog?", { title: "Hapus Blok" });
+    const ok = await confirmDelete(t("dashboard.components.catalogBlocksEditor.confirmDeleteBlockText"), {
+      title: t("dashboard.components.catalogBlocksEditor.confirmDeleteBlockTitle"),
+    });
     if (!ok) return;
     onChange(blocks.filter((b) => b.id !== id));
   }
@@ -141,7 +172,9 @@ export function CatalogBlocksEditor({
 
   return (
     <div className="mt-3 flex flex-col gap-2.5 rounded-xl border border-dashed border-app-border p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">Blok Tambahan di Item Ini</p>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">
+        {t("dashboard.components.catalogBlocksEditor.additionalBlocksTitle")}
+      </p>
 
       {blocks.map((block) => (
         <div key={block.id} className="rounded-lg border border-app-border bg-app-surface p-2.5">
@@ -149,11 +182,16 @@ export function CatalogBlocksEditor({
             <input
               defaultValue={block.title}
               onBlur={(e) => updateBlock(block.id, { title: e.target.value })}
-              placeholder="Judul blok"
-              aria-label="Judul blok tertanam"
+              placeholder={t("dashboard.components.catalogBlocksEditor.blockTitlePlaceholder")}
+              aria-label={t("dashboard.components.catalogBlocksEditor.blockTitleAriaLabel")}
               className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => removeBlock(block.id)} aria-label="Hapus blok" className="flex-shrink-0 text-app-muted hover:text-red-600">
+            <button
+              type="button"
+              onClick={() => removeBlock(block.id)}
+              aria-label={t("dashboard.components.catalogBlocksEditor.removeBlockAriaLabel")}
+              className="flex-shrink-0 text-app-muted hover:text-red-600"
+            >
               <IconTrash className="h-4 w-4" />
             </button>
           </div>
@@ -162,8 +200,8 @@ export function CatalogBlocksEditor({
             <textarea
               defaultValue={(block.block_data.text as string) ?? ""}
               onBlur={(e) => updateBlock(block.id, { block_data: { ...block.block_data, text: e.target.value } })}
-              placeholder="Isi teks"
-              aria-label="Isi teks blok"
+              placeholder={t("dashboard.components.catalogBlocksEditor.textContentPlaceholder")}
+              aria-label={t("dashboard.components.catalogBlocksEditor.textContentAriaLabel")}
               rows={2}
               className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
@@ -173,8 +211,8 @@ export function CatalogBlocksEditor({
             <input
               defaultValue={(block.block_data.video_url as string) ?? ""}
               onBlur={(e) => updateBlock(block.id, { block_data: { ...block.block_data, video_url: e.target.value } })}
-              placeholder="URL video YouTube/TikTok"
-              aria-label="URL video"
+              placeholder={t("dashboard.components.catalogBlocksEditor.videoUrlPlaceholder")}
+              aria-label={t("dashboard.components.catalogBlocksEditor.videoUrlAriaLabel")}
               className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
           )}
@@ -184,11 +222,11 @@ export function CatalogBlocksEditor({
               <input
                 defaultValue={block.url ?? ""}
                 onBlur={(e) => updateBlock(block.id, { url: e.target.value })}
-                placeholder="Tautan Google Maps"
-                aria-label="Tautan Google Maps"
+                placeholder={t("dashboard.components.catalogBlocksEditor.mapsUrlLabel")}
+                aria-label={t("dashboard.components.catalogBlocksEditor.mapsUrlLabel")}
                 className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
               />
-              <p className="text-[10px] text-app-muted">Selalu tautan langsung -- mode peta tertanam belum didukung di dalam item katalog.</p>
+              <p className="text-[10px] text-app-muted">{t("dashboard.components.catalogBlocksEditor.mapsHint")}</p>
             </div>
           )}
 
@@ -201,7 +239,7 @@ export function CatalogBlocksEditor({
 
           {block.block_type === "catalog" && (
             <div className="mt-2">
-              <p className="mb-1.5 text-[10.5px] text-app-muted">Item di dalam katalog bersarang ini:</p>
+              <p className="mb-1.5 text-[10.5px] text-app-muted">{t("dashboard.components.catalogBlocksEditor.nestedCatalogHint")}</p>
               <CatalogNodeEditor
                 items={(block.block_data.items as CatalogItem[]) ?? []}
                 isPremium={isPremium}
@@ -215,7 +253,9 @@ export function CatalogBlocksEditor({
 
       {atLimit ? (
         <p className="text-[10.5px] text-app-muted">
-          {depth >= maxCatalogDepth ? "Sudah mencapai batas maksimal kedalaman katalog." : `Maksimal ${maxCatalogItemBlocks} blok tertanam per item.`}
+          {depth >= maxCatalogDepth
+            ? t("dashboard.components.catalogBlocksEditor.maxDepthReached")
+            : t("dashboard.components.catalogBlocksEditor.maxBlocksReached").replace("{max}", String(maxCatalogItemBlocks))}
         </p>
       ) : (
         <CatalogBlockTypePicker isPremium={isPremium} disabled={atLimit} onPick={addBlock} />
@@ -241,8 +281,13 @@ export function CatalogNodeEditor({
   depth: number;
   onChange: (items: CatalogItem[]) => void;
 }) {
+  const { t } = useLocale();
+
   function addItem() {
-    onChange([...items, { id: crypto.randomUUID(), title: "Item baru", description: "", images: [] }]);
+    onChange([
+      ...items,
+      { id: crypto.randomUUID(), title: t("dashboard.components.catalogBlocksEditor.defaultItemTitle"), description: "", images: [] },
+    ]);
   }
 
   function updateItem(id: string, patch: Partial<CatalogItem>) {
@@ -250,7 +295,9 @@ export function CatalogNodeEditor({
   }
 
   async function removeItem(id: string) {
-    const ok = await confirmDelete("Hapus item ini dari katalog bersarang?", { title: "Hapus Item" });
+    const ok = await confirmDelete(t("dashboard.components.catalogBlocksEditor.confirmDeleteItemText"), {
+      title: t("dashboard.components.catalogBlocksEditor.confirmDeleteItemTitle"),
+    });
     if (!ok) return;
     onChange(items.filter((it) => it.id !== id));
   }
@@ -263,19 +310,24 @@ export function CatalogNodeEditor({
             <input
               defaultValue={item.title}
               onBlur={(e) => updateItem(item.id, { title: e.target.value })}
-              placeholder="Judul item"
-              aria-label="Judul item katalog bersarang"
+              placeholder={t("dashboard.components.catalogBlocksEditor.itemTitlePlaceholder")}
+              aria-label={t("dashboard.components.catalogBlocksEditor.itemTitleAriaLabel")}
               className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => removeItem(item.id)} aria-label="Hapus item" className="flex-shrink-0 text-app-muted hover:text-red-600">
+            <button
+              type="button"
+              onClick={() => removeItem(item.id)}
+              aria-label={t("dashboard.components.catalogBlocksEditor.removeItemAriaLabel")}
+              className="flex-shrink-0 text-app-muted hover:text-red-600"
+            >
               <IconTrash className="h-4 w-4" />
             </button>
           </div>
           <textarea
             defaultValue={item.description}
             onBlur={(e) => updateItem(item.id, { description: e.target.value })}
-            placeholder="Deskripsi item (opsional)"
-            aria-label="Deskripsi item katalog bersarang"
+            placeholder={t("dashboard.components.catalogBlocksEditor.itemDescriptionPlaceholder")}
+            aria-label={t("dashboard.components.catalogBlocksEditor.itemDescriptionAriaLabel")}
             rows={2}
             className="mt-1.5 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
           />
@@ -287,7 +339,7 @@ export function CatalogNodeEditor({
         onClick={addItem}
         className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
-        <IconPlus className="h-3.5 w-3.5" /> Tambah Item
+        <IconPlus className="h-3.5 w-3.5" /> {t("dashboard.components.catalogBlocksEditor.addItemButton")}
       </button>
     </div>
   );
@@ -304,6 +356,8 @@ function FaqEmbeddedEditor({
   items: FaqQA[];
   onChange: (items: FaqQA[]) => void;
 }) {
+  const { t } = useLocale();
+
   function update(i: number, patch: Partial<FaqQA>) {
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }
@@ -322,19 +376,24 @@ function FaqEmbeddedEditor({
             <input
               defaultValue={qa.question}
               onBlur={(e) => update(i, { question: e.target.value })}
-              placeholder="Pertanyaan"
-              aria-label={`Pertanyaan FAQ ${i + 1}`}
+              placeholder={t("dashboard.components.catalogBlocksEditor.questionPlaceholder")}
+              aria-label={t("dashboard.components.catalogBlocksEditor.questionAriaLabel").replace("{n}", String(i + 1))}
               className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => remove(i)} aria-label="Hapus pertanyaan" className="flex-shrink-0 text-app-muted hover:text-red-600">
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              aria-label={t("dashboard.components.catalogBlocksEditor.removeQuestionAriaLabel")}
+              className="flex-shrink-0 text-app-muted hover:text-red-600"
+            >
               <IconTrash className="h-3.5 w-3.5" />
             </button>
           </div>
           <textarea
             defaultValue={qa.answer}
             onBlur={(e) => update(i, { answer: e.target.value })}
-            placeholder="Jawaban"
-            aria-label={`Jawaban FAQ ${i + 1}`}
+            placeholder={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}
+            aria-label={t("dashboard.components.catalogBlocksEditor.answerAriaLabel").replace("{n}", String(i + 1))}
             rows={2}
             className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
           />
@@ -345,7 +404,7 @@ function FaqEmbeddedEditor({
         onClick={() => onChange([...items, { question: "", answer: "" }])}
         className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-app-border py-1.5 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
-        <IconPlus className="h-3 w-3" /> Tambah Pertanyaan
+        <IconPlus className="h-3 w-3" /> {t("dashboard.components.catalogBlocksEditor.addQuestionButton")}
       </button>
     </div>
   );

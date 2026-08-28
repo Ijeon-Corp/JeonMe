@@ -4,13 +4,16 @@ import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, KycStatus, getKycStatus, submitKyc } from "@/lib/api-client";
 import { IconCheck, IconShield, IconUpload } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
-const STATUS_LABEL: Record<KycStatus["status"], string> = {
-  unverified: "Belum diajukan",
-  pending: "Menunggu review",
-  verified: "Terverifikasi",
-  rejected: "Ditolak",
-};
+function buildStatusLabel(t: (key: string) => string): Record<KycStatus["status"], string> {
+  return {
+    unverified: t("dashboard.pages.kyc.status.unverified"),
+    pending: t("dashboard.pages.kyc.status.pending"),
+    verified: t("dashboard.pages.kyc.status.verified"),
+    rejected: t("dashboard.pages.kyc.status.rejected"),
+  };
+}
 
 const STATUS_BADGE_CLASS: Record<KycStatus["status"], string> = {
   unverified: "bg-gray-100 text-app-muted",
@@ -20,6 +23,8 @@ const STATUS_BADGE_CLASS: Record<KycStatus["status"], string> = {
 };
 
 export default function DashboardKycPage() {
+  const { t } = useLocale();
+  const STATUS_LABEL = buildStatusLabel(t);
   const [status, setStatus] = useState<KycStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +53,7 @@ export default function DashboardKycPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat status KYC."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.kyc.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,11 +64,11 @@ export default function DashboardKycPage() {
     const bankProof = bankProofInputRef.current?.files?.[0];
 
     if (!fullNameKtp.trim() || !bankAccountName.trim() || !domicileAddress.trim() || !businessDescription.trim() || !promotionChannels.trim()) {
-      setError("Semua kolom teks wajib diisi.");
+      setError(t("dashboard.pages.kyc.allFieldsRequiredError"));
       return;
     }
     if (!ktpPhoto || !selfiePhoto || !bankProof) {
-      setError("Foto KTP, foto selfie, dan bukti rekening wajib diunggah.");
+      setError(t("dashboard.pages.kyc.filesRequiredError"));
       return;
     }
 
@@ -82,7 +87,7 @@ export default function DashboardKycPage() {
       });
       await reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengirim pengajuan KYC.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.kyc.submitError"));
     } finally {
       setSubmitting(false);
     }
@@ -94,10 +99,7 @@ export default function DashboardKycPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-app-muted">
-        Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeon.id. Akun
-        yang belum terverifikasi tetap bisa berjualan dan menarik dana -- hanya diproses belakangan.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.kyc.intro")}</p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -112,20 +114,18 @@ export default function DashboardKycPage() {
 
           {status.status === "rejected" && status.rejection_reason && (
             <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
-              Alasan penolakan: {status.rejection_reason}
+              {t("dashboard.pages.kyc.rejectionReasonPrefix")} {status.rejection_reason}
             </p>
           )}
 
           {status.status === "pending" && (
-            <p className="mt-3 text-xs text-app-muted">
-              Pengajuanmu sedang direview, SLA 3x24 jam hari kerja. Kamu akan bisa mengajukan ulang kalau ditolak.
-            </p>
+            <p className="mt-3 text-xs text-app-muted">{t("dashboard.pages.kyc.pendingNote")}</p>
           )}
 
           {status.status === "verified" && (
             <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-secondary-dark">
               <IconCheck className="h-3.5 w-3.5" />
-              Akunmu sudah terverifikasi.
+              {t("dashboard.pages.kyc.verifiedNote")}
             </p>
           )}
         </section>
@@ -134,11 +134,11 @@ export default function DashboardKycPage() {
       {canSubmit && (
         <form onSubmit={handleSubmit} className="glass mt-4 flex flex-col gap-3 rounded-3xl p-5 shadow-card">
           <p className="text-xs font-bold uppercase tracking-wider text-app-muted">
-            Syarat: halaman sudah punya minimal 1 produk aktif
+            {t("dashboard.pages.kyc.requirementNote")}
           </p>
 
           <label className="text-xs font-semibold text-app-ink">
-            Nama lengkap (sesuai KTP)
+            {t("dashboard.pages.kyc.fullNameLabel")}
             <input
               type="text"
               value={fullNameKtp}
@@ -148,7 +148,7 @@ export default function DashboardKycPage() {
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Nama pemilik rekening bank (harus sama dengan nama KTP)
+            {t("dashboard.pages.kyc.bankAccountNameLabel")}
             <input
               type="text"
               value={bankAccountName}
@@ -158,7 +158,7 @@ export default function DashboardKycPage() {
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Alamat domisili lengkap
+            {t("dashboard.pages.kyc.domicileAddressLabel")}
             <textarea
               value={domicileAddress}
               onChange={(e) => setDomicileAddress(e.target.value)}
@@ -168,7 +168,7 @@ export default function DashboardKycPage() {
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Penjelasan bisnis/produk yang dijual
+            {t("dashboard.pages.kyc.businessDescriptionLabel")}
             <textarea
               value={businessDescription}
               onChange={(e) => setBusinessDescription(e.target.value)}
@@ -178,7 +178,7 @@ export default function DashboardKycPage() {
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Kanal promosi (mis. Instagram, TikTok, WhatsApp)
+            {t("dashboard.pages.kyc.promotionChannelsLabel")}
             <input
               type="text"
               value={promotionChannels}
@@ -188,17 +188,17 @@ export default function DashboardKycPage() {
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Foto KTP
+            {t("dashboard.pages.kyc.ktpPhotoLabel")}
             <input ref={ktpInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="mt-1 w-full text-xs" />
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Foto selfie sambil memegang KTP
+            {t("dashboard.pages.kyc.selfiePhotoLabel")}
             <input ref={selfieInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="mt-1 w-full text-xs" />
           </label>
 
           <label className="text-xs font-semibold text-app-ink">
-            Bukti rekening (buku tabungan/e-statement)
+            {t("dashboard.pages.kyc.bankProofLabel")}
             <input ref={bankProofInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="mt-1 w-full text-xs" />
           </label>
 
@@ -208,7 +208,7 @@ export default function DashboardKycPage() {
             className="btn-primary mt-2 flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             <IconUpload className="h-4 w-4" />
-            {submitting ? "Mengirim..." : "Ajukan Verifikasi"}
+            {submitting ? t("dashboard.pages.kyc.submittingButton") : t("dashboard.pages.kyc.submitButton")}
           </button>
         </form>
       )}

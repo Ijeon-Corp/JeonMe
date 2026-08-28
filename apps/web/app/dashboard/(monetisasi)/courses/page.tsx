@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   CourseChapterInput,
@@ -22,6 +23,7 @@ import { confirmDelete } from "@/lib/confirm";
 const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_url: "" };
 
 export default function DashboardCoursesPage() {
+  const { t } = useLocale();
   const [courses, setCourses] = useState<DashboardCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function DashboardCoursesPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat kursus."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -61,11 +63,11 @@ export default function DashboardCoursesPage() {
     e.preventDefault();
     const price = Number(priceIDR);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama kursus wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.courses.errors.nameAndPriceRequired"));
       return;
     }
     if (chapters.some((ch) => !ch.title.trim() || !ch.video_url.trim())) {
-      setError("Semua bab wajib punya judul dan tautan video.");
+      setError(t("dashboard.pages.courses.errors.chaptersRequired"));
       return;
     }
     setError(null);
@@ -76,7 +78,7 @@ export default function DashboardCoursesPage() {
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat kursus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -89,12 +91,12 @@ export default function DashboardCoursesPage() {
       await updateProduct(course.id, { is_active: nextActive });
     } catch (err) {
       setCourses((prev) => prev.map((c) => (c.id === course.id ? { ...c, is_active: course.is_active } : c)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui status kursus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.updateStatusFailed"));
     }
   }
 
   async function handleDelete(course: DashboardCourse) {
-    if (!(await confirmDelete(`Hapus kursus "${course.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.courses.confirmDeleteText").replace("{name}", course.name)))) return;
     const previous = courses;
     setCourses((prev) => prev.filter((c) => c.id !== course.id));
     setBusyId(course.id);
@@ -102,7 +104,7 @@ export default function DashboardCoursesPage() {
       await deleteProduct(course.id);
     } catch (err) {
       setCourses(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus kursus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.deleteFailed"));
     } finally {
       setBusyId(null);
     }
@@ -115,14 +117,14 @@ export default function DashboardCoursesPage() {
       const chs = await getCourseChapters(course.id);
       setEditChapters(chs.map((c: DashboardCourseChapter) => ({ title: c.title, description: c.description, video_url: c.video_url })));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat bab kursus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.loadChaptersFailed"));
       setEditingId(null);
     }
   }
 
   async function handleSaveChapters(courseId: string) {
     if (editChapters.some((ch) => !ch.title.trim() || !ch.video_url.trim())) {
-      setError("Semua bab wajib punya judul dan tautan video.");
+      setError(t("dashboard.pages.courses.errors.chaptersRequired"));
       return;
     }
     setError(null);
@@ -132,7 +134,7 @@ export default function DashboardCoursesPage() {
       await reload();
       setEditingId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan bab kursus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.saveChaptersFailed"));
     } finally {
       setSavingChapters(false);
     }
@@ -143,8 +145,7 @@ export default function DashboardCoursesPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Jual kursus video terstruktur per-bab dengan prasyarat & deskripsi pembelajaran. Video wajib tautan
-        YouTube atau TikTok.
+        {t("dashboard.pages.courses.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -157,23 +158,23 @@ export default function DashboardCoursesPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Buat Kursus
+            {t("dashboard.pages.courses.createButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Kursus</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.nameLabel")}</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Belajar Fotografi dari Nol"
+                placeholder={t("dashboard.pages.courses.namePlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi Pembelajaran</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.descriptionLabel")}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -182,17 +183,17 @@ export default function DashboardCoursesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Prasyarat (opsional)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.prerequisitesLabel")}</label>
               <input
                 type="text"
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
-                placeholder="Sudah punya kamera DSLR/mirrorless"
+                placeholder={t("dashboard.pages.courses.prerequisitesPlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.priceLabel")}</label>
               <input
                 type="number"
                 required
@@ -204,12 +205,12 @@ export default function DashboardCoursesPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bab Kursus</label>
+              <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.chaptersLabel")}</label>
               <div className="flex flex-col gap-3">
                 {chapters.map((ch, i) => (
                   <div key={i} className="rounded-lg border border-app-border p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-app-muted">Bab {i + 1}</p>
+                      <p className="text-xs font-bold text-app-muted">{t("dashboard.pages.courses.chapterN").replace("{n}", String(i + 1))}</p>
                       {chapters.length > 1 && (
                         <button
                           type="button"
@@ -222,7 +223,7 @@ export default function DashboardCoursesPage() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Judul bab"
+                      placeholder={t("dashboard.pages.courses.chapterTitlePlaceholder")}
                       value={ch.title}
                       onChange={(e) =>
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, title: e.target.value } : c)))
@@ -231,7 +232,7 @@ export default function DashboardCoursesPage() {
                     />
                     <input
                       type="text"
-                      placeholder="Tautan video (YouTube/TikTok)"
+                      placeholder={t("dashboard.pages.courses.chapterVideoPlaceholder")}
                       value={ch.video_url}
                       onChange={(e) =>
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, video_url: e.target.value } : c)))
@@ -239,7 +240,7 @@ export default function DashboardCoursesPage() {
                       className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <textarea
-                      placeholder="Deskripsi bab (opsional)"
+                      placeholder={t("dashboard.pages.courses.chapterDescriptionPlaceholder")}
                       value={ch.description}
                       onChange={(e) =>
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, description: e.target.value } : c)))
@@ -255,7 +256,7 @@ export default function DashboardCoursesPage() {
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-primary hover:border-primary"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
-                  Tambah Bab
+                  {t("dashboard.pages.courses.addChapter")}
                 </button>
               </div>
             </div>
@@ -269,14 +270,14 @@ export default function DashboardCoursesPage() {
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.courses.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Kursus"}
+                {creating ? t("dashboard.pages.courses.creating") : t("dashboard.pages.courses.createButton")}
               </button>
             </div>
           </form>
@@ -290,13 +291,13 @@ export default function DashboardCoursesPage() {
               <p className="text-sm font-bold text-app-ink">{course.name}</p>
               <span className="text-sm font-bold text-secondary-dark">Rp {course.price_idr.toLocaleString("id-ID")}</span>
             </div>
-            <p className="mt-1 text-xs text-app-muted">{course.chapter_count} bab</p>
-            {course.prerequisites && <p className="mt-1 text-xs text-app-muted">Prasyarat: {course.prerequisites}</p>}
+            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.chapterCount").replace("{count}", String(course.chapter_count))}</p>
+            {course.prerequisites && <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.prerequisitesPrefix").replace("{text}", course.prerequisites)}</p>}
 
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Toggle checked={course.is_active} onChange={() => handleToggleActive(course)} label={`Aktifkan ${course.name}`} />
-                <span className="text-xs font-semibold text-app-muted">Aktif</span>
+                <Toggle checked={course.is_active} onChange={() => handleToggleActive(course)} label={t("dashboard.pages.courses.activateAria").replace("{name}", course.name)} />
+                <span className="text-xs font-semibold text-app-muted">{t("dashboard.pages.courses.activeLabel")}</span>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -304,14 +305,14 @@ export default function DashboardCoursesPage() {
                   onClick={() => handleOpenEdit(course)}
                   className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary-subtle"
                 >
-                  Edit Bab
+                  {t("dashboard.pages.courses.editChapters")}
                   <IconChevronRight className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(course)}
                   disabled={busyId === course.id}
-                  title="Hapus kursus"
+                  title={t("dashboard.pages.courses.deleteTitle")}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-60"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -324,7 +325,7 @@ export default function DashboardCoursesPage() {
                 {editChapters.map((ch, i) => (
                   <div key={i} className="rounded-lg border border-app-border bg-app-surface p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-app-muted">Bab {i + 1}</p>
+                      <p className="text-xs font-bold text-app-muted">{t("dashboard.pages.courses.chapterN").replace("{n}", String(i + 1))}</p>
                       {editChapters.length > 1 && (
                         <button
                           type="button"
@@ -337,7 +338,7 @@ export default function DashboardCoursesPage() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Judul bab"
+                      placeholder={t("dashboard.pages.courses.chapterTitlePlaceholder")}
                       value={ch.title}
                       onChange={(e) =>
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, title: e.target.value } : c)))
@@ -346,7 +347,7 @@ export default function DashboardCoursesPage() {
                     />
                     <input
                       type="text"
-                      placeholder="Tautan video (YouTube/TikTok)"
+                      placeholder={t("dashboard.pages.courses.chapterVideoPlaceholder")}
                       value={ch.video_url}
                       onChange={(e) =>
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, video_url: e.target.value } : c)))
@@ -354,7 +355,7 @@ export default function DashboardCoursesPage() {
                       className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <textarea
-                      placeholder="Deskripsi bab (opsional)"
+                      placeholder={t("dashboard.pages.courses.chapterDescriptionPlaceholder")}
                       value={ch.description}
                       onChange={(e) =>
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, description: e.target.value } : c)))
@@ -370,7 +371,7 @@ export default function DashboardCoursesPage() {
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-primary hover:border-primary"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
-                  Tambah Bab
+                  {t("dashboard.pages.courses.addChapter")}
                 </button>
                 <div className="flex gap-2">
                   <button
@@ -378,7 +379,7 @@ export default function DashboardCoursesPage() {
                     onClick={() => setEditingId(null)}
                     className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
                   >
-                    Batal
+                    {t("dashboard.pages.courses.cancel")}
                   </button>
                   <button
                     type="button"
@@ -386,7 +387,7 @@ export default function DashboardCoursesPage() {
                     disabled={savingChapters}
                     className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
                   >
-                    {savingChapters ? "Menyimpan..." : "Simpan Bab"}
+                    {savingChapters ? t("dashboard.pages.courses.savingChapters") : t("dashboard.pages.courses.saveChapters")}
                   </button>
                 </div>
               </div>
@@ -394,7 +395,7 @@ export default function DashboardCoursesPage() {
           </div>
         ))}
 
-        {courses.length === 0 && <EmptyState text='Belum ada kursus -- klik "Buat Kursus" di atas untuk membuat yang pertama.' />}
+        {courses.length === 0 && <EmptyState text={t("dashboard.pages.courses.emptyCourses")} />}
       </div>
     </div>
   );

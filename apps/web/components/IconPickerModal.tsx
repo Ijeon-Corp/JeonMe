@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ICON_LIBRARY, LibraryIcon } from "@/lib/icon-library";
 import { IconClose, IconSearch } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // IconPickerModal -- permintaan langsung pengguna, 13 Agustus 2026: "saya
 // mau tambahkan untuk memilih icon untuk blok yang sudah disediakan dari
@@ -22,6 +23,7 @@ export default function IconPickerModal({
   onSelect: (icon: LibraryIcon) => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const [search, setSearch] = useState("");
   const searchLower = search.trim().toLowerCase();
 
@@ -42,7 +44,7 @@ export default function IconPickerModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
-          <h2 className="font-heading text-lg font-bold text-app-ink">Pilih Ikon</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.components.iconPickerModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
           </button>
@@ -54,7 +56,7 @@ export default function IconPickerModal({
             <input
               type="text"
               autoFocus
-              placeholder="Cari ikon (mis. kopi, musik, toko)"
+              placeholder={t("dashboard.components.iconPickerModal.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-transparent text-sm outline-none"
@@ -64,7 +66,7 @@ export default function IconPickerModal({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {grouped.size === 0 ? (
-            <p className="py-8 text-center text-sm text-app-muted">Ikon tidak ditemukan, coba kata kunci lain.</p>
+            <p className="py-8 text-center text-sm text-app-muted">{t("dashboard.components.iconPickerModal.noResults")}</p>
           ) : (
             Array.from(grouped.entries()).map(([category, icons]) => (
               <div key={category} className="mb-5 last:mb-0">

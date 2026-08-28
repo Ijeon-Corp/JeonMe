@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconClose, IconSearch } from "@/components/icons";
 import { SEARCH_INDEX } from "@/lib/search-index";
+import { useLocale } from "@/lib/locale-context";
 
 // Permintaan langsung pengguna: "saya mau tambahkan search global jadi
 // bisa mencari semua fitur yang ada di menu menu berdasarkan keyword" --
@@ -14,6 +15,7 @@ import { SEARCH_INDEX } from "@/lib/search-index";
 // atas label/deskripsi/keywords, tidak ada endpoint API baru (semua tujuan
 // pencarian sudah statis, tidak perlu query server).
 export default function GlobalSearch() {
+  const { t } = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,8 +94,8 @@ export default function GlobalSearch() {
       <button
         type="button"
         onClick={openPalette}
-        title="Cari menu (Ctrl+K)"
-        aria-label="Cari menu"
+        title={t("dashboard.components.globalSearch.triggerTitle")}
+        aria-label={t("dashboard.components.globalSearch.triggerLabel")}
         className="flex h-8 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
         <IconSearch className="h-3.5 w-3.5" />
@@ -104,7 +106,7 @@ export default function GlobalSearch() {
             lebar layar. Ditunda ke "lg:inline" (>=1024px) supaya tetap
             ikon-saja selama rentang tablet, sama seperti perilaku di bawah
             640px sebelumnya. */}
-        <span className="hidden lg:inline">Cari menu</span>
+        <span className="hidden lg:inline">{t("dashboard.components.globalSearch.triggerLabel")}</span>
         <span className="hidden rounded border border-app-border px-1 text-[10px] text-app-muted/70 lg:inline">Ctrl K</span>
       </button>
 
@@ -125,7 +127,7 @@ export default function GlobalSearch() {
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Cari fitur, mis. voucher, KYC, tema..."
+                placeholder={t("dashboard.components.globalSearch.searchPlaceholder")}
                 className="w-full bg-transparent text-sm outline-none"
               />
               <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-app-muted hover:text-app-ink">
@@ -135,7 +137,9 @@ export default function GlobalSearch() {
 
             <div className="flex-1 overflow-y-auto p-2">
               {results.length === 0 ? (
-                <p className="px-3 py-8 text-center text-xs text-app-muted">Tidak ada fitur yang cocok dengan &quot;{query}&quot;.</p>
+                <p className="px-3 py-8 text-center text-xs text-app-muted">
+                  {t("dashboard.components.globalSearch.noResults")} &quot;{query}&quot;.
+                </p>
               ) : (
                 results.map((item, i) => (
                   <button

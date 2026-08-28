@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   DashboardBundle,
@@ -18,6 +19,7 @@ import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardBundlesPage() {
+  const { t } = useLocale();
   const [bundles, setBundles] = useState<DashboardBundle[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function DashboardBundlesPage() {
         setBundles(b);
         setProducts(p);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat bundel."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.bundles.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -50,11 +52,11 @@ export default function DashboardBundlesPage() {
     e.preventDefault();
     const price = Number(priceIDR);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama bundel wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.bundles.errors.nameAndPriceRequired"));
       return;
     }
     if (productIds.length < 2) {
-      setError("Pilih minimal 2 produk untuk dijadikan bundel.");
+      setError(t("dashboard.pages.bundles.errors.minProductsRequired"));
       return;
     }
     setError(null);
@@ -66,7 +68,7 @@ export default function DashboardBundlesPage() {
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat bundel.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bundles.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -79,12 +81,12 @@ export default function DashboardBundlesPage() {
       await updateProduct(bundle.id, { is_active: nextActive });
     } catch (err) {
       setBundles((prev) => prev.map((b) => (b.id === bundle.id ? { ...b, is_active: bundle.is_active } : b)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui status bundel.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bundles.errors.updateStatusFailed"));
     }
   }
 
   async function handleDelete(bundle: DashboardBundle) {
-    if (!(await confirmDelete(`Hapus bundel "${bundle.name}"? Aksi ini tidak bisa dibatalkan.`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.bundles.confirmDeleteText").replace("{name}", bundle.name)))) return;
     const previous = bundles;
     setBundles((prev) => prev.filter((b) => b.id !== bundle.id));
     setBusyId(bundle.id);
@@ -92,7 +94,7 @@ export default function DashboardBundlesPage() {
       await deleteProduct(bundle.id);
     } catch (err) {
       setBundles(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus bundel.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bundles.errors.deleteFailed"));
     } finally {
       setBusyId(null);
     }
@@ -105,7 +107,7 @@ export default function DashboardBundlesPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Gabungkan beberapa produk aktif jadi satu paket dengan harga lebih murah dari jumlah aslinya.
+        {t("dashboard.pages.bundles.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -118,23 +120,23 @@ export default function DashboardBundlesPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Buat Bundel
+            {t("dashboard.pages.bundles.createButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Bundel</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bundles.nameLabel")}</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Paket Lengkap"
+                placeholder={t("dashboard.pages.bundles.namePlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga Bundel (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bundles.priceLabel")}</label>
               <input
                 type="number"
                 required
@@ -145,10 +147,10 @@ export default function DashboardBundlesPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-app-ink">Pilih minimal 2 produk aktif</label>
+              <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bundles.selectProductsLabel")}</label>
               <div className="flex flex-col gap-1.5 rounded-lg border border-app-border p-3">
                 {eligibleProducts.length === 0 && (
-                  <p className="text-xs text-app-muted">Belum ada produk aktif -- aktifkan produk dulu di halaman Produk.</p>
+                  <p className="text-xs text-app-muted">{t("dashboard.pages.bundles.noActiveProducts")}</p>
                 )}
                 {eligibleProducts.map((p) => (
                   <label key={p.id} className="flex items-center justify-between gap-2 text-xs text-app-ink">
@@ -179,14 +181,14 @@ export default function DashboardBundlesPage() {
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.bundles.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Bundel"}
+                {creating ? t("dashboard.pages.bundles.creating") : t("dashboard.pages.bundles.createButton")}
               </button>
             </div>
           </form>
@@ -206,14 +208,14 @@ export default function DashboardBundlesPage() {
             <p className="mt-1 text-xs text-app-muted">{b.item_names.join(", ")}</p>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Toggle checked={b.is_active} onChange={() => handleToggleActive(b)} label={`Aktifkan ${b.name}`} />
-                <span className="text-xs font-semibold text-app-muted">Aktif</span>
+                <Toggle checked={b.is_active} onChange={() => handleToggleActive(b)} label={t("dashboard.pages.bundles.activateAria").replace("{name}", b.name)} />
+                <span className="text-xs font-semibold text-app-muted">{t("dashboard.pages.bundles.activeLabel")}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleDelete(b)}
                 disabled={busyId === b.id}
-                title="Hapus bundel"
+                title={t("dashboard.pages.bundles.deleteTitle")}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
                 <IconTrash className="h-4 w-4" />
@@ -222,7 +224,7 @@ export default function DashboardBundlesPage() {
           </div>
         ))}
 
-        {bundles.length === 0 && <EmptyState text='Belum ada bundel -- klik "Buat Bundel" di atas untuk membuat yang pertama.' />}
+        {bundles.length === 0 && <EmptyState text={t("dashboard.pages.bundles.emptyBundles")} />}
       </div>
     </div>
   );

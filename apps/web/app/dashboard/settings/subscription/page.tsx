@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/components/Toast";
 import { IconCheck, IconChevronRight, IconStar } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Langganan Premium: menghilangkan watermark halaman publik + latar
 // kustom (theme="custom"). Harga BELUM keputusan bisnis final (placeholder,
@@ -27,6 +28,7 @@ import { confirmAction } from "@/lib/confirm";
 // langganan biasanya tiba dalam hitungan detik, jadi status sesaat setelah
 // redirect balik bisa saja masih "pending_card" -- lihat catatan di bawah).
 export default function SettingsSubscriptionPage() {
+  const { t } = useLocale();
   const { showToast } = useToast();
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,8 @@ export default function SettingsSubscriptionPage() {
   }
 
   useEffect(() => {
-    reload().catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat status langganan."));
+    reload().catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSubscription.loadError")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
   async function handleCheckout(plan: "monthly" | "yearly") {
@@ -47,15 +50,15 @@ export default function SettingsSubscriptionPage() {
       const res = await checkoutSubscription(plan);
       window.location.href = res.invoice_url;
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal memulai pembayaran, coba lagi.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSubscription.checkoutError"), "error");
       setCheckingOut(null);
     }
   }
 
   async function handleCancel() {
     if (
-      !(await confirmAction("Batalkan langganan Premium? Akses Premium tetap berlaku sampai akhir periode yang sudah dibayar.", {
-        confirmButtonText: "Ya, Batalkan",
+      !(await confirmAction(t("dashboard.pages.settingsSubscription.cancelConfirmText"), {
+        confirmButtonText: t("dashboard.pages.settingsSubscription.cancelConfirmButton"),
       }))
     ) {
       return;
@@ -64,9 +67,9 @@ export default function SettingsSubscriptionPage() {
     try {
       await cancelSubscription();
       await reload();
-      showToast("Langganan dibatalkan, akses Premium berlaku sampai akhir periode.");
+      showToast(t("dashboard.pages.settingsSubscription.cancelSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal membatalkan langganan.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSubscription.cancelError"), "error");
     } finally {
       setCanceling(false);
     }
@@ -80,6 +83,21 @@ export default function SettingsSubscriptionPage() {
   const periodEndLabel = status.current_period_end
     ? new Date(status.current_period_end).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : null;
+  const planLabel = status.plan === "yearly" ? t("dashboard.pages.settingsSubscription.yearly") : t("dashboard.pages.settingsSubscription.monthly");
+
+  let statusMessage: string;
+  if (status.status === "canceled") {
+    statusMessage = t("dashboard.pages.settingsSubscription.statusCanceled").replace(
+      "{date}",
+      periodEndLabel ?? t("dashboard.pages.settingsSubscription.endOfPaidPeriod")
+    );
+  } else if (status.status === "past_due") {
+    statusMessage = t("dashboard.pages.settingsSubscription.statusPastDue");
+  } else if (periodEndLabel) {
+    statusMessage = t("dashboard.pages.settingsSubscription.statusRenewsOn").replace("{date}", periodEndLabel);
+  } else {
+    statusMessage = t("dashboard.pages.settingsSubscription.statusActive");
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -88,17 +106,14 @@ export default function SettingsSubscriptionPage() {
         className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        Pengaturan
+        {t("dashboard.pages.settingsSubscription.breadcrumb")}
       </Link>
 
       <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
         <IconStar className="h-6 w-6 text-primary" />
-        Langganan Premium
+        {t("dashboard.pages.settingsSubscription.title")}
       </h1>
-      <p className="mt-1 text-sm text-app-muted">
-        Hilangkan watermark &quot;Buat halaman gratis di Jeon.id&quot; di halaman publikmu, dan gunakan latar belakang
-        kustom (warna/gradien/gambar sendiri).
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSubscription.subtitle")}</p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -107,18 +122,10 @@ export default function SettingsSubscriptionPage() {
           <div className="flex items-center gap-2">
             <IconStar className="h-5 w-5 text-primary" />
             <h2 className="font-heading text-sm font-bold text-app-ink">
-              Kamu Premium ({status.plan === "yearly" ? "Tahunan" : "Bulanan"})
+              {t("dashboard.pages.settingsSubscription.youArePremium").replace("{plan}", planLabel)}
             </h2>
           </div>
-          <p className="mt-2 text-xs text-app-muted">
-            {status.status === "canceled"
-              ? `Sudah dibatalkan, akses Premium berlaku sampai ${periodEndLabel ?? "akhir periode yang sudah dibayar"}.`
-              : status.status === "past_due"
-              ? "Penagihan siklus terakhir gagal -- perbarui metode pembayaranmu di Midtrans supaya langganan tidak nonaktif."
-              : periodEndLabel
-              ? `Diperpanjang otomatis pada ${periodEndLabel}.`
-              : "Aktif."}
-          </p>
+          <p className="mt-2 text-xs text-app-muted">{statusMessage}</p>
           {status.status !== "canceled" && (
             <button
               type="button"
@@ -126,48 +133,47 @@ export default function SettingsSubscriptionPage() {
               disabled={canceling}
               className="mt-3 rounded-lg border border-app-border bg-app-surface px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
             >
-              {canceling ? "Membatalkan..." : "Batalkan Langganan"}
+              {canceling ? t("dashboard.pages.settingsSubscription.canceling") : t("dashboard.pages.settingsSubscription.cancelSubscriptionButton")}
             </button>
           )}
         </section>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <PricingCard
-            label="Bulanan"
+            label={t("dashboard.pages.settingsSubscription.monthly")}
             priceIDR={status.monthly_price_idr}
-            priceSuffix="/bulan"
+            priceSuffix={t("dashboard.pages.settingsSubscription.perMonth")}
             onSubscribe={() => handleCheckout("monthly")}
             busy={checkingOut === "monthly"}
             disabled={checkingOut !== null || isLive}
+            t={t}
           />
           <PricingCard
-            label="Tahunan"
+            label={t("dashboard.pages.settingsSubscription.yearly")}
             priceIDR={status.yearly_price_idr}
-            priceSuffix="/tahun"
-            badge="Hemat"
+            priceSuffix={t("dashboard.pages.settingsSubscription.perYear")}
+            badge={t("dashboard.pages.settingsSubscription.saveBadge")}
             highlight
             onSubscribe={() => handleCheckout("yearly")}
             busy={checkingOut === "yearly"}
             disabled={checkingOut !== null || isLive}
+            t={t}
           />
         </div>
       )}
 
       {!status.is_premium && isLive && (
         <p className="mt-3 rounded-lg bg-primary-subtle/40 px-3 py-2 text-xs text-app-muted">
-          Pembayaran pendaftaran sedang diproses. Kalau kamu baru saja menyelesaikan pembayaran di Midtrans, muat
-          ulang halaman ini dalam beberapa saat.
+          {t("dashboard.pages.settingsSubscription.paymentProcessing")}
         </p>
       )}
 
       <ul className="mt-6 flex flex-col gap-2 text-sm text-app-ink">
-        <BenefitRow text="Hilangkan watermark Jeon.id di halaman publikmu" />
-        <BenefitRow text="Latar belakang kustom (warna, gradien, atau gambar sendiri)" />
+        <BenefitRow text={t("dashboard.pages.settingsSubscription.benefitWatermark")} />
+        <BenefitRow text={t("dashboard.pages.settingsSubscription.benefitCustomBackground")} />
       </ul>
 
-      <p className="mt-4 text-[11px] text-app-muted">
-        Ditagih otomatis lewat kartu kredit/debit tersimpan tiap siklus (bulanan atau tahunan) sampai kamu batalkan.
-      </p>
+      <p className="mt-4 text-[11px] text-app-muted">{t("dashboard.pages.settingsSubscription.billingNote")}</p>
     </div>
   );
 }
@@ -192,6 +198,7 @@ function PricingCard({
   onSubscribe,
   busy,
   disabled,
+  t,
 }: {
   label: string;
   priceIDR: number;
@@ -201,6 +208,7 @@ function PricingCard({
   onSubscribe: () => void;
   busy: boolean;
   disabled: boolean;
+  t: (key: string) => string;
 }) {
   return (
     <div
@@ -224,7 +232,7 @@ function PricingCard({
         disabled={disabled}
         className="mt-4 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
       >
-        {busy ? "Menyiapkan pembayaran..." : "Berlangganan"}
+        {busy ? t("dashboard.pages.settingsSubscription.preparingPayment") : t("dashboard.pages.settingsSubscription.subscribeButton")}
       </button>
     </div>
   );

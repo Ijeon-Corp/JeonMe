@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ApiError, ProductReview, deleteReview, listReviews, setReviewHidden } from "@/lib/api-client";
 import { IconInbox, IconStar, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Toko (Fase E1): tab Reviews -- semua ulasan lintas produk milik
 // kreator, dengan aksi sembunyikan (reversibel) / hapus (permanen).
@@ -19,14 +20,15 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 export default function ReviewsPanel() {
+  const { t } = useLocale();
   const [reviews, setReviews] = useState<ProductReview[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     listReviews()
       .then(setReviews)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat ulasan."));
-  }, []);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.reviewsPanel.loadError")));
+  }, [t]);
 
   async function handleToggleHidden(review: ProductReview) {
     const next = !review.is_hidden;
@@ -35,19 +37,19 @@ export default function ReviewsPanel() {
       await setReviewHidden(review.id, next);
     } catch (err) {
       setReviews((prev) => prev?.map((r) => (r.id === review.id ? { ...r, is_hidden: review.is_hidden } : r)) ?? prev);
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui ulasan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.reviewsPanel.updateError"));
     }
   }
 
   async function handleDelete(review: ProductReview) {
-    if (!(await confirmDelete("Hapus ulasan ini permanen?"))) return;
+    if (!(await confirmDelete(t("dashboard.components.reviewsPanel.confirmDeleteText")))) return;
     const previous = reviews;
     setReviews((prev) => prev?.filter((r) => r.id !== review.id) ?? prev);
     try {
       await deleteReview(review.id);
     } catch (err) {
       setReviews(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus ulasan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.reviewsPanel.deleteError"));
     }
   }
 
@@ -65,7 +67,9 @@ export default function ReviewsPanel() {
         <div className="glass mb-3 flex items-center gap-2 rounded-2xl p-4 shadow-card">
           <StarRow rating={Math.round(avgRating)} />
           <span className="text-sm font-bold text-app-ink">{avgRating.toFixed(1)}</span>
-          <span className="text-xs text-app-muted">dari {reviews.length} ulasan</span>
+          <span className="text-xs text-app-muted">
+            {t("dashboard.components.reviewsPanel.reviewCountLabel").replace("{count}", String(reviews.length))}
+          </span>
         </div>
       )}
 
@@ -86,13 +90,15 @@ export default function ReviewsPanel() {
                   onClick={() => handleToggleHidden(r)}
                   className="rounded-lg border border-app-border px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
                 >
-                  {r.is_hidden ? "Tampilkan" : "Sembunyikan"}
+                  {r.is_hidden
+                    ? t("dashboard.components.reviewsPanel.showButton")
+                    : t("dashboard.components.reviewsPanel.hideButton")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(r)}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                  title="Hapus"
+                  title={t("dashboard.components.reviewsPanel.deleteTitle")}
                 >
                   <IconTrash className="h-3.5 w-3.5" />
                 </button>
@@ -102,9 +108,9 @@ export default function ReviewsPanel() {
           </div>
         ))}
         {reviews.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-app-border bg-white/60 p-6 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-app-border bg-app-surface/60 p-6 text-center">
             <IconInbox className="h-5 w-5 text-app-muted" />
-            <p className="text-xs text-app-muted">Belum ada ulasan.</p>
+            <p className="text-xs text-app-muted">{t("dashboard.components.reviewsPanel.emptyState")}</p>
           </div>
         )}
       </div>

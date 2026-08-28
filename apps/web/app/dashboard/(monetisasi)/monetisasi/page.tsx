@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useLocale } from "@/lib/locale-context";
 import {
   IconBook,
   IconCalendar,
@@ -43,71 +44,73 @@ type MonetisasiItem = {
   icon: (props: { className?: string }) => React.ReactElement;
 };
 
-const MONETISASI_GROUPS: { label: string; items: MonetisasiItem[] }[] = [
-  {
-    label: "Harga & Paket",
-    items: [
-      {
-        href: "/dashboard/vouchers",
-        title: "Voucher",
-        description: "Kode diskon untuk produkmu.",
-        icon: IconTag,
-      },
-      {
-        href: "/dashboard/bundles",
-        title: "Bundel",
-        description: "Gabungkan beberapa produk jadi satu paket harga.",
-        icon: IconGift,
-      },
-    ],
-  },
-  {
-    label: "Jadwal & Konten",
-    items: [
-      {
-        href: "/dashboard/events",
-        title: "Event",
-        description: "Jual tiket acara online maupun offline.",
-        icon: IconCalendar,
-      },
-      {
-        href: "/dashboard/courses",
-        title: "Kelas & Kursus",
-        description: "Jual kelas online dengan beberapa bab/modul.",
-        icon: IconBook,
-      },
-      {
-        href: "/dashboard/bookings",
-        title: "Booking Konsultasi",
-        description: "Jadwal konsultasi berbayar dengan slot waktu.",
-        icon: IconClock,
-      },
-    ],
-  },
-  {
-    label: "Dukungan & Pertumbuhan",
-    items: [
-      {
-        href: "/dashboard/donation",
-        title: "Dukungan",
-        description: "Blok donasi/support di halaman publikmu.",
-        icon: IconHeart,
-      },
-      {
-        href: "/dashboard/affiliates",
-        title: "Afiliasi",
-        description: "Ajak orang lain menjualkan produkmu, bagi komisi.",
-        icon: IconUsers,
-      },
-      {
-        href: "/dashboard/loyalty",
-        title: "Loyalitas",
-        description: "Program poin untuk pembeli berulang.",
-        icon: IconStar,
-      },
-    ],
-  },
-];
+function buildGroups(t: (key: string) => string): { label: string; items: MonetisasiItem[] }[] {
+  return [
+    {
+      label: t("dashboard.pages.monetisasi.groups.pricing.label"),
+      items: [
+        {
+          href: "/dashboard/vouchers",
+          title: t("dashboard.pages.monetisasi.groups.pricing.vouchers.title"),
+          description: t("dashboard.pages.monetisasi.groups.pricing.vouchers.description"),
+          icon: IconTag,
+        },
+        {
+          href: "/dashboard/bundles",
+          title: t("dashboard.pages.monetisasi.groups.pricing.bundles.title"),
+          description: t("dashboard.pages.monetisasi.groups.pricing.bundles.description"),
+          icon: IconGift,
+        },
+      ],
+    },
+    {
+      label: t("dashboard.pages.monetisasi.groups.schedule.label"),
+      items: [
+        {
+          href: "/dashboard/events",
+          title: t("dashboard.pages.monetisasi.groups.schedule.events.title"),
+          description: t("dashboard.pages.monetisasi.groups.schedule.events.description"),
+          icon: IconCalendar,
+        },
+        {
+          href: "/dashboard/courses",
+          title: t("dashboard.pages.monetisasi.groups.schedule.courses.title"),
+          description: t("dashboard.pages.monetisasi.groups.schedule.courses.description"),
+          icon: IconBook,
+        },
+        {
+          href: "/dashboard/bookings",
+          title: t("dashboard.pages.monetisasi.groups.schedule.bookings.title"),
+          description: t("dashboard.pages.monetisasi.groups.schedule.bookings.description"),
+          icon: IconClock,
+        },
+      ],
+    },
+    {
+      label: t("dashboard.pages.monetisasi.groups.growth.label"),
+      items: [
+        {
+          href: "/dashboard/donation",
+          title: t("dashboard.pages.monetisasi.groups.growth.donation.title"),
+          description: t("dashboard.pages.monetisasi.groups.growth.donation.description"),
+          icon: IconHeart,
+        },
+        {
+          href: "/dashboard/affiliates",
+          title: t("dashboard.pages.monetisasi.groups.growth.affiliates.title"),
+          description: t("dashboard.pages.monetisasi.groups.growth.affiliates.description"),
+          icon: IconUsers,
+        },
+        {
+          href: "/dashboard/loyalty",
+          title: t("dashboard.pages.monetisasi.groups.growth.loyalty.title"),
+          description: t("dashboard.pages.monetisasi.groups.growth.loyalty.description"),
+          icon: IconStar,
+        },
+      ],
+    },
+  ];
+}
 
 function MonetisasiCard({ item }: { item: MonetisasiItem }) {
   const Icon = item.icon;
@@ -129,20 +132,24 @@ function MonetisasiCard({ item }: { item: MonetisasiItem }) {
 }
 
 export default function DashboardMonetisasiPage() {
+  const { t } = useLocale();
   const [query, setQuery] = useState("");
+  const groups = useMemo(() => buildGroups(t), [t]);
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return MONETISASI_GROUPS;
-    return MONETISASI_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter((s) => s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
-    })).filter((g) => g.items.length > 0);
-  }, [query]);
+    if (!q) return groups;
+    return groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((s) => s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [groups, query]);
 
   return (
     <div className="mx-auto max-w-4xl">
-      <p className="mt-1 text-sm text-app-muted">Tipe produk & alat monetisasi tambahan di luar produk digital biasa.</p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.monetisasi.subtitle")}</p>
 
       <div className="relative mt-5">
         <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
@@ -150,7 +157,7 @@ export default function DashboardMonetisasiPage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari tipe produk..."
+          placeholder={t("dashboard.pages.monetisasi.searchPlaceholder")}
           className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
         />
       </div>
@@ -168,7 +175,7 @@ export default function DashboardMonetisasiPage() {
         ))}
         {filteredGroups.length === 0 && (
           <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-sm text-app-muted">
-            Tidak ada tipe produk yang cocok dengan &quot;{query}&quot;.
+            {t("dashboard.pages.monetisasi.noResults").replace("{query}", query)}
           </p>
         )}
       </div>

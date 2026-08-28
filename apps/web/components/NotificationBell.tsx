@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppNotification, listNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/api-client";
 import { IconBell } from "@/components/icons";
 import { Skeleton } from "@/components/Skeleton";
+import { useLocale } from "@/lib/locale-context";
 
 // Ikon lonceng top bar dashboard (permintaan langsung pengguna berdasar
 // tangkapan layar top bar Linktree) -- panel dropdown ringkas, BUKAN
@@ -12,6 +13,7 @@ import { Skeleton } from "@/components/Skeleton";
 // WebSocket/SSE supaya tetap "sederhana" sesuai cakupan yang disepakati,
 // cukup untuk badge terasa hidup tanpa infrastruktur real-time baru.
 export default function NotificationBell() {
+  const { t } = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -94,8 +96,8 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={handleToggle}
-        title="Notifikasi"
-        aria-label="Notifikasi"
+        title={t("dashboard.components.notificationBell.title")}
+        aria-label={t("dashboard.components.notificationBell.title")}
         className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
       >
         <IconBell className="h-4 w-4" />
@@ -109,10 +111,10 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-2xl">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-4 py-3">
-            <p className="font-heading text-sm font-bold text-app-ink">Notifikasi</p>
+            <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.notificationBell.title")}</p>
             {unreadCount > 0 && (
               <button type="button" onClick={handleMarkAllRead} className="text-xs font-bold text-primary hover:underline">
-                Tandai semua dibaca
+                {t("dashboard.components.notificationBell.markAllRead")}
               </button>
             )}
           </div>
@@ -124,7 +126,7 @@ export default function NotificationBell() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-app-muted">Belum ada notifikasi.</p>
+              <p className="px-4 py-6 text-center text-xs text-app-muted">{t("dashboard.components.notificationBell.emptyState")}</p>
             ) : (
               notifications.map((n) => (
                 <button

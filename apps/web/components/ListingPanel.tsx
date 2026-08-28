@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiError, DashboardProduct, reorderProducts, updateProduct } from "@/lib/api-client";
 import { IconBox, IconGripVertical, IconStar } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Toko (Fase E2, tab Listing): urutan tampil (drag-and-drop, pola
 // SAMA seperti dashboard/links/page.tsx handleDrop) & unggulan. Controlled
@@ -18,6 +19,7 @@ export default function ListingPanel({
   setProducts: (updater: (prev: DashboardProduct[]) => DashboardProduct[]) => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useLocale();
   const [dragId, setDragId] = useState<string | null>(null);
 
   // sorted -- urutan TAMPIL (unggulan dulu, lalu position ASC), SAMA
@@ -48,7 +50,7 @@ export default function ListingPanel({
     );
 
     reorderProducts(withPositions).catch((err) => {
-      onError(err instanceof ApiError ? err.message : "Gagal menyimpan urutan produk.");
+      onError(err instanceof ApiError ? err.message : t("dashboard.components.listingPanel.reorderError"));
     });
   }
 
@@ -59,15 +61,13 @@ export default function ListingPanel({
       await updateProduct(product.id, { is_featured: next });
     } catch (err) {
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, is_featured: product.is_featured } : p)));
-      onError(err instanceof ApiError ? err.message : "Gagal memperbarui status unggulan.");
+      onError(err instanceof ApiError ? err.message : t("dashboard.components.listingPanel.featuredError"));
     }
   }
 
   return (
     <div className="mt-4">
-      <p className="text-sm text-app-muted">
-        Seret untuk mengatur urutan tampil di halaman publik. Produk unggulan selalu tampil paling atas.
-      </p>
+      <p className="text-sm text-app-muted">{t("dashboard.components.listingPanel.dragHint")}</p>
       <div className="mt-3 flex flex-col gap-2">
         {sorted.map((p) => (
           <div
@@ -78,7 +78,7 @@ export default function ListingPanel({
             onDrop={() => handleDrop(p.id)}
             className="glass flex items-center gap-3 rounded-2xl p-3 shadow-card"
           >
-            <span className="cursor-grab text-app-muted" title="Seret untuk mengatur urutan">
+            <span className="cursor-grab text-app-muted" title={t("dashboard.components.listingPanel.dragTitle")}>
               <IconGripVertical className="h-4 w-4" />
             </span>
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-subtle">
@@ -101,11 +101,17 @@ export default function ListingPanel({
               }`}
             >
               <IconStar className="h-3.5 w-3.5" />
-              {p.is_featured ? "Unggulan" : "Jadikan Unggulan"}
+              {p.is_featured
+                ? t("dashboard.components.listingPanel.featuredLabel")
+                : t("dashboard.components.listingPanel.makeFeaturedLabel")}
             </button>
           </div>
         ))}
-        {sorted.length === 0 && <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">Belum ada produk.</p>}
+        {sorted.length === 0 && (
+          <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
+            {t("dashboard.components.listingPanel.emptyState")}
+          </p>
+        )}
       </div>
     </div>
   );

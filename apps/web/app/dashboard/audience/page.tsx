@@ -15,19 +15,24 @@ import {
 import Toggle from "@/components/Toggle";
 import EmptyState from "@/components/EmptyState";
 import { IconMail } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
-const BROADCAST_STATUS_LABEL: Record<AudienceBroadcast["status"], { label: string; className: string }> = {
-  queued: { label: "Diantre", className: "bg-pop-yellow-tint text-accent-dark" },
-  sending: { label: "Mengirim...", className: "bg-pop-blue-tint text-pop-blue" },
-  sent: { label: "Terkirim", className: "bg-secondary-subtle text-secondary-dark" },
-  failed: { label: "Gagal", className: "bg-red-50 text-red-600" },
-};
+function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], { label: string; className: string }> {
+  return {
+    queued: { label: t("dashboard.pages.audience.status.queued"), className: "bg-pop-yellow-tint text-accent-dark" },
+    sending: { label: t("dashboard.pages.audience.status.sending"), className: "bg-pop-blue-tint text-pop-blue" },
+    sent: { label: t("dashboard.pages.audience.status.sent"), className: "bg-secondary-subtle text-secondary-dark" },
+    failed: { label: t("dashboard.pages.audience.status.failed"), className: "bg-red-50 text-red-600" },
+  };
+}
 
-const SOURCE_LABEL: Record<string, string> = {
-  lead_capture: "Subscriber",
-  buyer: "Pembeli",
-  business_card: "Kartu Kontak",
-};
+function buildSourceLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    lead_capture: t("dashboard.pages.audience.source.subscriber"),
+    buyer: t("dashboard.pages.audience.source.buyer"),
+    business_card: t("dashboard.pages.audience.source.businessCard"),
+  };
+}
 
 function toCSV(contacts: AudienceContact[]): string {
   const header = "name,email,whatsapp_number,sources,joined_at";
@@ -40,6 +45,9 @@ function toCSV(contacts: AudienceContact[]): string {
 }
 
 export default function DashboardAudiencePage() {
+  const { t } = useLocale();
+  const BROADCAST_STATUS_LABEL = buildBroadcastStatusLabel(t);
+  const SOURCE_LABEL = buildSourceLabel(t);
   const [contacts, setContacts] = useState<AudienceContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,7 +79,7 @@ export default function DashboardAudiencePage() {
         setContacts(c);
         setBroadcasts(b);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data audiens."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.audience.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -86,7 +94,7 @@ export default function DashboardAudiencePage() {
   async function handleSendBroadcast(e: React.FormEvent) {
     e.preventDefault();
     if (!broadcastSubject.trim() || !broadcastBody.trim()) {
-      setBroadcastError("Subjek dan isi pesan wajib diisi.");
+      setBroadcastError(t("dashboard.pages.audience.broadcastValidation"));
       return;
     }
     setBroadcastError(null);
@@ -96,11 +104,13 @@ export default function DashboardAudiencePage() {
       const res = await createBroadcast({ subject: broadcastSubject.trim(), body: broadcastBody.trim() });
       setBroadcastSubject("");
       setBroadcastBody("");
-      setBroadcastSent(`Broadcast diantre untuk ${res.recipient_count} subscriber.`);
+      setBroadcastSent(
+        `${t("dashboard.pages.audience.broadcastQueuedBefore")}${res.recipient_count}${t("dashboard.pages.audience.broadcastQueuedAfter")}`
+      );
       const refreshed = await listBroadcasts();
       setBroadcasts(refreshed);
     } catch (err) {
-      setBroadcastError(err instanceof ApiError ? err.message : "Gagal mengirim broadcast.");
+      setBroadcastError(err instanceof ApiError ? err.message : t("dashboard.pages.audience.broadcastSendError"));
     } finally {
       setSendingBroadcast(false);
     }
@@ -109,11 +119,11 @@ export default function DashboardAudiencePage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (enabled && !title.trim()) {
-      setError("Judul blok wajib diisi.");
+      setError(t("dashboard.pages.audience.titleRequired"));
       return;
     }
     if (enabled && !collectEmail && !collectWhatsapp) {
-      setError("Pilih minimal satu jenis data yang dikumpulkan.");
+      setError(t("dashboard.pages.audience.dataTypeRequired"));
       return;
     }
     setError(null);
@@ -129,7 +139,7 @@ export default function DashboardAudiencePage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.audience.saveError"));
     } finally {
       setSaving(false);
     }
@@ -150,30 +160,27 @@ export default function DashboardAudiencePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        Kumpulkan email/WhatsApp pengunjung lewat blok di halaman publik, dan lihat semua kontak (subscriber + pembeli)
-        dalam satu daftar.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.audience.intro")}</p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-      {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Pengaturan disimpan.</p>}
+      {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
 
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-app-ink">Aktifkan Blok Pengumpulan Lead</p>
-            <p className="text-xs text-app-muted">Tampil di halaman publikmu kalau aktif.</p>
+            <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.audience.enableTitle")}</p>
+            <p className="text-xs text-app-muted">{t("dashboard.pages.audience.enableHint")}</p>
           </div>
-          <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label="Aktifkan blok pengumpulan lead" />
+          <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label={t("dashboard.pages.audience.enableToggleLabel")} />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-app-ink">Judul</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.audience.titleLabel")}</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Dapatkan info terbaru dariku"
+            placeholder={t("dashboard.pages.audience.titlePlaceholder")}
             maxLength={200}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -182,11 +189,11 @@ export default function DashboardAudiencePage() {
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
             <input type="checkbox" checked={collectEmail} onChange={(e) => setCollectEmail(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-            Kumpulkan Email
+            {t("dashboard.pages.audience.collectEmail")}
           </label>
           <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
             <input type="checkbox" checked={collectWhatsapp} onChange={(e) => setCollectWhatsapp(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-            Kumpulkan Nomor WhatsApp
+            {t("dashboard.pages.audience.collectWhatsapp")}
           </label>
         </div>
 
@@ -195,7 +202,7 @@ export default function DashboardAudiencePage() {
           disabled={saving}
           className="btn-primary rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {saving ? "Menyimpan..." : "Simpan"}
+          {saving ? t("dashboard.pages.audience.saving") : t("dashboard.pages.audience.save")}
         </button>
       </form>
 
@@ -212,10 +219,11 @@ export default function DashboardAudiencePage() {
             <IconMail className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">Broadcast Email</h2>
+            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.audience.broadcastHeading")}</h2>
             <p className="text-xs text-app-muted">
-              Kirim pesan ke {subscriberCount} subscriber yang mendaftar lewat blok pengumpulan lead di atas
-              (pembeli tidak otomatis termasuk, kecuali mereka juga subscribe).
+              {t("dashboard.pages.audience.broadcastDescBefore")}
+              {subscriberCount}
+              {t("dashboard.pages.audience.broadcastDescAfter")}
             </p>
           </div>
         </div>
@@ -228,14 +236,14 @@ export default function DashboardAudiencePage() {
             type="text"
             value={broadcastSubject}
             onChange={(e) => setBroadcastSubject(e.target.value)}
-            placeholder="Subjek email"
+            placeholder={t("dashboard.pages.audience.subjectPlaceholder")}
             maxLength={200}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <textarea
             value={broadcastBody}
             onChange={(e) => setBroadcastBody(e.target.value)}
-            placeholder="Isi pesan..."
+            placeholder={t("dashboard.pages.audience.bodyPlaceholder")}
             maxLength={5000}
             rows={5}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -245,19 +253,21 @@ export default function DashboardAudiencePage() {
             disabled={sendingBroadcast || subscriberCount === 0}
             className="btn-primary self-start rounded-full px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {sendingBroadcast ? "Mengirim..." : `Kirim ke ${subscriberCount} Subscriber`}
+            {sendingBroadcast
+              ? t("dashboard.pages.audience.sending")
+              : `${t("dashboard.pages.audience.sendToBefore")}${subscriberCount}${t("dashboard.pages.audience.sendToAfter")}`}
           </button>
         </form>
 
         {broadcasts.length > 0 && (
           <div className="mt-5 flex flex-col gap-1.5 border-t border-app-border pt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Riwayat Broadcast</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.audience.broadcastHistory")}</p>
             {broadcasts.map((b) => (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2 text-xs">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-app-ink">{b.subject}</p>
                   <p className="text-app-muted">
-                    {b.sent_count}/{b.recipient_count} terkirim &middot; {new Date(b.created_at).toLocaleString("id-ID")}
+                    {b.sent_count}/{b.recipient_count} {t("dashboard.pages.audience.sentSuffix")} &middot; {new Date(b.created_at).toLocaleString("id-ID")}
                   </p>
                 </div>
                 <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${BROADCAST_STATUS_LABEL[b.status].className}`}>
@@ -270,14 +280,16 @@ export default function DashboardAudiencePage() {
       </section>
 
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="font-heading text-lg font-bold text-app-ink">Manajer Audiens ({contacts.length})</h2>
+        <h2 className="font-heading text-lg font-bold text-app-ink">
+          {t("dashboard.pages.audience.managerHeading")} ({contacts.length})
+        </h2>
         <button
           type="button"
           onClick={handleExportCSV}
           disabled={contacts.length === 0}
           className="rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-primary disabled:opacity-50"
         >
-          Ekspor CSV
+          {t("dashboard.pages.audience.exportCsv")}
         </button>
       </div>
 
@@ -285,11 +297,11 @@ export default function DashboardAudiencePage() {
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-app-muted">
-              <th className="px-4 py-2.5 font-semibold">Nama</th>
+              <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colName")}</th>
               <th className="px-4 py-2.5 font-semibold">Email</th>
               <th className="px-4 py-2.5 font-semibold">WhatsApp</th>
-              <th className="px-4 py-2.5 font-semibold">Sumber</th>
-              <th className="px-4 py-2.5 font-semibold">Bergabung</th>
+              <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colSource")}</th>
+              <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colJoined")}</th>
             </tr>
           </thead>
           <tbody>
@@ -313,7 +325,7 @@ export default function DashboardAudiencePage() {
           </tbody>
         </table>
         {contacts.length === 0 && (
-          <EmptyState bordered={false} text="Belum ada kontak -- aktifkan blok pengumpulan lead atau tunggu pembeli pertama." />
+          <EmptyState bordered={false} text={t("dashboard.pages.audience.emptyContacts")} />
         )}
       </div>
     </div>

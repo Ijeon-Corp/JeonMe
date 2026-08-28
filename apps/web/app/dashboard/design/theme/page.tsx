@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import ThemeGallery from "@/components/ThemeGallery";
+import { useLocale } from "@/lib/locale-context";
 
 // Galeri tema (tab Warna & Gradien/Wallpaper/3D-Live/Video/Doodle + tile
 // Custom) diekstrak ke components/ThemeGallery.tsx, 27 Agustus 2026 --
@@ -14,6 +15,7 @@ import ThemeGallery from "@/components/ThemeGallery";
 // urus data (useDesignData) & gerbang Premium utk tile Custom, render
 // galerinya lewat komponen bersama.
 export default function DesignThemePage() {
+  const { t } = useLocale();
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
   const router = useRouter();
 
@@ -25,8 +27,8 @@ export default function DesignThemePage() {
       links={links}
       products={products}
       backHref="/dashboard/design"
-      title="Tema"
-      description="Pilih salah satu template siap pakai, atau lanjut sesuaikan sendiri lewat Tombol & Font (otomatis jadi Custom)."
+      title={t("dashboard.pages.designTheme.title")}
+      description={t("dashboard.pages.designTheme.description")}
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 

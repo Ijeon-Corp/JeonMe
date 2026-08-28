@@ -24,6 +24,7 @@ import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orde
 import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
 import ThemeGallery from "@/components/ThemeGallery";
 import PagePreview, { PagePreviewData } from "@/components/PagePreview";
+import { useLocale } from "@/lib/locale-context";
 
 // buildPreviewData -- dipindah ke lib/quick-setup-templates.ts
 // (buildQuickSetupPreviewData) supaya bisa dipakai bareng components/
@@ -72,6 +73,7 @@ async function fetchMyPage(): Promise<MyPage | null> {
 // (satu-satunya preset yang sudah ada di proyek ini utk pola ini).
 export default function QuickSetupPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [step, setStep] = useState<"category" | "build" | "generating">("category");
   const [category, setCategory] = useState<string | null>(null);
   const [tab, setTab] = useState<"template" | "theme">("template");
@@ -123,16 +125,16 @@ export default function QuickSetupPage() {
 
   const previewData: PagePreviewData | null = useMemo(() => {
     if (!previewTemplate) return null;
-    return buildPreviewData(previewTemplate, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "");
-  }, [previewTemplate, myPage]);
+    return buildPreviewData(previewTemplate, myPage?.username ?? t("dashboard.pages.quickSetup.usernamePlaceholder"), myPage?.display_name || t("dashboard.pages.quickSetup.namePlaceholder"), myPage?.avatar_url ?? "");
+  }, [previewTemplate, myPage, t]);
 
   const categoryTemplates = useMemo(() => {
     if (!category) return [];
     const q = query.trim().toLowerCase();
-    return QUICK_SETUP_TEMPLATES.filter((t) => {
-      if (t.category !== category) return false;
+    return QUICK_SETUP_TEMPLATES.filter((tpl) => {
+      if (tpl.category !== category) return false;
       if (!q) return true;
-      return t.label.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
+      return tpl.label.toLowerCase().includes(q) || tpl.description.toLowerCase().includes(q);
     });
   }, [category, query]);
 
@@ -146,12 +148,18 @@ export default function QuickSetupPage() {
     setError(null);
   }
 
-  function pickTemplate(t: QuickSetupTemplate) {
-    setSelectedTemplate(t);
+  function pickTemplate(tmpl: QuickSetupTemplate) {
+    setSelectedTemplate(tmpl);
     setThemeOverride(null);
   }
 
-  async function applyTemplate(t: QuickSetupTemplate) {
+  // applyTemplate -- parameter DINAMAI "tmpl" (bukan "t" lagi seperti
+  // sebelumnya): permintaan susulan pengguna (29 Agustus 2026,
+  // terjemahkan seluruh isi dashboard) menambahkan `t` dari useLocale()
+  // di scope komponen ini -- parameter "t: QuickSetupTemplate" yang lama
+  // akan MENIMPA (shadow) fungsi terjemahan itu di seluruh badan fungsi
+  // ini, jadi WAJIB diganti nama supaya t() tetap bisa dipanggil di sini.
+  async function applyTemplate(tmpl: QuickSetupTemplate) {
     setError(null);
     setSubmitting(true);
     try {
@@ -173,11 +181,16 @@ export default function QuickSetupPage() {
         // Produk (kalau template ini punya) SENGAJA tidak disebut sebagai
         // sesuatu yang "diganti" -- beda dari tautan/blok, produk baru
         // MENAMBAH ke daftar produk yang sudah ada, bukan menimpanya.
-        const productNote = t.products && t.products.length > 0 ? ` Template ini juga akan menambah ${t.products.length} produk contoh (draft) di menu Toko.` : "";
-        const tokoNote = tokoBefore ? " Tema Halaman Toko-mu juga akan ikut disesuaikan mengikuti tema template ini." : "";
+        const productNote =
+          tmpl.products && tmpl.products.length > 0
+            ? t("dashboard.pages.quickSetup.productNoteTemplate").replace("{count}", String(tmpl.products.length))
+            : "";
+        const tokoNote = tokoBefore ? t("dashboard.pages.quickSetup.tokoNoteText") : "";
         const ok = await confirmDelete(
-          `Menerapkan template "${t.label}" akan menghapus ${existing.length} tautan/blok yang sudah ada saat ini, lalu menggantinya dengan tautan starter template ini.${productNote}${tokoNote}`,
-          { title: "Ganti semua tautan?", confirmButtonText: "Ya, Ganti" }
+          t("dashboard.pages.quickSetup.confirmReplaceText")
+            .replace("{label}", tmpl.label)
+            .replace("{count}", String(existing.length)) + productNote + tokoNote,
+          { title: t("dashboard.pages.quickSetup.confirmReplaceTitle"), confirmButtonText: t("dashboard.pages.quickSetup.confirmReplaceButton") }
         );
         if (!ok) {
           setSubmitting(false);
@@ -198,17 +211,17 @@ export default function QuickSetupPage() {
       // saran bio template cuma dipakai kalau bio masih kosong.
       // layout_variant SELALU ikut diterapkan (bukan cuma kalau bio
       // kosong) -- ini bagian dari "bentuk" template, sama seperti tema.
-      const layoutVariant = t.layoutVariant ?? "centered";
+      const layoutVariant = tmpl.layoutVariant ?? "centered";
       // social -- permintaan langsung pengguna, 24 Agustus 2026 (baris
       // ikon GitHub/LinkedIn/Website/Email, contoh template "Dimas Dev").
       // Nilai PLACEHOLDER jelas contoh -- kreator tinggal lengkapi lewat
-      // panel Kontak Sosial. Object.fromEntries -- t.social pakai key
+      // panel Kontak Sosial. Object.fromEntries -- tmpl.social pakai key
       // pendek ("github"), updateMyPage butuh key kolom DB ("social_github").
-      const socialPatch = t.social ? Object.fromEntries(Object.entries(t.social).map(([k, v]) => [`social_${k}`, v])) : {};
+      const socialPatch = tmpl.social ? Object.fromEntries(Object.entries(tmpl.social).map(([k, v]) => [`social_${k}`, v])) : {};
       await updateMyPage(
         page.bio.trim()
-          ? { theme: t.theme, layout_variant: layoutVariant, ...socialPatch }
-          : { theme: t.theme, bio: t.bio, layout_variant: layoutVariant, ...socialPatch }
+          ? { theme: tmpl.theme, layout_variant: layoutVariant, ...socialPatch }
+          : { theme: tmpl.theme, bio: tmpl.bio, layout_variant: layoutVariant, ...socialPatch }
       );
 
       // Sequential (bukan Promise.all) -- posisi tautan dihitung server-side
@@ -217,7 +230,7 @@ export default function QuickSetupPage() {
       // dua item kebetulan dapat posisi yang sama. Satu loop mengikuti
       // orderedTemplateItems APA ADANYA -- SATU sumber kebenaran urutan,
       // sama persis dengan yang ditampilkan pratinjau.
-      for (const item of orderedTemplateItems(t)) {
+      for (const item of orderedTemplateItems(tmpl)) {
         if (item.blockType === "link") {
           await createLink({ title: item.title, url: item.url, description: item.description });
         } else if (item.blockType === "maps") {
@@ -265,7 +278,7 @@ export default function QuickSetupPage() {
       // PERNAH dihapus/ditimpa (produk lama milik kreator dibiarkan apa
       // adanya, cuma ditambah) -- lihat catatan lengkap di
       // QuickSetupTemplateProduct kenapa ini aman & tidak destruktif.
-      for (const p of t.products ?? []) {
+      for (const p of tmpl.products ?? []) {
         const created = await createProduct({ name: p.name, description: p.description, price_idr: p.priceIDR, product_kind: p.productKind });
         // Sampul produk -- susulan permintaan pengguna: "buat gambar
         // product nya ambil dari sumber online yang free saja" -- aset
@@ -307,17 +320,17 @@ export default function QuickSetupPage() {
       const tokoAfter = pickAutoTokoPage(extraPagesAfter, page.username);
       if (tokoAfter) {
         try {
-          await updateExtraPage(tokoAfter.id, { theme: t.theme, layout_variant: layoutVariant });
+          await updateExtraPage(tokoAfter.id, { theme: tmpl.theme, layout_variant: layoutVariant });
         } catch {
           // soft-fail -- Bio & produk tetap berhasil diterapkan, kreator
           // bisa samakan tema Toko manual lewat menu Produk kalau ini gagal.
         }
       }
       setTokoSynced(tokoAfter !== null);
-      setAppliedMonetizationHint(t.monetizationHint ?? null);
+      setAppliedMonetizationHint(tmpl.monetizationHint ?? null);
       setGenerateSuccess(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menerapkan template, coba lagi.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.quickSetup.applyError"));
       setStep("build");
     } finally {
       setSubmitting(false);
@@ -328,9 +341,7 @@ export default function QuickSetupPage() {
   if (step === "category") {
     return (
       <div className="mx-auto max-w-4xl">
-        <p className="mt-1 text-sm text-app-muted">
-          Pilih kategori yang paling cocok dengan halamanmu -- template & tema di langkah berikutnya disaring sesuai kategori ini.
-        </p>
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.step1Intro")}</p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {QUICK_SETUP_CATEGORIES.map((c) => (
             <button
@@ -357,17 +368,17 @@ export default function QuickSetupPage() {
         {!generateSuccess ? (
           <>
             <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary-subtle border-t-primary" aria-hidden />
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">Menyiapkan halamanmu...</p>
-            <p className="mt-1 text-sm text-app-muted">Menerapkan tema, tautan, dan blok starter.</p>
+            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.generatingTitle")}</p>
+            <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.generatingDesc")}</p>
           </>
         ) : (
           <>
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
               <IconCheck className="h-6 w-6" />
             </span>
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">Template diterapkan!</p>
-            <p className="mt-1 text-sm text-app-muted">Mengalihkan ke Link Bio untuk melengkapi tautan asli kamu...</p>
-            {tokoSynced && <p className="mt-2 text-xs text-app-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan.</p>}
+            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.successTitle")}</p>
+            <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.successDesc")}</p>
+            {tokoSynced && <p className="mt-2 text-xs text-app-muted">{t("dashboard.pages.quickSetup.tokoSyncedNote")}</p>}
             {appliedMonetizationHint && (
               <p className="mt-3 max-w-sm rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{appliedMonetizationHint}</p>
             )}
@@ -389,11 +400,11 @@ export default function QuickSetupPage() {
         className="mb-1 inline-flex items-center gap-1 rounded-full bg-primary-subtle px-3 py-1.5 text-xs font-bold text-primary transition-transform hover:-translate-x-0.5"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        Ganti Kategori
+        {t("dashboard.pages.quickSetup.changeCategoryButton")}
       </button>
       <p className="mt-2 text-sm text-app-muted">
-        Kategori: <span className="font-semibold text-app-ink">{activeCategory?.label}</span> -- pilih template, lalu opsional ganti temanya
-        di tab Theme.
+        {t("dashboard.pages.quickSetup.categoryPrefix")} <span className="font-semibold text-app-ink">{activeCategory?.label}</span>{" "}
+        {t("dashboard.pages.quickSetup.categorySuffix")}
       </p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -408,7 +419,7 @@ export default function QuickSetupPage() {
                 tab === "template" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
-              Template
+              {t("dashboard.pages.quickSetup.templateTab")}
             </button>
             {/* Tab "Theme" sengaja dikunci sampai template dipilih --
                 permintaan langsung pengguna: "setelah pilih template user
@@ -417,12 +428,12 @@ export default function QuickSetupPage() {
               type="button"
               disabled={!selectedTemplate}
               onClick={() => selectedTemplate && setTab("theme")}
-              title={!selectedTemplate ? "Pilih template dulu" : undefined}
+              title={!selectedTemplate ? t("dashboard.pages.quickSetup.selectTemplateFirstTitle") : undefined}
               className={`border-b-2 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                 tab === "theme" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
-              Theme
+              {t("dashboard.pages.quickSetup.themeTab")}
             </button>
           </div>
 
@@ -434,32 +445,34 @@ export default function QuickSetupPage() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Cari template di kategori ini..."
+                  placeholder={t("dashboard.pages.quickSetup.searchPlaceholder")}
                   className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {categoryTemplates.map((t) => (
+                {categoryTemplates.map((tpl) => (
                   // div role="button" -- BUKAN <button> sungguhan: PagePreview
                   // di dalamnya merender ShareButton (elemen <button>
                   // sendiri), dan <button> di dalam <button> itu HTML TIDAK
                   // VALID -- browser otomatis "meratakan" nesting itu, event
                   // klik jadi kacau. tabIndex+onKeyDown menjaga tetap bisa
-                  // diakses keyboard.
+                  // diakses keyboard. Nama parameter "tpl" (bukan "t") --
+                  // sama seperti applyTemplate, supaya tidak menimpa t()
+                  // dari useLocale() di scope komponen ini.
                   <div
-                    key={t.key}
+                    key={tpl.key}
                     role="button"
                     tabIndex={0}
-                    onClick={() => pickTemplate(t)}
+                    onClick={() => pickTemplate(tpl)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        pickTemplate(t);
+                        pickTemplate(tpl);
                       }
                     }}
                     className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-app-surface text-left shadow-card transition-transform hover:-translate-y-0.5 ${
-                      selectedTemplate?.key === t.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-app-border"
+                      selectedTemplate?.key === tpl.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-app-border"
                     }`}
                   >
                     <div className="relative h-64 w-full overflow-hidden bg-app-surface pointer-events-none" aria-hidden="true">
@@ -467,19 +480,19 @@ export default function QuickSetupPage() {
                         <PagePreview
                           interactive={false}
                           rootClassName="min-h-full"
-                          data={buildPreviewData(t, myPage?.username ?? "namamu", myPage?.display_name || "Nama Kamu", myPage?.avatar_url ?? "")}
+                          data={buildPreviewData(tpl, myPage?.username ?? t("dashboard.pages.quickSetup.usernamePlaceholder"), myPage?.display_name || t("dashboard.pages.quickSetup.namePlaceholder"), myPage?.avatar_url ?? "")}
                         />
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className="font-heading text-sm font-bold text-app-ink">{t.label}</p>
-                      <p className="mt-1 text-xs text-app-muted">{t.description}</p>
+                      <p className="font-heading text-sm font-bold text-app-ink">{tpl.label}</p>
+                      <p className="mt-1 text-xs text-app-muted">{tpl.description}</p>
                     </div>
                   </div>
                 ))}
                 {categoryTemplates.length === 0 && (
                   <p className="col-span-full rounded-xl border border-dashed border-app-border p-6 text-center text-sm text-app-muted">
-                    Tidak ada template yang cocok dengan pencarianmu.
+                    {t("dashboard.pages.quickSetup.noResultsMessage")}
                   </p>
                 )}
               </div>
@@ -515,7 +528,7 @@ export default function QuickSetupPage() {
               </div>
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center text-xs text-app-muted">
-                Pilih template di sebelah kiri untuk lihat pratinjaunya di sini.
+                {t("dashboard.pages.quickSetup.selectTemplatePrompt")}
               </div>
             )}
           </div>
@@ -526,7 +539,7 @@ export default function QuickSetupPage() {
             disabled={!selectedTemplate || submitting}
             className="mt-4 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {submitting ? "Memeriksa..." : "Terapkan Template"}
+            {submitting ? t("dashboard.pages.quickSetup.checkingButton") : t("dashboard.pages.quickSetup.applyTemplateButton")}
           </button>
         </div>
       </div>

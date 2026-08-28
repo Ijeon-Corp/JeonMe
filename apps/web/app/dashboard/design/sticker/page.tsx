@@ -4,6 +4,7 @@ import PageSkeleton from "@/components/Skeleton";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
+import { useLocale } from "@/lib/locale-context";
 
 // DesignStickerPage -- Modul Desain (koreksi langsung pengguna, 8 Agustus
 // 2026, disempurnakan lagi hari yang sama: "langsung edit di bagian
@@ -14,6 +15,7 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 // halaman tetap sama dengan theme/header/tombol/font (DesignPageShell +
 // useDesignData).
 export default function DesignStickerPage() {
+  const { t } = useLocale();
   const { page, loading, error, links, products, handleStickersChange } = useDesignData();
 
   if (loading || !page) return <PageSkeleton />;
@@ -24,8 +26,8 @@ export default function DesignStickerPage() {
       links={links}
       products={products}
       backHref="/dashboard/design"
-      title="Stiker"
-      description="Tempel stiker dekoratif di halaman publikmu -- seret untuk pindah, tarik gagang pojok untuk ubah ukuran, langsung di panel pratinjau."
+      title={t("dashboard.pages.designSticker.title")}
+      description={t("dashboard.pages.designSticker.description")}
       editableStickers
       onStickersChange={handleStickersChange}
     >

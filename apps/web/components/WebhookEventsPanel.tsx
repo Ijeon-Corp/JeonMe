@@ -4,19 +4,21 @@ import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, WebhookEventItem, listWebhookEvents } from "@/lib/api-client";
 import { IconInbox } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Toko (Fase E4): tab Webhook Events -- log pengiriman webhook dari
 // produk dengan metode penyerahan "webhook" (lihat worker.HandleProductWebhookDelivery).
 // Hanya tampilan baca; tidak ada aksi retry manual (di luar cakupan).
 export default function WebhookEventsPanel() {
+  const { t } = useLocale();
   const [events, setEvents] = useState<WebhookEventItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     listWebhookEvents()
       .then(setEvents)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat riwayat webhook."));
-  }, []);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.webhookEventsPanel.loadError")));
+  }, [t]);
 
   if (events === null) {
     return <PageSkeleton />;
@@ -30,12 +32,12 @@ export default function WebhookEventsPanel() {
         <table className="w-full min-w-[720px] text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
-              <th className="px-4 py-3">Produk</th>
-              <th className="px-4 py-3">URL</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Kode Respons</th>
-              <th className="px-4 py-3">Percobaan</th>
-              <th className="px-4 py-3">Waktu</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnProduct")}</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnUrl")}</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnStatus")}</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnResponseCode")}</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnAttempt")}</th>
+              <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnTime")}</th>
             </tr>
           </thead>
           <tbody>
@@ -51,7 +53,9 @@ export default function WebhookEventsPanel() {
                       e.status === "success" ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
                     }`}
                   >
-                    {e.status === "success" ? "Berhasil" : "Gagal"}
+                    {e.status === "success"
+                      ? t("dashboard.components.webhookEventsPanel.statusSuccess")
+                      : t("dashboard.components.webhookEventsPanel.statusFailed")}
                   </span>
                   {e.status === "failed" && e.error_message && (
                     <p className="mt-1 max-w-[220px] truncate text-[10px] text-red-500" title={e.error_message}>
@@ -71,7 +75,7 @@ export default function WebhookEventsPanel() {
         {events.length === 0 && (
           <div className="flex flex-col items-center gap-2 p-6 text-center">
             <IconInbox className="h-5 w-5 text-app-muted" />
-            <p className="text-xs text-app-muted">Belum ada pengiriman webhook.</p>
+            <p className="text-xs text-app-muted">{t("dashboard.components.webhookEventsPanel.emptyState")}</p>
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconLock, Ic
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 import { SITE_URL } from "@/lib/site";
+import { useLocale } from "@/lib/locale-context";
 
 // Struktur halaman ini diikutkan tangkapan layar halaman Design Linktree:
 // satu baris "Theme" berdiri sendiri di atas, lalu label "Customize", lalu
@@ -34,13 +35,14 @@ import { SITE_URL } from "@/lib/site";
 // lengkap di halaman baru itu.
 export default function DashboardDesignPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
 
   if (loading || !page) return <PageSkeleton />;
 
   const presetMeta = PAGE_THEMES[page.theme as keyof typeof PAGE_THEMES] as (typeof PAGE_THEMES)[keyof typeof PAGE_THEMES] | undefined;
   const themeSwatch = page.theme === "custom" ? page.custom_button_color : (presetMeta?.swatch ?? "#1B4D3E");
-  const themeLabel = page.theme === "custom" ? "Custom" : (presetMeta?.label ?? "Default");
+  const themeLabel = page.theme === "custom" ? t("dashboard.pages.design.themeCustomLabel") : (presetMeta?.label ?? t("dashboard.pages.design.themeDefaultLabel"));
   const buttonStyleLabel = CUSTOM_BUTTON_STYLE_OPTIONS.find((o) => o.value === page.custom_button_style)?.label;
   const fontLabel = CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label;
 
@@ -53,13 +55,13 @@ export default function DashboardDesignPage() {
           di bawah lebar intrinsik kontennya di viewport sempit/zoom
           tinggi walau belum dilaporkan pengguna di halaman ini. */}
       <div className="min-w-0 max-w-2xl">
-        <p className="mt-1 text-sm text-app-muted">Foto profil, bio, dan tema halaman publikmu.</p>
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.design.subtitle")}</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         <section className="glass mt-6 rounded-3xl p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-bold text-app-ink">Pengaturan Halaman</h2>
+            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.design.pageSettingsHeading")}</h2>
             <a
               href={`${SITE_URL}/${page.username}`}
               target="_blank"
@@ -81,21 +83,23 @@ export default function DashboardDesignPage() {
             <div className="flex items-center gap-1.5">
               <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-app-muted"}`} />
               <span className="text-xs font-bold text-app-ink">
-                {page.verification.is_verified ? "Badge Terverifikasi Aktif" : "Badge Terverifikasi"}
+                {page.verification.is_verified
+                  ? t("dashboard.pages.design.verifiedBadgeActive")
+                  : t("dashboard.pages.design.verifiedBadge")}
               </span>
             </div>
             <ul className="mt-2 flex flex-col gap-1 text-[11px]">
               <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                Email terverifikasi
+                {t("dashboard.pages.design.emailVerified")}
               </li>
               <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                Profil lengkap (foto + bio terisi)
+                {t("dashboard.pages.design.profileComplete")}
               </li>
               <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
-                Minimal 1 transaksi sukses
+                {t("dashboard.pages.design.minTransaction")}
               </li>
             </ul>
           </div>
@@ -105,14 +109,14 @@ export default function DashboardDesignPage() {
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: themeSwatch }} aria-hidden />
                 <div>
-                  <p className="text-sm font-semibold text-app-ink">Tema</p>
+                  <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.themeRowLabel")}</p>
                   <p className="text-xs text-app-muted">{themeLabel}</p>
                 </div>
               </div>
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">Sesuaikan</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.design.customizeSectionLabel")}</p>
 
             <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
@@ -124,7 +128,7 @@ export default function DashboardDesignPage() {
                     {page.username.slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                <p className="text-sm font-semibold text-app-ink">Header</p>
+                <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.headerRowLabel")}</p>
               </div>
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
@@ -133,7 +137,7 @@ export default function DashboardDesignPage() {
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />
                 <div>
-                  <p className="text-sm font-semibold text-app-ink">Tombol</p>
+                  <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.buttonRowLabel")}</p>
                   {buttonStyleLabel && <p className="text-xs text-app-muted">{buttonStyleLabel}</p>}
                 </div>
               </div>
@@ -146,7 +150,7 @@ export default function DashboardDesignPage() {
                   Aa
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-app-ink">Font</p>
+                  <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.fontRowLabel")}</p>
                   {fontLabel && <p className="text-xs text-app-muted">{fontLabel}</p>}
                 </div>
               </div>
@@ -159,9 +163,11 @@ export default function DashboardDesignPage() {
                   <IconSparkle className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-app-ink">Stiker</p>
+                  <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.stickerRowLabel")}</p>
                   <p className="text-xs text-app-muted">
-                    {page.stickers.length === 0 ? "Tidak ada" : `${page.stickers.length} stiker terpasang`}
+                    {page.stickers.length === 0
+                      ? t("dashboard.pages.design.noStickers")
+                      : t("dashboard.pages.design.stickersInstalled").replace("{count}", String(page.stickers.length))}
                   </p>
                 </div>
               </div>
@@ -189,9 +195,11 @@ export default function DashboardDesignPage() {
                   {page.is_premium ? <IconSparkle className="h-4 w-4" /> : <IconLock className="h-4 w-4 text-app-muted" />}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-app-ink">Sembunyikan Watermark</p>
+                  <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.design.hideWatermarkTitle")}</p>
                   <p className="truncate text-xs text-app-muted">
-                    {page.is_premium ? "Hilangkan pil “Buat halaman gratis di Jeon.id” di footer" : "Khusus kreator Premium -- upgrade dulu"}
+                    {page.is_premium
+                      ? t("dashboard.pages.design.hideWatermarkDescPremium")
+                      : t("dashboard.pages.design.hideWatermarkDescFree")}
                   </p>
                 </div>
               </button>
@@ -199,7 +207,7 @@ export default function DashboardDesignPage() {
                 checked={page.is_premium && page.hide_watermark}
                 disabled={!page.is_premium}
                 onChange={() => handlePageSettingChange({ hide_watermark: !page.hide_watermark })}
-                label="Sembunyikan watermark"
+                label={t("dashboard.pages.design.hideWatermarkToggleLabel")}
               />
             </div>
           </div>

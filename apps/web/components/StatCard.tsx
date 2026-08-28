@@ -1,4 +1,7 @@
+"use client";
+
 import { IconTrendArrow } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Kartu statistik -- redesain "Premium Refined" (permintaan langsung
 // pengguna, 9 Agustus 2026, menggantikan arah "Playful Creator" 9 Agustus
@@ -73,6 +76,7 @@ export default function StatCard({
 }) {
   const t = STAT_TONES[tone];
   const isBrand = tone === "brand";
+  const { t: translate } = useLocale();
   return (
     <div className={`relative overflow-hidden rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-0.5 ${t.card}`}>
       {/* Garis emas tipis -- SATU-satunya penanda "kartu utama", dipakai
@@ -86,7 +90,7 @@ export default function StatCard({
         <p className={`font-serifDisplay text-xl font-semibold tabular-nums ${t.value}`}>{value}</p>
         {pct !== undefined && <TrendBadge pct={pct} onDark={isBrand} />}
       </div>
-      {sub !== "" && <p className={`mt-1 text-[11px] ${t.sub}`}>{sub ?? "dibanding periode sebelumnya"}</p>}
+      {sub !== "" && <p className={`mt-1 text-[11px] ${t.sub}`}>{sub ?? translate("dashboard.components.statCard.defaultSub")}</p>}
       {sparkline && sparkline.line && (
         <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-2 h-10 w-full">
           <path d={sparkline.area} fill={accentHex} fillOpacity={isBrand ? 0.18 : 0.16} />

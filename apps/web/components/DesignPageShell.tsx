@@ -4,6 +4,7 @@ import Link from "next/link";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import { IconChevronRight } from "@/components/icons";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
+import { useLocale } from "@/lib/locale-context";
 
 // DesignPageShell -- permintaan langsung pengguna: setiap menu di halaman
 // Desain sekarang halaman tersendiri (bukan accordion) -- komponen ini
@@ -54,6 +55,7 @@ export default function DesignPageShell({
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className={contentMaxWidth}>
@@ -63,7 +65,7 @@ export default function DesignPageShell({
             className="mb-3 inline-flex items-center gap-1 rounded-full bg-primary-subtle px-3 py-1.5 text-xs font-bold text-primary transition-transform hover:-translate-x-0.5"
           >
             <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-            Kembali ke Desain
+            {t("dashboard.components.designPageShell.backToDesign")}
           </Link>
         )}
         <h1 className="font-heading text-2xl font-bold text-app-ink">{title}</h1>

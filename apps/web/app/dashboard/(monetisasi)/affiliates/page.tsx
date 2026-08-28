@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   DashboardProduct,
@@ -19,6 +20,7 @@ import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardAffiliatesPage() {
+  const { t } = useLocale();
   const [affiliates, setAffiliates] = useState<MyAffiliate[]>([]);
   const [programs, setPrograms] = useState<AffiliateProgram[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -44,7 +46,7 @@ export default function DashboardAffiliatesPage() {
 
   useEffect(() => {
     loadAll()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat program afiliasi."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.affiliates.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,7 +61,7 @@ export default function DashboardAffiliatesPage() {
     e.preventDefault();
     const percent = Number(commissionPercent);
     if (!email.trim() || !productId || !percent || percent <= 0 || percent > 100) {
-      setError("Email afiliator, produk, dan komisi (0.01-100%) wajib diisi dengan benar.");
+      setError(t("dashboard.pages.affiliates.errors.formInvalid"));
       return;
     }
     setError(null);
@@ -72,19 +74,24 @@ export default function DashboardAffiliatesPage() {
       setCommissionPercent("10");
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan afiliator.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.affiliates.errors.saveFailed"));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleRevoke(affiliateId: string, email: string) {
-    if (!(await confirmDelete(`Cabut ${email} sebagai afiliator? Tautan referralnya akan berhenti berfungsi.`, { confirmButtonText: "Ya, Cabut" }))) return;
+    if (
+      !(await confirmDelete(t("dashboard.pages.affiliates.confirmRevokeText").replace("{email}", email), {
+        confirmButtonText: t("dashboard.pages.affiliates.confirmRevokeButton"),
+      }))
+    )
+      return;
     try {
       await revokeAffiliate(affiliateId);
       await loadAll();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mencabut afiliator.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.affiliates.errors.revokeFailed"));
     }
   }
 
@@ -93,7 +100,7 @@ export default function DashboardAffiliatesPage() {
       await removeAffiliateCommission(affiliateId, productId);
       await loadAll();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus komisi.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.affiliates.errors.removeCommissionFailed"));
     }
   }
 
@@ -102,8 +109,7 @@ export default function DashboardAffiliatesPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Undang afiliator dengan komisi custom per produk. Versi awal: mode privat -- afiliator harus sudah jadi
-        pengguna Jeon.id.
+        {t("dashboard.pages.affiliates.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -116,31 +122,31 @@ export default function DashboardAffiliatesPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Undang Afiliator
+            {t("dashboard.pages.affiliates.inviteButton")}
           </button>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Email Afiliator</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.affiliates.emailLabel")}</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="afiliator@email.com"
+                placeholder={t("dashboard.pages.affiliates.emailPlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
-              <p className="mt-1 text-[11px] text-app-muted">Harus sudah punya akun Jeon.id dengan email ini.</p>
+              <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.affiliates.emailHint")}</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Produk</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.affiliates.productLabel")}</label>
               <select
                 required
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Pilih produk...</option>
+                <option value="">{t("dashboard.pages.affiliates.productPlaceholder")}</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (Rp {p.price_idr.toLocaleString("id-ID")})
@@ -149,7 +155,7 @@ export default function DashboardAffiliatesPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Komisi (%)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.affiliates.commissionLabel")}</label>
               <input
                 type="number"
                 required
@@ -167,14 +173,14 @@ export default function DashboardAffiliatesPage() {
                 onClick={() => setAdding(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.affiliates.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={saving}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {saving ? "Menyimpan..." : "Simpan"}
+                {saving ? t("dashboard.pages.affiliates.saving") : t("dashboard.pages.affiliates.save")}
               </button>
             </div>
           </form>
@@ -189,7 +195,7 @@ export default function DashboardAffiliatesPage() {
               <button
                 type="button"
                 onClick={() => handleRevoke(a.id, a.affiliate_email)}
-                title="Cabut afiliator"
+                title={t("dashboard.pages.affiliates.revokeTitle")}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
               >
                 <IconTrash className="h-4 w-4" />
@@ -205,7 +211,7 @@ export default function DashboardAffiliatesPage() {
                 className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
               >
                 <IconCopy className="h-3 w-3" />
-                {copiedCode === a.referral_code ? "Tersalin!" : "Salin"}
+                {copiedCode === a.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-1.5">
@@ -217,7 +223,7 @@ export default function DashboardAffiliatesPage() {
                     <button
                       type="button"
                       onClick={() => handleRemoveCommission(a.id, c.product_id)}
-                      title="Hapus komisi produk ini"
+                      title={t("dashboard.pages.affiliates.removeCommissionTitle")}
                       className="text-app-muted hover:text-red-600"
                     >
                       <IconTrash className="h-3 w-3" />
@@ -225,18 +231,18 @@ export default function DashboardAffiliatesPage() {
                   </div>
                 </div>
               ))}
-              {a.commissions.length === 0 && <p className="text-xs text-app-muted">Belum ada komisi produk.</p>}
+              {a.commissions.length === 0 && <p className="text-xs text-app-muted">{t("dashboard.pages.affiliates.noCommissions")}</p>}
             </div>
           </div>
         ))}
 
         {affiliates.length === 0 && (
-          <EmptyState text='Belum ada afiliator -- klik "Undang Afiliator" di atas untuk mengundang yang pertama.' />
+          <EmptyState text={t("dashboard.pages.affiliates.emptyAffiliates")} />
         )}
       </div>
 
-      <h2 className="mt-10 font-heading text-lg font-bold text-app-ink">Saya Jadi Afiliator</h2>
-      <p className="mt-1 text-sm text-app-muted">Program afiliasi kreator lain yang kamu ikuti.</p>
+      <h2 className="mt-10 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.myAffiliationsSubtitle")}</p>
 
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
@@ -250,7 +256,7 @@ export default function DashboardAffiliatesPage() {
                 className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
               >
                 <IconCopy className="h-3 w-3" />
-                {copiedCode === p.referral_code ? "Tersalin!" : "Salin"}
+                {copiedCode === p.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}
               </button>
             </div>
             <div className="mt-3 flex flex-col gap-1.5">
@@ -264,7 +270,7 @@ export default function DashboardAffiliatesPage() {
           </div>
         ))}
 
-        {programs.length === 0 && <EmptyState text="Belum ada kreator yang mengundangmu sebagai afiliator." />}
+        {programs.length === 0 && <EmptyState text={t("dashboard.pages.affiliates.emptyPrograms")} />}
       </div>
     </div>
   );

@@ -6,8 +6,10 @@ import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_FONT_OPTIONS } from "@/lib/page-themes";
 import { MyPage } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
+import { useLocale } from "@/lib/locale-context";
 
 export default function DesignFontPage() {
+  const { t } = useLocale();
   const { page, setPage, links, products, loading, error, handleStyleOverride } = useDesignData();
 
   if (loading || !page) return <PageSkeleton />;
@@ -18,14 +20,14 @@ export default function DesignFontPage() {
       links={links}
       products={products}
       backHref="/dashboard/design"
-      title="Font"
-      description="Font halaman, warna teks umum, dan font/warna judul terpisah (opsional)."
+      title={t("dashboard.pages.designFont.title")}
+      description={t("dashboard.pages.designFont.description")}
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Font Halaman</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designFont.pageFontLabel")}</label>
           <select
             value={page.custom_font}
             onChange={(e) => handleStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
@@ -40,7 +42,7 @@ export default function DesignFontPage() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Teks Halaman</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designFont.pageTextColorLabel")}</label>
           <input
             type="color"
             value={page.custom_page_text_color || "#FFFFFF"}
@@ -54,20 +56,20 @@ export default function DesignFontPage() {
               onClick={() => handleStyleOverride({ custom_page_text_color: "" })}
               className="mt-1 text-[11px] font-semibold text-primary hover:underline"
             >
-              Kembalikan ke warna bawaan tema
+              {t("dashboard.pages.designFont.resetToThemeColor")}
             </button>
           )}
         </div>
 
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold text-app-ink">Font Judul Terpisah</p>
-            <p className="text-[11px] text-app-muted">Default sama dengan font halaman.</p>
+            <p className="text-xs font-semibold text-app-ink">{t("dashboard.pages.designFont.separateTitleFontLabel")}</p>
+            <p className="text-[11px] text-app-muted">{t("dashboard.pages.designFont.separateTitleFontHelp")}</p>
           </div>
           <Toggle
             checked={!!page.custom_title_font}
             onChange={() => handleStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
-            label="Font judul terpisah"
+            label={t("dashboard.pages.designFont.separateTitleFontToggleLabel")}
           />
         </div>
 
@@ -86,7 +88,7 @@ export default function DesignFontPage() {
         )}
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Judul</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designFont.titleColorLabel")}</label>
           <input
             type="color"
             value={page.custom_title_color || "#FFFFFF"}
@@ -100,7 +102,7 @@ export default function DesignFontPage() {
               onClick={() => handleStyleOverride({ custom_title_color: "" })}
               className="mt-1 text-[11px] font-semibold text-primary hover:underline"
             >
-              Kembalikan ke warna bawaan tema
+              {t("dashboard.pages.designFont.resetToThemeColor")}
             </button>
           )}
         </div>

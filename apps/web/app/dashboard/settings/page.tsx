@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getMyPage } from "@/lib/api-client";
+import { useLocale } from "@/lib/locale-context";
 import {
   IconChart,
   IconChevronRight,
@@ -56,110 +57,125 @@ type SettingsItem = {
   statusPill?: string;
 };
 
-const SETTINGS_GROUPS: { label: string; items: SettingsItem[] }[] = [
-  {
-    label: "Akun",
-    items: [
-      {
-        href: "/dashboard/settings/profile",
-        title: "Profil & Akun",
-        description: "Nama tampilan, bio, username, kategori kreator.",
-        icon: IconPencil,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/settings/security",
-        title: "Keamanan",
-        description: "Ganti password, verifikasi dua langkah (2FA), sesi aktif.",
-        icon: IconShield,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/settings/seo",
-        title: "SEO",
-        description: "Judul/deskripsi pencarian, sembunyikan dari mesin pencari.",
-        icon: IconSearch,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-    ],
-  },
-  {
-    label: "Uang & Verifikasi",
-    items: [
-      {
-        href: "/dashboard/settings/payment",
-        title: "Pembayaran & Penarikan",
-        description: "Rekening/e-wallet, verifikasi, jadwal auto-withdraw.",
-        icon: IconWallet,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/kyc",
-        title: "Verifikasi KYC",
-        description: "Upload identitas untuk membuka penarikan dana.",
-        icon: IconShield,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-    ],
-  },
-  {
-    label: "Pertumbuhan",
-    items: [
-      {
-        href: "/dashboard/settings/subscription",
-        title: "Langganan Premium",
-        description: "Hilangkan watermark, latar belakang kustom.",
-        icon: IconStar,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/custom-domain",
-        title: "Domain Kustom",
-        description: "Pakai domainmu sendiri untuk halaman publik.",
-        icon: IconGlobe,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/team",
-        title: "Tim & Kolaborator",
-        description: "Undang admin dengan akses tautan/produk/desain.",
-        icon: IconUsers,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      {
-        href: "/dashboard/analytics",
-        title: "Analitik",
-        description: "Facebook Pixel, Google Analytics, parameter UTM.",
-        icon: IconChart,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-      // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus
-      // 2026: "saya mau jeonme ini bisa connect ke akun kita contoh nya
-      // instagram tiktok" (diriset dulu vs Linktree -- profil + postingan/
-      // video terbaru tampil otomatis di halaman publik, beda dari tautan
-      // Instagram/TikTok biasa yang sudah ada di menu Link Bio).
-      {
-        href: "/dashboard/social-connect",
-        title: "Koneksi Sosial",
-        description: "Sambungkan Instagram/TikTok, tampilkan postingan terbaru otomatis.",
-        icon: IconExternal,
-        badgeClass: "bg-primary-subtle text-primary",
-      },
-    ],
-  },
-  {
-    label: "Zona Berbahaya",
-    items: [
-      {
-        href: "/dashboard/settings/danger-zone",
-        title: "Zona Berbahaya",
-        description: "Nonaktifkan atau hapus akun.",
-        icon: IconTrash,
-        badgeClass: "bg-red-50 text-red-600",
-      },
-    ],
-  },
-];
+// SettingsGroup.id -- pengenal STABIL (tidak ikut berganti bahasa), dipakai
+// untuk logika (mis. styling merah grup "Zona Berbahaya") supaya tidak
+// bergantung pada isi `label` yang sekarang lewat t() dan berubah per
+// locale.
+type SettingsGroup = { id: string; label: string; items: SettingsItem[] };
+
+// buildSettingsGroups -- FUNGSI (bukan konstanta modul) mengikuti pola
+// buildNavItems di dashboard/layout.tsx: dipanggil ulang tiap render supaya
+// label & deskripsi ikut berganti begitu locale berubah.
+function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
+  return [
+    {
+      id: "account",
+      label: t("dashboard.pages.settings.groups.account"),
+      items: [
+        {
+          href: "/dashboard/settings/profile",
+          title: t("dashboard.pages.settings.items.profileTitle"),
+          description: t("dashboard.pages.settings.items.profileDescription"),
+          icon: IconPencil,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/settings/security",
+          title: t("dashboard.pages.settings.items.securityTitle"),
+          description: t("dashboard.pages.settings.items.securityDescription"),
+          icon: IconShield,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/settings/seo",
+          title: t("dashboard.pages.settings.items.seoTitle"),
+          description: t("dashboard.pages.settings.items.seoDescription"),
+          icon: IconSearch,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+      ],
+    },
+    {
+      id: "moneyVerification",
+      label: t("dashboard.pages.settings.groups.moneyVerification"),
+      items: [
+        {
+          href: "/dashboard/settings/payment",
+          title: t("dashboard.pages.settings.items.paymentTitle"),
+          description: t("dashboard.pages.settings.items.paymentDescription"),
+          icon: IconWallet,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/kyc",
+          title: t("dashboard.pages.settings.items.kycTitle"),
+          description: t("dashboard.pages.settings.items.kycDescription"),
+          icon: IconShield,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+      ],
+    },
+    {
+      id: "growth",
+      label: t("dashboard.pages.settings.groups.growth"),
+      items: [
+        {
+          href: "/dashboard/settings/subscription",
+          title: t("dashboard.pages.settings.items.subscriptionTitle"),
+          description: t("dashboard.pages.settings.items.subscriptionDescription"),
+          icon: IconStar,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/custom-domain",
+          title: t("dashboard.pages.settings.items.customDomainTitle"),
+          description: t("dashboard.pages.settings.items.customDomainDescription"),
+          icon: IconGlobe,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/team",
+          title: t("dashboard.pages.settings.items.teamTitle"),
+          description: t("dashboard.pages.settings.items.teamDescription"),
+          icon: IconUsers,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        {
+          href: "/dashboard/analytics",
+          title: t("dashboard.pages.settings.items.analyticsTitle"),
+          description: t("dashboard.pages.settings.items.analyticsDescription"),
+          icon: IconChart,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+        // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus
+        // 2026: "saya mau jeonme ini bisa connect ke akun kita contoh nya
+        // instagram tiktok" (diriset dulu vs Linktree -- profil + postingan/
+        // video terbaru tampil otomatis di halaman publik, beda dari tautan
+        // Instagram/TikTok biasa yang sudah ada di menu Link Bio).
+        {
+          href: "/dashboard/social-connect",
+          title: t("dashboard.pages.settings.items.socialConnectTitle"),
+          description: t("dashboard.pages.settings.items.socialConnectDescription"),
+          icon: IconExternal,
+          badgeClass: "bg-primary-subtle text-primary",
+        },
+      ],
+    },
+    {
+      id: "dangerZone",
+      label: t("dashboard.pages.settings.groups.dangerZone"),
+      items: [
+        {
+          href: "/dashboard/settings/danger-zone",
+          title: t("dashboard.pages.settings.items.dangerZoneTitle"),
+          description: t("dashboard.pages.settings.items.dangerZoneDescription"),
+          icon: IconTrash,
+          badgeClass: "bg-red-50 text-red-600",
+        },
+      ],
+    },
+  ];
+}
 
 function SettingsCard({ item }: { item: SettingsItem }) {
   const Icon = item.icon;
@@ -188,6 +204,7 @@ function SettingsCard({ item }: { item: SettingsItem }) {
 }
 
 export default function DashboardSettingsPage() {
+  const { t } = useLocale();
   const [query, setQuery] = useState("");
   const [isPremium, setIsPremium] = useState(false);
 
@@ -201,27 +218,36 @@ export default function DashboardSettingsPage() {
       });
   }, []);
 
+  const settingsGroups = buildSettingsGroups(t);
+
   // resolveItem -- menimpa description/statusPill kartu "Langganan
   // Premium" kalau kreator ini SUDAH Premium, supaya kartu itu sendiri
   // langsung menunjukkan status aktif (bukan cuma teks upsell generik yang
   // sama untuk semua orang) tanpa perlu buka halamannya.
   function resolveItem(item: SettingsItem): SettingsItem {
     if (item.href !== "/dashboard/settings/subscription" || !isPremium) return item;
-    return { ...item, description: "Watermark disembunyikan, latar kustom aktif.", statusPill: "Aktif" };
+    return {
+      ...item,
+      description: t("dashboard.pages.settings.items.subscriptionActiveDescription"),
+      statusPill: t("dashboard.pages.settings.items.subscriptionActiveBadge"),
+    };
   }
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return SETTINGS_GROUPS;
-    return SETTINGS_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter((s) => s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
-    })).filter((g) => g.items.length > 0);
+    if (!q) return settingsGroups;
+    return settingsGroups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((s) => s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)),
+      }))
+      .filter((g) => g.items.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- settingsGroups dibangun ulang tiap render dari `t`, cukup ikuti `query` sebagai pemicu (menambah settingsGroups ke deps akan membuat memo ini tidak pernah "stabil" karena referensinya baru tiap render).
   }, [query]);
 
   return (
     <div className="mx-auto max-w-4xl">
-      <p className="mt-1 text-sm text-app-muted">Kelola akun, pembayaran, tim, dan keamananmu.</p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settings.subtitle")}</p>
 
       <div className="relative mt-5">
         <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
@@ -229,15 +255,15 @@ export default function DashboardSettingsPage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari pengaturan..."
+          placeholder={t("dashboard.pages.settings.searchPlaceholder")}
           className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
         />
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
         {filteredGroups.map((g) => (
-          <div key={g.label}>
-            <p className={`mb-2.5 text-xs font-bold uppercase tracking-wider ${g.label === "Zona Berbahaya" ? "text-red-500" : "text-app-muted"}`}>
+          <div key={g.id}>
+            <p className={`mb-2.5 text-xs font-bold uppercase tracking-wider ${g.id === "dangerZone" ? "text-red-500" : "text-app-muted"}`}>
               {g.label}
             </p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -249,7 +275,7 @@ export default function DashboardSettingsPage() {
         ))}
         {filteredGroups.length === 0 && (
           <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-sm text-app-muted">
-            Tidak ada pengaturan yang cocok dengan &quot;{query}&quot;.
+            {t("dashboard.pages.settings.noResults").replace("{query}", query)}
           </p>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   DonationSettings,
@@ -21,6 +22,7 @@ function formatRupiah(n: number): string {
 }
 
 export default function DashboardDonationPage() {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<DonationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,7 +58,7 @@ export default function DashboardDonationPage() {
         setGoalAmountIDR(s.goal_amount_idr ? String(s.goal_amount_idr) : "");
         setWishlist(w);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat pengaturan dukungan."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.donation.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -64,12 +66,12 @@ export default function DashboardDonationPage() {
     e.preventDefault();
     const minAmount = Number(minAmountIDR);
     if (enabled && (!title.trim() || !minAmount || minAmount < 1000)) {
-      setError("Judul wajib diisi dan nominal minimum minimal Rp1.000.");
+      setError(t("dashboard.pages.donation.errors.titleAndMinAmountRequired"));
       return;
     }
     const goalAmount = goalAmountIDR ? Number(goalAmountIDR) : 0;
     if (goalAmount > 0 && !goalTitle.trim()) {
-      setError("Judul target wajib diisi kalau mengatur target donasi.");
+      setError(t("dashboard.pages.donation.errors.goalTitleRequired"));
       return;
     }
     setError(null);
@@ -90,7 +92,7 @@ export default function DashboardDonationPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan dukungan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.donation.errors.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -100,7 +102,7 @@ export default function DashboardDonationPage() {
     e.preventDefault();
     const price = Number(wishlistPrice);
     if (!wishlistName.trim() || !price || price < 1000) {
-      setWishlistError("Nama wajib diisi dan harga minimal Rp1.000.");
+      setWishlistError(t("dashboard.pages.donation.errors.wishlistNameAndPriceRequired"));
       return;
     }
     setWishlistError(null);
@@ -112,7 +114,7 @@ export default function DashboardDonationPage() {
       setAddingWishlist(false);
       setWishlist(await listWishlistItems());
     } catch (err) {
-      setWishlistError(err instanceof ApiError ? err.message : "Gagal menambah wishlist.");
+      setWishlistError(err instanceof ApiError ? err.message : t("dashboard.pages.donation.errors.addWishlistFailed"));
     }
   }
 
@@ -128,36 +130,34 @@ export default function DashboardDonationPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <p className="mt-1 text-sm text-app-muted">
-        Biarkan pengunjung memberi dukungan dengan nominal bebas, tanpa harus membeli produk apa pun.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.donation.subtitle")}</p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-      {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Pengaturan disimpan.</p>}
+      {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.donation.saved")}</p>}
 
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-app-ink">Aktifkan Blok Dukungan</p>
-            <p className="text-xs text-app-muted">Tampil di halaman publikmu kalau aktif.</p>
+            <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.donation.enableBlock")}</p>
+            <p className="text-xs text-app-muted">{t("dashboard.pages.donation.enableBlockHint")}</p>
           </div>
-          <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label="Aktifkan blok dukungan" />
+          <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label={t("dashboard.pages.donation.enableBlockAria")} />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-app-ink">Judul</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.donation.titleLabel")}</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Traktir aku kopi"
+            placeholder={t("dashboard.pages.donation.titlePlaceholder")}
             maxLength={200}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-app-ink">Nominal Minimum (Rp)</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.donation.minAmountLabel")}</label>
           <input
             type="number"
             min={1000}
@@ -165,7 +165,7 @@ export default function DashboardDonationPage() {
             onChange={(e) => setMinAmountIDR(e.target.value)}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <p className="mt-1 text-[11px] text-app-muted">Pengunjung tetap bebas memberi lebih dari nominal ini.</p>
+          <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.donation.minAmountHint")}</p>
         </div>
 
         {/* Target Donasi -- Gap #4 benchmark kompetitif (9 Agustus 2026, ala
@@ -173,13 +173,13 @@ export default function DashboardDonationPage() {
             setiap kali target diganti (lihat catatan donation_goal_started_at
             di backend) -- BUKAN akumulasi sepanjang masa. */}
         <div className="rounded-2xl border border-dashed border-app-border p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Target Donasi (opsional)</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.donation.goalSectionTitle")}</p>
           <div className="mt-2 flex flex-col gap-2">
             <input
               type="text"
               value={goalTitle}
               onChange={(e) => setGoalTitle(e.target.value)}
-              placeholder="mis. Upgrade kamera streaming"
+              placeholder={t("dashboard.pages.donation.goalTitlePlaceholder")}
               maxLength={200}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
@@ -188,7 +188,7 @@ export default function DashboardDonationPage() {
               min={0}
               value={goalAmountIDR}
               onChange={(e) => setGoalAmountIDR(e.target.value)}
-              placeholder="Target nominal (Rp), kosongkan untuk hapus target"
+              placeholder={t("dashboard.pages.donation.goalAmountPlaceholder")}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
@@ -209,12 +209,12 @@ export default function DashboardDonationPage() {
           disabled={saving}
           className="btn-primary rounded-full py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {saving ? "Menyimpan..." : "Simpan"}
+          {saving ? t("dashboard.pages.donation.saving") : t("dashboard.pages.donation.save")}
         </button>
 
         {settings?.product_id && (
           <p className="text-[11px] text-app-muted">
-            Versi awal: nominal sekali bayar saja. Dukungan berulang (mingguan/bulanan) belum didukung.
+            {t("dashboard.pages.donation.recurringNotSupportedHint")}
           </p>
         )}
       </form>
@@ -228,8 +228,8 @@ export default function DashboardDonationPage() {
             <IconGift className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">Wishlist</h2>
-            <p className="text-xs text-app-muted">Barang yang bisa dipilih pendukung untuk &quot;diwujudkan&quot; saat mendukung.</p>
+            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.donation.wishlistTitle")}</h2>
+            <p className="text-xs text-app-muted">{t("dashboard.pages.donation.wishlistSubtitle")}</p>
           </div>
         </div>
 
@@ -253,14 +253,14 @@ export default function DashboardDonationPage() {
                   type="button"
                   onClick={() => handleDeleteWishlist(w.id)}
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                  title="Hapus item wishlist"
+                  title={t("dashboard.pages.donation.deleteWishlistItemTitle")}
                 >
                   <IconTrash className="h-3.5 w-3.5" />
                 </button>
               </div>
             );
           })}
-          {wishlist.length === 0 && !addingWishlist && <EmptyState text="Belum ada item wishlist." />}
+          {wishlist.length === 0 && !addingWishlist && <EmptyState text={t("dashboard.pages.donation.wishlistEmpty")} />}
         </div>
 
         {addingWishlist ? (
@@ -270,7 +270,7 @@ export default function DashboardDonationPage() {
               autoFocus
               value={wishlistName}
               onChange={(e) => setWishlistName(e.target.value)}
-              placeholder="Nama barang"
+              placeholder={t("dashboard.pages.donation.wishlistNamePlaceholder")}
               maxLength={200}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
@@ -279,26 +279,26 @@ export default function DashboardDonationPage() {
               min={1000}
               value={wishlistPrice}
               onChange={(e) => setWishlistPrice(e.target.value)}
-              placeholder="Harga (Rp)"
+              placeholder={t("dashboard.pages.donation.wishlistPricePlaceholder")}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <input
               type="url"
               value={wishlistLink}
               onChange={(e) => setWishlistLink(e.target.value)}
-              placeholder="Tautan produk (opsional)"
+              placeholder={t("dashboard.pages.donation.wishlistLinkPlaceholder")}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <div className="flex gap-2">
               <button type="submit" className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white">
-                Tambah
+                {t("dashboard.pages.donation.wishlistAdd")}
               </button>
               <button
                 type="button"
                 onClick={() => setAddingWishlist(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted"
               >
-                Batal
+                {t("dashboard.pages.donation.cancel")}
               </button>
             </div>
           </form>
@@ -308,7 +308,7 @@ export default function DashboardDonationPage() {
             onClick={() => setAddingWishlist(true)}
             className="mt-3 w-full rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-app-muted hover:border-primary hover:text-primary"
           >
-            + Tambah Item Wishlist
+            + {t("dashboard.pages.donation.wishlistAddItem")}
           </button>
         )}
       </section>

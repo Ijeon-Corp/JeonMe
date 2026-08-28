@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   DashboardBooking,
@@ -19,11 +20,11 @@ import Toggle from "@/components/Toggle";
 
 // Indonesia TIDAK memakai daylight saving time -- pola sama seperti
 // dashboard/events, offset UTC tetap sepanjang tahun.
-const TIMEZONE_OPTIONS: { value: string; label: string; offset: string }[] = [
-  { value: "Asia/Jakarta", label: "WIB (Jakarta)", offset: "+07:00" },
-  { value: "Asia/Makassar", label: "WITA (Makassar)", offset: "+08:00" },
-  { value: "Asia/Jayapura", label: "WIT (Jayapura)", offset: "+09:00" },
-  { value: "UTC", label: "UTC (booking internasional)", offset: "+00:00" },
+const TIMEZONE_OPTIONS: { value: string; offset: string }[] = [
+  { value: "Asia/Jakarta", offset: "+07:00" },
+  { value: "Asia/Makassar", offset: "+08:00" },
+  { value: "Asia/Jayapura", offset: "+09:00" },
+  { value: "UTC", offset: "+00:00" },
 ];
 
 function toRFC3339(localDateTime: string, timezone: string): string {
@@ -32,6 +33,13 @@ function toRFC3339(localDateTime: string, timezone: string): string {
 }
 
 export default function DashboardBookingsPage() {
+  const { t } = useLocale();
+  const timezoneLabels: Record<string, string> = {
+    "Asia/Jakarta": t("dashboard.pages.bookings.timezones.wib"),
+    "Asia/Makassar": t("dashboard.pages.bookings.timezones.wita"),
+    "Asia/Jayapura": t("dashboard.pages.bookings.timezones.wit"),
+    UTC: t("dashboard.pages.bookings.timezones.utc"),
+  };
   const [bookings, setBookings] = useState<DashboardBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +63,7 @@ export default function DashboardBookingsPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat booking."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -71,11 +79,11 @@ export default function DashboardBookingsPage() {
     const price = Number(priceIDR);
     const duration = Number(durationMinutes);
     if (!name.trim() || !price || price < 1000) {
-      setError("Nama booking wajib diisi dan harga minimal Rp1.000.");
+      setError(t("dashboard.pages.bookings.errors.nameAndPriceRequired"));
       return;
     }
     if (!duration || duration < 5) {
-      setError("Durasi minimal 5 menit.");
+      setError(t("dashboard.pages.bookings.errors.durationTooShort"));
       return;
     }
     setError(null);
@@ -86,7 +94,7 @@ export default function DashboardBookingsPage() {
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat booking.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -99,7 +107,7 @@ export default function DashboardBookingsPage() {
       await updateProduct(booking.id, { is_active: nextActive });
     } catch (err) {
       setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, is_active: booking.is_active } : b)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui status booking.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.updateStatusFailed"));
     }
   }
 
@@ -109,14 +117,14 @@ export default function DashboardBookingsPage() {
     try {
       setSlots(await listBookingSlots(booking.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memuat slot.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.loadSlotsFailed"));
       setManagingId(null);
     }
   }
 
   async function handleAddSlot() {
     if (!managingId || !slotTime) {
-      setError("Isi waktu slot terlebih dahulu.");
+      setError(t("dashboard.pages.bookings.errors.slotTimeRequired"));
       return;
     }
     setError(null);
@@ -127,7 +135,7 @@ export default function DashboardBookingsPage() {
       setSlotTime("");
       await reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menambah slot.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.addSlotFailed"));
     } finally {
       setAddingSlot(false);
     }
@@ -141,7 +149,7 @@ export default function DashboardBookingsPage() {
       setSlots(await listBookingSlots(managingId));
       await reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus slot.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.bookings.errors.deleteSlotFailed"));
     }
   }
 
@@ -150,8 +158,7 @@ export default function DashboardBookingsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Jual sesi konsultasi berbayar dengan slot waktu yang kamu tentukan sendiri -- bentrok jadwal dicegah
-        otomatis (slot yang sama tidak bisa dipesan dua orang).
+        {t("dashboard.pages.bookings.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -164,23 +171,23 @@ export default function DashboardBookingsPage() {
             className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
           >
             <IconPlus className="h-4 w-4" />
-            Buat Booking
+            {t("dashboard.pages.bookings.createButton")}
           </button>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Sesi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bookings.sessionNameLabel")}</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Konsultasi Karir 30 Menit"
+                placeholder={t("dashboard.pages.bookings.sessionNamePlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bookings.descriptionLabel")}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -190,7 +197,7 @@ export default function DashboardBookingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Harga (Rp)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bookings.priceLabel")}</label>
                 <input
                   type="number"
                   required
@@ -201,7 +208,7 @@ export default function DashboardBookingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-app-ink">Durasi (menit)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bookings.durationLabel")}</label>
                 <input
                   type="number"
                   required
@@ -221,14 +228,14 @@ export default function DashboardBookingsPage() {
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.bookings.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Booking"}
+                {creating ? t("dashboard.pages.bookings.creating") : t("dashboard.pages.bookings.createButton")}
               </button>
             </div>
           </form>
@@ -246,21 +253,23 @@ export default function DashboardBookingsPage() {
               <span className="text-sm font-bold text-secondary-dark">Rp {booking.price_idr.toLocaleString("id-ID")}</span>
             </div>
             <p className="mt-1 text-xs text-app-muted">
-              {booking.duration_minutes} menit &middot; {booking.available_slot_count} slot tersedia,{" "}
-              {booking.booked_slot_count} sudah dipesan
+              {t("dashboard.pages.bookings.slotSummary")
+                .replace("{duration}", String(booking.duration_minutes))
+                .replace("{available}", String(booking.available_slot_count))
+                .replace("{booked}", String(booking.booked_slot_count))}
             </p>
 
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Toggle checked={booking.is_active} onChange={() => handleToggleActive(booking)} label={`Aktifkan ${booking.name}`} />
-                <span className="text-xs font-semibold text-app-muted">Aktif</span>
+                <Toggle checked={booking.is_active} onChange={() => handleToggleActive(booking)} label={t("dashboard.pages.bookings.activateAria").replace("{name}", booking.name)} />
+                <span className="text-xs font-semibold text-app-muted">{t("dashboard.pages.bookings.activeLabel")}</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleOpenSlots(booking)}
                 className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary-subtle"
               >
-                Kelola Slot
+                {t("dashboard.pages.bookings.manageSlots")}
                 <IconChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -281,7 +290,7 @@ export default function DashboardBookingsPage() {
                   >
                     {TIMEZONE_OPTIONS.map((tz) => (
                       <option key={tz.value} value={tz.value}>
-                        {tz.label}
+                        {timezoneLabels[tz.value]}
                       </option>
                     ))}
                   </select>
@@ -291,7 +300,7 @@ export default function DashboardBookingsPage() {
                     disabled={addingSlot}
                     className="btn-primary rounded-lg px-3.5 py-2 text-xs font-bold text-white disabled:opacity-60"
                   >
-                    {addingSlot ? "Menambah..." : "Tambah Slot"}
+                    {addingSlot ? t("dashboard.pages.bookings.addingSlot") : t("dashboard.pages.bookings.addSlot")}
                   </button>
                 </div>
 
@@ -305,7 +314,7 @@ export default function DashboardBookingsPage() {
                         <p className="font-semibold text-app-ink">
                           {new Date(slot.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
                         </p>
-                        {slot.is_booked && <p className="text-app-muted">Dipesan oleh {slot.buyer_email}</p>}
+                        {slot.is_booked && <p className="text-app-muted">{t("dashboard.pages.bookings.bookedBy").replace("{email}", slot.buyer_email ?? "")}</p>}
                       </div>
                       {!slot.is_booked && (
                         <button
@@ -318,7 +327,7 @@ export default function DashboardBookingsPage() {
                       )}
                     </div>
                   ))}
-                  {slots.length === 0 && <p className="text-xs text-app-muted">Belum ada slot -- tambahkan di atas.</p>}
+                  {slots.length === 0 && <p className="text-xs text-app-muted">{t("dashboard.pages.bookings.noSlotsYet")}</p>}
                 </div>
 
                 <button
@@ -326,14 +335,14 @@ export default function DashboardBookingsPage() {
                   onClick={() => setManagingId(null)}
                   className="rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
                 >
-                  Tutup
+                  {t("dashboard.pages.bookings.close")}
                 </button>
               </div>
             )}
           </div>
         ))}
 
-        {bookings.length === 0 && <EmptyState text='Belum ada booking -- klik "Buat Booking" di atas untuk membuat yang pertama.' />}
+        {bookings.length === 0 && <EmptyState text={t("dashboard.pages.bookings.emptyBookings")} />}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale } from "@/lib/locale-context";
 
 // Route group (monetisasi) -- permintaan langsung pengguna, 10 Agustus
 // 2026: "semua yang ada di produk dan monetisasi itu dibuat jadi tab saja
@@ -18,20 +19,24 @@ import { usePathname } from "next/navigation";
 // client-side Next.js, bukan reload penuh), bukan menumpuk halaman
 // terpisah. Konten tiap halaman (page.tsx di dalam masing-masing folder)
 // TIDAK disentuh sama sekali -- murni pembungkus navigasi.
-const TABS = [
-  { href: "/dashboard/monetisasi", label: "Ringkasan" },
-  { href: "/dashboard/vouchers", label: "Voucher" },
-  { href: "/dashboard/bundles", label: "Bundel" },
-  { href: "/dashboard/donation", label: "Dukungan" },
-  { href: "/dashboard/affiliates", label: "Afiliasi" },
-  { href: "/dashboard/loyalty", label: "Loyalitas" },
-  { href: "/dashboard/events", label: "Event" },
-  { href: "/dashboard/courses", label: "Kelas & Kursus" },
-  { href: "/dashboard/bookings", label: "Booking" },
-];
+function buildTabs(t: (key: string) => string) {
+  return [
+    { href: "/dashboard/monetisasi", label: t("dashboard.pages.monetisasiLayout.tabs.overview") },
+    { href: "/dashboard/vouchers", label: t("dashboard.pages.monetisasiLayout.tabs.vouchers") },
+    { href: "/dashboard/bundles", label: t("dashboard.pages.monetisasiLayout.tabs.bundles") },
+    { href: "/dashboard/donation", label: t("dashboard.pages.monetisasiLayout.tabs.donation") },
+    { href: "/dashboard/affiliates", label: t("dashboard.pages.monetisasiLayout.tabs.affiliates") },
+    { href: "/dashboard/loyalty", label: t("dashboard.pages.monetisasiLayout.tabs.loyalty") },
+    { href: "/dashboard/events", label: t("dashboard.pages.monetisasiLayout.tabs.events") },
+    { href: "/dashboard/courses", label: t("dashboard.pages.monetisasiLayout.tabs.courses") },
+    { href: "/dashboard/bookings", label: t("dashboard.pages.monetisasiLayout.tabs.bookings") },
+  ];
+}
 
 export default function MonetisasiLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLocale();
+  const TABS = buildTabs(t);
 
   return (
     <div className="mx-auto max-w-3xl">

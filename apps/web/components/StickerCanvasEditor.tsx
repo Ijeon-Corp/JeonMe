@@ -3,6 +3,7 @@
 import { PageStickerData } from "@/lib/api-client";
 import StickerIcon, { STICKER_SHAPES } from "@/components/StickerIcon";
 import { IconPlus, IconTrash } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // StickerCanvasEditor -- Modul Desain (koreksi langsung pengguna, 8
 // Agustus 2026, disempurnakan lagi hari yang sama): "harusnya bagian
@@ -24,6 +25,8 @@ export default function StickerCanvasEditor({
   stickers: PageStickerData[];
   onChange: (stickers: PageStickerData[]) => void;
 }) {
+  const { t } = useLocale();
+
   function handleAdd(type: string) {
     // Sebar posisi awal tiap stiker baru (bukan selalu x=50,y=50) supaya
     // beberapa stiker sekaligus tidak menumpuk persis di tengah -- kreator
@@ -43,14 +46,14 @@ export default function StickerCanvasEditor({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-app-ink">Tambah Stiker</p>
+        <p className="mb-1.5 text-xs font-semibold text-app-ink">{t("dashboard.components.stickerCanvasEditor.addStickerLabel")}</p>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
           {STICKER_SHAPES.map((shape) => (
             <button
               key={shape.value}
               type="button"
               onClick={() => handleAdd(shape.value)}
-              title={`Tambah ${shape.label}`}
+              title={t("dashboard.components.stickerCanvasEditor.addStickerTitle").replace("{shape}", shape.label)}
               className="flex aspect-square flex-col items-center justify-center rounded-xl border border-app-border bg-app-surface p-2 text-app-ink hover:border-primary hover:text-primary"
             >
               <StickerIcon type={shape.value} className="h-6 w-6" />
@@ -61,12 +64,14 @@ export default function StickerCanvasEditor({
 
       <p className="flex items-center gap-1 text-xs font-semibold text-primary">
         <IconPlus className="h-3 w-3" />
-        Seret & ubah ukuran langsung di panel Pratinjau Langsung di samping.
+        {t("dashboard.components.stickerCanvasEditor.dragHint")}
       </p>
 
       {stickers.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-semibold text-app-ink">Stiker Terpasang ({stickers.length})</p>
+          <p className="text-xs font-semibold text-app-ink">
+            {t("dashboard.components.stickerCanvasEditor.installedStickers").replace("{count}", String(stickers.length))}
+          </p>
           {stickers.map((s) => {
             const meta = STICKER_SHAPES.find((shape) => shape.value === s.type);
             return (

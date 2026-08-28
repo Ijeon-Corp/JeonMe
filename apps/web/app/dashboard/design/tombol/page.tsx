@@ -4,8 +4,10 @@ import PageSkeleton from "@/components/Skeleton";
 import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_BUTTON_ROUNDED_OPTIONS, CUSTOM_BUTTON_SHADOW_OPTIONS, CUSTOM_BUTTON_STYLE_OPTIONS } from "@/lib/page-themes";
+import { useLocale } from "@/lib/locale-context";
 
 export default function DesignTombolPage() {
+  const { t } = useLocale();
   const { page, setPage, links, products, loading, error, handleStyleOverride } = useDesignData();
 
   if (loading || !page) return <PageSkeleton />;
@@ -16,14 +18,14 @@ export default function DesignTombolPage() {
       links={links}
       products={products}
       backHref="/dashboard/design"
-      title="Tombol"
-      description="Warna, gaya, kelengkungan sudut, dan bayangan tombol -- berlaku untuk blok tautan & tombol Beli/Dukung di halaman publikmu."
+      title={t("dashboard.pages.designTombol.title")}
+      description={t("dashboard.pages.designTombol.description")}
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Tombol</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designTombol.buttonColorLabel")}</label>
           <input
             type="color"
             value={page.custom_button_color}
@@ -33,7 +35,7 @@ export default function DesignTombolPage() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Teks Tombol</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designTombol.buttonTextColorLabel")}</label>
           <input
             type="color"
             value={page.custom_button_text_color || "#FFFFFF"}
@@ -43,7 +45,7 @@ export default function DesignTombolPage() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Gaya Tombol</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designTombol.buttonStyleLabel")}</label>
           <div className="flex gap-2">
             {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
               <button
@@ -60,7 +62,7 @@ export default function DesignTombolPage() {
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Kelengkungan Sudut</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designTombol.cornerRoundnessLabel")}</label>
           <div className="flex gap-2">
             {CUSTOM_BUTTON_ROUNDED_OPTIONS.map((opt) => (
               <button
@@ -78,7 +80,7 @@ export default function DesignTombolPage() {
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bayangan Tombol</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designTombol.buttonShadowLabel")}</label>
           <div className="flex gap-2">
             {CUSTOM_BUTTON_SHADOW_OPTIONS.map((opt) => (
               <button

@@ -6,6 +6,7 @@ import type { Map as LeafletMap } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { IconClose, IconMapPin, IconSearch, IconTarget } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // "untuk blok maps user bisa memilih langsung lokasi dia saat ini lewat
@@ -58,6 +59,7 @@ function ClickToPick({ onPick }: { onPick: (lat: number, lng: number) => void })
 }
 
 export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const { t } = useLocale();
   const [position, setPosition] = useState<[number, number]>(DEFAULT_CENTER);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<NominatimResult[]>([]);
@@ -104,7 +106,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
-      setError("Browser ini tidak mendukung deteksi lokasi.");
+      setError(t("dashboard.components.locationPickerModal.geolocationUnsupported"));
       return;
     }
     setLocating(true);
@@ -115,7 +117,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
         setLocating(false);
       },
       () => {
-        setError("Tidak bisa mengambil lokasimu -- pastikan izin lokasi diizinkan di browser, atau cari/klik peta secara manual.");
+        setError(t("dashboard.components.locationPickerModal.geolocationFailed"));
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -132,8 +134,8 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
       <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">Pilih Lokasi</h2>
-            <p className="text-xs text-app-muted">Klik di peta, cari alamat, atau pakai lokasimu saat ini.</p>
+            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.components.locationPickerModal.title")}</h2>
+            <p className="text-xs text-app-muted">{t("dashboard.components.locationPickerModal.subtitle")}</p>
           </div>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
@@ -147,7 +149,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               <input
                 type="text"
                 autoFocus
-                placeholder="Cari alamat/nama tempat..."
+                placeholder={t("dashboard.components.locationPickerModal.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full min-w-0 bg-transparent text-sm outline-none"
@@ -160,7 +162,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border px-3.5 py-2 text-xs font-bold text-app-ink hover:border-primary hover:text-primary disabled:opacity-60"
             >
               <IconTarget className="h-3.5 w-3.5" />
-              {locating ? "Mencari..." : "Lokasi Saya"}
+              {locating ? t("dashboard.components.locationPickerModal.searching") : t("dashboard.components.locationPickerModal.myLocation")}
             </button>
           </div>
           {results.length > 0 && (
@@ -183,7 +185,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               ))}
             </ul>
           )}
-          {searching && <p className="mt-1.5 text-[11px] text-app-muted">Mencari...</p>}
+          {searching && <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.locationPickerModal.searching")}</p>}
           {error && <p className="mt-1.5 text-[11px] font-semibold text-red-600">{error}</p>}
         </div>
 
@@ -219,10 +221,10 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
           </p>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="rounded-lg border border-app-border px-4 py-2 text-sm font-bold text-app-muted hover:border-ink/30">
-              Batal
+              {t("dashboard.components.locationPickerModal.cancel")}
             </button>
             <button type="button" onClick={confirm} className="btn-primary rounded-lg px-4 py-2 text-sm font-bold text-white">
-              Pilih Lokasi Ini
+              {t("dashboard.components.locationPickerModal.confirm")}
             </button>
           </div>
         </div>

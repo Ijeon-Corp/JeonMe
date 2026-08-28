@@ -19,11 +19,13 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconLogout, IconTrash } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Settings §5. Sesi TIDAK punya tabel Postgres sendiri (dibangun di
 // atas denylist jti Redis yang sudah ada, lihat session.go backend) -- jadi
 // "id" sesi di sini SEBENARNYA adalah jti token itu sendiri.
 export default function SettingsSecurityPage() {
+  const { t } = useLocale();
   const { showToast } = useToast();
 
   const [oldPassword, setOldPassword] = useState("");
@@ -64,9 +66,9 @@ export default function SettingsSecurityPage() {
       await changePassword({ old_password: oldPassword, new_password: newPassword });
       setOldPassword("");
       setNewPassword("");
-      showToast("Password berhasil diganti.");
+      showToast(t("dashboard.pages.settingsSecurity.passwordChangeSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal mengganti password.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.passwordChangeError"), "error");
     } finally {
       setSavingPassword(false);
     }
@@ -77,7 +79,7 @@ export default function SettingsSecurityPage() {
       const res = await enable2FA();
       setSetupSecret(res);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal memulai setup 2FA.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.start2faError"), "error");
     }
   }
 
@@ -89,9 +91,9 @@ export default function SettingsSecurityPage() {
       setSetupSecret(null);
       setVerifyCode("");
       loadStatus();
-      showToast("2FA berhasil diaktifkan.");
+      showToast(t("dashboard.pages.settingsSecurity.enable2faSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Kode 2FA salah.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.verify2faError"), "error");
     } finally {
       setVerifying(false);
     }
@@ -105,9 +107,9 @@ export default function SettingsSecurityPage() {
       setDisablePassword("");
       setShowDisableForm(false);
       loadStatus();
-      showToast("2FA dinonaktifkan.");
+      showToast(t("dashboard.pages.settingsSecurity.disable2faSuccess"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal menonaktifkan 2FA.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.disable2faError"), "error");
     } finally {
       setDisabling(false);
     }
@@ -122,10 +124,10 @@ export default function SettingsSecurityPage() {
     setSessions(sessions.filter((s) => s.id !== id));
     try {
       await revokeSession(id);
-      showToast("Sesi dicabut.");
+      showToast(t("dashboard.pages.settingsSecurity.revokeSessionSuccess"));
     } catch (err) {
       setSessions(previous);
-      showToast(err instanceof ApiError ? err.message : "Gagal mencabut sesi.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.revokeSessionError"), "error");
     } finally {
       setRevokingId(null);
     }
@@ -142,9 +144,9 @@ export default function SettingsSecurityPage() {
       // Segarkan daftar dari backend supaya sisa (hanya sesi ini) akurat.
       const fresh = await listSessions();
       setSessions(fresh);
-      showToast(`${res.revoked} sesi lain dicabut.`);
+      showToast(t("dashboard.pages.settingsSecurity.revokeAllSuccess").replace("{count}", String(res.revoked)));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal mencabut sesi lain.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.revokeAllError"), "error");
     } finally {
       setRevokingAll(false);
     }
@@ -157,19 +159,19 @@ export default function SettingsSecurityPage() {
         className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        Pengaturan
+        {t("dashboard.pages.settingsSecurity.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Keamanan</h1>
-      <p className="mt-1 text-sm text-app-muted">Password, verifikasi dua langkah, dan sesi aktif.</p>
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.title")}</h1>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSecurity.subtitle")}</p>
 
       <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Ganti Password</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
         <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
           <input
             type="password"
             required
-            placeholder="Password lama"
+            placeholder={t("dashboard.pages.settingsSecurity.oldPasswordPlaceholder")}
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
             className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
@@ -178,7 +180,7 @@ export default function SettingsSecurityPage() {
             type="password"
             required
             minLength={8}
-            placeholder="Password baru (min. 8 karakter)"
+            placeholder={t("dashboard.pages.settingsSecurity.newPasswordPlaceholder")}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
@@ -188,28 +190,25 @@ export default function SettingsSecurityPage() {
             disabled={savingPassword}
             className="self-start rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
           >
-            {savingPassword ? "Menyimpan..." : "Ganti Password"}
+            {savingPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.changePasswordButton")}
           </button>
         </form>
       </section>
 
       <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-sm font-bold text-app-ink">Verifikasi Dua Langkah (2FA)</h2>
+          <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.twoFactorTitle")}</h2>
           {status && (
             <span
               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                 status.enabled ? "bg-primary-subtle text-primary" : "bg-ink/5 text-app-muted"
               }`}
             >
-              {status.enabled ? "Aktif" : "Nonaktif"}
+              {status.enabled ? t("dashboard.pages.settingsSecurity.statusActive") : t("dashboard.pages.settingsSecurity.statusInactive")}
             </span>
           )}
         </div>
-        <p className="mt-1 text-xs text-app-muted">
-          Amankan akunmu dengan kode dari aplikasi authenticator (mis. Google Authenticator, Authy) setiap kali
-          login.
-        </p>
+        <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.twoFactorDescription")}</p>
 
         {!status?.enabled && !setupSecret && (
           <button
@@ -217,20 +216,19 @@ export default function SettingsSecurityPage() {
             onClick={handleStart2FA}
             className="mt-3 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark"
           >
-            Aktifkan 2FA
+            {t("dashboard.pages.settingsSecurity.enable2faButton")}
           </button>
         )}
 
         {setupSecret && (
           <div className="mt-4 rounded-xl border border-app-border bg-primary-subtle/40 p-4">
-            <p className="text-xs text-app-muted">
-              Scan kode QR ini di aplikasi authenticator-mu, lalu masukkan kode 6 digit yang muncul untuk konfirmasi.
-            </p>
+            <p className="text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.setupInstructions")}</p>
             <div className="mt-3 flex justify-center">
               <QRCodeCanvas value={setupSecret.otpauth_url} size={180} level="M" marginSize={2} />
             </div>
             <p className="mt-3 break-all text-center text-[11px] text-app-muted">
-              Kode manual: <span className="font-mono font-semibold text-app-ink">{setupSecret.secret}</span>
+              {t("dashboard.pages.settingsSecurity.manualCodeLabel")}{" "}
+              <span className="font-mono font-semibold text-app-ink">{setupSecret.secret}</span>
             </p>
 
             <form onSubmit={handleVerify2FA} className="mt-4 flex flex-col gap-2">
@@ -248,7 +246,7 @@ export default function SettingsSecurityPage() {
                 disabled={verifying}
                 className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
               >
-                {verifying ? "Memverifikasi..." : "Konfirmasi & Aktifkan"}
+                {verifying ? t("dashboard.pages.settingsSecurity.verifying") : t("dashboard.pages.settingsSecurity.confirmEnableButton")}
               </button>
             </form>
           </div>
@@ -260,7 +258,7 @@ export default function SettingsSecurityPage() {
             onClick={() => setShowDisableForm(true)}
             className="mt-3 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50"
           >
-            Nonaktifkan 2FA
+            {t("dashboard.pages.settingsSecurity.disable2faButton")}
           </button>
         )}
 
@@ -269,7 +267,7 @@ export default function SettingsSecurityPage() {
             <input
               type="password"
               required
-              placeholder="Masukkan password untuk konfirmasi"
+              placeholder={t("dashboard.pages.settingsSecurity.confirmPasswordPlaceholder")}
               value={disablePassword}
               onChange={(e) => setDisablePassword(e.target.value)}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm"
@@ -280,7 +278,7 @@ export default function SettingsSecurityPage() {
                 disabled={disabling}
                 className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
               >
-                {disabling ? "Memproses..." : "Nonaktifkan"}
+                {disabling ? t("dashboard.pages.settingsSecurity.processing") : t("dashboard.pages.settingsSecurity.disable")}
               </button>
               <button
                 type="button"
@@ -290,7 +288,7 @@ export default function SettingsSecurityPage() {
                 }}
                 className="rounded-lg border border-app-border px-3 py-2 text-xs font-semibold text-app-ink"
               >
-                Batal
+                {t("dashboard.pages.settingsSecurity.cancel")}
               </button>
             </div>
           </form>
@@ -300,8 +298,8 @@ export default function SettingsSecurityPage() {
       <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-heading text-sm font-bold text-app-ink">Sesi Aktif</h2>
-            <p className="mt-1 text-xs text-app-muted">Device yang sedang login ke akunmu.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.activeSessionsTitle")}</h2>
+            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.activeSessionsSubtitle")}</p>
           </div>
           {/* Audit keamanan 15 Agustus 2026: satu klik cabut semua device lain
               (sesi ini tetap aktif). Hanya muncul kalau ada lebih dari satu
@@ -314,7 +312,7 @@ export default function SettingsSecurityPage() {
               className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
               <IconLogout className="h-3.5 w-3.5" />
-              Keluar dari semua perangkat lain
+              {t("dashboard.pages.settingsSecurity.revokeAllButton")}
             </button>
           )}
         </div>
@@ -326,7 +324,7 @@ export default function SettingsSecurityPage() {
               <Skeleton className="h-12 w-full" />
             </div>
           )}
-          {sessions?.length === 0 && <p className="text-xs text-app-muted">Tidak ada sesi aktif tercatat.</p>}
+          {sessions?.length === 0 && <p className="text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.noSessions")}</p>}
           {sessions?.map((s) => (
             <div
               key={s.id}
@@ -343,16 +341,16 @@ export default function SettingsSecurityPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="min-w-0 truncate text-xs font-semibold text-app-ink">
-                    {s.user_agent || "Device tidak dikenal"}
+                    {s.user_agent || t("dashboard.pages.settingsSecurity.unknownDevice")}
                   </p>
                   {s.is_current && (
                     <span className="flex-shrink-0 rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
-                      Sesi ini
+                      {t("dashboard.pages.settingsSecurity.thisSessionBadge")}
                     </span>
                   )}
                 </div>
                 <p className="mt-0.5 text-[11px] text-app-muted">
-                  Masuk {new Date(s.created_at).toLocaleString("id-ID")}
+                  {t("dashboard.pages.settingsSecurity.signedInAt").replace("{date}", new Date(s.created_at).toLocaleString("id-ID"))}
                 </p>
               </div>
               <button
@@ -362,7 +360,7 @@ export default function SettingsSecurityPage() {
                 className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
                 <IconTrash className="h-3 w-3" />
-                Cabut
+                {t("dashboard.pages.settingsSecurity.revokeButton")}
               </button>
             </div>
           ))}

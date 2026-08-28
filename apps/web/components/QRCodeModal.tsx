@@ -3,17 +3,23 @@
 import { useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { IconClose } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // No.82 (Sprint 9): kode QR per halaman kreator, untuk materi promosi
 // offline (banner event, kemasan produk, dsb). Murni sisi klien -- URL
 // halaman publik sudah diketahui (jeon.id/{username}), tidak perlu
 // endpoint backend sama sekali.
+// title/description -- default TIDAK LAGI ditulis sebagai default
+// parameter literal (permintaan susulan pengguna, 29 Agustus 2026:
+// terjemahkan seluruh isi dashboard): default value harus lewat t(),
+// yang cuma bisa dipanggil di dalam badan komponen (hook), bukan di
+// posisi parameter -- lihat resolvedTitle/resolvedDescription di bawah.
 export default function QRCodeModal({
   url,
   username,
   onClose,
-  title = "Kode QR Halamanmu",
-  description = "Cetak di banner, stiker kemasan, atau materi promosi offline lainnya.",
+  title,
+  description,
 }: {
   url: string;
   username: string;
@@ -21,6 +27,9 @@ export default function QRCodeModal({
   title?: string;
   description?: string;
 }) {
+  const { t } = useLocale();
+  const resolvedTitle = title ?? t("dashboard.components.qrCodeModal.defaultTitle");
+  const resolvedDescription = description ?? t("dashboard.components.qrCodeModal.defaultDescription");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   function handleDownload() {
@@ -39,13 +48,13 @@ export default function QRCodeModal({
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-primary-subtle"
-          aria-label="Tutup"
+          aria-label={t("dashboard.components.qrCodeModal.closeAriaLabel")}
         >
           <IconClose className="h-4 w-4" />
         </button>
 
-        <p className="font-heading text-sm font-bold text-app-ink">{title}</p>
-        <p className="mt-1 text-xs text-app-muted">{description}</p>
+        <p className="font-heading text-sm font-bold text-app-ink">{resolvedTitle}</p>
+        <p className="mt-1 text-xs text-app-muted">{resolvedDescription}</p>
 
         <div className="mt-4 flex items-center justify-center">
           <QRCodeCanvas ref={canvasRef} value={url} size={200} level="M" marginSize={2} />
@@ -58,7 +67,7 @@ export default function QRCodeModal({
           onClick={handleDownload}
           className="btn-primary mt-4 w-full rounded-lg py-2.5 text-sm font-bold text-white"
         >
-          Unduh PNG
+          {t("dashboard.components.qrCodeModal.downloadButton")}
         </button>
       </div>
     </div>

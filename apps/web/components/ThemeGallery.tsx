@@ -4,6 +4,7 @@ import { useState } from "react";
 import { THEME_PRESETS } from "@/lib/api-client";
 import { DOODLE_THEME_NAMES, PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
 import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // ThemeGallery -- diekstrak dari app/dashboard/design/theme/page.tsx, 27
 // Agustus 2026 (redesain Quick Setup ala alur "Microsite" s.id: tab
@@ -58,6 +59,7 @@ function ThemeTile({
   // penjagaan (lihat isPremiumUser di page.go).
   locked?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <button type="button" onClick={onClick} className="group flex flex-col items-center gap-1.5">
       <div
@@ -79,13 +81,14 @@ function ThemeTile({
       </div>
       <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-app-ink"}`}>
         {label}
-        {locked && " (Premium)"}
+        {locked && t("dashboard.components.themeGallery.premiumSuffix")}
       </span>
     </button>
   );
 }
 
 export default function ThemeGallery({ value, onChange, customTile }: ThemeGalleryProps) {
+  const { t } = useLocale();
   const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video" | "doodle">("gradien");
 
   return (
@@ -98,7 +101,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             tab === "gradien" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
-          Warna & Gradien
+          {t("dashboard.components.themeGallery.tabGradient")}
         </button>
         <button
           type="button"
@@ -107,7 +110,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             tab === "wallpaper" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
-          Wallpaper
+          {t("dashboard.components.themeGallery.tabWallpaper")}
         </button>
         <button
           type="button"
@@ -116,7 +119,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             tab === "3d" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
-          3D/Live
+          {t("dashboard.components.themeGallery.tab3d")}
         </button>
         <button
           type="button"
@@ -125,7 +128,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             tab === "video" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
-          Video
+          {t("dashboard.components.themeGallery.tabVideo")}
         </button>
         <button
           type="button"
@@ -134,7 +137,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             tab === "doodle" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
-          Doodle
+          {t("dashboard.components.themeGallery.tabDoodle")}
         </button>
       </div>
 
@@ -146,7 +149,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             active={value === "custom"}
             locked={!customTile.isPremium}
             onClick={() => (customTile.isPremium ? customTile.onSelect() : customTile.onLocked())}
-            label="Custom"
+            label={t("dashboard.components.themeGallery.customTileLabel")}
           >
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
               <IconPaintbrush className="h-7 w-7 text-app-muted" />

@@ -19,16 +19,21 @@ import { IconBadgeCheck, IconShield, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import StatCard from "@/components/StatCard";
+import { useLocale } from "@/lib/locale-context";
 
-const STATUS_LABEL: Record<Payout["status"], string> = {
-  requested: "Diajukan",
-  processing: "Diproses",
-  completed: "Berhasil",
-  failed: "Gagal",
-};
+function buildStatusLabel(t: (key: string) => string): Record<Payout["status"], string> {
+  return {
+    requested: t("dashboard.pages.balance.status.requested"),
+    processing: t("dashboard.pages.balance.status.processing"),
+    completed: t("dashboard.pages.balance.status.completed"),
+    failed: t("dashboard.pages.balance.status.failed"),
+  };
+}
 
 export default function DashboardBalancePage() {
   const { showToast } = useToast();
+  const { t } = useLocale();
+  const STATUS_LABEL = buildStatusLabel(t);
 
   const [balance, setBalance] = useState<Balance | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -52,7 +57,7 @@ export default function DashboardBalancePage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat saldo."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.balance.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -70,11 +75,11 @@ export default function DashboardBalancePage() {
     e.preventDefault();
     const amountIDR = Number(amount);
     if (!amountIDR || amountIDR < 50000) {
-      setError("Minimum penarikan Rp50.000.");
+      setError(t("dashboard.pages.balance.minAmountError"));
       return;
     }
     if (!selectedMethodId) {
-      setError("Tambahkan & verifikasi metode pembayaran dulu di Pengaturan > Pembayaran & Penarikan.");
+      setError(t("dashboard.pages.balance.noVerifiedMethodError"));
       return;
     }
     setError(null);
@@ -83,9 +88,9 @@ export default function DashboardBalancePage() {
       await createPayout({ amount_idr: amountIDR, payout_method_id: selectedMethodId });
       setAmount("");
       await reload();
-      showToast("Penarikan diajukan.");
+      showToast(t("dashboard.pages.balance.payoutRequestedToast"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal mengajukan penarikan.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.balance.payoutRequestErrorToast"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -103,16 +108,16 @@ export default function DashboardBalancePage() {
           <StatCard
             tone="brand"
             icon={<IconWallet className="h-4 w-4" />}
-            label="Saldo Tersedia"
+            label={t("dashboard.pages.balance.availableBalance")}
             value={`Rp ${balance.available_idr.toLocaleString("id-ID")}`}
             sub=""
           />
           <StatCard
             tone="lilac"
             icon={<IconWallet className="h-4 w-4" />}
-            label="Saldo Tertahan"
+            label={t("dashboard.pages.balance.heldBalance")}
             value={`Rp ${balance.held_idr.toLocaleString("id-ID")}`}
-            sub={`Tertahan ${balance.holding_period_days} hari sejak pembayaran (anti-fraud)`}
+            sub={t("dashboard.pages.balance.heldBalanceSub").replace("{days}", String(balance.holding_period_days))}
           />
         </section>
       )}
@@ -133,16 +138,13 @@ export default function DashboardBalancePage() {
               <IconBadgeCheck className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-bold text-secondary-dark">Jeon.id 0% komisi transaksi</p>
-              <p className="mt-0.5 text-xs text-secondary-dark/80">
-                Kamu terima 100% dari harga jual produkmu -- Jeon.id tidak memotong apa pun dari penjualan.
-                Satu-satunya potongan adalah biaya prosesor pembayaran (Midtrans) di bawah ini, diteruskan apa adanya.
-              </p>
+              <p className="text-sm font-bold text-secondary-dark">{t("dashboard.pages.balance.zeroFeeTitle")}</p>
+              <p className="mt-0.5 text-xs text-secondary-dark/80">{t("dashboard.pages.balance.zeroFeeDesc")}</p>
             </div>
           </div>
 
-          <h2 className="mt-5 font-heading text-lg font-bold text-app-ink">Estimasi Biaya Prosesor per Metode</h2>
-          <p className="mt-1 text-xs text-app-muted">Ditentukan Midtrans, di luar kendali Jeon.id -- bukan komisi platform.</p>
+          <h2 className="mt-5 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</h2>
+          <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
 
           <div className="mt-3 flex flex-col gap-1.5">
             {feeBreakdown.reference.map((r) => (
@@ -156,30 +158,30 @@ export default function DashboardBalancePage() {
       )}
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-app-ink">Ajukan Penarikan</h2>
+        <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
         <p className="mt-1 text-xs text-app-muted">
-          Minimum Rp50.000.{" "}
+          {t("dashboard.pages.balance.minimumPrefix")}{" "}
           <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
             <IconShield className="h-3 w-3" />
-            Verifikasi KYC
+            {t("dashboard.pages.balance.kycLinkText")}
           </Link>{" "}
-          supaya penarikanmu diprioritaskan diproses.
+          {t("dashboard.pages.balance.prioritizedSuffix")}
         </p>
 
         {verifiedMethods.length === 0 ? (
           <p className="mt-3 rounded-lg bg-primary-subtle/50 px-3 py-2 text-xs text-app-ink">
-            Belum ada metode pembayaran terverifikasi.{" "}
+            {t("dashboard.pages.balance.noMethodPrefix")}{" "}
             <Link href="/dashboard/settings/payment" className="font-semibold text-primary hover:underline">
-              Tambahkan & verifikasi rekening/e-wallet dulu
+              {t("dashboard.pages.balance.noMethodLinkText")}
             </Link>{" "}
-            sebelum bisa menarik dana.
+            {t("dashboard.pages.balance.noMethodSuffix")}
           </p>
         ) : (
           <form onSubmit={handleRequestPayout} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               type="number"
               min={50000}
-              placeholder="Jumlah (IDR)"
+              placeholder={t("dashboard.pages.balance.amountPlaceholder")}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-40 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -191,7 +193,7 @@ export default function DashboardBalancePage() {
             >
               {verifiedMethods.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.provider} {m.account_number_masked} {m.is_primary ? "(Utama)" : ""}
+                  {m.provider} {m.account_number_masked} {m.is_primary ? t("dashboard.pages.balance.primaryLabel") : ""}
                 </option>
               ))}
             </select>
@@ -200,14 +202,14 @@ export default function DashboardBalancePage() {
               disabled={submitting}
               className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
             >
-              {submitting ? "Memproses..." : "Ajukan"}
+              {submitting ? t("dashboard.pages.balance.processingButton") : t("dashboard.pages.balance.submitButton")}
             </button>
           </form>
         )}
       </section>
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-app-ink">Riwayat Penarikan</h2>
+        <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.historyHeading")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (
             <li key={p.id} className="flex items-center justify-between rounded-xl border border-app-border px-4 py-3">
@@ -228,7 +230,7 @@ export default function DashboardBalancePage() {
               </span>
             </li>
           ))}
-          {payouts.length === 0 && <EmptyState as="li" text="Belum ada penarikan." />}
+          {payouts.length === 0 && <EmptyState as="li" text={t("dashboard.pages.balance.emptyHistory")} />}
         </ul>
       </section>
     </div>

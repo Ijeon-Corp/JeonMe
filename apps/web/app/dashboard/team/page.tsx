@@ -20,37 +20,47 @@ import { useToast } from "@/components/Toast";
 import { IconCheck, IconClock, IconTrash, IconUsers } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
-const STATUS_LABEL: Record<DashboardCollaborator["status"], string> = {
-  invited: "Menunggu diterima",
-  active: "Aktif",
-  revoked: "Dicabut",
-};
+function buildStatusLabel(t: (key: string) => string): Record<DashboardCollaborator["status"], string> {
+  return {
+    invited: t("dashboard.pages.team.status.invited"),
+    active: t("dashboard.pages.team.status.active"),
+    revoked: t("dashboard.pages.team.status.revoked"),
+  };
+}
 
 // Modul Settings §4 (keputusan pengguna 2026-07-31): role dipetakan ke 3
 // flag boolean lama di backend (roleToPermissions) -- daftar & label di
 // sini HARUS tetap sinkron dengan pemetaan itu.
-const ROLE_LABEL: Record<TeamRole, string> = {
-  content_admin: "Admin Konten (Tautan & Desain)",
-  sales_admin: "Admin Penjualan (Produk)",
-  full_access: "Akses Penuh",
-};
+function buildRoleLabel(t: (key: string) => string): Record<TeamRole, string> {
+  return {
+    content_admin: t("dashboard.pages.team.role.contentAdmin"),
+    sales_admin: t("dashboard.pages.team.role.salesAdmin"),
+    full_access: t("dashboard.pages.team.role.fullAccess"),
+  };
+}
 const ROLE_OPTIONS: TeamRole[] = ["content_admin", "sales_admin", "full_access"];
 
-function formatAuditEntry(entry: TeamAuditLogEntry): string {
+function formatAuditEntry(entry: TeamAuditLogEntry, t: (key: string) => string, roleLabel: Record<TeamRole, string>): string {
   const m = entry.metadata ?? {};
-  const email = m.collaborator_email ?? "seseorang";
+  const email = m.collaborator_email ?? t("dashboard.pages.team.someoneFallback");
   switch (entry.action) {
     case "team.invited":
-      return `Mengundang ${email} sebagai ${ROLE_LABEL[m.role as TeamRole] ?? m.role}`;
+      return t("dashboard.pages.team.auditInvited")
+        .replace("{email}", email)
+        .replace("{role}", roleLabel[m.role as TeamRole] ?? m.role);
     case "team.role_updated":
-      return `Mengubah role ${email} dari ${ROLE_LABEL[m.old_role as TeamRole] ?? m.old_role} ke ${
-        ROLE_LABEL[m.new_role as TeamRole] ?? m.new_role
-      }`;
+      return t("dashboard.pages.team.auditRoleUpdated")
+        .replace("{email}", email)
+        .replace("{oldRole}", roleLabel[m.old_role as TeamRole] ?? m.old_role)
+        .replace("{newRole}", roleLabel[m.new_role as TeamRole] ?? m.new_role);
     case "team.revoked":
-      return `Mencabut akses ${email} (sebelumnya ${ROLE_LABEL[m.role as TeamRole] ?? m.role})`;
+      return t("dashboard.pages.team.auditRevoked")
+        .replace("{email}", email)
+        .replace("{role}", roleLabel[m.role as TeamRole] ?? m.role);
     case "team.invite_accepted":
-      return `${email} menerima undangan`;
+      return t("dashboard.pages.team.auditInviteAccepted").replace("{email}", email);
     default:
       return entry.action;
   }
@@ -58,6 +68,9 @@ function formatAuditEntry(entry: TeamAuditLogEntry): string {
 
 export default function DashboardTeamPage() {
   const { showToast } = useToast();
+  const { t } = useLocale();
+  const STATUS_LABEL = buildStatusLabel(t);
+  const ROLE_LABEL = buildRoleLabel(t);
 
   const [collaborators, setCollaborators] = useState<DashboardCollaborator[]>([]);
   const [invitesForMe, setInvitesForMe] = useState<PendingCollaborationInvite[]>([]);
@@ -80,14 +93,14 @@ export default function DashboardTeamPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat data tim."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.team.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     if (!emailOrUsername.trim()) {
-      showToast("Isi email atau username kolaborator.", "error");
+      showToast(t("dashboard.pages.team.emailRequiredError"), "error");
       return;
     }
     setError(null);
@@ -97,9 +110,9 @@ export default function DashboardTeamPage() {
       setEmailOrUsername("");
       setRole("content_admin");
       await reload();
-      showToast("Undangan dikirim.");
+      showToast(t("dashboard.pages.team.inviteSentToast"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal membuat undangan.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.team.inviteError"), "error");
     } finally {
       setInviting(false);
     }
@@ -111,25 +124,25 @@ export default function DashboardTeamPage() {
     setCollaborators(collaborators.map((c) => (c.id === collaborator.id ? { ...c, role: newRole } : c)));
     try {
       await updateCollaboratorRole(collaborator.id, newRole);
-      showToast(`Role ${collaborator.email} diperbarui.`);
+      showToast(t("dashboard.pages.team.roleUpdatedToast").replace("{email}", collaborator.email));
       const auditRefresh = await listTeamAuditLog();
       setAuditLog(auditRefresh);
     } catch (err) {
       setCollaborators(previous);
-      showToast(err instanceof ApiError ? err.message : "Gagal mengubah role.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.team.roleUpdateError"), "error");
     }
   }
 
   async function handleRevoke(c: DashboardCollaborator) {
-    if (!(await confirmDelete(`Cabut akses "${c.email}"?`, { confirmButtonText: "Ya, Cabut" }))) return;
+    if (!(await confirmDelete(t("dashboard.pages.team.revokeConfirmText").replace("{email}", c.email), { confirmButtonText: t("dashboard.pages.team.revokeConfirmButton") }))) return;
     setError(null);
     setBusyId(c.id);
     try {
       await revokeCollaborator(c.id);
       await reload();
-      showToast("Akses kolaborator dicabut.");
+      showToast(t("dashboard.pages.team.revokedToast"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal mencabut akses.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.team.revokeError"), "error");
     } finally {
       setBusyId(null);
     }
@@ -141,9 +154,9 @@ export default function DashboardTeamPage() {
     try {
       await acceptCollaborationInvite(invite.id);
       await reload();
-      showToast("Undangan diterima.");
+      showToast(t("dashboard.pages.team.inviteAcceptedToast"));
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Gagal menerima undangan.", "error");
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.team.acceptError"), "error");
     } finally {
       setBusyId(null);
     }
@@ -153,16 +166,13 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-app-muted">
-        Undang admin/tim kecil untuk membantu kelola tautan, produk, atau desain halamanmu -- mereka TIDAK
-        bisa menyentuh saldo, penarikan, verifikasi KYC, atau menghapus akunmu.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.team.intro")}</p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {invitesForMe.length > 0 && (
         <section className="mt-4 rounded-3xl border border-primary/30 bg-primary-subtle/40 p-5">
-          <h2 className="font-heading text-sm font-bold text-app-ink">Undangan untuk Saya</h2>
+          <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
               <li key={inv.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3.5 py-2.5">
@@ -177,7 +187,7 @@ export default function DashboardTeamPage() {
                   className="btn-primary flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
                 >
                   <IconCheck className="h-3.5 w-3.5" />
-                  Terima
+                  {t("dashboard.pages.team.acceptButton")}
                 </button>
               </li>
             ))}
@@ -186,17 +196,17 @@ export default function DashboardTeamPage() {
       )}
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Undang Kolaborator</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.inviteHeading")}</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
             type="text"
-            placeholder="email@contoh.com atau username"
+            placeholder={t("dashboard.pages.team.invitePlaceholder")}
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
             className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <select
-            aria-label="Role kolaborator baru"
+            aria-label={t("dashboard.pages.team.newRoleAriaLabel")}
             value={role}
             onChange={(e) => setRole(e.target.value as TeamRole)}
             className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
@@ -212,13 +222,13 @@ export default function DashboardTeamPage() {
             disabled={inviting}
             className="btn-primary rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {inviting ? "Mengundang..." : "Kirim Undangan"}
+            {inviting ? t("dashboard.pages.team.invitingButton") : t("dashboard.pages.team.sendInviteButton")}
           </button>
         </form>
       </section>
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">Kolaboratorku</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.myCollaboratorsHeading")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-app-border px-4 py-3">
@@ -233,7 +243,7 @@ export default function DashboardTeamPage() {
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 <select
-                  aria-label={`Role ${c.email}`}
+                  aria-label={t("dashboard.pages.team.roleAriaLabelTemplate").replace("{email}", c.email)}
                   value={c.role}
                   onChange={(e) => handleRoleChange(c, e.target.value as TeamRole)}
                   disabled={c.status === "revoked"}
@@ -249,7 +259,7 @@ export default function DashboardTeamPage() {
                   type="button"
                   disabled={busyId === c.id}
                   onClick={() => handleRevoke(c)}
-                  title="Cabut akses"
+                  title={t("dashboard.pages.team.revokeTitle")}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
                   <IconTrash className="h-4 w-4" />
@@ -257,24 +267,24 @@ export default function DashboardTeamPage() {
               </div>
             </li>
           ))}
-          {collaborators.length === 0 && <EmptyState as="li" text="Belum ada kolaborator." />}
+          {collaborators.length === 0 && <EmptyState as="li" text={t("dashboard.pages.team.emptyCollaborators")} />}
         </ul>
       </section>
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
           <IconClock className="h-4 w-4 text-app-muted" />
-          Riwayat Aktivitas Tim
+          {t("dashboard.pages.team.activityLogHeading")}
         </h2>
-        <p className="mt-1 text-xs text-app-muted">Siapa mengubah apa dan kapan.</p>
+        <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.team.activityLogDesc")}</p>
         <ul className="mt-3 flex flex-col gap-2">
           {auditLog.map((entry) => (
             <li key={entry.id} className="rounded-lg border border-app-border px-3.5 py-2.5">
-              <p className="text-xs text-app-ink">{formatAuditEntry(entry)}</p>
+              <p className="text-xs text-app-ink">{formatAuditEntry(entry, t, ROLE_LABEL)}</p>
               <p className="mt-0.5 text-[11px] text-app-muted">{new Date(entry.created_at).toLocaleString("id-ID")}</p>
             </li>
           ))}
-          {auditLog.length === 0 && <EmptyState as="li" text="Belum ada aktivitas tim." />}
+          {auditLog.length === 0 && <EmptyState as="li" text={t("dashboard.pages.team.emptyActivityLog")} />}
         </ul>
       </section>
     </div>

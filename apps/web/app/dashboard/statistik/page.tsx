@@ -12,6 +12,7 @@ import {
 import { IconBox, IconChart, IconInbox, IconLink } from "@/components/icons";
 import ShopOverviewPanel from "@/components/ShopOverviewPanel";
 import StatCard from "@/components/StatCard";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Statistik (permintaan langsung pengguna: "menu statistik yang
 // berisi data jumlah klik dll pada link bio dan produk toko di halaman
@@ -23,12 +24,14 @@ import StatCard from "@/components/StatCard";
 // mencampur keduanya.
 const PRESETS = [7, 30, 90];
 
-const DEVICE_LABEL: Record<string, string> = {
-  mobile: "Mobile",
-  desktop: "Desktop",
-  tablet: "Tablet",
-  unknown: "Tidak diketahui",
-};
+function buildDeviceLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    mobile: "Mobile",
+    desktop: "Desktop",
+    tablet: "Tablet",
+    unknown: t("dashboard.pages.statistik.deviceUnknown"),
+  };
+}
 
 // buildAreaPath -- grafik area SVG polos, sama seperti di dashboard/page.tsx
 // (Ringkasan). Tidak diekstrak ke lib bersama karena cuma dipakai 2 tempat
@@ -48,6 +51,8 @@ function buildAreaPath(values: number[]): { line: string; area: string } {
 }
 
 export default function StatistikPage() {
+  const { t } = useLocale();
+  const DEVICE_LABEL = buildDeviceLabel(t);
   const [tab, setTab] = useState<"link-bio" | "toko">("link-bio");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[] | null>(null);
@@ -61,7 +66,7 @@ export default function StatistikPage() {
         setSummary(s);
         setRecentOrders(orders);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat statistik."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.statistik.loadError")))
       .finally(() => setLoading(false));
   }, [rangeDays]);
 
@@ -71,7 +76,7 @@ export default function StatistikPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <p className="text-sm text-app-muted">Jumlah klik tautan dan performa penjualan produkmu.</p>
+      <p className="text-sm text-app-muted">{t("dashboard.pages.statistik.intro")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2 border-b border-app-border">
@@ -83,7 +88,7 @@ export default function StatistikPage() {
             }`}
           >
             <IconLink className="h-4 w-4" />
-            Link Bio
+            {t("dashboard.pages.statistik.tabLinkBio")}
           </button>
           <button
             type="button"
@@ -93,7 +98,7 @@ export default function StatistikPage() {
             }`}
           >
             <IconBox className="h-4 w-4" />
-            Toko
+            {t("dashboard.pages.statistik.tabShop")}
           </button>
         </div>
 
@@ -109,7 +114,7 @@ export default function StatistikPage() {
                   : "border-app-border text-app-muted hover:border-primary/50"
               }`}
             >
-              {d} hari
+              {d} {t("dashboard.pages.statistik.days")}
             </button>
           ))}
         </div>
@@ -122,13 +127,13 @@ export default function StatistikPage() {
       ) : tab === "link-bio" ? (
         <>
           <section className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard tone="blue" icon={<IconChart className="h-4 w-4" />} label="Kunjungan Halaman" value={summary.total_views.toLocaleString("id-ID")} sub="" />
-            <StatCard tone="yellow" icon={<IconLink className="h-4 w-4" />} label="Klik Tautan" value={summary.total_clicks.toLocaleString("id-ID")} sub="" />
+            <StatCard tone="blue" icon={<IconChart className="h-4 w-4" />} label={t("dashboard.pages.statistik.pageViews")} value={summary.total_views.toLocaleString("id-ID")} sub="" />
+            <StatCard tone="yellow" icon={<IconLink className="h-4 w-4" />} label={t("dashboard.pages.statistik.linkClicks")} value={summary.total_clicks.toLocaleString("id-ID")} sub="" />
           </section>
 
           {summary.daily_series.length > 0 && (
             <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-app-ink">Tren Kunjungan &amp; Klik</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.trendHeading")}</h2>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
                   <linearGradient id="statViewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -146,10 +151,10 @@ export default function StatistikPage() {
               </div>
               <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-primary" /> Kunjungan
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t("dashboard.pages.statistik.legendViews")}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-accent" /> Klik
+                  <span className="h-2 w-2 rounded-full bg-accent" /> {t("dashboard.pages.statistik.legendClicks")}
                 </span>
               </div>
             </div>
@@ -157,21 +162,23 @@ export default function StatistikPage() {
 
           <section className="mt-3 grid gap-3 sm:grid-cols-2">
             <div className="glass rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-app-ink">Tautan Terpopuler</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.topLinksHeading")}</h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {summary.top_links.map((l) => (
                   <li key={l.link_id} className="flex justify-between text-xs">
                     <span className="truncate text-app-ink">{l.title}</span>
-                    <span className="ml-2 flex-shrink-0 font-semibold text-primary">{l.clicks} klik</span>
+                    <span className="ml-2 flex-shrink-0 font-semibold text-primary">
+                      {l.clicks} {t("dashboard.pages.statistik.clicksSuffix")}
+                    </span>
                   </li>
                 ))}
-                {summary.top_links.length === 0 && <EmptyRow text="Belum ada data klik." />}
+                {summary.top_links.length === 0 && <EmptyRow text={t("dashboard.pages.statistik.emptyClicks")} />}
               </ul>
             </div>
 
             {summary.device_breakdown.length > 0 && (
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">Perangkat Pengunjung</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.deviceHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.device_breakdown.map((d) => (
                     <li key={d.device_type} className="flex items-center gap-2 text-xs">

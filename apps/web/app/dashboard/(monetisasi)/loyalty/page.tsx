@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
   LoyaltyReward,
@@ -19,6 +20,7 @@ import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardLoyaltyPage() {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function DashboardLoyaltyPage() {
 
   useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat program loyalitas."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.loyalty.errors.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -60,7 +62,7 @@ export default function DashboardLoyaltyPage() {
       });
       await reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.loyalty.errors.saveSettingsFailed"));
     } finally {
       setSavingSettings(false);
     }
@@ -71,7 +73,7 @@ export default function DashboardLoyaltyPage() {
     const points = Number(pointsNeeded);
     const value = Number(discountValue);
     if (!rewardName.trim() || !points || points < 1 || !value || value < 1) {
-      setError("Isi nama reward, poin yang dibutuhkan, dan nilai diskon dengan benar.");
+      setError(t("dashboard.pages.loyalty.errors.rewardFormInvalid"));
       return;
     }
     setError(null);
@@ -84,7 +86,7 @@ export default function DashboardLoyaltyPage() {
       setDiscountValue("");
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal membuat reward.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.loyalty.errors.createRewardFailed"));
     } finally {
       setCreating(false);
     }
@@ -97,19 +99,19 @@ export default function DashboardLoyaltyPage() {
       await updateLoyaltyReward(reward.id, { is_published: next });
     } catch (err) {
       setRewards((prev) => prev.map((r) => (r.id === reward.id ? { ...r, is_published: reward.is_published } : r)));
-      setError(err instanceof ApiError ? err.message : "Gagal memperbarui reward.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.loyalty.errors.updateRewardFailed"));
     }
   }
 
   async function handleDeleteReward(reward: LoyaltyReward) {
-    if (!(await confirmDelete(`Hapus reward "${reward.name}"?`))) return;
+    if (!(await confirmDelete(t("dashboard.pages.loyalty.confirmDeleteText").replace("{name}", reward.name)))) return;
     const previous = rewards;
     setRewards((prev) => prev.filter((r) => r.id !== reward.id));
     try {
       await deleteLoyaltyReward(reward.id);
     } catch (err) {
       setRewards(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus reward.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.loyalty.errors.deleteRewardFailed"));
     }
   }
 
@@ -118,8 +120,7 @@ export default function DashboardLoyaltyPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">
-        Beri poin ke pembeli setiap transaksi, biarkan mereka menukarnya dengan reward -- mekanisme retensi
-        pembeli berulang, cocok disandingkan dengan voucher.
+        {t("dashboard.pages.loyalty.subtitle")}
       </p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -129,25 +130,25 @@ export default function DashboardLoyaltyPage() {
           <Toggle
             checked={settings.is_active}
             onChange={() => setSettings({ ...settings, is_active: !settings.is_active })}
-            label="Aktifkan program loyalitas"
+            label={t("dashboard.pages.loyalty.enableAria")}
           />
-          <span className="text-sm font-semibold text-app-ink">Aktifkan Program Loyalitas</span>
+          <span className="text-sm font-semibold text-app-ink">{t("dashboard.pages.loyalty.enableLabel")}</span>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-app-ink">Tipe Poin</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.loyalty.pointTypeLabel")}</label>
             <select
               value={settings.point_type}
               onChange={(e) => setSettings({ ...settings, point_type: e.target.value as "percentage" | "nominal" })}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
-              <option value="nominal">Nominal (poin per Rp10.000)</option>
-              <option value="percentage">Persentase (poin per Rp100.000)</option>
+              <option value="nominal">{t("dashboard.pages.loyalty.pointTypeNominal")}</option>
+              <option value="percentage">{t("dashboard.pages.loyalty.pointTypePercentage")}</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-app-ink">Rate Poin</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.loyalty.pointsRateLabel")}</label>
             <input
               type="number"
               min={0}
@@ -158,18 +159,18 @@ export default function DashboardLoyaltyPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-app-ink">Batas Maks Poin per Transaksi (opsional)</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.loyalty.pointsLimitLabel")}</label>
             <input
               type="number"
               min={1}
               value={settings.points_limit ?? ""}
               onChange={(e) => setSettings({ ...settings, points_limit: e.target.value ? Number(e.target.value) : null })}
-              placeholder="Tanpa batas"
+              placeholder={t("dashboard.pages.loyalty.pointsLimitPlaceholder")}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-app-ink">Minimum Pembelian (Rp)</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.loyalty.minPurchaseLabel")}</label>
             <input
               type="number"
               min={0}
@@ -186,13 +187,13 @@ export default function DashboardLoyaltyPage() {
           disabled={savingSettings}
           className="btn-primary mt-4 rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {savingSettings ? "Menyimpan..." : "Simpan Pengaturan"}
+          {savingSettings ? t("dashboard.pages.loyalty.savingSettings") : t("dashboard.pages.loyalty.saveSettings")}
         </button>
       </section>
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold text-app-ink">Katalog Reward</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.loyalty.catalogHeading")}</h2>
           {!adding && (
             <button
               type="button"
@@ -200,7 +201,7 @@ export default function DashboardLoyaltyPage() {
               className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
               <IconPlus className="h-4 w-4" />
-              Tambah Reward
+              {t("dashboard.pages.loyalty.addReward")}
             </button>
           )}
         </div>
@@ -210,7 +211,7 @@ export default function DashboardLoyaltyPage() {
             <input
               type="text"
               required
-              placeholder="Nama reward (mis. Diskon 20%)"
+              placeholder={t("dashboard.pages.loyalty.rewardNamePlaceholder")}
               value={rewardName}
               onChange={(e) => setRewardName(e.target.value)}
               className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -220,7 +221,7 @@ export default function DashboardLoyaltyPage() {
                 type="number"
                 required
                 min={1}
-                placeholder="Poin dibutuhkan"
+                placeholder={t("dashboard.pages.loyalty.pointsNeededPlaceholder")}
                 value={pointsNeeded}
                 onChange={(e) => setPointsNeeded(e.target.value)}
                 className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -230,14 +231,14 @@ export default function DashboardLoyaltyPage() {
                 onChange={(e) => setDiscountType(e.target.value as "percentage" | "nominal")}
                 className="rounded-lg border border-app-border px-2 py-2 text-sm focus:border-primary focus:outline-none"
               >
-                <option value="nominal">Rp (nominal)</option>
-                <option value="percentage">% (persen)</option>
+                <option value="nominal">{t("dashboard.pages.loyalty.discountTypeNominal")}</option>
+                <option value="percentage">{t("dashboard.pages.loyalty.discountTypePercentage")}</option>
               </select>
               <input
                 type="number"
                 required
                 min={1}
-                placeholder="Nilai diskon"
+                placeholder={t("dashboard.pages.loyalty.discountValuePlaceholder")}
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
                 className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
@@ -249,14 +250,14 @@ export default function DashboardLoyaltyPage() {
                 onClick={() => setAdding(false)}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.pages.loyalty.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={creating}
                 className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60"
               >
-                {creating ? "Membuat..." : "Buat Reward"}
+                {creating ? t("dashboard.pages.loyalty.creating") : t("dashboard.pages.loyalty.createReward")}
               </button>
             </div>
           </form>
@@ -268,13 +269,13 @@ export default function DashboardLoyaltyPage() {
               <div>
                 <p className="text-sm font-semibold text-app-ink">{reward.name}</p>
                 <p className="text-xs text-app-muted">
-                  {reward.points_needed} poin &middot;{" "}
+                  {reward.points_needed} {t("dashboard.pages.loyalty.pointsLabel")} &middot;{" "}
                   {reward.discount_type === "percentage" ? `${reward.discount_value}%` : `Rp${reward.discount_value.toLocaleString("id-ID")}`}{" "}
-                  &middot; {reward.redeemed_count}x ditukar
+                  &middot; {reward.redeemed_count}{t("dashboard.pages.loyalty.redeemedSuffix")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Toggle checked={reward.is_published} onChange={() => handleTogglePublish(reward)} label={`Publikasikan ${reward.name}`} />
+                <Toggle checked={reward.is_published} onChange={() => handleTogglePublish(reward)} label={t("dashboard.pages.loyalty.publishAria").replace("{name}", reward.name)} />
                 <button
                   type="button"
                   onClick={() => handleDeleteReward(reward)}
@@ -285,7 +286,7 @@ export default function DashboardLoyaltyPage() {
               </div>
             </div>
           ))}
-          {rewards.length === 0 && <EmptyState text="Belum ada reward -- tambahkan di atas." />}
+          {rewards.length === 0 && <EmptyState text={t("dashboard.pages.loyalty.emptyRewards")} />}
         </div>
       </section>
     </div>

@@ -12,8 +12,10 @@ import {
 } from "@/lib/api-client";
 import { IconCheck, IconCopy } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
+import { useLocale } from "@/lib/locale-context";
 
 export default function DashboardCustomDomainPage() {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<DomainSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,7 +32,7 @@ export default function DashboardCustomDomainPage() {
         setSettings(s);
         setDomainInput(s.domain);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat pengaturan domain."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.customDomain.loadError")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -51,7 +53,7 @@ export default function DashboardCustomDomainPage() {
       const updated = await setDomainSettings(domainInput.trim());
       setSettings(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan domain.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.customDomain.saveError"));
     } finally {
       setSaving(false);
     }
@@ -66,7 +68,7 @@ export default function DashboardCustomDomainPage() {
       setSettings(res.domain_settings);
       setVerifyMessage(res.message);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal memverifikasi domain.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.customDomain.verifyError"));
     } finally {
       setVerifying(false);
     }
@@ -74,14 +76,19 @@ export default function DashboardCustomDomainPage() {
 
   async function handleRemove() {
     if (!settings) return;
-    if (!(await confirmDelete(`Lepas domain kustom "${settings.domain}"?`, { confirmButtonText: "Ya, Lepas" }))) return;
+    if (
+      !(await confirmDelete(t("dashboard.pages.customDomain.removeConfirmText").replace("{domain}", settings.domain), {
+        confirmButtonText: t("dashboard.pages.customDomain.removeConfirmButton"),
+      }))
+    )
+      return;
     setError(null);
     try {
       await deleteDomainSettings();
       setSettings({ domain: "", verified: false, verification_token: "", cname_target: settings.cname_target, txt_record_name: "" });
       setDomainInput("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal melepas domain.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.customDomain.removeError"));
     }
   }
 
@@ -89,14 +96,8 @@ export default function DashboardCustomDomainPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-app-muted">
-        Arahkan domainmu sendiri (mis. toko.namamu.com) ke halaman Jeon.id-mu. Fitur PRO di kompetitor -- gratis di
-        Jeon.id.
-      </p>
-      <p className="mt-2 rounded-lg bg-accent-subtle px-3 py-2 text-xs text-accent-dark">
-        Versi awal: bagian pengaturan & verifikasi domain sudah bisa dipakai. Domainmu belum bisa benar-benar
-        menampilkan halaman sampai infrastruktur server selesai disiapkan tim Jeon.id.
-      </p>
+      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.customDomain.intro")}</p>
+      <p className="mt-2 rounded-lg bg-accent-subtle px-3 py-2 text-xs text-accent-dark">{t("dashboard.pages.customDomain.betaNote")}</p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -104,7 +105,7 @@ export default function DashboardCustomDomainPage() {
         <form onSubmit={handleSetDomain} className="flex gap-2">
           <input
             type="text"
-            placeholder="toko.namamu.com"
+            placeholder={t("dashboard.pages.customDomain.domainPlaceholder")}
             value={domainInput}
             onChange={(e) => setDomainInput(e.target.value)}
             className="min-w-0 flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -114,7 +115,7 @@ export default function DashboardCustomDomainPage() {
             disabled={saving}
             className="flex-shrink-0 btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
-            {saving ? "Menyimpan..." : "Simpan"}
+            {saving ? t("dashboard.pages.customDomain.savingButton") : t("dashboard.pages.customDomain.saveButton")}
           </button>
         </form>
 
@@ -123,13 +124,13 @@ export default function DashboardCustomDomainPage() {
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${settings.verified ? "bg-secondary" : "bg-muted"}`} />
               <span className={`text-xs font-semibold ${settings.verified ? "text-secondary-dark" : "text-app-muted"}`}>
-                {settings.verified ? "Terverifikasi" : "Belum terverifikasi"}
+                {settings.verified ? t("dashboard.pages.customDomain.verifiedLabel") : t("dashboard.pages.customDomain.unverifiedLabel")}
               </span>
             </div>
 
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">
-                Tambahkan 2 DNS record berikut di penyedia domainmu
+                {t("dashboard.pages.customDomain.dnsRecordsHeading")}
               </p>
               <div className="flex flex-col gap-2">
                 <div className="rounded-lg border border-app-border p-3">
@@ -144,7 +145,7 @@ export default function DashboardCustomDomainPage() {
                       className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
                     >
                       <IconCopy className="h-3 w-3" />
-                      {copied === "cname" ? "Tersalin!" : "Salin"}
+                      {copied === "cname" ? t("dashboard.pages.customDomain.copiedLabel") : t("dashboard.pages.customDomain.copyLabel")}
                     </button>
                   </div>
                 </div>
@@ -160,7 +161,7 @@ export default function DashboardCustomDomainPage() {
                       className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
                     >
                       <IconCopy className="h-3 w-3" />
-                      {copied === "txt" ? "Tersalin!" : "Salin"}
+                      {copied === "txt" ? t("dashboard.pages.customDomain.copiedLabel") : t("dashboard.pages.customDomain.copyLabel")}
                     </button>
                   </div>
                 </div>
@@ -185,14 +186,14 @@ export default function DashboardCustomDomainPage() {
                 className="btn-primary flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
                 <IconCheck className="h-4 w-4" />
-                {verifying ? "Memeriksa DNS..." : "Verifikasi Sekarang"}
+                {verifying ? t("dashboard.pages.customDomain.verifyingButton") : t("dashboard.pages.customDomain.verifyButton")}
               </button>
               <button
                 type="button"
                 onClick={handleRemove}
                 className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-red-600 hover:border-red-300"
               >
-                Lepas
+                {t("dashboard.pages.customDomain.removeButton")}
               </button>
             </div>
           </div>

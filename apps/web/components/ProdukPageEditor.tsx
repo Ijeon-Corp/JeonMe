@@ -56,6 +56,7 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
+import { useLocale } from "@/lib/locale-context";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
 
@@ -70,59 +71,75 @@ const maxGalleryImages = 9;
 // 7 opsi baru (split/ticket/headline/ribbon/duo/masthead/portrait) --
 // lihat catatan lengkap di dashboard/design/header/page.tsx & renderBioHeader
 // (PagePreview.tsx).
-const LAYOUT_OPTIONS: { value: MyPage["layout_variant"]; label: string; description: string }[] = [
-  { value: "centered", label: "Centered", description: "Avatar besar di tengah -- gaya klasik, bawaan." },
-  { value: "banner", label: "Banner", description: "Avatar kecil rata kiri, sebaris dengan nama." },
-  { value: "card", label: "Card", description: "Identitas dibungkus kartu, avatar menonjol di tepi atas." },
-  { value: "spotlight", label: "Spotlight", description: "Avatar besar, nama di dalam badge bulat." },
-  { value: "cover", label: "Cover", description: "Pita warna di atas ala foto sampul." },
-  { value: "minimal", label: "Minimal", description: "Avatar kecil sebaris nama, konten jadi fokus." },
-  { value: "hero", label: "Hero", description: "Foto profil tampil besar edge-to-edge sebagai latar. Isi Foto Profil dulu." },
-  { value: "polaroid", label: "Polaroid", description: "Avatar kotak dibingkai putih & dimiringkan ala foto polaroid." },
-  { value: "split", label: "Split", description: "2 kolom -- foto persegi di kiri, nama & bio di kanan. Kesan formal ala CV digital." },
-  { value: "ticket", label: "Ticket", description: "Dua bagian dipisah garis putus-putus ala tiket/boarding pass." },
-  { value: "headline", label: "Headline", description: "Nama & bio dulu di atas, foto kecil menyusul di bawah." },
-  { value: "ribbon", label: "Ribbon", description: "Badge aksen di sudut avatar, nama dalam pita selebar penuh." },
-  { value: "duo", label: "Duo", description: "Avatar & nama jadi satu chip pil ringkas, rata tengah." },
-  { value: "masthead", label: "Masthead", description: "Pita warna selebar penuh berisi avatar+nama+bio langsung di dalamnya." },
-  { value: "portrait", label: "Portrait", description: "Foto tegak dibingkai & berbayang ala poster. Isi Foto Profil dulu." },
-];
+// getLayoutOptions/getContentTiles/getBlockLabel -- FUNGSI (bukan konstanta
+// modul lagi), pola sama seperti buildNavItems/buildExtraPageLabels di
+// dashboard/layout.tsx (Modul Pilihan Bahasa EN/ID, 29 Agustus 2026): label
+// lewat t()/dict supaya ikut berganti begitu locale berubah, dipanggil ULANG
+// tiap render di dalam komponen yang memakainya. Nilai label short-name
+// (Centered/Banner/dst, Video/FAQ/Accordion) SENGAJA dibiarkan sama di
+// id/en (nama gaya/tipe blok, bukan kalimat) -- cuma deskripsinya yang
+// benar-benar diterjemahkan.
+function getLayoutOptions(t: (key: string) => string): { value: MyPage["layout_variant"]; label: string; description: string }[] {
+  return [
+    { value: "centered", label: "Centered", description: t("dashboard.components.produkPageEditor.layoutOptions.centered") },
+    { value: "banner", label: "Banner", description: t("dashboard.components.produkPageEditor.layoutOptions.banner") },
+    { value: "card", label: "Card", description: t("dashboard.components.produkPageEditor.layoutOptions.card") },
+    { value: "spotlight", label: "Spotlight", description: t("dashboard.components.produkPageEditor.layoutOptions.spotlight") },
+    { value: "cover", label: "Cover", description: t("dashboard.components.produkPageEditor.layoutOptions.cover") },
+    { value: "minimal", label: "Minimal", description: t("dashboard.components.produkPageEditor.layoutOptions.minimal") },
+    { value: "hero", label: "Hero", description: t("dashboard.components.produkPageEditor.layoutOptions.hero") },
+    { value: "polaroid", label: "Polaroid", description: t("dashboard.components.produkPageEditor.layoutOptions.polaroid") },
+    { value: "split", label: "Split", description: t("dashboard.components.produkPageEditor.layoutOptions.split") },
+    { value: "ticket", label: "Ticket", description: t("dashboard.components.produkPageEditor.layoutOptions.ticket") },
+    { value: "headline", label: "Headline", description: t("dashboard.components.produkPageEditor.layoutOptions.headline") },
+    { value: "ribbon", label: "Ribbon", description: t("dashboard.components.produkPageEditor.layoutOptions.ribbon") },
+    { value: "duo", label: "Duo", description: t("dashboard.components.produkPageEditor.layoutOptions.duo") },
+    { value: "masthead", label: "Masthead", description: t("dashboard.components.produkPageEditor.layoutOptions.masthead") },
+    { value: "portrait", label: "Portrait", description: t("dashboard.components.produkPageEditor.layoutOptions.portrait") },
+  ];
+}
 
-const CONTENT_TILES: { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
-  { key: "link", label: "Tautan", description: "Tautkan ke halaman web mana pun", Icon: IconLink },
-  { key: "video", label: "Video", description: "Embed video YouTube/TikTok", Icon: IconPlayCircle },
-  { key: "faq", label: "FAQ", description: "Pertanyaan yang sering ditanyakan", Icon: IconBook },
-  // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
-  // lalu keluar text, bukan hanya untuk faq saja" -- lihat catatan lengkap
-  // di dashboard/links/page.tsx (pola sama persis, dipakai ulang di sini
-  // untuk paritas halaman utama/Toko).
-  { key: "accordion", label: "Accordion", description: "Satu judul yang bisa diklik untuk membuka isi teksnya", Icon: IconChevronRight },
-  { key: "contact_form", label: "Formulir Kontak", description: "Kumpulkan nama, email, dan pesan", Icon: IconMail },
-  { key: "maps", label: "Lokasi", description: "Google Maps (tertanam atau tautan)", Icon: IconMapPin },
-  { key: "text", label: "Teks", description: "Paragraf bebas", Icon: IconTextLines },
-  // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
-  // 2026, lihat catatan lengkap di dashboard/links/page.tsx (pola sama
-  // persis, dipakai ulang di sini untuk paritas halaman utama/Toko).
-  { key: "gallery", label: "Galeri Foto", description: "Grid beberapa foto sekaligus", Icon: IconPhotoLibrary },
-  { key: "audio", label: "Audio/Musik", description: "Pemutar audio tertanam di bio", Icon: IconMusicNote },
-  // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
-  // file pdf download", lihat catatan lengkap di dashboard/links/page.tsx
-  // (pola sama persis, dipakai ulang di sini untuk paritas halaman
-  // utama/Toko).
-  { key: "file", label: "File & Unduhan", description: "Bagikan PDF/ZIP/EPUB gratis untuk diunduh", Icon: IconFileText },
-];
+function getContentTiles(
+  t: (key: string) => string
+): { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] {
+  return [
+    { key: "link", label: t("dashboard.components.produkPageEditor.contentTiles.link.label"), description: t("dashboard.components.produkPageEditor.contentTiles.link.desc"), Icon: IconLink },
+    { key: "video", label: t("dashboard.components.produkPageEditor.contentTiles.video.label"), description: t("dashboard.components.produkPageEditor.contentTiles.video.desc"), Icon: IconPlayCircle },
+    { key: "faq", label: t("dashboard.components.produkPageEditor.contentTiles.faq.label"), description: t("dashboard.components.produkPageEditor.contentTiles.faq.desc"), Icon: IconBook },
+    // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
+    // lalu keluar text, bukan hanya untuk faq saja" -- lihat catatan lengkap
+    // di dashboard/links/page.tsx (pola sama persis, dipakai ulang di sini
+    // untuk paritas halaman utama/Toko).
+    { key: "accordion", label: t("dashboard.components.produkPageEditor.contentTiles.accordion.label"), description: t("dashboard.components.produkPageEditor.contentTiles.accordion.desc"), Icon: IconChevronRight },
+    { key: "contact_form", label: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"), description: t("dashboard.components.produkPageEditor.contentTiles.contactForm.desc"), Icon: IconMail },
+    { key: "maps", label: t("dashboard.components.produkPageEditor.contentTiles.maps.label"), description: t("dashboard.components.produkPageEditor.contentTiles.maps.desc"), Icon: IconMapPin },
+    { key: "text", label: t("dashboard.components.produkPageEditor.contentTiles.text.label"), description: t("dashboard.components.produkPageEditor.contentTiles.text.desc"), Icon: IconTextLines },
+    // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
+    // 2026, lihat catatan lengkap di dashboard/links/page.tsx (pola sama
+    // persis, dipakai ulang di sini untuk paritas halaman utama/Toko).
+    { key: "gallery", label: t("dashboard.components.produkPageEditor.contentTiles.gallery.label"), description: t("dashboard.components.produkPageEditor.contentTiles.gallery.desc"), Icon: IconPhotoLibrary },
+    { key: "audio", label: t("dashboard.components.produkPageEditor.contentTiles.audio.label"), description: t("dashboard.components.produkPageEditor.contentTiles.audio.desc"), Icon: IconMusicNote },
+    // "file" -- permintaan langsung pengguna, 20 Agustus 2026: "tambahkan
+    // file pdf download", lihat catatan lengkap di dashboard/links/page.tsx
+    // (pola sama persis, dipakai ulang di sini untuk paritas halaman
+    // utama/Toko).
+    { key: "file", label: t("dashboard.components.produkPageEditor.contentTiles.file.label"), description: t("dashboard.components.produkPageEditor.contentTiles.file.desc"), Icon: IconFileText },
+  ];
+}
 
-const BLOCK_LABEL: Record<string, string> = {
-  video: "Video",
-  faq: "FAQ",
-  contact_form: "Formulir Kontak",
-  maps: "Lokasi",
-  text: "Teks",
-  accordion: "Accordion",
-  gallery: "Galeri Foto",
-  audio: "Audio/Musik",
-  file: "File & Unduhan",
-};
+function getBlockLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    video: t("dashboard.components.produkPageEditor.contentTiles.video.label"),
+    faq: t("dashboard.components.produkPageEditor.contentTiles.faq.label"),
+    contact_form: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"),
+    maps: t("dashboard.components.produkPageEditor.contentTiles.maps.label"),
+    text: t("dashboard.components.produkPageEditor.contentTiles.text.label"),
+    accordion: t("dashboard.components.produkPageEditor.contentTiles.accordion.label"),
+    gallery: t("dashboard.components.produkPageEditor.contentTiles.gallery.label"),
+    audio: t("dashboard.components.produkPageEditor.contentTiles.audio.label"),
+    file: t("dashboard.components.produkPageEditor.contentTiles.file.label"),
+  };
+}
 
 export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "stiker";
 
@@ -185,6 +202,7 @@ export default function ProdukPageEditor({
   setSection: (s: DesignSection) => void;
 }) {
   const router = useRouter();
+  const { t } = useLocale();
 
   async function handlePatch(patch: Parameters<typeof updateExtraPage>[1]) {
     if (!page) return;
@@ -194,7 +212,7 @@ export default function ProdukPageEditor({
       await updateExtraPage(page.id, patch);
     } catch (err) {
       setPage(previous);
-      setError(err instanceof ApiError ? err.message : "Gagal menyimpan pengaturan.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveSettings"));
     }
   }
 
@@ -212,11 +230,10 @@ export default function ProdukPageEditor({
     return (
       <div className="glass mx-auto max-w-xl rounded-2xl p-8 text-center shadow-card">
         <IconSparkle className="mx-auto h-8 w-8 text-primary" />
-        <h2 className="mt-3 font-heading text-lg font-bold text-app-ink">Halaman Toko belum aktif</h2>
+        <h2 className="mt-3 font-heading text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.notActive.title")}</h2>
         <p className="mt-2 text-sm text-app-muted">
-          Halaman Toko-mu otomatis dibuat & dipublikasikan begitu kamu menambahkan produk pertama di tab Manage Items --
-          tidak perlu langkah manual apa pun. Kalau mau menyiapkan bio/tema/blok-nya lebih awal, buat sekarang juga bisa,
-          URL-nya selalu <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
+          {t("dashboard.components.produkPageEditor.notActive.description")}{" "}
+          <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
         </p>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button
@@ -225,7 +242,7 @@ export default function ProdukPageEditor({
           disabled={creating || !username}
           className="btn-primary mt-5 rounded-lg px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {creating ? "Membuat..." : "Buat Halaman Toko sekarang"}
+          {creating ? t("dashboard.components.produkPageEditor.notActive.creating") : t("dashboard.components.produkPageEditor.notActive.createNow")}
         </button>
       </div>
     );
@@ -235,7 +252,7 @@ export default function ProdukPageEditor({
     <div className="min-w-0">
       <section className="glass rounded-2xl p-5 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-lg font-bold text-app-ink">Halaman Toko</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.pageTitle")}</h2>
           <a
             href={`${SITE_URL}/${username}/${page.slug}`}
             target="_blank"
@@ -249,12 +266,16 @@ export default function ProdukPageEditor({
         <div className="mt-1.5 flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
           <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-app-muted"}`}>
-            {page.is_published ? "Sudah terbit" : "Belum terbit"}
+            {page.is_published ? t("dashboard.components.produkPageEditor.published") : t("dashboard.components.produkPageEditor.notPublished")}
           </span>
         </div>
         <div className="mt-4 flex items-center gap-2">
-          <Toggle checked={page.is_published} onChange={() => handlePatch({ is_published: !page.is_published })} label="Terbitkan halaman Toko" />
-          <span className="text-sm font-semibold text-app-ink">Terbitkan halaman Toko</span>
+          <Toggle
+            checked={page.is_published}
+            onChange={() => handlePatch({ is_published: !page.is_published })}
+            label={t("dashboard.components.produkPageEditor.publishToggle")}
+          />
+          <span className="text-sm font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.publishToggle")}</span>
         </div>
         {/* Modul Langganan Premium (permintaan langsung pengguna, 8 Agustus
             2026): toggle watermark yang SAMA seperti halaman Bio utama
@@ -266,14 +287,14 @@ export default function ProdukPageEditor({
             checked={page.is_premium && page.hide_watermark}
             disabled={!page.is_premium}
             onChange={() => handlePatch({ hide_watermark: !page.hide_watermark })}
-            label="Sembunyikan watermark"
+            label={t("dashboard.components.produkPageEditor.hideWatermark")}
           />
           <button
             type="button"
             onClick={() => !page.is_premium && router.push("/dashboard/settings/subscription")}
             className="flex items-center gap-1 text-sm font-semibold text-app-ink"
           >
-            Sembunyikan watermark
+            {t("dashboard.components.produkPageEditor.hideWatermark")}
             {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-app-muted" />}
           </button>
         </div>
@@ -293,7 +314,7 @@ export default function ProdukPageEditor({
             (bukan `!== "stacked"` seperti sebelumnya) supaya opsi ketiga ini
             tidak ikut salah ke-highlight sebagai "Grid 2 Kolom". */}
         <div className="mt-4">
-          <p className="text-sm font-semibold text-app-ink">Tata Letak Produk</p>
+          <p className="text-sm font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.productLayout.title")}</p>
           <div className="mt-1.5 flex flex-col gap-1.5 sm:flex-row">
             <button
               type="button"
@@ -304,7 +325,7 @@ export default function ProdukPageEditor({
                   : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
-              Grid 2 Kolom
+              {t("dashboard.components.produkPageEditor.productLayout.grid")}
             </button>
             <button
               type="button"
@@ -313,7 +334,7 @@ export default function ProdukPageEditor({
                 page.product_layout === "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
-              1 Kolom Penuh
+              {t("dashboard.components.produkPageEditor.productLayout.stacked")}
             </button>
             <button
               type="button"
@@ -322,14 +343,11 @@ export default function ProdukPageEditor({
                 page.product_layout === "category" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
-              Blok Kategori
+              {t("dashboard.components.produkPageEditor.productLayout.category")}
             </button>
           </div>
           {page.product_layout === "category" && (
-            <p className="mt-1.5 text-[11px] text-app-muted">
-              Pengunjung melihat blok kategori dulu (mis. Sepatu, Baju, Celana) -- klik satu blok untuk lihat semua produk di
-              kategori itu. Pastikan produkmu sudah diberi kategori lewat menu Kelola supaya masuk ke blok yang tepat.
-            </p>
+            <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.productLayout.categoryHint")}</p>
           )}
         </div>
       </section>
@@ -339,12 +357,12 @@ export default function ProdukPageEditor({
       <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-2xl p-1.5 shadow-card">
         {(
           [
-            ["blok", "Blok & Tautan"],
-            ["tema", "Tema"],
-            ["header", "Header"],
-            ["tombol", "Tombol"],
-            ["font", "Font"],
-            ["stiker", "Stiker"],
+            ["blok", t("dashboard.components.produkPageEditor.designTabs.blok")],
+            ["tema", t("dashboard.components.produkPageEditor.designTabs.tema")],
+            ["header", t("dashboard.components.produkPageEditor.designTabs.header")],
+            ["tombol", t("dashboard.components.produkPageEditor.designTabs.tombol")],
+            ["font", t("dashboard.components.produkPageEditor.designTabs.font")],
+            ["stiker", t("dashboard.components.produkPageEditor.designTabs.stiker")],
           ] as [DesignSection, string][]
         ).map(([key, label]) => (
           <button
@@ -415,6 +433,9 @@ function BlockSection({
   setLinks: (fn: (prev: LinkItem[]) => LinkItem[]) => void;
   setError: (msg: string | null) => void;
 }) {
+  const { t } = useLocale();
+  const CONTENT_TILES = getContentTiles(t);
+  const BLOCK_LABEL = getBlockLabel(t);
   const [adding, setAdding] = useState(false);
   const [blockType, setBlockType] = useState<BlockType>("link");
   const [title, setTitle] = useState("");
@@ -450,7 +471,7 @@ function BlockSection({
       const { images } = await uploadGalleryImage(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah foto galeri.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadGalleryImage"));
     } finally {
       setGalleryUploadingId(null);
     }
@@ -462,7 +483,7 @@ function BlockSection({
       const { images } = await deleteGalleryImage(link.id, index);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, images } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus foto galeri.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteGalleryImage"));
     }
   }
 
@@ -476,7 +497,7 @@ function BlockSection({
       const { audio_url, title } = await uploadAudioBlock(link.id, file);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, title, block_data: { ...l.block_data, audio_url } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah audio.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadAudio"));
     } finally {
       setAudioUploadingId(null);
     }
@@ -488,7 +509,7 @@ function BlockSection({
       await deleteAudioBlock(link.id);
       setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, audio_url: "" } } : l)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus audio.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteAudio"));
     }
   }
 
@@ -506,7 +527,7 @@ function BlockSection({
         prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url, file_name, file_size_bytes } } : l))
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengunggah file.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadFile"));
     } finally {
       setFileUploadingId(null);
     }
@@ -520,7 +541,7 @@ function BlockSection({
         prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, file_url: "", file_name: "", file_size_bytes: 0 } } : l))
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus file.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteFile"));
     }
   }
 
@@ -538,7 +559,7 @@ function BlockSection({
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Judul wajib diisi.");
+      setError(t("dashboard.components.produkPageEditor.errors.titleRequired"));
       return;
     }
     setError(null);
@@ -546,7 +567,7 @@ function BlockSection({
     try {
       if (blockType === "link") {
         if (!linkUrl.trim()) {
-          setError("URL wajib diisi.");
+          setError(t("dashboard.components.produkPageEditor.errors.urlRequired"));
           setSaving(false);
           return;
         }
@@ -557,7 +578,7 @@ function BlockSection({
         let url: string | undefined;
         if (blockType === "video") {
           if (!videoUrl.trim()) {
-            setError("Tautan video wajib diisi.");
+            setError(t("dashboard.components.produkPageEditor.errors.videoUrlRequired"));
             setSaving(false);
             return;
           }
@@ -565,14 +586,14 @@ function BlockSection({
         } else if (blockType === "faq") {
           const items = faqItems.filter((it) => it.question.trim() && it.answer.trim());
           if (items.length === 0) {
-            setError("Isi minimal 1 pertanyaan FAQ.");
+            setError(t("dashboard.components.produkPageEditor.errors.faqItemRequired"));
             setSaving(false);
             return;
           }
           blockData = { items };
         } else if (blockType === "maps") {
           if (!mapsUrl.trim()) {
-            setError("Tautan Google Maps wajib diisi.");
+            setError(t("dashboard.components.produkPageEditor.errors.mapsUrlRequired"));
             setSaving(false);
             return;
           }
@@ -580,14 +601,14 @@ function BlockSection({
           blockData = { embed: mapsEmbed };
         } else if (blockType === "text") {
           if (!text.trim()) {
-            setError("Isi teksnya dulu.");
+            setError(t("dashboard.components.produkPageEditor.errors.textRequired"));
             setSaving(false);
             return;
           }
           blockData = { text: text.trim() };
         } else if (blockType === "accordion") {
           if (!accordionText.trim()) {
-            setError("Isi teks yang muncul saat diklik.");
+            setError(t("dashboard.components.produkPageEditor.errors.accordionTextRequired"));
             setSaving(false);
             return;
           }
@@ -599,7 +620,7 @@ function BlockSection({
       resetForm();
       setAdding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menambah blok.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.addBlock"));
     } finally {
       setSaving(false);
     }
@@ -610,7 +631,7 @@ function BlockSection({
     try {
       await deleteLink(id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal menghapus.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.deleteBlock"));
     }
   }
 
@@ -627,7 +648,7 @@ function BlockSection({
       reorderExtraPageLinks(
         pageId,
         withPositions.map((l) => ({ id: l.id, position: l.position }))
-      ).catch((err) => setError(err instanceof ApiError ? err.message : "Gagal menyimpan urutan."));
+      ).catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveOrder")));
       return withPositions;
     });
     setDragId(null);
@@ -639,7 +660,7 @@ function BlockSection({
         {!adding ? (
           <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
             <IconPlus className="h-4 w-4" />
-            Tambah Blok/Tautan
+            {t("dashboard.components.produkPageEditor.addBlockButton")}
           </button>
         ) : (
           <form onSubmit={handleAdd} className="flex flex-col gap-3">
@@ -661,14 +682,18 @@ function BlockSection({
             </div>
 
             <FormField
-              label={blockType === "link" ? "Judul" : "Judul Blok"}
+              label={
+                blockType === "link"
+                  ? t("dashboard.components.produkPageEditor.blockForm.titleLabel")
+                  : t("dashboard.components.produkPageEditor.blockForm.blockTitleLabel")
+              }
               hint={
                 blockType === "link"
-                  ? "Teks yang tampil di halamanmu."
+                  ? t("dashboard.components.produkPageEditor.blockForm.titleHintLink")
                   : blockType === "text"
-                  ? "Internal saja, TIDAK tampil ke pengunjung."
+                  ? t("dashboard.components.produkPageEditor.blockForm.titleHintText")
                   : blockType === "accordion"
-                  ? "Ini yang tampil & diklik pengunjung untuk membuka isinya."
+                  ? t("dashboard.components.produkPageEditor.blockForm.titleHintAccordion")
                   : undefined
               }
             >
@@ -677,13 +702,16 @@ function BlockSection({
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Judul"
+                placeholder={t("dashboard.components.produkPageEditor.blockForm.titlePlaceholder")}
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
             </FormField>
 
             {blockType === "link" && (
-              <FormField label="Tautan (URL)" hint="Alamat halaman tujuan saat diklik.">
+              <FormField
+                label={t("dashboard.components.produkPageEditor.blockForm.urlLabel")}
+                hint={t("dashboard.components.produkPageEditor.blockForm.urlHint")}
+              >
                 <input
                   type="url"
                   required
@@ -695,55 +723,55 @@ function BlockSection({
               </FormField>
             )}
             {blockType === "video" && (
-              <FormField label="Tautan Video">
+              <FormField label={t("dashboard.components.produkPageEditor.blockForm.videoUrlLabel")}>
                 <input
                   type="url"
                   required
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="Tautan YouTube/TikTok"
+                  placeholder={t("dashboard.components.produkPageEditor.blockForm.videoUrlPlaceholder")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
             {blockType === "maps" && (
               <>
-                <FormField label="Tautan Google Maps">
+                <FormField label={t("dashboard.components.produkPageEditor.blockForm.mapsUrlLabel")}>
                   <input
                     type="url"
                     required
                     value={mapsUrl}
                     onChange={(e) => setMapsUrl(e.target.value)}
-                    placeholder="Tautan Google Maps"
+                    placeholder={t("dashboard.components.produkPageEditor.blockForm.mapsUrlLabel")}
                     className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
                 <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
                   <input type="checkbox" checked={mapsEmbed} onChange={(e) => setMapsEmbed(e.target.checked)} />
-                  Tampilkan tertanam (embed), bukan cuma tautan
+                  {t("dashboard.components.produkPageEditor.blockForm.mapsEmbedCheckbox")}
                 </label>
               </>
             )}
             {blockType === "text" && (
-              <FormField label="Isi Teks">
+              <FormField label={t("dashboard.components.produkPageEditor.blockForm.textLabel")}>
                 <textarea
                   required
                   rows={3}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Isi teks..."
+                  placeholder={t("dashboard.components.produkPageEditor.blockForm.textPlaceholder")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
             {blockType === "accordion" && (
-              <FormField label="Isi Saat Diklik">
+              <FormField label={t("dashboard.components.produkPageEditor.blockForm.accordionTextLabel")}>
                 <textarea
                   required
                   rows={3}
                   value={accordionText}
                   onChange={(e) => setAccordionText(e.target.value)}
-                  placeholder="Isi teks yang muncul saat judul di atas diklik..."
+                  placeholder={t("dashboard.components.produkPageEditor.blockForm.accordionTextPlaceholder")}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
@@ -752,21 +780,21 @@ function BlockSection({
               <div className="flex flex-col gap-2">
                 {faqItems.map((item, idx) => (
                   <div key={idx} className="flex flex-col gap-1.5 rounded-lg border border-app-border p-2.5">
-                    <FormField label={`Pertanyaan ${idx + 1}`}>
+                    <FormField label={t("dashboard.components.produkPageEditor.blockForm.faqQuestionLabel").replace("{index}", String(idx + 1))}>
                       <input
                         type="text"
                         value={item.question}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)))}
-                        placeholder="Pertanyaan"
+                        placeholder={t("dashboard.components.produkPageEditor.blockForm.faqQuestionPlaceholder")}
                         className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
-                    <FormField label="Jawaban">
+                    <FormField label={t("dashboard.components.produkPageEditor.blockForm.faqAnswerLabel")}>
                       <textarea
                         rows={2}
                         value={item.answer}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)))}
-                        placeholder="Jawaban"
+                        placeholder={t("dashboard.components.produkPageEditor.blockForm.faqAnswerLabel")}
                         className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
@@ -777,20 +805,20 @@ function BlockSection({
                   onClick={() => setFaqItems((prev) => [...prev, { question: "", answer: "" }])}
                   className="self-start text-xs font-semibold text-primary hover:underline"
                 >
-                  + Tambah pertanyaan
+                  {t("dashboard.components.produkPageEditor.blockForm.addFaqQuestion")}
                 </button>
               </div>
             )}
             {blockType === "contact_form" && (
-              <p className="text-xs text-app-muted">Formulir siap pakai -- pengunjung isi nama/email/pesan, terkirim ke emailmu.</p>
+              <p className="text-xs text-app-muted">{t("dashboard.components.produkPageEditor.blockForm.contactFormHint")}</p>
             )}
             {(blockType === "gallery" || blockType === "audio" || blockType === "file") && (
               <p className="text-xs text-app-muted">
                 {blockType === "gallery"
-                  ? 'Buat blok dulu, foto ditambahkan setelahnya lewat panel "Kelola foto" di kartu blok.'
+                  ? t("dashboard.components.produkPageEditor.blockForm.galleryHint")
                   : blockType === "audio"
-                  ? 'Buat blok dulu, file audio diunggah setelahnya lewat panel "Kelola audio" di kartu blok.'
-                  : 'Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel "Kelola file" di kartu blok.'}
+                  ? t("dashboard.components.produkPageEditor.blockForm.audioHint")
+                  : t("dashboard.components.produkPageEditor.blockForm.fileHint")}
               </p>
             )}
 
@@ -803,10 +831,10 @@ function BlockSection({
                 }}
                 className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
-                Batal
+                {t("dashboard.components.produkPageEditor.blockForm.cancel")}
               </button>
               <button type="submit" disabled={saving} className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white disabled:opacity-60">
-                {saving ? "Menyimpan..." : "Tambah"}
+                {saving ? t("dashboard.components.produkPageEditor.blockForm.saving") : t("dashboard.components.produkPageEditor.blockForm.add")}
               </button>
             </div>
           </form>
@@ -814,7 +842,9 @@ function BlockSection({
       </section>
 
       <div className="flex flex-col gap-2">
-        {links.length === 0 && <p className="text-center text-xs text-app-muted">Belum ada blok/tautan -- tambahkan lewat tombol di atas.</p>}
+        {links.length === 0 && (
+          <p className="text-center text-xs text-app-muted">{t("dashboard.components.produkPageEditor.blockForm.emptyState")}</p>
+        )}
         {links.map((link) => (
           <div
             key={link.id}
@@ -847,7 +877,9 @@ function BlockSection({
             {link.block_type === "gallery" && (
               <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                 <p className="text-[11px] font-semibold text-app-muted">
-                  {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
+                  {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
+                    .replace("{count}", String(((link.block_data?.images as string[]) ?? []).length))
+                    .replace("{max}", String(maxGalleryImages))}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {((link.block_data?.images as string[]) ?? []).map((src, i) => (
@@ -857,7 +889,7 @@ function BlockSection({
                       <button
                         type="button"
                         onClick={() => handleGalleryImageDelete(link, i)}
-                        title="Hapus foto"
+                        title={t("dashboard.components.produkPageEditor.blockForm.deletePhoto")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
                       >
                         <IconX className="h-3 w-3" />
@@ -875,7 +907,7 @@ function BlockSection({
                       ) : (
                         <>
                           <IconPlus className="h-4 w-4" />
-                          <span className="text-[9px] font-semibold">Tambah</span>
+                          <span className="text-[9px] font-semibold">{t("dashboard.components.produkPageEditor.blockForm.add")}</span>
                         </>
                       )}
                       <input
@@ -893,10 +925,16 @@ function BlockSection({
             {link.block_type === "audio" && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
-                  {(link.block_data?.audio_url as string) ? "Audio terunggah." : "Belum ada audio (mp3/wav/m4a/ogg, maks 15MB)."}
+                  {(link.block_data?.audio_url as string)
+                    ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
+                    : t("dashboard.components.produkPageEditor.blockForm.audioEmpty")}
                 </p>
                 <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                  {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti" : "Unggah"}
+                  {audioUploadingId === link.id
+                    ? t("dashboard.components.produkPageEditor.blockForm.uploading")
+                    : (link.block_data?.audio_url as string)
+                    ? t("dashboard.components.produkPageEditor.blockForm.replace")
+                    : t("dashboard.components.produkPageEditor.blockForm.upload")}
                   <input
                     type="file"
                     accept=".mp3,.wav,.m4a,.ogg,audio/mpeg,audio/wav,audio/mp4,audio/ogg"
@@ -907,7 +945,7 @@ function BlockSection({
                 </label>
                 {(link.block_data?.audio_url as string) && (
                   <button type="button" onClick={() => handleAudioDelete(link)} className="flex-shrink-0 text-[11px] font-semibold text-red-600 hover:underline">
-                    Hapus
+                    {t("dashboard.components.produkPageEditor.blockForm.delete")}
                   </button>
                 )}
               </div>
@@ -918,10 +956,16 @@ function BlockSection({
             {link.block_type === "file" && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
-                  {(link.block_data?.file_url as string) ? "File terunggah." : "Belum ada file (pdf/zip/epub, maks 20MB)."}
+                  {(link.block_data?.file_url as string)
+                    ? t("dashboard.components.produkPageEditor.blockForm.fileUploaded")
+                    : t("dashboard.components.produkPageEditor.blockForm.fileEmpty")}
                 </p>
                 <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
-                  {fileUploadingId === link.id ? "Mengunggah..." : (link.block_data?.file_url as string) ? "Ganti" : "Unggah"}
+                  {fileUploadingId === link.id
+                    ? t("dashboard.components.produkPageEditor.blockForm.uploading")
+                    : (link.block_data?.file_url as string)
+                    ? t("dashboard.components.produkPageEditor.blockForm.replace")
+                    : t("dashboard.components.produkPageEditor.blockForm.upload")}
                   <input
                     type="file"
                     accept=".pdf,.zip,.epub,application/pdf,application/zip,application/epub+zip"
@@ -932,7 +976,7 @@ function BlockSection({
                 </label>
                 {(link.block_data?.file_url as string) && (
                   <button type="button" onClick={() => handleFileDelete(link)} className="flex-shrink-0 text-[11px] font-semibold text-red-600 hover:underline">
-                    Hapus
+                    {t("dashboard.components.produkPageEditor.blockForm.delete")}
                   </button>
                 )}
               </div>
@@ -957,6 +1001,7 @@ function TemaSection({
   onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
   onError: (msg: string | null) => void;
 }) {
+  const { t } = useLocale();
   const [bgUploading, setBgUploading] = useState(false);
 
   async function handleBackgroundUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -968,7 +1013,7 @@ function TemaSection({
       await uploadExtraPageBackground(page.id, file);
       onPatch({});
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : "Gagal mengunggah gambar latar.");
+      onError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadBackground"));
     } finally {
       setBgUploading(false);
     }
@@ -977,7 +1022,15 @@ function TemaSection({
   return (
     <section className="glass rounded-2xl p-5 shadow-card">
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-        <button type="button" onClick={() => (isPremium ? onPatch({ theme: "custom", custom_style_override: false }) : onError("Latar kustom khusus kreator Premium."))} className="group flex flex-col items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() =>
+            isPremium
+              ? onPatch({ theme: "custom", custom_style_override: false })
+              : onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly"))
+          }
+          className="group flex flex-col items-center gap-1.5"
+        >
           <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-primary ring-offset-2" : ""}`}>
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
               <IconPaintbrush className="h-7 w-7 text-app-muted" />
@@ -988,7 +1041,10 @@ function TemaSection({
               </div>
             )}
           </div>
-          <span className="text-[11px] font-semibold text-app-ink">Custom{!isPremium && " (Premium)"}</span>
+          <span className="text-[11px] font-semibold text-app-ink">
+            {t("dashboard.components.produkPageEditor.tema.customLabel")}
+            {!isPremium && ` (${t("dashboard.components.produkPageEditor.tema.premiumSuffix")})`}
+          </span>
         </button>
         {THEME_PRESETS.map((themeName) => {
           const meta = PAGE_THEMES[themeName as keyof typeof PAGE_THEMES];
@@ -1015,24 +1071,28 @@ function TemaSection({
 
       {page.theme === "custom" && isPremium && (
         <div className="mt-5 flex flex-col gap-3 border-t border-app-border pt-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Latar Kustom</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.components.produkPageEditor.tema.customBackground")}</p>
           <div className="flex gap-2">
-            {(["solid", "gradient", "image"] as const).map((t) => (
+            {(["solid", "gradient", "image"] as const).map((bgType) => (
               <button
-                key={t}
+                key={bgType}
                 type="button"
-                onClick={() => onPatch({ custom_background_type: t })}
+                onClick={() => onPatch({ custom_background_type: bgType })}
                 className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold capitalize ${
-                  page.custom_background_type === t ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                  page.custom_background_type === bgType ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
                 }`}
               >
-                {t === "solid" ? "Warna" : t === "gradient" ? "Gradien" : "Gambar"}
+                {bgType === "solid"
+                  ? t("dashboard.components.produkPageEditor.tema.backgroundColor")
+                  : bgType === "gradient"
+                  ? t("dashboard.components.produkPageEditor.tema.backgroundGradient")
+                  : t("dashboard.components.produkPageEditor.tema.backgroundImage")}
               </button>
             ))}
           </div>
           {page.custom_background_type === "image" ? (
             <label className="cursor-pointer self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
-              {bgUploading ? "Mengunggah..." : "Unggah gambar latar"}
+              {bgUploading ? t("dashboard.components.produkPageEditor.tema.uploading") : t("dashboard.components.produkPageEditor.tema.uploadBackground")}
               <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleBackgroundUpload} disabled={bgUploading} className="hidden" />
             </label>
           ) : (
@@ -1063,6 +1123,8 @@ function HeaderSection({
   onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
   onError: (msg: string | null) => void;
 }) {
+  const { t } = useLocale();
+  const LAYOUT_OPTIONS = getLayoutOptions(t);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Kontak sosial -- permintaan langsung pengguna, 11 Agustus 2026, paritas
@@ -1081,7 +1143,7 @@ function HeaderSection({
       const { avatar_url } = await uploadExtraPageAvatar(page.id, file);
       setPage({ ...page, avatar_url });
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : "Gagal mengunggah foto profil.");
+      onError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadAvatar"));
     } finally {
       setAvatarUploading(false);
     }
@@ -1124,7 +1186,7 @@ function HeaderSection({
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Foto Profil Toko</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.avatarLabel")}</label>
         <div className="flex items-center gap-3">
           {page.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1135,13 +1197,13 @@ function HeaderSection({
             </div>
           )}
           <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
-            {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
+            {avatarUploading ? t("dashboard.components.produkPageEditor.header.uploading") : t("dashboard.components.produkPageEditor.header.changePhoto")}
             <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={avatarUploading} className="hidden" />
           </label>
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Nama Tampilan</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.displayNameLabel")}</label>
         <input
           type="text"
           maxLength={100}
@@ -1152,7 +1214,7 @@ function HeaderSection({
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bio (maks 160 karakter)</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.bioLabel")}</label>
         <textarea
           maxLength={160}
           rows={3}
@@ -1167,7 +1229,7 @@ function HeaderSection({
           header/page.tsx), lihat catatan lengkap di sana soal kenapa
           pemilih manual ini perlu ada. */}
       <div>
-        <label className="mb-1 block text-xs font-semibold text-app-ink">Layout</label>
+        <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.layoutLabel")}</label>
         <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {LAYOUT_OPTIONS.map((opt) => (
             <button
@@ -1197,7 +1259,7 @@ function HeaderSection({
           onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
           className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-app-ink"
         >
-          Kontak Sosial
+          {t("dashboard.components.produkPageEditor.header.socialContact")}
           <IconChevronRight className={`h-3.5 w-3.5 text-app-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
         </button>
         {socialOpen && (
@@ -1219,15 +1281,13 @@ function HeaderSection({
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-app-muted">
-              Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
-            </p>
+            <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.header.socialHint")}</p>
             <div className="mt-3 flex items-center gap-2">
               <button type="button" onClick={saveSocial} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white">
-                Simpan
+                {t("dashboard.components.produkPageEditor.header.save")}
               </button>
               <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
-                Batal
+                {t("dashboard.components.produkPageEditor.header.cancel")}
               </button>
             </div>
           </div>
@@ -1248,10 +1308,11 @@ function TombolSection({
   setPage: (p: ExtraPageDetail) => void;
   onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
 }) {
+  const { t } = useLocale();
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonColor")}</label>
         <input
           type="color"
           value={page.custom_button_color}
@@ -1261,7 +1322,7 @@ function TombolSection({
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Gaya Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonStyle")}</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
             <button
@@ -1278,7 +1339,7 @@ function TombolSection({
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Kelengkungan Sudut</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.cornerRadius")}</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_ROUNDED_OPTIONS.map((opt) => (
             <button
@@ -1296,7 +1357,7 @@ function TombolSection({
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bayangan Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonShadow")}</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_SHADOW_OPTIONS.map((opt) => (
             <button
@@ -1327,10 +1388,11 @@ function FontSection({
   setPage: (p: ExtraPageDetail) => void;
   onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
 }) {
+  const { t } = useLocale();
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Font Halaman</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.pageFont")}</label>
         <select
           value={page.custom_font}
           onChange={(e) => onStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
@@ -1345,7 +1407,7 @@ function FontSection({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Teks Halaman</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.pageTextColor")}</label>
         <input
           type="color"
           value={page.custom_page_text_color || "#FFFFFF"}
@@ -1357,10 +1419,14 @@ function FontSection({
 
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-app-ink">Font Judul Terpisah</p>
-          <p className="text-[11px] text-app-muted">Default sama dengan font halaman.</p>
+          <p className="text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.separateTitleFont")}</p>
+          <p className="text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.font.separateTitleFontHint")}</p>
         </div>
-        <Toggle checked={!!page.custom_title_font} onChange={() => onStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })} label="Font judul terpisah" />
+        <Toggle
+          checked={!!page.custom_title_font}
+          onChange={() => onStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
+          label={t("dashboard.components.produkPageEditor.font.separateTitleFont")}
+        />
       </div>
 
       {page.custom_title_font && (
@@ -1378,7 +1444,7 @@ function FontSection({
       )}
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Judul</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.titleColor")}</label>
         <input
           type="color"
           value={page.custom_title_color || "#FFFFFF"}

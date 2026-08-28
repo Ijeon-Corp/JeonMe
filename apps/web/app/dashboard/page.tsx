@@ -16,17 +16,9 @@ import {
 } from "@/components/icons";
 import AnalyticsAssistant from "@/components/AnalyticsAssistant";
 import StatCard from "@/components/StatCard";
+import { useLocale } from "@/lib/locale-context";
 
 const PRESETS = [7, 30, 90];
-
-const DEVICE_LABEL: Record<string, string> = {
-  mobile: "Mobile",
-  desktop: "Desktop",
-  tablet: "Tablet",
-  unknown: "Tidak diketahui",
-};
-
-const WEEKDAY_LABEL = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 function formatRupiah(n: number): string {
   return "Rp" + n.toLocaleString("id-ID");
@@ -70,6 +62,9 @@ function buildAreaPath(values: number[]): { line: string; area: string } {
 }
 
 export default function DashboardHomePage() {
+  const { t, dict } = useLocale();
+  const deviceLabel = dict.dashboard.pages.home.deviceLabels;
+  const weekdayLabel = dict.dashboard.pages.home.weekdayLabels;
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [prevSummary, setPrevSummary] = useState<AnalyticsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +91,7 @@ export default function DashboardHomePage() {
           .then(setPrevSummary)
           .catch(() => setPrevSummary(null));
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat ringkasan."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.home.errorLoadSummary")))
       .finally(() => setLoading(false));
   }
 
@@ -107,7 +102,7 @@ export default function DashboardHomePage() {
 
   function handleApplyCustomRange() {
     if (!customFrom || !customTo) {
-      setError("Isi tanggal mulai dan tanggal akhir.");
+      setError(t("dashboard.pages.home.errorFillDateRange"));
       return;
     }
     setError(null);
@@ -126,7 +121,7 @@ export default function DashboardHomePage() {
     try {
       await exportAnalyticsCSV(currentParams());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gagal mengekspor CSV.");
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.home.errorExportCsv"));
     } finally {
       setExporting(false);
     }
@@ -151,7 +146,7 @@ export default function DashboardHomePage() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-app-muted">
-          Statistik {summary?.from_date ?? ""} sampai {summary?.to_date ?? ""}.
+          {t("dashboard.pages.home.statsRangePrefix")} {summary?.from_date ?? ""} {t("dashboard.pages.home.statsRangeSeparator")} {summary?.to_date ?? ""}.
         </p>
         <button
           type="button"
@@ -160,7 +155,7 @@ export default function DashboardHomePage() {
           className="flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-primary hover:text-primary disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
-          {exporting ? "Mengekspor..." : "Ekspor CSV"}
+          {exporting ? t("dashboard.pages.home.exportingLabel") : t("dashboard.pages.home.exportCsvButton")}
         </button>
       </div>
 
@@ -172,27 +167,27 @@ export default function DashboardHomePage() {
           gambar/tema sungguhan milik kreator (itu tugas panel Pratinjau
           Langsung di halaman masing-masing, di sini cukup penanda visual). */}
       <section className="mt-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-app-muted">Menu Cepat</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.home.quickMenuHeading")}</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <QuickAccessCard
             href="/dashboard/links"
             icon={<IconLink className="h-5 w-5" />}
-            title="Link Bio"
-            description="Kelola tautan & tampilan halaman bio-mu"
+            title={t("dashboard.pages.home.quickAccessLinkBioTitle")}
+            description={t("dashboard.pages.home.quickAccessLinkBioDescription")}
             gradient="linear-gradient(135deg, #123328 0%, #1B4D3E 55%, #3E7C59 100%)"
           />
           <QuickAccessCard
             href="/dashboard/products"
             icon={<IconBox className="h-5 w-5" />}
-            title="Toko"
-            description="Kelola produk & Halaman Toko-mu"
+            title={t("dashboard.pages.home.quickAccessShopTitle")}
+            description={t("dashboard.pages.home.quickAccessShopDescription")}
             gradient="linear-gradient(135deg, #A9822F 0%, #C9A24B 55%, #E0C378 100%)"
           />
           <QuickAccessCard
             href="/dashboard/design"
             icon={<IconSparkle className="h-5 w-5" />}
-            title="Desain"
-            description="Tema, header, tombol, font & stiker"
+            title={t("dashboard.pages.home.quickAccessDesignTitle")}
+            description={t("dashboard.pages.home.quickAccessDesignDescription")}
             gradient="linear-gradient(135deg, #145C52 0%, #1F7A6C 55%, #5FB3A3 100%)"
           />
         </div>
@@ -210,7 +205,7 @@ export default function DashboardHomePage() {
                 : "border-app-border text-app-muted hover:border-primary/50"
             }`}
           >
-            {d} hari
+            {d} {t("dashboard.pages.home.daysSuffix")}
           </button>
         ))}
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): 2 input
@@ -227,7 +222,7 @@ export default function DashboardHomePage() {
             onChange={(e) => setCustomFrom(e.target.value)}
             className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
           />
-          <span className="text-xs text-app-muted">s/d</span>
+          <span className="text-xs text-app-muted">{t("dashboard.pages.home.dateRangeSeparator")}</span>
           <input
             type="date"
             value={customTo}
@@ -243,7 +238,7 @@ export default function DashboardHomePage() {
                 : "border-app-border text-app-muted hover:border-primary/50"
             }`}
           >
-            Terapkan
+            {t("dashboard.pages.home.applyButton")}
           </button>
         </div>
       </div>
@@ -281,7 +276,7 @@ export default function DashboardHomePage() {
               <StatCard
                 tone="blue"
                 icon={<IconChart className="h-4 w-4" />}
-                label="Kunjungan"
+                label={t("dashboard.pages.home.statLabelViews")}
                 value={summary.total_views.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_views, prevSummary.total_views) : null}
                 sparkline={viewsPath}
@@ -290,7 +285,7 @@ export default function DashboardHomePage() {
               <StatCard
                 tone="yellow"
                 icon={<IconLink className="h-4 w-4" />}
-                label="Klik Tautan"
+                label={t("dashboard.pages.home.statLabelClicks")}
                 value={summary.total_clicks.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_clicks, prevSummary.total_clicks) : null}
                 sparkline={clicksPath}
@@ -299,14 +294,14 @@ export default function DashboardHomePage() {
               <StatCard
                 tone="lilac"
                 icon={<IconBox className="h-4 w-4" />}
-                label="Pesanan"
+                label={t("dashboard.pages.home.statLabelOrders")}
                 value={summary.total_orders.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_orders, prevSummary.total_orders) : null}
               />
               <StatCard
                 tone="brand"
                 icon={<IconWallet className="h-4 w-4" />}
-                label="Penjualan"
+                label={t("dashboard.pages.home.statLabelRevenue")}
                 value={formatRupiah(summary.total_revenue_idr)}
                 pct={prevSummary ? pctChange(summary.total_revenue_idr, prevSummary.total_revenue_idr) : null}
                 sparkline={revenuePath}
@@ -317,7 +312,7 @@ export default function DashboardHomePage() {
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">Tren Kunjungan &amp; Klik</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.chartTrendHeading")}</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
                       <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -335,10 +330,10 @@ export default function DashboardHomePage() {
                   </div>
                   <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-primary" /> Kunjungan
+                      <span className="h-2 w-2 rounded-full bg-primary" /> {t("dashboard.pages.home.statLabelViews")}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-accent" /> Klik
+                      <span className="h-2 w-2 rounded-full bg-accent" /> {t("dashboard.pages.home.legendClicks")}
                     </span>
                   </div>
                 </div>
@@ -349,7 +344,7 @@ export default function DashboardHomePage() {
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">Pendapatan 7 Hari Terakhir</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.weeklyRevenueHeading")}</h2>
                 <p className="mt-2 font-heading text-xl font-bold tabular-nums text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
                   {summary.weekly_revenue.map((d) => (
@@ -358,7 +353,7 @@ export default function DashboardHomePage() {
                         className="w-full rounded-t bg-secondary transition-all"
                         style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }}
                       />
-                      <span className="text-[10px] text-app-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
+                      <span className="text-[10px] text-app-muted">{weekdayLabel[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
                     </div>
                   ))}
                 </div>
@@ -367,7 +362,7 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">Tautan Terpopuler</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topLinksHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
                     <li key={l.link_id} className="flex justify-between text-xs">
@@ -375,20 +370,20 @@ export default function DashboardHomePage() {
                       <span className="ml-2 flex-shrink-0 font-semibold text-primary">{l.clicks}</span>
                     </li>
                   ))}
-                  {summary.top_links.length === 0 && <EmptyRow text="Belum ada data klik." />}
+                  {summary.top_links.length === 0 && <EmptyRow text={t("dashboard.pages.home.emptyTopLinks")} />}
                 </ul>
               </div>
 
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">Produk Terlaris</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topProductsHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
                     <li key={p.product_id} className="flex justify-between text-xs">
                       <span className="truncate text-app-ink">{p.name}</span>
-                      <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">{p.sold_count} terjual</span>
+                      <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">{p.sold_count} {t("dashboard.pages.home.soldSuffix")}</span>
                     </li>
                   ))}
-                  {summary.top_products.length === 0 && <EmptyRow text="Belum ada penjualan." />}
+                  {summary.top_products.length === 0 && <EmptyRow text={t("dashboard.pages.home.emptyTopProducts")} />}
                 </ul>
               </div>
             </section>
@@ -396,7 +391,7 @@ export default function DashboardHomePage() {
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">Sumber Trafik Utama</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topReferrersHeading")}</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
                       <li key={r.referrer} className="flex justify-between text-xs">
@@ -410,12 +405,12 @@ export default function DashboardHomePage() {
 
               {summary.device_breakdown.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">Perangkat Pengunjung</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.deviceBreakdownHeading")}</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
                       <li key={d.device_type} className="flex items-center gap-2 text-xs">
                         <span className="w-20 flex-shrink-0 truncate text-app-ink">
-                          {DEVICE_LABEL[d.device_type] ?? d.device_type}
+                          {deviceLabel[d.device_type as keyof typeof deviceLabel] ?? d.device_type}
                         </span>
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-subtle/50">
                           <div
@@ -432,10 +427,10 @@ export default function DashboardHomePage() {
             </section>
 
             {summary.total_views === 0 && (
-              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-app-border bg-white/60 p-5 text-center">
+              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-app-border bg-app-surface/60 p-5 text-center">
                 <IconSparkle className="h-5 w-5 flex-shrink-0 text-accent" />
                 <p className="text-xs text-app-muted">
-                  Belum ada kunjungan. Bagikan tautan halamanmu di bio Instagram/TikTok supaya statistik mulai terisi.
+                  {t("dashboard.pages.home.emptyViewsMessage")}
                 </p>
               </section>
             )}
