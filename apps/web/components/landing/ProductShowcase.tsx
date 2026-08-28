@@ -2,15 +2,43 @@
 
 import { useRef } from "react";
 import Carousel, { CarouselArrows, type CarouselHandle } from "./Carousel";
+import PagePreview from "@/components/PagePreview";
+import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 
-const items = [
-  { initials: "RS", name: "Rian Saputra", title: "Profil Kreator", desc: "Tautan sosial + hub konten", bg: "from-emerald-100 to-teal-100", dark: false },
-  { initials: "DV", name: "Dimas Dev", title: "Portofolio Developer", desc: "Proyek + GitHub + CV", bg: "from-slate-800 to-slate-900", dark: true },
-  { initials: "SN", name: "Sinta Nuraini", title: "Kreator Kelas", desc: "Modul + pendaftaran + review", bg: "from-amber-50 to-orange-100", dark: false },
-  { initials: "FW", name: "Farah W.", title: "Profil Freelancer", desc: "Layanan + portofolio + booking", bg: "from-teal-50 to-emerald-100", dark: false },
-  { initials: "TS", name: "Toko Senja", title: "Toko Digital", desc: "Produk + checkout + review", bg: "from-amber-100 to-yellow-100", dark: false },
-  { initials: "CB", name: "Coach Budi", title: "Halaman Coach", desc: "Sesi + kalender + pembayaran", bg: "from-emerald-50 to-teal-100", dark: false },
-];
+// items -- permintaan langsung pengguna, 28 Agustus 2026: "ganti semua isi
+// product showcase pakai template di quick setup yang tema nya bagus bagus
+// seperti contoh nya yang fullstack web developer". SEBELUMNYA 6 mockup
+// buatan tangan (kotak gradien + 3 balok abu-abu placeholder, BUKAN isi
+// sungguhan apa pun) -- sekarang dirender pakai KOMPONEN PagePreview
+// SUNGGUHAN persis seperti Templates.tsx di bawah section ini (lihat
+// catatan lengkap di sana soal kenapa PagePreview asli, bukan mockup
+// tangan). "fullstack-developer" dipertahankan sesuai contoh yang diminta
+// pengguna, 5 lainnya dipilih beda dari 16 kunci yang sudah dipakai
+// Templates.tsx (CURATED_KEYS di file itu) supaya kreator yang scroll ke
+// bawah TIDAK melihat template yang sama dua kali berturut-turut, sambil
+// tetap mencakup ragam persona yang mirip susunan lama (kreator, developer,
+// kelas, freelancer, toko, coach) + 2 tambahan (wedding organizer, travel
+// agency) supaya carousel ini terasa penuh dengan 8 kartu.
+const CURATED_KEYS = [
+  { key: "fullstack-developer", displayName: "Dimas Aditya", avatarUrl: "https://randomuser.me/api/portraits/men/34.jpg" },
+  { key: "influencer", displayName: "Rian Saputra", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
+  { key: "course-creator", displayName: "Sinta Nuraini", avatarUrl: "https://randomuser.me/api/portraits/women/28.jpg" },
+  { key: "freelancer", displayName: "Farah W.", avatarUrl: "https://randomuser.me/api/portraits/women/65.jpg" },
+  { key: "online-store", displayName: "Toko Senja", avatarUrl: "https://randomuser.me/api/portraits/women/50.jpg" },
+  { key: "fitness-coach", displayName: "Coach Budi", avatarUrl: "https://randomuser.me/api/portraits/men/58.jpg" },
+  { key: "wedding-organizer", displayName: "Amara Wedding", avatarUrl: "https://randomuser.me/api/portraits/women/41.jpg" },
+  { key: "travel-agency", displayName: "Jelajah Nusantara", avatarUrl: "https://randomuser.me/api/portraits/men/22.jpg" },
+] as const;
+
+const items = CURATED_KEYS.map((c) => {
+  const t = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
+  return {
+    key: c.key,
+    label: t.label,
+    description: t.description,
+    data: buildQuickSetupPreviewData(t, c.key.replace(/-/g, ""), c.displayName, c.avatarUrl),
+  };
+});
 
 export default function ProductShowcase() {
   const carouselRef = useRef<CarouselHandle>(null);
@@ -37,27 +65,29 @@ export default function ProductShowcase() {
         <Carousel ref={carouselRef}>
           {items.map((item) => (
             <div
-              key={item.name}
-              className="tilt-card w-64 flex-shrink-0 scroll-snap-item rounded-3xl border border-border bg-white p-5 shadow-card"
+              key={item.key}
+              className="tilt-card w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-3xl border border-border bg-white shadow-card"
             >
-              <div className={`mb-4 rounded-2xl bg-gradient-to-br ${item.bg} p-4`} style={{ aspectRatio: "9/13" }}>
-                <div
-                  className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white`}
-                  style={{ background: "linear-gradient(135deg,#1B4D3E,#1F7A6C)" }}
-                >
-                  {item.initials}
+              {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola & ukuran
+                  SAMA PERSIS dengan galeri Templates.tsx di bawah section
+                  ini (h-[26rem] + zoom:0.5 -- 448px lebar asli PagePreview
+                  jadi 224px, pas dengan lebar kartu w-56 tanpa sisa
+                  ruang kosong di kiri/kanan). pointer-events-none -- mockup
+                  MURNI visual, kartu ini tidak punya link tujuan. */}
+              <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+                <div className="h-full [zoom:0.5]">
+                  <PagePreview interactive={false} rootClassName="min-h-full" data={item.data} hideFooterChrome />
                 </div>
-                <p className={`mb-3 text-center font-heading text-xs font-bold ${item.dark ? "text-white" : "text-ink"}`}>
-                  {item.name}
-                </p>
-                <div className="space-y-1.5">
-                  <div className={`h-6 rounded-lg ${item.dark ? "bg-white/10" : "bg-white shadow-sm"}`} />
-                  <div className={`h-6 rounded-lg ${item.dark ? "bg-white/10" : "bg-white shadow-sm"}`} />
-                  <div className={`h-6 rounded-lg ${item.dark ? "bg-white/10" : "bg-white shadow-sm"}`} />
-                </div>
+                {/* Fade bawah -- konten template panjangnya beda-beda,
+                    menyamarkan garis potong di tengah kalimat jadi transisi
+                    halus ke area putih judul kartu (lihat catatan sama di
+                    Templates.tsx). */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
               </div>
-              <h3 className="font-heading text-sm font-bold text-ink">{item.title}</h3>
-              <p className="mt-1 text-xs text-muted">{item.desc}</p>
+              <div className="p-5 pt-3">
+                <h3 className="font-heading text-sm font-bold text-ink">{item.label}</h3>
+                <p className="mt-1 text-xs text-muted">{item.description}</p>
+              </div>
             </div>
           ))}
         </Carousel>
