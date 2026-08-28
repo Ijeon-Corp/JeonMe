@@ -104,7 +104,7 @@ export default function DashboardBundlesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Gabungkan beberapa produk aktif jadi satu paket dengan harga lebih murah dari jumlah aslinya.
       </p>
 
@@ -123,35 +123,35 @@ export default function DashboardBundlesPage() {
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Nama Bundel</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Bundel</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Paket Lengkap"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Harga Bundel (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga Bundel (Rp)</label>
               <input
                 type="number"
                 required
                 min={1000}
                 value={priceIDR}
                 onChange={(e) => setPriceIDR(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-ink">Pilih minimal 2 produk aktif</label>
-              <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+              <label className="mb-1.5 block text-xs font-semibold text-app-ink">Pilih minimal 2 produk aktif</label>
+              <div className="flex flex-col gap-1.5 rounded-lg border border-app-border p-3">
                 {eligibleProducts.length === 0 && (
-                  <p className="text-xs text-muted">Belum ada produk aktif -- aktifkan produk dulu di halaman Produk.</p>
+                  <p className="text-xs text-app-muted">Belum ada produk aktif -- aktifkan produk dulu di halaman Produk.</p>
                 )}
                 {eligibleProducts.map((p) => (
-                  <label key={p.id} className="flex items-center justify-between gap-2 text-xs text-ink">
+                  <label key={p.id} className="flex items-center justify-between gap-2 text-xs text-app-ink">
                     <span className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -165,7 +165,7 @@ export default function DashboardBundlesPage() {
                       />
                       {p.name}
                     </span>
-                    <span className="text-muted">Rp {p.price_idr.toLocaleString("id-ID")}</span>
+                    <span className="text-app-muted">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                   </label>
                 ))}
               </div>
@@ -177,7 +177,7 @@ export default function DashboardBundlesPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -197,17 +197,17 @@ export default function DashboardBundlesPage() {
         {bundles.map((b) => (
           <div key={b.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-ink">{b.name}</p>
+              <p className="text-sm font-bold text-app-ink">{b.name}</p>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted line-through">Rp {b.original_total_idr.toLocaleString("id-ID")}</span>
+                <span className="text-xs text-app-muted line-through">Rp {b.original_total_idr.toLocaleString("id-ID")}</span>
                 <span className="text-sm font-bold text-secondary-dark">Rp {b.price_idr.toLocaleString("id-ID")}</span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-muted">{b.item_names.join(", ")}</p>
+            <p className="mt-1 text-xs text-app-muted">{b.item_names.join(", ")}</p>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Toggle checked={b.is_active} onChange={() => handleToggleActive(b)} label={`Aktifkan ${b.name}`} />
-                <span className="text-xs font-semibold text-muted">Aktif</span>
+                <span className="text-xs font-semibold text-app-muted">Aktif</span>
               </div>
               <button
                 type="button"

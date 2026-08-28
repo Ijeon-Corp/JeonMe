@@ -25,11 +25,11 @@ export default function DesignFontPage() {
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Font Halaman</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Font Halaman</label>
           <select
             value={page.custom_font}
             onChange={(e) => handleStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -40,13 +40,13 @@ export default function DesignFontPage() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Teks Halaman</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Teks Halaman</label>
           <input
             type="color"
             value={page.custom_page_text_color || "#FFFFFF"}
             onChange={(e) => setPage({ ...page, custom_page_text_color: e.target.value })}
             onBlur={(e) => handleStyleOverride({ custom_page_text_color: e.target.value })}
-            className="h-9 w-full rounded-lg border border-border"
+            className="h-9 w-full rounded-lg border border-app-border"
           />
           {page.custom_page_text_color && (
             <button
@@ -61,8 +61,8 @@ export default function DesignFontPage() {
 
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold text-ink">Font Judul Terpisah</p>
-            <p className="text-[11px] text-muted">Default sama dengan font halaman.</p>
+            <p className="text-xs font-semibold text-app-ink">Font Judul Terpisah</p>
+            <p className="text-[11px] text-app-muted">Default sama dengan font halaman.</p>
           </div>
           <Toggle
             checked={!!page.custom_title_font}
@@ -75,7 +75,7 @@ export default function DesignFontPage() {
           <select
             value={page.custom_title_font}
             onChange={(e) => handleStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -86,13 +86,13 @@ export default function DesignFontPage() {
         )}
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Judul</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Judul</label>
           <input
             type="color"
             value={page.custom_title_color || "#FFFFFF"}
             onChange={(e) => setPage({ ...page, custom_title_color: e.target.value })}
             onBlur={(e) => handleStyleOverride({ custom_title_color: e.target.value })}
-            className="h-9 w-full rounded-lg border border-border"
+            className="h-9 w-full rounded-lg border border-app-border"
           />
           {page.custom_title_color && (
             <button

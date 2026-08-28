@@ -13,7 +13,7 @@ const STATUS_LABEL: Record<KycStatus["status"], string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<KycStatus["status"], string> = {
-  unverified: "bg-gray-100 text-muted",
+  unverified: "bg-gray-100 text-app-muted",
   pending: "bg-amber-50 text-amber-700",
   verified: "bg-secondary-subtle text-secondary-dark",
   rejected: "bg-red-50 text-red-600",
@@ -94,7 +94,7 @@ export default function DashboardKycPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Lengkapi verifikasi identitas & rekening supaya penarikan danamu diprioritaskan diproses tim Jeon.id. Akun
         yang belum terverifikasi tetap bisa berjualan dan menarik dana -- hanya diproses belakangan.
       </p>
@@ -117,7 +117,7 @@ export default function DashboardKycPage() {
           )}
 
           {status.status === "pending" && (
-            <p className="mt-3 text-xs text-muted">
+            <p className="mt-3 text-xs text-app-muted">
               Pengajuanmu sedang direview, SLA 3x24 jam hari kerja. Kamu akan bisa mengajukan ulang kalau ditolak.
             </p>
           )}
@@ -133,71 +133,71 @@ export default function DashboardKycPage() {
 
       {canSubmit && (
         <form onSubmit={handleSubmit} className="glass mt-4 flex flex-col gap-3 rounded-3xl p-5 shadow-card">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">
+          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">
             Syarat: halaman sudah punya minimal 1 produk aktif
           </p>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Nama lengkap (sesuai KTP)
             <input
               type="text"
               value={fullNameKtp}
               onChange={(e) => setFullNameKtp(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Nama pemilik rekening bank (harus sama dengan nama KTP)
             <input
               type="text"
               value={bankAccountName}
               onChange={(e) => setBankAccountName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Alamat domisili lengkap
             <textarea
               value={domicileAddress}
               onChange={(e) => setDomicileAddress(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Penjelasan bisnis/produk yang dijual
             <textarea
               value={businessDescription}
               onChange={(e) => setBusinessDescription(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Kanal promosi (mis. Instagram, TikTok, WhatsApp)
             <input
               type="text"
               value={promotionChannels}
               onChange={(e) => setPromotionChannels(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Foto KTP
             <input ref={ktpInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="mt-1 w-full text-xs" />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Foto selfie sambil memegang KTP
             <input ref={selfieInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="mt-1 w-full text-xs" />
           </label>
 
-          <label className="text-xs font-semibold text-ink">
+          <label className="text-xs font-semibold text-app-ink">
             Bukti rekening (buku tabungan/e-statement)
             <input ref={bankProofInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="mt-1 w-full text-xs" />
           </label>

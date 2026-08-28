@@ -35,14 +35,14 @@ export default function EmptyState({
   const Tag = as;
   return (
     <Tag
-      className={`flex flex-col items-center justify-center gap-3 px-4 py-10 text-center text-sm text-muted ${
+      className={`flex flex-col items-center justify-center gap-3 px-4 py-10 text-center text-sm text-app-muted ${
         // Bug dihindari: TIDAK pakai class .glass di sini -- shorthand
         // `border` milik .glass (solid) akan menang atas utility
         // `border-dashed` Tailwind pada cascade (.glass didefinisikan
         // SETELAH @tailwind utilities di globals.css, jadi menang kalau
         // digabung). Efek kaca ditiru manual (bg+blur saja, TANPA
         // shorthand border) supaya `border-dashed` tetap dashed sungguhan.
-        bordered ? "rounded-3xl border border-dashed border-border bg-white/65 backdrop-blur-lg" : ""
+        bordered ? "rounded-3xl border border-dashed border-app-border bg-white/65 backdrop-blur-lg" : ""
       } ${className}`}
     >
       <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">

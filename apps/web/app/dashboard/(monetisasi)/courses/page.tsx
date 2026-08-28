@@ -142,7 +142,7 @@ export default function DashboardCoursesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Jual kursus video terstruktur per-bab dengan prasyarat & deskripsi pembelajaran. Video wajib tautan
         YouTube atau TikTok.
       </p>
@@ -162,54 +162,54 @@ export default function DashboardCoursesPage() {
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Nama Kursus</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Kursus</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Belajar Fotografi dari Nol"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Deskripsi Pembelajaran</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi Pembelajaran</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Prasyarat (opsional)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Prasyarat (opsional)</label>
               <input
                 type="text"
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
                 placeholder="Sudah punya kamera DSLR/mirrorless"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Harga (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga (Rp)</label>
               <input
                 type="number"
                 required
                 min={1000}
                 value={priceIDR}
                 onChange={(e) => setPriceIDR(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-ink">Bab Kursus</label>
+              <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bab Kursus</label>
               <div className="flex flex-col gap-3">
                 {chapters.map((ch, i) => (
-                  <div key={i} className="rounded-lg border border-border p-3">
+                  <div key={i} className="rounded-lg border border-app-border p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-muted">Bab {i + 1}</p>
+                      <p className="text-xs font-bold text-app-muted">Bab {i + 1}</p>
                       {chapters.length > 1 && (
                         <button
                           type="button"
@@ -227,7 +227,7 @@ export default function DashboardCoursesPage() {
                       onChange={(e) =>
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, title: e.target.value } : c)))
                       }
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <input
                       type="text"
@@ -236,7 +236,7 @@ export default function DashboardCoursesPage() {
                       onChange={(e) =>
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, video_url: e.target.value } : c)))
                       }
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <textarea
                       placeholder="Deskripsi bab (opsional)"
@@ -245,14 +245,14 @@ export default function DashboardCoursesPage() {
                         setChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, description: e.target.value } : c)))
                       }
                       rows={2}
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 ))}
                 <button
                   type="button"
                   onClick={() => setChapters((prev) => [...prev, { ...EMPTY_CHAPTER }])}
-                  className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-bold text-primary hover:border-primary"
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-primary hover:border-primary"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
                   Tambah Bab
@@ -267,7 +267,7 @@ export default function DashboardCoursesPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -287,16 +287,16 @@ export default function DashboardCoursesPage() {
         {courses.map((course) => (
           <div key={course.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-ink">{course.name}</p>
+              <p className="text-sm font-bold text-app-ink">{course.name}</p>
               <span className="text-sm font-bold text-secondary-dark">Rp {course.price_idr.toLocaleString("id-ID")}</span>
             </div>
-            <p className="mt-1 text-xs text-muted">{course.chapter_count} bab</p>
-            {course.prerequisites && <p className="mt-1 text-xs text-muted">Prasyarat: {course.prerequisites}</p>}
+            <p className="mt-1 text-xs text-app-muted">{course.chapter_count} bab</p>
+            {course.prerequisites && <p className="mt-1 text-xs text-app-muted">Prasyarat: {course.prerequisites}</p>}
 
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Toggle checked={course.is_active} onChange={() => handleToggleActive(course)} label={`Aktifkan ${course.name}`} />
-                <span className="text-xs font-semibold text-muted">Aktif</span>
+                <span className="text-xs font-semibold text-app-muted">Aktif</span>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -320,11 +320,11 @@ export default function DashboardCoursesPage() {
             </div>
 
             {editingId === course.id && (
-              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/20 p-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/20 p-3">
                 {editChapters.map((ch, i) => (
-                  <div key={i} className="rounded-lg border border-border bg-white p-3">
+                  <div key={i} className="rounded-lg border border-app-border bg-app-surface p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-muted">Bab {i + 1}</p>
+                      <p className="text-xs font-bold text-app-muted">Bab {i + 1}</p>
                       {editChapters.length > 1 && (
                         <button
                           type="button"
@@ -342,7 +342,7 @@ export default function DashboardCoursesPage() {
                       onChange={(e) =>
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, title: e.target.value } : c)))
                       }
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <input
                       type="text"
@@ -351,7 +351,7 @@ export default function DashboardCoursesPage() {
                       onChange={(e) =>
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, video_url: e.target.value } : c)))
                       }
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <textarea
                       placeholder="Deskripsi bab (opsional)"
@@ -360,14 +360,14 @@ export default function DashboardCoursesPage() {
                         setEditChapters((prev) => prev.map((c, idx) => (idx === i ? { ...c, description: e.target.value } : c)))
                       }
                       rows={2}
-                      className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="mt-2 w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 ))}
                 <button
                   type="button"
                   onClick={() => setEditChapters((prev) => [...prev, { ...EMPTY_CHAPTER }])}
-                  className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-bold text-primary hover:border-primary"
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-primary hover:border-primary"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
                   Tambah Bab
@@ -376,7 +376,7 @@ export default function DashboardCoursesPage() {
                   <button
                     type="button"
                     onClick={() => setEditingId(null)}
-                    className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                    className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
                   >
                     Batal
                   </button>

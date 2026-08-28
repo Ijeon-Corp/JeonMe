@@ -11,6 +11,9 @@ import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/GlobalSearch";
 import QRCodeModal from "@/components/QRCodeModal";
+import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLocale } from "@/lib/locale-context";
 import { SITE_URL } from "@/lib/site";
 import {
   Workspace,
@@ -70,77 +73,88 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 // Tautan/Produk/Desain jadi satu bagian karena ketiganya sama-sama
 // menentukan apa yang tampil di halaman publik kreator & berbagi satu
 // panel pratinjau langsung (lihat LivePreviewPanel).
-const NAV_ITEMS: NavEntry[] = [
-  { type: "link", href: "/dashboard", label: "Ringkasan", icon: IconChart },
-  {
-    type: "group",
-    label: "Halaman Saya",
-    items: [
-      // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026:
-      // menu template siap-pakai (tema+bio+tautan starter sekaligus),
-      // ditaruh PALING ATAS grup ini karena sifatnya titik awal/wizard
-      // (dipakai sesekali di awal, beda dari Link Bio/Toko/Desain yang
-      // dikelola terus-menerus).
-      { href: "/dashboard/quick-setup", label: "Quick Setup", icon: IconSparkle },
-      { href: "/dashboard/links", label: "Link Bio", icon: IconLink },
-      { href: "/dashboard/products", label: "Toko", icon: IconBox },
-      { href: "/dashboard/statistik", label: "Statistik", icon: IconChart },
-      { href: "/dashboard/design", label: "Desain", icon: IconPaintbrush },
-    ],
-  },
-  { type: "link", href: "/dashboard/monetisasi", label: "Produk & Monetisasi", icon: IconGift },
-  {
-    type: "group",
-    label: "Audiens & Pemasaran",
-    items: [
-      { href: "/dashboard/audience", label: "Audiens", icon: IconInbox },
-      { href: "/dashboard/social-proof", label: "Social Proof", icon: IconBell },
-      { href: "/dashboard/business-card", label: "Kartu Kontak", icon: IconPhone },
-    ],
-  },
-  { type: "link", href: "/dashboard/balance", label: "Saldo & Penarikan", icon: IconWallet },
-  { type: "link", href: "/dashboard/settings", label: "Pengaturan", icon: IconSettings },
-];
+// buildNavItems/buildExtraPageLabels -- FUNGSI (bukan konstanta modul lagi)
+// permintaan langsung pengguna, 29 Agustus 2026: "harusnya berfungsi di
+// semua page termasuk dashboard dll ... untuk ... pilihan bahasa id/en" --
+// label-nya sekarang lewat t() supaya ikut berganti begitu locale
+// berubah, dipanggil ULANG tiap render (bukan dihitung sekali di level
+// modul) di dalam komponen di bawah. Struktur/href/urutan/ikon TIDAK
+// berubah sama sekali dari sebelumnya, cuma sumber teksnya.
+function buildNavItems(t: (key: string) => string): NavEntry[] {
+  return [
+    { type: "link", href: "/dashboard", label: t("dashboard.nav.overview"), icon: IconChart },
+    {
+      type: "group",
+      label: t("dashboard.nav.myPageGroup"),
+      items: [
+        // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026:
+        // menu template siap-pakai (tema+bio+tautan starter sekaligus),
+        // ditaruh PALING ATAS grup ini karena sifatnya titik awal/wizard
+        // (dipakai sesekali di awal, beda dari Link Bio/Toko/Desain yang
+        // dikelola terus-menerus).
+        { href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
+        { href: "/dashboard/links", label: t("dashboard.nav.linkBio"), icon: IconLink },
+        { href: "/dashboard/products", label: t("dashboard.nav.shop"), icon: IconBox },
+        { href: "/dashboard/statistik", label: t("dashboard.nav.statistics"), icon: IconChart },
+        { href: "/dashboard/design", label: t("dashboard.nav.design"), icon: IconPaintbrush },
+      ],
+    },
+    { type: "link", href: "/dashboard/monetisasi", label: t("dashboard.nav.productsMonetization"), icon: IconGift },
+    {
+      type: "group",
+      label: t("dashboard.nav.audienceMarketingGroup"),
+      items: [
+        { href: "/dashboard/audience", label: t("dashboard.nav.audience"), icon: IconInbox },
+        { href: "/dashboard/social-proof", label: t("dashboard.nav.socialProof"), icon: IconBell },
+        { href: "/dashboard/business-card", label: t("dashboard.nav.contactCard"), icon: IconPhone },
+      ],
+    },
+    { type: "link", href: "/dashboard/balance", label: t("dashboard.nav.balance"), icon: IconWallet },
+    { type: "link", href: "/dashboard/settings", label: t("dashboard.nav.settings"), icon: IconSettings },
+  ];
+}
 
-// EXTRA_PAGE_LABELS -- halaman yang TIDAK (lagi) muncul sebagai baris
-// NAV_ITEMS langsung (dipindah ke dalam hub /dashboard/monetisasi atau
+// buildExtraPageLabels -- halaman yang TIDAK (lagi) muncul sebagai baris
+// nav langsung (dipindah ke dalam hub /dashboard/monetisasi atau
 // /dashboard/settings, lihat catatan konsolidasi di atas) tapi rute-nya
 // TETAP ada persis seperti sebelumnya -- didaftar di sini supaya judul
 // top bar desktop tidak jatuh balik ke "Dashboard" generik saat halaman
 // ini dibuka langsung.
-const EXTRA_PAGE_LABELS: Record<string, string> = {
-  "/dashboard/tutorial": "Tutorial",
-  "/dashboard/custom-domain": "Domain Kustom",
-  "/dashboard/kyc": "Verifikasi KYC",
-  "/dashboard/team": "Tim & Kolaborator",
-  "/dashboard/vouchers": "Voucher",
-  "/dashboard/bundles": "Bundel",
-  "/dashboard/donation": "Dukungan",
-  "/dashboard/affiliates": "Afiliasi",
-  "/dashboard/loyalty": "Loyalitas",
-  "/dashboard/events": "Event",
-  "/dashboard/courses": "Kelas & Kursus",
-  "/dashboard/bookings": "Booking Konsultasi",
-  "/dashboard/settings/profile": "Profil & Akun",
-  "/dashboard/settings/security": "Keamanan",
-  "/dashboard/settings/payment": "Pembayaran & Penarikan",
-  "/dashboard/settings/subscription": "Langganan Premium",
-  "/dashboard/settings/danger-zone": "Zona Berbahaya",
-};
+function buildExtraPageLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    "/dashboard/tutorial": t("dashboard.extraPages.tutorial"),
+    "/dashboard/custom-domain": t("dashboard.extraPages.customDomain"),
+    "/dashboard/kyc": t("dashboard.extraPages.kycVerification"),
+    "/dashboard/team": t("dashboard.extraPages.team"),
+    "/dashboard/vouchers": t("dashboard.extraPages.vouchers"),
+    "/dashboard/bundles": t("dashboard.extraPages.bundles"),
+    "/dashboard/donation": t("dashboard.extraPages.donation"),
+    "/dashboard/affiliates": t("dashboard.extraPages.affiliates"),
+    "/dashboard/loyalty": t("dashboard.extraPages.loyalty"),
+    "/dashboard/events": t("dashboard.extraPages.events"),
+    "/dashboard/courses": t("dashboard.extraPages.courses"),
+    "/dashboard/bookings": t("dashboard.extraPages.bookings"),
+    "/dashboard/settings/profile": t("dashboard.extraPages.profileAccount"),
+    "/dashboard/settings/security": t("dashboard.extraPages.security"),
+    "/dashboard/settings/payment": t("dashboard.extraPages.payment"),
+    "/dashboard/settings/subscription": t("dashboard.extraPages.subscription"),
+    "/dashboard/settings/danger-zone": t("dashboard.extraPages.dangerZone"),
+  };
+}
 
 // currentPageLabel -- judul top bar desktop (di bawah) mengikuti label item
 // nav yang sedang aktif, termasuk yang berada di dalam grup collapsible,
 // jatuh balik ke EXTRA_PAGE_LABELS untuk halaman yang sengaja tidak lagi
 // muncul di sidebar utama (lihat catatan konsolidasi di atas).
-function currentPageLabel(pathname: string): string {
-  for (const item of NAV_ITEMS) {
+function currentPageLabel(pathname: string, navItems: NavEntry[], extraPageLabels: Record<string, string>, fallback: string): string {
+  for (const item of navItems) {
     if (item.type === "link" && item.href === pathname) return item.label;
     if (item.type === "group") {
       const found = item.items.find((sub) => sub.href === pathname);
       if (found) return found.label;
     }
   }
-  return EXTRA_PAGE_LABELS[pathname] ?? "Dashboard";
+  return extraPageLabels[pathname] ?? fallback;
 }
 
 export default function DashboardLayout({
@@ -150,6 +164,9 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useLocale();
+  const navItems = buildNavItems(t);
+  const extraPageLabels = buildExtraPageLabels(t);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -177,7 +194,7 @@ export default function DashboardLayout({
   // yang berisi halaman aktif tidak pernah benar-benar tertutup).
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    for (const item of NAV_ITEMS) {
+    for (const item of navItems) {
       if (item.type === "group" && item.items.some((sub) => sub.href === pathname)) {
         initial.add(item.label);
       }
@@ -274,7 +291,7 @@ export default function DashboardLayout({
                 setActiveOwnerIdState(e.target.value);
                 handleWorkspaceChange(e.target.value);
               }}
-              className="mt-1 w-full rounded-lg border border-border bg-white px-2.5 py-2 text-xs font-semibold text-ink focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-2.5 py-2 text-xs font-semibold text-app-ink focus:border-primary focus:outline-none"
             >
               {workspaces.map((w) => (
                 <option key={w.owner_user_id} value={w.owner_user_id}>
@@ -291,7 +308,7 @@ export default function DashboardLayout({
             samar. Ikon TANPA badge bulat lagi -- lebih tenang/quiet,
             sesuai prinsip "satu aksen berani (emas), sisanya netral". */}
         <nav className="mt-6 flex flex-col gap-0.5 text-xs">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             if (item.type === "link") {
               const active = pathname === item.href;
               const Icon = item.icon;
@@ -360,12 +377,24 @@ export default function DashboardLayout({
       </div>
 
       <div className="flex flex-col gap-3">
+        {/* Dark/light + bahasa (mobile) -- permintaan langsung pengguna,
+            29 Agustus 2026. Gaya di sini SENGAJA beda dari topbar desktop
+            (border/teks putih transparan, bukan border-app-border/bg-app-
+            surface) -- sidebar mobile punya latar HIJAU GELAP TETAP
+            (bg-primary-dark, tidak ikut toggle terang/gelap sama sekali,
+            lihat catatan lengkap di project memory soal batas ini), jadi
+            kontrol di dalamnya harus tetap kontras terhadap latar gelap
+            tetap itu, sama seperti tombol Keluar di bawahnya. */}
+        <div className="flex items-center justify-between gap-2 px-3">
+          <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
+          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white" />
+        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-300 hover:bg-white/5"
         >
           <IconLogout className="h-4 w-4" />
-          Keluar
+          {t("dashboard.logout")}
         </button>
       </div>
     </>
@@ -424,7 +453,7 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-ink hover:bg-primary-subtle"
+                className="rounded-lg p-2 text-app-ink hover:bg-primary-subtle"
                 aria-label="Buka menu"
               >
                 <IconMenu className="h-5 w-5" />
@@ -462,9 +491,19 @@ export default function DashboardLayout({
                   min-w-0+truncate di judul membiarkan JUDUL yang mengalah
                   duluan (konten paling tidak krusial di baris ini) supaya
                   grup ikon (fungsional) tetap utuh. */}
-              <p className="min-w-0 flex-1 truncate font-heading text-base font-bold text-ink">{currentPageLabel(pathname)}</p>
+              <p className="min-w-0 flex-1 truncate font-heading text-base font-bold text-app-ink">
+                {currentPageLabel(pathname, navItems, extraPageLabels, t("dashboard.dashboardFallback"))}
+              </p>
               <div className="flex flex-shrink-0 items-center gap-1.5">
                 <GlobalSearch />
+                {/* Dark/light + bahasa -- permintaan langsung pengguna, 29
+                    Agustus 2026: "harusnya berfungsi di semua page termasuk
+                    dashboard dll". Sama seperti Navbar pemasaran, ThemeToggle
+                    className dioper eksplisit di sini supaya cocok gaya
+                    tombol ikon bulat topbar dashboard (border+bg-app-surface),
+                    bukan gaya bawaannya sendiri. */}
+                <LanguageSwitcher className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
+                <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary" />
                 {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
                     di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
                     bantuan bulat di sini, pola sama seperti ikon bantuan
@@ -472,9 +511,9 @@ export default function DashboardLayout({
                     tanpa merebut tempat di sidebar sepanjang waktu. */}
                 <Link
                   href="/dashboard/tutorial"
-                  title="Tutorial"
-                  aria-label="Tutorial"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                  title={t("dashboard.extraPages.tutorial")}
+                  aria-label={t("dashboard.extraPages.tutorial")}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
                 >
                   <IconPlayCircle className="h-4 w-4" />
                 </Link>
@@ -483,9 +522,9 @@ export default function DashboardLayout({
                     href={`${SITE_URL}/${username}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Lihat halaman publik"
-                    aria-label="Lihat halaman publik"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                    title={t("dashboard.publicPage")}
+                    aria-label={t("dashboard.publicPage")}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
                   >
                     <IconExternal className="h-4 w-4" />
                   </a>
@@ -502,18 +541,18 @@ export default function DashboardLayout({
                   <button
                     type="button"
                     onClick={() => setQrOpen(true)}
-                    title="Kode QR profil"
-                    aria-label="Kode QR profil"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                    title={t("dashboard.qrCode")}
+                    aria-label={t("dashboard.qrCode")}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
                   >
                     <IconQrCode className="h-4 w-4" />
                   </button>
                 )}
                 <Link
                   href="/dashboard/settings"
-                  title="Pengaturan"
-                  aria-label="Pengaturan"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+                  title={t("dashboard.nav.settings")}
+                  aria-label={t("dashboard.nav.settings")}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
                 >
                   <IconSettings className="h-4 w-4" />
                 </Link>
@@ -522,8 +561,8 @@ export default function DashboardLayout({
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    title="Salin tautan halaman publik"
-                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
+                    title={t("dashboard.copyLink")}
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary"
                   >
                     {/* Teks domain penuh cuma tampil mulai lg: (>=1024px,
                         sama seperti label GlobalSearch) -- di rentang
@@ -531,7 +570,7 @@ export default function DashboardLayout({
                         ikut memaksa halaman melebar horizontal. */}
                     <span className="hidden lg:inline">jeon.id/{username}</span>
                     <IconCopy className="h-3 w-3" />
-                    {copied && <span className="text-primary">Tersalin!</span>}
+                    {copied && <span className="text-primary">{t("dashboard.linkCopied")}</span>}
                   </button>
                 )}
                 {/* Avatar akun (redesain premium, permintaan langsung
@@ -545,7 +584,7 @@ export default function DashboardLayout({
                   <Link
                     href="/dashboard/settings/profile"
                     title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
-                    className="ml-0.5 flex flex-shrink-0 items-center gap-2 rounded-full border border-border bg-white py-1 pl-1 pr-2.5 hover:border-primary"
+                    className="ml-0.5 flex flex-shrink-0 items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-primary"
                   >
                     {/* Lencana bintang di sudut avatar + pil "Premium" di
                         sebelah @username -- permintaan langsung pengguna:
@@ -571,7 +610,7 @@ export default function DashboardLayout({
                         </span>
                       )}
                     </span>
-                    <span className="hidden items-center gap-1 text-[11px] font-semibold text-ink lg:flex">
+                    <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
                       @{username}
                       {isPremium && (
                         <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">

@@ -101,7 +101,7 @@ export default function DashboardAffiliatesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Undang afiliator dengan komisi custom per produk. Versi awal: mode privat -- afiliator harus sudah jadi
         pengguna Jeon.id.
       </p>
@@ -121,24 +121,24 @@ export default function DashboardAffiliatesPage() {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Email Afiliator</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Email Afiliator</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="afiliator@email.com"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
-              <p className="mt-1 text-[11px] text-muted">Harus sudah punya akun Jeon.id dengan email ini.</p>
+              <p className="mt-1 text-[11px] text-app-muted">Harus sudah punya akun Jeon.id dengan email ini.</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Produk</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Produk</label>
               <select
                 required
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Pilih produk...</option>
                 {products.map((p) => (
@@ -149,7 +149,7 @@ export default function DashboardAffiliatesPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Komisi (%)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Komisi (%)</label>
               <input
                 type="number"
                 required
@@ -158,14 +158,14 @@ export default function DashboardAffiliatesPage() {
                 step={0.01}
                 value={commissionPercent}
                 onChange={(e) => setCommissionPercent(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setAdding(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -185,7 +185,7 @@ export default function DashboardAffiliatesPage() {
         {affiliates.map((a) => (
           <div key={a.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-ink">{a.affiliate_email}</p>
+              <p className="text-sm font-bold text-app-ink">{a.affiliate_email}</p>
               <button
                 type="button"
                 onClick={() => handleRevoke(a.id, a.affiliate_email)}
@@ -196,13 +196,13 @@ export default function DashboardAffiliatesPage() {
               </button>
             </div>
             <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary-subtle/60 px-3 py-1.5">
-              <p className="min-w-0 flex-1 truncate text-xs text-ink">
+              <p className="min-w-0 flex-1 truncate text-xs text-app-ink">
                 {a.referral_base_url}?ref={a.referral_code}
               </p>
               <button
                 type="button"
                 onClick={() => handleCopy(`${a.referral_base_url}?ref=${a.referral_code}`, a.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border bg-white px-2 py-1 text-[11px] font-semibold text-ink hover:border-primary"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === a.referral_code ? "Tersalin!" : "Salin"}
@@ -211,21 +211,21 @@ export default function DashboardAffiliatesPage() {
             <div className="mt-3 flex flex-col gap-1.5">
               {a.commissions.map((c) => (
                 <div key={c.product_id} className="flex items-center justify-between text-xs">
-                  <span className="text-ink">{c.product_name}</span>
+                  <span className="text-app-ink">{c.product_name}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-secondary-dark">{c.commission_percent}%</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveCommission(a.id, c.product_id)}
                       title="Hapus komisi produk ini"
-                      className="text-muted hover:text-red-600"
+                      className="text-app-muted hover:text-red-600"
                     >
                       <IconTrash className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
               ))}
-              {a.commissions.length === 0 && <p className="text-xs text-muted">Belum ada komisi produk.</p>}
+              {a.commissions.length === 0 && <p className="text-xs text-app-muted">Belum ada komisi produk.</p>}
             </div>
           </div>
         ))}
@@ -235,19 +235,19 @@ export default function DashboardAffiliatesPage() {
         )}
       </div>
 
-      <h2 className="mt-10 font-heading text-lg font-bold text-ink">Saya Jadi Afiliator</h2>
-      <p className="mt-1 text-sm text-muted">Program afiliasi kreator lain yang kamu ikuti.</p>
+      <h2 className="mt-10 font-heading text-lg font-bold text-app-ink">Saya Jadi Afiliator</h2>
+      <p className="mt-1 text-sm text-app-muted">Program afiliasi kreator lain yang kamu ikuti.</p>
 
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
           <div key={p.id} className="glass rounded-2xl p-4 shadow-card">
-            <p className="text-sm font-bold text-ink">@{p.creator_username}</p>
+            <p className="text-sm font-bold text-app-ink">@{p.creator_username}</p>
             <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary-subtle/60 px-3 py-1.5">
-              <p className="min-w-0 flex-1 truncate text-xs text-ink">{p.referral_url}</p>
+              <p className="min-w-0 flex-1 truncate text-xs text-app-ink">{p.referral_url}</p>
               <button
                 type="button"
                 onClick={() => handleCopy(p.referral_url, p.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border bg-white px-2 py-1 text-[11px] font-semibold text-ink hover:border-primary"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === p.referral_code ? "Tersalin!" : "Salin"}
@@ -256,7 +256,7 @@ export default function DashboardAffiliatesPage() {
             <div className="mt-3 flex flex-col gap-1.5">
               {p.commissions.map((c) => (
                 <div key={c.product_id} className="flex items-center justify-between text-xs">
-                  <span className="text-ink">{c.product_name}</span>
+                  <span className="text-app-ink">{c.product_name}</span>
                   <span className="font-bold text-secondary-dark">{c.commission_percent}%</span>
                 </div>
               ))}

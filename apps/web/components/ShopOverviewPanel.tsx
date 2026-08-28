@@ -21,7 +21,7 @@ const WEEKDAY_LABEL = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const ORDER_STATUS_LABEL: Record<string, { label: string; className: string }> = {
   paid: { label: "Lunas", className: "bg-secondary-subtle text-secondary-dark" },
   pending: { label: "Menunggu", className: "bg-amber-50 text-amber-700" },
-  expired: { label: "Kedaluwarsa", className: "bg-gray-100 text-muted" },
+  expired: { label: "Kedaluwarsa", className: "bg-gray-100 text-app-muted" },
   failed: { label: "Gagal", className: "bg-red-50 text-red-600" },
 };
 
@@ -64,29 +64,29 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
           sub=""
         />
       </section>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-[11px] text-app-muted">
         Checkout = pembeli sampai ke proses bayar (lunas atau tidak). Tingkat Konversi = Transaksi lunas &divide; Checkout.
       </p>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
-        <p className="mt-2 font-heading text-xl font-bold text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Pendapatan 7 Hari Terakhir</h2>
+        <p className="mt-2 font-heading text-xl font-bold text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
           {summary.weekly_revenue.map((d) => (
             <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
               <div className="w-full rounded-t bg-secondary transition-all" style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }} />
-              <span className="text-[10px] text-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
+              <span className="text-[10px] text-app-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
             </div>
           ))}
         </div>
       </div>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Produk Terlaris</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {summary.top_products.map((p) => (
             <li key={p.product_id} className="flex justify-between text-xs">
-              <span className="truncate text-ink">{p.name}</span>
+              <span className="truncate text-app-ink">{p.name}</span>
               <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">
                 {p.sold_count} terjual &middot; {formatRupiah(p.revenue_idr)}
               </span>
@@ -97,14 +97,14 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
       </div>
 
       <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-ink">Transaksi Terbaru</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Transaksi Terbaru</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {(recentOrders ?? []).map((o) => {
-            const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-muted" };
+            const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-app-muted" };
             return (
               <li key={o.order_id} className="flex items-center justify-between gap-2 text-xs">
-                <span className="min-w-0 flex-1 truncate text-ink">{o.product_name}</span>
-                <span className="flex-shrink-0 font-semibold text-ink">{formatRupiah(o.amount_idr)}</span>
+                <span className="min-w-0 flex-1 truncate text-app-ink">{o.product_name}</span>
+                <span className="flex-shrink-0 font-semibold text-app-ink">{formatRupiah(o.amount_idr)}</span>
                 <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusMeta.className}`}>{statusMeta.label}</span>
               </li>
             );
@@ -118,7 +118,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
 
 function EmptyRow({ text }: { text: string }) {
   return (
-    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-muted">
+    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-app-muted">
       <IconInbox className="h-3.5 w-3.5 flex-shrink-0" />
       {text}
     </li>

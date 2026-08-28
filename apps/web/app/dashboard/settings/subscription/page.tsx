@@ -85,17 +85,17 @@ export default function SettingsSubscriptionPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Pengaturan
       </Link>
 
-      <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-ink">
+      <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
         <IconStar className="h-6 w-6 text-primary" />
         Langganan Premium
       </h1>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Hilangkan watermark &quot;Buat halaman gratis di Jeon.id&quot; di halaman publikmu, dan gunakan latar belakang
         kustom (warna/gradien/gambar sendiri).
       </p>
@@ -106,11 +106,11 @@ export default function SettingsSubscriptionPage() {
         <section className="mt-6 rounded-3xl border border-primary/20 bg-primary-subtle p-5">
           <div className="flex items-center gap-2">
             <IconStar className="h-5 w-5 text-primary" />
-            <h2 className="font-heading text-sm font-bold text-ink">
+            <h2 className="font-heading text-sm font-bold text-app-ink">
               Kamu Premium ({status.plan === "yearly" ? "Tahunan" : "Bulanan"})
             </h2>
           </div>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-xs text-app-muted">
             {status.status === "canceled"
               ? `Sudah dibatalkan, akses Premium berlaku sampai ${periodEndLabel ?? "akhir periode yang sudah dibayar"}.`
               : status.status === "past_due"
@@ -124,7 +124,7 @@ export default function SettingsSubscriptionPage() {
               type="button"
               onClick={handleCancel}
               disabled={canceling}
-              className="mt-3 rounded-lg border border-border bg-white px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
+              className="mt-3 rounded-lg border border-app-border bg-app-surface px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
             >
               {canceling ? "Membatalkan..." : "Batalkan Langganan"}
             </button>
@@ -154,18 +154,18 @@ export default function SettingsSubscriptionPage() {
       )}
 
       {!status.is_premium && isLive && (
-        <p className="mt-3 rounded-lg bg-primary-subtle/40 px-3 py-2 text-xs text-muted">
+        <p className="mt-3 rounded-lg bg-primary-subtle/40 px-3 py-2 text-xs text-app-muted">
           Pembayaran pendaftaran sedang diproses. Kalau kamu baru saja menyelesaikan pembayaran di Midtrans, muat
           ulang halaman ini dalam beberapa saat.
         </p>
       )}
 
-      <ul className="mt-6 flex flex-col gap-2 text-sm text-ink">
+      <ul className="mt-6 flex flex-col gap-2 text-sm text-app-ink">
         <BenefitRow text="Hilangkan watermark Jeon.id di halaman publikmu" />
         <BenefitRow text="Latar belakang kustom (warna, gradien, atau gambar sendiri)" />
       </ul>
 
-      <p className="mt-4 text-[11px] text-muted">
+      <p className="mt-4 text-[11px] text-app-muted">
         Ditagih otomatis lewat kartu kredit/debit tersimpan tiap siklus (bulanan atau tahunan) sampai kamu batalkan.
       </p>
     </div>
@@ -205,7 +205,7 @@ function PricingCard({
   return (
     <div
       className={`relative rounded-2xl border p-5 ${
-        highlight ? "border-primary bg-primary-subtle/30" : "border-border bg-white"
+        highlight ? "border-primary bg-primary-subtle/30" : "border-app-border bg-app-surface"
       }`}
     >
       {badge && (
@@ -213,10 +213,10 @@ function PricingCard({
           {badge}
         </span>
       )}
-      <p className="text-sm font-bold text-ink">{label}</p>
+      <p className="text-sm font-bold text-app-ink">{label}</p>
       <p className="mt-1.5">
-        <span className="font-heading text-2xl font-bold text-ink">Rp {priceIDR.toLocaleString("id-ID")}</span>
-        <span className="text-xs text-muted">{priceSuffix}</span>
+        <span className="font-heading text-2xl font-bold text-app-ink">Rp {priceIDR.toLocaleString("id-ID")}</span>
+        <span className="text-xs text-app-muted">{priceSuffix}</span>
       </p>
       <button
         type="button"

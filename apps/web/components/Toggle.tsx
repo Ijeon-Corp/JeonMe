@@ -26,7 +26,7 @@ export default function Toggle({
       }`}
     >
       <span
-        className={`inline-block transform rounded-full bg-white shadow transition-transform ${
+        className={`inline-block transform rounded-full bg-app-surface shadow transition-transform ${
           checked ? "translate-x-[22px]" : "translate-x-[3px]"
         }`}
         style={{ height: 18, width: 18 }}

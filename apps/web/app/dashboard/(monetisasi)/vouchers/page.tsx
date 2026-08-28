@@ -157,7 +157,7 @@ export default function DashboardVouchersPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Buat kode diskon untuk produkmu -- kode tunggal (dipakai berkali-kali) atau generate banyak kode sekali pakai
         untuk afiliasi/influencer.
       </p>
@@ -181,7 +181,7 @@ export default function DashboardVouchersPage() {
                 type="button"
                 onClick={() => setMode("single")}
                 className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
-                  mode === "single" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
+                  mode === "single" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
                 }`}
               >
                 Kode Tunggal
@@ -190,7 +190,7 @@ export default function DashboardVouchersPage() {
                 type="button"
                 onClick={() => setMode("bulk")}
                 className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
-                  mode === "bulk" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
+                  mode === "bulk" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
                 }`}
               >
                 Generate Massal
@@ -199,30 +199,30 @@ export default function DashboardVouchersPage() {
 
             {mode === "single" ? (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Kode (kosongkan untuk acak)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Kode (kosongkan untuk acak)</label>
                 <input
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   placeholder="DISKON10"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-ink">Nama Batch</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Batch</label>
                   <input
                     type="text"
                     required
                     value={batchLabel}
                     onChange={(e) => setBatchLabel(e.target.value)}
                     placeholder="Afiliasi Oktober"
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-ink">Jumlah Kode (maks 200)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">Jumlah Kode (maks 200)</label>
                   <input
                     type="number"
                     required
@@ -230,7 +230,7 @@ export default function DashboardVouchersPage() {
                     max={200}
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
@@ -238,18 +238,18 @@ export default function DashboardVouchersPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Tipe Diskon</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Tipe Diskon</label>
                 <select
                   value={discountType}
                   onChange={(e) => setDiscountType(e.target.value as "percentage" | "fixed")}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="percentage">Persentase (%)</option>
                   <option value="fixed">Nominal (Rp)</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">
+                <label className="mb-1 block text-xs font-semibold text-app-ink">
                   Nilai Diskon {discountType === "percentage" ? "(%)" : "(Rp)"}
                 </label>
                 <input
@@ -259,7 +259,7 @@ export default function DashboardVouchersPage() {
                   max={discountType === "percentage" ? 100 : undefined}
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -267,58 +267,58 @@ export default function DashboardVouchersPage() {
             <div className="grid grid-cols-2 gap-3">
               {discountType === "percentage" && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-ink">Maks. Diskon (Rp, opsional)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">Maks. Diskon (Rp, opsional)</label>
                   <input
                     type="number"
                     min={1}
                     value={maxDiscountIDR}
                     onChange={(e) => setMaxDiscountIDR(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Min. Pembelian (Rp, opsional)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Min. Pembelian (Rp, opsional)</label>
                 <input
                   type="number"
                   min={0}
                   value={minPurchaseIDR}
                   onChange={(e) => setMinPurchaseIDR(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               {mode === "single" && (
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-ink">Batas Pemakaian (opsional)</label>
+                  <label className="mb-1 block text-xs font-semibold text-app-ink">Batas Pemakaian (opsional)</label>
                   <input
                     type="number"
                     min={1}
                     value={maxUses}
                     onChange={(e) => setMaxUses(e.target.value)}
                     placeholder="Tak terbatas"
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Kedaluwarsa (opsional)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Kedaluwarsa (opsional)</label>
                 <input
                   type="date"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-ink">
+              <label className="mb-1.5 block text-xs font-semibold text-app-ink">
                 Berlaku untuk produk (kosongkan = semua produk)
               </label>
-              <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
-                {products.length === 0 && <p className="text-xs text-muted">Belum ada produk.</p>}
+              <div className="flex flex-col gap-1.5 rounded-lg border border-app-border p-3">
+                {products.length === 0 && <p className="text-xs text-app-muted">Belum ada produk.</p>}
                 {products.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-xs text-ink">
+                  <label key={p.id} className="flex items-center gap-2 text-xs text-app-ink">
                     <input
                       type="checkbox"
                       checked={productIds.includes(p.id)}
@@ -342,7 +342,7 @@ export default function DashboardVouchersPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -376,12 +376,12 @@ export default function DashboardVouchersPage() {
           return (
             <div key={label} className="glass rounded-2xl p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-ink">{label}</p>
-                <p className="text-xs font-semibold text-muted">
+                <p className="text-sm font-bold text-app-ink">{label}</p>
+                <p className="text-xs font-semibold text-app-muted">
                   {usedTotal}/{list.length} kode terpakai &middot; {discountLabel(list[0])}
                 </p>
               </div>
-              <p className="mt-1 text-xs text-muted">{productNames(list[0].product_ids)}</p>
+              <p className="mt-1 text-xs text-app-muted">{productNames(list[0].product_ids)}</p>
               <div className="mt-3 flex flex-col gap-2">
                 {list.map((v) => (
                   <VoucherRow
@@ -424,16 +424,16 @@ function VoucherRow({
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
-        compact ? "border-border/60 bg-primary-subtle/20" : "border-border bg-white shadow-card"
+        compact ? "border-app-border/60 bg-primary-subtle/20" : "border-app-border bg-app-surface shadow-card"
       }`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate font-mono text-sm font-bold text-ink">{voucher.code}</p>
+          <p className="truncate font-mono text-sm font-bold text-app-ink">{voucher.code}</p>
           {discountLabel && <span className="text-xs font-bold text-secondary-dark">{discountLabel}</span>}
         </div>
-        {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
-        <p className="text-[11px] text-muted">
+        {subtitle && <p className="truncate text-xs text-app-muted">{subtitle}</p>}
+        <p className="text-[11px] text-app-muted">
           {voucher.used_count}
           {voucher.max_uses ? `/${voucher.max_uses}` : ""} dipakai
           {voucher.expires_at ? ` · berlaku sampai ${new Date(voucher.expires_at).toLocaleDateString("id-ID")}` : ""}

@@ -77,7 +77,7 @@ function ThemeTile({
           </span>
         )}
       </div>
-      <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-ink"}`}>
+      <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-app-ink"}`}>
         {label}
         {locked && " (Premium)"}
       </span>
@@ -90,12 +90,12 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
 
   return (
     <div>
-      <div className="mb-4 flex gap-2 overflow-x-auto border-b border-border">
+      <div className="mb-4 flex gap-2 overflow-x-auto border-b border-app-border">
         <button
           type="button"
           onClick={() => setTab("gradien")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "gradien" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            tab === "gradien" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           Warna & Gradien
@@ -104,7 +104,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("wallpaper")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "wallpaper" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            tab === "wallpaper" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           Wallpaper
@@ -113,7 +113,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("3d")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "3d" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            tab === "3d" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           3D/Live
@@ -122,7 +122,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("video")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "video" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            tab === "video" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           Video
@@ -131,7 +131,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("doodle")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "doodle" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+            tab === "doodle" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           Doodle
@@ -149,7 +149,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
             label="Custom"
           >
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
-              <IconPaintbrush className="h-7 w-7 text-muted" />
+              <IconPaintbrush className="h-7 w-7 text-app-muted" />
             </div>
           </ThemeTile>
         )}
@@ -196,7 +196,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
                 />
               )}
               <span
-                className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-ink"}`}
+                className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`}
                 aria-hidden
               >
                 Aa

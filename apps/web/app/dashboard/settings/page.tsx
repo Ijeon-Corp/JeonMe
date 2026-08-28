@@ -166,23 +166,23 @@ function SettingsCard({ item }: { item: SettingsItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-2xl border border-border bg-white p-3.5 transition-colors hover:border-primary"
+      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-primary"
     >
       <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${item.badgeClass}`}>
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="block truncate text-sm font-bold text-ink">{item.title}</span>
+          <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
           {item.statusPill && (
             <span className="flex-shrink-0 rounded-full bg-secondary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-secondary-dark">
               {item.statusPill}
             </span>
           )}
         </span>
-        <span className="block truncate text-xs text-muted">{item.description}</span>
+        <span className="block truncate text-xs text-app-muted">{item.description}</span>
       </span>
-      <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+      <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
     </Link>
   );
 }
@@ -221,23 +221,23 @@ export default function DashboardSettingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <p className="mt-1 text-sm text-muted">Kelola akun, pembayaran, tim, dan keamananmu.</p>
+      <p className="mt-1 text-sm text-app-muted">Kelola akun, pembayaran, tim, dan keamananmu.</p>
 
       <div className="relative mt-5">
-        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Cari pengaturan..."
-          className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
         />
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
         {filteredGroups.map((g) => (
           <div key={g.label}>
-            <p className={`mb-2.5 text-xs font-bold uppercase tracking-wider ${g.label === "Zona Berbahaya" ? "text-red-500" : "text-muted"}`}>
+            <p className={`mb-2.5 text-xs font-bold uppercase tracking-wider ${g.label === "Zona Berbahaya" ? "text-red-500" : "text-app-muted"}`}>
               {g.label}
             </p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -248,7 +248,7 @@ export default function DashboardSettingsPage() {
           </div>
         ))}
         {filteredGroups.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted">
+          <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-sm text-app-muted">
             Tidak ada pengaturan yang cocok dengan &quot;{query}&quot;.
           </p>
         )}

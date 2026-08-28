@@ -153,7 +153,7 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Undang admin/tim kecil untuk membantu kelola tautan, produk, atau desain halamanmu -- mereka TIDAK
         bisa menyentuh saldo, penarikan, verifikasi KYC, atau menghapus akunmu.
       </p>
@@ -162,13 +162,13 @@ export default function DashboardTeamPage() {
 
       {invitesForMe.length > 0 && (
         <section className="mt-4 rounded-3xl border border-primary/30 bg-primary-subtle/40 p-5">
-          <h2 className="font-heading text-sm font-bold text-ink">Undangan untuk Saya</h2>
+          <h2 className="font-heading text-sm font-bold text-app-ink">Undangan untuk Saya</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
-              <li key={inv.id} className="flex items-center justify-between rounded-lg border border-border bg-white px-3.5 py-2.5">
+              <li key={inv.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3.5 py-2.5">
                 <div>
-                  <p className="text-sm font-semibold text-ink">@{inv.owner_username}</p>
-                  <p className="text-[11px] text-muted">{ROLE_LABEL[inv.role]}</p>
+                  <p className="text-sm font-semibold text-app-ink">@{inv.owner_username}</p>
+                  <p className="text-[11px] text-app-muted">{ROLE_LABEL[inv.role]}</p>
                 </div>
                 <button
                   type="button"
@@ -186,20 +186,20 @@ export default function DashboardTeamPage() {
       )}
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-ink">Undang Kolaborator</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Undang Kolaborator</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
             type="text"
             placeholder="email@contoh.com atau username"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
-            className="rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <select
             aria-label="Role kolaborator baru"
             value={role}
             onChange={(e) => setRole(e.target.value as TeamRole)}
-            className="rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
           >
             {ROLE_OPTIONS.map((r) => (
               <option key={r} value={r}>
@@ -218,17 +218,17 @@ export default function DashboardTeamPage() {
       </section>
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-ink">Kolaboratorku</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Kolaboratorku</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+            <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-app-border px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                   <IconUsers className="h-[18px] w-[18px]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">{c.email}</p>
-                  <p className="text-[11px] text-muted">{STATUS_LABEL[c.status]}</p>
+                  <p className="truncate text-sm font-semibold text-app-ink">{c.email}</p>
+                  <p className="text-[11px] text-app-muted">{STATUS_LABEL[c.status]}</p>
                 </div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
@@ -237,7 +237,7 @@ export default function DashboardTeamPage() {
                   value={c.role}
                   onChange={(e) => handleRoleChange(c, e.target.value as TeamRole)}
                   disabled={c.status === "revoked"}
-                  className="rounded-lg border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
+                  className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>
@@ -262,16 +262,16 @@ export default function DashboardTeamPage() {
       </section>
 
       <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
-          <IconClock className="h-4 w-4 text-muted" />
+        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
+          <IconClock className="h-4 w-4 text-app-muted" />
           Riwayat Aktivitas Tim
         </h2>
-        <p className="mt-1 text-xs text-muted">Siapa mengubah apa dan kapan.</p>
+        <p className="mt-1 text-xs text-app-muted">Siapa mengubah apa dan kapan.</p>
         <ul className="mt-3 flex flex-col gap-2">
           {auditLog.map((entry) => (
-            <li key={entry.id} className="rounded-lg border border-border px-3.5 py-2.5">
-              <p className="text-xs text-ink">{formatAuditEntry(entry)}</p>
-              <p className="mt-0.5 text-[11px] text-muted">{new Date(entry.created_at).toLocaleString("id-ID")}</p>
+            <li key={entry.id} className="rounded-lg border border-app-border px-3.5 py-2.5">
+              <p className="text-xs text-app-ink">{formatAuditEntry(entry)}</p>
+              <p className="mt-0.5 text-[11px] text-app-muted">{new Date(entry.created_at).toLocaleString("id-ID")}</p>
             </li>
           ))}
           {auditLog.length === 0 && <EmptyState as="li" text="Belum ada aktivitas tim." />}

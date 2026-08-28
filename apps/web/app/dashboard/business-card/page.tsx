@@ -67,7 +67,7 @@ export default function DashboardBusinessCardPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Kartu kontak terpisah dari halaman utamamu -- bagikan lewat kode QR, pengunjung bisa langsung menyimpan
         kontakmu ke ponsel (format vCard, kompatibel dengan Kontak iOS &amp; Android) dan (opsional) membagikan
         kontaknya balik ke kamu.
@@ -80,7 +80,7 @@ export default function DashboardBusinessCardPage() {
         <button
           type="button"
           onClick={() => setQrOpen(true)}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-white py-2.5 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-app-border bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-primary hover:text-primary"
         >
           <IconQrCode className="h-4 w-4" />
           Lihat &amp; Unduh Kode QR Kartu
@@ -90,8 +90,8 @@ export default function DashboardBusinessCardPage() {
       <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-ink">Aktifkan Kartu Kontak</p>
-            <p className="text-xs text-muted">Kartu bisa diakses publik lewat jeon.id/card/{username} kalau aktif.</p>
+            <p className="text-sm font-bold text-app-ink">Aktifkan Kartu Kontak</p>
+            <p className="text-xs text-app-muted">Kartu bisa diakses publik lewat jeon.id/card/{username} kalau aktif.</p>
           </div>
           <Toggle
             checked={card.is_active}
@@ -101,89 +101,89 @@ export default function DashboardBusinessCardPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Nama Lengkap</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Lengkap</label>
           <input
             type="text"
             value={card.full_name}
             onChange={(e) => setCard({ ...card, full_name: e.target.value })}
             maxLength={200}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Jabatan</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Jabatan</label>
             <input
               type="text"
               value={card.job_title}
               onChange={(e) => setCard({ ...card, job_title: e.target.value })}
               maxLength={200}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Perusahaan</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Perusahaan</label>
             <input
               type="text"
               value={card.company}
               onChange={(e) => setCard({ ...card, company: e.target.value })}
               maxLength={200}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Telepon</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Telepon</label>
             <input
               type="text"
               value={card.phone}
               onChange={(e) => setCard({ ...card, phone: e.target.value })}
               maxLength={30}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">WhatsApp</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">WhatsApp</label>
             <input
               type="text"
               value={card.whatsapp_number}
               onChange={(e) => setCard({ ...card, whatsapp_number: e.target.value })}
               maxLength={30}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Email</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Email</label>
           <input
             type="email"
             value={card.email}
             onChange={(e) => setCard({ ...card, email: e.target.value })}
             maxLength={255}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Website</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Website</label>
           <input
             type="text"
             value={card.website}
             onChange={(e) => setCard({ ...card, website: e.target.value })}
             placeholder="https://..."
             maxLength={500}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+        <div className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2.5">
           <div>
-            <p className="text-sm font-semibold text-ink">Terima Kontak Balik</p>
-            <p className="text-xs text-muted">Pengunjung yang scan bisa membagikan nama &amp; kontaknya ke kamu.</p>
+            <p className="text-sm font-semibold text-app-ink">Terima Kontak Balik</p>
+            <p className="text-xs text-app-muted">Pengunjung yang scan bisa membagikan nama &amp; kontaknya ke kamu.</p>
           </div>
           <Toggle
             checked={card.collect_contact_back}

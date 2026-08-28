@@ -145,14 +145,14 @@ export default function SettingsProfilePage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Pengaturan
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-ink">Profil & Akun</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Profil & Akun</h1>
+      <p className="mt-1 text-sm text-app-muted">
         Foto profil & tema halaman diatur lewat halaman{" "}
         <Link href="/dashboard/design" className="font-semibold text-primary hover:underline">
           Desain
@@ -168,7 +168,7 @@ export default function SettingsProfilePage() {
           <img
             src={original.avatar_url}
             alt=""
-            className="h-16 w-16 rounded-full border border-border object-cover"
+            className="h-16 w-16 rounded-full border border-app-border object-cover"
           />
         )}
         {/* Kode QR profil (permintaan langsung pengguna, 18 Agustus 2026:
@@ -186,7 +186,7 @@ export default function SettingsProfilePage() {
           <button
             type="button"
             onClick={() => setQrOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3.5 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+            className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary"
           >
             <IconQrCode className="h-4 w-4" />
             Lihat Kode QR
@@ -196,19 +196,19 @@ export default function SettingsProfilePage() {
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         <div>
-          <label htmlFor="settings-username" className="text-xs font-bold uppercase tracking-wider text-muted">
+          <label htmlFor="settings-username" className="text-xs font-bold uppercase tracking-wider text-app-muted">
             Username
           </label>
           <div
-            className={`mt-1 flex items-center rounded-xl border bg-white transition-colors focus-within:ring-2 ${
+            className={`mt-1 flex items-center rounded-xl border bg-app-surface transition-colors focus-within:ring-2 ${
               usernameState === "available"
                 ? "border-secondary focus-within:border-secondary focus-within:ring-secondary/20"
                 : usernameState === "unavailable"
                 ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
-                : "border-border focus-within:border-primary focus-within:ring-primary/20"
+                : "border-app-border focus-within:border-primary focus-within:ring-primary/20"
             }`}
           >
-            <span className="pl-3 text-sm text-muted">jeon.id/</span>
+            <span className="pl-3 text-sm text-app-muted">jeon.id/</span>
             {/* focus:!shadow-none -- glow fokus global (globals.css,
                 `input:not([type=checkbox]):not([type=radio]):focus`) selektornya
                 lebih spesifik daripada utility Tailwind biasa, jadi tanpa `!`
@@ -223,11 +223,11 @@ export default function SettingsProfilePage() {
               onChange={(e) => setUsername(e.target.value)}
               maxLength={30}
               disabled={cooldownActive}
-              className="w-full rounded-r-xl py-2.5 pr-3 text-sm text-ink focus:!shadow-none focus:outline-none disabled:cursor-not-allowed disabled:text-muted disabled:opacity-70"
+              className="w-full rounded-r-xl py-2.5 pr-3 text-sm text-app-ink focus:!shadow-none focus:outline-none disabled:cursor-not-allowed disabled:text-app-muted disabled:opacity-70"
             />
           </div>
           {cooldownActive && cooldownUntil ? (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-app-muted">
               Username cuma bisa diganti sekali per 30 hari -- kamu bisa ganti lagi mulai {formatCooldownDate(cooldownUntil)}.
             </p>
           ) : (
@@ -239,7 +239,7 @@ export default function SettingsProfilePage() {
                       ? "text-secondary-dark"
                       : usernameState === "unavailable"
                       ? "text-red-600"
-                      : "text-muted"
+                      : "text-app-muted"
                   }`}
                 >
                   {usernameState === "checking" && "Memeriksa ketersediaan..."}
@@ -255,7 +255,7 @@ export default function SettingsProfilePage() {
                   )}
                 </p>
               )}
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-xs text-app-muted">
                 Ganti username tetap mengalihkan pengunjung dari alamat lama selama 90 hari, jadi tautan yang sudah
                 dibagikan tidak langsung 404.
               </p>
@@ -264,7 +264,7 @@ export default function SettingsProfilePage() {
         </div>
 
         <div>
-          <label htmlFor="settings-display-name" className="text-xs font-bold uppercase tracking-wider text-muted">
+          <label htmlFor="settings-display-name" className="text-xs font-bold uppercase tracking-wider text-app-muted">
             Nama Tampilan
           </label>
           <input
@@ -273,12 +273,12 @@ export default function SettingsProfilePage() {
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={100}
             placeholder={username}
-            className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
           />
         </div>
 
         <div>
-          <label htmlFor="settings-bio" className="text-xs font-bold uppercase tracking-wider text-muted">
+          <label htmlFor="settings-bio" className="text-xs font-bold uppercase tracking-wider text-app-muted">
             Bio
           </label>
           <textarea
@@ -287,13 +287,13 @@ export default function SettingsProfilePage() {
             onChange={(e) => setBio(e.target.value)}
             maxLength={160}
             rows={3}
-            className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
           />
-          <p className="mt-1 text-right text-[11px] text-muted">{bio.length}/160</p>
+          <p className="mt-1 text-right text-[11px] text-app-muted">{bio.length}/160</p>
         </div>
 
         <div>
-          <label htmlFor="settings-category" className="text-xs font-bold uppercase tracking-wider text-muted">
+          <label htmlFor="settings-category" className="text-xs font-bold uppercase tracking-wider text-app-muted">
             Kategori
           </label>
           <input
@@ -302,7 +302,7 @@ export default function SettingsProfilePage() {
             onChange={(e) => setCategory(e.target.value)}
             maxLength={50}
             placeholder="mis. Musik, Pendidikan, Kuliner"
-            className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
           />
         </div>
 

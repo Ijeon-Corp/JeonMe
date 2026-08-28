@@ -61,12 +61,12 @@ export default function AdminPayoutsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Penarikan Dana</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Penarikan Dana</h1>
+      <p className="mt-1 text-sm text-app-muted">
         Proses pengajuan penarikan kreator secara manual -- transfer dana dilakukan di luar sistem
         (mis. internet banking), lalu tandai statusnya di sini. Kreator dengan KYC terverifikasi
         ditampilkan lebih dulu supaya diproses lebih cepat.
@@ -79,7 +79,7 @@ export default function AdminPayoutsPage() {
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "needs_action"
               ? "border-primary bg-primary-subtle text-primary"
-              : "border-border text-muted hover:border-primary/50"
+              : "border-app-border text-app-muted hover:border-primary/50"
           }`}
         >
           Perlu Tindakan
@@ -90,7 +90,7 @@ export default function AdminPayoutsPage() {
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
               ? "border-primary bg-primary-subtle text-primary"
-              : "border-border text-muted hover:border-primary/50"
+              : "border-app-border text-app-muted hover:border-primary/50"
           }`}
         >
           Semua Riwayat
@@ -101,20 +101,20 @@ export default function AdminPayoutsPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {payouts.map((p) => (
-          <div key={p.id} className="rounded-xl border border-border bg-white p-4 shadow-card">
+          <div key={p.id} className="rounded-xl border border-app-border bg-app-surface p-4 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                   <IconWallet className="h-[18px] w-[18px]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-ink">
+                  <p className="text-sm font-semibold text-app-ink">
                     Rp {p.amount_idr.toLocaleString("id-ID")}
-                    <span className="ml-2 font-normal text-muted">
+                    <span className="ml-2 font-normal text-app-muted">
                       @{p.username} ({p.email})
                     </span>
                   </p>
-                  <p className="text-xs text-muted">{p.destination_account}</p>
+                  <p className="text-xs text-app-muted">{p.destination_account}</p>
                 </div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -130,7 +130,7 @@ export default function AdminPayoutsPage() {
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs">
-              <span className="text-muted">
+              <span className="text-app-muted">
                 Diajukan {new Date(p.requested_at).toLocaleString("id-ID")}
               </span>
 
@@ -180,7 +180,7 @@ export default function AdminPayoutsPage() {
         ))}
 
         {payouts.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             {filter === "needs_action" ? "Tidak ada penarikan yang perlu diproses." : "Belum ada riwayat penarikan."}
           </div>

@@ -128,7 +128,7 @@ export default function DashboardDonationPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Biarkan pengunjung memberi dukungan dengan nominal bebas, tanpa harus membeli produk apa pun.
       </p>
 
@@ -138,42 +138,42 @@ export default function DashboardDonationPage() {
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-ink">Aktifkan Blok Dukungan</p>
-            <p className="text-xs text-muted">Tampil di halaman publikmu kalau aktif.</p>
+            <p className="text-sm font-bold text-app-ink">Aktifkan Blok Dukungan</p>
+            <p className="text-xs text-app-muted">Tampil di halaman publikmu kalau aktif.</p>
           </div>
           <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label="Aktifkan blok dukungan" />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Judul</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Judul</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Traktir aku kopi"
             maxLength={200}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Nominal Minimum (Rp)</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Nominal Minimum (Rp)</label>
           <input
             type="number"
             min={1000}
             value={minAmountIDR}
             onChange={(e) => setMinAmountIDR(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <p className="mt-1 text-[11px] text-muted">Pengunjung tetap bebas memberi lebih dari nominal ini.</p>
+          <p className="mt-1 text-[11px] text-app-muted">Pengunjung tetap bebas memberi lebih dari nominal ini.</p>
         </div>
 
         {/* Target Donasi -- Gap #4 benchmark kompetitif (9 Agustus 2026, ala
             goal Saweria/Trakteer): progress bar publik, direset ke nol
             setiap kali target diganti (lihat catatan donation_goal_started_at
             di backend) -- BUKAN akumulasi sepanjang masa. */}
-        <div className="rounded-2xl border border-dashed border-border p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Target Donasi (opsional)</p>
+        <div className="rounded-2xl border border-dashed border-app-border p-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Target Donasi (opsional)</p>
           <div className="mt-2 flex flex-col gap-2">
             <input
               type="text"
@@ -181,7 +181,7 @@ export default function DashboardDonationPage() {
               onChange={(e) => setGoalTitle(e.target.value)}
               placeholder="mis. Upgrade kamera streaming"
               maxLength={200}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <input
               type="number"
@@ -189,7 +189,7 @@ export default function DashboardDonationPage() {
               value={goalAmountIDR}
               onChange={(e) => setGoalAmountIDR(e.target.value)}
               placeholder="Target nominal (Rp), kosongkan untuk hapus target"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           {goalAmountNum > 0 && settings && (
@@ -197,7 +197,7 @@ export default function DashboardDonationPage() {
               <div className="h-2.5 overflow-hidden rounded-full bg-primary-subtle">
                 <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${goalProgressPct}%` }} />
               </div>
-              <p className="mt-1 text-[11px] font-semibold text-ink">
+              <p className="mt-1 text-[11px] font-semibold text-app-ink">
                 {formatRupiah(settings.goal_raised_idr)} / {formatRupiah(goalAmountNum)} ({goalProgressPct.toFixed(0)}%)
               </p>
             </div>
@@ -213,7 +213,7 @@ export default function DashboardDonationPage() {
         </button>
 
         {settings?.product_id && (
-          <p className="text-[11px] text-muted">
+          <p className="text-[11px] text-app-muted">
             Versi awal: nominal sekali bayar saja. Dukungan berulang (mingguan/bulanan) belum didukung.
           </p>
         )}
@@ -228,8 +228,8 @@ export default function DashboardDonationPage() {
             <IconGift className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg font-bold text-ink">Wishlist</h2>
-            <p className="text-xs text-muted">Barang yang bisa dipilih pendukung untuk &quot;diwujudkan&quot; saat mendukung.</p>
+            <h2 className="font-heading text-lg font-bold text-app-ink">Wishlist</h2>
+            <p className="text-xs text-app-muted">Barang yang bisa dipilih pendukung untuk &quot;diwujudkan&quot; saat mendukung.</p>
           </div>
         </div>
 
@@ -239,13 +239,13 @@ export default function DashboardDonationPage() {
           {wishlist.map((w) => {
             const pct = w.price_idr > 0 ? Math.min(100, (w.raised_idr / w.price_idr) * 100) : 0;
             return (
-              <div key={w.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2.5">
+              <div key={w.id} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{w.name}</p>
+                  <p className="truncate text-sm font-semibold text-app-ink">{w.name}</p>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary-subtle">
                     <div className="h-full rounded-full bg-pop-pink" style={{ width: `${pct}%` }} />
                   </div>
-                  <p className="mt-1 text-[11px] text-muted">
+                  <p className="mt-1 text-[11px] text-app-muted">
                     {formatRupiah(w.raised_idr)} / {formatRupiah(w.price_idr)}
                   </p>
                 </div>
@@ -264,7 +264,7 @@ export default function DashboardDonationPage() {
         </div>
 
         {addingWishlist ? (
-          <form onSubmit={handleAddWishlist} className="mt-3 flex flex-col gap-2 rounded-lg border border-border p-3">
+          <form onSubmit={handleAddWishlist} className="mt-3 flex flex-col gap-2 rounded-lg border border-app-border p-3">
             <input
               type="text"
               autoFocus
@@ -272,7 +272,7 @@ export default function DashboardDonationPage() {
               onChange={(e) => setWishlistName(e.target.value)}
               placeholder="Nama barang"
               maxLength={200}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <input
               type="number"
@@ -280,14 +280,14 @@ export default function DashboardDonationPage() {
               value={wishlistPrice}
               onChange={(e) => setWishlistPrice(e.target.value)}
               placeholder="Harga (Rp)"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <input
               type="url"
               value={wishlistLink}
               onChange={(e) => setWishlistLink(e.target.value)}
               placeholder="Tautan produk (opsional)"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <div className="flex gap-2">
               <button type="submit" className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white">
@@ -296,7 +296,7 @@ export default function DashboardDonationPage() {
               <button
                 type="button"
                 onClick={() => setAddingWishlist(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted"
               >
                 Batal
               </button>
@@ -306,7 +306,7 @@ export default function DashboardDonationPage() {
           <button
             type="button"
             onClick={() => setAddingWishlist(true)}
-            className="mt-3 w-full rounded-lg border border-dashed border-border py-2 text-xs font-bold text-muted hover:border-primary hover:text-primary"
+            className="mt-3 w-full rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-app-muted hover:border-primary hover:text-primary"
           >
             + Tambah Item Wishlist
           </button>

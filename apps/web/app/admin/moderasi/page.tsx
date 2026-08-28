@@ -125,12 +125,12 @@ export default function AdminModerationPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Moderasi Tautan</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Moderasi Tautan</h1>
+      <p className="mt-1 text-sm text-app-muted">
         Kelola kata kunci &amp; reputasi domain yang dipakai memblokir tautan judi online/konten dewasa saat kreator menyimpan link.
       </p>
 
@@ -138,11 +138,11 @@ export default function AdminModerationPage() {
 
       {/* Kata kunci */}
       <section className="mt-6">
-        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-ink">
+        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-app-ink">
           <ShieldAlert className="h-4 w-4" />
           Kata Kunci Terblokir
         </h2>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-xs text-app-muted">
           Dicek terhadap URL+judul tautan baru, hanya untuk domain yang belum pernah dilihat sebelumnya.
         </p>
 
@@ -153,12 +153,12 @@ export default function AdminModerationPage() {
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddKeyword()}
             placeholder="mis. slot gacor"
-            className="flex-1 min-w-[160px] rounded-lg border border-border px-3 py-1.5 text-sm"
+            className="flex-1 min-w-[160px] rounded-lg border border-app-border px-3 py-1.5 text-sm"
           />
           <select
             value={newKeywordCategory}
             onChange={(e) => setNewKeywordCategory(e.target.value as ModerationCategory)}
-            className="rounded-lg border border-border px-2 py-1.5 text-sm"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -179,8 +179,8 @@ export default function AdminModerationPage() {
 
         <div className="mt-3 flex flex-col gap-1.5">
           {keywords.map((k) => (
-            <div key={k.id} className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2">
-              <div className="flex items-center gap-2 text-sm text-ink">
+            <div key={k.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3 py-2">
+              <div className="flex items-center gap-2 text-sm text-app-ink">
                 <span className="font-mono">{k.keyword}</span>
                 <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
                   {CATEGORY_LABELS[k.category] ?? k.category}
@@ -190,14 +190,14 @@ export default function AdminModerationPage() {
                 type="button"
                 onClick={() => handleDeleteKeyword(k.id)}
                 title="Hapus kata kunci"
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
           {keywords.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+            <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
               <IconInbox className="h-4 w-4 flex-shrink-0" />
               Belum ada kata kunci.
             </div>
@@ -207,11 +207,11 @@ export default function AdminModerationPage() {
 
       {/* Reputasi domain */}
       <section className="mt-8">
-        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-ink">
+        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-app-ink">
           <Ban className="h-4 w-4" />
           Reputasi Domain
         </h2>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-xs text-app-muted">
           Cache keputusan per domain -- dikurasi admin manual di sini, atau hasil klasifikasi otomatis (kata kunci/AI) yang bisa ditinjau/dibatalkan di sini.
         </p>
 
@@ -222,12 +222,12 @@ export default function AdminModerationPage() {
             onChange={(e) => setNewDomain(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddDomain()}
             placeholder="mis. contoh-judol.com"
-            className="flex-1 min-w-[160px] rounded-lg border border-border px-3 py-1.5 text-sm"
+            className="flex-1 min-w-[160px] rounded-lg border border-app-border px-3 py-1.5 text-sm"
           />
           <select
             value={newDomainCategory}
             onChange={(e) => setNewDomainCategory(e.target.value as ModerationCategory)}
-            className="rounded-lg border border-border px-2 py-1.5 text-sm"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -253,7 +253,7 @@ export default function AdminModerationPage() {
               type="button"
               onClick={() => setDomainFilter(f)}
               className={`rounded-full px-3 py-1 font-semibold ${
-                domainFilter === f ? "bg-primary text-white" : "border border-border text-muted hover:border-primary"
+                domainFilter === f ? "bg-primary text-white" : "border border-app-border text-app-muted hover:border-primary"
               }`}
             >
               {f === "blocked" ? "Diblokir" : f === "allowed" ? "Diizinkan" : "Semua"}
@@ -263,9 +263,9 @@ export default function AdminModerationPage() {
 
         <div className="mt-3 flex flex-col gap-1.5">
           {domains.map((d) => (
-            <div key={d.id} className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2">
+            <div key={d.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3 py-2">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm text-ink">
+                <div className="flex items-center gap-2 text-sm text-app-ink">
                   <span className="truncate font-mono">{d.domain}</span>
                   <span
                     className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -275,7 +275,7 @@ export default function AdminModerationPage() {
                     {d.verdict === "blocked" ? "Diblokir" : "Diizinkan"}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-muted">
+                <p className="mt-0.5 truncate text-xs text-app-muted">
                   {SOURCE_LABELS[d.source]}
                   {d.category && ` · ${CATEGORY_LABELS[d.category]}`}
                   {d.reason && ` · ${d.reason}`}
@@ -285,14 +285,14 @@ export default function AdminModerationPage() {
                 type="button"
                 onClick={() => handleDeleteDomain(d.id)}
                 title="Hapus entri (dievaluasi ulang di percobaan berikutnya)"
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
           {domains.length === 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+            <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
               <IconInbox className="h-4 w-4 flex-shrink-0" />
               Belum ada entri.
             </div>

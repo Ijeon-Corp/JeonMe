@@ -49,14 +49,14 @@ export default function StorageFilesPanel() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="glass mb-3 rounded-2xl p-4 shadow-card">
-        <p className="text-xs font-semibold text-muted">Total Penyimpanan Terpakai</p>
-        <p className="mt-1 font-heading text-xl font-bold text-ink">{formatBytes(data.total_bytes)}</p>
+        <p className="text-xs font-semibold text-app-muted">Total Penyimpanan Terpakai</p>
+        <p className="mt-1 font-heading text-xl font-bold text-app-ink">{formatBytes(data.total_bytes)}</p>
       </div>
 
       <div className="glass overflow-x-auto rounded-2xl shadow-card">
         <table className="w-full min-w-[480px] text-left text-xs">
           <thead>
-            <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">Produk</th>
               <th className="px-4 py-3">Ukuran</th>
               <th className="px-4 py-3">Status</th>
@@ -65,13 +65,13 @@ export default function StorageFilesPanel() {
           </thead>
           <tbody>
             {data.files.map((f) => (
-              <tr key={f.product_id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 font-semibold text-ink">{f.product_name}</td>
-                <td className="px-4 py-3 text-ink">{formatBytes(f.file_size_bytes)}</td>
+              <tr key={f.product_id} className="border-b border-app-border last:border-0">
+                <td className="px-4 py-3 font-semibold text-app-ink">{f.product_name}</td>
+                <td className="px-4 py-3 text-app-ink">{formatBytes(f.file_size_bytes)}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      f.is_active ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-muted"
+                      f.is_active ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-app-muted"
                     }`}
                   >
                     {f.is_active ? "Aktif" : "Nonaktif"}
@@ -94,8 +94,8 @@ export default function StorageFilesPanel() {
         </table>
         {data.files.length === 0 && (
           <div className="flex flex-col items-center gap-2 p-6 text-center">
-            <IconInbox className="h-5 w-5 text-muted" />
-            <p className="text-xs text-muted">Belum ada file yang diunggah.</p>
+            <IconInbox className="h-5 w-5 text-app-muted" />
+            <p className="text-xs text-app-muted">Belum ada file yang diunggah.</p>
           </div>
         )}
       </div>

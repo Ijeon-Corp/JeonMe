@@ -41,8 +41,8 @@ function ConnectCard({
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-heading text-sm font-bold text-ink">{label}</p>
-          <p className="text-xs text-muted">{description}</p>
+          <p className="font-heading text-sm font-bold text-app-ink">{label}</p>
+          <p className="text-xs text-app-muted">{description}</p>
         </div>
         {connection && (
           <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
@@ -52,7 +52,7 @@ function ConnectCard({
       </div>
 
       {connection ? (
-        <div className="flex items-center justify-between rounded-xl border border-border bg-white p-3">
+        <div className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface p-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {connection.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -63,8 +63,8 @@ function ConnectCard({
               </span>
             )}
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-ink">@{connection.external_username}</p>
-              <p className="text-[11px] text-muted">Tersambung {new Date(connection.connected_at).toLocaleDateString("id-ID")}</p>
+              <p className="truncate text-sm font-bold text-app-ink">@{connection.external_username}</p>
+              <p className="text-[11px] text-app-muted">Tersambung {new Date(connection.connected_at).toLocaleDateString("id-ID")}</p>
             </div>
           </div>
           <button
@@ -72,7 +72,7 @@ function ConnectCard({
             onClick={onDisconnect}
             disabled={disconnecting}
             title="Putuskan koneksi"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
           >
             <IconTrash className="h-4 w-4" />
           </button>
@@ -86,7 +86,7 @@ function ConnectCard({
           Sambungkan {label}
         </button>
       ) : (
-        <p className="rounded-xl border border-dashed border-border p-3 text-center text-[11px] text-muted">
+        <p className="rounded-xl border border-dashed border-app-border p-3 text-center text-[11px] text-app-muted">
           Fitur ini belum dikonfigurasi di server Jeon.id.
         </p>
       )}
@@ -130,7 +130,7 @@ export default function SocialConnectPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted">Memuat...</p>;
+    return <p className="text-sm text-app-muted">Memuat...</p>;
   }
 
   const instagramConnection = connections.find((c) => c.platform === "instagram");
@@ -138,7 +138,7 @@ export default function SocialConnectPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Sambungkan akun Instagram/TikTok kreator supaya profil dan beberapa postingan/video terbarumu tampil otomatis di halaman
         publik -- tidak perlu update manual. Ini terpisah dari tautan Instagram/TikTok biasa di menu Link Bio.
       </p>

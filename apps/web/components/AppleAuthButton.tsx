@@ -44,7 +44,7 @@ export default function AppleAuthButton({
     <button
       type="button"
       onClick={handleClick}
-      className="flex w-full items-center justify-center gap-2.5 rounded-full border border-border bg-white px-5 py-3.5 text-sm font-bold text-ink shadow-sm transition-colors hover:bg-black/[0.02]"
+      className="flex w-full items-center justify-center gap-2.5 rounded-full border border-app-border bg-app-surface px-5 py-3.5 text-sm font-bold text-app-ink shadow-sm transition-colors hover:bg-black/[0.02]"
     >
       <AppleLogo />
       {label}

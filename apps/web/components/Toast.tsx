@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-medium shadow-card ${
+            className={`pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-xl border bg-app-surface px-4 py-3 text-sm font-medium shadow-card ${
               t.variant === "success" ? "border-primary/20 text-primary" : "border-red-200 text-red-600"
             }`}
           >
@@ -66,7 +66,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => dismiss(t.id)}
-              className="text-muted hover:text-ink"
+              className="text-app-muted hover:text-app-ink"
               aria-label="Tutup notifikasi"
             >
               <IconClose className="h-3.5 w-3.5" />

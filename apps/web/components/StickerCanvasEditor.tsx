@@ -43,7 +43,7 @@ export default function StickerCanvasEditor({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-ink">Tambah Stiker</p>
+        <p className="mb-1.5 text-xs font-semibold text-app-ink">Tambah Stiker</p>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
           {STICKER_SHAPES.map((shape) => (
             <button
@@ -51,7 +51,7 @@ export default function StickerCanvasEditor({
               type="button"
               onClick={() => handleAdd(shape.value)}
               title={`Tambah ${shape.label}`}
-              className="flex aspect-square flex-col items-center justify-center rounded-xl border border-border bg-white p-2 text-ink hover:border-primary hover:text-primary"
+              className="flex aspect-square flex-col items-center justify-center rounded-xl border border-app-border bg-app-surface p-2 text-app-ink hover:border-primary hover:text-primary"
             >
               <StickerIcon type={shape.value} className="h-6 w-6" />
             </button>
@@ -66,19 +66,19 @@ export default function StickerCanvasEditor({
 
       {stickers.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-semibold text-ink">Stiker Terpasang ({stickers.length})</p>
+          <p className="text-xs font-semibold text-app-ink">Stiker Terpasang ({stickers.length})</p>
           {stickers.map((s) => {
             const meta = STICKER_SHAPES.find((shape) => shape.value === s.type);
             return (
-              <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-border bg-white p-2.5">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-ink">
+              <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-app-border bg-app-surface p-2.5">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-app-ink">
                   <StickerIcon type={s.type} className="h-5 w-5" />
                 </span>
-                <p className="flex-1 truncate text-xs font-semibold text-ink">{meta?.label ?? s.type}</p>
+                <p className="flex-1 truncate text-xs font-semibold text-app-ink">{meta?.label ?? s.type}</p>
                 <button
                   type="button"
                   onClick={() => handleDelete(s.id)}
-                  className="flex-shrink-0 rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600"
+                  className="flex-shrink-0 rounded-lg p-1.5 text-app-muted hover:bg-red-50 hover:text-red-600"
                 >
                   <IconTrash className="h-4 w-4" />
                 </button>

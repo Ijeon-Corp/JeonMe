@@ -125,8 +125,8 @@ export default function VerifyEmailPage() {
               />
             </svg>
           </span>
-          <h1 className="mt-5 font-heading text-2xl font-bold text-ink sm:text-3xl">Verifikasi Berhasil!</h1>
-          <p className="mt-2 text-sm text-muted">Akunmu sudah aktif & siap dipakai.</p>
+          <h1 className="mt-5 font-heading text-2xl font-bold text-app-ink sm:text-3xl">Verifikasi Berhasil!</h1>
+          <p className="mt-2 text-sm text-app-muted">Akunmu sudah aktif & siap dipakai.</p>
           <button
             type="button"
             onClick={handleContinue}
@@ -142,18 +142,18 @@ export default function VerifyEmailPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
         Verifikasi Emailmu
       </h1>
-      <p className="mt-3 text-sm text-muted">
+      <p className="mt-3 text-sm text-app-muted">
         Kami sudah mengirim kode 6 digit ke{" "}
-        <span className="font-semibold text-ink">{email || "emailmu"}</span>. Masukkan kodenya untuk mengaktifkan akun --
+        <span className="font-semibold text-app-ink">{email || "emailmu"}</span>. Masukkan kodenya untuk mengaktifkan akun --
         akunmu belum bisa dipakai sebelum ini.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Kode Verifikasi</label>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Kode Verifikasi</label>
           <input
             type="text"
             inputMode="numeric"
@@ -164,9 +164,9 @@ export default function VerifyEmailPage() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="123456"
-            className="w-full rounded-xl border border-border px-3.5 py-3 text-center text-lg font-bold tracking-[0.4em] text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-center text-lg font-bold tracking-[0.4em] text-app-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <p className="mt-1 text-xs text-muted">Kode berlaku 15 menit sejak diminta.</p>
+          <p className="mt-1 text-xs text-app-muted">Kode berlaku 15 menit sejak diminta.</p>
         </div>
 
         {devHint && <p className="rounded-lg bg-accent-subtle px-3 py-2 text-xs text-accent-dark">{devHint}</p>}
@@ -181,19 +181,19 @@ export default function VerifyEmailPage() {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-6 text-center text-sm text-app-muted">
         Tidak dapat kodenya?{" "}
         <button
           type="button"
           onClick={handleResend}
           disabled={resending || resendCooldown > 0}
-          className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
+          className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-app-muted disabled:no-underline"
         >
           {resendCooldown > 0 ? `Kirim ulang (${resendCooldown}d)` : resending ? "Mengirim..." : "Kirim ulang kode"}
         </button>
       </p>
 
-      <p className="mt-4 text-center text-sm text-muted">
+      <p className="mt-4 text-center text-sm text-app-muted">
         Salah email?{" "}
         <Link href="/register" className="font-semibold text-primary hover:underline">
           Daftar ulang

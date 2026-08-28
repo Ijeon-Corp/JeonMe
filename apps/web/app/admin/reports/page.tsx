@@ -29,24 +29,24 @@ export default function AdminReportsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Laporan Konten</h1>
-      <p className="mt-1 text-sm text-muted">Laporan yang masih menunggu tinjauan.</p>
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Laporan Konten</h1>
+      <p className="mt-1 text-sm text-app-muted">Laporan yang masih menunggu tinjauan.</p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 flex flex-col gap-2">
         {reports.map((r) => (
-          <div key={r.id} className="rounded-xl border border-border bg-white p-4 shadow-card">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          <div key={r.id} className="rounded-xl border border-app-border bg-app-surface p-4 shadow-card">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-app-muted">
               <IconFlag className="h-3.5 w-3.5 text-red-500" />
               {r.target_type} · {r.target_id}
             </div>
-            <p className="mt-1.5 text-sm text-ink">{r.reason}</p>
-            {r.reporter_email && <p className="mt-1 text-xs text-muted">Pelapor: {r.reporter_email}</p>}
+            <p className="mt-1.5 text-sm text-app-ink">{r.reason}</p>
+            {r.reporter_email && <p className="mt-1 text-xs text-app-muted">Pelapor: {r.reporter_email}</p>}
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
               <button
                 type="button"
                 onClick={() => handleResolve(r.id, "dismiss")}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-ink hover:border-primary"
+                className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-bold text-app-ink hover:border-primary"
               >
                 Abaikan
               </button>
@@ -66,7 +66,7 @@ export default function AdminReportsPage() {
           </div>
         ))}
         {reports.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             Tidak ada laporan tertunda.
           </div>

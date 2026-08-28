@@ -1,17 +1,68 @@
 // dictionaries -- Modul Pilihan Bahasa EN/ID (permintaan langsung
-// pengguna, 29 Agustus 2026). Cakupan SENGAJA dibatasi ke situs pemasaran
-// (homepage + /features + /pricing, dilihat pengunjung SEBELUM daftar) --
-// TIDAK mencakup dashboard kreator (ribuan string tersebar di 100+ file,
-// pekerjaan i18n terpisah yang jauh lebih besar), halaman auth (/login,
-// /register, dst -- pesan error di sana datang LANGSUNG dari respons API
-// backend berbahasa Indonesia, menerjemahkan cuma label statis di
-// sekitarnya akan terasa setengah-setengah), atau halaman legal (/privacy,
-// /terms, /cookies -- dokumen panjang, biasanya sengaja TIDAK
-// diterjemahkan otomatis di produk sungguhan karena presisi bahasa hukum).
+// pengguna, 29 Agustus 2026: "pilihan bahasa en/id di navbar", lalu
+// susulan: "harusnya berfungsi di semua page termasuk dashboard dll").
+//
+// Cakupan SEKARANG (setelah susulan): situs pemasaran (homepage + /features
+// + /pricing) DITERJEMAHKAN PENUH, dan cangkang dashboard (nav sidebar +
+// label topbar, `dashboard` di bawah) diterjemahkan supaya toggle bahasa
+// SUNGGUHAN berefek begitu masuk dashboard -- TAPI ISI tiap halaman
+// dashboard (Link Bio, Toko, Statistik, dst -- ribuan string tersebar di
+// 100+ file) BELUM diterjemahkan, itu pekerjaan susulan yang jauh lebih
+// besar. Halaman auth (/login, /register, dst -- pesan error datang
+// LANGSUNG dari respons API backend berbahasa Indonesia, menerjemahkan
+// cuma label statis di sekitarnya akan terasa setengah-setengah) dan
+// halaman legal (/privacy, /terms, /cookies -- dokumen panjang, biasanya
+// sengaja TIDAK diterjemahkan otomatis di produk sungguhan karena presisi
+// bahasa hukum) SENGAJA TETAP di luar cakupan terjemahan (dark/light MODE
+// tetap berfungsi di sana, cuma bahasanya yang tidak ikut berubah).
+//
 // Lihat catatan lengkap di lib/locale-context.tsx soal kenapa pendekatan
 // client-side Context (bukan next-intl/[locale] routing).
 export const dictionaries = {
   id: {
+    dashboard: {
+      nav: {
+        overview: "Ringkasan",
+        myPageGroup: "Halaman Saya",
+        quickSetup: "Quick Setup",
+        linkBio: "Link Bio",
+        shop: "Toko",
+        statistics: "Statistik",
+        design: "Desain",
+        productsMonetization: "Produk & Monetisasi",
+        audienceMarketingGroup: "Audiens & Pemasaran",
+        audience: "Audiens",
+        socialProof: "Social Proof",
+        contactCard: "Kartu Kontak",
+        balance: "Saldo & Penarikan",
+        settings: "Pengaturan",
+      },
+      extraPages: {
+        tutorial: "Tutorial",
+        customDomain: "Domain Kustom",
+        kycVerification: "Verifikasi KYC",
+        team: "Tim & Kolaborator",
+        vouchers: "Voucher",
+        bundles: "Bundel",
+        donation: "Dukungan",
+        affiliates: "Afiliasi",
+        loyalty: "Loyalitas",
+        events: "Event",
+        courses: "Kelas & Kursus",
+        bookings: "Booking Konsultasi",
+        profileAccount: "Profil & Akun",
+        security: "Keamanan",
+        payment: "Pembayaran & Penarikan",
+        subscription: "Langganan Premium",
+        dangerZone: "Zona Berbahaya",
+      },
+      dashboardFallback: "Dashboard",
+      publicPage: "Lihat halaman publik",
+      qrCode: "Kode QR profil",
+      copyLink: "Salin tautan halaman publik",
+      linkCopied: "Tersalin!",
+      logout: "Keluar",
+    },
     nav: {
       features: "Fitur",
       templates: "Template",
@@ -191,6 +242,49 @@ export const dictionaries = {
     languageSwitcher: { label: "Bahasa" },
   },
   en: {
+    dashboard: {
+      nav: {
+        overview: "Overview",
+        myPageGroup: "My Page",
+        quickSetup: "Quick Setup",
+        linkBio: "Link Bio",
+        shop: "Shop",
+        statistics: "Statistics",
+        design: "Design",
+        productsMonetization: "Products & Monetization",
+        audienceMarketingGroup: "Audience & Marketing",
+        audience: "Audience",
+        socialProof: "Social Proof",
+        contactCard: "Contact Card",
+        balance: "Balance & Payouts",
+        settings: "Settings",
+      },
+      extraPages: {
+        tutorial: "Tutorial",
+        customDomain: "Custom Domain",
+        kycVerification: "KYC Verification",
+        team: "Team & Collaborators",
+        vouchers: "Vouchers",
+        bundles: "Bundles",
+        donation: "Donations",
+        affiliates: "Affiliates",
+        loyalty: "Loyalty",
+        events: "Events",
+        courses: "Courses & Classes",
+        bookings: "Consultation Bookings",
+        profileAccount: "Profile & Account",
+        security: "Security",
+        payment: "Payment & Payouts",
+        subscription: "Premium Subscription",
+        dangerZone: "Danger Zone",
+      },
+      dashboardFallback: "Dashboard",
+      publicPage: "View public page",
+      qrCode: "Profile QR code",
+      copyLink: "Copy public page link",
+      linkCopied: "Copied!",
+      logout: "Log Out",
+    },
     nav: {
       features: "Features",
       templates: "Templates",

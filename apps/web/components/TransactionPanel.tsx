@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600",
   paid: "bg-secondary-subtle text-secondary-dark",
-  expired: "bg-gray-100 text-muted",
+  expired: "bg-gray-100 text-app-muted",
   failed: "bg-red-50 text-red-600",
   refunded: "bg-blue-50 text-blue-600",
 };
@@ -68,16 +68,16 @@ export default function TransactionPanel() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Cari email pembeli atau nama produk..."
-            className="rounded-lg border border-border px-3 py-1.5 text-xs text-ink"
+            className="rounded-lg border border-app-border px-3 py-1.5 text-xs text-app-ink"
           />
-          <button type="submit" className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary">
+          <button type="submit" className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary">
             Cari
           </button>
         </form>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-border px-3 py-1.5 text-xs text-ink"
+          className="rounded-lg border border-app-border px-3 py-1.5 text-xs text-app-ink"
         >
           <option value="">Semua Status</option>
           <option value="paid">Lunas</option>
@@ -94,7 +94,7 @@ export default function TransactionPanel() {
         <div className="glass overflow-x-auto rounded-2xl shadow-card">
           <table className="w-full min-w-[720px] text-left text-xs">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
                 <th className="px-4 py-3">Produk</th>
                 <th className="px-4 py-3">Pembeli</th>
                 <th className="px-4 py-3">Jumlah</th>
@@ -107,25 +107,25 @@ export default function TransactionPanel() {
                 <tr
                   key={o.order_id}
                   onClick={() => setSelectedOrderId(o.order_id)}
-                  className="cursor-pointer border-b border-border last:border-0 hover:bg-primary-subtle/40"
+                  className="cursor-pointer border-b border-app-border last:border-0 hover:bg-primary-subtle/40"
                 >
-                  <td className="px-4 py-3 font-semibold text-ink">{o.product_name}</td>
-                  <td className="px-4 py-3 text-ink">{o.buyer_email}</td>
-                  <td className="px-4 py-3 text-ink">{formatIDR(o.amount_idr)}</td>
+                  <td className="px-4 py-3 font-semibold text-app-ink">{o.product_name}</td>
+                  <td className="px-4 py-3 text-app-ink">{o.buyer_email}</td>
+                  <td className="px-4 py-3 text-app-ink">{formatIDR(o.amount_idr)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_BADGE[o.status] ?? "bg-gray-100 text-muted"}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_BADGE[o.status] ?? "bg-gray-100 text-app-muted"}`}>
                       {STATUS_LABEL[o.status] ?? o.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted">{formatDateTime(o.created_at)}</td>
+                  <td className="px-4 py-3 text-app-muted">{formatDateTime(o.created_at)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {orders.length === 0 && (
             <div className="flex flex-col items-center gap-2 p-6 text-center">
-              <IconInbox className="h-5 w-5 text-muted" />
-              <p className="text-xs text-muted">Belum ada transaksi.</p>
+              <IconInbox className="h-5 w-5 text-app-muted" />
+              <p className="text-xs text-app-muted">Belum ada transaksi.</p>
             </div>
           )}
         </div>
@@ -141,8 +141,8 @@ export default function TransactionPanel() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-muted">{label}</span>
-      <span className="text-right font-semibold text-ink">{value}</span>
+      <span className="text-app-muted">{label}</span>
+      <span className="text-right font-semibold text-app-ink">{value}</span>
     </div>
   );
 }
@@ -174,11 +174,11 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-      <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-hero">
+      <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-app-surface p-6 shadow-hero">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-primary-subtle"
           aria-label="Tutup"
         >
           <IconClose className="h-4 w-4" />
@@ -190,8 +190,8 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
           <PageSkeleton />
         ) : (
           <>
-            <p className="font-heading text-sm font-bold text-ink">Detail Transaksi</p>
-            <p className="mt-0.5 truncate text-xs text-muted">{detail.order_id}</p>
+            <p className="font-heading text-sm font-bold text-app-ink">Detail Transaksi</p>
+            <p className="mt-0.5 truncate text-xs text-app-muted">{detail.order_id}</p>
 
             <div className="mt-4 flex flex-col gap-1.5 text-xs">
               <Row label="Produk" value={detail.product_name} />
@@ -217,13 +217,13 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
             </div>
 
             {detail.ledger_entries.length > 0 && (
-              <div className="mt-4 rounded-xl border border-border p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Riwayat Saldo dari Transaksi Ini</p>
+              <div className="mt-4 rounded-xl border border-app-border p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-app-muted">Riwayat Saldo dari Transaksi Ini</p>
                 <div className="mt-1.5 flex flex-col gap-1">
                   {detail.ledger_entries.map((l, i) => (
                     <div key={i} className="flex justify-between text-xs">
-                      <span className="text-muted">{l.type === "credit" ? "Masuk" : l.type === "refund_debit" ? "Refund" : l.type}</span>
-                      <span className={`font-semibold ${l.amount_idr < 0 ? "text-red-600" : "text-ink"}`}>
+                      <span className="text-app-muted">{l.type === "credit" ? "Masuk" : l.type === "refund_debit" ? "Refund" : l.type}</span>
+                      <span className={`font-semibold ${l.amount_idr < 0 ? "text-red-600" : "text-app-ink"}`}>
                         {l.amount_idr < 0 ? "-" : "+"}
                         {formatIDR(Math.abs(l.amount_idr))}
                       </span>
@@ -234,7 +234,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
             )}
 
             {detail.status === "paid" && (
-              <div className="mt-5 border-t border-border pt-4">
+              <div className="mt-5 border-t border-app-border pt-4">
                 {!confirming ? (
                   <button
                     type="button"
@@ -245,13 +245,13 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
                   </button>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-semibold text-muted">Alasan refund (opsional)</label>
+                    <label className="text-[11px] font-semibold text-app-muted">Alasan refund (opsional)</label>
                     <textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       maxLength={200}
                       rows={2}
-                      className="rounded-lg border border-border px-3 py-2 text-xs text-ink"
+                      className="rounded-lg border border-app-border px-3 py-2 text-xs text-app-ink"
                       placeholder="Contoh: pembeli komplain, salah beli, dsb"
                     />
                     <p className="text-[11px] text-red-600">
@@ -270,7 +270,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
                         type="button"
                         disabled={refunding}
                         onClick={() => setConfirming(false)}
-                        className="flex-1 rounded-lg border border-border py-2 text-xs font-semibold text-ink"
+                        className="flex-1 rounded-lg border border-app-border py-2 text-xs font-semibold text-app-ink"
                       >
                         Batal
                       </button>

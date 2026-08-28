@@ -105,29 +105,29 @@ export default function RegisterPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
         Daftar ke Jeon.id
       </h1>
-      <p className="mt-3 text-sm text-muted">
-        Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-ink">gratis</span>.
+      <p className="mt-3 text-sm text-app-muted">
+        Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-app-ink">gratis</span>.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Klaim link bio gratismu</label>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Klaim link bio gratismu</label>
           {/* Prefiks "jeon.id/" MENYATU dengan input (referensi layout
               signup Beacons) -- lebih jelas ini adalah alamat, bukan cuma
               teks bantuan terpisah di bawah field seperti sebelumnya. */}
           <div
-            className={`flex items-center rounded-xl border bg-white pl-3.5 transition-colors focus-within:ring-2 ${
+            className={`flex items-center rounded-xl border bg-app-surface pl-3.5 transition-colors focus-within:ring-2 ${
               usernameState === "available"
                 ? "border-secondary focus-within:border-secondary focus-within:ring-secondary/20"
                 : usernameState === "unavailable"
                 ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
-                : "border-border focus-within:border-primary focus-within:ring-primary/20"
+                : "border-app-border focus-within:border-primary focus-within:ring-primary/20"
             }`}
           >
-            <span className="flex-shrink-0 text-sm font-semibold text-muted">jeon.id/</span>
+            <span className="flex-shrink-0 text-sm font-semibold text-app-muted">jeon.id/</span>
             <input
               type="text"
               required
@@ -150,7 +150,7 @@ export default function RegisterPage() {
               // Pembungkus <div> di atas sudah menampilkan highlight fokus
               // sendiri lewat focus-within:ring, jadi glow bawaan pada
               // <input> mentahnya harus benar-benar dimatikan.
-              className="w-full min-w-0 bg-transparent py-3 pl-0.5 pr-3.5 text-sm text-ink focus:!shadow-none focus:outline-none"
+              className="w-full min-w-0 bg-transparent py-3 pl-0.5 pr-3.5 text-sm text-app-ink focus:!shadow-none focus:outline-none"
             />
           </div>
           {usernameState !== "idle" && (
@@ -160,7 +160,7 @@ export default function RegisterPage() {
                   ? "text-secondary-dark"
                   : usernameState === "unavailable"
                   ? "text-red-600"
-                  : "text-muted"
+                  : "text-app-muted"
               }`}
             >
               {usernameState === "checking" && "Memeriksa ketersediaan..."}
@@ -178,29 +178,29 @@ export default function RegisterPage() {
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Email</label>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Password</label>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password</label>
           <input
             type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <p className="mt-1 text-xs text-muted">Minimal 8 karakter.</p>
+          <p className="mt-1 text-xs text-app-muted">Minimal 8 karakter.</p>
         </div>
 
-        <label className="flex items-start gap-2 text-xs text-muted">
+        <label className="flex items-start gap-2 text-xs text-app-muted">
           <input
             type="checkbox"
             checked={consentAccepted}
@@ -231,7 +231,7 @@ export default function RegisterPage() {
           Google, cuma posisi tombolnya yang pindah. */}
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">atau</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
         <div className="h-px flex-1 bg-border" />
       </div>
       {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
@@ -244,7 +244,7 @@ export default function RegisterPage() {
         <AppleAuthButton label="Daftar dengan Apple" onBeforeRedirect={requireConsent} />
       </div>
 
-      <p className="mt-8 text-center text-sm text-muted">
+      <p className="mt-8 text-center text-sm text-app-muted">
         Sudah punya akun?{" "}
         <Link href="/login" className="font-semibold text-primary hover:underline">
           Masuk

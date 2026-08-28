@@ -28,7 +28,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen items-center justify-center px-4 text-center">
         <div>
           <p className="font-heading text-lg font-bold text-red-600">Akses Ditolak</p>
-          <p className="mt-1 text-sm text-muted">Halaman ini hanya untuk admin.</p>
+          <p className="mt-1 text-sm text-app-muted">Halaman ini hanya untuk admin.</p>
         </div>
       </div>
     );
@@ -36,7 +36,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
 
   if (status !== "authorized") {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
+      <div className="flex min-h-screen items-center justify-center text-sm text-app-muted">
         Memeriksa akses...
       </div>
     );

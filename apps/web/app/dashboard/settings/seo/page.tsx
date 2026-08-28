@@ -79,13 +79,13 @@ export default function SettingsSeoPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary">
+      <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary">
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Pengaturan
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-ink">SEO</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">SEO</h1>
+      <p className="mt-1 text-sm text-app-muted">
         Kontrol judul/deskripsi yang tampil di hasil pencarian & saat dibagikan, plus opsi menyembunyikan halaman dari
         mesin pencari.
       </p>
@@ -94,33 +94,33 @@ export default function SettingsSeoPage() {
 
       <form onSubmit={handleSubmit} className="glass mt-6 flex flex-col gap-5 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">Judul SEO (maks 70 karakter)</label>
+          <label className="mb-1.5 block text-sm font-semibold text-app-ink">Judul SEO (maks 70 karakter)</label>
           <input
             type="text"
             maxLength={70}
             value={seoTitle}
             placeholder={`@${page.username} — Jeon.id`}
             onChange={(e) => setSeoTitle(e.target.value)}
-            className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-ink">Deskripsi SEO (maks 160 karakter)</label>
+          <label className="mb-1.5 block text-sm font-semibold text-app-ink">Deskripsi SEO (maks 160 karakter)</label>
           <textarea
             maxLength={160}
             value={seoDescription}
             placeholder={page.bio || `Lihat semua tautan dan produk @${page.username} di Jeon.id.`}
             onChange={(e) => setSeoDescription(e.target.value)}
             rows={2}
-            className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="flex items-center justify-between border-t border-app-border pt-4">
           <div>
-            <p className="text-sm font-bold text-ink">Sembunyikan dari Mesin Pencari</p>
-            <p className="mt-0.5 text-xs text-muted">Menambahkan tag noindex supaya halamanmu tidak masuk hasil pencarian.</p>
+            <p className="text-sm font-bold text-app-ink">Sembunyikan dari Mesin Pencari</p>
+            <p className="mt-0.5 text-xs text-app-muted">Menambahkan tag noindex supaya halamanmu tidak masuk hasil pencarian.</p>
           </div>
           <Toggle checked={noindex} onChange={handleToggleNoindex} label="Sembunyikan dari mesin pencari" />
         </div>

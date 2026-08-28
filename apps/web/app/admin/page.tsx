@@ -18,11 +18,11 @@ export default function AdminSummaryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Ringkasan Admin</h1>
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Ringkasan Admin</h1>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -47,33 +47,33 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/reports"
-              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-white p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
+              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
                 <IconFlag className="h-4 w-4" />
               </span>
               <span>
-                <span className="block text-xs font-semibold text-muted">Laporan Tertunda</span>
+                <span className="block text-xs font-semibold text-app-muted">Laporan Tertunda</span>
                 <span className="block font-serifDisplay text-2xl font-semibold text-red-600">{summary.pending_reports}</span>
               </span>
             </Link>
 
             <Link
               href="/admin/payouts"
-              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-white p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-accent/40"
+              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-accent/40"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-accent-dark">
                 <IconWallet className="h-4 w-4" />
               </span>
               <span>
-                <span className="block text-xs font-semibold text-muted">Penarikan Tertunda</span>
+                <span className="block text-xs font-semibold text-app-muted">Penarikan Tertunda</span>
                 <span className="block font-serifDisplay text-2xl font-semibold text-accent-dark">{summary.pending_payouts}</span>
               </span>
             </Link>
           </section>
 
           {(summary.pending_reports > 0 || summary.pending_payouts > 0) && (
-            <p className="mt-4 text-xs text-muted">
+            <p className="mt-4 text-xs text-app-muted">
               Ada hal yang perlu ditinjau -- klik kartu &quot;Laporan Tertunda&quot; atau &quot;Penarikan Tertunda&quot; di atas.
             </p>
           )}

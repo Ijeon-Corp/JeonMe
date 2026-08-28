@@ -150,14 +150,14 @@ export default function DashboardHomePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-muted">
+        <p className="text-sm text-app-muted">
           Statistik {summary?.from_date ?? ""} sampai {summary?.to_date ?? ""}.
         </p>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting || loading}
-          className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-card hover:border-primary hover:text-primary disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-primary hover:text-primary disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {exporting ? "Mengekspor..." : "Ekspor CSV"}
@@ -172,7 +172,7 @@ export default function DashboardHomePage() {
           gambar/tema sungguhan milik kreator (itu tugas panel Pratinjau
           Langsung di halaman masing-masing, di sini cukup penanda visual). */}
       <section className="mt-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Menu Cepat</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-app-muted">Menu Cepat</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <QuickAccessCard
             href="/dashboard/links"
@@ -207,7 +207,7 @@ export default function DashboardHomePage() {
             className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               !useCustomRange && rangeDays === d
                 ? "border-primary bg-primary-subtle text-primary"
-                : "border-border text-muted hover:border-primary/50"
+                : "border-app-border text-app-muted hover:border-primary/50"
             }`}
           >
             {d} hari
@@ -225,14 +225,14 @@ export default function DashboardHomePage() {
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
           />
-          <span className="text-xs text-muted">s/d</span>
+          <span className="text-xs text-app-muted">s/d</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
           />
           <button
             type="button"
@@ -240,7 +240,7 @@ export default function DashboardHomePage() {
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
               useCustomRange
                 ? "border-primary bg-primary-subtle text-primary"
-                : "border-border text-muted hover:border-primary/50"
+                : "border-app-border text-app-muted hover:border-primary/50"
             }`}
           >
             Terapkan
@@ -317,7 +317,7 @@ export default function DashboardHomePage() {
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">Tren Kunjungan &amp; Klik</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
                       <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -329,11 +329,11 @@ export default function DashboardHomePage() {
                     <path d={viewsPath.line} fill="none" stroke="#1B4D3E" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                     <path d={clicksPath.line} fill="none" stroke="#C9A24B" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                   </svg>
-                  <div className="mt-2 flex justify-between text-[10px] text-muted">
+                  <div className="mt-2 flex justify-between text-[10px] text-app-muted">
                     <span>{summary.daily_series[0]?.date}</span>
                     <span>{summary.daily_series[summary.daily_series.length - 1]?.date}</span>
                   </div>
-                  <div className="mt-3 flex gap-4 text-[11px] text-muted">
+                  <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                     <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-primary" /> Kunjungan
                     </span>
@@ -349,8 +349,8 @@ export default function DashboardHomePage() {
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-ink">Pendapatan 7 Hari Terakhir</h2>
-                <p className="mt-2 font-heading text-xl font-bold tabular-nums text-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+                <h2 className="font-heading text-sm font-bold text-app-ink">Pendapatan 7 Hari Terakhir</h2>
+                <p className="mt-2 font-heading text-xl font-bold tabular-nums text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
                   {summary.weekly_revenue.map((d) => (
                     <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
@@ -358,7 +358,7 @@ export default function DashboardHomePage() {
                         className="w-full rounded-t bg-secondary transition-all"
                         style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }}
                       />
-                      <span className="text-[10px] text-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
+                      <span className="text-[10px] text-app-muted">{WEEKDAY_LABEL[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
                     </div>
                   ))}
                 </div>
@@ -367,11 +367,11 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">Tautan Terpopuler</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
                     <li key={l.link_id} className="flex justify-between text-xs">
-                      <span className="truncate text-ink">{l.title}</span>
+                      <span className="truncate text-app-ink">{l.title}</span>
                       <span className="ml-2 flex-shrink-0 font-semibold text-primary">{l.clicks}</span>
                     </li>
                   ))}
@@ -380,11 +380,11 @@ export default function DashboardHomePage() {
               </div>
 
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-ink">Produk Terlaris</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">Produk Terlaris</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
                     <li key={p.product_id} className="flex justify-between text-xs">
-                      <span className="truncate text-ink">{p.name}</span>
+                      <span className="truncate text-app-ink">{p.name}</span>
                       <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">{p.sold_count} terjual</span>
                     </li>
                   ))}
@@ -396,11 +396,11 @@ export default function DashboardHomePage() {
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-ink">Sumber Trafik Utama</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">Sumber Trafik Utama</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
                       <li key={r.referrer} className="flex justify-between text-xs">
-                        <span className="truncate text-ink">{r.referrer}</span>
+                        <span className="truncate text-app-ink">{r.referrer}</span>
                         <span className="ml-2 flex-shrink-0 font-semibold text-primary">{r.count}</span>
                       </li>
                     ))}
@@ -410,11 +410,11 @@ export default function DashboardHomePage() {
 
               {summary.device_breakdown.length > 0 && (
                 <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
+                  <h2 className="font-heading text-sm font-bold text-app-ink">Perangkat Pengunjung</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
                       <li key={d.device_type} className="flex items-center gap-2 text-xs">
-                        <span className="w-20 flex-shrink-0 truncate text-ink">
+                        <span className="w-20 flex-shrink-0 truncate text-app-ink">
                           {DEVICE_LABEL[d.device_type] ?? d.device_type}
                         </span>
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-subtle/50">
@@ -432,9 +432,9 @@ export default function DashboardHomePage() {
             </section>
 
             {summary.total_views === 0 && (
-              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border bg-white/60 p-5 text-center">
+              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-app-border bg-white/60 p-5 text-center">
                 <IconSparkle className="h-5 w-5 flex-shrink-0 text-accent" />
-                <p className="text-xs text-muted">
+                <p className="text-xs text-app-muted">
                   Belum ada kunjungan. Bagikan tautan halamanmu di bio Instagram/TikTok supaya statistik mulai terisi.
                 </p>
               </section>
@@ -485,7 +485,7 @@ function QuickAccessCard({
 
 function EmptyRow({ text }: { text: string }) {
   return (
-    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-muted">
+    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-app-muted">
       <IconInbox className="h-3.5 w-3.5 flex-shrink-0" />
       {text}
     </li>

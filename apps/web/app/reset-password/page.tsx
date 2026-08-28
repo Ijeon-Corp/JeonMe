@@ -66,8 +66,8 @@ export default function ResetPasswordPage() {
               />
             </svg>
           </span>
-          <h1 className="mt-5 font-heading text-2xl font-bold text-ink sm:text-3xl">Password Berhasil Diganti!</h1>
-          <p className="mt-2 text-sm text-muted">Masuk lagi pakai password barumu.</p>
+          <h1 className="mt-5 font-heading text-2xl font-bold text-app-ink sm:text-3xl">Password Berhasil Diganti!</h1>
+          <p className="mt-2 text-sm text-app-muted">Masuk lagi pakai password barumu.</p>
           <button
             type="button"
             onClick={() => router.push("/login")}
@@ -82,14 +82,14 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
         Buat Password Baru
       </h1>
-      <p className="mt-3 text-sm text-muted">Masukkan password baru untuk akunmu. Tautan ini berlaku 1 jam sejak diminta.</p>
+      <p className="mt-3 text-sm text-app-muted">Masukkan password baru untuk akunmu. Tautan ini berlaku 1 jam sejak diminta.</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted">Password Baru</label>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password Baru</label>
           <input
             type="password"
             autoFocus
@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Minimal 8 karakter"
-            className="w-full rounded-xl border border-border px-3.5 py-3 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm text-app-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-6 text-center text-sm text-app-muted">
         Kembali ke{" "}
         <Link href="/login" className="font-semibold text-primary hover:underline">
           halaman masuk

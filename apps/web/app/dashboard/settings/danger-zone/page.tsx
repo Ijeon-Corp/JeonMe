@@ -118,25 +118,25 @@ export default function DangerZonePage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Pengaturan
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-ink">Zona Berbahaya</h1>
-      <p className="mt-1 text-sm text-muted">Nonaktifkan atau hapus akunmu, dan unduh data pribadimu.</p>
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Zona Berbahaya</h1>
+      <p className="mt-1 text-sm text-app-muted">Nonaktifkan atau hapus akunmu, dan unduh data pribadimu.</p>
 
-      <section className="mt-6 rounded-3xl border border-border bg-white p-5">
-        <h2 className="font-heading text-sm font-bold text-ink">Nonaktifkan Akun</h2>
-        <p className="mt-1 text-xs text-muted">
+      <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
+        <h2 className="font-heading text-sm font-bold text-app-ink">Nonaktifkan Akun</h2>
+        <p className="mt-1 text-xs text-app-muted">
           Halaman publikmu langsung tidak tampil, tapi semua data & pengaturanmu tetap utuh. Bisa diaktifkan
           kembali kapan pun.
         </p>
 
         {status?.deactivated ? (
           <div className="mt-3 flex items-center justify-between rounded-lg bg-primary-subtle/50 px-3 py-2.5">
-            <span className="text-xs font-semibold text-ink">Akunmu sedang nonaktif.</span>
+            <span className="text-xs font-semibold text-app-ink">Akunmu sedang nonaktif.</span>
             <button
               type="button"
               onClick={handleReactivate}
@@ -154,12 +154,12 @@ export default function DangerZonePage() {
               placeholder="Masukkan password"
               value={deactivatePassword}
               onChange={(e) => setDeactivatePassword(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
             />
             <button
               type="submit"
               disabled={deactivating}
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-ink hover:border-primary disabled:opacity-60"
+              className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-ink hover:border-primary disabled:opacity-60"
             >
               {deactivating ? "Memproses..." : "Nonaktifkan"}
             </button>
@@ -167,16 +167,16 @@ export default function DangerZonePage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
-        <h2 className="font-heading text-sm font-bold text-ink">Ekspor Data</h2>
-        <p className="mt-1 text-xs text-muted">
+      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
+        <h2 className="font-heading text-sm font-bold text-app-ink">Ekspor Data</h2>
+        <p className="mt-1 text-xs text-app-muted">
           Unduh salinan data produk, histori transaksi, dan daftar pelanggan sebelum menghapus akun.
         </p>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="mt-3 rounded-lg border border-border px-4 py-2 text-xs font-bold text-ink hover:border-primary disabled:opacity-60"
+          className="mt-3 rounded-lg border border-app-border px-4 py-2 text-xs font-bold text-app-ink hover:border-primary disabled:opacity-60"
         >
           {exporting ? "Menyiapkan..." : "Unduh Data Saya"}
         </button>
@@ -198,7 +198,7 @@ export default function DangerZonePage() {
               type="button"
               onClick={handleCancelDeletion}
               disabled={cancelling}
-              className="mt-3 rounded-lg bg-white px-4 py-2 text-xs font-bold text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-100 disabled:opacity-60"
+              className="mt-3 rounded-lg bg-app-surface px-4 py-2 text-xs font-bold text-red-700 ring-1 ring-inset ring-red-300 hover:bg-red-100 disabled:opacity-60"
             >
               {cancelling ? "Memproses..." : "Batalkan Penghapusan"}
             </button>
@@ -216,7 +216,7 @@ export default function DangerZonePage() {
                 placeholder="Ketik username-mu untuk konfirmasi"
                 value={usernameConfirmation}
                 onChange={(e) => setUsernameConfirmation(e.target.value)}
-                className="rounded-lg border border-red-200 bg-white px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none"
+                className="rounded-lg border border-red-200 bg-app-surface px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none"
               />
               <input
                 type="password"
@@ -224,7 +224,7 @@ export default function DangerZonePage() {
                 placeholder="Password"
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}
-                className="rounded-lg border border-red-200 bg-white px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none"
+                className="rounded-lg border border-red-200 bg-app-surface px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none"
               />
               <button
                 type="submit"

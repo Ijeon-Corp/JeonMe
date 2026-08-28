@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             tua, kontras jelek di atas latar sidebar sehijau ini juga --
             lihat catatan sama di dashboard/layout.tsx). */}
         <Link href="/admin" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface p-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-baru.png" alt="Jeon.id" className="h-full w-full object-contain" />
           </span>
@@ -120,12 +120,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin" className="flex items-center gap-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-baru.png" alt="Jeon.id" className="h-7 w-auto" />
-              <span className="font-heading text-lg font-extrabold text-ink">Admin</span>
+              <span className="font-heading text-lg font-extrabold text-app-ink">Admin</span>
             </Link>
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-ink hover:bg-primary-subtle"
+              className="rounded-lg p-2 text-app-ink hover:bg-primary-subtle"
               aria-label="Buka menu"
             >
               <IconMenu className="h-5 w-5" />

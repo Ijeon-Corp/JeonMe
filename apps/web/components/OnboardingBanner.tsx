@@ -94,7 +94,7 @@ export default function OnboardingBanner() {
             <IconSparkle className="h-3.5 w-3.5" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-ink">
+            <p className="text-xs font-bold text-app-ink">
               {allDone ? "Setup akunmu selesai!" : "Lengkapi setup akunmu"} -- {doneCount}/{total} selesai
             </p>
             <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-white/70 sm:w-48">
@@ -112,7 +112,7 @@ export default function OnboardingBanner() {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary"
+            className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
           >
             {expanded ? "Sembunyikan" : "Lihat semua"}
             <IconChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
@@ -122,7 +122,7 @@ export default function OnboardingBanner() {
             onClick={handleDismiss}
             disabled={busy}
             title="Tutup"
-            className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-black/5"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-app-muted hover:bg-black/5"
           >
             <IconClose className="h-3.5 w-3.5" />
           </button>
@@ -134,14 +134,14 @@ export default function OnboardingBanner() {
           {checklist.map((item) => (
             <li key={item.key}>
               {item.done ? (
-                <span className="flex items-center gap-2 text-xs text-muted">
+                <span className="flex items-center gap-2 text-xs text-app-muted">
                   <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
                     <IconCheck className="h-3 w-3" />
                   </span>
                   <span className="line-through">{item.label}</span>
                 </span>
               ) : (
-                <Link href={item.href} className="flex items-center gap-2 text-xs font-semibold text-ink hover:text-primary">
+                <Link href={item.href} className="flex items-center gap-2 text-xs font-semibold text-app-ink hover:text-primary">
                   <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-dashed border-muted" />
                   {item.label}
                 </Link>

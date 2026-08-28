@@ -41,14 +41,14 @@ function StepCard({ index, title, body, href }: { index: number; title: string; 
   return (
     <Link
       href={href}
-      className="flex gap-3 rounded-2xl border border-border bg-white p-4 transition-colors hover:border-primary"
+      className="flex gap-3 rounded-2xl border border-app-border bg-app-surface p-4 transition-colors hover:border-primary"
     >
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-bold text-primary">
         {index}
       </span>
       <span>
-        <span className="block text-sm font-bold text-ink">{title}</span>
-        <span className="mt-0.5 block text-xs text-muted">{body}</span>
+        <span className="block text-sm font-bold text-app-ink">{title}</span>
+        <span className="mt-0.5 block text-xs text-app-muted">{body}</span>
       </span>
     </Link>
   );
@@ -57,16 +57,16 @@ function StepCard({ index, title, body, href }: { index: number; title: string; 
 export default function TutorialPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="flex items-center gap-2 font-heading text-2xl font-bold text-ink">
+      <h1 className="flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
         <IconSparkle className="h-6 w-6 text-primary" />
         Tutorial
       </h1>
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Panduan singkat membuat link bio dan produk pertamamu di Jeon.id.
       </p>
 
       <section className="mt-6">
-        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
+        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
           <IconLink className="h-4 w-4 text-primary" />
           Membuat Link Bio
         </h2>
@@ -78,7 +78,7 @@ export default function TutorialPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-ink">
+        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
           <IconBox className="h-4 w-4 text-primary" />
           Menjual Produk
         </h2>
@@ -89,7 +89,7 @@ export default function TutorialPage() {
         </div>
       </section>
 
-      <p className="mt-8 rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+      <p className="mt-8 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
         Butuh bantuan lebih lanjut? Hubungi kami lewat halaman{" "}
         <Link href="/dashboard/audience" className="font-semibold text-primary hover:underline">
           Audiens

@@ -82,7 +82,7 @@ export default function DashboardAnalyticsPage() {
   return (
     <div className="mx-auto max-w-lg">
       <div className="flex items-center gap-2">
-        <p className="text-sm text-muted">Integrasikan pixel untuk melacak pengunjung halamanmu di Facebook dan Google.</p>
+        <p className="text-sm text-app-muted">Integrasikan pixel untuk melacak pengunjung halamanmu di Facebook dan Google.</p>
       </div>
 
       {!isPremium && (
@@ -98,18 +98,18 @@ export default function DashboardAnalyticsPage() {
 
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-5 rounded-3xl p-5 shadow-card">
         <div>
-          <p className="text-sm font-bold text-ink">Facebook</p>
+          <p className="text-sm font-bold text-app-ink">Facebook</p>
 
-          <label className="mb-1 mt-3 block text-xs font-semibold text-ink">Pixel ID</label>
+          <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Pixel ID</label>
           <input
             type="text"
             value={fbPixelId}
             onChange={(e) => setFbPixelId(e.target.value)}
             placeholder="Contoh: 1234567890"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
 
-          <label className="mb-1 mt-3 block text-xs font-semibold text-ink">Facebook Conversions API Access Token</label>
+          <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Facebook Conversions API Access Token</label>
           <input
             type="password"
             value={tokenInput}
@@ -118,10 +118,10 @@ export default function DashboardAnalyticsPage() {
               if (e.target.value) setClearToken(false);
             }}
             placeholder={fbAccessTokenSet && !clearToken ? "•••••••• (tersimpan, isi untuk mengganti)" : "Token dari Facebook Events Manager"}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <div className="mt-1 flex items-center justify-between">
-            <p className="text-[11px] text-muted">Token dari Facebook Events Manager.</p>
+            <p className="text-[11px] text-app-muted">Token dari Facebook Events Manager.</p>
             {fbAccessTokenSet && !clearToken && (
               <button
                 type="button"
@@ -139,21 +139,21 @@ export default function DashboardAnalyticsPage() {
         </div>
 
         <div>
-          <p className="text-sm font-bold text-ink">Google</p>
-          <label className="mb-1 mt-3 block text-xs font-semibold text-ink">Google Measurement ID</label>
+          <p className="text-sm font-bold text-app-ink">Google</p>
+          <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Google Measurement ID</label>
           <input
             type="text"
             value={gaMeasurementId}
             onChange={(e) => setGaMeasurementId(e.target.value)}
             placeholder="Contoh: G-XXXXXXXXXX"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="flex items-center justify-between border-t border-app-border pt-4">
           <div>
-            <p className="text-sm font-bold text-ink">Parameter UTM</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="text-sm font-bold text-app-ink">Parameter UTM</p>
+            <p className="mt-0.5 text-xs text-app-muted">
               Tandai halaman Jeon.id-mu sebagai trafik &apos;social&apos; di Google Analytics. Parameter kampanye diatur
               otomatis dari judul tiap tautan.
             </p>

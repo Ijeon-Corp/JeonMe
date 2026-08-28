@@ -19,7 +19,7 @@ export default function AuthShowcase() {
     <div className="flex h-full flex-col items-center justify-center gap-8 overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/hero.png" alt="Pratinjau halaman bio & dashboard Jeon.id" className="w-full max-w-xl object-contain" />
-      <p className="max-w-md text-center font-heading text-2xl font-bold leading-snug text-ink" style={{ textWrap: "balance" }}>
+      <p className="max-w-md text-center font-heading text-2xl font-bold leading-snug text-app-ink" style={{ textWrap: "balance" }}>
         &ldquo;<span className="text-primary">Satu halaman</span> untuk jualan produk digital, terima dukungan, dan kelola semua tautan kamu.&rdquo;
       </p>
     </div>

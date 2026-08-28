@@ -71,15 +71,15 @@ export default function StatistikPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <p className="text-sm text-muted">Jumlah klik tautan dan performa penjualan produkmu.</p>
+      <p className="text-sm text-app-muted">Jumlah klik tautan dan performa penjualan produkmu.</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 border-b border-border">
+        <div className="flex gap-2 border-b border-app-border">
           <button
             type="button"
             onClick={() => setTab("link-bio")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "link-bio" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "link-bio" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             <IconLink className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function StatistikPage() {
             type="button"
             onClick={() => setTab("toko")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "toko" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "toko" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             <IconBox className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function StatistikPage() {
               className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                 rangeDays === d
                   ? "border-primary bg-primary-subtle text-primary"
-                  : "border-border text-muted hover:border-primary/50"
+                  : "border-app-border text-app-muted hover:border-primary/50"
               }`}
             >
               {d} hari
@@ -128,7 +128,7 @@ export default function StatistikPage() {
 
           {summary.daily_series.length > 0 && (
             <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-ink">Tren Kunjungan &amp; Klik</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">Tren Kunjungan &amp; Klik</h2>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
                   <linearGradient id="statViewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -140,11 +140,11 @@ export default function StatistikPage() {
                 <path d={viewsPath.line} fill="none" stroke="#1B4D3E" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                 <path d={clicksPath.line} fill="none" stroke="#C9A24B" strokeWidth="1" vectorEffect="non-scaling-stroke" />
               </svg>
-              <div className="mt-2 flex justify-between text-[10px] text-muted">
+              <div className="mt-2 flex justify-between text-[10px] text-app-muted">
                 <span>{summary.daily_series[0]?.date}</span>
                 <span>{summary.daily_series[summary.daily_series.length - 1]?.date}</span>
               </div>
-              <div className="mt-3 flex gap-4 text-[11px] text-muted">
+              <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-primary" /> Kunjungan
                 </span>
@@ -157,11 +157,11 @@ export default function StatistikPage() {
 
           <section className="mt-3 grid gap-3 sm:grid-cols-2">
             <div className="glass rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-ink">Tautan Terpopuler</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">Tautan Terpopuler</h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {summary.top_links.map((l) => (
                   <li key={l.link_id} className="flex justify-between text-xs">
-                    <span className="truncate text-ink">{l.title}</span>
+                    <span className="truncate text-app-ink">{l.title}</span>
                     <span className="ml-2 flex-shrink-0 font-semibold text-primary">{l.clicks} klik</span>
                   </li>
                 ))}
@@ -171,11 +171,11 @@ export default function StatistikPage() {
 
             {summary.device_breakdown.length > 0 && (
               <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-ink">Perangkat Pengunjung</h2>
+                <h2 className="font-heading text-sm font-bold text-app-ink">Perangkat Pengunjung</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.device_breakdown.map((d) => (
                     <li key={d.device_type} className="flex items-center gap-2 text-xs">
-                      <span className="w-20 flex-shrink-0 truncate text-ink">{DEVICE_LABEL[d.device_type] ?? d.device_type}</span>
+                      <span className="w-20 flex-shrink-0 truncate text-app-ink">{DEVICE_LABEL[d.device_type] ?? d.device_type}</span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-subtle/50">
                         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }} />
                       </div>
@@ -198,7 +198,7 @@ export default function StatistikPage() {
 
 function EmptyRow({ text }: { text: string }) {
   return (
-    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-muted">
+    <li className="flex items-center justify-center gap-2 py-2 text-center text-xs text-app-muted">
       <IconInbox className="h-3.5 w-3.5 flex-shrink-0" />
       {text}
     </li>

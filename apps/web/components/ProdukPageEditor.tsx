@@ -212,11 +212,11 @@ export default function ProdukPageEditor({
     return (
       <div className="glass mx-auto max-w-xl rounded-2xl p-8 text-center shadow-card">
         <IconSparkle className="mx-auto h-8 w-8 text-primary" />
-        <h2 className="mt-3 font-heading text-lg font-bold text-ink">Halaman Toko belum aktif</h2>
-        <p className="mt-2 text-sm text-muted">
+        <h2 className="mt-3 font-heading text-lg font-bold text-app-ink">Halaman Toko belum aktif</h2>
+        <p className="mt-2 text-sm text-app-muted">
           Halaman Toko-mu otomatis dibuat & dipublikasikan begitu kamu menambahkan produk pertama di tab Manage Items --
           tidak perlu langkah manual apa pun. Kalau mau menyiapkan bio/tema/blok-nya lebih awal, buat sekarang juga bisa,
-          URL-nya selalu <span className="font-semibold text-ink">jeon.id/{username}/{username}</span>.
+          URL-nya selalu <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
         </p>
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button
@@ -235,7 +235,7 @@ export default function ProdukPageEditor({
     <div className="min-w-0">
       <section className="glass rounded-2xl p-5 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-lg font-bold text-ink">Halaman Toko</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">Halaman Toko</h2>
           <a
             href={`${SITE_URL}/${username}/${page.slug}`}
             target="_blank"
@@ -248,13 +248,13 @@ export default function ProdukPageEditor({
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-          <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-muted"}`}>
+          <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-app-muted"}`}>
             {page.is_published ? "Sudah terbit" : "Belum terbit"}
           </span>
         </div>
         <div className="mt-4 flex items-center gap-2">
           <Toggle checked={page.is_published} onChange={() => handlePatch({ is_published: !page.is_published })} label="Terbitkan halaman Toko" />
-          <span className="text-sm font-semibold text-ink">Terbitkan halaman Toko</span>
+          <span className="text-sm font-semibold text-app-ink">Terbitkan halaman Toko</span>
         </div>
         {/* Modul Langganan Premium (permintaan langsung pengguna, 8 Agustus
             2026): toggle watermark yang SAMA seperti halaman Bio utama
@@ -271,10 +271,10 @@ export default function ProdukPageEditor({
           <button
             type="button"
             onClick={() => !page.is_premium && router.push("/dashboard/settings/subscription")}
-            className="flex items-center gap-1 text-sm font-semibold text-ink"
+            className="flex items-center gap-1 text-sm font-semibold text-app-ink"
           >
             Sembunyikan watermark
-            {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-muted" />}
+            {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-app-muted" />}
           </button>
         </div>
         {/* Layout grid Produk -- permintaan langsung pengguna, 19 Agustus
@@ -293,7 +293,7 @@ export default function ProdukPageEditor({
             (bukan `!== "stacked"` seperti sebelumnya) supaya opsi ketiga ini
             tidak ikut salah ke-highlight sebagai "Grid 2 Kolom". */}
         <div className="mt-4">
-          <p className="text-sm font-semibold text-ink">Tata Letak Produk</p>
+          <p className="text-sm font-semibold text-app-ink">Tata Letak Produk</p>
           <div className="mt-1.5 flex flex-col gap-1.5 sm:flex-row">
             <button
               type="button"
@@ -301,7 +301,7 @@ export default function ProdukPageEditor({
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
                 !page.product_layout || page.product_layout === "grid"
                   ? "border-primary bg-primary-subtle text-primary"
-                  : "border-border text-muted hover:text-ink"
+                  : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
               Grid 2 Kolom
@@ -310,7 +310,7 @@ export default function ProdukPageEditor({
               type="button"
               onClick={() => handlePatch({ product_layout: "stacked" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+                page.product_layout === "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
               1 Kolom Penuh
@@ -319,14 +319,14 @@ export default function ProdukPageEditor({
               type="button"
               onClick={() => handlePatch({ product_layout: "category" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "category" ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted hover:text-ink"
+                page.product_layout === "category" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
               Blok Kategori
             </button>
           </div>
           {page.product_layout === "category" && (
-            <p className="mt-1.5 text-[11px] text-muted">
+            <p className="mt-1.5 text-[11px] text-app-muted">
               Pengunjung melihat blok kategori dulu (mis. Sepatu, Baju, Celana) -- klik satu blok untuk lihat semua produk di
               kategori itu. Pastikan produkmu sudah diberi kategori lewat menu Kelola supaya masuk ke blok yang tepat.
             </p>
@@ -352,7 +352,7 @@ export default function ProdukPageEditor({
             type="button"
             onClick={() => setSection(key)}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
-              section === key ? "bg-primary-subtle text-primary" : "text-muted hover:text-ink"
+              section === key ? "bg-primary-subtle text-primary" : "text-app-muted hover:text-app-ink"
             }`}
           >
             {label}
@@ -396,10 +396,10 @@ function FormField({ label, hint, children }: { label: string; hint?: string; ch
   return (
     <div className="flex flex-col gap-1">
       <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-app-muted">{label}</span>
         {children}
       </label>
-      {hint && <p className="text-[10.5px] text-muted">{hint}</p>}
+      {hint && <p className="text-[10.5px] text-app-muted">{hint}</p>}
     </div>
   );
 }
@@ -651,7 +651,7 @@ function BlockSection({
                   onClick={() => setBlockType(tile.key)}
                   title={tile.description}
                   className={`flex flex-col items-center gap-1 rounded-xl border p-2.5 text-center ${
-                    blockType === tile.key ? "border-primary bg-primary-subtle text-primary" : "border-border text-muted"
+                    blockType === tile.key ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
                   }`}
                 >
                   <tile.Icon className="h-5 w-5" />
@@ -678,7 +678,7 @@ function BlockSection({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Judul"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
             </FormField>
 
@@ -690,7 +690,7 @@ function BlockSection({
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -702,7 +702,7 @@ function BlockSection({
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="Tautan YouTube/TikTok"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -715,10 +715,10 @@ function BlockSection({
                     value={mapsUrl}
                     onChange={(e) => setMapsUrl(e.target.value)}
                     placeholder="Tautan Google Maps"
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
-                <label className="flex items-center gap-2 text-xs font-semibold text-ink">
+                <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
                   <input type="checkbox" checked={mapsEmbed} onChange={(e) => setMapsEmbed(e.target.checked)} />
                   Tampilkan tertanam (embed), bukan cuma tautan
                 </label>
@@ -732,7 +732,7 @@ function BlockSection({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Isi teks..."
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -744,21 +744,21 @@ function BlockSection({
                   value={accordionText}
                   onChange={(e) => setAccordionText(e.target.value)}
                   placeholder="Isi teks yang muncul saat judul di atas diklik..."
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
             {blockType === "faq" && (
               <div className="flex flex-col gap-2">
                 {faqItems.map((item, idx) => (
-                  <div key={idx} className="flex flex-col gap-1.5 rounded-lg border border-border p-2.5">
+                  <div key={idx} className="flex flex-col gap-1.5 rounded-lg border border-app-border p-2.5">
                     <FormField label={`Pertanyaan ${idx + 1}`}>
                       <input
                         type="text"
                         value={item.question}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)))}
                         placeholder="Pertanyaan"
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                     <FormField label="Jawaban">
@@ -767,7 +767,7 @@ function BlockSection({
                         value={item.answer}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)))}
                         placeholder="Jawaban"
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   </div>
@@ -782,10 +782,10 @@ function BlockSection({
               </div>
             )}
             {blockType === "contact_form" && (
-              <p className="text-xs text-muted">Formulir siap pakai -- pengunjung isi nama/email/pesan, terkirim ke emailmu.</p>
+              <p className="text-xs text-app-muted">Formulir siap pakai -- pengunjung isi nama/email/pesan, terkirim ke emailmu.</p>
             )}
             {(blockType === "gallery" || blockType === "audio" || blockType === "file") && (
-              <p className="text-xs text-muted">
+              <p className="text-xs text-app-muted">
                 {blockType === "gallery"
                   ? 'Buat blok dulu, foto ditambahkan setelahnya lewat panel "Kelola foto" di kartu blok.'
                   : blockType === "audio"
@@ -801,7 +801,7 @@ function BlockSection({
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -814,7 +814,7 @@ function BlockSection({
       </section>
 
       <div className="flex flex-col gap-2">
-        {links.length === 0 && <p className="text-center text-xs text-muted">Belum ada blok/tautan -- tambahkan lewat tombol di atas.</p>}
+        {links.length === 0 && <p className="text-center text-xs text-app-muted">Belum ada blok/tautan -- tambahkan lewat tombol di atas.</p>}
         {links.map((link) => (
           <div
             key={link.id}
@@ -822,20 +822,20 @@ function BlockSection({
             onDragStart={() => setDragId(link.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(link.id)}
-            className="flex flex-col gap-2.5 rounded-xl border border-border bg-white p-3 shadow-card"
+            className="flex flex-col gap-2.5 rounded-xl border border-app-border bg-app-surface p-3 shadow-card"
           >
             <div className="flex items-center gap-2.5">
-              <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
+              <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {link.lock_type && <IconLock className="mr-1 inline h-3.5 w-3.5 text-muted" />}
+                <p className="truncate text-sm font-semibold text-app-ink">
+                  {link.lock_type && <IconLock className="mr-1 inline h-3.5 w-3.5 text-app-muted" />}
                   {link.title}
                 </p>
-                <p className="truncate text-xs text-muted">
+                <p className="truncate text-xs text-app-muted">
                   {link.block_type && link.block_type !== "link" ? BLOCK_LABEL[link.block_type] ?? link.block_type : link.url}
                 </p>
               </div>
-              <button type="button" onClick={() => handleDelete(link.id)} className="flex-shrink-0 rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600">
+              <button type="button" onClick={() => handleDelete(link.id)} className="flex-shrink-0 rounded-lg p-1.5 text-app-muted hover:bg-red-50 hover:text-red-600">
                 <IconTrash className="h-4 w-4" />
               </button>
             </div>
@@ -845,8 +845,8 @@ function BlockSection({
                 dibalik toggle) karena inti dari blok ini, sama seperti
                 catatan di dashboard/links/page.tsx. */}
             {link.block_type === "gallery" && (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                <p className="text-[11px] font-semibold text-muted">
+              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <p className="text-[11px] font-semibold text-app-muted">
                   {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -866,7 +866,7 @@ function BlockSection({
                   ))}
                   {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                     <label
-                      className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                      className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
                         galleryUploadingId === link.id ? "opacity-60" : ""
                       }`}
                     >
@@ -891,11 +891,11 @@ function BlockSection({
               </div>
             )}
             {link.block_type === "audio" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.audio_url as string) ? "Audio terunggah." : "Belum ada audio (mp3/wav/m4a/ogg, maks 15MB)."}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                   {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti" : "Unggah"}
                   <input
                     type="file"
@@ -916,11 +916,11 @@ function BlockSection({
                 pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                 pola sama persis seperti panel Kelola audio di atas. */}
             {link.block_type === "file" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.file_url as string) ? "File terunggah." : "Belum ada file (pdf/zip/epub, maks 20MB)."}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                   {fileUploadingId === link.id ? "Mengunggah..." : (link.block_data?.file_url as string) ? "Ganti" : "Unggah"}
                   <input
                     type="file"
@@ -980,7 +980,7 @@ function TemaSection({
         <button type="button" onClick={() => (isPremium ? onPatch({ theme: "custom", custom_style_override: false }) : onError("Latar kustom khusus kreator Premium."))} className="group flex flex-col items-center gap-1.5">
           <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-primary ring-offset-2" : ""}`}>
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
-              <IconPaintbrush className="h-7 w-7 text-muted" />
+              <IconPaintbrush className="h-7 w-7 text-app-muted" />
             </div>
             {!isPremium && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -988,7 +988,7 @@ function TemaSection({
               </div>
             )}
           </div>
-          <span className="text-[11px] font-semibold text-ink">Custom{!isPremium && " (Premium)"}</span>
+          <span className="text-[11px] font-semibold text-app-ink">Custom{!isPremium && " (Premium)"}</span>
         </button>
         {THEME_PRESETS.map((themeName) => {
           const meta = PAGE_THEMES[themeName as keyof typeof PAGE_THEMES];
@@ -997,7 +997,7 @@ function TemaSection({
             <button key={themeName} type="button" onClick={() => onPatch({ theme: themeName, custom_style_override: false })} className="group flex flex-col items-center gap-1.5">
               <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-primary ring-offset-2" : ""}`}>
                 <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
-                <span className={`absolute left-2.5 top-2 font-heading text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-ink"}`} aria-hidden>
+                <span className={`absolute left-2.5 top-2 font-heading text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
                   Aa
                 </span>
                 <span className={`absolute inset-x-2.5 bottom-2.5 h-5 rounded-full ring-1 ring-black/10 ${meta.buyButton}`} aria-hidden />
@@ -1007,15 +1007,15 @@ function TemaSection({
                   </span>
                 )}
               </div>
-              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-primary" : "text-ink"}`}>{meta.label}</span>
+              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-primary" : "text-app-ink"}`}>{meta.label}</span>
             </button>
           );
         })}
       </div>
 
       {page.theme === "custom" && isPremium && (
-        <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Latar Kustom</p>
+        <div className="mt-5 flex flex-col gap-3 border-t border-app-border pt-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Latar Kustom</p>
           <div className="flex gap-2">
             {(["solid", "gradient", "image"] as const).map((t) => (
               <button
@@ -1023,7 +1023,7 @@ function TemaSection({
                 type="button"
                 onClick={() => onPatch({ custom_background_type: t })}
                 className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold capitalize ${
-                  page.custom_background_type === t ? "border-primary bg-white text-primary" : "border-border text-muted"
+                  page.custom_background_type === t ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
                 }`}
               >
                 {t === "solid" ? "Warna" : t === "gradient" ? "Gradien" : "Gambar"}
@@ -1031,7 +1031,7 @@ function TemaSection({
             ))}
           </div>
           {page.custom_background_type === "image" ? (
-            <label className="cursor-pointer self-start rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary">
+            <label className="cursor-pointer self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
               {bgUploading ? "Mengunggah..." : "Unggah gambar latar"}
               <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleBackgroundUpload} disabled={bgUploading} className="hidden" />
             </label>
@@ -1041,7 +1041,7 @@ function TemaSection({
               value={page.custom_background_value || (page.custom_background_type === "solid" ? "#1B4D3E" : "")}
               onChange={(e) => onPatch({ custom_background_value: e.target.value })}
               placeholder={page.custom_background_type === "gradient" ? "linear-gradient(...)" : undefined}
-              className="h-9 w-full rounded-lg border border-border px-3 text-sm"
+              className="h-9 w-full rounded-lg border border-app-border px-3 text-sm"
             />
           )}
         </div>
@@ -1124,7 +1124,7 @@ function HeaderSection({
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Foto Profil Toko</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Foto Profil Toko</label>
         <div className="flex items-center gap-3">
           {page.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1134,32 +1134,32 @@ function HeaderSection({
               {page.slug.slice(0, 1).toUpperCase()}
             </div>
           )}
-          <label className="cursor-pointer rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary">
+          <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
             {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
             <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={avatarUploading} className="hidden" />
           </label>
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Nama Tampilan</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Nama Tampilan</label>
         <input
           type="text"
           maxLength={100}
           value={page.display_name}
           onChange={(e) => setPage({ ...page, display_name: e.target.value })}
           onBlur={(e) => onPatch({ display_name: e.target.value })}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Bio (maks 160 karakter)</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bio (maks 160 karakter)</label>
         <textarea
           maxLength={160}
           rows={3}
           value={page.bio}
           onChange={(e) => setPage({ ...page, bio: e.target.value })}
           onBlur={(e) => onPatch({ bio: e.target.value })}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -1167,7 +1167,7 @@ function HeaderSection({
           header/page.tsx), lihat catatan lengkap di sana soal kenapa
           pemilih manual ini perlu ada. */}
       <div>
-        <label className="mb-1 block text-xs font-semibold text-ink">Layout</label>
+        <label className="mb-1 block text-xs font-semibold text-app-ink">Layout</label>
         <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {LAYOUT_OPTIONS.map((opt) => (
             <button
@@ -1178,11 +1178,11 @@ function HeaderSection({
                 onPatch({ layout_variant: opt.value });
               }}
               className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-colors ${
-                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-border bg-white hover:border-primary/50"
+                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-app-border bg-app-surface hover:border-primary/50"
               }`}
             >
-              <span className="text-[11px] font-bold text-ink">{opt.label}</span>
-              <span className="text-[9px] leading-snug text-muted">{opt.description}</span>
+              <span className="text-[11px] font-bold text-app-ink">{opt.label}</span>
+              <span className="text-[9px] leading-snug text-app-muted">{opt.description}</span>
             </button>
           ))}
         </div>
@@ -1191,17 +1191,17 @@ function HeaderSection({
       {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026,
           paritas penuh dengan halaman utama (lihat catatan lengkap di
           dashboard/links/page.tsx). */}
-      <div className="rounded-xl border border-border">
+      <div className="rounded-xl border border-app-border">
         <button
           type="button"
           onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
-          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-ink"
+          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-app-ink"
         >
           Kontak Sosial
-          <IconChevronRight className={`h-3.5 w-3.5 text-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
+          <IconChevronRight className={`h-3.5 w-3.5 text-app-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
         </button>
         {socialOpen && (
-          <div className="border-t border-border p-3">
+          <div className="border-t border-app-border p-3">
             <div className="grid grid-cols-1 gap-2">
               {SOCIAL_PLATFORMS.map((p) => (
                 <div key={p.key} className="flex items-center gap-2">
@@ -1214,19 +1214,19 @@ function HeaderSection({
                     onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                     placeholder={`${p.label} · ${p.placeholder}`}
                     aria-label={p.label}
-                    className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
+                    className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-primary focus:outline-none"
                   />
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-muted">
+            <p className="mt-2 text-[11px] text-app-muted">
               Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
             </p>
             <div className="mt-3 flex items-center gap-2">
               <button type="button" onClick={saveSocial} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white">
                 Simpan
               </button>
-              <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-muted hover:text-ink">
+              <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
                 Batal
               </button>
             </div>
@@ -1251,17 +1251,17 @@ function TombolSection({
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Tombol</label>
         <input
           type="color"
           value={page.custom_button_color}
           onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
           onBlur={(e) => onStyleOverride({ custom_button_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-border"
+          className="h-9 w-full rounded-lg border border-app-border"
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Gaya Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Gaya Tombol</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
             <button
@@ -1269,7 +1269,7 @@ function TombolSection({
               type="button"
               onClick={() => onStyleOverride({ custom_button_style: opt.value })}
               className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_style === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
+                page.custom_button_style === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
               }`}
             >
               {opt.label}
@@ -1278,7 +1278,7 @@ function TombolSection({
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Kelengkungan Sudut</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Kelengkungan Sudut</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_ROUNDED_OPTIONS.map((opt) => (
             <button
@@ -1287,7 +1287,7 @@ function TombolSection({
               onClick={() => onStyleOverride({ custom_button_rounded: opt.value })}
               title={opt.label}
               className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
-                page.custom_button_rounded === opt.value ? "border-primary bg-white" : "border-border"
+                page.custom_button_rounded === opt.value ? "border-primary bg-app-surface" : "border-app-border"
               }`}
             >
               <span className={`block h-3 w-6 border-2 border-ink/60 ${opt.className}`} aria-hidden />
@@ -1296,7 +1296,7 @@ function TombolSection({
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Bayangan Tombol</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bayangan Tombol</label>
         <div className="flex gap-2">
           {CUSTOM_BUTTON_SHADOW_OPTIONS.map((opt) => (
             <button
@@ -1304,7 +1304,7 @@ function TombolSection({
               type="button"
               onClick={() => onStyleOverride({ custom_button_shadow: opt.value })}
               className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_shadow === opt.value ? "border-primary bg-white text-primary" : "border-border text-muted"
+                page.custom_button_shadow === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
               }`}
             >
               {opt.label}
@@ -1330,11 +1330,11 @@ function FontSection({
   return (
     <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Font Halaman</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Font Halaman</label>
         <select
           value={page.custom_font}
           onChange={(e) => onStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         >
           {CUSTOM_FONT_OPTIONS.map((f) => (
             <option key={f.value} value={f.value}>
@@ -1345,20 +1345,20 @@ function FontSection({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Teks Halaman</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Teks Halaman</label>
         <input
           type="color"
           value={page.custom_page_text_color || "#FFFFFF"}
           onChange={(e) => setPage({ ...page, custom_page_text_color: e.target.value })}
           onBlur={(e) => onStyleOverride({ custom_page_text_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-border"
+          className="h-9 w-full rounded-lg border border-app-border"
         />
       </div>
 
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-ink">Font Judul Terpisah</p>
-          <p className="text-[11px] text-muted">Default sama dengan font halaman.</p>
+          <p className="text-xs font-semibold text-app-ink">Font Judul Terpisah</p>
+          <p className="text-[11px] text-app-muted">Default sama dengan font halaman.</p>
         </div>
         <Toggle checked={!!page.custom_title_font} onChange={() => onStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })} label="Font judul terpisah" />
       </div>
@@ -1367,7 +1367,7 @@ function FontSection({
         <select
           value={page.custom_title_font}
           onChange={(e) => onStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
         >
           {CUSTOM_FONT_OPTIONS.map((f) => (
             <option key={f.value} value={f.value}>
@@ -1378,13 +1378,13 @@ function FontSection({
       )}
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink">Warna Judul</label>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">Warna Judul</label>
         <input
           type="color"
           value={page.custom_title_color || "#FFFFFF"}
           onChange={(e) => setPage({ ...page, custom_title_color: e.target.value })}
           onBlur={(e) => onStyleOverride({ custom_title_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-border"
+          className="h-9 w-full rounded-lg border border-app-border"
         />
       </div>
     </section>

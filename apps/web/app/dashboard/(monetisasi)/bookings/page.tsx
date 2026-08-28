@@ -149,7 +149,7 @@ export default function DashboardBookingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Jual sesi konsultasi berbayar dengan slot waktu yang kamu tentukan sendiri -- bentrok jadwal dicegah
         otomatis (slot yang sama tidak bisa dipesan dua orang).
       </p>
@@ -169,46 +169,46 @@ export default function DashboardBookingsPage() {
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Nama Sesi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Sesi</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Konsultasi Karir 30 Menit"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Deskripsi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Harga (Rp)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Harga (Rp)</label>
                 <input
                   type="number"
                   required
                   min={1000}
                   value={priceIDR}
                   onChange={(e) => setPriceIDR(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Durasi (menit)</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Durasi (menit)</label>
                 <input
                   type="number"
                   required
                   min={5}
                   value={durationMinutes}
                   onChange={(e) => setDurationMinutes(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function DashboardBookingsPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -241,11 +241,11 @@ export default function DashboardBookingsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <IconCalendar className="h-4 w-4 text-primary" />
-                <p className="text-sm font-bold text-ink">{booking.name}</p>
+                <p className="text-sm font-bold text-app-ink">{booking.name}</p>
               </div>
               <span className="text-sm font-bold text-secondary-dark">Rp {booking.price_idr.toLocaleString("id-ID")}</span>
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-app-muted">
               {booking.duration_minutes} menit &middot; {booking.available_slot_count} slot tersedia,{" "}
               {booking.booked_slot_count} sudah dipesan
             </p>
@@ -253,7 +253,7 @@ export default function DashboardBookingsPage() {
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Toggle checked={booking.is_active} onChange={() => handleToggleActive(booking)} label={`Aktifkan ${booking.name}`} />
-                <span className="text-xs font-semibold text-muted">Aktif</span>
+                <span className="text-xs font-semibold text-app-muted">Aktif</span>
               </div>
               <button
                 type="button"
@@ -266,18 +266,18 @@ export default function DashboardBookingsPage() {
             </div>
 
             {managingId === booking.id && (
-              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/20 p-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/20 p-3">
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="datetime-local"
                     value={slotTime}
                     onChange={(e) => setSlotTime(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <select
                     value={slotTimezone}
                     onChange={(e) => setSlotTimezone(e.target.value)}
-                    className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   >
                     {TIMEZONE_OPTIONS.map((tz) => (
                       <option key={tz.value} value={tz.value}>
@@ -299,13 +299,13 @@ export default function DashboardBookingsPage() {
                   {slots.map((slot) => (
                     <div
                       key={slot.id}
-                      className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2 text-xs"
+                      className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs"
                     >
                       <div>
-                        <p className="font-semibold text-ink">
+                        <p className="font-semibold text-app-ink">
                           {new Date(slot.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
                         </p>
-                        {slot.is_booked && <p className="text-muted">Dipesan oleh {slot.buyer_email}</p>}
+                        {slot.is_booked && <p className="text-app-muted">Dipesan oleh {slot.buyer_email}</p>}
                       </div>
                       {!slot.is_booked && (
                         <button
@@ -318,13 +318,13 @@ export default function DashboardBookingsPage() {
                       )}
                     </div>
                   ))}
-                  {slots.length === 0 && <p className="text-xs text-muted">Belum ada slot -- tambahkan di atas.</p>}
+                  {slots.length === 0 && <p className="text-xs text-app-muted">Belum ada slot -- tambahkan di atas.</p>}
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setManagingId(null)}
-                  className="rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                  className="rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
                 >
                   Tutup
                 </button>

@@ -66,8 +66,8 @@ export default function DesignPageShell({
             Kembali ke Desain
           </Link>
         )}
-        <h1 className="font-heading text-2xl font-bold text-ink">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+        <h1 className="font-heading text-2xl font-bold text-app-ink">{title}</h1>
+        {description && <p className="mt-1 text-sm text-app-muted">{description}</p>}
         {children}
       </div>
       <LivePreviewPanel

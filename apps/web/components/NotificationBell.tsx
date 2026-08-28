@@ -96,7 +96,7 @@ export default function NotificationBell() {
         onClick={handleToggle}
         title="Notifikasi"
         aria-label="Notifikasi"
-        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-ink hover:border-primary hover:text-primary"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
       >
         <IconBell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -107,9 +107,9 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
-          <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-4 py-3">
-            <p className="font-heading text-sm font-bold text-ink">Notifikasi</p>
+        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-2xl">
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-4 py-3">
+            <p className="font-heading text-sm font-bold text-app-ink">Notifikasi</p>
             {unreadCount > 0 && (
               <button type="button" onClick={handleMarkAllRead} className="text-xs font-bold text-primary hover:underline">
                 Tandai semua dibaca
@@ -124,23 +124,23 @@ export default function NotificationBell() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-muted">Belum ada notifikasi.</p>
+              <p className="px-4 py-6 text-center text-xs text-app-muted">Belum ada notifikasi.</p>
             ) : (
               notifications.map((n) => (
                 <button
                   key={n.id}
                   type="button"
                   onClick={() => handleItemClick(n)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-border px-4 py-3 text-left last:border-b-0 hover:bg-primary-subtle/40 ${
+                  className={`flex w-full flex-col gap-0.5 border-b border-app-border px-4 py-3 text-left last:border-b-0 hover:bg-primary-subtle/40 ${
                     n.read ? "" : "bg-primary-subtle/20"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     {!n.read && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" aria-hidden />}
-                    <p className="truncate text-sm font-bold text-ink">{n.title}</p>
+                    <p className="truncate text-sm font-bold text-app-ink">{n.title}</p>
                   </div>
-                  <p className="text-xs text-muted">{n.body}</p>
-                  <p className="mt-0.5 text-[10px] text-muted/70">{new Date(n.created_at).toLocaleString("id-ID")}</p>
+                  <p className="text-xs text-app-muted">{n.body}</p>
+                  <p className="mt-0.5 text-[10px] text-app-muted/70">{new Date(n.created_at).toLocaleString("id-ID")}</p>
                 </button>
               ))
             )}

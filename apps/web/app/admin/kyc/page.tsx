@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
 };
 
 const STATUS_BADGE: Record<AdminKycItem["status"], string> = {
-  unverified: "bg-gray-100 text-muted",
+  unverified: "bg-gray-100 text-app-muted",
   pending: "bg-accent-subtle text-accent-dark",
   verified: "bg-secondary-subtle text-secondary-dark",
   rejected: "bg-red-50 text-red-600",
@@ -85,12 +85,12 @@ export default function AdminKycPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Review KYC</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Review KYC</h1>
+      <p className="mt-1 text-sm text-app-muted">
         Verifikasi identitas & rekening kreator. Tidak memblokir penjualan/penarikan -- hanya
         memprioritaskan antrian proses penarikan dana.
       </p>
@@ -102,7 +102,7 @@ export default function AdminKycPage() {
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "pending"
               ? "border-primary bg-primary-subtle text-primary"
-              : "border-border text-muted hover:border-primary/50"
+              : "border-app-border text-app-muted hover:border-primary/50"
           }`}
         >
           Menunggu Review
@@ -113,7 +113,7 @@ export default function AdminKycPage() {
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
               ? "border-primary bg-primary-subtle text-primary"
-              : "border-border text-muted hover:border-primary/50"
+              : "border-app-border text-app-muted hover:border-primary/50"
           }`}
         >
           Semua Riwayat
@@ -128,21 +128,21 @@ export default function AdminKycPage() {
             key={it.user_id}
             type="button"
             onClick={() => openDetail(it.user_id)}
-            className="flex items-center justify-between rounded-xl border border-border bg-white p-4 text-left shadow-card hover:border-primary/50"
+            className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface p-4 text-left shadow-card hover:border-primary/50"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                 <IconShield className="h-[18px] w-[18px]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-app-ink">
                   {it.full_name_ktp || "(nama belum diisi)"}
-                  <span className="ml-2 font-normal text-muted">
+                  <span className="ml-2 font-normal text-app-muted">
                     @{it.username} ({it.email})
                   </span>
                 </p>
                 {it.submitted_at && (
-                  <p className="text-xs text-muted">Diajukan {new Date(it.submitted_at).toLocaleString("id-ID")}</p>
+                  <p className="text-xs text-app-muted">Diajukan {new Date(it.submitted_at).toLocaleString("id-ID")}</p>
                 )}
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function AdminKycPage() {
         ))}
 
         {items.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             {filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."}
           </div>
@@ -162,12 +162,12 @@ export default function AdminKycPage() {
 
       {(detailLoading || detail) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-hero">
-            {detailLoading && <p className="text-sm text-muted">Memuat detail...</p>}
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-app-surface p-6 shadow-hero">
+            {detailLoading && <p className="text-sm text-app-muted">Memuat detail...</p>}
             {detail && (
               <>
                 <div className="flex items-center justify-between">
-                  <h2 className="font-heading text-lg font-bold text-ink">@{detail.username}</h2>
+                  <h2 className="font-heading text-lg font-bold text-app-ink">@{detail.username}</h2>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[detail.status]}`}>
                     {STATUS_LABEL[detail.status]}
                   </span>
@@ -175,38 +175,38 @@ export default function AdminKycPage() {
 
                 <dl className="mt-4 flex flex-col gap-2 text-sm">
                   <div>
-                    <dt className="text-xs font-bold uppercase text-muted">Nama KTP</dt>
-                    <dd className="text-ink">{detail.full_name_ktp}</dd>
+                    <dt className="text-xs font-bold uppercase text-app-muted">Nama KTP</dt>
+                    <dd className="text-app-ink">{detail.full_name_ktp}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-bold uppercase text-muted">Nama Rekening</dt>
-                    <dd className="text-ink">{detail.bank_account_name}</dd>
+                    <dt className="text-xs font-bold uppercase text-app-muted">Nama Rekening</dt>
+                    <dd className="text-app-ink">{detail.bank_account_name}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-bold uppercase text-muted">Alamat Domisili</dt>
-                    <dd className="text-ink">{detail.domicile_address}</dd>
+                    <dt className="text-xs font-bold uppercase text-app-muted">Alamat Domisili</dt>
+                    <dd className="text-app-ink">{detail.domicile_address}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-bold uppercase text-muted">Penjelasan Bisnis</dt>
-                    <dd className="text-ink">{detail.business_description}</dd>
+                    <dt className="text-xs font-bold uppercase text-app-muted">Penjelasan Bisnis</dt>
+                    <dd className="text-app-ink">{detail.business_description}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-bold uppercase text-muted">Kanal Promosi</dt>
-                    <dd className="text-ink">{detail.promotion_channels}</dd>
+                    <dt className="text-xs font-bold uppercase text-app-muted">Kanal Promosi</dt>
+                    <dd className="text-app-ink">{detail.promotion_channels}</dd>
                   </div>
                 </dl>
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {detail.ktp_photo_url && (
                     <a href={detail.ktp_photo_url} target="_blank" rel="noopener noreferrer" className="block">
-                      <img src={detail.ktp_photo_url} alt="Foto KTP" className="aspect-square rounded-lg border border-border object-cover" />
-                      <p className="mt-1 text-center text-[10px] font-semibold text-muted">KTP</p>
+                      <img src={detail.ktp_photo_url} alt="Foto KTP" className="aspect-square rounded-lg border border-app-border object-cover" />
+                      <p className="mt-1 text-center text-[10px] font-semibold text-app-muted">KTP</p>
                     </a>
                   )}
                   {detail.selfie_photo_url && (
                     <a href={detail.selfie_photo_url} target="_blank" rel="noopener noreferrer" className="block">
-                      <img src={detail.selfie_photo_url} alt="Foto selfie" className="aspect-square rounded-lg border border-border object-cover" />
-                      <p className="mt-1 text-center text-[10px] font-semibold text-muted">Selfie</p>
+                      <img src={detail.selfie_photo_url} alt="Foto selfie" className="aspect-square rounded-lg border border-app-border object-cover" />
+                      <p className="mt-1 text-center text-[10px] font-semibold text-app-muted">Selfie</p>
                     </a>
                   )}
                   {detail.bank_proof_url && (
@@ -214,7 +214,7 @@ export default function AdminKycPage() {
                       href={detail.bank_proof_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex aspect-square items-center justify-center rounded-lg border border-border bg-primary-subtle/40 text-xs font-semibold text-primary"
+                      className="flex aspect-square items-center justify-center rounded-lg border border-app-border bg-primary-subtle/40 text-xs font-semibold text-primary"
                     >
                       Lihat Bukti
                     </a>
@@ -228,7 +228,7 @@ export default function AdminKycPage() {
                       onChange={(e) => setRejectReason(e.target.value)}
                       placeholder="Alasan penolakan (wajib kalau menolak)"
                       rows={2}
-                      className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <div className="flex gap-2">
                       <button
@@ -260,7 +260,7 @@ export default function AdminKycPage() {
                 <button
                   type="button"
                   onClick={() => setDetail(null)}
-                  className="mt-4 w-full rounded-lg border border-border py-2 text-xs font-semibold text-muted hover:border-primary hover:text-primary"
+                  className="mt-4 w-full rounded-lg border border-app-border py-2 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
                 >
                   Tutup
                 </button>

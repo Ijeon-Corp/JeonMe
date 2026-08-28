@@ -117,7 +117,7 @@ export default function DashboardLoyaltyPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Beri poin ke pembeli setiap transaksi, biarkan mereka menukarnya dengan reward -- mekanisme retensi
         pembeli berulang, cocok disandingkan dengan voucher.
       </p>
@@ -131,51 +131,51 @@ export default function DashboardLoyaltyPage() {
             onChange={() => setSettings({ ...settings, is_active: !settings.is_active })}
             label="Aktifkan program loyalitas"
           />
-          <span className="text-sm font-semibold text-ink">Aktifkan Program Loyalitas</span>
+          <span className="text-sm font-semibold text-app-ink">Aktifkan Program Loyalitas</span>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Tipe Poin</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Tipe Poin</label>
             <select
               value={settings.point_type}
               onChange={(e) => setSettings({ ...settings, point_type: e.target.value as "percentage" | "nominal" })}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             >
               <option value="nominal">Nominal (poin per Rp10.000)</option>
               <option value="percentage">Persentase (poin per Rp100.000)</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Rate Poin</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Rate Poin</label>
             <input
               type="number"
               min={0}
               step="0.1"
               value={settings.points_rate}
               onChange={(e) => setSettings({ ...settings, points_rate: Number(e.target.value) })}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Batas Maks Poin per Transaksi (opsional)</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Batas Maks Poin per Transaksi (opsional)</label>
             <input
               type="number"
               min={1}
               value={settings.points_limit ?? ""}
               onChange={(e) => setSettings({ ...settings, points_limit: e.target.value ? Number(e.target.value) : null })}
               placeholder="Tanpa batas"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">Minimum Pembelian (Rp)</label>
+            <label className="mb-1 block text-xs font-semibold text-app-ink">Minimum Pembelian (Rp)</label>
             <input
               type="number"
               min={0}
               value={settings.min_purchase_idr}
               onChange={(e) => setSettings({ ...settings, min_purchase_idr: Number(e.target.value) })}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function DashboardLoyaltyPage() {
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold text-ink">Katalog Reward</h2>
+          <h2 className="font-heading text-lg font-bold text-app-ink">Katalog Reward</h2>
           {!adding && (
             <button
               type="button"
@@ -206,14 +206,14 @@ export default function DashboardLoyaltyPage() {
         </div>
 
         {adding && (
-          <form onSubmit={handleCreateReward} className="mt-3 flex flex-col gap-3 rounded-lg border border-border p-3">
+          <form onSubmit={handleCreateReward} className="mt-3 flex flex-col gap-3 rounded-lg border border-app-border p-3">
             <input
               type="text"
               required
               placeholder="Nama reward (mis. Diskon 20%)"
               value={rewardName}
               onChange={(e) => setRewardName(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -223,12 +223,12 @@ export default function DashboardLoyaltyPage() {
                 placeholder="Poin dibutuhkan"
                 value={pointsNeeded}
                 onChange={(e) => setPointsNeeded(e.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as "percentage" | "nominal")}
-                className="rounded-lg border border-border px-2 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-2 py-2 text-sm focus:border-primary focus:outline-none"
               >
                 <option value="nominal">Rp (nominal)</option>
                 <option value="percentage">% (persen)</option>
@@ -240,14 +240,14 @@ export default function DashboardLoyaltyPage() {
                 placeholder="Nilai diskon"
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setAdding(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -264,10 +264,10 @@ export default function DashboardLoyaltyPage() {
 
         <div className="mt-4 flex flex-col gap-2">
           {rewards.map((reward) => (
-            <div key={reward.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+            <div key={reward.id} className="flex items-center justify-between rounded-xl border border-app-border px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-ink">{reward.name}</p>
-                <p className="text-xs text-muted">
+                <p className="text-sm font-semibold text-app-ink">{reward.name}</p>
+                <p className="text-xs text-app-muted">
                   {reward.points_needed} poin &middot;{" "}
                   {reward.discount_type === "percentage" ? `${reward.discount_value}%` : `Rp${reward.discount_value.toLocaleString("id-ID")}`}{" "}
                   &middot; {reward.redeemed_count}x ditukar

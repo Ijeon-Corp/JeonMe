@@ -44,11 +44,11 @@ export default function AdminUsersPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted">Memuat...</p>;
+  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-ink">Pengguna</h1>
+      <h1 className="font-heading text-2xl font-bold text-app-ink">Pengguna</h1>
 
       <form onSubmit={handleSearch} className="mt-4 flex gap-2">
         <input
@@ -56,9 +56,9 @@ export default function AdminUsersPage() {
           placeholder="Cari email/username..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
-        <button type="submit" className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:border-primary">
+        <button type="submit" className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-semibold hover:border-primary">
           Cari
         </button>
       </form>
@@ -67,16 +67,16 @@ export default function AdminUsersPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3 shadow-card">
+          <div key={u.id} className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface px-4 py-3 shadow-card">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                 <IconUsers className="h-[18px] w-[18px]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-ink">
-                  {u.username} <span className="font-normal text-muted">({u.email})</span>
+                <p className="text-sm font-semibold text-app-ink">
+                  {u.username} <span className="font-normal text-app-muted">({u.email})</span>
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-app-muted">
                   {u.role}
                   {u.deleted_at && " · dihapus"}
                   {u.suspended_at && !u.deleted_at && " · ditangguhkan"}
@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
           </div>
         ))}
         {users.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-sm text-muted">
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-white/60 px-4 py-6 text-sm text-app-muted">
             <IconInbox className="h-4 w-4 flex-shrink-0" />
             Tidak ada pengguna ditemukan.
           </div>

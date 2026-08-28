@@ -65,7 +65,7 @@ export default function ListingPanel({
 
   return (
     <div className="mt-4">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-app-muted">
         Seret untuk mengatur urutan tampil di halaman publik. Produk unggulan selalu tampil paling atas.
       </p>
       <div className="mt-3 flex flex-col gap-2">
@@ -78,7 +78,7 @@ export default function ListingPanel({
             onDrop={() => handleDrop(p.id)}
             className="glass flex items-center gap-3 rounded-2xl p-3 shadow-card"
           >
-            <span className="cursor-grab text-muted" title="Seret untuk mengatur urutan">
+            <span className="cursor-grab text-app-muted" title="Seret untuk mengatur urutan">
               <IconGripVertical className="h-4 w-4" />
             </span>
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-subtle">
@@ -90,14 +90,14 @@ export default function ListingPanel({
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-              {p.category && <p className="text-[11px] text-muted">{p.category}</p>}
+              <p className="truncate text-sm font-semibold text-app-ink">{p.name}</p>
+              {p.category && <p className="text-[11px] text-app-muted">{p.category}</p>}
             </div>
             <button
               type="button"
               onClick={() => handleToggleFeatured(p)}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-                p.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-border text-muted hover:border-primary"
+                p.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-app-border text-app-muted hover:border-primary"
               }`}
             >
               <IconStar className="h-3.5 w-3.5" />
@@ -105,7 +105,7 @@ export default function ListingPanel({
             </button>
           </div>
         ))}
-        {sorted.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">Belum ada produk.</p>}
+        {sorted.length === 0 && <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">Belum ada produk.</p>}
       </div>
     </div>
   );

@@ -129,21 +129,21 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div>
-            <h2 className="font-heading text-lg font-bold text-ink">Pilih Lokasi</h2>
-            <p className="text-xs text-muted">Klik di peta, cari alamat, atau pakai lokasimu saat ini.</p>
+            <h2 className="font-heading text-lg font-bold text-app-ink">Pilih Lokasi</h2>
+            <p className="text-xs text-app-muted">Klik di peta, cari alamat, atau pakai lokasimu saat ini.</p>
           </div>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink">
+          <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex-shrink-0 border-b border-border p-3">
+        <div className="flex-shrink-0 border-b border-app-border p-3">
           <div className="flex gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-gray-100 px-4 py-2.5">
-              <IconSearch className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconSearch className="h-4 w-4 flex-shrink-0 text-app-muted" />
               <input
                 type="text"
                 autoFocus
@@ -157,14 +157,14 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               type="button"
               onClick={useCurrentLocation}
               disabled={locating}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border px-3.5 py-2 text-xs font-bold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border px-3.5 py-2 text-xs font-bold text-app-ink hover:border-primary hover:text-primary disabled:opacity-60"
             >
               <IconTarget className="h-3.5 w-3.5" />
               {locating ? "Mencari..." : "Lokasi Saya"}
             </button>
           </div>
           {results.length > 0 && (
-            <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-border">
+            <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-app-border">
               {results.map((r, i) => (
                 <li key={i}>
                   <button
@@ -174,16 +174,16 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
                       setResults([]);
                       setSearch(r.display_name);
                     }}
-                    className="flex w-full items-start gap-2 border-b border-border px-3 py-2 text-left text-xs text-ink last:border-b-0 hover:bg-primary-subtle"
+                    className="flex w-full items-start gap-2 border-b border-app-border px-3 py-2 text-left text-xs text-app-ink last:border-b-0 hover:bg-primary-subtle"
                   >
-                    <IconMapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted" />
+                    <IconMapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-app-muted" />
                     {r.display_name}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-          {searching && <p className="mt-1.5 text-[11px] text-muted">Mencari...</p>}
+          {searching && <p className="mt-1.5 text-[11px] text-app-muted">Mencari...</p>}
           {error && <p className="mt-1.5 text-[11px] font-semibold text-red-600">{error}</p>}
         </div>
 
@@ -213,12 +213,12 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
           </MapContainer>
         </div>
 
-        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-border px-5 py-4">
-          <p className="text-[11px] text-muted">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-app-border px-5 py-4">
+          <p className="text-[11px] text-app-muted">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </p>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-bold text-muted hover:border-ink/30">
+            <button type="button" onClick={onClose} className="rounded-lg border border-app-border px-4 py-2 text-sm font-bold text-app-muted hover:border-ink/30">
               Batal
             </button>
             <button type="button" onClick={confirm} className="btn-primary rounded-lg px-4 py-2 text-sm font-bold text-white">

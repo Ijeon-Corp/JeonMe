@@ -29,7 +29,7 @@ export default function WebhookEventsPanel() {
       <div className="glass overflow-x-auto rounded-2xl shadow-card">
         <table className="w-full min-w-[720px] text-left text-xs">
           <thead>
-            <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">Produk</th>
               <th className="px-4 py-3">URL</th>
               <th className="px-4 py-3">Status</th>
@@ -40,9 +40,9 @@ export default function WebhookEventsPanel() {
           </thead>
           <tbody>
             {events.map((e) => (
-              <tr key={e.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 font-semibold text-ink">{e.product_name}</td>
-                <td className="max-w-[220px] truncate px-4 py-3 text-ink" title={e.url}>
+              <tr key={e.id} className="border-b border-app-border last:border-0">
+                <td className="px-4 py-3 font-semibold text-app-ink">{e.product_name}</td>
+                <td className="max-w-[220px] truncate px-4 py-3 text-app-ink" title={e.url}>
                   {e.url}
                 </td>
                 <td className="px-4 py-3">
@@ -59,9 +59,9 @@ export default function WebhookEventsPanel() {
                     </p>
                   )}
                 </td>
-                <td className="px-4 py-3 text-ink">{e.response_code ?? "-"}</td>
-                <td className="px-4 py-3 text-ink">{e.attempt}</td>
-                <td className="px-4 py-3 text-muted">
+                <td className="px-4 py-3 text-app-ink">{e.response_code ?? "-"}</td>
+                <td className="px-4 py-3 text-app-ink">{e.attempt}</td>
+                <td className="px-4 py-3 text-app-muted">
                   {new Date(e.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
                 </td>
               </tr>
@@ -70,8 +70,8 @@ export default function WebhookEventsPanel() {
         </table>
         {events.length === 0 && (
           <div className="flex flex-col items-center gap-2 p-6 text-center">
-            <IconInbox className="h-5 w-5 text-muted" />
-            <p className="text-xs text-muted">Belum ada pengiriman webhook.</p>
+            <IconInbox className="h-5 w-5 text-app-muted" />
+            <p className="text-xs text-app-muted">Belum ada pengiriman webhook.</p>
           </div>
         )}
       </div>

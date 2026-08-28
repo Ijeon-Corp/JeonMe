@@ -49,9 +49,9 @@ export default function AnalyticsAssistant() {
     <section className="glass mt-4 rounded-2xl p-5 shadow-card">
       <div className="flex items-center gap-2">
         <IconSparkle className="h-4 w-4 text-accent" />
-        <h2 className="font-heading text-sm font-bold text-ink">Tanya Analitik</h2>
+        <h2 className="font-heading text-sm font-bold text-app-ink">Tanya Analitik</h2>
       </div>
-      <p className="mt-1 text-[11px] text-muted">
+      <p className="mt-1 text-[11px] text-app-muted">
         Jawaban dirangkai otomatis dari data analitikmu 30 hari terakhir (bukan model AI berbayar).
       </p>
 
@@ -63,7 +63,7 @@ export default function AnalyticsAssistant() {
               type="button"
               onClick={() => handleAsk(s)}
               disabled={asking}
-              className="rounded-full border border-border px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+              className="rounded-full border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary disabled:opacity-60"
             >
               {s}
             </button>
@@ -75,10 +75,10 @@ export default function AnalyticsAssistant() {
         <div className="mt-3 flex flex-col gap-3">
           {history.map((entry, i) => (
             <div key={i} className="flex flex-col gap-1">
-              <p className="self-end rounded-xl bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-ink">
+              <p className="self-end rounded-xl bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-app-ink">
                 {entry.question}
               </p>
-              <p className="rounded-xl bg-ink/5 px-3 py-1.5 text-xs text-ink">{entry.answer}</p>
+              <p className="rounded-xl bg-ink/5 px-3 py-1.5 text-xs text-app-ink">{entry.answer}</p>
             </div>
           ))}
         </div>
@@ -93,7 +93,7 @@ export default function AnalyticsAssistant() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={500}
-          className="min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-xs focus:border-primary focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-app-border px-3 py-2 text-xs focus:border-primary focus:outline-none"
         />
         <button
           type="submit"

@@ -59,7 +59,7 @@ export default function DashboardSocialProofPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Tampilkan notifikasi &quot;X baru saja membeli&quot; di halaman publik & checkout untuk mendorong konversi.
       </p>
 
@@ -69,28 +69,28 @@ export default function DashboardSocialProofPage() {
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-ink">Aktifkan Notifikasi</p>
-            <p className="text-xs text-muted">Email pembeli selalu disamarkan sebagian, tidak pernah ditampilkan penuh.</p>
+            <p className="text-sm font-bold text-app-ink">Aktifkan Notifikasi</p>
+            <p className="text-xs text-app-muted">Email pembeli selalu disamarkan sebagian, tidak pernah ditampilkan penuh.</p>
           </div>
           <Toggle checked={enabled} onChange={() => setEnabled((v) => !v)} label="Aktifkan notifikasi social proof" />
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-ink">Tampil di Halaman Produk (Publik)</p>
+          <p className="text-xs font-semibold text-app-ink">Tampil di Halaman Produk (Publik)</p>
           <Toggle checked={showOnProductPage} onChange={() => setShowOnProductPage((v) => !v)} label="Tampil di halaman produk" />
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-ink">Tampil di Halaman Checkout</p>
+          <p className="text-xs font-semibold text-app-ink">Tampil di Halaman Checkout</p>
           <Toggle checked={showOnCheckout} onChange={() => setShowOnCheckout((v) => !v)} label="Tampil di halaman checkout" />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Durasi Tampil</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Durasi Tampil</label>
           <select
             value={displaySeconds}
             onChange={(e) => setDisplaySeconds(Number(e.target.value))}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {DISPLAY_OPTIONS.map((v) => (
               <option key={v} value={v}>
@@ -101,11 +101,11 @@ export default function DashboardSocialProofPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Interval Sebelum Notifikasi Berikutnya</label>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Interval Sebelum Notifikasi Berikutnya</label>
           <select
             value={intervalSeconds}
             onChange={(e) => setIntervalSeconds(Number(e.target.value))}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {INTERVAL_OPTIONS.map((v) => (
               <option key={v} value={v}>

@@ -328,7 +328,7 @@ export default function QuickSetupPage() {
   if (step === "category") {
     return (
       <div className="mx-auto max-w-4xl">
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-app-muted">
           Pilih kategori yang paling cocok dengan halamanmu -- template & tema di langkah berikutnya disaring sesuai kategori ini.
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -337,12 +337,12 @@ export default function QuickSetupPage() {
               key={c.key}
               type="button"
               onClick={() => openCategory(c.key)}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border border-border bg-white p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-primary"
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-primary"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-subtle text-primary">
                 <c.Icon className="h-5 w-5" />
               </span>
-              <span className="text-sm font-bold text-ink">{c.label}</span>
+              <span className="text-sm font-bold text-app-ink">{c.label}</span>
             </button>
           ))}
         </div>
@@ -357,17 +357,17 @@ export default function QuickSetupPage() {
         {!generateSuccess ? (
           <>
             <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary-subtle border-t-primary" aria-hidden />
-            <p className="mt-4 font-heading text-lg font-bold text-ink">Menyiapkan halamanmu...</p>
-            <p className="mt-1 text-sm text-muted">Menerapkan tema, tautan, dan blok starter.</p>
+            <p className="mt-4 font-heading text-lg font-bold text-app-ink">Menyiapkan halamanmu...</p>
+            <p className="mt-1 text-sm text-app-muted">Menerapkan tema, tautan, dan blok starter.</p>
           </>
         ) : (
           <>
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
               <IconCheck className="h-6 w-6" />
             </span>
-            <p className="mt-4 font-heading text-lg font-bold text-ink">Template diterapkan!</p>
-            <p className="mt-1 text-sm text-muted">Mengalihkan ke Link Bio untuk melengkapi tautan asli kamu...</p>
-            {tokoSynced && <p className="mt-2 text-xs text-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan.</p>}
+            <p className="mt-4 font-heading text-lg font-bold text-app-ink">Template diterapkan!</p>
+            <p className="mt-1 text-sm text-app-muted">Mengalihkan ke Link Bio untuk melengkapi tautan asli kamu...</p>
+            {tokoSynced && <p className="mt-2 text-xs text-app-muted">Tema Halaman Toko-mu juga sudah ikut disesuaikan.</p>}
             {appliedMonetizationHint && (
               <p className="mt-3 max-w-sm rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{appliedMonetizationHint}</p>
             )}
@@ -391,8 +391,8 @@ export default function QuickSetupPage() {
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Ganti Kategori
       </button>
-      <p className="mt-2 text-sm text-muted">
-        Kategori: <span className="font-semibold text-ink">{activeCategory?.label}</span> -- pilih template, lalu opsional ganti temanya
+      <p className="mt-2 text-sm text-app-muted">
+        Kategori: <span className="font-semibold text-app-ink">{activeCategory?.label}</span> -- pilih template, lalu opsional ganti temanya
         di tab Theme.
       </p>
 
@@ -400,12 +400,12 @@ export default function QuickSetupPage() {
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>
-          <div className="flex gap-2 border-b border-border">
+          <div className="flex gap-2 border-b border-app-border">
             <button
               type="button"
               onClick={() => setTab("template")}
               className={`border-b-2 px-3 py-2 text-sm font-semibold ${
-                tab === "template" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+                tab === "template" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
               Template
@@ -419,7 +419,7 @@ export default function QuickSetupPage() {
               onClick={() => selectedTemplate && setTab("theme")}
               title={!selectedTemplate ? "Pilih template dulu" : undefined}
               className={`border-b-2 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
-                tab === "theme" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+                tab === "theme" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
               Theme
@@ -429,13 +429,13 @@ export default function QuickSetupPage() {
           {tab === "template" && (
             <>
               <div className="relative mt-4">
-                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
                 <input
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cari template di kategori ini..."
-                  className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-ink focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
                 />
               </div>
 
@@ -458,11 +458,11 @@ export default function QuickSetupPage() {
                         pickTemplate(t);
                       }
                     }}
-                    className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-card transition-transform hover:-translate-y-0.5 ${
-                      selectedTemplate?.key === t.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
+                    className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-app-surface text-left shadow-card transition-transform hover:-translate-y-0.5 ${
+                      selectedTemplate?.key === t.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-app-border"
                     }`}
                   >
-                    <div className="relative h-64 w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
+                    <div className="relative h-64 w-full overflow-hidden bg-app-surface pointer-events-none" aria-hidden="true">
                       <div className="h-full [zoom:0.36]">
                         <PagePreview
                           interactive={false}
@@ -472,13 +472,13 @@ export default function QuickSetupPage() {
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className="font-heading text-sm font-bold text-ink">{t.label}</p>
-                      <p className="mt-1 text-xs text-muted">{t.description}</p>
+                      <p className="font-heading text-sm font-bold text-app-ink">{t.label}</p>
+                      <p className="mt-1 text-xs text-app-muted">{t.description}</p>
                     </div>
                   </div>
                 ))}
                 {categoryTemplates.length === 0 && (
-                  <p className="col-span-full rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
+                  <p className="col-span-full rounded-xl border border-dashed border-app-border p-6 text-center text-sm text-app-muted">
                     Tidak ada template yang cocok dengan pencarianmu.
                   </p>
                 )}
@@ -508,13 +508,13 @@ export default function QuickSetupPage() {
             efektif -- supaya PagePreview tetap merender proporsional,
             cuma fisiknya lebih besar). */}
         <div className="lg:sticky lg:top-4">
-          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-2xl border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {previewData ? (
               <div className="h-full [zoom:0.75]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center p-6 text-center text-xs text-muted">
+              <div className="flex h-full items-center justify-center p-6 text-center text-xs text-app-muted">
                 Pilih template di sebelah kiri untuk lihat pratinjaunya di sini.
               </div>
             )}

@@ -52,8 +52,8 @@ export default function ShopSettingsPanel() {
       <div className="glass rounded-2xl p-4 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-ink">Jeda Toko Sementara</p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="text-sm font-bold text-app-ink">Jeda Toko Sementara</p>
+            <p className="mt-1 text-xs text-app-muted">
               Sembunyikan tombol beli di semua produk & tolak pesanan baru, tanpa menonaktifkan produk satu per satu.
             </p>
           </div>
@@ -68,7 +68,7 @@ export default function ShopSettingsPanel() {
             }`}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-app-surface shadow transition-transform ${
                 settings.shop_paused ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
@@ -76,20 +76,20 @@ export default function ShopSettingsPanel() {
         </div>
 
         <div className="mt-3">
-          <label className="text-xs font-semibold text-muted">Pesan untuk pembeli (opsional)</label>
+          <label className="text-xs font-semibold text-app-muted">Pesan untuk pembeli (opsional)</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             maxLength={200}
             rows={2}
             placeholder="Contoh: Toko sedang libur, kembali buka 10 Agustus"
-            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink"
+            className="mt-1 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink"
           />
           <button
             type="button"
             disabled={saving || message === settings.shop_paused_message}
             onClick={() => save(settings.shop_paused, message)}
-            className="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary disabled:opacity-50"
+            className="mt-2 rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-50"
           >
             Simpan Pesan
           </button>

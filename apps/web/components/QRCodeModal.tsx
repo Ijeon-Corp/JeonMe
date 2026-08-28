@@ -34,24 +34,24 @@ export default function QRCodeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-      <div className="relative w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-hero">
+      <div className="relative w-full max-w-xs rounded-2xl bg-app-surface p-6 text-center shadow-hero">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-muted hover:bg-primary-subtle"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-primary-subtle"
           aria-label="Tutup"
         >
           <IconClose className="h-4 w-4" />
         </button>
 
-        <p className="font-heading text-sm font-bold text-ink">{title}</p>
-        <p className="mt-1 text-xs text-muted">{description}</p>
+        <p className="font-heading text-sm font-bold text-app-ink">{title}</p>
+        <p className="mt-1 text-xs text-app-muted">{description}</p>
 
         <div className="mt-4 flex items-center justify-center">
           <QRCodeCanvas ref={canvasRef} value={url} size={200} level="M" marginSize={2} />
         </div>
 
-        <p className="mt-3 truncate text-xs text-muted">{url}</p>
+        <p className="mt-3 truncate text-xs text-app-muted">{url}</p>
 
         <button
           type="button"

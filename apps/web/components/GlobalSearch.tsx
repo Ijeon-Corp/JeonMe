@@ -94,7 +94,7 @@ export default function GlobalSearch() {
         onClick={openPalette}
         title="Cari menu (Ctrl+K)"
         aria-label="Cari menu"
-        className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-muted hover:border-primary hover:text-primary"
+        className="flex h-8 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
         <IconSearch className="h-3.5 w-3.5" />
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): "sm:inline"
@@ -105,7 +105,7 @@ export default function GlobalSearch() {
             ikon-saja selama rentang tablet, sama seperti perilaku di bawah
             640px sebelumnya. */}
         <span className="hidden lg:inline">Cari menu</span>
-        <span className="hidden rounded border border-border px-1 text-[10px] text-muted/70 lg:inline">Ctrl K</span>
+        <span className="hidden rounded border border-app-border px-1 text-[10px] text-app-muted/70 lg:inline">Ctrl K</span>
       </button>
 
       {open && (
@@ -114,11 +114,11 @@ export default function GlobalSearch() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-app-surface shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-shrink-0 items-center gap-2 border-b border-border px-4 py-3">
-              <IconSearch className="h-4 w-4 flex-shrink-0 text-muted" />
+            <div className="flex flex-shrink-0 items-center gap-2 border-b border-app-border px-4 py-3">
+              <IconSearch className="h-4 w-4 flex-shrink-0 text-app-muted" />
               <input
                 ref={inputRef}
                 type="text"
@@ -128,14 +128,14 @@ export default function GlobalSearch() {
                 placeholder="Cari fitur, mis. voucher, KYC, tema..."
                 className="w-full bg-transparent text-sm outline-none"
               />
-              <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-muted hover:text-ink">
+              <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-app-muted hover:text-app-ink">
                 <IconClose className="h-4 w-4" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-2">
               {results.length === 0 ? (
-                <p className="px-3 py-8 text-center text-xs text-muted">Tidak ada fitur yang cocok dengan &quot;{query}&quot;.</p>
+                <p className="px-3 py-8 text-center text-xs text-app-muted">Tidak ada fitur yang cocok dengan &quot;{query}&quot;.</p>
               ) : (
                 results.map((item, i) => (
                   <button
@@ -151,8 +151,8 @@ export default function GlobalSearch() {
                       <item.icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">{item.label}</span>
-                      <span className="block truncate text-xs text-muted">{item.description}</span>
+                      <span className="block truncate text-sm font-semibold text-app-ink">{item.label}</span>
+                      <span className="block truncate text-xs text-app-muted">{item.description}</span>
                     </span>
                   </button>
                 ))

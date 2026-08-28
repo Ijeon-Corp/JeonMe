@@ -114,16 +114,16 @@ function MonetisasiCard({ item }: { item: MonetisasiItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-2xl border border-border bg-white p-3.5 transition-colors hover:border-primary"
+      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-primary"
     >
       <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold text-ink">{item.title}</span>
-        <span className="block truncate text-xs text-muted">{item.description}</span>
+        <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
+        <span className="block truncate text-xs text-app-muted">{item.description}</span>
       </span>
-      <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+      <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
     </Link>
   );
 }
@@ -142,23 +142,23 @@ export default function DashboardMonetisasiPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <p className="mt-1 text-sm text-muted">Tipe produk & alat monetisasi tambahan di luar produk digital biasa.</p>
+      <p className="mt-1 text-sm text-app-muted">Tipe produk & alat monetisasi tambahan di luar produk digital biasa.</p>
 
       <div className="relative mt-5">
-        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Cari tipe produk..."
-          className="w-full rounded-xl border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
         />
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
         {filteredGroups.map((g) => (
           <div key={g.label}>
-            <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted">{g.label}</p>
+            <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-app-muted">{g.label}</p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {g.items.map((s) => (
                 <MonetisasiCard key={s.href} item={s} />
@@ -167,7 +167,7 @@ export default function DashboardMonetisasiPage() {
           </div>
         ))}
         {filteredGroups.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted">
+          <p className="rounded-xl border border-dashed border-app-border p-4 text-center text-sm text-app-muted">
             Tidak ada tipe produk yang cocok dengan &quot;{query}&quot;.
           </p>
         )}

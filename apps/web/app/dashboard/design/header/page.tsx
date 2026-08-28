@@ -76,7 +76,7 @@ export default function DesignHeaderPage() {
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Foto Profil</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Foto Profil</label>
           <div className="flex items-center gap-3">
             {page.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -86,7 +86,7 @@ export default function DesignHeaderPage() {
                 {page.username.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <label className="cursor-pointer rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary">
+            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary">
               {avatarUploading ? "Mengunggah..." : "Ganti Foto"}
               <input
                 type="file"
@@ -99,7 +99,7 @@ export default function DesignHeaderPage() {
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Nama Tampilan</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Nama Tampilan</label>
           <input
             type="text"
             maxLength={100}
@@ -107,27 +107,27 @@ export default function DesignHeaderPage() {
             value={page.display_name}
             onChange={(e) => setPage({ ...page, display_name: e.target.value })}
             onBlur={(e) => handlePageSettingChange({ display_name: e.target.value })}
-            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
-          <p className="mt-1 text-[11px] text-muted">Tampil sebagai judul profil di halaman publik. Kosongkan untuk memakai username ({page.username}).</p>
+          <p className="mt-1 text-[11px] text-app-muted">Tampil sebagai judul profil di halaman publik. Kosongkan untuk memakai username ({page.username}).</p>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink">Bio (maks 160 karakter)</label>
+          <label className="mb-1.5 block text-xs font-semibold text-app-ink">Bio (maks 160 karakter)</label>
           <textarea
             maxLength={160}
             value={page.bio}
             onChange={(e) => setPage({ ...page, bio: e.target.value })}
             onBlur={(e) => handlePageSettingChange({ bio: e.target.value })}
             rows={3}
-            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </section>
 
       <section className="glass mt-4 flex flex-col gap-3 rounded-3xl p-5 shadow-card">
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Layout</label>
-          <p className="text-[11px] text-muted">Susunan avatar, nama, dan bio di bagian atas halaman publikmu.</p>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">Layout</label>
+          <p className="text-[11px] text-app-muted">Susunan avatar, nama, dan bio di bagian atas halaman publikmu.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {LAYOUT_OPTIONS.map((opt) => (
@@ -139,11 +139,11 @@ export default function DesignHeaderPage() {
                 handlePageSettingChange({ layout_variant: opt.value });
               }}
               className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-colors ${
-                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-border bg-white hover:border-primary/50"
+                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-app-border bg-app-surface hover:border-primary/50"
               }`}
             >
-              <span className="text-xs font-bold text-ink">{opt.label}</span>
-              <span className="text-[10px] leading-snug text-muted">{opt.description}</span>
+              <span className="text-xs font-bold text-app-ink">{opt.label}</span>
+              <span className="text-[10px] leading-snug text-app-muted">{opt.description}</span>
             </button>
           ))}
         </div>

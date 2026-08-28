@@ -93,7 +93,7 @@ import { useRouter } from "next/navigation";
 // validasi nama/harga lain di form yang sama).
 function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-2.5 text-xs font-semibold text-muted hover:border-primary hover:text-primary">
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-app-border px-3.5 py-2.5 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary">
       <IconCamera className="h-4 w-4 flex-shrink-0" />
       <span className="min-w-0 truncate">{coverFile ? coverFile.name : "Pilih gambar sampul (wajib)"}</span>
       <input
@@ -846,12 +846,12 @@ export default function DashboardProductsPage() {
             x-auto membuat scroll-nya lokal ke baris tab saja, flex-shrink-0
             + whitespace-nowrap di tiap tombol mencegah teksnya sendiri
             terpotong/melipat sebelum scroll sempat aktif. */}
-        <div className="flex gap-2 overflow-x-auto border-b border-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setTab("halaman_toko")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "halaman_toko" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "halaman_toko" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Halaman Toko
@@ -860,7 +860,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("overview")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "overview" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "overview" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Overview
@@ -869,7 +869,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("manage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "manage" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "manage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Manage Items
@@ -878,7 +878,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("reviews")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "reviews" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "reviews" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Reviews
@@ -887,7 +887,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("listing")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "listing" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "listing" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Listing
@@ -896,7 +896,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("storage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "storage" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "storage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Storage & Files
@@ -905,7 +905,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("webhook_events")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "webhook_events" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "webhook_events" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Webhook Events
@@ -914,7 +914,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("shop_settings")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Shop Settings
@@ -923,7 +923,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("transaction")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "transaction" ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+              tab === "transaction" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             Transaction
@@ -946,7 +946,7 @@ export default function DashboardProductsPage() {
                 yang sengaja slug-nya SELALU = username. */}
             {allTokoPages.length >= 1 && (allTokoPages.length > 1 || page?.is_premium) && (
               <>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-muted">Toko</p>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-app-muted">Toko</p>
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                   {allTokoPages.map((tp) => (
                     <button
@@ -955,7 +955,7 @@ export default function DashboardProductsPage() {
                       onClick={() => switchToTokoPage(tp.id)}
                       disabled={tokoLoading || activeTokoPageId === tp.id}
                       className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-                        activeTokoPageId === tp.id ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+                        activeTokoPageId === tp.id ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
                       }`}
                     >
                       {tp.name}
@@ -979,7 +979,7 @@ export default function DashboardProductsPage() {
                       setCreatingTokoPage(true);
                     }}
                     title={!page?.is_premium ? "Toko tambahan khusus kreator Premium" : undefined}
-                    className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-bold text-muted hover:border-primary hover:text-primary"
+                    className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
                   >
                     <IconPlus className="h-3.5 w-3.5" />
                     Toko
@@ -990,7 +990,7 @@ export default function DashboardProductsPage() {
                   const activeTp = allTokoPages.find((p) => p.id === activeTokoPageId);
                   if (!activeTp) return null;
                   return (
-                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-muted">
                       <label className="flex items-center gap-1.5">
                         <Toggle checked={activeTp.is_published} onChange={() => handleTogglePagePublish(activeTp)} />
                         Terbitkan
@@ -1051,7 +1051,7 @@ export default function DashboardProductsPage() {
                   </span>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-ink">{page.display_name || `@${page.username}`}</p>
+                  <p className="truncate text-sm font-bold text-app-ink">{page.display_name || `@${page.username}`}</p>
                   <a
                     href={`${SITE_URL}/${page.username}`}
                     target="_blank"
@@ -1073,7 +1073,7 @@ export default function DashboardProductsPage() {
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     overviewRangeDays === d
                       ? "border-primary bg-primary-subtle text-primary"
-                      : "border-border text-muted hover:border-primary/50"
+                      : "border-app-border text-app-muted hover:border-primary/50"
                   }`}
                 >
                   {d} hari
@@ -1088,7 +1088,7 @@ export default function DashboardProductsPage() {
           </div>
         ) : (
           <div className="mt-4">
-            <p className="text-sm text-muted">
+            <p className="text-sm text-app-muted">
               Unggah file (pdf/zip/epub/mp4/mp3/mov/gambar, maks 100MB) sebelum mengaktifkan produk. Tambahkan sampul
               (jpg/png/webp, maks 5MB) supaya tampil menarik di halaman publik.
             </p>
@@ -1098,7 +1098,7 @@ export default function DashboardProductsPage() {
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-1 flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1 sm:max-w-xs">
-                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+                  <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-muted" />
                   <input
                     type="search"
                     value={query}
@@ -1107,7 +1107,7 @@ export default function DashboardProductsPage() {
                       setItemsPage(1);
                     }}
                     placeholder="Cari produk..."
-                    className="w-full rounded-lg border border-border bg-white py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border bg-app-surface py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
                   />
                 </div>
                 {categories.length > 0 && (
@@ -1117,7 +1117,7 @@ export default function DashboardProductsPage() {
                       setCategoryFilter(e.target.value);
                       setItemsPage(1);
                     }}
-                    className="rounded-lg border border-border bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none"
+                    className="rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs focus:border-primary focus:outline-none"
                   >
                     <option value="">Semua Kategori</option>
                     {categories.map((c) => (
@@ -1147,20 +1147,20 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconUpload className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-ink">Digital Product</span>
-                  <span className="text-[11px] text-muted">Jual produk digital seperti file, e-book, software, template.</span>
+                  <span className="text-sm font-bold text-app-ink">Digital Product</span>
+                  <span className="text-[11px] text-app-muted">Jual produk digital seperti file, e-book, software, template.</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAddMode("payment_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconWallet className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-ink">Payment Link</span>
-                  <span className="text-[11px] text-muted">Terima pembayaran untuk jasa, donasi, atau tujuan khusus lain.</span>
+                  <span className="text-sm font-bold text-app-ink">Payment Link</span>
+                  <span className="text-[11px] text-app-muted">Terima pembayaran untuk jasa, donasi, atau tujuan khusus lain.</span>
                 </button>
                 {/* Link Eksternal -- permintaan langsung pengguna, 17
                     Agustus 2026: "saya mau untuk produk bisa untuk
@@ -1171,11 +1171,11 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => setAddMode("external_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
                 >
                   <IconExternal className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-bold text-ink">Link Eksternal</span>
-                  <span className="text-[11px] text-muted">Tombol Beli membuka listing di Shopee/Tokopedia/toko lain (boleh link affiliate).</span>
+                  <span className="text-sm font-bold text-app-ink">Link Eksternal</span>
+                  <span className="text-[11px] text-app-muted">Tombol Beli membuka listing di Shopee/Tokopedia/toko lain (boleh link affiliate).</span>
                 </button>
               </div>
             )}
@@ -1190,7 +1190,7 @@ export default function DashboardProductsPage() {
                     placeholder="Nama produk"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="number"
@@ -1199,14 +1199,14 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="text"
                     placeholder="Kategori (opsional)"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 {renderCoverPicker(coverFile, setCoverFile)}
@@ -1223,7 +1223,7 @@ export default function DashboardProductsPage() {
                       setCategory("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     Batal
                   </button>
@@ -1241,7 +1241,7 @@ export default function DashboardProductsPage() {
                     placeholder="Judul (mis. Konsultasi 1 Jam)"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="number"
@@ -1250,7 +1250,7 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <textarea
@@ -1258,7 +1258,7 @@ export default function DashboardProductsPage() {
                   value={successMessage}
                   onChange={(e) => setSuccessMessage(e.target.value)}
                   rows={2}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -1267,14 +1267,14 @@ export default function DashboardProductsPage() {
                     placeholder="Batas jumlah pembayaran (opsional)"
                     value={paymentLimitCount}
                     onChange={(e) => setPaymentLimitCount(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="datetime-local"
                     value={linkExpiresAt}
                     onChange={(e) => setLinkExpiresAt(e.target.value)}
                     title="Kedaluwarsa link (opsional)"
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 {renderCoverPicker(coverFile, setCoverFile)}
@@ -1293,7 +1293,7 @@ export default function DashboardProductsPage() {
                       setLinkExpiresAt("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     Batal
                   </button>
@@ -1311,7 +1311,7 @@ export default function DashboardProductsPage() {
                     placeholder="Nama produk"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     type="number"
@@ -1319,7 +1319,7 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <input
@@ -1328,14 +1328,14 @@ export default function DashboardProductsPage() {
                   placeholder="Tautan produk (mis. https://shopee.co.id/... atau link affiliate kamu)"
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <input
                   type="text"
                   placeholder="Kategori (opsional)"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 {renderCoverPicker(coverFile, setCoverFile)}
                 <div className="flex gap-2">
@@ -1352,7 +1352,7 @@ export default function DashboardProductsPage() {
                       setExternalUrl("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     Batal
                   </button>
@@ -1364,7 +1364,7 @@ export default function DashboardProductsPage() {
               <div className="glass mt-4 overflow-x-auto rounded-3xl shadow-card">
                 <table className="w-full min-w-[520px] text-left text-xs">
                   <thead>
-                    <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-muted">
+                    <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
                       <th className="px-4 py-3">Item</th>
                       <th className="px-4 py-3">Harga</th>
                       <th className="px-4 py-3">Terjual</th>
@@ -1382,7 +1382,7 @@ export default function DashboardProductsPage() {
                   </thead>
                   <tbody>
                     {pagedProducts.map((p) => (
-                      <tr key={p.id} className="border-b border-border last:border-0">
+                      <tr key={p.id} className="border-b border-app-border last:border-0">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-subtle">
@@ -1394,7 +1394,7 @@ export default function DashboardProductsPage() {
                               )}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-ink">{p.name}</p>
+                              <p className="truncate font-semibold text-app-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
                                 {p.product_kind === "payment_link" && (
                                   <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">Payment Link</span>
@@ -1419,7 +1419,7 @@ export default function DashboardProductsPage() {
                                   </a>
                                 )}
                                 {p.category && (
-                                  <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-muted">{p.category}</span>
+                                  <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-app-muted">{p.category}</span>
                                 )}
                                 {p.is_flash_sale_active && (
                                   <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">Flash Sale</span>
@@ -1443,7 +1443,7 @@ export default function DashboardProductsPage() {
                             <span className="font-bold text-secondary-dark">Min Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}</span>
                           ) : p.is_flash_sale_active ? (
                             <span>
-                              <span className="mr-1 text-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</span>
+                              <span className="mr-1 text-app-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                               <span className="font-bold text-accent-dark">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
                             </span>
                           ) : p.product_kind === "external_link" && p.price_idr === 0 ? (
@@ -1451,13 +1451,13 @@ export default function DashboardProductsPage() {
                             // langsung pengguna, 20 Agustus 2026) -- 0 di sini
                             // berarti sengaja tidak diisi, bukan produk gratis
                             // Rp0 sungguhan (jenis lain harga tetap wajib >= 1000).
-                            <span className="text-muted">Tidak ditampilkan</span>
+                            <span className="text-app-muted">Tidak ditampilkan</span>
                           ) : (
-                            <span className="font-bold text-ink">Rp {p.price_idr.toLocaleString("id-ID")}</span>
+                            <span className="font-bold text-app-ink">Rp {p.price_idr.toLocaleString("id-ID")}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 align-top text-ink">{p.sold_count.toLocaleString("id-ID")}</td>
-                        <td className="px-4 py-3 align-top text-muted">{p.click_count.toLocaleString("id-ID")}</td>
+                        <td className="px-4 py-3 align-top text-app-ink">{p.sold_count.toLocaleString("id-ID")}</td>
+                        <td className="px-4 py-3 align-top text-app-muted">{p.click_count.toLocaleString("id-ID")}</td>
                         <td className="px-4 py-3 align-top">
                           <Toggle
                             checked={p.is_active}
@@ -1470,7 +1470,7 @@ export default function DashboardProductsPage() {
                           <button
                             type="button"
                             onClick={() => setManageProductId(p.id)}
-                            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary"
+                            className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary"
                           >
                             Kelola
                           </button>
@@ -1481,7 +1481,7 @@ export default function DashboardProductsPage() {
                 </table>
               </div>
             ) : products.length > 0 ? (
-              <p className="mt-4 rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted">
+              <p className="mt-4 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
                 Tidak ada produk yang cocok dengan pencarian/filter ini.
               </p>
             ) : (
@@ -1494,7 +1494,7 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary disabled:opacity-40"
+                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
                 >
                   Sebelumnya
                 </button>
@@ -1504,7 +1504,7 @@ export default function DashboardProductsPage() {
                     type="button"
                     onClick={() => setItemsPage(n)}
                     className={`h-8 w-8 rounded-lg text-xs font-semibold ${
-                      n === currentPage ? "bg-primary text-white" : "text-ink hover:bg-primary-subtle"
+                      n === currentPage ? "bg-primary text-white" : "text-app-ink hover:bg-primary-subtle"
                     }`}
                   >
                     {n}
@@ -1514,7 +1514,7 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setItemsPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary disabled:opacity-40"
+                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
                 >
                   Berikutnya
                 </button>
@@ -1532,10 +1532,10 @@ export default function DashboardProductsPage() {
           <form
             onSubmit={handleCreateAdditionalToko}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
           >
-            <h2 className="font-heading text-sm font-bold text-ink">Toko Baru</h2>
-            <p className="mt-1 text-xs text-muted">Beri nama Toko-nya. Kamu bisa tambahkan produk & atur tampilannya setelah dibuat.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">Toko Baru</h2>
+            <p className="mt-1 text-xs text-app-muted">Beri nama Toko-nya. Kamu bisa tambahkan produk & atur tampilannya setelah dibuat.</p>
             <input
               type="text"
               autoFocus
@@ -1543,13 +1543,13 @@ export default function DashboardProductsPage() {
               onChange={(e) => setNewTokoPageTitle(e.target.value)}
               placeholder="Contoh: Toko Skincare"
               maxLength={80}
-              className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             />
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => setCreatingTokoPage(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
                 Batal
               </button>
@@ -1582,15 +1582,15 @@ export default function DashboardProductsPage() {
           onClick={closeManageModal}
         >
           <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-5 shadow-hero"
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl bg-app-surface p-5 shadow-hero"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
-              <h2 className="font-heading text-sm font-bold text-ink">Kelola: {manageProduct.name}</h2>
+              <h2 className="font-heading text-sm font-bold text-app-ink">Kelola: {manageProduct.name}</h2>
               <button
                 type="button"
                 onClick={closeManageModal}
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
                 aria-label="Tutup"
               >
                 <IconClose className="h-4 w-4" />
@@ -1605,9 +1605,9 @@ export default function DashboardProductsPage() {
                   placeholder="Kategori"
                   value={categoryDraft}
                   onChange={(e) => setCategoryDraft(e.target.value)}
-                  className="flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                 />
-                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-border px-2.5 py-1.5 text-[11px] font-bold text-muted">
+                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
                   Batal
                 </button>
                 <button
@@ -1642,10 +1642,10 @@ export default function DashboardProductsPage() {
                 Eksternal yang tidak punya File Produk sama sekali) --
                 gerbang aktivasi backend (product.go) menolak keduanya kalau
                 salah satu kosong. */}
-            <p className="mt-4 text-[11px] leading-relaxed text-muted">
-              <strong className="text-ink">File Produk</strong> (pdf/zip/epub/mp4/mp3/mov/gambar) wajib diunggah
+            <p className="mt-4 text-[11px] leading-relaxed text-app-muted">
+              <strong className="text-app-ink">File Produk</strong> (pdf/zip/epub/mp4/mp3/mov/gambar) wajib diunggah
               supaya bisa diaktifkan -- ini yang akan diterima pembeli (kecuali Payment Link/Link Eksternal, tidak
-              butuh file). <strong className="text-ink">Sampul</strong> WAJIB untuk semua jenis produk -- gambar
+              butuh file). <strong className="text-app-ink">Sampul</strong> WAJIB untuk semua jenis produk -- gambar
               yang tampil di kartu produk halaman publik.
             </p>
             <div className="mt-2.5 flex items-end gap-3">
@@ -1669,7 +1669,7 @@ export default function DashboardProductsPage() {
                     <IconCamera className="h-2.5 w-2.5" />
                   </span>
                 </button>
-                <span className="text-[10px] font-semibold text-muted">Sampul (wajib)</span>
+                <span className="text-[10px] font-semibold text-app-muted">Sampul (wajib)</span>
               </div>
               <input
                 ref={(el) => {
@@ -1715,7 +1715,7 @@ export default function DashboardProductsPage() {
                       type="button"
                       onClick={() => handleGetDownloadLink(manageProduct.id)}
                       title="Lihat file"
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle"
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
                     >
                       <IconExternal className="h-4 w-4" />
                     </button>
@@ -1726,7 +1726,7 @@ export default function DashboardProductsPage() {
                       onClick={() => handleToggleWatermark(manageProduct)}
                       title="Watermark otomatis (email pembeli + ID pesanan)"
                       className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        manageProduct.watermark_enabled ? "text-primary" : "text-muted"
+                        manageProduct.watermark_enabled ? "text-primary" : "text-app-muted"
                       }`}
                     >
                       <IconShield className="h-4 w-4" />
@@ -1738,8 +1738,8 @@ export default function DashboardProductsPage() {
 
             <div className="mt-4 flex flex-col gap-2.5">
               {flashSaleEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-ink">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconSparkle className="h-3.5 w-3.5" /> Flash Sale
                   </p>
                   <input
@@ -1747,24 +1747,24 @@ export default function DashboardProductsPage() {
                     placeholder="Harga flash sale (Rp)"
                     value={flashPrice}
                     onChange={(e) => setFlashPrice(e.target.value)}
-                    className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
                   <div className="flex gap-1.5">
                     <input
                       type="datetime-local"
                       value={flashStart}
                       onChange={(e) => setFlashStart(e.target.value)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
                     <input
                       type="datetime-local"
                       value={flashEnd}
                       onChange={(e) => setFlashEnd(e.target.value)}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
                   </div>
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted">
+                    <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
                       Batal
                     </button>
                     <button
@@ -1790,15 +1790,15 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => openFlashSaleForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-[11px] font-semibold text-muted hover:border-primary hover:text-primary"
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                 >
                   <IconSparkle className="h-3.5 w-3.5" /> Jadwalkan Flash Sale
                 </button>
               )}
 
               {pwywEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-ink">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconWallet className="h-3.5 w-3.5" /> Bayar Seikhlasnya
                   </p>
                   <input
@@ -1806,10 +1806,10 @@ export default function DashboardProductsPage() {
                     placeholder="Harga minimum (Rp)"
                     value={pwywMinPrice}
                     onChange={(e) => setPwywMinPrice(e.target.value)}
-                    className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                   />
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted">
+                    <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
                       Batal
                     </button>
                     <button
@@ -1835,7 +1835,7 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => openPwywForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-[11px] font-semibold text-muted hover:border-primary hover:text-primary"
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                 >
                   <IconWallet className="h-3.5 w-3.5" /> Aktifkan Bayar Seikhlasnya
                 </button>
@@ -1843,8 +1843,8 @@ export default function DashboardProductsPage() {
 
               {activeCollaborators.length > 0 &&
                 (splitsEditId === manageProduct.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                    <p className="text-[11px] text-muted">
+                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                    <p className="text-[11px] text-app-muted">
                       Bagian pendapatan otomatis ke kolaborator setiap produk ini terjual (dipotong dari bagianmu).
                     </p>
                     {splitRows.map((row, i) => (
@@ -1852,7 +1852,7 @@ export default function DashboardProductsPage() {
                         <select
                           value={row.user_id}
                           onChange={(e) => updateSplitRow(i, { user_id: e.target.value })}
-                          className="flex-1 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         >
                           <option value="">Pilih kolaborator</option>
                           {activeCollaborators.map((c) => (
@@ -1869,7 +1869,7 @@ export default function DashboardProductsPage() {
                           placeholder="%"
                           value={row.percent || ""}
                           onChange={(e) => updateSplitRow(i, { percent: Number(e.target.value) })}
-                          className="w-16 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-16 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1888,7 +1888,7 @@ export default function DashboardProductsPage() {
                       + Tambah kolaborator
                     </button>
                     <div className="flex gap-1.5">
-                      <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted">
+                      <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
                         Batal
                       </button>
                       <button
@@ -1915,7 +1915,7 @@ export default function DashboardProductsPage() {
                   <button
                     type="button"
                     onClick={() => openSplitsForm(manageProduct)}
-                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-[11px] font-semibold text-muted hover:border-primary hover:text-primary"
+                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
                   >
                     <IconUsers className="h-3.5 w-3.5" /> Atur Split Kolaborator
                   </button>
@@ -1926,8 +1926,8 @@ export default function DashboardProductsPage() {
                 field khusus external_link yang bisa diubah setelah dibuat
                 (ProductKind sendiri immutable, lihat catatan di product.go). */}
             {manageProduct.product_kind === "external_link" && (
-              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                <p className="flex items-center gap-1.5 text-[11px] font-bold text-ink">
+              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                   <IconExternal className="h-3.5 w-3.5" /> Tautan Produk
                 </p>
                 {externalUrlEditId === manageProduct.id ? (
@@ -1937,7 +1937,7 @@ export default function DashboardProductsPage() {
                       autoFocus
                       value={externalUrlDraft}
                       onChange={(e) => setExternalUrlDraft(e.target.value)}
-                      className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                     />
                     <div className="flex gap-1.5">
                       <button
@@ -1951,7 +1951,7 @@ export default function DashboardProductsPage() {
                       <button
                         type="button"
                         onClick={() => setExternalUrlEditId(null)}
-                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted hover:border-ink/30"
+                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted hover:border-ink/30"
                       >
                         Batal
                       </button>
@@ -1959,7 +1959,7 @@ export default function DashboardProductsPage() {
                   </>
                 ) : (
                   <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-[11px] text-ink">{manageProduct.external_url}</p>
+                    <p className="min-w-0 truncate text-[11px] text-app-ink">{manageProduct.external_url}</p>
                     <button
                       type="button"
                       onClick={() => {

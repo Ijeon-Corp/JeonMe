@@ -51,7 +51,7 @@ export default function LivePreviewPanel({
     // overflow-x internal kotak mockup yang menangani sisanya.
     <div className="mt-8 min-w-0 lg:sticky lg:top-6 lg:mt-0">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted">Pratinjau Langsung</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-app-muted">Pratinjau Langsung</p>
         {page && (
           <a
             href={openUrl ?? `${SITE_URL}/${page.username}`}
@@ -82,7 +82,7 @@ export default function LivePreviewPanel({
           tetap dipertahankan supaya di layar SANGAT sempit (<280px, mis.
           landscape ponsel kecil) kotak ikut menyusut, bukan meluber. */}
       {page && (
-        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Permintaan susulan: font pratinjau masih terasa besar --
               PagePreview dipakai BERSAMA halaman publik asli, jadi ukuran
               teksnya sendiri (Tailwind class di PagePreview.tsx) TIDAK boleh
@@ -110,7 +110,7 @@ export default function LivePreviewPanel({
           </div>
         </div>
       )}
-      <p className="mt-3 text-center text-[11px] text-muted">
+      <p className="mt-3 text-center text-[11px] text-app-muted">
         Menampilkan tautan &amp; produk yang aktif, persis seperti yang dilihat pengunjung.
       </p>
     </div>

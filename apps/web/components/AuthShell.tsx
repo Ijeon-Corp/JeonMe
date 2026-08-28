@@ -8,7 +8,7 @@ import AuthShowcase from "@/components/AuthShowcase";
 // bawah lg: karena dekoratif & tidak esensial di layar sempit).
 export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen bg-white lg:grid-cols-2">
+    <main className="grid min-h-screen bg-app-surface lg:grid-cols-2">
       <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-20">
         <Link href="/" className="mb-10 inline-flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -16,7 +16,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="w-full max-w-sm">{children}</div>
       </div>
-      <div className="hidden border-l border-border bg-primary-subtle/25 px-10 lg:block">
+      <div className="hidden border-l border-app-border bg-primary-subtle/25 px-10 lg:block">
         <AuthShowcase />
       </div>
     </main>

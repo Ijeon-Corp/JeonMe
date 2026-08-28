@@ -154,17 +154,17 @@ export default function SettingsSecurityPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         Pengaturan
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-ink">Keamanan</h1>
-      <p className="mt-1 text-sm text-muted">Password, verifikasi dua langkah, dan sesi aktif.</p>
+      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">Keamanan</h1>
+      <p className="mt-1 text-sm text-app-muted">Password, verifikasi dua langkah, dan sesi aktif.</p>
 
-      <section className="mt-6 rounded-3xl border border-border bg-white p-5">
-        <h2 className="font-heading text-sm font-bold text-ink">Ganti Password</h2>
+      <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
+        <h2 className="font-heading text-sm font-bold text-app-ink">Ganti Password</h2>
         <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
           <input
             type="password"
@@ -172,7 +172,7 @@ export default function SettingsSecurityPage() {
             placeholder="Password lama"
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
-            className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
           />
           <input
             type="password"
@@ -181,7 +181,7 @@ export default function SettingsSecurityPage() {
             placeholder="Password baru (min. 8 karakter)"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
           />
           <button
             type="submit"
@@ -193,20 +193,20 @@ export default function SettingsSecurityPage() {
         </form>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-sm font-bold text-ink">Verifikasi Dua Langkah (2FA)</h2>
+          <h2 className="font-heading text-sm font-bold text-app-ink">Verifikasi Dua Langkah (2FA)</h2>
           {status && (
             <span
               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                status.enabled ? "bg-primary-subtle text-primary" : "bg-ink/5 text-muted"
+                status.enabled ? "bg-primary-subtle text-primary" : "bg-ink/5 text-app-muted"
               }`}
             >
               {status.enabled ? "Aktif" : "Nonaktif"}
             </span>
           )}
         </div>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-xs text-app-muted">
           Amankan akunmu dengan kode dari aplikasi authenticator (mis. Google Authenticator, Authy) setiap kali
           login.
         </p>
@@ -222,15 +222,15 @@ export default function SettingsSecurityPage() {
         )}
 
         {setupSecret && (
-          <div className="mt-4 rounded-xl border border-border bg-primary-subtle/40 p-4">
-            <p className="text-xs text-muted">
+          <div className="mt-4 rounded-xl border border-app-border bg-primary-subtle/40 p-4">
+            <p className="text-xs text-app-muted">
               Scan kode QR ini di aplikasi authenticator-mu, lalu masukkan kode 6 digit yang muncul untuk konfirmasi.
             </p>
             <div className="mt-3 flex justify-center">
               <QRCodeCanvas value={setupSecret.otpauth_url} size={180} level="M" marginSize={2} />
             </div>
-            <p className="mt-3 break-all text-center text-[11px] text-muted">
-              Kode manual: <span className="font-mono font-semibold text-ink">{setupSecret.secret}</span>
+            <p className="mt-3 break-all text-center text-[11px] text-app-muted">
+              Kode manual: <span className="font-mono font-semibold text-app-ink">{setupSecret.secret}</span>
             </p>
 
             <form onSubmit={handleVerify2FA} className="mt-4 flex flex-col gap-2">
@@ -241,7 +241,7 @@ export default function SettingsSecurityPage() {
                 placeholder="123456"
                 value={verifyCode}
                 onChange={(e) => setVerifyCode(e.target.value)}
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-center text-lg tracking-[0.3em] focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-center text-lg tracking-[0.3em] focus:border-primary focus:outline-none"
               />
               <button
                 type="submit"
@@ -272,7 +272,7 @@ export default function SettingsSecurityPage() {
               placeholder="Masukkan password untuk konfirmasi"
               value={disablePassword}
               onChange={(e) => setDisablePassword(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm"
             />
             <div className="flex gap-2">
               <button
@@ -288,7 +288,7 @@ export default function SettingsSecurityPage() {
                   setShowDisableForm(false);
                   setDisablePassword("");
                 }}
-                className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-ink"
+                className="rounded-lg border border-app-border px-3 py-2 text-xs font-semibold text-app-ink"
               >
                 Batal
               </button>
@@ -297,11 +297,11 @@ export default function SettingsSecurityPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-border bg-white p-5">
+      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-heading text-sm font-bold text-ink">Sesi Aktif</h2>
-            <p className="mt-1 text-xs text-muted">Device yang sedang login ke akunmu.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">Sesi Aktif</h2>
+            <p className="mt-1 text-xs text-app-muted">Device yang sedang login ke akunmu.</p>
           </div>
           {/* Audit keamanan 15 Agustus 2026: satu klik cabut semua device lain
               (sesi ini tetap aktif). Hanya muncul kalau ada lebih dari satu
@@ -326,11 +326,11 @@ export default function SettingsSecurityPage() {
               <Skeleton className="h-12 w-full" />
             </div>
           )}
-          {sessions?.length === 0 && <p className="text-xs text-muted">Tidak ada sesi aktif tercatat.</p>}
+          {sessions?.length === 0 && <p className="text-xs text-app-muted">Tidak ada sesi aktif tercatat.</p>}
           {sessions?.map((s) => (
             <div
               key={s.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
+              className="flex items-center justify-between gap-3 rounded-xl border border-app-border p-3"
             >
               {/* Bug ditemukan (5 Agustus 2026, audit responsif): badge
                   "Sesi ini" sebelumnya ikut ditulis SEBARIS di dalam <p>
@@ -342,7 +342,7 @@ export default function SettingsSecurityPage() {
                   truncate di elemennya sendiri. */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="min-w-0 truncate text-xs font-semibold text-ink">
+                  <p className="min-w-0 truncate text-xs font-semibold text-app-ink">
                     {s.user_agent || "Device tidak dikenal"}
                   </p>
                   {s.is_current && (
@@ -351,7 +351,7 @@ export default function SettingsSecurityPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-[11px] text-muted">
+                <p className="mt-0.5 text-[11px] text-app-muted">
                   Masuk {new Date(s.created_at).toLocaleString("id-ID")}
                 </p>
               </div>

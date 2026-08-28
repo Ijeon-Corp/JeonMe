@@ -89,7 +89,7 @@ export default function DashboardCustomDomainPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Arahkan domainmu sendiri (mis. toko.namamu.com) ke halaman Jeon.id-mu. Fitur PRO di kompetitor -- gratis di
         Jeon.id.
       </p>
@@ -107,7 +107,7 @@ export default function DashboardCustomDomainPage() {
             placeholder="toko.namamu.com"
             value={domainInput}
             onChange={(e) => setDomainInput(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="min-w-0 flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="submit"
@@ -122,42 +122,42 @@ export default function DashboardCustomDomainPage() {
           <div className="mt-5 flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${settings.verified ? "bg-secondary" : "bg-muted"}`} />
-              <span className={`text-xs font-semibold ${settings.verified ? "text-secondary-dark" : "text-muted"}`}>
+              <span className={`text-xs font-semibold ${settings.verified ? "text-secondary-dark" : "text-app-muted"}`}>
                 {settings.verified ? "Terverifikasi" : "Belum terverifikasi"}
               </span>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">
                 Tambahkan 2 DNS record berikut di penyedia domainmu
               </p>
               <div className="flex flex-col gap-2">
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-bold uppercase text-muted">CNAME</p>
+                <div className="rounded-lg border border-app-border p-3">
+                  <p className="text-[10px] font-bold uppercase text-app-muted">CNAME</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-xs text-ink">
+                    <p className="truncate text-xs text-app-ink">
                       {settings.domain} &rarr; {settings.cname_target}
                     </p>
                     <button
                       type="button"
                       onClick={() => handleCopy(settings.cname_target, "cname")}
-                      className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-ink hover:border-primary"
+                      className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
                     >
                       <IconCopy className="h-3 w-3" />
                       {copied === "cname" ? "Tersalin!" : "Salin"}
                     </button>
                   </div>
                 </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-bold uppercase text-muted">TXT</p>
+                <div className="rounded-lg border border-app-border p-3">
+                  <p className="text-[10px] font-bold uppercase text-app-muted">TXT</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-xs text-ink">
+                    <p className="truncate text-xs text-app-ink">
                       {settings.txt_record_name} = {settings.verification_token}
                     </p>
                     <button
                       type="button"
                       onClick={() => handleCopy(settings.verification_token, "txt")}
-                      className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-ink hover:border-primary"
+                      className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
                     >
                       <IconCopy className="h-3 w-3" />
                       {copied === "txt" ? "Tersalin!" : "Salin"}
@@ -190,7 +190,7 @@ export default function DashboardCustomDomainPage() {
               <button
                 type="button"
                 onClick={handleRemove}
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-red-600 hover:border-red-300"
+                className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-red-600 hover:border-red-300"
               >
                 Lepas
               </button>

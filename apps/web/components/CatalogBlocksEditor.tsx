@@ -83,14 +83,14 @@ function CatalogBlockTypePicker({
             disabled={disabled && !locked}
             onClick={() => (locked ? router.push("/dashboard/settings/subscription") : onPick(t.type))}
             title={locked ? "Khusus kreator Premium" : disabled ? "Sudah mencapai batas" : undefined}
-            className={`flex flex-col items-center gap-1 rounded-xl border border-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex flex-col items-center gap-1 rounded-xl border border-app-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 ${
               locked ? "relative" : ""
             }`}
           >
-            {locked ? <IconLock className="h-4 w-4 text-muted" /> : <t.Icon className="h-4 w-4" />}
+            {locked ? <IconLock className="h-4 w-4 text-app-muted" /> : <t.Icon className="h-4 w-4" />}
             <span>
               {t.label}
-              {locked && <span className="block text-[9px] text-muted">Premium</span>}
+              {locked && <span className="block text-[9px] text-app-muted">Premium</span>}
             </span>
           </button>
         );
@@ -140,20 +140,20 @@ export function CatalogBlocksEditor({
   const atLimit = blocks.length >= maxCatalogItemBlocks || depth >= maxCatalogDepth;
 
   return (
-    <div className="mt-3 flex flex-col gap-2.5 rounded-xl border border-dashed border-border p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Blok Tambahan di Item Ini</p>
+    <div className="mt-3 flex flex-col gap-2.5 rounded-xl border border-dashed border-app-border p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">Blok Tambahan di Item Ini</p>
 
       {blocks.map((block) => (
-        <div key={block.id} className="rounded-lg border border-border bg-white p-2.5">
+        <div key={block.id} className="rounded-lg border border-app-border bg-app-surface p-2.5">
           <div className="flex items-center gap-2">
             <input
               defaultValue={block.title}
               onBlur={(e) => updateBlock(block.id, { title: e.target.value })}
               placeholder="Judul blok"
               aria-label="Judul blok tertanam"
-              className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => removeBlock(block.id)} aria-label="Hapus blok" className="flex-shrink-0 text-muted hover:text-red-600">
+            <button type="button" onClick={() => removeBlock(block.id)} aria-label="Hapus blok" className="flex-shrink-0 text-app-muted hover:text-red-600">
               <IconTrash className="h-4 w-4" />
             </button>
           </div>
@@ -165,7 +165,7 @@ export function CatalogBlocksEditor({
               placeholder="Isi teks"
               aria-label="Isi teks blok"
               rows={2}
-              className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
           )}
 
@@ -175,7 +175,7 @@ export function CatalogBlocksEditor({
               onBlur={(e) => updateBlock(block.id, { block_data: { ...block.block_data, video_url: e.target.value } })}
               placeholder="URL video YouTube/TikTok"
               aria-label="URL video"
-              className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
           )}
 
@@ -186,9 +186,9 @@ export function CatalogBlocksEditor({
                 onBlur={(e) => updateBlock(block.id, { url: e.target.value })}
                 placeholder="Tautan Google Maps"
                 aria-label="Tautan Google Maps"
-                className="w-full rounded-md border border-border px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
               />
-              <p className="text-[10px] text-muted">Selalu tautan langsung -- mode peta tertanam belum didukung di dalam item katalog.</p>
+              <p className="text-[10px] text-app-muted">Selalu tautan langsung -- mode peta tertanam belum didukung di dalam item katalog.</p>
             </div>
           )}
 
@@ -201,7 +201,7 @@ export function CatalogBlocksEditor({
 
           {block.block_type === "catalog" && (
             <div className="mt-2">
-              <p className="mb-1.5 text-[10.5px] text-muted">Item di dalam katalog bersarang ini:</p>
+              <p className="mb-1.5 text-[10.5px] text-app-muted">Item di dalam katalog bersarang ini:</p>
               <CatalogNodeEditor
                 items={(block.block_data.items as CatalogItem[]) ?? []}
                 isPremium={isPremium}
@@ -214,7 +214,7 @@ export function CatalogBlocksEditor({
       ))}
 
       {atLimit ? (
-        <p className="text-[10.5px] text-muted">
+        <p className="text-[10.5px] text-app-muted">
           {depth >= maxCatalogDepth ? "Sudah mencapai batas maksimal kedalaman katalog." : `Maksimal ${maxCatalogItemBlocks} blok tertanam per item.`}
         </p>
       ) : (
@@ -258,16 +258,16 @@ export function CatalogNodeEditor({
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <div key={item.id} className="rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+        <div key={item.id} className="rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
           <div className="flex items-center gap-2">
             <input
               defaultValue={item.title}
               onBlur={(e) => updateItem(item.id, { title: e.target.value })}
               placeholder="Judul item"
               aria-label="Judul item katalog bersarang"
-              className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => removeItem(item.id)} aria-label="Hapus item" className="flex-shrink-0 text-muted hover:text-red-600">
+            <button type="button" onClick={() => removeItem(item.id)} aria-label="Hapus item" className="flex-shrink-0 text-app-muted hover:text-red-600">
               <IconTrash className="h-4 w-4" />
             </button>
           </div>
@@ -277,7 +277,7 @@ export function CatalogNodeEditor({
             placeholder="Deskripsi item (opsional)"
             aria-label="Deskripsi item katalog bersarang"
             rows={2}
-            className="mt-1.5 w-full rounded-md border border-border px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+            className="mt-1.5 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
           />
           <CatalogBlocksEditor blocks={item.blocks ?? []} isPremium={isPremium} depth={depth} onChange={(blocks) => updateItem(item.id, { blocks })} />
         </div>
@@ -285,7 +285,7 @@ export function CatalogNodeEditor({
       <button
         type="button"
         onClick={addItem}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-muted hover:border-primary hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
         <IconPlus className="h-3.5 w-3.5" /> Tambah Item
       </button>
@@ -317,16 +317,16 @@ function FaqEmbeddedEditor({
         // berubah struktur (tambah/hapus baris) supaya defaultValue baris
         // yang index-nya bergeser tetap sinkron ke data terbaru, tapi TIDAK
         // remount di tiap ketikan (panjang array tidak berubah saat mengetik).
-        <div key={`${i}-${items.length}`} className="flex flex-col gap-1 rounded-md border border-border p-2">
+        <div key={`${i}-${items.length}`} className="flex flex-col gap-1 rounded-md border border-app-border p-2">
           <div className="flex items-center gap-1.5">
             <input
               defaultValue={qa.question}
               onBlur={(e) => update(i, { question: e.target.value })}
               placeholder="Pertanyaan"
               aria-label={`Pertanyaan FAQ ${i + 1}`}
-              className="min-w-0 flex-1 rounded-md border border-border px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
             />
-            <button type="button" onClick={() => remove(i)} aria-label="Hapus pertanyaan" className="flex-shrink-0 text-muted hover:text-red-600">
+            <button type="button" onClick={() => remove(i)} aria-label="Hapus pertanyaan" className="flex-shrink-0 text-app-muted hover:text-red-600">
               <IconTrash className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -336,14 +336,14 @@ function FaqEmbeddedEditor({
             placeholder="Jawaban"
             aria-label={`Jawaban FAQ ${i + 1}`}
             rows={2}
-            className="w-full rounded-md border border-border px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
           />
         </div>
       ))}
       <button
         type="button"
         onClick={() => onChange([...items, { question: "", answer: "" }])}
-        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-1.5 text-[11px] font-semibold text-muted hover:border-primary hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-app-border py-1.5 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
       >
         <IconPlus className="h-3 w-3" /> Tambah Pertanyaan
       </button>

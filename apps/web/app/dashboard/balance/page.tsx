@@ -141,14 +141,14 @@ export default function DashboardBalancePage() {
             </div>
           </div>
 
-          <h2 className="mt-5 font-heading text-lg font-bold text-ink">Estimasi Biaya Prosesor per Metode</h2>
-          <p className="mt-1 text-xs text-muted">Ditentukan Midtrans, di luar kendali Jeon.id -- bukan komisi platform.</p>
+          <h2 className="mt-5 font-heading text-lg font-bold text-app-ink">Estimasi Biaya Prosesor per Metode</h2>
+          <p className="mt-1 text-xs text-app-muted">Ditentukan Midtrans, di luar kendali Jeon.id -- bukan komisi platform.</p>
 
           <div className="mt-3 flex flex-col gap-1.5">
             {feeBreakdown.reference.map((r) => (
-              <div key={r.method} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs">
-                <span className="font-semibold text-ink">{r.label}</span>
-                <span className="text-muted">{r.fee_description}</span>
+              <div key={r.method} className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-xs">
+                <span className="font-semibold text-app-ink">{r.label}</span>
+                <span className="text-app-muted">{r.fee_description}</span>
               </div>
             ))}
           </div>
@@ -156,8 +156,8 @@ export default function DashboardBalancePage() {
       )}
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-ink">Ajukan Penarikan</h2>
-        <p className="mt-1 text-xs text-muted">
+        <h2 className="font-heading text-lg font-bold text-app-ink">Ajukan Penarikan</h2>
+        <p className="mt-1 text-xs text-app-muted">
           Minimum Rp50.000.{" "}
           <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
             <IconShield className="h-3 w-3" />
@@ -167,7 +167,7 @@ export default function DashboardBalancePage() {
         </p>
 
         {verifiedMethods.length === 0 ? (
-          <p className="mt-3 rounded-lg bg-primary-subtle/50 px-3 py-2 text-xs text-ink">
+          <p className="mt-3 rounded-lg bg-primary-subtle/50 px-3 py-2 text-xs text-app-ink">
             Belum ada metode pembayaran terverifikasi.{" "}
             <Link href="/dashboard/settings/payment" className="font-semibold text-primary hover:underline">
               Tambahkan & verifikasi rekening/e-wallet dulu
@@ -182,12 +182,12 @@ export default function DashboardBalancePage() {
               placeholder="Jumlah (IDR)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-40 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-40 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <select
               value={selectedMethodId}
               onChange={(e) => setPayoutMethodId(e.target.value)}
-              className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               {verifiedMethods.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -207,13 +207,13 @@ export default function DashboardBalancePage() {
       </section>
 
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-ink">Riwayat Penarikan</h2>
+        <h2 className="font-heading text-lg font-bold text-app-ink">Riwayat Penarikan</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (
-            <li key={p.id} className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+            <li key={p.id} className="flex items-center justify-between rounded-xl border border-app-border px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-ink">Rp {p.amount_idr.toLocaleString("id-ID")}</p>
-                <p className="text-xs text-muted">{p.destination_account}</p>
+                <p className="text-sm font-semibold text-app-ink">Rp {p.amount_idr.toLocaleString("id-ID")}</p>
+                <p className="text-xs text-app-muted">{p.destination_account}</p>
               </div>
               <span
                 className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -221,7 +221,7 @@ export default function DashboardBalancePage() {
                     ? "bg-secondary-subtle text-secondary-dark"
                     : p.status === "failed"
                       ? "bg-red-50 text-red-600"
-                      : "bg-gray-100 text-muted"
+                      : "bg-gray-100 text-app-muted"
                 }`}
               >
                 {STATUS_LABEL[p.status]}

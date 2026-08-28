@@ -134,13 +134,13 @@ export default function DeliveryMethodPanel({
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-border p-3">
-      <p className="text-[11px] font-bold text-ink">Metode Penyerahan</p>
+    <div className="mt-4 rounded-lg border border-app-border p-3">
+      <p className="text-[11px] font-bold text-app-ink">Metode Penyerahan</p>
       <select
         value={product.delivery_method}
         disabled={saving}
         onChange={(e) => handleChangeMethod(e.target.value as DashboardProduct["delivery_method"])}
-        className="mt-1.5 w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
+        className="mt-1.5 w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
       >
         {METHOD_OPTIONS.map((m) => (
           <option key={m.value} value={m.value}>
@@ -148,7 +148,7 @@ export default function DeliveryMethodPanel({
           </option>
         ))}
       </select>
-      <p className="mt-1 text-[10px] text-muted">
+      <p className="mt-1 text-[10px] text-app-muted">
         {METHOD_OPTIONS.find((m) => m.value === product.delivery_method)?.description}
       </p>
 
@@ -160,7 +160,7 @@ export default function DeliveryMethodPanel({
               placeholder="https://server-kamu.com/webhook"
               value={webhookUrlDraft}
               onChange={(e) => setWebhookUrlDraft(e.target.value)}
-              className="flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+              className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
             />
             <button
               type="button"
@@ -173,7 +173,7 @@ export default function DeliveryMethodPanel({
           </div>
           {webhookSecret ? (
             <div className="flex items-center gap-1.5 rounded-md bg-primary-subtle/40 px-2.5 py-1.5">
-              <code className="min-w-0 flex-1 truncate text-[10px] text-ink">{webhookSecret}</code>
+              <code className="min-w-0 flex-1 truncate text-[10px] text-app-ink">{webhookSecret}</code>
               <button type="button" onClick={handleCopySecret} className="flex-shrink-0 text-primary" title="Salin">
                 {copied ? <IconCheck className="h-3.5 w-3.5" /> : <IconCopy className="h-3.5 w-3.5" />}
               </button>
@@ -188,7 +188,7 @@ export default function DeliveryMethodPanel({
               {loadingSecret ? "Memuat..." : "Lihat kunci tanda tangan (HMAC)"}
             </button>
           )}
-          <p className="text-[10px] text-muted">
+          <p className="text-[10px] text-app-muted">
             Tiap POST ditandatangani di header <code>X-Jeon-Signature</code> (HMAC-SHA256 dari isi body) supaya
             server kamu bisa memverifikasi pengirimnya benar-benar Jeon.id.
           </p>
@@ -197,7 +197,7 @@ export default function DeliveryMethodPanel({
 
       {product.delivery_method === "random_code" && (
         <div className="mt-2.5 flex flex-col gap-2">
-          <p className="text-[11px] font-semibold text-ink">
+          <p className="text-[11px] font-semibold text-app-ink">
             Stok tersedia: <span className="text-secondary-dark">{product.unclaimed_code_count}</span>
           </p>
           <textarea
@@ -205,7 +205,7 @@ export default function DeliveryMethodPanel({
             value={newCodesText}
             onChange={(e) => setNewCodesText(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
           />
           <button
             type="button"
@@ -221,12 +221,12 @@ export default function DeliveryMethodPanel({
               {loadingCodes ? "Memuat..." : "Lihat daftar kode"}
             </button>
           ) : (
-            <div className="max-h-40 overflow-y-auto rounded-md border border-border">
+            <div className="max-h-40 overflow-y-auto rounded-md border border-app-border">
               {codes.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-1.5 text-[11px] last:border-0">
-                  <span className={`truncate ${c.claimed_at ? "text-muted line-through" : "text-ink"}`}>{c.code}</span>
+                <div key={c.id} className="flex items-center justify-between gap-2 border-b border-app-border px-2.5 py-1.5 text-[11px] last:border-0">
+                  <span className={`truncate ${c.claimed_at ? "text-app-muted line-through" : "text-app-ink"}`}>{c.code}</span>
                   {c.claimed_at ? (
-                    <span className="flex-shrink-0 text-[9px] font-bold text-muted">Terpakai</span>
+                    <span className="flex-shrink-0 text-[9px] font-bold text-app-muted">Terpakai</span>
                   ) : (
                     <button type="button" onClick={() => handleDeleteCode(c.id)} className="flex-shrink-0 text-red-600 hover:bg-red-50">
                       <IconTrash className="h-3 w-3" />
@@ -234,7 +234,7 @@ export default function DeliveryMethodPanel({
                   )}
                 </div>
               ))}
-              {codes.length === 0 && <p className="px-2.5 py-2 text-center text-[11px] text-muted">Belum ada kode.</p>}
+              {codes.length === 0 && <p className="px-2.5 py-2 text-center text-[11px] text-app-muted">Belum ada kode.</p>}
             </div>
           )}
         </div>

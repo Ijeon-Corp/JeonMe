@@ -130,7 +130,7 @@ export default function DashboardEventsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-muted">
+      <p className="mt-1 text-sm text-app-muted">
         Jual tiket event online/offline dengan tanggal, waktu, zona waktu, dan kuota peserta.
       </p>
 
@@ -149,64 +149,64 @@ export default function DashboardEventsPage() {
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Nama Event</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Nama Event</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Workshop Fotografi Dasar"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Deskripsi</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Deskripsi</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Harga Tiket (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Harga Tiket (Rp)</label>
               <input
                 type="number"
                 required
                 min={1000}
                 value={priceIDR}
                 onChange={(e) => setPriceIDR(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Mulai</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Mulai</label>
                 <input
                   type="datetime-local"
                   required
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Berakhir</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Berakhir</label>
                 <input
                   type="datetime-local"
                   required
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Zona Waktu</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Zona Waktu</label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {TIMEZONE_OPTIONS.map((tz) => (
                   <option key={tz.value} value={tz.value}>
@@ -217,28 +217,28 @@ export default function DashboardEventsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Toggle checked={isOnline} onChange={() => setIsOnline((v) => !v)} label="Event online" />
-              <span className="text-xs font-semibold text-ink">{isOnline ? "Online" : "Offline (tatap muka)"}</span>
+              <span className="text-xs font-semibold text-app-ink">{isOnline ? "Online" : "Offline (tatap muka)"}</span>
             </div>
             {!isOnline && (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">Lokasi</label>
+                <label className="mb-1 block text-xs font-semibold text-app-ink">Lokasi</label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Jl. Contoh No. 1, Jakarta"
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             )}
             <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">Kuota Peserta (kosongkan untuk tanpa batas)</label>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">Kuota Peserta (kosongkan untuk tanpa batas)</label>
               <input
                 type="number"
                 min={1}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="flex gap-2">
@@ -248,7 +248,7 @@ export default function DashboardEventsPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -270,21 +270,21 @@ export default function DashboardEventsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <IconCalendar className="h-4 w-4 text-primary" />
-                <p className="text-sm font-bold text-ink">{ev.name}</p>
+                <p className="text-sm font-bold text-app-ink">{ev.name}</p>
               </div>
               <span className="text-sm font-bold text-secondary-dark">Rp {ev.price_idr.toLocaleString("id-ID")}</span>
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-app-muted">
               {new Date(ev.starts_at).toLocaleString("id-ID")} ({ev.timezone}) &middot;{" "}
               {ev.is_online ? "Online" : ev.location || "Offline"}
             </p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-app-muted">
               {ev.attendee_count} pendaftar{ev.capacity !== null ? ` / ${ev.capacity} slot` : " (tanpa batas kuota)"}
             </p>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Toggle checked={ev.is_active} onChange={() => handleToggleActive(ev)} label={`Aktifkan ${ev.name}`} />
-                <span className="text-xs font-semibold text-muted">Aktif</span>
+                <span className="text-xs font-semibold text-app-muted">Aktif</span>
               </div>
               <button
                 type="button"

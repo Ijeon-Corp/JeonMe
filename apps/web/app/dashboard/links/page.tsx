@@ -338,10 +338,10 @@ function FormField({ label, hint, children }: { label: string; hint?: string; ch
   return (
     <div className="flex flex-col gap-1">
       <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-app-muted">{label}</span>
         {children}
       </label>
-      {hint && <p className="text-[10.5px] text-muted">{hint}</p>}
+      {hint && <p className="text-[10.5px] text-app-muted">{hint}</p>}
     </div>
   );
 }
@@ -1675,14 +1675,14 @@ export default function DashboardLinksPage() {
             TIDAK ada UI terpisah. Halaman Toko (page_type "produk") sengaja
             TIDAK muncul di sini -- keputusan langsung pengguna, tetap
             dikelola lewat menu Toko (Produk & Monetisasi). */}
-        <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">Halaman</p>
+        <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">Halaman</p>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => switchToPage(null)}
             disabled={switchingPage || activePage === null}
             className={`rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-              activePage === null ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+              activePage === null ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
             }`}
           >
             Home
@@ -1694,7 +1694,7 @@ export default function DashboardLinksPage() {
               onClick={() => switchToPage({ id: ep.id, slug: ep.slug, pageType: ep.page_type === "landing" ? "landing" : "bio" })}
               disabled={switchingPage || activePage?.id === ep.id}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-                activePage?.id === ep.id ? "bg-ink text-white" : "bg-surface-2 text-muted hover:text-ink"
+                activePage?.id === ep.id ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
               }`}
             >
               {ep.name}
@@ -1719,7 +1719,7 @@ export default function DashboardLinksPage() {
               setCreatingPage(true);
             }}
             title={!page?.is_premium ? "Halaman tambahan khusus kreator Premium" : undefined}
-            className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-bold text-muted hover:border-primary hover:text-primary"
+            className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
           >
             <IconPlus className="h-3.5 w-3.5" />
             Page
@@ -1732,7 +1732,7 @@ export default function DashboardLinksPage() {
             const activeExtraPage = extraPages.find((p) => p.id === activePage.id);
             if (!activeExtraPage) return null;
             return (
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-muted">
                 {renamingPage ? (
                   <input
                     type="text"
@@ -1741,7 +1741,7 @@ export default function DashboardLinksPage() {
                     onChange={(e) => setRenamePageValue(e.target.value)}
                     onBlur={saveRenamePage}
                     onKeyDown={(e) => e.key === "Enter" && saveRenamePage()}
-                    className="rounded-md border border-primary px-2 py-0.5 text-xs text-ink focus:outline-none"
+                    className="rounded-md border border-primary px-2 py-0.5 text-xs text-app-ink focus:outline-none"
                   />
                 ) : (
                   <button type="button" onClick={() => startRenamePage(activeExtraPage)} className="flex items-center gap-1 hover:text-primary">
@@ -1763,7 +1763,7 @@ export default function DashboardLinksPage() {
             );
           })()}
 
-        <p className="mt-3 text-sm text-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
+        <p className="mt-3 text-sm text-app-muted">Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -1812,12 +1812,12 @@ export default function DashboardLinksPage() {
                   onBlur={saveEditProfileField}
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
                   placeholder={page.username}
-                  className="w-full rounded-md border border-primary px-2 py-1 font-heading text-base font-bold text-ink focus:outline-none"
+                  className="w-full rounded-md border border-primary px-2 py-1 font-heading text-base font-bold text-app-ink focus:outline-none"
                 />
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <p className="truncate font-heading text-base font-bold text-ink">{page.display_name || page.username}</p>
-                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah nama tampilan">
+                  <p className="truncate font-heading text-base font-bold text-app-ink">{page.display_name || page.username}</p>
+                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah nama tampilan">
                     <IconPencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -1833,12 +1833,12 @@ export default function DashboardLinksPage() {
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
                   placeholder="Tambahkan deskripsi singkat"
                   maxLength={160}
-                  className="mt-1 w-full rounded-md border border-primary px-2 py-1 text-sm text-muted focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-primary px-2 py-1 text-sm text-app-muted focus:outline-none"
                 />
               ) : (
                 <div className="mt-1 flex items-center gap-1.5">
-                  <p className="truncate text-sm text-muted">{page.bio || "Tambahkan deskripsi singkat"}</p>
-                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah deskripsi">
+                  <p className="truncate text-sm text-app-muted">{page.bio || "Tambahkan deskripsi singkat"}</p>
+                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah deskripsi">
                     <IconPencil className="h-3 w-3" />
                   </button>
                 </div>
@@ -1857,17 +1857,17 @@ export default function DashboardLinksPage() {
             supaya tidak bikin bagian atas halaman ini penuh buat kreator
             yang belum butuh fitur ini. */}
         {page && (
-          <div className="mt-3 rounded-xl border border-border">
+          <div className="mt-3 rounded-xl border border-app-border">
             <button
               type="button"
               onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-ink"
+              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-app-ink"
             >
               Kontak Sosial
-              <IconChevronRight className={`h-3.5 w-3.5 text-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
+              <IconChevronRight className={`h-3.5 w-3.5 text-app-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
             </button>
             {socialOpen && (
-              <div className="border-t border-border p-3">
+              <div className="border-t border-app-border p-3">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {SOCIAL_PLATFORMS.map((p) => (
                     <div key={p.key} className="flex items-center gap-2">
@@ -1880,12 +1880,12 @@ export default function DashboardLinksPage() {
                         onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                         placeholder={`${p.label} · ${p.placeholder}`}
                         aria-label={p.label}
-                        className="w-full min-w-0 rounded-lg border border-border px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
+                        className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-primary focus:outline-none"
                       />
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-[11px] text-muted">
+                <p className="mt-2 text-[11px] text-app-muted">
                   Isi handle saja (mis. &quot;username&quot;) atau tautan lengkap. Kosongkan untuk menyembunyikan ikonnya.
                 </p>
                 <div className="mt-3 flex items-center gap-2">
@@ -1897,7 +1897,7 @@ export default function DashboardLinksPage() {
                   >
                     {savingSocial ? "Menyimpan..." : "Simpan"}
                   </button>
-                  <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-muted hover:text-ink">
+                  <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
                     Batal
                   </button>
                 </div>
@@ -1922,10 +1922,10 @@ export default function DashboardLinksPage() {
               type="button"
               onClick={() => handleSelectContentTile(tile)}
               title={tile.label}
-              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted hover:border-primary hover:text-primary"
+              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-muted hover:border-primary hover:text-primary"
             >
               <tile.Icon className="h-4 w-4" />
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[9px] font-bold text-ink ring-1 ring-border">
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app-surface text-[9px] font-bold text-app-ink ring-1 ring-border">
                 +
               </span>
             </button>
@@ -1938,7 +1938,7 @@ export default function DashboardLinksPage() {
               setAddModalOpen(true);
             }}
             title="Lihat semua pilihan"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-ink hover:bg-gray-200"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-app-ink hover:bg-gray-200"
           >
             <IconPlus className="h-4 w-4" />
           </button>
@@ -1968,7 +1968,7 @@ export default function DashboardLinksPage() {
                   placeholder="mis. Website Saya"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </FormField>
               <FormField label="Tautan (URL)" hint="Alamat halaman tujuan saat diklik.">
@@ -1978,7 +1978,7 @@ export default function DashboardLinksPage() {
                   placeholder="https://..."
                   value={newURL}
                   onChange={(e) => setNewURL(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </FormField>
             </div>
@@ -1993,14 +1993,14 @@ export default function DashboardLinksPage() {
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 maxLength={240}
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </FormField>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setAddingLink(false)}
-                className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-muted hover:border-ink/30"
+                className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -2032,7 +2032,7 @@ export default function DashboardLinksPage() {
                       | "catalog"
                   )
                 }
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               >
                 <option value="video">Video (YouTube/TikTok)</option>
                 <option value="contact_form">Formulir Kontak</option>
@@ -2052,7 +2052,7 @@ export default function DashboardLinksPage() {
               blockType === "file" ||
               blockType === "project_showcase" ||
               blockType === "catalog") && (
-              <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-muted">
+              <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-app-muted">
                 {blockType === "gallery"
                   ? "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok."
                   : blockType === "audio"
@@ -2090,7 +2090,7 @@ export default function DashboardLinksPage() {
                 }
                 value={blockTitle}
                 onChange={(e) => setBlockTitle(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
             </FormField>
             {blockType === "project_showcase" && (
@@ -2101,7 +2101,7 @@ export default function DashboardLinksPage() {
                     placeholder="mis. Project Unggulan"
                     value={blockShowcaseBadge}
                     onChange={(e) => setBlockShowcaseBadge(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
@@ -2111,7 +2111,7 @@ export default function DashboardLinksPage() {
                     onChange={(e) => setBlockShowcaseDescription(e.target.value)}
                     rows={2}
                     maxLength={240}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
@@ -2121,7 +2121,7 @@ export default function DashboardLinksPage() {
                     placeholder="https://..."
                     value={blockShowcaseUrl}
                     onChange={(e) => setBlockShowcaseUrl(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
                 <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
@@ -2130,7 +2130,7 @@ export default function DashboardLinksPage() {
                     placeholder="mis. Lihat studi kasus"
                     value={blockShowcaseCta}
                     onChange={(e) => setBlockShowcaseCta(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   />
                 </FormField>
               </div>
@@ -2142,7 +2142,7 @@ export default function DashboardLinksPage() {
                   value={blockText}
                   onChange={(e) => setBlockText(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -2153,7 +2153,7 @@ export default function DashboardLinksPage() {
                   value={blockAccordionText}
                   onChange={(e) => setBlockAccordionText(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -2164,7 +2164,7 @@ export default function DashboardLinksPage() {
                   placeholder="https://youtube.com/... atau https://tiktok.com/..."
                   value={blockVideoUrl}
                   onChange={(e) => setBlockVideoUrl(e.target.value)}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 />
               </FormField>
             )}
@@ -2177,12 +2177,12 @@ export default function DashboardLinksPage() {
                       placeholder="Tempel tautan berbagi lokasi (mis. https://maps.app.goo.gl/...)"
                       value={blockMapsUrl}
                       onChange={(e) => setBlockMapsUrl(e.target.value)}
-                      className="w-full min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      className="w-full min-w-0 flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setMapsPickerOpenFor("add")}
-                      className="flex-shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:border-primary"
+                      className="flex-shrink-0 rounded-lg border border-app-border px-3 py-2 text-xs font-bold text-primary hover:border-primary"
                     >
                       Pilih di Peta
                     </button>
@@ -2190,7 +2190,7 @@ export default function DashboardLinksPage() {
                 </FormField>
                 <FormField label="Perilaku Saat Diklik Pengunjung">
                   <div className="flex flex-col gap-1.5">
-                    <label className="flex items-start gap-2 text-xs text-ink">
+                    <label className="flex items-start gap-2 text-xs text-app-ink">
                       <input
                         type="radio"
                         name="blockMapsEmbed"
@@ -2200,7 +2200,7 @@ export default function DashboardLinksPage() {
                       />
                       Buka tautan Google Maps langsung
                     </label>
-                    <label className="flex items-start gap-2 text-xs text-ink">
+                    <label className="flex items-start gap-2 text-xs text-app-ink">
                       <input
                         type="radio"
                         name="blockMapsEmbed"
@@ -2217,14 +2217,14 @@ export default function DashboardLinksPage() {
             {blockType === "faq" && (
               <div className="flex flex-col gap-2">
                 {blockFaqItems.map((item, i) => (
-                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-border p-2.5">
+                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-app-border p-2.5">
                     <FormField label={`Pertanyaan ${i + 1}`}>
                       <input
                         type="text"
                         placeholder="Pertanyaan"
                         value={item.question}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                     <FormField label="Jawaban">
@@ -2233,7 +2233,7 @@ export default function DashboardLinksPage() {
                         value={item.answer}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                         rows={2}
-                        className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   </div>
@@ -2251,7 +2251,7 @@ export default function DashboardLinksPage() {
               <button
                 type="button"
                 onClick={() => setAddingBlock(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 Batal
               </button>
@@ -2270,12 +2270,12 @@ export default function DashboardLinksPage() {
               onDragStart={() => setDragId(link.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(link.id)}
-              className={`flex flex-col gap-2.5 rounded-2xl border bg-white p-3.5 shadow-card transition-colors ${
-                link.is_active ? "border-border" : "border-border opacity-60"
+              className={`flex flex-col gap-2.5 rounded-2xl border bg-app-surface p-3.5 shadow-card transition-colors ${
+                link.is_active ? "border-app-border" : "border-app-border opacity-60"
               }`}
             >
               <div className="flex items-center gap-3">
-                <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted" />
+                <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
                 {/* Badge ikon -- permintaan langsung pengguna, 14 Agustus 2026:
                     "harusnya semua tipe ini... bisa ubah icon" -- urutan resolusi
                     SAMA PERSIS dgn tautan biasa (custom_icon_url > icon_key galeri
@@ -2332,11 +2332,11 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-sm font-bold text-ink focus:outline-none"
+                      className="w-full rounded-md border border-primary px-2 py-1 text-sm font-bold text-app-ink focus:outline-none"
                     />
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-sm font-bold text-ink">{link.title}</p>
+                      <p className="truncate text-sm font-bold text-app-ink">{link.title}</p>
                       {/* Permintaan langsung pengguna, 14 Agustus 2026: "judul nya
                           bisa diedit juga sama seperti yang lain" -- sebelumnya
                           cuma tautan biasa yang bisa ubah judul inline, sekarang
@@ -2344,7 +2344,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => startEditField(link, "title")}
-                        className="flex-shrink-0 text-muted hover:text-primary"
+                        className="flex-shrink-0 text-app-muted hover:text-primary"
                         title="Ubah judul"
                       >
                         <IconPencil className="h-3.5 w-3.5" />
@@ -2361,7 +2361,7 @@ export default function DashboardLinksPage() {
                   <ShareButton
                     title={link.title}
                     url={link.url}
-                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
+                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
                   />
                 )}
                 <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={`Aktifkan ${link.title}`} />
@@ -2377,12 +2377,12 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-muted focus:outline-none"
+                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : (
                     <>
-                      <p className="truncate text-xs text-muted">{link.url}</p>
-                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-muted hover:text-primary" title="Ubah URL">
+                      <p className="truncate text-xs text-app-muted">{link.url}</p>
+                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-primary" title="Ubah URL">
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
@@ -2406,15 +2406,15 @@ export default function DashboardLinksPage() {
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
                       maxLength={240}
                       placeholder="Deskripsi singkat (opsional)"
-                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-muted focus:outline-none"
+                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : (
                     <>
-                      <p className="truncate text-xs italic text-muted">{link.description || "Tanpa deskripsi"}</p>
+                      <p className="truncate text-xs italic text-app-muted">{link.description || "Tanpa deskripsi"}</p>
                       <button
                         type="button"
                         onClick={() => startEditField(link, "description")}
-                        className="flex-shrink-0 text-muted hover:text-primary"
+                        className="flex-shrink-0 text-app-muted hover:text-primary"
                         title="Ubah deskripsi"
                       >
                         <IconPencil className="h-3 w-3" />
@@ -2435,7 +2435,7 @@ export default function DashboardLinksPage() {
                       onClick={() => openScheduleForm(link)}
                       title="Jadwalkan tampil/sembunyi"
                       className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.starts_at && link.ends_at ? "text-primary" : "text-muted"
+                        link.starts_at && link.ends_at ? "text-primary" : "text-app-muted"
                       }`}
                     >
                       <IconClock className="h-4 w-4" />
@@ -2445,7 +2445,7 @@ export default function DashboardLinksPage() {
                       onClick={() => openLockForm(link)}
                       title="Kunci tautan"
                       className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.lock_type ? "text-primary" : "text-muted"
+                        link.lock_type ? "text-primary" : "text-app-muted"
                       }`}
                     >
                       <IconLock className="h-4 w-4" />
@@ -2464,7 +2464,7 @@ export default function DashboardLinksPage() {
                     onClick={() => handleToggleSensitive(link)}
                     title={link.lock_type === "sensitive" ? "Batalkan peringatan konten sensitif" : "Tandai konten sensitif"}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                      link.lock_type === "sensitive" ? "text-primary" : "text-muted"
+                      link.lock_type === "sensitive" ? "text-primary" : "text-app-muted"
                     }`}
                   >
                     <span aria-hidden className="text-sm leading-none">⚠️</span>
@@ -2479,7 +2479,7 @@ export default function DashboardLinksPage() {
                 <label
                   title={link.custom_icon_url ? "Ganti ikon kustom" : "Unggah ikon kustom"}
                   className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                    link.custom_icon_url ? "text-primary" : "text-muted"
+                    link.custom_icon_url ? "text-primary" : "text-app-muted"
                   }`}
                 >
                   {iconUploadingId === link.id ? (
@@ -2500,7 +2500,7 @@ export default function DashboardLinksPage() {
                   onClick={() => setIconPickerLinkId(link.id)}
                   title="Pilih dari galeri ikon"
                   className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                    link.icon_key ? "text-primary" : "text-muted"
+                    link.icon_key ? "text-primary" : "text-app-muted"
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -2527,7 +2527,7 @@ export default function DashboardLinksPage() {
                         aria-hidden
                       />
                     ) : (
-                      <IconPaintbrush className="h-4 w-4 text-muted" />
+                      <IconPaintbrush className="h-4 w-4 text-app-muted" />
                     )}
                     <input
                       type="color"
@@ -2542,7 +2542,7 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={() => handleClearIconColor(link)}
                     title="Hapus warna ikon (kembali ke warna tema)"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                   >
                     <IconClose className="h-4 w-4" />
                   </button>
@@ -2552,7 +2552,7 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={() => handleRemoveIcon(link)}
                     title="Hapus ikon (kembali ke deteksi/ikon default)"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
                   >
                     <IconClose className="h-4 w-4" />
                   </button>
@@ -2570,7 +2570,7 @@ export default function DashboardLinksPage() {
                     onClick={() => handleToggleFeatured(link)}
                     title={link.is_featured ? "Matikan Featured (kembali ke baris klasik)" : "Jadikan Featured (kartu thumbnail besar)"}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                      link.is_featured ? "text-primary" : "text-muted"
+                      link.is_featured ? "text-primary" : "text-app-muted"
                     }`}
                   >
                     <IconStar className="h-4 w-4" />
@@ -2601,7 +2601,7 @@ export default function DashboardLinksPage() {
                   type="button"
                   onClick={() => handleDuplicate(link)}
                   title="Duplikat"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-primary-subtle hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle hover:text-primary"
                 >
                   <IconCopy className="h-4 w-4" />
                 </button>
@@ -2621,23 +2621,23 @@ export default function DashboardLinksPage() {
               </div>
 
               {link.block_type === "link" && link.is_featured && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   {link.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
                   ) : (
-                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted">
+                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
                       Belum ada
                     </div>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="text-[11px] text-muted">
+                    <p className="text-[11px] text-app-muted">
                       {link.thumbnail_url
                         ? "Thumbnail kartu Featured."
                         : "Belum ada thumbnail -- untuk tautan YouTube akan otomatis terisi, tautan lain unggah manual di bawah."}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                         {thumbnailUploadingId === link.id ? "Mengunggah..." : link.thumbnail_url ? "Ganti Thumbnail" : "Unggah Thumbnail"}
                         <input
                           type="file"
@@ -2667,8 +2667,8 @@ export default function DashboardLinksPage() {
                   Featured Link di atas, karena kelola-foto justru INTI dari
                   blok ini, bukan pengaturan sekunder. */}
               {link.block_type === "gallery" && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  <p className="text-[11px] font-semibold text-muted">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <p className="text-[11px] font-semibold text-app-muted">
                     {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} foto
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -2688,7 +2688,7 @@ export default function DashboardLinksPage() {
                     ))}
                     {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                       <label
-                        className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                        className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
                           galleryUploadingId === link.id ? "opacity-60" : ""
                         }`}
                       >
@@ -2719,7 +2719,7 @@ export default function DashboardLinksPage() {
                   gambar, unggah ulang menimpa) -- BEDA disimpan di
                   block_data.image_url, bukan kolom thumbnail_url. */}
               {link.block_type === "project_showcase" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   {link.block_data?.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -2728,13 +2728,13 @@ export default function DashboardLinksPage() {
                       className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5"
                     />
                   ) : (
-                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted">
+                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
                       Belum ada
                     </div>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="text-[11px] text-muted">Gambar kartu Project Unggulan.</p>
-                    <label className="w-fit cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                    <p className="text-[11px] text-app-muted">Gambar kartu Project Unggulan.</p>
+                    <label className="w-fit cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                       {showcaseUploadingId === link.id ? "Mengunggah..." : link.block_data?.image_url ? "Ganti Gambar" : "Unggah Gambar"}
                       <input
                         type="file"
@@ -2756,12 +2756,12 @@ export default function DashboardLinksPage() {
                   dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
                   supaya tidak terasa terpecah 2 tempat berbeda. */}
               {link.block_type === "catalog" && (
-                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-muted">Belum ada item -- tambahkan di bawah.</p>}
+                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">Belum ada item -- tambahkan di bawah.</p>}
                   {catalogItemsOf(link).map((item) => {
                     const uploadKey = `${link.id}:${item.id}`;
                     return (
-                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-border bg-white p-2.5">
+                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
                         <div className="flex items-start gap-2">
                           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                             <FormField label="Judul Item">
@@ -2770,7 +2770,7 @@ export default function DashboardLinksPage() {
                                 defaultValue={item.title}
                                 placeholder="Judul item"
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
-                                className="w-full rounded-md border border-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
                               />
                             </FormField>
                             <FormField label="Deskripsi Item (opsional)">
@@ -2779,7 +2779,7 @@ export default function DashboardLinksPage() {
                                 placeholder="Deskripsi (opsional)"
                                 rows={2}
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
-                                className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                               />
                             </FormField>
                           </div>
@@ -2809,7 +2809,7 @@ export default function DashboardLinksPage() {
                           ))}
                           {item.images.length < maxCatalogImagesPerItem && (
                             <label
-                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary ${
+                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
                                 catalogItemImageUploadingKey === uploadKey ? "opacity-60" : ""
                               }`}
                             >
@@ -2848,7 +2848,7 @@ export default function DashboardLinksPage() {
                     );
                   })}
                   {catalogItemsOf(link).length < maxCatalogItems && (
-                    <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-border p-2.5">
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-app-border p-2.5">
                       <FormField label="Judul Item Baru">
                         <input
                           type="text"
@@ -2857,7 +2857,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) =>
                             setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
                           }
-                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <FormField label="Deskripsi Item Baru (opsional)">
@@ -2868,7 +2868,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) =>
                             setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
                           }
-                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <button
@@ -2889,18 +2889,18 @@ export default function DashboardLinksPage() {
                   ikon kustom yang sudah generik (baris kontrol ikon di
                   atas), tidak diduplikasi di sini. */}
               {link.block_type === "audio" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-white text-primary ring-1 ring-black/5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-primary ring-1 ring-black/5">
                     <IconMusicNote className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="text-[11px] text-muted">
+                    <p className="text-[11px] text-app-muted">
                       {(link.block_data?.audio_url as string)
                         ? "Audio terunggah, siap tampil di halaman publik."
                         : "Belum ada audio -- unggah file mp3/wav/m4a/ogg (maks 15MB)."}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                         {audioUploadingId === link.id ? "Mengunggah..." : (link.block_data?.audio_url as string) ? "Ganti Audio" : "Unggah Audio"}
                         <input
                           type="file"
@@ -2928,18 +2928,18 @@ export default function DashboardLinksPage() {
                   pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                   pola sama persis seperti panel Kelola audio di atas. */}
               {link.block_type === "file" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-white text-primary ring-1 ring-black/5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-primary ring-1 ring-black/5">
                     <IconFileText className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="truncate text-[11px] text-muted">
+                    <p className="truncate text-[11px] text-app-muted">
                       {(link.block_data?.file_url as string)
                         ? `${(link.block_data?.file_name as string) ?? "File"} terunggah, siap diunduh pengunjung.`
                         : "Belum ada file -- unggah PDF/ZIP/EPUB (maks 20MB)."}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
                         {fileUploadingId === link.id ? "Mengunggah..." : (link.block_data?.file_url as string) ? "Ganti File" : "Unggah File"}
                         <input
                           type="file"
@@ -2965,14 +2965,14 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                     <div className="flex gap-1.5">
                       <FormField label="Mulai Tampil">
                         <input
                           type="datetime-local"
                           value={scheduleStart}
                           onChange={(e) => setScheduleStart(e.target.value)}
-                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <FormField label="Berhenti Tampil">
@@ -2980,7 +2980,7 @@ export default function DashboardLinksPage() {
                           type="datetime-local"
                           value={scheduleEnd}
                           onChange={(e) => setScheduleEnd(e.target.value)}
-                          className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                     </div>
@@ -2988,7 +2988,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => setScheduleEditId(null)}
-                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
                       >
                         Batal
                       </button>
@@ -3018,11 +3018,11 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (lockEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
-                      className="w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                     >
                       <option value="code">Kode akses</option>
                       <option value="age">Konfirmasi usia</option>
@@ -3035,7 +3035,7 @@ export default function DashboardLinksPage() {
                         placeholder="Kode akses"
                         value={lockCodeInput}
                         onChange={(e) => setLockCodeInput(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     )}
                     {lockTypeInput === "age" && (
@@ -3046,14 +3046,14 @@ export default function DashboardLinksPage() {
                         placeholder="Batas usia"
                         value={lockMinAgeInput}
                         onChange={(e) => setLockMinAgeInput(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     )}
                     <div className="flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => setLockEditId(null)}
-                        className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted"
+                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
                       >
                         Batal
                       </button>
@@ -3094,7 +3094,7 @@ export default function DashboardLinksPage() {
                 link.block_type === "accordion" ||
                 link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Mengedit: {BLOCK_TYPE_LABEL[link.block_type]}</p>
                   {link.block_type === "video" ? (
                     <FormField label="Tautan Video">
@@ -3103,7 +3103,7 @@ export default function DashboardLinksPage() {
                         placeholder="https://youtube.com/... atau https://tiktok.com/..."
                         value={editVideoUrl}
                         onChange={(e) => setEditVideoUrl(e.target.value)}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "text" ? (
@@ -3113,7 +3113,7 @@ export default function DashboardLinksPage() {
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         rows={3}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "accordion" ? (
@@ -3123,7 +3123,7 @@ export default function DashboardLinksPage() {
                         value={editAccordionText}
                         onChange={(e) => setEditAccordionText(e.target.value)}
                         rows={3}
-                        className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "maps" ? (
@@ -3135,12 +3135,12 @@ export default function DashboardLinksPage() {
                             placeholder="Tempel tautan berbagi lokasi Google Maps"
                             value={editMapsUrl}
                             onChange={(e) => setEditMapsUrl(e.target.value)}
-                            className="w-full min-w-0 flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                            className="w-full min-w-0 flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => setMapsPickerOpenFor(link.id)}
-                            className="flex-shrink-0 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-bold text-primary hover:border-primary"
+                            className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-primary hover:border-primary"
                           >
                             Pilih di Peta
                           </button>
@@ -3148,7 +3148,7 @@ export default function DashboardLinksPage() {
                       </FormField>
                       <FormField label="Perilaku Saat Diklik Pengunjung">
                         <div className="flex flex-col gap-1.5">
-                          <label className="flex items-start gap-2 text-xs text-ink">
+                          <label className="flex items-start gap-2 text-xs text-app-ink">
                             <input
                               type="radio"
                               name={`editMapsEmbed-${link.id}`}
@@ -3158,7 +3158,7 @@ export default function DashboardLinksPage() {
                             />
                             Buka tautan Google Maps langsung
                           </label>
-                          <label className="flex items-start gap-2 text-xs text-ink">
+                          <label className="flex items-start gap-2 text-xs text-app-ink">
                             <input
                               type="radio"
                               name={`editMapsEmbed-${link.id}`}
@@ -3179,7 +3179,7 @@ export default function DashboardLinksPage() {
                           placeholder="mis. Project Unggulan"
                           value={editShowcaseBadge}
                           onChange={(e) => setEditShowcaseBadge(e.target.value)}
-                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <FormField label="Deskripsi" hint="Paragraf singkat menjelaskan proyek ini.">
@@ -3189,7 +3189,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) => setEditShowcaseDescription(e.target.value)}
                           rows={2}
                           maxLength={240}
-                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <FormField label="Tautan Tujuan (CTA)" hint="Dibuka saat kartu ini diklik.">
@@ -3198,7 +3198,7 @@ export default function DashboardLinksPage() {
                           placeholder="https://..."
                           value={editShowcaseUrl}
                           onChange={(e) => setEditShowcaseUrl(e.target.value)}
-                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                       <FormField label="Teks Tombol CTA (opsional)" hint="Bawaan: &quot;Lihat detail&quot;.">
@@ -3207,21 +3207,21 @@ export default function DashboardLinksPage() {
                           placeholder="mis. Lihat studi kasus"
                           value={editShowcaseCta}
                           onChange={(e) => setEditShowcaseCta(e.target.value)}
-                          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
                         />
                       </FormField>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">
                       {editFaqItems.map((item, i) => (
-                        <div key={i} className="flex flex-col gap-2 rounded-md border border-border p-2">
+                        <div key={i} className="flex flex-col gap-2 rounded-md border border-app-border p-2">
                           <FormField label={`Pertanyaan ${i + 1}`}>
                             <input
                               type="text"
                               placeholder="Pertanyaan"
                               value={item.question}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                              className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
                             />
                           </FormField>
                           <FormField label="Jawaban">
@@ -3230,7 +3230,7 @@ export default function DashboardLinksPage() {
                               value={item.answer}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                               rows={2}
-                              className="w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
                             />
                           </FormField>
                           <button
@@ -3252,7 +3252,7 @@ export default function DashboardLinksPage() {
                     </div>
                   )}
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border border-border py-1.5 text-[11px] font-bold text-muted">
+                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
                       Batal
                     </button>
                     <button
@@ -3274,7 +3274,7 @@ export default function DashboardLinksPage() {
                   lagi menumpang di baris ikon aksi seperti sebelumnya) --
                   berlaku utk SEMUA block_type (link/video/faq/dst, click_count
                   sudah dihitung backend untuk semuanya), bukan cuma tautan biasa. */}
-              <div className="ml-11 flex items-center gap-1.5 border-t border-border/70 pt-2 text-xs text-muted">
+              <div className="ml-11 flex items-center gap-1.5 border-t border-app-border/70 pt-2 text-xs text-app-muted">
                 <IconChart className="h-3.5 w-3.5" />
                 {link.click_count.toLocaleString("id-ID")} klik
               </div>
@@ -3337,7 +3337,7 @@ export default function DashboardLinksPage() {
               onClick={() => setConfirmDeleteId(null)}
             >
               <div
-                className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+                className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start gap-3">
@@ -3345,8 +3345,8 @@ export default function DashboardLinksPage() {
                     <TriangleAlert className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-heading text-sm font-bold text-ink">Hapus {noun} ini?</h2>
-                    <p className="mt-1 text-xs text-muted">
+                    <h2 className="font-heading text-sm font-bold text-app-ink">Hapus {noun} ini?</h2>
+                    <p className="mt-1 text-xs text-app-muted">
                       &ldquo;{target.title || "(tanpa judul)"}&rdquo; akan hilang dari halaman publikmu. Tindakan ini tidak bisa dibatalkan.
                     </p>
                   </div>
@@ -3355,7 +3355,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteId(null)}
-                    className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+                    className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
                   >
                     Batal
                   </button>
@@ -3390,10 +3390,10 @@ export default function DashboardLinksPage() {
           <form
             onSubmit={handleCreatePage}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
           >
-            <h2 className="font-heading text-sm font-bold text-ink">Halaman Baru</h2>
-            <p className="mt-1 text-xs text-muted">Beri judul halamannya. Kamu bisa isi tautan/blok setelah dibuat.</p>
+            <h2 className="font-heading text-sm font-bold text-app-ink">Halaman Baru</h2>
+            <p className="mt-1 text-xs text-app-muted">Beri judul halamannya. Kamu bisa isi tautan/blok setelah dibuat.</p>
             <input
               type="text"
               autoFocus
@@ -3401,16 +3401,16 @@ export default function DashboardLinksPage() {
               onChange={(e) => setNewPageTitle(e.target.value)}
               placeholder="Contoh: Promo Agustus"
               maxLength={80}
-              className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             />
-            <label htmlFor="new-page-duplicate-from" className="mb-1 mt-3 block text-xs font-semibold text-ink">
+            <label htmlFor="new-page-duplicate-from" className="mb-1 mt-3 block text-xs font-semibold text-app-ink">
               Mulai dari
             </label>
             <select
               id="new-page-duplicate-from"
               value={duplicateFromId}
               onChange={(e) => setDuplicateFromId(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
             >
               <option value="">Halaman kosong</option>
               <option value="primary">Duplikat dari Home (Link Bio)</option>
@@ -3424,7 +3424,7 @@ export default function DashboardLinksPage() {
               <button
                 type="button"
                 onClick={() => setCreatingPage(false)}
-                className="flex-1 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
                 Batal
               </button>
@@ -3508,17 +3508,17 @@ function AddModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="font-heading text-lg font-bold text-ink">Tambah</h2>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink">
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
+          <h2 className="font-heading text-lg font-bold text-app-ink">Tambah</h2>
+          <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex-shrink-0 border-b border-border px-5 py-3">
+        <div className="flex-shrink-0 border-b border-app-border px-5 py-3">
           <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2.5">
-            <IconSearch className="h-4 w-4 flex-shrink-0 text-muted" />
+            <IconSearch className="h-4 w-4 flex-shrink-0 text-app-muted" />
             <input
               type="text"
               autoFocus
@@ -3539,8 +3539,8 @@ function AddModal({
             >
               <IconLink className="h-5 w-5 flex-shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">Tambahkan tautan ini</p>
-                <p className="truncate text-xs text-muted">{search.trim()}</p>
+                <p className="text-sm font-semibold text-app-ink">Tambahkan tautan ini</p>
+                <p className="truncate text-xs text-app-muted">{search.trim()}</p>
               </div>
             </button>
           )}
@@ -3554,7 +3554,7 @@ function AddModal({
                     type="button"
                     onClick={() => onCategoryChange(cat.key)}
                     className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-                      category === cat.key ? "bg-ink text-white" : "bg-gray-100 text-muted hover:bg-gray-200"
+                      category === cat.key ? "bg-ink text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
                     }`}
                   >
                     {cat.label}
@@ -3568,12 +3568,12 @@ function AddModal({
                     key={tile.key}
                     type="button"
                     onClick={() => onSelectContentTile(tile)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-border p-2.5 hover:border-primary/50"
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-app-border p-2.5 hover:border-primary/50"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-subtle text-primary">
                       <tile.Icon className="h-5 w-5" />
                     </span>
-                    <span className="text-center text-[11px] font-semibold text-ink">{tile.label}</span>
+                    <span className="text-center text-[11px] font-semibold text-app-ink">{tile.label}</span>
                   </button>
                 ))}
               </div>
@@ -3581,7 +3581,7 @@ function AddModal({
           )}
 
           {(contentRows.length > 0 || platformRows.length > 0) && (
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{sectionLabel}</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">{sectionLabel}</p>
           )}
 
           <div className="flex flex-col gap-1">
@@ -3590,16 +3590,16 @@ function AddModal({
                 key={tile.key}
                 type="button"
                 onClick={() => onSelectContentTile(tile)}
-                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-gray-50"
+                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
               >
                 <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
                   <tile.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">{tile.label}</p>
-                  <p className="truncate text-xs text-muted">{tile.description}</p>
+                  <p className="text-sm font-semibold text-app-ink">{tile.label}</p>
+                  <p className="truncate text-xs text-app-muted">{tile.description}</p>
                 </div>
-                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
               </button>
             ))}
 
@@ -3608,16 +3608,16 @@ function AddModal({
                 key={platform.key}
                 type="button"
                 onClick={() => onSelectPlatform(platform)}
-                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-gray-50"
+                className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
               >
                 <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${platform.badgeClass}`}>
                   <platform.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">{platform.label}</p>
-                  <p className="truncate text-xs text-muted">{platform.description}</p>
+                  <p className="text-sm font-semibold text-app-ink">{platform.label}</p>
+                  <p className="truncate text-xs text-app-muted">{platform.description}</p>
                 </div>
-                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+                <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
               </button>
             ))}
           </div>

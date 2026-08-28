@@ -11,11 +11,11 @@ import { IconTrendArrow } from "@/components/icons";
 // StatCard di seluruh app (Ringkasan/Statistik/Saldo/ShopOverviewPanel/
 // admin) TIDAK perlu diubah satu-satu -- cukup ubah definisi di sini.
 const NEUTRAL_TONE = {
-  card: "bg-white text-ink border border-primary/10 shadow-refined",
+  card: "bg-app-surface text-app-ink border border-primary/10 shadow-refined",
   icon: "bg-primary-subtle text-primary",
-  label: "text-ink/65",
-  value: "text-ink",
-  sub: "text-muted",
+  label: "text-app-ink/65",
+  value: "text-app-ink",
+  sub: "text-app-muted",
 };
 
 export const STAT_TONES = {

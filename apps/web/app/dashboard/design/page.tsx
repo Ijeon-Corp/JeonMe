@@ -53,13 +53,13 @@ export default function DashboardDesignPage() {
           di bawah lebar intrinsik kontennya di viewport sempit/zoom
           tinggi walau belum dilaporkan pengguna di halaman ini. */}
       <div className="min-w-0 max-w-2xl">
-        <p className="mt-1 text-sm text-muted">Foto profil, bio, dan tema halaman publikmu.</p>
+        <p className="mt-1 text-sm text-app-muted">Foto profil, bio, dan tema halaman publikmu.</p>
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         <section className="glass mt-6 rounded-3xl p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-bold text-ink">Pengaturan Halaman</h2>
+            <h2 className="font-heading text-lg font-bold text-app-ink">Pengaturan Halaman</h2>
             <a
               href={`${SITE_URL}/${page.username}`}
               target="_blank"
@@ -75,25 +75,25 @@ export default function DashboardDesignPage() {
               proses review manual. */}
           <div
             className={`mt-4 rounded-xl border p-3.5 ${
-              page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-border bg-gray-50"
+              page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-app-border bg-app-surface-2"
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-muted"}`} />
-              <span className="text-xs font-bold text-ink">
+              <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-app-muted"}`} />
+              <span className="text-xs font-bold text-app-ink">
                 {page.verification.is_verified ? "Badge Terverifikasi Aktif" : "Badge Terverifikasi"}
               </span>
             </div>
             <ul className="mt-2 flex flex-col gap-1 text-[11px]">
-              <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 Email terverifikasi
               </li>
-              <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 Profil lengkap (foto + bio terisi)
               </li>
-              <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-app-muted"}`}>
                 {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 Minimal 1 transaksi sukses
               </li>
@@ -101,20 +101,20 @@ export default function DashboardDesignPage() {
           </div>
 
           <div className="mt-5 flex flex-col gap-3">
-            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: themeSwatch }} aria-hidden />
                 <div>
-                  <p className="text-sm font-semibold text-ink">Tema</p>
-                  <p className="text-xs text-muted">{themeLabel}</p>
+                  <p className="text-sm font-semibold text-app-ink">Tema</p>
+                  <p className="text-xs text-app-muted">{themeLabel}</p>
                 </div>
               </div>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">Sesuaikan</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">Sesuaikan</p>
 
-            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -124,48 +124,48 @@ export default function DashboardDesignPage() {
                     {page.username.slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                <p className="text-sm font-semibold text-ink">Header</p>
+                <p className="text-sm font-semibold text-app-ink">Header</p>
               </div>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />
                 <div>
-                  <p className="text-sm font-semibold text-ink">Tombol</p>
-                  {buttonStyleLabel && <p className="text-xs text-muted">{buttonStyleLabel}</p>}
+                  <p className="text-sm font-semibold text-app-ink">Tombol</p>
+                  {buttonStyleLabel && <p className="text-xs text-app-muted">{buttonStyleLabel}</p>}
                 </div>
               </div>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-heading text-sm font-bold text-pop-blue" aria-hidden>
                   Aa
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-ink">Font</p>
-                  {fontLabel && <p className="text-xs text-muted">{fontLabel}</p>}
+                  <p className="text-sm font-semibold text-app-ink">Font</p>
+                  {fontLabel && <p className="text-xs text-app-muted">{fontLabel}</p>}
                 </div>
               </div>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-pink-tint text-pop-pink" aria-hidden>
                   <IconSparkle className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-ink">Stiker</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-sm font-semibold text-app-ink">Stiker</p>
+                  <p className="text-xs text-app-muted">
                     {page.stickers.length === 0 ? "Tidak ada" : `${page.stickers.length} stiker terpasang`}
                   </p>
                 </div>
               </div>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-muted" />
+              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
             {/* Modul Langganan Premium (permintaan langsung pengguna, 8
@@ -175,7 +175,7 @@ export default function DashboardDesignPage() {
                 mengarahkan ke halaman upgrade), kreator Premium bebas
                 menyalakan/mematikan sendiri. Gerbang sungguhan tetap di
                 backend (finishPublicPageResponse, page.go) -- ini murni UI. */}
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3">
               <button
                 type="button"
                 onClick={() =>
@@ -186,11 +186,11 @@ export default function DashboardDesignPage() {
                 className="flex min-w-0 items-center gap-3 text-left"
               >
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-primary" aria-hidden>
-                  {page.is_premium ? <IconSparkle className="h-4 w-4" /> : <IconLock className="h-4 w-4 text-muted" />}
+                  {page.is_premium ? <IconSparkle className="h-4 w-4" /> : <IconLock className="h-4 w-4 text-app-muted" />}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink">Sembunyikan Watermark</p>
-                  <p className="truncate text-xs text-muted">
+                  <p className="text-sm font-semibold text-app-ink">Sembunyikan Watermark</p>
+                  <p className="truncate text-xs text-app-muted">
                     {page.is_premium ? "Hilangkan pil “Buat halaman gratis di Jeon.id” di footer" : "Khusus kreator Premium -- upgrade dulu"}
                   </p>
                 </div>

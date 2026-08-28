@@ -40,7 +40,7 @@ export default function MonetisasiLayout({ children }: { children: React.ReactNo
           di tempat lain (mis. Pratinjau Langsung) -- dipakai ulang di
           sini supaya 8 tab tidak pecah/terpotong di layar sempit,
           cukup geser, tanpa perlu menu "lainnya" terpisah. */}
-      <div className="scroll-row -mx-1 flex gap-1 overflow-x-auto border-b border-border px-1">
+      <div className="scroll-row -mx-1 flex gap-1 overflow-x-auto border-b border-app-border px-1">
         {TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
@@ -48,7 +48,7 @@ export default function MonetisasiLayout({ children }: { children: React.ReactNo
               key={tab.href}
               href={tab.href}
               className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-                active ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"
+                active ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
               {tab.label}
