@@ -303,6 +303,17 @@ export type PageLayoutVariant =
   | "masthead"
   | "portrait";
 
+// PublicPageSite -- satu entri di PublicPage.site_pages. name/slug kosong
+// untuk halaman utama (is_primary true) -- frontend memakai label tetap
+// "Link Bio" & href {username} untuk entri itu (lihat PageSwitcher,
+// PagePreview.tsx), bukan name/slug.
+export interface PublicPageSite {
+  name: string;
+  slug: string;
+  page_type: "bio" | "landing" | "produk";
+  is_primary: boolean;
+}
+
 export interface PublicPage {
   id: string;
   username: string;
@@ -380,14 +391,19 @@ export interface PublicPage {
   // menyembunyikan tombol beli & menampilkan pesannya di frontend.
   shop_paused: boolean;
   shop_paused_message: string;
-  // shop_published -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
-  // halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
-  // true kalau akun ini punya halaman Toko (page_type="produk") yang
-  // SUDAH diterbitkan -- mencakup baik "belum pernah dibuat sama sekali"
-  // maupun "sudah dibuat tapi is_published=false", keduanya sama-sama
-  // false di sini. Dipakai PageSwitcher (PagePreview.tsx) supaya tautan
-  // "Toko" di hamburger tidak muncul kalau ujungnya cuma 404.
-  shop_published: boolean;
+  // show_profile_header -- permintaan langsung pengguna, 28 Agustus 2026:
+  // "biasanya page baru untuk landing page biasanya bisa juga tidak
+  // menampilkan foto profile nama dsb gitu". false menyembunyikan avatar/
+  // nama/bio di renderBioHeader (PagePreview.tsx) -- untuk halaman utama
+  // SELALU true (backend tidak pernah mengeksposnya lewat UpdateMyPage).
+  show_profile_header: boolean;
+  // site_pages -- permintaan langsung pengguna, 28 Agustus 2026: "aktifkan
+  // menu hamburger jika ada page lebih dari satu". Menggantikan
+  // shop_published (SEBELUMNYA: binary Bio<->Toko saja) -- daftar SEMUA
+  // halaman TERBIT milik akun (halaman utama SELALU ikut). PageSwitcher
+  // (PagePreview.tsx) merender satu baris per entri, sembunyi total kalau
+  // isinya cuma 1 (tidak ada halaman lain untuk dipindah).
+  site_pages: PublicPageSite[];
   // instagram_feed/tiktok_feed -- Modul Koneksi Sosial (migrasi 000069,
   // permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
   // bisa connect ke akun kita contoh nya instagram tiktok"). null kalau
@@ -665,6 +681,14 @@ export interface MyPage {
   // upgrade lagi. Gerbang premium diterapkan di UI (dikunci/disabled untuk
   // kreator gratis), bukan disembunyikan nilainya.
   hide_watermark: boolean;
+  // show_profile_header -- OPSIONAL & TIDAK PERNAH dikirim GetMyPage
+  // sungguhan (halaman utama tidak bisa menyembunyikan identitasnya
+  // sendiri) -- field ini murni supaya dashboard/links/page.tsx bisa
+  // memakai satu state `page: MyPage` yang SAMA untuk halaman utama MAUPUN
+  // halaman tambahan yang di-shim jadi bentuk MyPage (lihat switchToPage),
+  // yang MEMANG punya field ini (lihat ExtraPageDetail). undefined di sini
+  // selalu dibaca setara true.
+  show_profile_header?: boolean;
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -1307,6 +1331,10 @@ export interface ExtraPageDetail extends Omit<MyPage, "username"> {
   name: string;
   slug: string;
   page_type: "bio" | "landing" | "produk";
+  // show_profile_header -- lihat catatan lengkap di MyPage. Di sini WAJIB
+  // (bukan opsional) -- GetPage/UpdatePage SELALU mengembalikannya untuk
+  // halaman tambahan, beda dari MyPage yang cuma optional demi shim.
+  show_profile_header: boolean;
   // product_layout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
   // pilihan dua tipe layout product" -- cuma relevan untuk page_type=
   // "produk" (Toko), TIDAK ada di MyPage (grid Produk dihapus dari halaman
@@ -1365,7 +1393,16 @@ export function listMyExtraPages() {
   return apiFetch<ExtraPage[]>("/dashboard/pages", { method: "GET" }, { auth: true });
 }
 
-export function createExtraPage(input: { name: string; slug: string; page_type?: "bio" | "landing" | "produk" }) {
+export function createExtraPage(input: {
+  name: string;
+  slug: string;
+  page_type?: "bio" | "landing" | "produk";
+  // duplicate_from -- ID halaman lain milik akun ini, atau literal
+  // "primary" untuk halaman utama, yang isinya mau disalin ke halaman baru
+  // ini (page_type diabaikan kalau ini diisi, mengikuti sumber). Lihat
+  // catatan lengkap di createExtraPageRequest (backend, page.go).
+  duplicate_from?: string;
+}) {
   return apiFetch<{ id: string; message: string }>(
     "/dashboard/pages",
     { method: "POST", body: JSON.stringify(input) },
@@ -1405,6 +1442,7 @@ export function updateExtraPage(
       | "custom_title_color"
       | "custom_style_override"
       | "hide_watermark"
+      | "show_profile_header"
       | "social_instagram"
       | "social_tiktok"
       | "social_facebook"

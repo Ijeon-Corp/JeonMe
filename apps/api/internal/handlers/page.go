@@ -250,19 +250,19 @@ type publicPageResponse struct {
 	// supaya tidak bisa dilewati lewat panggilan API langsung.
 	ShopPaused        bool   `json:"shop_paused"`
 	ShopPausedMessage string `json:"shop_paused_message"`
-	// ShopPublished -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
-	// halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
-	// PageSwitcher (hamburger kiri-atas, PagePreview.tsx) SEBELUMNYA
-	// memutuskan tampil-tidaknya tautan "Toko" hanya dari products.length
-	// > 0 (akun punya produk aktif) -- BUKAN dari status terbit Toko itu
-	// sendiri, jadi kalau kreator menonaktifkan toggle "Terbitkan halaman
-	// Toko" (is_published=false) padahal masih punya produk, hamburger
-	// tetap menampilkan tautan Toko yang ujungnya 404 (GetPublicPageBySlug
-	// menolak is_published=false). Field ini SATU query EXISTS murah,
-	// mencakup DUA kasus sekaligus (Toko belum pernah dibuat SAMA SEKALI,
-	// atau sudah dibuat tapi sengaja di-unpublish) tanpa frontend perlu
-	// tahu bedanya.
-	ShopPublished bool `json:"shop_published"`
+	// ShowProfileHeader -- lihat catatan lengkap di extraPageDetailResponse.
+	// Untuk halaman utama (GetPublicPage) SELALU true, di-set langsung tanpa
+	// query kolom (tidak pernah ditoggle lewat UpdateMyPage).
+	ShowProfileHeader bool `json:"show_profile_header"`
+	// SitePages -- permintaan langsung pengguna, 28 Agustus 2026: "aktifkan
+	// menu hamburger jika ada page lebih dari satu". Daftar SEMUA halaman
+	// TERBIT milik akun (halaman utama SELALU ikut, is_published-nya selalu
+	// true sejak akun dibuat, lihat onboarding.go), meliputi bio/landing/
+	// produk sekaligus. PageSwitcher (hamburger kiri-atas, PagePreview.tsx)
+	// merender satu baris per entri & SEMBUNYI TOTAL kalau isinya cuma 1
+	// (satu-satunya halaman ya halaman yang sedang dibuka sendiri, tidak
+	// ada tempat lain untuk "pindah").
+	SitePages []publicPageLink `json:"site_pages"`
 	// InstagramFeed/TikTokFeed -- Modul Koneksi Sosial (migrasi 000069),
 	// permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
 	// bisa connect ke akun kita contoh nya instagram tiktok". nil kalau
@@ -272,6 +272,18 @@ type publicPageResponse struct {
 	// tanpa widget ini, tidak pernah jadi alasan seluruh halaman gagal.
 	InstagramFeed *PublicSocialFeed `json:"instagram_feed"`
 	TikTokFeed    *PublicSocialFeed `json:"tiktok_feed"`
+}
+
+// publicPageLink -- satu entri di publicPageResponse.SitePages (lihat
+// catatan lengkap di sana). Name/Slug kosong untuk halaman utama (IsPrimary
+// true) -- frontend memakai label tetap "Link Bio" & href {username} untuk
+// entri itu, bukan Name/Slug (halaman utama tidak punya kolom name/slug
+// yang berarti).
+type publicPageLink struct {
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	PageType  string `json:"page_type"`
+	IsPrimary bool   `json:"is_primary"`
 }
 
 // publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
@@ -488,6 +500,11 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 	}
 	resp.ID = pageID
 	resp.PageType = "bio"
+	// ShowProfileHeader -- halaman utama tidak pernah menyembunyikan
+	// identitasnya sendiri (toggle ini cuma diekspos lewat UpdatePage untuk
+	// halaman TAMBAHAN, lihat catatan lengkap di extraPageDetailResponse),
+	// jadi di-set langsung di sini tanpa perlu kolom tambahan di query.
+	resp.ShowProfileHeader = true
 
 	h.finishPublicPageResponse(c, ctx, "page:"+username, userID, pageID, emailVerified, &resp)
 }
@@ -564,7 +581,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.custom_background_type, p.custom_background_value, p.custom_font, p.custom_button_color, p.custom_button_style,
 			p.custom_button_rounded, p.custom_button_shadow, p.custom_button_text_color,
 			p.custom_page_text_color, p.custom_title_font, p.custom_title_color, p.custom_style_override, p.stickers,
-			p.hide_watermark,
+			p.hide_watermark, p.show_profile_header,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
 			p.layout_variant, p.product_layout,
@@ -578,7 +595,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
-		&resp.HideWatermark,
+		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
 		&resp.LayoutVariant, &resp.ProductLayout,
@@ -678,14 +695,26 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	})
 
 	g.Go(func() error {
-		// ShopPublished -- lihat catatan lengkap di definisi field
-		// (publicPageResponse). EXISTS tunggal ini mencakup "Toko belum
-		// pernah dibuat" (tidak ada baris page_type='produk' sama sekali)
-		// MAUPUN "sudah dibuat tapi is_published=false" -- keduanya sama
-		// artinya bagi hamburger PageSwitcher: jangan tautkan ke Toko.
-		_ = h.DB.QueryRow(gctx, `
-			SELECT EXISTS(SELECT 1 FROM pages WHERE user_id = $1 AND page_type = 'produk' AND is_published = true)
-		`, userID).Scan(&resp.ShopPublished)
+		// SitePages -- lihat catatan lengkap di definisi field
+		// (publicPageResponse). Halaman utama SELALU ikut (is_published
+		// selalu true sejak akun dibuat) -- tidak perlu UNION terpisah,
+		// kondisi WHERE ini sudah mencakup is_primary=true DAN is_primary=
+		// false sekaligus.
+		resp.SitePages = []publicPageLink{}
+		rows, err := h.DB.Query(gctx, `
+			SELECT COALESCE(name, ''), COALESCE(slug, ''), page_type, is_primary
+			FROM pages WHERE user_id = $1 AND is_published = true
+			ORDER BY is_primary DESC, name ASC
+		`, userID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var sp publicPageLink
+				if err := rows.Scan(&sp.Name, &sp.Slug, &sp.PageType, &sp.IsPrimary); err == nil {
+					resp.SitePages = append(resp.SitePages, sp)
+				}
+			}
+		}
 		return nil
 	})
 
@@ -1796,8 +1825,18 @@ type createExtraPageRequest struct {
 	Slug string `json:"slug" binding:"required,max=50"`
 	// PageType -- No.99: opsional, default "bio" kalau kosong. "produk"
 	// (Modul Halaman Produk) -- showcase katalog Toko, lihat catatan lingkup
-	// di CreatePage.
+	// di CreatePage. Diabaikan kalau DuplicateFrom diisi (lihat di bawah).
 	PageType string `json:"page_type" binding:"omitempty,oneof=bio landing produk"`
+	// DuplicateFrom -- permintaan langsung pengguna, 28 Agustus 2026: "buat
+	// bisa duplikat isi dari page lainnya". ID halaman lain milik akun yang
+	// sama, ATAU literal "primary" untuk halaman utama, yang isinya (bio/
+	// avatar/tema/tautan/blok/stiker/dst) mau disalin ke halaman baru ini.
+	// Kosong (default) berarti halaman baru mulai KOSONG seperti sebelumnya.
+	// page_type halaman baru mengikuti SUMBER (mengabaikan PageType di
+	// atas) -- sumber page_type="produk" TIDAK BOLEH (multi-Toko dikelola
+	// terpisah lewat menu Toko, lihat catatan carve-out di
+	// dashboard/products/page.tsx), ditolak 400 di bawah.
+	DuplicateFrom string `json:"duplicate_from" binding:"omitempty"`
 }
 
 // premiumExtraPageLimit -- Modul Langganan Premium: batas Halaman Tambahan
@@ -1875,9 +1914,9 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	if rdb != nil {
 		rdb.Del(ctx, "page-slug:"+username+":"+username)
 		// Cache halaman UTAMA ikut dihapus -- Toko baru saja LANGSUNG
-		// published (is_published=true di atas), mengubah shop_published
-		// pada respons halaman utama dari false ke true (lihat catatan
-		// lengkap soal bug ini di UpdatePage).
+		// published (is_published=true di atas), mengubah daftar SitePages
+		// pada respons halaman utama (lihat catatan lengkap soal bug ini di
+		// UpdatePage).
 		rdb.Del(ctx, "page:"+username)
 	}
 }
@@ -1904,6 +1943,30 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Modul duplikat halaman (permintaan langsung pengguna, 28 Agustus
+	// 2026: "buat bisa duplikat isi dari page lainnya") -- resolusi sumber
+	// dilakukan DI SINI (sebelum gerbang Premium/limit di bawah) supaya
+	// page_type yang dipakai gerbang tersebut adalah page_type SUMBER,
+	// bukan tebakan/isian klien yang bisa saja tidak sinkron.
+	duplicateFrom := strings.TrimSpace(req.DuplicateFrom)
+	var duplicateFromPageID string
+	if duplicateFrom != "" {
+		var scanErr error
+		if duplicateFrom == "primary" {
+			scanErr = h.DB.QueryRow(ctx, `
+				SELECT id, page_type FROM pages WHERE user_id = $1 AND is_primary = true
+			`, userID).Scan(&duplicateFromPageID, &pageType)
+		} else {
+			scanErr = h.DB.QueryRow(ctx, `
+				SELECT id, page_type FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false AND page_type != 'produk'
+			`, duplicateFrom, userID).Scan(&duplicateFromPageID, &pageType)
+		}
+		if scanErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "halaman sumber duplikat tidak ditemukan"})
+			return
+		}
+	}
 
 	premium := isPremiumUser(ctx, h.DB, userID)
 	isAutoProdukSlug := false
@@ -1984,6 +2047,68 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
 			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8) RETURNING id
 		`, userID, name, slug, bio, avatarURL, theme, stickersRaw, hideWatermark).Scan(&pageID)
+	} else if duplicateFrom != "" {
+		// INSERT ... SELECT ... FROM pages (pola sama LinksHandler.Duplicate,
+		// links.go) -- menyalin SELURUH kolom tampilan (bio/avatar/tema/
+		// stiker/watermark/show_profile_header/SEO/kustomisasi/sosial) di
+		// level SQL, tanpa perlu scan bolak-balik ke struct Go. Dibungkus
+		// transaksi bersama INSERT tautan di bawah supaya "duplikat" benar-
+		// benar atomik -- halaman baru TIDAK PERNAH setengah tersalin
+		// (halaman ada tapi tautannya gagal ikut, atau sebaliknya).
+		if name == "" {
+			name = "Salinan"
+		}
+		var tx pgx.Tx
+		tx, err = h.DB.Begin(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+			return
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+
+		err = tx.QueryRow(ctx, `
+			INSERT INTO pages (
+				user_id, is_primary, name, slug, page_type, is_published,
+				display_name, bio, avatar_url, theme, stickers, hide_watermark, show_profile_header,
+				seo_title, seo_description, noindex,
+				custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
+				custom_button_rounded, custom_button_shadow, custom_button_text_color,
+				custom_page_text_color, custom_title_font, custom_title_color, custom_style_override,
+				social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
+				social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
+				layout_variant
+			)
+			SELECT $1, false, $2, $3, page_type, false,
+				display_name, bio, avatar_url, theme, stickers, hide_watermark, show_profile_header,
+				seo_title, seo_description, noindex,
+				custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
+				custom_button_rounded, custom_button_shadow, custom_button_text_color,
+				custom_page_text_color, custom_title_font, custom_title_color, custom_style_override,
+				social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
+				social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
+				layout_variant
+			FROM pages WHERE id = $4
+			RETURNING id
+		`, userID, name, slug, duplicateFromPageID).Scan(&pageID)
+		if err == nil {
+			// Salin SEMUA tautan/blok -- position disalin APA ADANYA (bukan
+			// dihitung ulang), urutannya otomatis ikut sumber tanpa perlu
+			// ORDER BY di SELECT ini.
+			_, err = tx.Exec(ctx, `
+				INSERT INTO links (
+					page_id, title, url, position, is_active, starts_at, ends_at,
+					lock_type, lock_code, lock_min_age, block_type, block_data,
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
+				)
+				SELECT $1, title, url, position, is_active, starts_at, ends_at,
+					lock_type, lock_code, lock_min_age, block_type, block_data,
+					custom_icon_url, is_featured, thumbnail_url, icon_key, icon_color, description
+				FROM links WHERE page_id = $2
+			`, pageID, duplicateFromPageID)
+		}
+		if err == nil {
+			err = tx.Commit(ctx)
+		}
 	} else {
 		err = h.DB.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
@@ -2041,18 +2166,27 @@ type extraPageDetailResponse struct {
 	CustomStyleOverride   bool          `json:"custom_style_override"`
 	Stickers              []PageSticker `json:"stickers"`
 	HideWatermark         bool          `json:"hide_watermark"`
-	SocialInstagram       string        `json:"social_instagram"`
-	SocialTiktok          string        `json:"social_tiktok"`
-	SocialFacebook        string        `json:"social_facebook"`
-	SocialWhatsapp        string        `json:"social_whatsapp"`
-	SocialYoutube         string        `json:"social_youtube"`
-	SocialX               string        `json:"social_x"`
-	SocialLinkedin        string        `json:"social_linkedin"`
-	SocialTelegram        string        `json:"social_telegram"`
-	SocialEmail           string        `json:"social_email"`
-	SocialGithub          string        `json:"social_github"`
-	SocialWebsite         string        `json:"social_website"`
-	LayoutVariant         string        `json:"layout_variant"`
+	// ShowProfileHeader -- permintaan langsung pengguna, 28 Agustus 2026:
+	// "biasanya page baru untuk landing page biasanya bisa juga tidak
+	// menampilkan foto profile nama dsb gitu". Default true (lihat migrasi
+	// 000080) -- false menyembunyikan avatar/nama/bio di renderBioHeader
+	// (PagePreview.tsx), dipakai supaya halaman tambahan bertipe "bio" bisa
+	// tampil gaya landing tanpa kehilangan tautan/blok biasa (page_type
+	// "landing" yang sudah ada TETAP selalu menyembunyikan header ini,
+	// terlepas dari kolom ini -- lihat LandingPagePreview).
+	ShowProfileHeader bool   `json:"show_profile_header"`
+	SocialInstagram   string `json:"social_instagram"`
+	SocialTiktok      string `json:"social_tiktok"`
+	SocialFacebook    string `json:"social_facebook"`
+	SocialWhatsapp    string `json:"social_whatsapp"`
+	SocialYoutube     string `json:"social_youtube"`
+	SocialX           string `json:"social_x"`
+	SocialLinkedin    string `json:"social_linkedin"`
+	SocialTelegram    string `json:"social_telegram"`
+	SocialEmail       string `json:"social_email"`
+	SocialGithub      string `json:"social_github"`
+	SocialWebsite     string `json:"social_website"`
+	LayoutVariant     string `json:"layout_variant"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse.
 	ProductLayout string `json:"product_layout"`
 	IsPremium     bool   `json:"is_premium"`
@@ -2082,7 +2216,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			custom_background_type, custom_background_value, custom_font, custom_button_color, custom_button_style,
 			custom_button_rounded, custom_button_shadow, custom_button_text_color,
 			custom_page_text_color, custom_title_font, custom_title_color, custom_style_override, stickers,
-			hide_watermark,
+			hide_watermark, show_profile_header,
 			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 			social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
 			layout_variant, product_layout
@@ -2092,7 +2226,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		&resp.CustomBackgroundType, &resp.CustomBackgroundValue, &resp.CustomFont, &resp.CustomButtonColor, &resp.CustomButtonStyle,
 		&resp.CustomButtonRounded, &resp.CustomButtonShadow, &resp.CustomButtonTextColor,
 		&resp.CustomPageTextColor, &resp.CustomTitleFont, &resp.CustomTitleColor, &resp.CustomStyleOverride, &stickersRaw,
-		&resp.HideWatermark,
+		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
 		&resp.LayoutVariant, &resp.ProductLayout)
@@ -2140,18 +2274,20 @@ type updateExtraPageRequest struct {
 	CustomTitleColor      *string `json:"custom_title_color" binding:"omitempty,max=7"`
 	CustomStyleOverride   *bool   `json:"custom_style_override"`
 	HideWatermark         *bool   `json:"hide_watermark"`
-	SocialInstagram       *string `json:"social_instagram" binding:"omitempty,max=255"`
-	SocialTiktok          *string `json:"social_tiktok" binding:"omitempty,max=255"`
-	SocialFacebook        *string `json:"social_facebook" binding:"omitempty,max=255"`
-	SocialWhatsapp        *string `json:"social_whatsapp" binding:"omitempty,max=255"`
-	SocialYoutube         *string `json:"social_youtube" binding:"omitempty,max=255"`
-	SocialX               *string `json:"social_x" binding:"omitempty,max=255"`
-	SocialLinkedin        *string `json:"social_linkedin" binding:"omitempty,max=255"`
-	SocialTelegram        *string `json:"social_telegram" binding:"omitempty,max=255"`
-	SocialEmail           *string `json:"social_email" binding:"omitempty,max=255"`
-	SocialGithub          *string `json:"social_github" binding:"omitempty,max=255"`
-	SocialWebsite         *string `json:"social_website" binding:"omitempty,max=255"`
-	LayoutVariant         *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
+	// ShowProfileHeader -- lihat catatan lengkap di extraPageDetailResponse.
+	ShowProfileHeader *bool   `json:"show_profile_header"`
+	SocialInstagram   *string `json:"social_instagram" binding:"omitempty,max=255"`
+	SocialTiktok      *string `json:"social_tiktok" binding:"omitempty,max=255"`
+	SocialFacebook    *string `json:"social_facebook" binding:"omitempty,max=255"`
+	SocialWhatsapp    *string `json:"social_whatsapp" binding:"omitempty,max=255"`
+	SocialYoutube     *string `json:"social_youtube" binding:"omitempty,max=255"`
+	SocialX           *string `json:"social_x" binding:"omitempty,max=255"`
+	SocialLinkedin    *string `json:"social_linkedin" binding:"omitempty,max=255"`
+	SocialTelegram    *string `json:"social_telegram" binding:"omitempty,max=255"`
+	SocialEmail       *string `json:"social_email" binding:"omitempty,max=255"`
+	SocialGithub      *string `json:"social_github" binding:"omitempty,max=255"`
+	SocialWebsite     *string `json:"social_website" binding:"omitempty,max=255"`
+	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse
 	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
 	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
@@ -2241,25 +2377,26 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			custom_title_color = COALESCE($20, custom_title_color),
 			custom_style_override = COALESCE($21, custom_style_override),
 			hide_watermark = COALESCE($22, hide_watermark),
-			social_instagram = COALESCE($23, social_instagram),
-			social_tiktok = COALESCE($24, social_tiktok),
-			social_facebook = COALESCE($25, social_facebook),
-			social_whatsapp = COALESCE($26, social_whatsapp),
-			social_youtube = COALESCE($27, social_youtube),
-			social_x = COALESCE($28, social_x),
-			social_linkedin = COALESCE($29, social_linkedin),
-			social_telegram = COALESCE($30, social_telegram),
-			social_email = COALESCE($31, social_email),
-			social_github = COALESCE($32, social_github),
-			social_website = COALESCE($33, social_website),
-			layout_variant = COALESCE($34, layout_variant),
-			product_layout = COALESCE($35, product_layout)
-		WHERE id = $36 AND user_id = $37 AND is_primary = false
+			show_profile_header = COALESCE($23, show_profile_header),
+			social_instagram = COALESCE($24, social_instagram),
+			social_tiktok = COALESCE($25, social_tiktok),
+			social_facebook = COALESCE($26, social_facebook),
+			social_whatsapp = COALESCE($27, social_whatsapp),
+			social_youtube = COALESCE($28, social_youtube),
+			social_x = COALESCE($29, social_x),
+			social_linkedin = COALESCE($30, social_linkedin),
+			social_telegram = COALESCE($31, social_telegram),
+			social_email = COALESCE($32, social_email),
+			social_github = COALESCE($33, social_github),
+			social_website = COALESCE($34, social_website),
+			layout_variant = COALESCE($35, layout_variant),
+			product_layout = COALESCE($36, product_layout)
+		WHERE id = $37 AND user_id = $38 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
 		req.CustomPageTextColor, req.CustomTitleFont, req.CustomTitleColor, req.CustomStyleOverride,
-		req.HideWatermark,
+		req.HideWatermark, req.ShowProfileHeader,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
 		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
 		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.ProductLayout,
@@ -2286,14 +2423,15 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 				h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+currentSlug)
 			}
 			// Cache halaman UTAMA ("page:<username>") IKUT dihapus -- bug
-			// ditemukan 28 Agustus 2026 sambil menambah ShopPublished
-			// (permintaan langsung pengguna soal hamburger): respons
-			// halaman utama membawa field shop_published yang DIHITUNG DARI
-			// status is_published halaman tambahan ini (kalau page_type-nya
-			// "produk") -- tanpa baris ini, toggle "Terbitkan halaman Toko"
-			// tidak berefek di halaman Bio publik sampai TTL 30 detik penuh
-			// habis (persis pola bug yang sama seperti invalidateUserPageCache,
-			// lihat catatan lengkap di cache.go).
+			// ditemukan 28 Agustus 2026 sambil menambah shop_published
+			// (sekarang SitePages, lihat catatan lengkap di
+			// publicPageResponse): respons halaman utama membawa daftar
+			// SEMUA halaman terbit lintas akun -- toggle terbit/nonterbit
+			// halaman TAMBAHAN mana pun (bio/landing/produk) mengubah daftar
+			// itu, jadi tanpa baris ini perubahannya tidak berefek di
+			// halaman Bio publik sampai TTL 30 detik penuh habis (persis
+			// pola bug yang sama seperti invalidateUserPageCache, lihat
+			// catatan lengkap di cache.go).
 			h.RDB.Del(ctx, "page:"+ownerUsername)
 		}
 	}

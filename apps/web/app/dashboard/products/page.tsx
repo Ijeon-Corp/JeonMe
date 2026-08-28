@@ -946,6 +946,7 @@ export default function DashboardProductsPage() {
                 yang sengaja slug-nya SELALU = username. */}
             {allTokoPages.length >= 1 && (allTokoPages.length > 1 || page?.is_premium) && (
               <>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-muted">Toko</p>
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                   {allTokoPages.map((tp) => (
                     <button

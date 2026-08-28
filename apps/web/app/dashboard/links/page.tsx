@@ -392,6 +392,10 @@ export default function DashboardLinksPage() {
   const [switchingPage, setSwitchingPage] = useState(false);
   const [creatingPage, setCreatingPage] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState("");
+  // duplicateFromId -- permintaan langsung pengguna, 28 Agustus 2026: "buat
+  // bisa duplikat isi dari page lainnya". "" = halaman kosong (default),
+  // "primary" = duplikat Home, id halaman tambahan = duplikat halaman itu.
+  const [duplicateFromId, setDuplicateFromId] = useState("");
   const [savingNewPage, setSavingNewPage] = useState(false);
   const [renamingPage, setRenamingPage] = useState(false);
   const [renamePageValue, setRenamePageValue] = useState("");
@@ -637,11 +641,20 @@ export default function DashboardLinksPage() {
     setError(null);
     const baseSlug = slugifyTitle(title);
     let slug = baseSlug;
+    // resolvedPageType -- kalau menduplikat, halaman baru mewarisi page_type
+    // SUMBER (backend juga menegakkan ini, lihat CreatePage) -- Home selalu
+    // "bio", halaman tambahan lain ambil dari extraPages yang sudah dimuat
+    // (tidak perlu fetch tambahan, produk sudah difilter keluar dari list
+    // ini sejak awal jadi tidak pernah muncul sebagai pilihan sumber).
+    const resolvedPageType: "bio" | "landing" =
+      duplicateFromId && duplicateFromId !== "primary" && extraPages.find((ep) => ep.id === duplicateFromId)?.page_type === "landing"
+        ? "landing"
+        : "bio";
     try {
       let created: { id: string; message: string } | null = null;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          created = await createExtraPage({ name: title, slug, page_type: "bio" });
+          created = await createExtraPage({ name: title, slug, page_type: "bio", duplicate_from: duplicateFromId || undefined });
           break;
         } catch (err) {
           const isSlugTaken = err instanceof ApiError && err.status === 409;
@@ -653,8 +666,9 @@ export default function DashboardLinksPage() {
       const freshExtras = await listMyExtraPages();
       setExtraPages(freshExtras.filter((ep) => ep.page_type !== "produk"));
       setNewPageTitle("");
+      setDuplicateFromId("");
       setCreatingPage(false);
-      await switchToPage({ id: created.id, slug, pageType: "bio" });
+      await switchToPage({ id: created.id, slug, pageType: resolvedPageType });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal membuat halaman.");
     } finally {
@@ -708,6 +722,26 @@ export default function DashboardLinksPage() {
     } catch (err) {
       setExtraPages(previous);
       setError(err instanceof ApiError ? err.message : "Gagal mengubah judul halaman.");
+    }
+  }
+
+  // handleToggleShowProfileHeader -- permintaan langsung pengguna, 28
+  // Agustus 2026: "biasanya page baru untuk landing page biasanya bisa
+  // juga tidak menampilkan foto profile nama dsb gitu" -- KHUSUS halaman
+  // tambahan (activePage truthy, dijamin oleh satu-satunya tempat tombol
+  // ini dirender). Panggil updateExtraPage LANGSUNG (bukan lewat
+  // currentPagePatch) -- field ini sengaja TIDAK ada di updateMyPage,
+  // halaman utama tidak bisa menyembunyikan identitasnya sendiri.
+  async function handleToggleShowProfileHeader() {
+    if (!activePage || !page) return;
+    const next = !(page.show_profile_header ?? true);
+    const previous = page;
+    setPage({ ...page, show_profile_header: next });
+    try {
+      await updateExtraPage(activePage.id, { show_profile_header: next });
+    } catch (err) {
+      setPage(previous);
+      setError(err instanceof ApiError ? err.message : "Gagal mengubah tampilan header profil.");
     }
   }
 
@@ -1641,6 +1675,7 @@ export default function DashboardLinksPage() {
             TIDAK ada UI terpisah. Halaman Toko (page_type "produk") sengaja
             TIDAK muncul di sini -- keputusan langsung pengguna, tetap
             dikelola lewat menu Toko (Produk & Monetisasi). */}
+        <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">Halaman</p>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
@@ -1680,6 +1715,7 @@ export default function DashboardLinksPage() {
                 return;
               }
               setNewPageTitle("");
+              setDuplicateFromId("");
               setCreatingPage(true);
             }}
             title={!page?.is_premium ? "Halaman tambahan khusus kreator Premium" : undefined}
@@ -1715,6 +1751,10 @@ export default function DashboardLinksPage() {
                 <label className="flex items-center gap-1.5">
                   <Toggle checked={activeExtraPage.is_published} onChange={() => handleTogglePagePublish(activeExtraPage)} />
                   Terbitkan
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <Toggle checked={page?.show_profile_header ?? true} onChange={handleToggleShowProfileHeader} />
+                  Tampilkan foto profil &amp; nama
                 </label>
                 <button type="button" onClick={() => handleDeletePage(activeExtraPage)} className="flex items-center gap-1 text-red-500 hover:underline">
                   <IconTrash className="h-3 w-3" /> Hapus halaman
@@ -3340,7 +3380,11 @@ export default function DashboardLinksPage() {
           diturunkan otomatis dari judul (slugifyTitle) dengan retry
           tabrakan di handleCreatePage -- kreator tidak perlu tahu/pilih
           slug sama sekali, beda dari form dashboard/pages/page.tsx yang
-          digantikan modul ini. */}
+          digantikan modul ini. Dropdown "Mulai dari" -- susulan permintaan
+          langsung pengguna: "buat bisa duplikat isi dari page lainnya" --
+          kosong (default) berarti halaman baru mulai kosong, pilih salah
+          satu halaman lain (termasuk Home) untuk menyalin SELURUH isinya
+          (bio/avatar/tema/tautan/blok/stiker/dst, lihat CreatePage backend). */}
       {creatingPage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreatingPage(false)}>
           <form
@@ -3359,6 +3403,23 @@ export default function DashboardLinksPage() {
               maxLength={80}
               className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
             />
+            <label htmlFor="new-page-duplicate-from" className="mb-1 mt-3 block text-xs font-semibold text-ink">
+              Mulai dari
+            </label>
+            <select
+              id="new-page-duplicate-from"
+              value={duplicateFromId}
+              onChange={(e) => setDuplicateFromId(e.target.value)}
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+            >
+              <option value="">Halaman kosong</option>
+              <option value="primary">Duplikat dari Home (Link Bio)</option>
+              {extraPages.map((ep) => (
+                <option key={ep.id} value={ep.id}>
+                  Duplikat dari &quot;{ep.name}&quot;
+                </option>
+              ))}
+            </select>
             <div className="mt-4 flex gap-2">
               <button
                 type="button"

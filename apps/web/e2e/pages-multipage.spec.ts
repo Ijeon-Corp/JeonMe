@@ -21,6 +21,9 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
 
     await page.goto("/dashboard/links");
     await expect(page.getByRole("button", { name: "Home", exact: true })).toBeVisible();
+    // Label di atas pill nav (susulan permintaan langsung pengguna: "tambah
+    // label di atas pill nav").
+    await expect(page.getByText("Halaman", { exact: true })).toBeVisible();
 
     // Akun gratis: tombol "+ Page" mengarahkan ke halaman Langganan Premium,
     // BUKAN membuka modal buat halaman (gating 100% server-enforced juga,
@@ -72,6 +75,57 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     // cuma tidak ditampilkan waktu Home aktif).
     await newPagePill.click();
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
+
+    // Modul duplikat halaman (permintaan langsung pengguna: "buat bisa
+    // duplikat isi dari page lainnya") -- halaman baru mewarisi SELURUH
+    // isi "Promo Agustus E2E" (termasuk tautannya), tanpa perlu diisi ulang
+    // manual.
+    await page.getByRole("button", { name: "Page", exact: true }).click();
+    await page.getByPlaceholder("Contoh: Promo Agustus").fill("Duplikat Promo E2E");
+    await page.getByLabel("Mulai dari").selectOption({ label: 'Duplikat dari "Promo Agustus E2E"' });
+    await page.getByRole("button", { name: "Buat Halaman", exact: true }).click();
+
+    const duplicatedPagePill = page.getByRole("button", { name: /Duplikat Promo E2E/ });
+    await expect(duplicatedPagePill).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
+
+    // Toggle "Tampilkan foto profil & nama" (permintaan langsung pengguna:
+    // "biasanya page baru untuk landing page biasanya bisa juga tidak
+    // menampilkan foto profile nama dsb gitu") -- default ON, mematikannya
+    // menyembunyikan renderBioHeader di halaman publik. Locator DIBATASI ke
+    // <label> yang membungkus toggle ini -- getByRole("switch") polos juga
+    // akan cocok dengan toggle is_active tiap kartu tautan di daftar bawah.
+    await page.locator("label", { hasText: "Tampilkan foto profil & nama" }).getByRole("switch").click();
+
+    // Terbitkan kedua halaman tambahan supaya muncul di site_pages/hamburger
+    // halaman publik.
+    async function publishActivePage() {
+      const toggle = page.locator("label", { hasText: "Terbitkan" }).getByRole("switch");
+      if ((await toggle.getAttribute("aria-checked")) !== "true") {
+        await toggle.click();
+      }
+    }
+    await publishActivePage();
+    await newPagePill.click();
+    await publishActivePage();
+
+    // Halaman publik: dengan Home + 2 halaman tambahan terbit (3 total),
+    // hamburger PageSwitcher HARUS muncul -- permintaan langsung pengguna:
+    // "aktifkan menu hamburger jika ada page lebih dari satu".
+    await expect(async () => {
+      await page.goto(`/${username}`);
+      await expect(page.getByLabel("Ganti halaman")).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 75000, intervals: [5000] });
+    await page.getByLabel("Ganti halaman").click();
+    await expect(page.getByRole("link", { name: /Link Bio/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Promo Agustus E2E/ })).toBeVisible();
+
+    // Halaman "Duplikat Promo E2E" -- header profil disembunyikan (toggle
+    // dimatikan di atas): nama tampilan TIDAK dirender sebagai heading di
+    // halaman publiknya.
+    await page.goto(`/${username}/duplikat-promo-e2e`);
+    await expect(page.getByText(linkTitle)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: username })).toHaveCount(0);
   });
 
   test("Toko: switcher multi-Toko tersembunyi untuk akun gratis, muncul & bisa buat Toko baru setelah Premium", async ({ page }) => {

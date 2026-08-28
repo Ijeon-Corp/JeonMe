@@ -196,7 +196,13 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
           referralCode: ref,
           shopPaused: page.shop_paused,
           shopPausedMessage: page.shop_paused_message,
-          shopPublished: page.shop_published,
+          showProfileHeader: page.show_profile_header,
+          sitePages: page.site_pages.map((sp) => ({
+            name: sp.name,
+            slug: sp.slug,
+            pageType: sp.page_type,
+            isPrimary: sp.is_primary,
+          })),
           social: {
             instagram: page.social_instagram,
             tiktok: page.social_tiktok,

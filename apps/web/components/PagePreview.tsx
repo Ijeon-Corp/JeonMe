@@ -178,6 +178,14 @@ export interface PagePreviewSocialProof {
   recent: RecentPurchase[];
 }
 
+// PagePreviewSitePage -- lihat catatan lengkap di PagePreviewData.sitePages.
+export interface PagePreviewSitePage {
+  name: string;
+  slug: string;
+  pageType: "bio" | "landing" | "produk";
+  isPrimary: boolean;
+}
+
 export interface PagePreviewData {
   id?: string;
   username: string;
@@ -240,12 +248,21 @@ export interface PagePreviewData {
   // di klien (lihat checkout.go Create).
   shopPaused?: boolean;
   shopPausedMessage?: string;
-  // shopPublished -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
-  // halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
-  // Dipakai PageSwitcher di bawah -- BUKAN products.length > 0 (sinyal
-  // lama, yang tidak tahu status terbit Toko itu sendiri, cuma tahu akun
-  // punya produk aktif atau tidak).
-  shopPublished?: boolean;
+  // showProfileHeader -- permintaan langsung pengguna, 28 Agustus 2026:
+  // "biasanya page baru untuk landing page biasanya bisa juga tidak
+  // menampilkan foto profile nama dsb gitu". false menyembunyikan
+  // renderBioHeader di layout bio biasa (BUKAN produk/landing -- landing
+  // SUDAH SELALU tanpa header lewat LandingPagePreview terpisah, lihat
+  // catatan di sana). undefined dibaca setara true (dashboard mini-preview
+  // tidak selalu mengisi field ini, lihat toPreviewData).
+  showProfileHeader?: boolean;
+  // sitePages -- permintaan langsung pengguna, 28 Agustus 2026: "aktifkan
+  // menu hamburger jika ada page lebih dari satu". Menggantikan
+  // shopPublished (SEBELUMNYA: binary Bio<->Toko saja) -- daftar SEMUA
+  // halaman TERBIT milik akun, dipakai PageSwitcher di bawah. undefined/
+  // array 0-1 item berarti hamburger tidak dirender sama sekali (tidak ada
+  // halaman lain untuk dipindah).
+  sitePages?: PagePreviewSitePage[];
   // stickers -- Modul Desain: stiker dekoratif INTERAKTIF (posisi & ukuran
   // sendiri per stiker, diatur lewat StickerCanvasEditor di dashboard).
   // Array kosong/undefined = tidak ada.
@@ -345,6 +362,7 @@ interface PreviewSourcePage {
   is_verified?: boolean;
   is_premium?: boolean;
   hide_watermark?: boolean;
+  show_profile_header?: boolean;
   // social_instagram..social_email -- permintaan langsung pengguna, 11
   // Agustus 2026: sumber untuk field `social` PagePreviewData, supaya
   // Pratinjau Langsung di dashboard (dibangun lewat toPreviewData ini, BEDA
@@ -431,6 +449,7 @@ export function toPreviewData(
     isVerified: page.is_verified ?? false,
     isPremium: page.is_premium ?? false,
     hideWatermark: page.hide_watermark ?? true,
+    showProfileHeader: page.show_profile_header ?? true,
     stickers: page.stickers,
     social: {
       instagram: page.social_instagram,
@@ -539,39 +558,39 @@ function renderCategoryTabs(categories: string[], selected: string, onSelect: (c
   );
 }
 
-// PageSwitcher -- hamburger kiri-atas untuk berpindah antara Link Bio &
-// Toko (permintaan langsung pengguna, 19 Agustus 2026: "karna 1 akun
-// punya dua halaman yaitu link bio dan toko tambahkan hamburger button
-// di kiri atas menampilkan page toko atau bio"). Perlu jadi KOMPONEN
-// sungguhan (bukan fungsi render biasa seperti renderCategoryTabs) karena
-// butuh state buka/tutup sendiri.
+// PageSwitcher -- hamburger kiri-atas untuk berpindah antar halaman
+// (permintaan langsung pengguna, 19 Agustus 2026: "karna 1 akun punya dua
+// halaman yaitu link bio dan toko tambahkan hamburger button di kiri atas
+// menampilkan page toko atau bio"). Perlu jadi KOMPONEN sungguhan (bukan
+// fungsi render biasa seperti renderCategoryTabs) karena butuh state
+// buka/tutup sendiri.
 //
-// Slug Toko SENGAJA dibangun langsung dari username (${SITE_URL}/
-// ${username}/${username}), BUKAN dari field pageSlug yang sudah ada di
-// PagePreviewData -- Toko PERTAMA/otomatis tiap akun SELALU memakai
-// slug = username (bukan slug bebas, lihat ensureProdukPage & catatan
-// arsitektur di CLAUDE.md), jadi tidak perlu endpoint tambahan hanya
-// untuk menemukan alamat Toko dari halaman Bio. Kreator Premium dengan
-// beberapa Toko (slug bebas) tetap diarahkan ke Toko PERTAMA ini --
-// cukup untuk kasus yang digambarkan pengguna ("1 akun 2 halaman").
-// Revisi 28 Agustus 2026: URL pindah dari /p/{slug} ke /{username}/{slug}
-// (lihat migrasi 000079) -- karena slug Toko auto = username, hasilnya
-// jadi /{username}/{username} (tampak berulang, tapi memang begitu
-// konsekuensi skema baru untuk kasus khusus ini).
+// Revisi 28 Agustus 2026 (permintaan langsung pengguna: "aktifkan menu
+// hamburger jika ada page lebih dari satu"): SEBELUMNYA binary Bio<->Toko
+// saja (2 baris hardcode, showToko/current: "bio"|"produk") -- sekarang
+// generik untuk SEMUA halaman TERBIT milik akun (bio/landing/produk
+// sekaligus, `pages` dari publicPageResponse.SitePages via
+// PagePreviewData.sitePages), tampil/sembunyi murni dari JUMLAHNYA (>=2)
+// bukan lagi field boolean terpisah -- kalau cuma ada 1 halaman (dirinya
+// sendiri), tidak ada tempat lain untuk pindah, hamburger tidak berguna.
 //
-// showToko dikontrol dari shopPublished di pemanggil. Revisi 28 Agustus
-// 2026 (permintaan langsung pengguna: "kalau halaman toko tidak
-// diterbitkan jangan tampilkan menu hamburger nya"): SEBELUMNYA dari
-// products.length > 0 -- sinyal itu cuma tahu "akun punya produk aktif",
-// BUKAN "Toko-nya sudah diterbitkan". Kreator bisa punya produk aktif
-// tapi sengaja mematikan toggle "Terbitkan halaman Toko" -- hamburger
-// lama tetap menampilkan tautan Toko yang ujungnya 404. shopPublished
-// (lihat ShopPublished di backend page.go) mencakup DUA kasus jadi satu:
-// Toko belum pernah dibuat SAMA SEKALI, atau sudah dibuat tapi
-// di-unpublish -- keduanya sama-sama alasan menyembunyikan tautan ini.
-function PageSwitcher({ username, showToko, current, theme }: { username: string; showToko: boolean; current: "bio" | "produk"; theme: PageTheme }) {
+// currentSlug null berarti halaman utama yang sedang aktif (pageSlug
+// kosong di PagePreviewData) -- entri is_primary di `pages` dicocokkan ke
+// itu, entri lain dicocokkan by slug (unik PER-USER sejak migrasi 000079,
+// jadi aman dibandingkan langsung tanpa perlu id).
+function PageSwitcher({
+  username,
+  pages,
+  currentSlug,
+  theme,
+}: {
+  username: string;
+  pages?: PagePreviewSitePage[];
+  currentSlug: string | null;
+  theme: PageTheme;
+}) {
   const [open, setOpen] = useState(false);
-  if (!showToko) return null;
+  if (!pages || pages.length < 2) return null;
 
   return (
     <div className="relative">
@@ -586,23 +605,24 @@ function PageSwitcher({ username, showToko, current, theme }: { username: string
       {open && (
         <>
           <div aria-hidden className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className={`absolute left-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-xl shadow-card ${theme.card}`}>
-            <a
-              href={`${SITE_URL}/${username}`}
-              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
-                current === "bio" ? "opacity-100" : "opacity-70 hover:opacity-100"
-              }`}
-            >
-              <IconLink className="h-3.5 w-3.5" /> Link Bio
-            </a>
-            <a
-              href={`${SITE_URL}/${username}/${username}`}
-              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
-                current === "produk" ? "opacity-100" : "opacity-70 hover:opacity-100"
-              }`}
-            >
-              <IconBox className="h-3.5 w-3.5" /> Toko
-            </a>
+          <div className={`absolute left-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl shadow-card ${theme.card}`}>
+            {pages.map((p) => {
+              const isCurrent = p.isPrimary ? currentSlug === null : currentSlug === p.slug;
+              const href = p.isPrimary ? `${SITE_URL}/${username}` : `${SITE_URL}/${username}/${p.slug}`;
+              const Icon = p.pageType === "produk" ? IconBox : IconLink;
+              return (
+                <a
+                  key={p.isPrimary ? "primary" : p.slug}
+                  href={href}
+                  className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold ${theme.productTitle} ${
+                    isCurrent ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{p.isPrimary ? "Link Bio" : p.name}</span>
+                </a>
+              );
+            })}
           </div>
         </>
       )}
@@ -2414,13 +2434,13 @@ export default function PagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
-        <PageSwitcher username={data.username} showToko={data.shopPublished === true} current="bio" theme={theme} />
+        <PageSwitcher username={data.username} pages={data.sitePages} currentSlug={data.pageSlug ?? null} theme={theme} />
         {/* ml-auto (bukan justify-between di kontainer) -- PageSwitcher
-            return null kalau showToko false, dan justify-between dengan
-            SATU anak nyata akan mendorongnya ke KIRI (bukan tetap di
-            kanan) begitu anak pertama tidak ikut dihitung sama sekali.
-            ml-auto SELALU mendorong tombol ini ke kanan terlepas dari
-            PageSwitcher merender apa pun. */}
+            return null kalau pages < 2, dan justify-between dengan SATU
+            anak nyata akan mendorongnya ke KIRI (bukan tetap di kanan)
+            begitu anak pertama tidak ikut dihitung sama sekali. ml-auto
+            SELALU mendorong tombol ini ke kanan terlepas dari PageSwitcher
+            merender apa pun. */}
         <div className="ml-auto">
           <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
@@ -3007,11 +3027,7 @@ function ProdukPagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
-        {/* showToko selalu true di sini -- ProdukPagePreview MEMANG
-            merender Halaman Toko, jadi keberadaannya sudah terbukti
-            dengan sendirinya (beda dari sisi Bio yang perlu cek
-            products.length dulu). */}
-        <PageSwitcher username={data.username} showToko current="produk" theme={theme} />
+        <PageSwitcher username={data.username} pages={data.sitePages} currentSlug={data.pageSlug ?? null} theme={theme} />
         <div className="ml-auto">
           <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
         </div>
