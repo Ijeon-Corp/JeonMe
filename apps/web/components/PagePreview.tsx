@@ -240,6 +240,12 @@ export interface PagePreviewData {
   // di klien (lihat checkout.go Create).
   shopPaused?: boolean;
   shopPausedMessage?: string;
+  // shopPublished -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
+  // halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
+  // Dipakai PageSwitcher di bawah -- BUKAN products.length > 0 (sinyal
+  // lama, yang tidak tahu status terbit Toko itu sendiri, cuma tahu akun
+  // punya produk aktif atau tidak).
+  shopPublished?: boolean;
   // stickers -- Modul Desain: stiker dekoratif INTERAKTIF (posisi & ukuran
   // sendiri per stiker, diatur lewat StickerCanvasEditor di dashboard).
   // Array kosong/undefined = tidak ada.
@@ -553,10 +559,16 @@ function renderCategoryTabs(categories: string[], selected: string, onSelect: (c
 // jadi /{username}/{username} (tampak berulang, tapi memang begitu
 // konsekuensi skema baru untuk kasus khusus ini).
 //
-// showToko dikontrol dari products.length > 0 di pemanggil (bukan
-// query terpisah) -- Toko otomatis TIDAK PERNAH ada sebelum produk
-// pertama dibuat (ensureProdukPage), jadi ini sinyal yang sudah tersedia
-// tanpa butuh data baru.
+// showToko dikontrol dari shopPublished di pemanggil. Revisi 28 Agustus
+// 2026 (permintaan langsung pengguna: "kalau halaman toko tidak
+// diterbitkan jangan tampilkan menu hamburger nya"): SEBELUMNYA dari
+// products.length > 0 -- sinyal itu cuma tahu "akun punya produk aktif",
+// BUKAN "Toko-nya sudah diterbitkan". Kreator bisa punya produk aktif
+// tapi sengaja mematikan toggle "Terbitkan halaman Toko" -- hamburger
+// lama tetap menampilkan tautan Toko yang ujungnya 404. shopPublished
+// (lihat ShopPublished di backend page.go) mencakup DUA kasus jadi satu:
+// Toko belum pernah dibuat SAMA SEKALI, atau sudah dibuat tapi
+// di-unpublish -- keduanya sama-sama alasan menyembunyikan tautan ini.
 function PageSwitcher({ username, showToko, current, theme }: { username: string; showToko: boolean; current: "bio" | "produk"; theme: PageTheme }) {
   const [open, setOpen] = useState(false);
   if (!showToko) return null;
@@ -2402,7 +2414,7 @@ export default function PagePreview({
           z-20 di sini memastikan tombol share SELALU di atas, apa pun
           varian avatar/tema yang dipakai. */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
-        <PageSwitcher username={data.username} showToko={data.products.length > 0} current="bio" theme={theme} />
+        <PageSwitcher username={data.username} showToko={data.shopPublished === true} current="bio" theme={theme} />
         {/* ml-auto (bukan justify-between di kontainer) -- PageSwitcher
             return null kalau showToko false, dan justify-between dengan
             SATU anak nyata akan mendorongnya ke KIRI (bukan tetap di

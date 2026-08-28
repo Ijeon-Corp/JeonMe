@@ -380,6 +380,14 @@ export interface PublicPage {
   // menyembunyikan tombol beli & menampilkan pesannya di frontend.
   shop_paused: boolean;
   shop_paused_message: string;
+  // shop_published -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
+  // halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
+  // true kalau akun ini punya halaman Toko (page_type="produk") yang
+  // SUDAH diterbitkan -- mencakup baik "belum pernah dibuat sama sekali"
+  // maupun "sudah dibuat tapi is_published=false", keduanya sama-sama
+  // false di sini. Dipakai PageSwitcher (PagePreview.tsx) supaya tautan
+  // "Toko" di hamburger tidak muncul kalau ujungnya cuma 404.
+  shop_published: boolean;
   // instagram_feed/tiktok_feed -- Modul Koneksi Sosial (migrasi 000069,
   // permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
   // bisa connect ke akun kita contoh nya instagram tiktok"). null kalau

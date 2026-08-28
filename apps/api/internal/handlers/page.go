@@ -250,6 +250,19 @@ type publicPageResponse struct {
 	// supaya tidak bisa dilewati lewat panggilan API langsung.
 	ShopPaused        bool   `json:"shop_paused"`
 	ShopPausedMessage string `json:"shop_paused_message"`
+	// ShopPublished -- permintaan langsung pengguna, 28 Agustus 2026: "kalau
+	// halaman toko tidak diterbitkan jangan tampilkan menu hamburger nya".
+	// PageSwitcher (hamburger kiri-atas, PagePreview.tsx) SEBELUMNYA
+	// memutuskan tampil-tidaknya tautan "Toko" hanya dari products.length
+	// > 0 (akun punya produk aktif) -- BUKAN dari status terbit Toko itu
+	// sendiri, jadi kalau kreator menonaktifkan toggle "Terbitkan halaman
+	// Toko" (is_published=false) padahal masih punya produk, hamburger
+	// tetap menampilkan tautan Toko yang ujungnya 404 (GetPublicPageBySlug
+	// menolak is_published=false). Field ini SATU query EXISTS murah,
+	// mencakup DUA kasus sekaligus (Toko belum pernah dibuat SAMA SEKALI,
+	// atau sudah dibuat tapi sengaja di-unpublish) tanpa frontend perlu
+	// tahu bedanya.
+	ShopPublished bool `json:"shop_published"`
 	// InstagramFeed/TikTokFeed -- Modul Koneksi Sosial (migrasi 000069),
 	// permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini
 	// bisa connect ke akun kita contoh nya instagram tiktok". nil kalau
@@ -661,6 +674,18 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 
 	g.Go(func() error {
 		resp.ShopPaused, resp.ShopPausedMessage = getShopPauseStatus(gctx, h.DB, userID)
+		return nil
+	})
+
+	g.Go(func() error {
+		// ShopPublished -- lihat catatan lengkap di definisi field
+		// (publicPageResponse). EXISTS tunggal ini mencakup "Toko belum
+		// pernah dibuat" (tidak ada baris page_type='produk' sama sekali)
+		// MAUPUN "sudah dibuat tapi is_published=false" -- keduanya sama
+		// artinya bagi hamburger PageSwitcher: jangan tautkan ke Toko.
+		_ = h.DB.QueryRow(gctx, `
+			SELECT EXISTS(SELECT 1 FROM pages WHERE user_id = $1 AND page_type = 'produk' AND is_published = true)
+		`, userID).Scan(&resp.ShopPublished)
 		return nil
 	})
 
@@ -1843,6 +1868,11 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 
 	if rdb != nil {
 		rdb.Del(ctx, "page-slug:"+username+":"+username)
+		// Cache halaman UTAMA ikut dihapus -- Toko baru saja LANGSUNG
+		// published (is_published=true di atas), mengubah shop_published
+		// pada respons halaman utama dari false ke true (lihat catatan
+		// lengkap soal bug ini di UpdatePage).
+		rdb.Del(ctx, "page:"+username)
 	}
 }
 
@@ -1960,6 +1990,19 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat halaman"})
 		return
+	}
+
+	// isAutoProdukSlug -- Toko pertama gratis LANGSUNG published (di atas),
+	// beda dari cabang else yang mulai draft (is_published=false, TIDAK
+	// mengubah apa pun yang sudah tersaji ke pengunjung, jadi tidak perlu
+	// invalidasi). Cache halaman UTAMA harus ikut dihapus di sini -- respons
+	// halaman utama membawa shop_published yang baru saja berubah dari
+	// false ke true (lihat catatan lengkap soal bug ini di UpdatePage).
+	if isAutoProdukSlug && h.RDB != nil {
+		var ownerUsername string
+		if scanErr := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&ownerUsername); scanErr == nil {
+			h.RDB.Del(ctx, "page:"+ownerUsername)
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"id": pageID, "message": "halaman dibuat, isi & publikasikan lewat pengaturan halaman"})
@@ -2232,8 +2275,20 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 		var currentSlug, ownerUsername string
 		if scanErr := h.DB.QueryRow(ctx, `
 			SELECT p.slug, u.username FROM pages p JOIN users u ON u.id = p.user_id WHERE p.id = $1
-		`, pageID).Scan(&currentSlug, &ownerUsername); scanErr == nil && currentSlug != "" {
-			h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+currentSlug)
+		`, pageID).Scan(&currentSlug, &ownerUsername); scanErr == nil {
+			if currentSlug != "" {
+				h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+currentSlug)
+			}
+			// Cache halaman UTAMA ("page:<username>") IKUT dihapus -- bug
+			// ditemukan 28 Agustus 2026 sambil menambah ShopPublished
+			// (permintaan langsung pengguna soal hamburger): respons
+			// halaman utama membawa field shop_published yang DIHITUNG DARI
+			// status is_published halaman tambahan ini (kalau page_type-nya
+			// "produk") -- tanpa baris ini, toggle "Terbitkan halaman Toko"
+			// tidak berefek di halaman Bio publik sampai TTL 30 detik penuh
+			// habis (persis pola bug yang sama seperti invalidateUserPageCache,
+			// lihat catatan lengkap di cache.go).
+			h.RDB.Del(ctx, "page:"+ownerUsername)
 		}
 	}
 
@@ -2330,10 +2385,16 @@ func (h *PageHandler) DeletePage(c *gin.Context) {
 		return
 	}
 
-	if h.RDB != nil && slug != "" {
+	if h.RDB != nil {
 		var ownerUsername string
 		if scanErr := h.DB.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&ownerUsername); scanErr == nil {
-			h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
+			if slug != "" {
+				h.RDB.Del(ctx, "page-slug:"+ownerUsername+":"+slug)
+			}
+			// Cache halaman UTAMA ikut dihapus -- lihat catatan lengkap di
+			// UpdatePage (menghapus halaman Toko juga mengubah shop_published
+			// pada respons halaman utama).
+			h.RDB.Del(ctx, "page:"+ownerUsername)
 		}
 	}
 
