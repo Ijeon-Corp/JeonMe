@@ -41,6 +41,15 @@ import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-s
 // bawahnya). Tema "kraft" (dipakai batik-craft) juga tetap TIDAK pernah
 // dipakai di kurasi ini -- sama seperti "electric" di atas, dicek ulang
 // supaya tidak kebawa lagi kalau daftar Quick Setup bertambah ke depannya.
+//
+// Revisi 28 Agustus 2026 (permintaan langsung pengguna: "ganti template
+// electric dan ember yang ada di home page dengan template lain"): tema
+// "electric" MEMANG sudah tidak dipakai sama sekali sejak revisi di atas
+// (gamer/gym-fitness-center tidak pernah masuk kurasi ini). Tema "ember"
+// SEMPAT terpakai lewat "musician" (baris Portrait) -- diganti "dj"
+// (tema "downtown", layoutVariant "portrait" juga, kategori entertainment
+// sama seperti musician) supaya baris Portrait tetap 4 tema yang
+// benar-benar berbeda tanpa "ember" ataupun "electric".
 const CURATED_KEYS = [
   // Baris 1 -- layout "cover" (foto sampul lanskap + avatar bulat menumpuk).
   { key: "restaurant", tag: "Cover" as const, displayName: "Bagus Prasetyo", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
@@ -48,7 +57,7 @@ const CURATED_KEYS = [
   { key: "event-organizer", tag: "Cover" as const, displayName: "Dimas Wirawan", avatarUrl: "https://randomuser.me/api/portraits/men/91.jpg" },
   { key: "nonprofit-charity", tag: "Cover" as const, displayName: "Sari Wulandari", avatarUrl: "https://randomuser.me/api/portraits/women/54.jpg" },
   // Baris 2 -- layout "portrait" (foto tegak dibingkai & berbayang ala poster).
-  { key: "musician", tag: "Portrait" as const, displayName: "Daniel Kim", avatarUrl: "https://randomuser.me/api/portraits/men/56.jpg" },
+  { key: "dj", tag: "Portrait" as const, displayName: "Reza Firmansyah", avatarUrl: "https://randomuser.me/api/portraits/men/72.jpg" },
   { key: "streamer", tag: "Portrait" as const, displayName: "Vanya Kirana", avatarUrl: "https://randomuser.me/api/portraits/women/61.jpg" },
   { key: "diving-center", tag: "Portrait" as const, displayName: "Nabila Putri", avatarUrl: "https://randomuser.me/api/portraits/women/23.jpg" },
   { key: "adventure-guide", tag: "Portrait" as const, displayName: "Bianca Alves", avatarUrl: "https://randomuser.me/api/portraits/women/17.jpg" },
