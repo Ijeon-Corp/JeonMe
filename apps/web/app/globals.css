@@ -136,6 +136,25 @@ h1, h2, h3, h4, h5 {
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+/* .glass gelap -- ditemukan lewat audit visual dark mode (permintaan
+   pengguna "perbaiki teks yang jadi tidak terlihat di dark mode"): kartu
+   .glass dipakai di 40+ halaman dashboard/admin (mis. widget statistik di
+   app/dashboard/page.tsx), TIDAK PERNAH dapat varian dark seperti .nav-glass
+   di atas -- jadi selalu tampil putih transparan walau di dark mode, bikin
+   teks text-app-ink/text-app-muted (yang otomatis jadi terang di dark mode)
+   nyaris tidak kelihatan di atas kartu yang masih terang. Pola 2 lapis SAMA
+   seperti .nav-glass. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .glass {
+    background: rgba(16, 29, 24, 0.65);
+    border: 1px solid rgba(36, 53, 44, 0.6);
+  }
+}
+[data-theme="dark"] .glass {
+  background: rgba(16, 29, 24, 0.65);
+  border: 1px solid rgba(36, 53, 44, 0.6);
+}
+
 .nav-glass {
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(14px);
