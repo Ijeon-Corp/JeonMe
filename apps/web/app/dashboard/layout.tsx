@@ -377,15 +377,22 @@ export default function DashboardLayout({
       </div>
 
       <div className="flex flex-col gap-3">
-        {/* Dark/light + bahasa (mobile) -- permintaan langsung pengguna,
+        {/* Dark/light + bahasa (mobile SAJA) -- permintaan langsung pengguna,
             29 Agustus 2026. Gaya di sini SENGAJA beda dari topbar desktop
             (border/teks putih transparan, bukan border-app-border/bg-app-
             surface) -- sidebar mobile punya latar HIJAU GELAP TETAP
             (bg-primary-dark, tidak ikut toggle terang/gelap sama sekali,
             lihat catatan lengkap di project memory soal batas ini), jadi
             kontrol di dalamnya harus tetap kontras terhadap latar gelap
-            tetap itu, sama seperti tombol Keluar di bawahnya. */}
-        <div className="flex items-center justify-between gap-2 px-3">
+            tetap itu, sama seperti tombol Keluar di bawahnya.
+            `md:hidden` -- susulan pengguna: "hilangkan menu bahasa dan dark
+            mode di sidebar dashboard untuk desktop". sidebarContent ini
+            dipakai BERSAMA oleh <aside> desktop (md:flex, selalu tampil) dan
+            drawer mobile (md:hidden, cuma tampil di layar sempit) -- topbar
+            desktop SUDAH punya kontrol bahasa/tema sendiri (lihat di bawah),
+            jadi versi sidebar ini sekarang cuma perlu tampil di mobile (yang
+            tidak punya topbar dengan kontrol itu). */}
+        <div className="flex items-center justify-between gap-2 px-3 md:hidden">
           <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white" />
         </div>
