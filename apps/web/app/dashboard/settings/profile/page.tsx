@@ -3,9 +3,18 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ApiError, SettingsProfile, checkUsername, getSettingsProfile, updateSettingsProfile } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
+import {
+  ApiError,
+  SettingsProfile,
+  checkUsername,
+  clearToken,
+  getSettingsProfile,
+  logout as apiLogout,
+  updateSettingsProfile,
+} from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconCheck, IconChevronRight, IconClose, IconQrCode } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconClose, IconLogout, IconQrCode } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
@@ -26,6 +35,7 @@ function formatCooldownDate(iso: string): string {
 // cuma dipratinjau di sini sebagai referensi.
 export default function SettingsProfilePage() {
   const { t } = useLocale();
+  const router = useRouter();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,6 +148,25 @@ export default function SettingsProfilePage() {
       showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsProfile.saveError"), "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // handleLogout -- permintaan langsung pengguna, 30 Agustus 2026: "fitur
+  // logout pindah ke profile hilangkan dari sidebar". Ditaruh di sini
+  // (bukan dropdown baru di topbar) supaya tetap terjangkau di MOBILE juga
+  // -- drawer sidebar mobile pakai sidebarContent yang SAMA dengan aside
+  // desktop, jadi tombol Keluar yang dihapus dari sana hilang dari kedua
+  // tempat sekaligus kalau tidak dipindah ke suatu halaman yang tetap bisa
+  // dibuka dari mana pun (topbar desktop & menu Pengaturan sidebar mobile
+  // sama-sama mengarah ke halaman Profil & Akun ini).
+  async function handleLogout() {
+    try {
+      await apiLogout();
+    } catch {
+      // Tetap lanjut hapus token lokal walau request revoke ke server gagal.
+    } finally {
+      clearToken();
+      router.push("/login");
     }
   }
 
@@ -319,6 +348,17 @@ export default function SettingsProfilePage() {
           {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>
       </form>
+
+      <div className="mt-6 border-t border-app-border pt-5">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 rounded-xl border border-app-border px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300"
+        >
+          <IconLogout className="h-4 w-4" />
+          {t("dashboard.logout")}
+        </button>
+      </div>
 
       {qrOpen && original?.username && (
         <QRCodeModal url={`${SITE_URL}/${original.username}`} username={original.username} onClose={() => setQrOpen(false)} />

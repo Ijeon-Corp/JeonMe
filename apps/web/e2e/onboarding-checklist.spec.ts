@@ -77,8 +77,10 @@ test.describe("Onboarding: Checklist Progresif", () => {
     await expect(page.getByText("Lengkapi setup akunmu -- 0/3 selesai")).toBeVisible({ timeout: 10000 });
 
     // Navigasi ke Link Bio lewat SIDEBAR (klik <Link>, bukan page.goto) --
-    // "Link Bio" ada di dalam grup collapsible "Halaman Saya", buka dulu.
-    await page.getByRole("button", { name: "Halaman Saya" }).click();
+    // "Link Bio" ada di dalam grup collapsible "Link Saya" (nama grup ganti
+    // dari "Halaman Saya", susulan permintaan pengguna 30 Agustus 2026), buka
+    // dulu.
+    await page.getByRole("button", { name: "Link Saya" }).click();
     await page.getByRole("link", { name: "Link Bio", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/links$/);
     await page.getByRole("button", { name: "Tambah" }).first().click();

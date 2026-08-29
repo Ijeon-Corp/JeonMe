@@ -23,7 +23,7 @@ export const dictionaries = {
     dashboard: {
       nav: {
         overview: "Ringkasan",
-        myPageGroup: "Halaman Saya",
+        myPageGroup: "Link Saya",
         quickSetup: "Quick Setup",
         linkBio: "Link Bio",
         shop: "Toko",
@@ -2303,7 +2303,7 @@ export const dictionaries = {
     dashboard: {
       nav: {
         overview: "Overview",
-        myPageGroup: "My Page",
+        myPageGroup: "My Link",
         quickSetup: "Quick Setup",
         linkBio: "Link Bio",
         shop: "Shop",

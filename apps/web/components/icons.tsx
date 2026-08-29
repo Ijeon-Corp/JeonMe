@@ -319,15 +319,23 @@ export function IconPlus({ className }: IconProps) {
   );
 }
 
+// IconSettings -- didesain ulang (permintaan langsung pengguna, 30 Agustus
+// 2026: "perbaiki icon settings di navbar"). Versi sebelumnya (path gerigi
+// 12-titik satu potong) tampil miring/tidak simetris di ukuran kecil topbar
+// (h-4 w-4 = 16px) -- gerigi rapatnya jadi "meleleh" saat dirender sekecil
+// itu. Diganti pola lingkaran + 8 garis radial (gaya "roda gigi" yang lebih
+// sederhana) supaya tetap simetris & jelas di ukuran berapa pun, konsisten
+// dengan gaya ikon sekitarnya di topbar (ThemeToggle, NotificationBell, dst
+// -- bentuk geometris sederhana, bukan path rumit satu potong).
 export function IconSettings({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={base} />
+      <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth={base} />
       <path
-        d="M19.4 13.5c.1-.5.1-1 0-1.5l1.6-1.3-1.5-2.6-1.9.6a6 6 0 0 0-1.3-.8L15.9 6h-3l-.4 1.9c-.5.2-.9.5-1.3.8l-1.9-.6-1.5 2.6 1.6 1.3c-.1.5-.1 1 0 1.5l-1.6 1.3 1.5 2.6 1.9-.6c.4.3.8.6 1.3.8l.4 1.9h3l.4-1.9c.5-.2.9-.5 1.3-.8l1.9.6 1.5-2.6-1.6-1.3Z"
+        d="M12 3v2.5M12 18.5V21M21 12h-2.5M5.5 12H3M18.36 5.64l-1.77 1.77M7.41 16.59l-1.77 1.77M18.36 18.36l-1.77-1.77M7.41 7.41 5.64 5.64"
         stroke="currentColor"
         strokeWidth={base}
-        strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );

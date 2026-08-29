@@ -15,6 +15,10 @@ test.describe("Panel Admin", () => {
 
     try {
       const { username: targetUsername, email: targetEmail } = await registerAndLogin(targetPage, "admintarget");
+      // Tombol Keluar dipindah dari sidebar ke halaman Profil & Akun (susulan
+      // permintaan pengguna, 30 Agustus 2026: "fitur logout pindah ke
+      // profile hilangkan dari sidebar").
+      await targetPage.goto("/dashboard/settings/profile");
       await targetPage.getByRole("button", { name: "Keluar" }).click();
       await targetPage.waitForURL("**/login", { timeout: 10000 });
 

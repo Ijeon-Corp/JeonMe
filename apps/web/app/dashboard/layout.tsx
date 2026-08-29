@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
@@ -10,18 +10,15 @@ import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
 import GlobalSearch from "@/components/GlobalSearch";
-import QRCodeModal from "@/components/QRCodeModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLocale } from "@/lib/locale-context";
 import { SITE_URL } from "@/lib/site";
 import {
   Workspace,
-  clearToken,
   getActiveWorkspaceOwnerId,
   getMyPage,
   listWorkspaces,
-  logout as apiLogout,
   setActiveWorkspaceOwnerId,
 } from "@/lib/api-client";
 import {
@@ -31,16 +28,13 @@ import {
   IconChevronRight,
   IconClose,
   IconCopy,
-  IconExternal,
   IconGift,
   IconInbox,
   IconLink,
-  IconLogout,
   IconMenu,
   IconPaintbrush,
   IconPhone,
   IconPlayCircle,
-  IconQrCode,
   IconSettings,
   IconSparkle,
   IconStar,
@@ -83,22 +77,24 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 function buildNavItems(t: (key: string) => string): NavEntry[] {
   return [
     { type: "link", href: "/dashboard", label: t("dashboard.nav.overview"), icon: IconChart },
+    // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: menu
+    // template siap-pakai (tema+bio+tautan starter sekaligus). Sempat di
+    // dalam grup "Halaman Saya" -- dipindah jadi baris lepas (susulan
+    // permintaan pengguna, 30 Agustus 2026: "menu My Link isinya link bio,
+    // shop dan design" -- grup itu dipersempit khusus 3 halaman yang
+    // sungguh-sungguh membentuk halaman publik, Quick Setup sifatnya
+    // wizard sekali-pakai di awal, bukan halaman yang dikelola terus).
+    { type: "link", href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
     {
       type: "group",
       label: t("dashboard.nav.myPageGroup"),
       items: [
-        // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026:
-        // menu template siap-pakai (tema+bio+tautan starter sekaligus),
-        // ditaruh PALING ATAS grup ini karena sifatnya titik awal/wizard
-        // (dipakai sesekali di awal, beda dari Link Bio/Toko/Desain yang
-        // dikelola terus-menerus).
-        { href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
         { href: "/dashboard/links", label: t("dashboard.nav.linkBio"), icon: IconLink },
         { href: "/dashboard/products", label: t("dashboard.nav.shop"), icon: IconBox },
-        { href: "/dashboard/statistik", label: t("dashboard.nav.statistics"), icon: IconChart },
         { href: "/dashboard/design", label: t("dashboard.nav.design"), icon: IconPaintbrush },
       ],
     },
+    { type: "link", href: "/dashboard/statistik", label: t("dashboard.nav.statistics"), icon: IconChart },
     { type: "link", href: "/dashboard/monetisasi", label: t("dashboard.nav.productsMonetization"), icon: IconGift },
     {
       type: "group",
@@ -162,7 +158,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const { t } = useLocale();
   const navItems = buildNavItems(t);
@@ -177,30 +172,18 @@ export default function DashboardLayout({
   // apa pun di chip akun top bar (terlihat di SEMUA halaman dashboard).
   const [isPremium, setIsPremium] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
 
   // Menu per grup jadi collapsible (permintaan langsung pengguna) --
   // sidebar sudah terlalu panjang (~21 item nav di 3 grup + 5 tautan
-  // lepas) untuk selalu tampil terbuka semua. Grup yang berisi halaman
-  // aktif saat pertama kali layout ini dimuat otomatis terbuka (dihitung
-  // sekali lewat initializer useState, memakai pathname yang sudah
-  // tersedia saat render pertama), grup lain mulai tertutup. Sesudahnya
-  // sepenuhnya dikendalikan manual oleh klik pengguna -- SENGAJA tidak
-  // dipaksa terbuka ulang lewat effect setiap pathname berubah (selain
-  // menghindari pola setState-di-dalam-effect yang anti-pola React, itu
-  // juga akan membuat tombol tutup terasa "rusak" -- diklik tapi grup
-  // yang berisi halaman aktif tidak pernah benar-benar tertutup).
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    for (const item of navItems) {
-      if (item.type === "group" && item.items.some((sub) => sub.href === pathname)) {
-        initial.add(item.label);
-      }
-    }
-    return initial;
-  });
+  // lepas) untuk selalu tampil terbuka semua. SEMUA grup mulai tertutup
+  // (susulan permintaan pengguna, 30 Agustus 2026: "saya mau grup menu
+  // menu di sidebar di collapse" -- sebelumnya grup yang berisi halaman
+  // aktif otomatis terbuka saat pertama dimuat, sekarang sengaja TIDAK
+  // lagi supaya sidebar konsisten ringkas dari awal, murni dikendalikan
+  // manual oleh klik pengguna).
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set<string>());
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
@@ -248,18 +231,6 @@ export default function DashboardLayout({
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });
-  }
-
-  async function handleLogout() {
-    try {
-      await apiLogout();
-    } catch {
-      // Tetap lanjut hapus token lokal walau request revoke ke server gagal
-      // (mis. token sudah kedaluwarsa) -- pengguna tetap harus bisa keluar.
-    } finally {
-      clearToken();
-      router.push("/login");
-    }
   }
 
   const sidebarContent = (
@@ -384,25 +355,26 @@ export default function DashboardLayout({
             (bg-primary-dark, tidak ikut toggle terang/gelap sama sekali,
             lihat catatan lengkap di project memory soal batas ini), jadi
             kontrol di dalamnya harus tetap kontras terhadap latar gelap
-            tetap itu, sama seperti tombol Keluar di bawahnya.
+            tetap itu.
             `md:hidden` -- susulan pengguna: "hilangkan menu bahasa dan dark
             mode di sidebar dashboard untuk desktop". sidebarContent ini
             dipakai BERSAMA oleh <aside> desktop (md:flex, selalu tampil) dan
             drawer mobile (md:hidden, cuma tampil di layar sempit) -- topbar
             desktop SUDAH punya kontrol bahasa/tema sendiri (lihat di bawah),
             jadi versi sidebar ini sekarang cuma perlu tampil di mobile (yang
-            tidak punya topbar dengan kontrol itu). */}
+            tidak punya topbar dengan kontrol itu).
+            Tombol Keluar SEBELUMNYA ada di sini -- dipindah ke halaman Profil
+            & Akun (susulan permintaan pengguna, 30 Agustus 2026: "fitur
+            logout pindah ke profile hilangkan dari sidebar"), lihat
+            app/dashboard/settings/profile/page.tsx. Sengaja BUKAN dropdown
+            baru di avatar topbar desktop -- itu tidak terjangkau di mobile
+            (topbar mobile cuma logo+hamburger), sedangkan halaman Profil &
+            Akun tetap bisa dibuka dari kedua sisi (avatar topbar desktop,
+            atau menu Pengaturan di drawer mobile). */}
         <div className="flex items-center justify-between gap-2 px-3 md:hidden">
           <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-white/20 p-0.5 text-[11px] font-bold text-white/70" />
           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white" />
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-red-300 hover:bg-white/5"
-        >
-          <IconLogout className="h-4 w-4" />
-          {t("dashboard.logout")}
-        </button>
       </div>
     </>
   );
@@ -524,37 +496,15 @@ export default function DashboardLayout({
                 >
                   <IconPlayCircle className="h-4 w-4" />
                 </Link>
-                {username && (
-                  <a
-                    href={`${SITE_URL}/${username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={t("dashboard.publicPage")}
-                    aria-label={t("dashboard.publicPage")}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
-                  >
-                    <IconExternal className="h-4 w-4" />
-                  </a>
-                )}
-                {/* Kode QR profil (permintaan langsung pengguna, 18 Agustus
-                    2026: "buatkan qrcode untuk profile kita, supaya orang
-                    lain tinggal scan dan menuju profile") -- QRCodeModal
-                    SUDAH ada sebelumnya, tapi cuma dipakai fitur Kartu
-                    Kontak (business-card/page.tsx). Ditaruh di top bar
-                    (bukan halaman tersendiri) supaya konsisten dengan tombol
-                    "Lihat halaman publik"/"Salin tautan" di sebelahnya --
-                    ketiganya sama-sama aksi cepat "bagikan halaman publikmu". */}
-                {username && (
-                  <button
-                    type="button"
-                    onClick={() => setQrOpen(true)}
-                    title={t("dashboard.qrCode")}
-                    aria-label={t("dashboard.qrCode")}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
-                  >
-                    <IconQrCode className="h-4 w-4" />
-                  </button>
-                )}
+                {/* "Lihat halaman publik" & "Kode QR profil" SEBELUMNYA ada
+                    di sini -- dihapus dari top bar (susulan permintaan
+                    pengguna, 30 Agustus 2026: "di navbar hilangkan view
+                    public sites dan juga qrcode"). Bukan fitur yang hilang:
+                    kode QR sudah bisa dibuka dari halaman Profil & Akun
+                    (lihat tombol "Lihat Kode QR" di
+                    app/dashboard/settings/profile/page.tsx), dan tautan
+                    halaman publik tetap ada lewat chip "jeon.id/{username}"
+                    di sebelah kanan top bar ini (klik = salin tautan). */}
                 <Link
                   href="/dashboard/settings"
                   title={t("dashboard.nav.settings")}
@@ -633,9 +583,6 @@ export default function DashboardLayout({
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </div>
         </div>
-        {qrOpen && username && (
-          <QRCodeModal url={`${SITE_URL}/${username}`} username={username} onClose={() => setQrOpen(false)} />
-        )}
       </ToastProvider>
     </AuthGuard>
   );
