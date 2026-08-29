@@ -2118,6 +2118,9 @@ export const dictionaries = {
         },
       },
     },
+    watermark: {
+      cta: "Buat milikmu di",
+    },
     nav: {
       features: "Fitur",
       templates: "Template",
@@ -4394,6 +4397,9 @@ export const dictionaries = {
           backToDesign: "Back to Design",
         },
       },
+    },
+    watermark: {
+      cta: "Create yours on",
     },
     nav: {
       features: "Features",

@@ -145,6 +145,50 @@ h1, h2, h3, h4, h5 {
   background-clip: text;
 }
 
+/* .text-gradient gelap -- ditemukan lewat audit visual dark mode (permintaan
+   pengguna, "teks warna hijau dengan bg hijau itu bikin tidak kelihatan"):
+   gradient hijau-tua>teal>emas di atas TIDAK PERNAH dapat varian dark --
+   stop pertamanya (#1b4d3e) nyaris sewarna dengan token --app-bg/--app-
+   surface/--app-surface-2 dark (semuanya keluarga hijau-hitam pekat), jadi
+   judul-judul yang pakai .text-gradient (Hero, Features, FAQ, Testimonials,
+   Monetization, Analytics, ProductShowcase, Templates, Pricing, dst) nyaris
+   tidak kelihatan begitu dark mode aktif. Ganti ke varian warna "light" brand
+   yang sudah ada di tailwind.config.ts (primary.light/secondary.light/
+   accent.light) -- jauh lebih terang, kontras aman terhadap latar gelap,
+   tetap kombinasi hijau>teal>emas yang sama secara identitas brand.
+   PAKAI `background-image` (longhand), BUKAN shorthand `background` --
+   shorthand `background` me-reset SEMUA sub-property termasuk
+   background-clip ke default (border-box), jadi malah MEMATIKAN efek
+   clip-ke-teks dari rule dasar .text-gradient di atas (ketahuan lewat
+   screenshot: judul jadi kotak solid buram, bukan teks). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .text-gradient {
+    background-image: linear-gradient(135deg, #3e7c59, #5fb3a3, #e0c378);
+  }
+}
+[data-theme="dark"] .text-gradient {
+  background-image: linear-gradient(135deg, #3e7c59, #5fb3a3, #e0c378);
+}
+
+/* .brand-logo-img -- ditemukan lewat audit yang sama: logo.png (wordmark
+   "jeon.id", dipakai Navbar/Footer landing + AuthShell login/register)
+   berlatar TRANSPARAN dengan glyph "jeon" berwarna hijau tua (#123328-an) --
+   sama seperti .text-gradient di atas, nyaris tidak kelihatan begitu latar
+   di baliknya ikut gelap (bg-app-surface/.nav-glass dark mode). Karena ini
+   file gambar raster (bukan teks CSS), tidak bisa diwarnai ulang lewat
+   currentColor -- solusinya filter brightness/saturate di dark mode supaya
+   bagian gelapnya ikut terang, TANPA bikin bagian mint-nya yang sudah
+   terang jadi over-exposed (nilai ditest visual lewat Playwright, bukan
+   angka sembarang). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo-img {
+    filter: brightness(1.8) saturate(1.15);
+  }
+}
+[data-theme="dark"] .brand-logo-img {
+  filter: brightness(1.8) saturate(1.15);
+}
+
 .bg-mesh {
   background:
     radial-gradient(ellipse 60% 50% at 20% 10%, rgba(27, 77, 62, 0.1) 0%, transparent 60%),

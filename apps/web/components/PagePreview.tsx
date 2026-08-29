@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import AudioPlayerBlock from "@/components/AudioPlayerBlock";
 import BookSlotButton from "@/components/BookSlotButton";
@@ -1593,6 +1594,37 @@ function renderBioHeader(
 // menyentuh definisi setiap komponen ikon satu per satu. TIDAK
 // diterapkan ke customIconUrl (gambar hasil upload, bukan SVG, tidak
 // bisa "diwarnai ulang" lewat CSS color).
+// Watermark -- redesain (permintaan langsung pengguna, referensi gambar
+// tombol "Buat milikmu di [ikon] jeon.id"): sebelumnya teks polos "Buat
+// halaman gratis di Jeon.id" tanpa logo. Dipakai identik di 3 tempat
+// (PagePreview/LandingPagePreview/ProdukPagePreview) -- diekstrak ke sini
+// SATU KALI daripada tiga salinan. useLocale() aman dipanggil di sini
+// (LocaleProvider membungkus SELURUH app termasuk rute publik kreator di
+// app/layout.tsx, bukan cuma dashboard) -- teksnya otomatis ikut preferensi
+// bahasa PENGUNJUNG sendiri (localStorage jeonme-locale), default "id" kalau
+// pengunjung belum pernah pilih apa pun. Ini beda dari larangan token
+// app-* dark/light di file ini -- itu soal WARNA tema halaman kreator,
+// bukan BAHASA elemen watermark milik platform sendiri.
+function Watermark({ isPremium, hideWatermark }: { isPremium?: boolean; hideWatermark?: boolean }) {
+  const { t } = useLocale();
+  if (isPremium && hideWatermark) return null;
+  return (
+    <a
+      href={`${SITE_URL}/register`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
+    >
+      {t("watermark.cta")}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-icon.png" alt="" className="h-4 w-4 flex-shrink-0" />
+      <span>
+        jeon<span className="text-secondary-light">.id</span>
+      </span>
+    </a>
+  );
+}
+
 function ColoredIcon({ color, children }: { color?: string; children: React.ReactNode }) {
   if (!color) return <>{children}</>;
   return (
@@ -2710,16 +2742,7 @@ export default function PagePreview({
                 apa pun nilai hideWatermark -- kreator Premium bisa
                 menyembunyikannya sendiri lewat toggle di Desain/Halaman Toko
                 (lihat isPremiumUser backend & PagePreviewData.hideWatermark). */}
-            {(!data.isPremium || !data.hideWatermark) && (
-              <a
-                href={`${SITE_URL}/register`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-              >
-                Buat halaman gratis di Jeon.id
-              </a>
-            )}
+            <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             {/* Footer SELALU tampil, termasuk di pratinjau dashboard
                 (interactive=false) -- permintaan langsung pengguna: "tampilkan
                 seluruh footer privacy dll", sebelumnya sengaja disembunyikan
@@ -2951,16 +2974,7 @@ function LandingPagePreview({
 
         {!hideFooterChrome && (
           <div className="mt-6 flex flex-col items-center gap-3">
-            {(!data.isPremium || !data.hideWatermark) && (
-              <a
-                href={`${SITE_URL}/register`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-              >
-                Buat halaman gratis di Jeon.id
-              </a>
-            )}
+            <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             {/* Footer SELALU tampil, termasuk di pratinjau dashboard
                 (interactive=false) -- permintaan langsung pengguna: "tampilkan
                 seluruh footer privacy dll", sebelumnya sengaja disembunyikan
@@ -3071,16 +3085,7 @@ function ProdukPagePreview({
 
         {!hideFooterChrome && (
           <div className="mt-10 flex flex-col items-center gap-3">
-            {(!data.isPremium || !data.hideWatermark) && (
-              <a
-                href={`${SITE_URL}/register`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
-              >
-                Buat halaman gratis di Jeon.id
-              </a>
-            )}
+            <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             <PageFooterLinks
               pageId={data.id}
               username={data.username}
