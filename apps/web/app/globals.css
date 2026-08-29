@@ -101,6 +101,31 @@
   }
 }
 
+/* color-scheme: dark -- permintaan langsung pengguna, "fix warna teks di
+   dropdown saat darkmode". Beda dari reset background di atas: teks &
+   background KOTAK <select> itu sendiri sudah benar (dicek lewat
+   getComputedStyle sungguhan -- color: rgb(234,243,239) dari text-app-ink,
+   background transparent seperti diharapkan), tapi computed colorScheme-nya
+   masih "normal" (belum di-set). Popup daftar opsi <select> (dan
+   date/time picker native lainnya) dirender browser sendiri di luar
+   jangkauan CSS kita -- browser MENGASUMSIKAN skema TERANG untuk popup itu
+   kalau color-scheme tidak diset, jadi background popup tetap putih bawaan
+   sementara teksnya ikut warna terang (text-app-ink) yang kita pasang di
+   elemen -- putih di atas putih di dalam popup, sama sekali tidak
+   ter-screenshot lewat automated testing biasa (popup native ini tidak
+   pernah masuk lapisan screenshot Playwright) makanya lolos dari semua
+   audit visual sebelumnya, cuma ketahuan dari laporan pengguna langsung.
+   Discoped ke .app-shell (sama seperti reset background di atas) supaya
+   TIDAK memengaruhi form publik pembeli/pengunjung sama sekali. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-shell {
+    color-scheme: dark;
+  }
+}
+[data-theme="dark"] .app-shell {
+  color-scheme: dark;
+}
+
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   scrollbar-width: thin;
