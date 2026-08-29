@@ -1984,7 +1984,7 @@ export default function DashboardLinksPage() {
               setAddModalOpen(true);
             }}
             title={t("dashboard.pages.links.quickAdd.viewAllOptions")}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-app-ink hover:bg-gray-200"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-app-surface-2 text-app-ink hover:bg-app-border"
           >
             <IconPlus className="h-4 w-4" />
           </button>
