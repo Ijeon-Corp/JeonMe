@@ -95,10 +95,22 @@ export default function Hero() {
                 AuthShowcase.tsx (image1.png, sekarang hero.png juga --
                 lihat catatan di sana) menggantikan mockup JSX buatan tangan
                 dengan gambar. animate-float dipertahankan di pembungkusnya
-                supaya efek mengambang halus yang sama tetap ada. */}
+                supaya efek mengambang halus yang sama tetap ada.
+                Nama file hero-v2.png (29 Agustus 2026, BUKAN menimpa
+                hero.png lagi): Apache/Cloudflare di VPS staging/production
+                cache gambar statis 1 tahun penuh (cache-control max-age
+                31536000) -- menimpa file di URL yang SAMA tidak akan pernah
+                terlihat pengunjung sampai cache itu benar-benar kedaluwarsa
+                atau di-purge manual, ketahuan langsung lewat curl -sI
+                (cf-cache-status: HIT, age lebih dari sebulan) setelah
+                penggantian pertama tidak muncul-muncul di staging. Ganti
+                nama file (bukan query string) supaya PASTI kena sebagai URL
+                baru di semua lapis cache -- kalau ganti gambar ini lagi
+                nanti, naikkan angka versinya lagi (hero-v3.png, dst),
+                jangan timpa nama file yang sama. */}
             <div className="animate-float w-full max-w-xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/hero.png" alt="Pratinjau halaman bio & dashboard Jeon.id" className="w-full object-contain" />
+              <img src="/hero-v2.png" alt="Pratinjau halaman bio & dashboard Jeon.id" className="w-full object-contain" />
             </div>
           </div>
         </div>
