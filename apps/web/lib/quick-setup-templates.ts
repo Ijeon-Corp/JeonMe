@@ -74,6 +74,7 @@ import {
   IconMapPin,
   IconMusicNote,
   IconPlane,
+  IconPlus,
   IconShoppingBag,
   IconSparkle,
 } from "@/components/icons";
@@ -107,6 +108,15 @@ export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
   { key: "tourism", label: "Tourism & Travel", Icon: IconPlane },
   { key: "lifestyle", label: "Lifestyle", Icon: IconHeart },
   { key: "special", label: "Special Purpose", Icon: IconGift },
+  // "custom" -- permintaan langsung pengguna, 29 Agustus 2026: "di quick
+  // setup tambahkan kategori other yaitu custom sendiri". Beda dari 9
+  // kategori lain (masing-masing berisi beberapa template niche siap pakai)
+  // -- kategori ini SENGAJA cuma berisi SATU template "kosong" (lihat
+  // "custom-blank" di QUICK_SETUP_TEMPLATES) untuk kreator yang tidak
+  // cocok dengan niche mana pun dan lebih suka mulai dari nol lalu susun
+  // sendiri lewat editor Link Bio biasa. Selalu ditaruh PALING TERAKHIR di
+  // grid kategori (bukan sesuatu yang perlu ditemukan duluan).
+  { key: "custom", label: "Other / Custom", Icon: IconPlus },
 ];
 
 // PLATFORM_URL -- URL dasar starter per platform (pola sama seperti
@@ -2455,5 +2465,20 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
     ],
     monetizationHint: "Aktifkan Dukungan (Donasi) kalau audiensmu ingin membantu biaya operasional produk secara sukarela.",
+  },
+  // "custom-blank" -- satu-satunya template kategori "custom" (lihat
+  // catatan di QUICK_SETUP_CATEGORIES). SENGAJA tanpa bio/links/blocks/
+  // social/products -- applyTemplate (dashboard/quick-setup/page.tsx)
+  // tetap menghapus link lama & menerapkan tema/layout seperti template
+  // lain (perilaku "ganti total" yang sama, cuma hasil akhirnya kosong),
+  // lalu kreator susun sendiri lewat editor Link Bio biasa sesudahnya.
+  {
+    key: "custom-blank",
+    category: "custom",
+    label: "Blank Canvas",
+    description: "Halaman kosong tanpa konten bawaan -- pilih tema dasarnya, sisanya susun sendiri sesuai keinginanmu.",
+    theme: "default",
+    bio: "",
+    links: [],
   },
 ];
