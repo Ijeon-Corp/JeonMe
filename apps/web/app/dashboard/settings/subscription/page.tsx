@@ -118,9 +118,9 @@ export default function SettingsSubscriptionPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status.is_premium ? (
-        <section className="mt-6 rounded-3xl border border-primary/20 bg-primary-subtle p-5">
+        <section className="mt-6 rounded-3xl border border-app-border bg-app-surface-2 p-5">
           <div className="flex items-center gap-2">
-            <IconStar className="h-5 w-5 text-primary" />
+            <IconStar className="h-5 w-5 text-accent" />
             <h2 className="font-heading text-sm font-bold text-app-ink">
               {t("dashboard.pages.settingsSubscription.youArePremium").replace("{plan}", planLabel)}
             </h2>

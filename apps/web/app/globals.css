@@ -126,6 +126,78 @@
   color-scheme: dark;
 }
 
+/* Status alert warna (merah/hijau/amber/biru) dark mode -- permintaan
+   pengguna "cek saja secara keseluruhan untuk mode darkmode ini", ditemukan
+   lewat audit visual 3-agent paralel: pola bg-red-50/bg-green-50/bg-amber-50
+   + text-red-600/text-green-700/text-amber-700 dst DICOPY-PASTE (bukan lewat
+   satu komponen bersama) di 50+ tempat -- kotak error/sukses/peringatan,
+   badge status (KYC/domain terverifikasi), dst. Semuanya WARNA LITERAL
+   Tailwind (bukan token app-*), jadi selalu tampil kotak TERANG/putih di
+   tengah UI gelap -- teks di dalamnya masih "terbaca" (gelap di atas
+   terang), tapi kotaknya sendiri jelas belum ikut tema.
+   Pendekatan: override LANGSUNG kelas utility Tailwind literal (BUKAN ganti
+   ratusan className satu per satu) di-scope ke .app-shell -- 1 tempat
+   menangani SEMUA pemakaian sekarang & yang akan datang. Warna solid untuk
+   TOMBOL (bg-red-600/700 + text-white, tombol "Hapus" dst) SENGAJA tidak
+   disentuh -- putih di atas merah pekat sudah kontras baik di kedua tema.
+   Begitu juga text-red-300/400 & text-green-300 -- sudah dipakai khusus di
+   konteks yang sudah gelap secara permanen (sidebar bg-primary-dark, atau
+   komponen publik pembeli di luar .app-shell sama sekali). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-shell .bg-red-50,
+  :root:not([data-theme="light"]) .app-shell .bg-red-100 { background-color: rgba(153, 27, 27, 0.22); }
+  :root:not([data-theme="light"]) .app-shell .border-red-200,
+  :root:not([data-theme="light"]) .app-shell .border-red-300,
+  :root:not([data-theme="light"]) .app-shell .border-red-400 { border-color: rgba(248, 113, 113, 0.35); }
+  :root:not([data-theme="light"]) .app-shell .text-red-600,
+  :root:not([data-theme="light"]) .app-shell .text-red-500,
+  :root:not([data-theme="light"]) .app-shell .text-red-700 { color: #f87171; }
+  :root:not([data-theme="light"]) .app-shell .text-red-700\/80 { color: rgba(248, 113, 113, 0.8); }
+
+  :root:not([data-theme="light"]) .app-shell .bg-green-50,
+  :root:not([data-theme="light"]) .app-shell .bg-green-100 { background-color: rgba(22, 101, 52, 0.22); }
+  :root:not([data-theme="light"]) .app-shell .border-green-200 { border-color: rgba(74, 222, 128, 0.35); }
+  :root:not([data-theme="light"]) .app-shell .text-green-700,
+  :root:not([data-theme="light"]) .app-shell .text-green-600 { color: #4ade80; }
+
+  :root:not([data-theme="light"]) .app-shell .bg-amber-50 { background-color: rgba(120, 53, 15, 0.22); }
+  :root:not([data-theme="light"]) .app-shell .border-amber-200,
+  :root:not([data-theme="light"]) .app-shell .border-amber-300 { border-color: rgba(251, 191, 36, 0.35); }
+  :root:not([data-theme="light"]) .app-shell .text-amber-700,
+  :root:not([data-theme="light"]) .app-shell .text-amber-800,
+  :root:not([data-theme="light"]) .app-shell .text-amber-900,
+  :root:not([data-theme="light"]) .app-shell .text-amber-600 { color: #fbbf24; }
+
+  :root:not([data-theme="light"]) .app-shell .bg-blue-50 { background-color: rgba(30, 58, 138, 0.22); }
+  :root:not([data-theme="light"]) .app-shell .text-blue-600 { color: #60a5fa; }
+}
+[data-theme="dark"] .app-shell .bg-red-50,
+[data-theme="dark"] .app-shell .bg-red-100 { background-color: rgba(153, 27, 27, 0.22); }
+[data-theme="dark"] .app-shell .border-red-200,
+[data-theme="dark"] .app-shell .border-red-300,
+[data-theme="dark"] .app-shell .border-red-400 { border-color: rgba(248, 113, 113, 0.35); }
+[data-theme="dark"] .app-shell .text-red-600,
+[data-theme="dark"] .app-shell .text-red-500,
+[data-theme="dark"] .app-shell .text-red-700 { color: #f87171; }
+[data-theme="dark"] .app-shell .text-red-700\/80 { color: rgba(248, 113, 113, 0.8); }
+
+[data-theme="dark"] .app-shell .bg-green-50,
+[data-theme="dark"] .app-shell .bg-green-100 { background-color: rgba(22, 101, 52, 0.22); }
+[data-theme="dark"] .app-shell .border-green-200 { border-color: rgba(74, 222, 128, 0.35); }
+[data-theme="dark"] .app-shell .text-green-700,
+[data-theme="dark"] .app-shell .text-green-600 { color: #4ade80; }
+
+[data-theme="dark"] .app-shell .bg-amber-50 { background-color: rgba(120, 53, 15, 0.22); }
+[data-theme="dark"] .app-shell .border-amber-200,
+[data-theme="dark"] .app-shell .border-amber-300 { border-color: rgba(251, 191, 36, 0.35); }
+[data-theme="dark"] .app-shell .text-amber-700,
+[data-theme="dark"] .app-shell .text-amber-800,
+[data-theme="dark"] .app-shell .text-amber-900,
+[data-theme="dark"] .app-shell .text-amber-600 { color: #fbbf24; }
+
+[data-theme="dark"] .app-shell .bg-blue-50 { background-color: rgba(30, 58, 138, 0.22); }
+[data-theme="dark"] .app-shell .text-blue-600 { color: #60a5fa; }
+
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   scrollbar-width: thin;

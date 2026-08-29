@@ -148,7 +148,7 @@ export default function DesignHeaderPage() {
                 handlePageSettingChange({ layout_variant: value });
               }}
               className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-colors ${
-                page.layout_variant === value ? "border-primary bg-primary-subtle" : "border-app-border bg-app-surface hover:border-primary/50"
+                page.layout_variant === value ? "border-primary bg-app-surface-2" : "border-app-border bg-app-surface hover:border-primary/50"
               }`}
             >
               <span className="text-xs font-bold text-app-ink">{t(`dashboard.pages.designHeader.layouts.${value}.label`)}</span>

@@ -16,7 +16,7 @@ function buildStatusLabel(t: (key: string) => string): Record<KycStatus["status"
 }
 
 const STATUS_BADGE_CLASS: Record<KycStatus["status"], string> = {
-  unverified: "bg-gray-100 text-app-muted",
+  unverified: "bg-app-surface-2 text-app-muted",
   pending: "bg-amber-50 text-amber-700",
   verified: "bg-secondary-subtle text-secondary-dark",
   rejected: "bg-red-50 text-red-600",

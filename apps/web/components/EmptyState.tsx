@@ -45,7 +45,7 @@ export default function EmptyState({
         bordered ? "rounded-3xl border border-dashed border-app-border bg-app-surface/65 backdrop-blur-lg" : ""
       } ${className}`}
     >
-      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-app-surface-2 text-app-muted">
         <Icon className="h-5 w-5" />
       </span>
       <span>{text}</span>

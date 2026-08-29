@@ -1427,7 +1427,7 @@ export default function DashboardProductsPage() {
                                   </a>
                                 )}
                                 {p.category && (
-                                  <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-app-muted">{p.category}</span>
+                                  <span className="rounded-full bg-app-surface-2 px-1.5 py-0.5 text-[9px] font-bold text-app-muted">{p.category}</span>
                                 )}
                                 {p.is_flash_sale_active && (
                                   <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">
