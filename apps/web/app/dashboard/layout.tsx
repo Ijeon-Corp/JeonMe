@@ -177,13 +177,34 @@ export default function DashboardLayout({
 
   // Menu per grup jadi collapsible (permintaan langsung pengguna) --
   // sidebar sudah terlalu panjang (~21 item nav di 3 grup + 5 tautan
-  // lepas) untuk selalu tampil terbuka semua. SEMUA grup mulai tertutup
-  // (susulan permintaan pengguna, 30 Agustus 2026: "saya mau grup menu
-  // menu di sidebar di collapse" -- sebelumnya grup yang berisi halaman
-  // aktif otomatis terbuka saat pertama dimuat, sekarang sengaja TIDAK
-  // lagi supaya sidebar konsisten ringkas dari awal, murni dikendalikan
-  // manual oleh klik pengguna).
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set<string>());
+  // lepas) untuk selalu tampil terbuka semua. Grup yang berisi halaman
+  // aktif saat pertama kali layout ini dimuat otomatis terbuka (dihitung
+  // sekali lewat initializer useState, memakai pathname yang sudah
+  // tersedia saat render pertama), grup lain mulai tertutup. Sesudahnya
+  // sepenuhnya dikendalikan manual oleh klik pengguna.
+  // RIWAYAT: sempat diubah jadi "SEMUA grup mulai tertutup tanpa
+  // pengecualian" (30 Agustus 2026, salah tafsir dari "saya mau grup menu
+  // di sidebar di collapse") -- lalu DIBALIKKAN LAGI di hari yang sama
+  // karena bikin bug nyata: DashboardLayout ini TIDAK remount saat
+  // navigasi client-side biasa (App Router mempertahankan layout yang
+  // sama antar halaman /dashboard/*), jadi expandedGroups yang isinya
+  // SELALU kosong sejak awal itu benar-benar mustahil pernah otomatis
+  // berisi grup manapun -- efeknya PERSIS seperti laporan pengguna
+  // "menu collapse yang sudah terbuka jangan tertutup lagi": begitu
+  // mendarat di halaman apa pun di dalam suatu grup (klik link dari
+  // sidebar, buka tautan langsung, atau muat ulang), grup pembungkusnya
+  // SELALU tampil tertutup walau halaman aktif ada di dalamnya -- pola
+  // auto-expand-berdasar-pathname di bawah ini justru itulah yang
+  // mencegah kesan "grup yang harusnya terbuka malah tertutup".
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of navItems) {
+      if (item.type === "group" && item.items.some((sub) => sub.href === pathname)) {
+        initial.add(item.label);
+      }
+    }
+    return initial;
+  });
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
