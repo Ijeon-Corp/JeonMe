@@ -153,6 +153,8 @@ function currentPageLabel(pathname: string, navItems: NavEntry[], extraPageLabel
   return extraPageLabels[pathname] ?? fallback;
 }
 
+const EXPANDED_GROUPS_STORAGE_KEY = "jeonme-sidebar-expanded-groups";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -180,22 +182,10 @@ export default function DashboardLayout({
   // lepas) untuk selalu tampil terbuka semua. Grup yang berisi halaman
   // aktif saat pertama kali layout ini dimuat otomatis terbuka (dihitung
   // sekali lewat initializer useState, memakai pathname yang sudah
-  // tersedia saat render pertama), grup lain mulai tertutup. Sesudahnya
-  // sepenuhnya dikendalikan manual oleh klik pengguna.
-  // RIWAYAT: sempat diubah jadi "SEMUA grup mulai tertutup tanpa
-  // pengecualian" (30 Agustus 2026, salah tafsir dari "saya mau grup menu
-  // di sidebar di collapse") -- lalu DIBALIKKAN LAGI di hari yang sama
-  // karena bikin bug nyata: DashboardLayout ini TIDAK remount saat
-  // navigasi client-side biasa (App Router mempertahankan layout yang
-  // sama antar halaman /dashboard/*), jadi expandedGroups yang isinya
-  // SELALU kosong sejak awal itu benar-benar mustahil pernah otomatis
-  // berisi grup manapun -- efeknya PERSIS seperti laporan pengguna
-  // "menu collapse yang sudah terbuka jangan tertutup lagi": begitu
-  // mendarat di halaman apa pun di dalam suatu grup (klik link dari
-  // sidebar, buka tautan langsung, atau muat ulang), grup pembungkusnya
-  // SELALU tampil tertutup walau halaman aktif ada di dalamnya -- pola
-  // auto-expand-berdasar-pathname di bawah ini justru itulah yang
-  // mencegah kesan "grup yang harusnya terbuka malah tertutup".
+  // tersedia saat render pertama, SSR-aman -- tidak baca localStorage di
+  // sini supaya render pertama di server & klien identik), grup lain
+  // mulai tertutup. Sesudahnya sepenuhnya dikendalikan manual oleh klik
+  // pengguna.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     for (const item of navItems) {
@@ -206,11 +196,52 @@ export default function DashboardLayout({
     return initial;
   });
 
+  // Persist ke localStorage (susulan permintaan pengguna, 30 Agustus 2026:
+  // "kadang ketika klik menu itu normal kadang juga ketika klik menu
+  // seperti merefresh gitu jadinya menu link collapse yang sedang terbuka
+  // jadi ketutup semua"). Akar masalah SEBENARNYA: <Link> Next.js baru
+  // mencegat klik & pindah halaman lewat client-side routing SETELAH
+  // hydration React selesai -- HTML dari server sudah terlihat "siap"
+  // duluan padahal listener klik React-nya belum terpasang. Kalau
+  // pengguna sempat klik link sidebar SEBELUM hydration selesai (lebih
+  // sering di device/koneksi lambat, makanya "kadang" bukan selalu),
+  // browser jatuh balik ke perilaku <a href> NATIF -- navigasi keras
+  // sungguhan (reload penuh, PERSIS seperti laporan "seperti merefresh"),
+  // me-remount DashboardLayout dari nol sehingga expandedGroups kembali
+  // ke initializer di atas (grup lain yang SEMPAT dibuka manual ikut
+  // tertutup). Race hydration itu sendiri di luar kendali kode di sini
+  // (butuh bundle JS lebih kecil/cepat untuk benar-benar dihilangkan) --
+  // yang BISA dikendalikan adalah membuat expandedGroups TAHAN terhadap
+  // reload keras apa pun, dengan menyimpannya ke localStorage dan
+  // membaca baliknya SETELAH mount (bukan di initializer -- pola sama
+  // seperti AuthGuard.tsx: baca localStorage di effect, bukan langsung
+  // saat initial state, supaya tidak memicu hydration mismatch SSR).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(EXPANDED_GROUPS_STORAGE_KEY);
+      if (raw) {
+        const persisted: unknown = JSON.parse(raw);
+        if (Array.isArray(persisted)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setExpandedGroups((prev) => new Set([...prev, ...persisted]));
+        }
+      }
+    } catch {
+      // localStorage tidak tersedia (mode private dst) atau data korup --
+      // abaikan, ini cuma kemudahan tambahan, bukan fitur inti.
+    }
+  }, []);
+
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
       else next.add(label);
+      try {
+        localStorage.setItem(EXPANDED_GROUPS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        // Sama seperti di atas -- kemudahan tambahan, gagal simpan diamkan saja.
+      }
       return next;
     });
   }
