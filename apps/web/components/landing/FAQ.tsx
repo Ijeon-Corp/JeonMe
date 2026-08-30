@@ -8,7 +8,7 @@ import { useLocale } from "@/lib/locale-context";
 // app/pricing/page.tsx -- SENGAJA TETAP Bahasa Indonesia apa adanya, tidak
 // ikut locale toggle, lihat catatan lengkap di lib/i18n/dictionaries.ts
 // soal cakupan yang sengaja tidak mencakup structured data/SEO).
-const FAQ_KEYS = ["whatIsJeonId", "customDomain", "freePlan", "sellDigital", "analytics"] as const;
+const FAQ_KEYS = ["whatIsJeonId", "freePlan", "sellDigital", "analytics"] as const;
 
 export default function FAQ() {
   const [active, setActive] = useState<number | null>(null);

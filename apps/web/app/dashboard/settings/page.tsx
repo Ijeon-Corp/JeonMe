@@ -8,7 +8,6 @@ import {
   IconChart,
   IconChevronRight,
   IconExternal,
-  IconGlobe,
   IconPencil,
   IconSearch,
   IconShield,
@@ -23,12 +22,11 @@ import {
 // jangan dilewati walau daftarnya masih pendek di fase awal ini.
 //
 // Konsolidasi sidebar (permintaan langsung pengguna, benchmark vs
-// Linktree/Lynk.id, 8 Agustus 2026): "Verifikasi KYC" & "Domain Kustom"
-// SEBELUMNYA baris sidebar utama TERSENDIRI -- keduanya termasuk
-// pengaturan akun/teknis yang dibuka jarang (sekali di awal, bukan
-// harian), sama seperti "Tim & Kolaborator" yang MEMANG SUDAH lama ada
-// di sini juga (dulu dobel-tampil, sekarang cuma di sini). Rute
-// masing-masing TIDAK berubah, cuma jalur masuknya lewat hub ini.
+// Linktree/Lynk.id, 8 Agustus 2026): "Verifikasi KYC" SEBELUMNYA baris
+// sidebar utama TERSENDIRI -- termasuk pengaturan akun/teknis yang dibuka
+// jarang (sekali di awal, bukan harian), sama seperti "Tim & Kolaborator"
+// yang MEMANG SUDAH lama ada di sini juga (dulu dobel-tampil, sekarang
+// cuma di sini). Rutenya TIDAK berubah, cuma jalur masuknya lewat hub ini.
 //
 // Rombak tata letak (permintaan langsung pengguna, 12 Agustus 2026:
 // "terlalu menumpuk dan terlihat jelek dari segi ui dan ux nya") --
@@ -124,13 +122,6 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.subscriptionTitle"),
           description: t("dashboard.pages.settings.items.subscriptionDescription"),
           icon: IconStar,
-          badgeClass: "bg-primary-subtle text-primary",
-        },
-        {
-          href: "/dashboard/custom-domain",
-          title: t("dashboard.pages.settings.items.customDomainTitle"),
-          description: t("dashboard.pages.settings.items.customDomainDescription"),
-          icon: IconGlobe,
           badgeClass: "bg-primary-subtle text-primary",
         },
         {

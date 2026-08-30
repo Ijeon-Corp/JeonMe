@@ -61,7 +61,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	audience := handlers.NewAudienceHandler(db, rdb, queueClient)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
-	customDomain := handlers.NewCustomDomainHandler(db, cfg.CustomDomainCnameTarget)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
 	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
@@ -191,10 +190,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// kartu (bukan halaman utama kreator), publik.
 		api.GET("/cards/:username", businessCard.GetPublicCard)
 		api.POST("/cards/:username/contact", leadsRateLimit, businessCard.SubmitCardContact)
-
-		// No.81 (Sprint 9): resolusi domain kustom -> username, dipanggil
-		// proxy.ts (bukan browser).
-		api.GET("/domains/:domain/resolve", customDomain.ResolveUsername)
 
 		// Modul Settings §2: dipanggil app/[username]/page.tsx SETELAH
 		// GetPublicPage 404, untuk redirect permanen dari username lama.
@@ -477,13 +472,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// (GA4), toggle UTM.
 			dashboard.GET("/analytics-settings", analyticsSettings.Get)
 			dashboard.PUT("/analytics-settings", analyticsSettings.Upsert)
-
-			// No.81 (Sprint 9): domain kustom -- lihat catatan lingkup di
-			// CustomDomainHandler (bagian aplikasi saja, belum wiring infra).
-			dashboard.GET("/domain", customDomain.Get)
-			dashboard.PUT("/domain", customDomain.Set)
-			dashboard.POST("/domain/verify", customDomain.Verify)
-			dashboard.DELETE("/domain", customDomain.Delete)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

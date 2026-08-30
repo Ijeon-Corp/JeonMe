@@ -13,21 +13,15 @@ export interface FaqItem {
   a: string;
 }
 
-// Dua jawaban di bawah sebelumnya merujuk paket "Pro" yang tidak pernah
-// ada di backend (lihat komentar components/landing/Pricing.tsx) DAN
-// salah soal fitur mana yang sungguhan Premium-only -- ditelusuri ulang
-// dari kode: domain kustom TIDAK di-gerbang isPremiumUser sama sekali
-// (bebas di semua paket, lihat CustomDomainHandler), analitik pendapatan
-// JUGA tidak digerbang (cuma integrasi Meta Conversions API yang
-// Premium-only, analytics.go).
+// Jawaban di bawah sebelumnya merujuk paket "Pro" yang tidak pernah ada di
+// backend (lihat komentar components/landing/Pricing.tsx) DAN salah soal
+// fitur mana yang sungguhan Premium-only -- ditelusuri ulang dari kode:
+// analitik pendapatan tidak digerbang (cuma integrasi Meta Conversions API
+// yang Premium-only, analytics.go).
 export const faqs: FaqItem[] = [
   {
     q: "Apa itu Jeon.id?",
     a: "Jeon.id adalah platform link-in-bio all-in-one yang memungkinkan kreator, freelancer, dan bisnis menggabungkan tautan, konten, dan tools monetisasi mereka menjadi satu halaman yang indah dan bisa disesuaikan.",
-  },
-  {
-    q: "Bisakah saya pakai domain sendiri?",
-    a: "Bisa, di semua paket termasuk Gratis, hubungkan domain kustom milikmu sendiri lewat Pengaturan halaman. Untuk menghapus watermark \"Buat halaman gratis di Jeon.id\" dan mengatur latar belakang kustom, upgrade ke Premium.",
   },
   {
     q: "Apakah ada paket gratis?",

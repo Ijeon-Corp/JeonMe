@@ -60,9 +60,9 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 // fitur/halaman yang dihapus:
 // - 8 baris "Produk & Monetisasi" -> 1 baris ke hub kartu
 //   /dashboard/monetisasi (pola sama seperti /dashboard/settings).
-// - Verifikasi KYC, Tim & Kolaborator, Domain Kustom -> pindah jadi
-//   kartu di dalam /dashboard/settings (Tim malah SUDAH lama ada di
-//   sana juga, cuma dobel-tampil di sidebar utama sebelumnya).
+// - Verifikasi KYC, Tim & Kolaborator -> pindah jadi kartu di dalam
+//   /dashboard/settings (Tim malah SUDAH lama ada di sana juga, cuma
+//   dobel-tampil di sidebar utama sebelumnya).
 // - Tutorial -> bukan lagi baris sidebar permanen, jadi ikon bantuan
 //   bulat di top bar (lihat header desktop di bawah), sejalan dengan
 //   pola Linktree/Lynk.id yang taruh onboarding di ikon "?", bukan slot
@@ -129,7 +129,6 @@ function buildNavItems(t: (key: string) => string): NavEntry[] {
 function buildExtraPageLabels(t: (key: string) => string): Record<string, string> {
   return {
     "/dashboard/tutorial": t("dashboard.extraPages.tutorial"),
-    "/dashboard/custom-domain": t("dashboard.extraPages.customDomain"),
     "/dashboard/kyc": t("dashboard.extraPages.kycVerification"),
     "/dashboard/team": t("dashboard.extraPages.team"),
     "/dashboard/vouchers": t("dashboard.extraPages.vouchers"),
