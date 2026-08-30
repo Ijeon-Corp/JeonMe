@@ -25,8 +25,8 @@ import {
 // berubah sama sekali (fungsional identik, tetap halaman penuh dengan
 // pengaturan lengkap) -- yang berubah CUMA cara masuknya: dari sidebar
 // sekarang cuma 1 baris ("Produk & Monetisasi") ke hub kartu ini.
-// Semua badge ikon kartu SATU warna hijau tema (bg-primary-subtle
-// text-primary) -- permintaan langsung pengguna, 10 Agustus 2026,
+// Semua badge ikon kartu SATU warna hijau tema (bg-jeon-purple/10
+// text-jeon-purple) -- permintaan langsung pengguna, 10 Agustus 2026,
 // menggantikan tint pop warna-warni per kartu era "Playful Creator" yang
 // sudah tidak dipakai lagi sejak redesain "Premium Refined".
 //
@@ -117,9 +117,9 @@ function MonetisasiCard({ item }: { item: MonetisasiItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-primary"
+      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
@@ -158,7 +158,7 @@ export default function DashboardMonetisasiPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("dashboard.pages.monetisasi.searchPlaceholder")}
-          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
         />
       </div>
 

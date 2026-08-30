@@ -19,9 +19,9 @@ import { useLocale } from "@/lib/locale-context";
 
 function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], { label: string; className: string }> {
   return {
-    queued: { label: t("dashboard.pages.audience.status.queued"), className: "bg-pop-yellow-tint text-accent-dark" },
+    queued: { label: t("dashboard.pages.audience.status.queued"), className: "bg-pop-yellow-tint text-jeon-warning" },
     sending: { label: t("dashboard.pages.audience.status.sending"), className: "bg-pop-blue-tint text-pop-blue" },
-    sent: { label: t("dashboard.pages.audience.status.sent"), className: "bg-secondary-subtle text-secondary-dark" },
+    sent: { label: t("dashboard.pages.audience.status.sent"), className: "bg-jeon-purple/10 text-jeon-purple" },
     failed: { label: t("dashboard.pages.audience.status.failed"), className: "bg-red-50 text-red-600" },
   };
 }
@@ -182,17 +182,17 @@ export default function DashboardAudiencePage() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("dashboard.pages.audience.titlePlaceholder")}
             maxLength={200}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
-            <input type="checkbox" checked={collectEmail} onChange={(e) => setCollectEmail(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+            <input type="checkbox" checked={collectEmail} onChange={(e) => setCollectEmail(e.target.checked)} className="h-3.5 w-3.5 accent-jeon-purple" />
             {t("dashboard.pages.audience.collectEmail")}
           </label>
           <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
-            <input type="checkbox" checked={collectWhatsapp} onChange={(e) => setCollectWhatsapp(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+            <input type="checkbox" checked={collectWhatsapp} onChange={(e) => setCollectWhatsapp(e.target.checked)} className="h-3.5 w-3.5 accent-jeon-purple" />
             {t("dashboard.pages.audience.collectWhatsapp")}
           </label>
         </div>
@@ -229,7 +229,7 @@ export default function DashboardAudiencePage() {
         </div>
 
         {broadcastError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{broadcastError}</p>}
-        {broadcastSent && <p className="mt-3 rounded-lg bg-secondary-subtle px-3 py-2 text-sm text-secondary-dark">{broadcastSent}</p>}
+        {broadcastSent && <p className="mt-3 rounded-lg bg-jeon-purple/10 px-3 py-2 text-sm text-jeon-purple">{broadcastSent}</p>}
 
         <form onSubmit={handleSendBroadcast} className="mt-4 flex flex-col gap-3">
           <input
@@ -238,7 +238,7 @@ export default function DashboardAudiencePage() {
             onChange={(e) => setBroadcastSubject(e.target.value)}
             placeholder={t("dashboard.pages.audience.subjectPlaceholder")}
             maxLength={200}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
           <textarea
             value={broadcastBody}
@@ -246,7 +246,7 @@ export default function DashboardAudiencePage() {
             placeholder={t("dashboard.pages.audience.bodyPlaceholder")}
             maxLength={5000}
             rows={5}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
           <button
             type="submit"
@@ -287,7 +287,7 @@ export default function DashboardAudiencePage() {
           type="button"
           onClick={handleExportCSV}
           disabled={contacts.length === 0}
-          className="rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-primary disabled:opacity-50"
+          className="rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-50"
         >
           {t("dashboard.pages.audience.exportCsv")}
         </button>
@@ -313,7 +313,7 @@ export default function DashboardAudiencePage() {
                 <td className="px-4 py-2.5">
                   <div className="flex gap-1">
                     {c.sources.map((s) => (
-                      <span key={s} className="rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                      <span key={s} className="rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
                         {SOURCE_LABEL[s] ?? s}
                       </span>
                     ))}

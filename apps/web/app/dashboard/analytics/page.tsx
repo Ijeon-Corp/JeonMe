@@ -88,7 +88,7 @@ export default function DashboardAnalyticsPage() {
       </div>
 
       {!isPremium && (
-        <p className="mt-3 flex items-start gap-2 rounded-lg bg-primary-subtle px-3 py-2.5 text-xs font-semibold text-primary">
+        <p className="mt-3 flex items-start gap-2 rounded-lg bg-jeon-purple/10 px-3 py-2.5 text-xs font-semibold text-jeon-purple">
           <IconLock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
           {t("dashboard.pages.analytics.premiumNotice")}
         </p>
@@ -107,7 +107,7 @@ export default function DashboardAnalyticsPage() {
             value={fbPixelId}
             onChange={(e) => setFbPixelId(e.target.value)}
             placeholder={t("dashboard.pages.analytics.pixelIdPlaceholder")}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
 
           <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Facebook Conversions API Access Token</label>
@@ -123,7 +123,7 @@ export default function DashboardAnalyticsPage() {
                 ? t("dashboard.pages.analytics.tokenPlaceholderSet")
                 : t("dashboard.pages.analytics.tokenPlaceholderEmpty")
             }
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
           <div className="mt-1 flex items-center justify-between">
             <p className="text-[11px] text-app-muted">{t("dashboard.pages.analytics.tokenHint")}</p>
@@ -151,7 +151,7 @@ export default function DashboardAnalyticsPage() {
             value={gaMeasurementId}
             onChange={(e) => setGaMeasurementId(e.target.value)}
             placeholder={t("dashboard.pages.analytics.gaMeasurementIdPlaceholder")}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 

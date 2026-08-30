@@ -84,7 +84,7 @@ export default function StatistikPage() {
             type="button"
             onClick={() => setTab("link-bio")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "link-bio" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "link-bio" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             <IconLink className="h-4 w-4" />
@@ -94,7 +94,7 @@ export default function StatistikPage() {
             type="button"
             onClick={() => setTab("toko")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "toko" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             <IconBox className="h-4 w-4" />
@@ -110,8 +110,8 @@ export default function StatistikPage() {
               onClick={() => setRangeDays(d)}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                 rangeDays === d
-                  ? "border-primary bg-primary-subtle text-primary"
-                  : "border-app-border text-app-muted hover:border-primary/50"
+                  ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                  : "border-app-border text-app-muted hover:border-jeon-purple/50"
               }`}
             >
               {d} {t("dashboard.pages.statistik.days")}
@@ -151,10 +151,10 @@ export default function StatistikPage() {
               </div>
               <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-primary" /> {t("dashboard.pages.statistik.legendViews")}
+                  <span className="h-2 w-2 rounded-full bg-jeon-purple" /> {t("dashboard.pages.statistik.legendViews")}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-accent" /> {t("dashboard.pages.statistik.legendClicks")}
+                  <span className="h-2 w-2 rounded-full bg-jeon-warning" /> {t("dashboard.pages.statistik.legendClicks")}
                 </span>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function StatistikPage() {
                 {summary.top_links.map((l) => (
                   <li key={l.link_id} className="flex justify-between text-xs">
                     <span className="truncate text-app-ink">{l.title}</span>
-                    <span className="ml-2 flex-shrink-0 font-semibold text-primary">
+                    <span className="ml-2 flex-shrink-0 font-semibold text-jeon-purple">
                       {l.clicks} {t("dashboard.pages.statistik.clicksSuffix")}
                     </span>
                   </li>
@@ -183,10 +183,10 @@ export default function StatistikPage() {
                   {summary.device_breakdown.map((d) => (
                     <li key={d.device_type} className="flex items-center gap-2 text-xs">
                       <span className="w-20 flex-shrink-0 truncate text-app-ink">{DEVICE_LABEL[d.device_type] ?? d.device_type}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-subtle/50">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }} />
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/10/50">
+                        <div className="h-full rounded-full bg-jeon-purple" style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }} />
                       </div>
-                      <span className="w-8 flex-shrink-0 text-right font-semibold text-primary">{d.count}</span>
+                      <span className="w-8 flex-shrink-0 text-right font-semibold text-jeon-purple">{d.count}</span>
                     </li>
                   ))}
                 </ul>

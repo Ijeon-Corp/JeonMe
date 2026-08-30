@@ -156,7 +156,7 @@ export default function SettingsSecurityPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsSecurity.breadcrumb")}
@@ -174,7 +174,7 @@ export default function SettingsSecurityPage() {
             placeholder={t("dashboard.pages.settingsSecurity.oldPasswordPlaceholder")}
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           />
           <input
             type="password"
@@ -183,12 +183,12 @@ export default function SettingsSecurityPage() {
             placeholder={t("dashboard.pages.settingsSecurity.newPasswordPlaceholder")}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           />
           <button
             type="submit"
             disabled={savingPassword}
-            className="self-start rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+            className="self-start rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
           >
             {savingPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.changePasswordButton")}
           </button>
@@ -201,7 +201,7 @@ export default function SettingsSecurityPage() {
           {status && (
             <span
               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                status.enabled ? "bg-primary-subtle text-primary" : "bg-ink/5 text-app-muted"
+                status.enabled ? "bg-jeon-purple/10 text-jeon-purple" : "bg-ink/5 text-app-muted"
               }`}
             >
               {status.enabled ? t("dashboard.pages.settingsSecurity.statusActive") : t("dashboard.pages.settingsSecurity.statusInactive")}
@@ -214,14 +214,14 @@ export default function SettingsSecurityPage() {
           <button
             type="button"
             onClick={handleStart2FA}
-            className="mt-3 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark"
+            className="mt-3 rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark"
           >
             {t("dashboard.pages.settingsSecurity.enable2faButton")}
           </button>
         )}
 
         {setupSecret && (
-          <div className="mt-4 rounded-xl border border-app-border bg-primary-subtle/40 p-4">
+          <div className="mt-4 rounded-xl border border-app-border bg-jeon-purple/10/40 p-4">
             <p className="text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.setupInstructions")}</p>
             <div className="mt-3 flex justify-center">
               <QRCodeCanvas value={setupSecret.otpauth_url} size={180} level="M" marginSize={2} />
@@ -239,12 +239,12 @@ export default function SettingsSecurityPage() {
                 placeholder="123456"
                 value={verifyCode}
                 onChange={(e) => setVerifyCode(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-center text-lg tracking-[0.3em] focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-center text-lg tracking-[0.3em] focus:border-jeon-purple focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={verifying}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+                className="rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
               >
                 {verifying ? t("dashboard.pages.settingsSecurity.verifying") : t("dashboard.pages.settingsSecurity.confirmEnableButton")}
               </button>
@@ -344,7 +344,7 @@ export default function SettingsSecurityPage() {
                     {s.user_agent || t("dashboard.pages.settingsSecurity.unknownDevice")}
                   </p>
                   {s.is_current && (
-                    <span className="flex-shrink-0 rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="flex-shrink-0 rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
                       {t("dashboard.pages.settingsSecurity.thisSessionBadge")}
                     </span>
                   )}

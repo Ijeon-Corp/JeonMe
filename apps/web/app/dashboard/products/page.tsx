@@ -106,7 +106,7 @@ const ProdukPageEditor = dynamic(() => import("@/components/ProdukPageEditor"));
 // validasi nama/harga lain di form yang sama).
 function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void, t: (key: string) => string) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-app-border px-3.5 py-2.5 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary">
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-app-border px-3.5 py-2.5 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple">
       <IconCamera className="h-4 w-4 flex-shrink-0" />
       <span className="min-w-0 truncate">{coverFile ? coverFile.name : t("dashboard.pages.products.coverPicker.placeholder")}</span>
       <input
@@ -868,7 +868,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("halaman_toko")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "halaman_toko" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "halaman_toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.halamanToko")}
@@ -877,7 +877,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("overview")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "overview" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "overview" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.overview")}
@@ -886,7 +886,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("manage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "manage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "manage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.manageItems")}
@@ -895,7 +895,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("reviews")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "reviews" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "reviews" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.reviews")}
@@ -904,7 +904,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("listing")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "listing" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "listing" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.listing")}
@@ -913,7 +913,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("storage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "storage" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "storage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.storage")}
@@ -922,7 +922,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("webhook_events")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "webhook_events" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "webhook_events" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.webhookEvents")}
@@ -931,7 +931,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("shop_settings")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "shop_settings" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "shop_settings" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.shopSettings")}
@@ -940,7 +940,7 @@ export default function DashboardProductsPage() {
             type="button"
             onClick={() => setTab("transaction")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
-              tab === "transaction" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+              tab === "transaction" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
             {t("dashboard.pages.products.tabs.transaction")}
@@ -972,7 +972,7 @@ export default function DashboardProductsPage() {
                       onClick={() => switchToTokoPage(tp.id)}
                       disabled={tokoLoading || activeTokoPageId === tp.id}
                       className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-                        activeTokoPageId === tp.id ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
+                        activeTokoPageId === tp.id ? "bg-jeon-sidebar text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
                       }`}
                     >
                       {tp.name}
@@ -1000,11 +1000,11 @@ export default function DashboardProductsPage() {
                       setCreatingTokoPage(true);
                     }}
                     title={!page?.is_premium ? t("dashboard.pages.products.premiumOnlyTitle") : undefined}
-                    className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
+                    className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     <IconPlus className="h-3.5 w-3.5" />
                     {t("dashboard.pages.products.tokoLabel")}
-                    {!page?.is_premium && <IconSparkle className="h-3 w-3 text-secondary-dark" />}
+                    {!page?.is_premium && <IconSparkle className="h-3 w-3 text-jeon-purple" />}
                   </button>
                 </div>
                 {(() => {
@@ -1067,7 +1067,7 @@ export default function DashboardProductsPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={page.avatar_url} alt={page.username} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
                 ) : (
-                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-sm font-bold text-primary">
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-sm font-bold text-jeon-purple">
                     {page.username.slice(0, 1).toUpperCase()}
                   </span>
                 )}
@@ -1077,7 +1077,7 @@ export default function DashboardProductsPage() {
                     href={`${SITE_URL}/${page.username}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="truncate text-xs text-primary hover:underline"
+                    className="truncate text-xs text-jeon-purple hover:underline"
                   >
                     jeon.id/{page.username}
                   </a>
@@ -1093,8 +1093,8 @@ export default function DashboardProductsPage() {
                   onClick={() => setOverviewRangeDays(d)}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     overviewRangeDays === d
-                      ? "border-primary bg-primary-subtle text-primary"
-                      : "border-app-border text-app-muted hover:border-primary/50"
+                      ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                      : "border-app-border text-app-muted hover:border-jeon-purple/50"
                   }`}
                 >
                   {t("dashboard.pages.products.rangeDays").replace("{days}", String(d))}
@@ -1125,7 +1125,7 @@ export default function DashboardProductsPage() {
                       setItemsPage(1);
                     }}
                     placeholder={t("dashboard.pages.products.searchPlaceholder")}
-                    className="w-full rounded-lg border border-app-border bg-app-surface py-2 pl-8 pr-3 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border bg-app-surface py-2 pl-8 pr-3 text-xs focus:border-jeon-purple focus:outline-none"
                   />
                 </div>
                 {categories.length > 0 && (
@@ -1135,7 +1135,7 @@ export default function DashboardProductsPage() {
                       setCategoryFilter(e.target.value);
                       setItemsPage(1);
                     }}
-                    className="rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs focus:border-primary focus:outline-none"
+                    className="rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs focus:border-jeon-purple focus:outline-none"
                   >
                     <option value="">{t("dashboard.pages.products.allCategories")}</option>
                     {categories.map((c) => (
@@ -1165,18 +1165,18 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
                 >
-                  <IconUpload className="h-5 w-5 text-primary" />
+                  <IconUpload className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
                   <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAddMode("payment_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
                 >
-                  <IconWallet className="h-5 w-5 text-primary" />
+                  <IconWallet className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
                   <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
                 </button>
@@ -1189,9 +1189,9 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => setAddMode("external_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-primary"
+                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
                 >
-                  <IconExternal className="h-5 w-5 text-primary" />
+                  <IconExternal className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
                   <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
                 </button>
@@ -1208,7 +1208,7 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.form.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <input
                     type="number"
@@ -1217,14 +1217,14 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <input
                     type="text"
                     placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                 </div>
                 {renderCoverPicker(coverFile, setCoverFile, t)}
@@ -1259,7 +1259,7 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.form.titlePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <input
                     type="number"
@@ -1268,7 +1268,7 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                 </div>
                 <textarea
@@ -1276,7 +1276,7 @@ export default function DashboardProductsPage() {
                   value={successMessage}
                   onChange={(e) => setSuccessMessage(e.target.value)}
                   rows={2}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -1285,14 +1285,14 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.form.paymentLimitPlaceholder")}
                     value={paymentLimitCount}
                     onChange={(e) => setPaymentLimitCount(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <input
                     type="datetime-local"
                     value={linkExpiresAt}
                     onChange={(e) => setLinkExpiresAt(e.target.value)}
                     title={t("dashboard.pages.products.form.linkExpiresTitle")}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                 </div>
                 {renderCoverPicker(coverFile, setCoverFile, t)}
@@ -1329,7 +1329,7 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.form.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <input
                     type="number"
@@ -1337,7 +1337,7 @@ export default function DashboardProductsPage() {
                     min={1000}
                     value={priceIDR}
                     onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                 </div>
                 <input
@@ -1346,14 +1346,14 @@ export default function DashboardProductsPage() {
                   placeholder={t("dashboard.pages.products.form.externalUrlPlaceholder")}
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
                 <input
                   type="text"
                   placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
                 {renderCoverPicker(coverFile, setCoverFile, t)}
                 <div className="flex gap-2">
@@ -1403,19 +1403,19 @@ export default function DashboardProductsPage() {
                       <tr key={p.id} className="border-b border-app-border last:border-0">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-subtle">
+                            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10">
                               {p.cover_image_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
                               ) : (
-                                <IconBox className="h-4 w-4 text-primary/40" />
+                                <IconBox className="h-4 w-4 text-jeon-purple/40" />
                               )}
                             </span>
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-app-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
                                 {p.product_kind === "payment_link" && (
-                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
                                     {t("dashboard.pages.products.badges.paymentLink")}
                                   </span>
                                 )}
@@ -1433,7 +1433,7 @@ export default function DashboardProductsPage() {
                                     href={p.external_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-0.5 rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary hover:underline"
+                                    className="flex items-center gap-0.5 rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple hover:underline"
                                   >
                                     {t("dashboard.pages.products.badges.externalLink")} <IconExternal className="h-2.5 w-2.5" />
                                   </a>
@@ -1442,17 +1442,17 @@ export default function DashboardProductsPage() {
                                   <span className="rounded-full bg-app-surface-2 px-1.5 py-0.5 text-[9px] font-bold text-app-muted">{p.category}</span>
                                 )}
                                 {p.is_flash_sale_active && (
-                                  <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-[9px] font-bold text-accent-dark">
+                                  <span className="rounded-full bg-jeon-warning/15 px-1.5 py-0.5 text-[9px] font-bold text-jeon-warning">
                                     {t("dashboard.pages.products.badges.flashSale")}
                                   </span>
                                 )}
                                 {p.pwyw_enabled && (
-                                  <span className="rounded-full bg-secondary-subtle px-1.5 py-0.5 text-[9px] font-bold text-secondary-dark">
+                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
                                     {t("dashboard.pages.products.badges.pwyw")}
                                   </span>
                                 )}
                                 {p.collaborator_splits.length > 0 && (
-                                  <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
                                     {t("dashboard.pages.products.badges.collaboratorsCount").replace("{count}", String(p.collaborator_splits.length))}
                                   </span>
                                 )}
@@ -1462,13 +1462,13 @@ export default function DashboardProductsPage() {
                         </td>
                         <td className="px-4 py-3 align-top">
                           {p.pwyw_enabled ? (
-                            <span className="font-bold text-secondary-dark">
+                            <span className="font-bold text-jeon-purple">
                               {t("dashboard.pages.products.minPriceLabel")} Rp {(p.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")}
                             </span>
                           ) : p.is_flash_sale_active ? (
                             <span>
                               <span className="mr-1 text-app-muted line-through">Rp {p.price_idr.toLocaleString("id-ID")}</span>
-                              <span className="font-bold text-accent-dark">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
+                              <span className="font-bold text-jeon-warning">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
                             </span>
                           ) : p.product_kind === "external_link" && p.price_idr === 0 ? (
                             // Harga opsional khusus Link Eksternal (permintaan
@@ -1494,7 +1494,7 @@ export default function DashboardProductsPage() {
                           <button
                             type="button"
                             onClick={() => setManageProductId(p.id)}
-                            className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary"
+                            className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                           >
                             {t("dashboard.pages.products.manage")}
                           </button>
@@ -1518,7 +1518,7 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
+                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
                 >
                   {t("dashboard.pages.products.pagination.previous")}
                 </button>
@@ -1528,7 +1528,7 @@ export default function DashboardProductsPage() {
                     type="button"
                     onClick={() => setItemsPage(n)}
                     className={`h-8 w-8 rounded-lg text-xs font-semibold ${
-                      n === currentPage ? "bg-primary text-white" : "text-app-ink hover:bg-primary-subtle"
+                      n === currentPage ? "bg-jeon-purple text-white" : "text-app-ink hover:bg-jeon-purple/10"
                     }`}
                   >
                     {n}
@@ -1538,7 +1538,7 @@ export default function DashboardProductsPage() {
                   type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setItemsPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-40"
+                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
                 >
                   {t("dashboard.pages.products.pagination.next")}
                 </button>
@@ -1567,7 +1567,7 @@ export default function DashboardProductsPage() {
               onChange={(e) => setNewTokoPageTitle(e.target.value)}
               placeholder={t("dashboard.pages.products.newTokoModal.namePlaceholder")}
               maxLength={80}
-              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
             />
             <div className="mt-4 flex gap-2">
               <button
@@ -1580,7 +1580,7 @@ export default function DashboardProductsPage() {
               <button
                 type="submit"
                 disabled={!newTokoPageTitle.trim() || savingNewTokoPage}
-                className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="flex-1 rounded-lg bg-jeon-purple py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {savingNewTokoPage ? t("dashboard.pages.products.newTokoModal.creating") : t("dashboard.pages.products.newTokoModal.create")}
               </button>
@@ -1602,7 +1602,7 @@ export default function DashboardProductsPage() {
 
       {manageProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
           onClick={closeManageModal}
         >
           <div
@@ -1616,7 +1616,7 @@ export default function DashboardProductsPage() {
               <button
                 type="button"
                 onClick={closeManageModal}
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
                 aria-label={t("dashboard.pages.products.manageModal.close")}
               >
                 <IconClose className="h-4 w-4" />
@@ -1631,7 +1631,7 @@ export default function DashboardProductsPage() {
                   placeholder={t("dashboard.pages.products.manageModal.categoryPlaceholder")}
                   value={categoryDraft}
                   onChange={(e) => setCategoryDraft(e.target.value)}
-                  className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                  className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                 />
                 <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
                   {t("dashboard.pages.products.manageModal.cancel")}
@@ -1646,7 +1646,7 @@ export default function DashboardProductsPage() {
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={() => openCategoryForm(manageProduct)} className="mt-2 text-[11px] font-semibold text-primary hover:underline">
+              <button type="button" onClick={() => openCategoryForm(manageProduct)} className="mt-2 text-[11px] font-semibold text-jeon-purple hover:underline">
                 {manageProduct.category
                   ? t("dashboard.pages.products.manageModal.setCategoryPrefix").replace("{category}", manageProduct.category)
                   : t("dashboard.pages.products.manageModal.setCategoryButton")}
@@ -1687,13 +1687,13 @@ export default function DashboardProductsPage() {
                       ? t("dashboard.pages.products.manageModal.changeCoverTitle")
                       : t("dashboard.pages.products.manageModal.addCoverTitle")
                   }
-                  className="relative h-14 w-14 overflow-hidden rounded-xl bg-primary-subtle disabled:opacity-60"
+                  className="relative h-14 w-14 overflow-hidden rounded-xl bg-jeon-purple/10 disabled:opacity-60"
                 >
                   {manageProduct.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={manageProduct.cover_image_url} alt={manageProduct.name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-primary/40">
+                    <div className="flex h-full w-full items-center justify-center text-jeon-purple/40">
                       <IconBox className="h-6 w-6" />
                     </div>
                   )}
@@ -1736,7 +1736,7 @@ export default function DashboardProductsPage() {
                     disabled={busyId === manageProduct.id}
                     onClick={() => fileInputRefs.current[manageProduct.id]?.click()}
                     className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${
-                      manageProduct.has_file ? "bg-secondary-subtle text-secondary-dark" : "bg-primary-subtle text-primary"
+                      manageProduct.has_file ? "bg-jeon-purple/10 text-jeon-purple" : "bg-jeon-purple/10 text-jeon-purple"
                     }`}
                   >
                     {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
@@ -1749,7 +1749,7 @@ export default function DashboardProductsPage() {
                       type="button"
                       onClick={() => handleGetDownloadLink(manageProduct.id)}
                       title={t("dashboard.pages.products.manageModal.viewFileTitle")}
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle"
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
                     >
                       <IconExternal className="h-4 w-4" />
                     </button>
@@ -1759,8 +1759,8 @@ export default function DashboardProductsPage() {
                       type="button"
                       onClick={() => handleToggleWatermark(manageProduct)}
                       title={t("dashboard.pages.products.manageModal.watermarkTitle")}
-                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        manageProduct.watermark_enabled ? "text-primary" : "text-app-muted"
+                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                        manageProduct.watermark_enabled ? "text-jeon-purple" : "text-app-muted"
                       }`}
                     >
                       <IconShield className="h-4 w-4" />
@@ -1772,7 +1772,7 @@ export default function DashboardProductsPage() {
 
             <div className="mt-4 flex flex-col gap-2.5">
               {flashSaleEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.flashSaleLabel")}
                   </p>
@@ -1781,20 +1781,20 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.manageModal.flashPricePlaceholder")}
                     value={flashPrice}
                     onChange={(e) => setFlashPrice(e.target.value)}
-                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                   />
                   <div className="flex gap-1.5">
                     <input
                       type="datetime-local"
                       value={flashStart}
                       onChange={(e) => setFlashStart(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     />
                     <input
                       type="datetime-local"
                       value={flashEnd}
                       onChange={(e) => setFlashEnd(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     />
                   </div>
                   <div className="flex gap-1.5">
@@ -1812,8 +1812,8 @@ export default function DashboardProductsPage() {
                   </div>
                 </div>
               ) : manageProduct.is_flash_sale_active ? (
-                <div className="flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
-                  <span className="text-[11px] font-semibold text-accent-dark">
+                <div className="flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
+                  <span className="text-[11px] font-semibold text-jeon-warning">
                     {t("dashboard.pages.products.manageModal.flashSaleUntil").replace(
                       "{date}",
                       manageProduct.flash_sale_ends_at ? new Date(manageProduct.flash_sale_ends_at).toLocaleString("id-ID") : ""
@@ -1827,14 +1827,14 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => openFlashSaleForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.scheduleFlashSale")}
                 </button>
               )}
 
               {pwywEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.pwywLabel")}
                   </p>
@@ -1843,7 +1843,7 @@ export default function DashboardProductsPage() {
                     placeholder={t("dashboard.pages.products.manageModal.pwywMinPricePlaceholder")}
                     value={pwywMinPrice}
                     onChange={(e) => setPwywMinPrice(e.target.value)}
-                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                   />
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
@@ -1860,8 +1860,8 @@ export default function DashboardProductsPage() {
                   </div>
                 </div>
               ) : manageProduct.pwyw_enabled ? (
-                <div className="flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
-                  <span className="text-[11px] font-semibold text-secondary-dark">
+                <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+                  <span className="text-[11px] font-semibold text-jeon-purple">
                     {t("dashboard.pages.products.manageModal.pwywActiveMin").replace(
                       "{amount}",
                       (manageProduct.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")
@@ -1875,7 +1875,7 @@ export default function DashboardProductsPage() {
                 <button
                   type="button"
                   onClick={() => openPwywForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.activatePwyw")}
                 </button>
@@ -1883,14 +1883,14 @@ export default function DashboardProductsPage() {
 
               {activeCollaborators.length > 0 &&
                 (splitsEditId === manageProduct.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                     <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>
                     {splitRows.map((row, i) => (
                       <div key={i} className="flex gap-1.5">
                         <select
                           value={row.user_id}
                           onChange={(e) => updateSplitRow(i, { user_id: e.target.value })}
-                          className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         >
                           <option value="">{t("dashboard.pages.products.manageModal.chooseCollaborator")}</option>
                           {activeCollaborators.map((c) => (
@@ -1907,7 +1907,7 @@ export default function DashboardProductsPage() {
                           placeholder="%"
                           value={row.percent || ""}
                           onChange={(e) => updateSplitRow(i, { percent: Number(e.target.value) })}
-                          className="w-16 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-16 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1921,7 +1921,7 @@ export default function DashboardProductsPage() {
                     <button
                       type="button"
                       onClick={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
-                      className="self-start text-[11px] font-semibold text-primary hover:underline"
+                      className="self-start text-[11px] font-semibold text-jeon-purple hover:underline"
                     >
                       {t("dashboard.pages.products.manageModal.addCollaborator")}
                     </button>
@@ -1940,13 +1940,13 @@ export default function DashboardProductsPage() {
                     </div>
                   </div>
                 ) : manageProduct.collaborator_splits.length > 0 ? (
-                  <div className="flex items-center justify-between rounded-lg bg-primary-subtle px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-primary">
+                  <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-jeon-purple">
                       {t("dashboard.pages.products.manageModal.collaboratorsShare")
                         .replace("{count}", String(manageProduct.collaborator_splits.length))
                         .replace("{percent}", String(manageProduct.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)))}
                     </span>
-                    <button type="button" onClick={() => openSplitsForm(manageProduct)} className="text-[11px] font-bold text-primary hover:underline">
+                    <button type="button" onClick={() => openSplitsForm(manageProduct)} className="text-[11px] font-bold text-jeon-purple hover:underline">
                       {t("dashboard.pages.products.manageModal.change")}
                     </button>
                   </div>
@@ -1954,7 +1954,7 @@ export default function DashboardProductsPage() {
                   <button
                     type="button"
                     onClick={() => openSplitsForm(manageProduct)}
-                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
+                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     <IconUsers className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.setSplits")}
                   </button>
@@ -1965,7 +1965,7 @@ export default function DashboardProductsPage() {
                 field khusus external_link yang bisa diubah setelah dibuat
                 (ProductKind sendiri immutable, lihat catatan di product.go). */}
             {manageProduct.product_kind === "external_link" && (
-              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                 <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                   <IconExternal className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.productLinkLabel")}
                 </p>
@@ -1976,7 +1976,7 @@ export default function DashboardProductsPage() {
                       autoFocus
                       value={externalUrlDraft}
                       onChange={(e) => setExternalUrlDraft(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     />
                     <div className="flex gap-1.5">
                       <button
@@ -2005,7 +2005,7 @@ export default function DashboardProductsPage() {
                         setExternalUrlEditId(manageProduct.id);
                         setExternalUrlDraft(manageProduct.external_url);
                       }}
-                      className="flex-shrink-0 text-[11px] font-bold text-primary hover:underline"
+                      className="flex-shrink-0 text-[11px] font-bold text-jeon-purple hover:underline"
                     >
                       {t("dashboard.pages.products.manageModal.change")}
                     </button>

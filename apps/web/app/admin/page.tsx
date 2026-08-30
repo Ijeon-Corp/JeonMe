@@ -47,7 +47,7 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/reports"
-              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
+              className="flex items-center gap-3 rounded-2xl border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
                 <IconFlag className="h-4 w-4" />
@@ -60,14 +60,14 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/payouts"
-              className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-accent/40"
+              className="flex items-center gap-3 rounded-2xl border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-warning/40"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-accent-dark">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-jeon-warning">
                 <IconWallet className="h-4 w-4" />
               </span>
               <span>
                 <span className="block text-xs font-semibold text-app-muted">Penarikan Tertunda</span>
-                <span className="block font-serifDisplay text-2xl font-semibold text-accent-dark">{summary.pending_payouts}</span>
+                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-warning">{summary.pending_payouts}</span>
               </span>
             </Link>
           </section>

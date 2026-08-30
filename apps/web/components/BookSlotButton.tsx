@@ -9,7 +9,7 @@ import { ApiError, AvailableSlot, createCheckout, getAvailableSlots } from "@/li
 // (lazy), bukan digabung ke payload halaman utama.
 export default function BookSlotButton({
   productId,
-  buttonClassName = "bg-primary text-white hover:opacity-90",
+  buttonClassName = "bg-jeon-purple text-white hover:opacity-90",
 }: {
   productId: string;
   buttonClassName?: string;
@@ -78,7 +78,7 @@ export default function BookSlotButton({
           required
           value={selectedSlotId}
           onChange={(e) => setSelectedSlotId(e.target.value)}
-          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
         >
           <option value="">Pilih jadwal...</option>
           {slots.map((slot) => (
@@ -94,7 +94,7 @@ export default function BookSlotButton({
         placeholder="Email kamu"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
       />
       {/* No.74 (Sprint 8): sama seperti BuyProductButton -- nomor WhatsApp
           opsional supaya konfirmasi jadwal juga bisa dikirim lewat kanal
@@ -104,7 +104,7 @@ export default function BookSlotButton({
         placeholder="Nomor WhatsApp (opsional)"
         value={whatsappNumber}
         onChange={(e) => setWhatsappNumber(e.target.value)}
-        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
       />
       {error && <p className="text-[10px] text-red-400">{error}</p>}
       <button

@@ -50,7 +50,7 @@ export default function WebhookEventsPanel() {
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      e.status === "success" ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
+                      e.status === "success" ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
                     }`}
                   >
                     {e.status === "success"

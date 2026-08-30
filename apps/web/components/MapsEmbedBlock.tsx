@@ -58,8 +58,8 @@ export default function MapsEmbedBlock({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-border p-3">
-                <p className="truncate font-heading text-sm font-bold text-ink">{title || "Lokasi"}</p>
-                <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-muted hover:text-ink">
+                <p className="truncate font-heading text-sm font-bold text-app-ink">{title || "Lokasi"}</p>
+                <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-muted hover:text-app-ink">
                   <IconClose className="h-5 w-5" />
                 </button>
               </div>

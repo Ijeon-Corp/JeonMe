@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
               <button
                 type="button"
                 onClick={() => handleResolve(r.id, "dismiss")}
-                className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-bold text-app-ink hover:border-primary"
+                className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-bold text-app-ink hover:border-jeon-purple"
               >
                 Abaikan
               </button>

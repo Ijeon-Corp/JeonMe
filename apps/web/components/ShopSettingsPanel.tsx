@@ -50,7 +50,7 @@ export default function ShopSettingsPanel() {
     <div className="mt-4 max-w-xl">
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && (
-        <p className="mb-3 rounded-lg bg-secondary-subtle px-3 py-2 text-sm text-secondary-dark">
+        <p className="mb-3 rounded-lg bg-jeon-purple/10 px-3 py-2 text-sm text-jeon-purple">
           {t("dashboard.components.shopSettingsPanel.savedMessage")}
         </p>
       )}
@@ -68,7 +68,7 @@ export default function ShopSettingsPanel() {
             disabled={saving}
             onClick={() => save(!settings.shop_paused, message)}
             className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-              settings.shop_paused ? "bg-primary" : "bg-gray-200"
+              settings.shop_paused ? "bg-jeon-purple" : "bg-gray-200"
             }`}
           >
             <span
@@ -93,7 +93,7 @@ export default function ShopSettingsPanel() {
             type="button"
             disabled={saving || message === settings.shop_paused_message}
             onClick={() => save(settings.shop_paused, message)}
-            className="mt-2 rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary disabled:opacity-50"
+            className="mt-2 rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-50"
           >
             {t("dashboard.components.shopSettingsPanel.saveMessageButton")}
           </button>

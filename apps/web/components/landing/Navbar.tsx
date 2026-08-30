@@ -49,7 +49,7 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-        scrolled ? "border-b border-jeon-border bg-jeon-paper/95 backdrop-blur-sm" : "bg-transparent"
+        scrolled ? "border-b border-jeon-border bg-jeon-paper shadow-sm" : "bg-transparent"
       }`}
     >
       <div className="mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">

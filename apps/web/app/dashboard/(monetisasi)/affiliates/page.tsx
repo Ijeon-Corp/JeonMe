@@ -119,7 +119,7 @@ export default function DashboardAffiliatesPage() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
           >
             <IconPlus className="h-4 w-4" />
             {t("dashboard.pages.affiliates.inviteButton")}
@@ -134,7 +134,7 @@ export default function DashboardAffiliatesPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t("dashboard.pages.affiliates.emailPlaceholder")}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
               <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.affiliates.emailHint")}</p>
             </div>
@@ -144,7 +144,7 @@ export default function DashboardAffiliatesPage() {
                 required
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               >
                 <option value="">{t("dashboard.pages.affiliates.productPlaceholder")}</option>
                 {products.map((p) => (
@@ -164,7 +164,7 @@ export default function DashboardAffiliatesPage() {
                 step={0.01}
                 value={commissionPercent}
                 onChange={(e) => setCommissionPercent(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div className="flex gap-2">
@@ -201,14 +201,14 @@ export default function DashboardAffiliatesPage() {
                 <IconTrash className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary-subtle/60 px-3 py-1.5">
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10/60 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-app-ink">
                 {a.referral_base_url}?ref={a.referral_code}
               </p>
               <button
                 type="button"
                 onClick={() => handleCopy(`${a.referral_base_url}?ref=${a.referral_code}`, a.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === a.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}
@@ -219,7 +219,7 @@ export default function DashboardAffiliatesPage() {
                 <div key={c.product_id} className="flex items-center justify-between text-xs">
                   <span className="text-app-ink">{c.product_name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-secondary-dark">{c.commission_percent}%</span>
+                    <span className="font-bold text-jeon-purple">{c.commission_percent}%</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveCommission(a.id, c.product_id)}
@@ -248,12 +248,12 @@ export default function DashboardAffiliatesPage() {
         {programs.map((p) => (
           <div key={p.id} className="glass rounded-2xl p-4 shadow-card">
             <p className="text-sm font-bold text-app-ink">@{p.creator_username}</p>
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary-subtle/60 px-3 py-1.5">
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10/60 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-app-ink">{p.referral_url}</p>
               <button
                 type="button"
                 onClick={() => handleCopy(p.referral_url, p.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-primary"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === p.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}
@@ -263,7 +263,7 @@ export default function DashboardAffiliatesPage() {
               {p.commissions.map((c) => (
                 <div key={c.product_id} className="flex items-center justify-between text-xs">
                   <span className="text-app-ink">{c.product_name}</span>
-                  <span className="font-bold text-secondary-dark">{c.commission_percent}%</span>
+                  <span className="font-bold text-jeon-purple">{c.commission_percent}%</span>
                 </div>
               ))}
             </div>

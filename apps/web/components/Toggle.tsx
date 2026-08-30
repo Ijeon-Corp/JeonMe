@@ -22,7 +22,7 @@ export default function Toggle({
       disabled={disabled}
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        checked ? "bg-primary" : "bg-gray-200"
+        checked ? "bg-jeon-purple" : "bg-gray-200"
       }`}
     >
       <span

@@ -53,9 +53,9 @@ function StepCard({ index, title, body, href }: { index: number; title: string; 
   return (
     <Link
       href={href}
-      className="flex gap-3 rounded-2xl border border-app-border bg-app-surface p-4 transition-colors hover:border-primary"
+      className="flex gap-3 rounded-2xl border border-app-border bg-app-surface p-4 transition-colors hover:border-jeon-purple"
     >
-      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-bold text-primary">
+      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-xs font-bold text-jeon-purple">
         {index}
       </span>
       <span>
@@ -74,14 +74,14 @@ export default function TutorialPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
-        <IconSparkle className="h-6 w-6 text-primary" />
+        <IconSparkle className="h-6 w-6 text-jeon-purple" />
         {t("dashboard.pages.tutorial.pageHeading")}
       </h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.tutorial.intro")}</p>
 
       <section className="mt-6">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
-          <IconLink className="h-4 w-4 text-primary" />
+          <IconLink className="h-4 w-4 text-jeon-purple" />
           {t("dashboard.pages.tutorial.linkBioHeading")}
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
@@ -93,7 +93,7 @@ export default function TutorialPage() {
 
       <section className="mt-8">
         <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
-          <IconBox className="h-4 w-4 text-primary" />
+          <IconBox className="h-4 w-4 text-jeon-purple" />
           {t("dashboard.pages.tutorial.sellProductsHeading")}
         </h2>
         <div className="mt-3 flex flex-col gap-2.5">
@@ -105,7 +105,7 @@ export default function TutorialPage() {
 
       <p className="mt-8 rounded-xl border border-dashed border-app-border p-4 text-center text-xs text-app-muted">
         {t("dashboard.pages.tutorial.helpPrefix")}{" "}
-        <Link href="/dashboard/audience" className="font-semibold text-primary hover:underline">
+        <Link href="/dashboard/audience" className="font-semibold text-jeon-purple hover:underline">
           {t("dashboard.pages.tutorial.audienceLinkText")}
         </Link>{" "}
         {t("dashboard.pages.tutorial.helpSuffix")}

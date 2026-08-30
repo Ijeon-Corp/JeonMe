@@ -152,7 +152,7 @@ export default function DashboardDonationPage() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("dashboard.pages.donation.titlePlaceholder")}
             maxLength={200}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 
@@ -163,7 +163,7 @@ export default function DashboardDonationPage() {
             min={1000}
             value={minAmountIDR}
             onChange={(e) => setMinAmountIDR(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
           <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.donation.minAmountHint")}</p>
         </div>
@@ -181,7 +181,7 @@ export default function DashboardDonationPage() {
               onChange={(e) => setGoalTitle(e.target.value)}
               placeholder={t("dashboard.pages.donation.goalTitlePlaceholder")}
               maxLength={200}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
             <input
               type="number"
@@ -189,13 +189,13 @@ export default function DashboardDonationPage() {
               value={goalAmountIDR}
               onChange={(e) => setGoalAmountIDR(e.target.value)}
               placeholder={t("dashboard.pages.donation.goalAmountPlaceholder")}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </div>
           {goalAmountNum > 0 && settings && (
             <div className="mt-3">
-              <div className="h-2.5 overflow-hidden rounded-full bg-primary-subtle">
-                <div className="h-full rounded-full bg-secondary transition-all" style={{ width: `${goalProgressPct}%` }} />
+              <div className="h-2.5 overflow-hidden rounded-full bg-jeon-purple/10">
+                <div className="h-full rounded-full bg-jeon-purple transition-all" style={{ width: `${goalProgressPct}%` }} />
               </div>
               <p className="mt-1 text-[11px] font-semibold text-app-ink">
                 {formatRupiah(settings.goal_raised_idr)} / {formatRupiah(goalAmountNum)} ({goalProgressPct.toFixed(0)}%)
@@ -224,7 +224,7 @@ export default function DashboardDonationPage() {
           saat mendukung (lihat DonationForm di halaman publik). */}
       <section className="glass mt-6 rounded-3xl p-5 shadow-card">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple">
             <IconGift className="h-4 w-4" />
           </span>
           <div>
@@ -242,7 +242,7 @@ export default function DashboardDonationPage() {
               <div key={w.id} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-app-ink">{w.name}</p>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-primary-subtle">
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-jeon-purple/10">
                     <div className="h-full rounded-full bg-pop-pink" style={{ width: `${pct}%` }} />
                   </div>
                   <p className="mt-1 text-[11px] text-app-muted">
@@ -272,7 +272,7 @@ export default function DashboardDonationPage() {
               onChange={(e) => setWishlistName(e.target.value)}
               placeholder={t("dashboard.pages.donation.wishlistNamePlaceholder")}
               maxLength={200}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <input
               type="number"
@@ -280,14 +280,14 @@ export default function DashboardDonationPage() {
               value={wishlistPrice}
               onChange={(e) => setWishlistPrice(e.target.value)}
               placeholder={t("dashboard.pages.donation.wishlistPricePlaceholder")}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <input
               type="url"
               value={wishlistLink}
               onChange={(e) => setWishlistLink(e.target.value)}
               placeholder={t("dashboard.pages.donation.wishlistLinkPlaceholder")}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <div className="flex gap-2">
               <button type="submit" className="btn-primary flex-1 rounded-lg py-2 text-xs font-bold text-white">
@@ -306,7 +306,7 @@ export default function DashboardDonationPage() {
           <button
             type="button"
             onClick={() => setAddingWishlist(true)}
-            className="mt-3 w-full rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-app-muted hover:border-primary hover:text-primary"
+            className="mt-3 w-full rounded-lg border border-dashed border-app-border py-2 text-xs font-bold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
           >
             + {t("dashboard.pages.donation.wishlistAddItem")}
           </button>

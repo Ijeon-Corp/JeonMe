@@ -379,7 +379,7 @@ export default function DashboardLayout({
 
         {/* Item aktif: garis emas tipis di kiri (bukan lagi pil solid
             warna brand -- di atas latar sidebar yang SUDAH hijau tua,
-            pil bg-primary nyaris tidak kontras) + latar putih transparan
+            pil bg-jeon-purple nyaris tidak kontras) + latar putih transparan
             samar. Ikon TANPA badge bulat lagi -- lebih tenang/quiet,
             sesuai prinsip "satu aksen berani (emas), sisanya netral". */}
         <nav className="mt-6 flex flex-col gap-0.5 text-xs">
@@ -456,7 +456,7 @@ export default function DashboardLayout({
             29 Agustus 2026. Gaya di sini SENGAJA beda dari topbar desktop
             (border/teks putih transparan, bukan border-app-border/bg-app-
             surface) -- sidebar mobile punya latar HIJAU GELAP TETAP
-            (bg-primary-dark, tidak ikut toggle terang/gelap sama sekali,
+            (bg-jeon-purple-dark, tidak ikut toggle terang/gelap sama sekali,
             lihat catatan lengkap di project memory soal batas ini), jadi
             kontrol di dalamnya harus tetap kontras terhadap latar gelap
             tetap itu.
@@ -545,7 +545,7 @@ export default function DashboardLayout({
 
             {mobileOpen && (
               <div className="fixed inset-0 z-40 md:hidden">
-                <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
+                <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
                 <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero">
                   <button
                     type="button"

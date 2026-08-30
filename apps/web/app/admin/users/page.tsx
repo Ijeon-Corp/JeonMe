@@ -56,9 +56,9 @@ export default function AdminUsersPage() {
           placeholder="Cari email/username..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
         />
-        <button type="submit" className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-semibold hover:border-primary">
+        <button type="submit" className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-semibold hover:border-jeon-purple">
           Cari
         </button>
       </form>
@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
         {users.map((u) => (
           <div key={u.id} className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface px-4 py-3 shadow-card">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
                 <IconUsers className="h-[18px] w-[18px]" />
               </div>
               <div>
@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={() => handleToggleSuspend(u)}
                 className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
-                  u.suspended_at ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
+                  u.suspended_at ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
                 }`}
               >
                 {u.suspended_at ? "Aktifkan" : "Tangguhkan"}

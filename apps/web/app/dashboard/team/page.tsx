@@ -171,7 +171,7 @@ export default function DashboardTeamPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {invitesForMe.length > 0 && (
-        <section className="mt-4 rounded-3xl border border-primary/30 bg-primary-subtle/40 p-5">
+        <section className="mt-4 rounded-3xl border border-jeon-purple/30 bg-jeon-purple/10/40 p-5">
           <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
@@ -203,13 +203,13 @@ export default function DashboardTeamPage() {
             placeholder={t("dashboard.pages.team.invitePlaceholder")}
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
-            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
           <select
             aria-label={t("dashboard.pages.team.newRoleAriaLabel")}
             value={role}
             onChange={(e) => setRole(e.target.value as TeamRole)}
-            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {ROLE_OPTIONS.map((r) => (
               <option key={r} value={r}>
@@ -233,7 +233,7 @@ export default function DashboardTeamPage() {
           {collaborators.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-app-border px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
                   <IconUsers className="h-[18px] w-[18px]" />
                 </div>
                 <div className="min-w-0">
@@ -247,7 +247,7 @@ export default function DashboardTeamPage() {
                   value={c.role}
                   onChange={(e) => handleRoleChange(c, e.target.value as TeamRole)}
                   disabled={c.status === "revoked"}
-                  className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
+                  className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>

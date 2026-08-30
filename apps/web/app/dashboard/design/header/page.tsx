@@ -91,11 +91,11 @@ export default function DesignHeaderPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={page.avatar_url} alt={page.username} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle font-heading text-base font-bold text-primary">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-heading text-base font-bold text-jeon-purple">
                 {page.username.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary">
+            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
               {avatarUploading ? t("dashboard.pages.designHeader.uploading") : t("dashboard.pages.designHeader.changePhoto")}
               <input
                 type="file"
@@ -116,7 +116,7 @@ export default function DesignHeaderPage() {
             value={page.display_name}
             onChange={(e) => setPage({ ...page, display_name: e.target.value })}
             onBlur={(e) => handlePageSettingChange({ display_name: e.target.value })}
-            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.pages.designHeader.displayNameHelp").replace("{username}", page.username)}</p>
         </div>
@@ -128,7 +128,7 @@ export default function DesignHeaderPage() {
             onChange={(e) => setPage({ ...page, bio: e.target.value })}
             onBlur={(e) => handlePageSettingChange({ bio: e.target.value })}
             rows={3}
-            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           />
         </div>
       </section>
@@ -148,7 +148,7 @@ export default function DesignHeaderPage() {
                 handlePageSettingChange({ layout_variant: value });
               }}
               className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-colors ${
-                page.layout_variant === value ? "border-primary bg-app-surface-2" : "border-app-border bg-app-surface hover:border-primary/50"
+                page.layout_variant === value ? "border-jeon-purple bg-app-surface-2" : "border-app-border bg-app-surface hover:border-jeon-purple/50"
               }`}
             >
               <span className="text-xs font-bold text-app-ink">{t(`dashboard.pages.designHeader.layouts.${value}.label`)}</span>

@@ -164,7 +164,7 @@ export default function SettingsPaymentPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsPayment.breadcrumb")}
@@ -173,7 +173,7 @@ export default function SettingsPaymentPage() {
       <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsPayment.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
         {t("dashboard.pages.settingsPayment.subtitlePrefix")}{" "}
-        <Link href="/dashboard/balance" className="font-semibold text-primary hover:underline">
+        <Link href="/dashboard/balance" className="font-semibold text-jeon-purple hover:underline">
           {t("dashboard.pages.settingsPayment.balanceLinkLabel")}
         </Link>
         .
@@ -196,13 +196,13 @@ export default function SettingsPaymentPage() {
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-1.5">
                   {m.is_primary && (
-                    <span className="rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
                       {t("dashboard.pages.settingsPayment.primaryBadge")}
                     </span>
                   )}
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      m.verified ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-app-muted"
+                      m.verified ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
                     }`}
                   >
                     {m.verified ? t("dashboard.pages.settingsPayment.verifiedBadge") : t("dashboard.pages.settingsPayment.unverifiedBadge")}
@@ -223,7 +223,7 @@ export default function SettingsPaymentPage() {
                   <button
                     type="button"
                     onClick={() => handleStartVerify(m.id)}
-                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-primary hover:border-primary"
+                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-jeon-purple hover:border-jeon-purple"
                   >
                     {t("dashboard.pages.settingsPayment.verifyButton")}
                   </button>
@@ -232,7 +232,7 @@ export default function SettingsPaymentPage() {
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(m.id)}
-                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary"
+                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
                   >
                     {t("dashboard.pages.settingsPayment.makePrimaryButton")}
                   </button>
@@ -240,7 +240,7 @@ export default function SettingsPaymentPage() {
               </div>
 
               {verifyingId === m.id && (
-                <form onSubmit={handleVerify} className="mt-2 flex gap-2 rounded-lg bg-primary-subtle/40 p-2.5">
+                <form onSubmit={handleVerify} className="mt-2 flex gap-2 rounded-lg bg-jeon-purple/10/40 p-2.5">
                   <input
                     type="text"
                     inputMode="numeric"
@@ -248,12 +248,12 @@ export default function SettingsPaymentPage() {
                     placeholder={t("dashboard.pages.settingsPayment.sixDigitCodePlaceholder")}
                     value={verifyCode}
                     onChange={(e) => setVerifyCode(e.target.value)}
-                    className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                    className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={verifyBusy}
-                    className="rounded-md bg-primary px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    className="rounded-md bg-jeon-purple px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                   >
                     {verifyBusy ? "..." : t("dashboard.pages.settingsPayment.confirmButton")}
                   </button>
@@ -268,7 +268,7 @@ export default function SettingsPaymentPage() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mt-3 rounded-xl border border-dashed border-app-border px-4 py-2.5 text-sm font-semibold text-primary hover:border-primary"
+            className="mt-3 rounded-xl border border-dashed border-app-border px-4 py-2.5 text-sm font-semibold text-jeon-purple hover:border-jeon-purple"
           >
             {t("dashboard.pages.settingsPayment.addMethodButton")}
           </button>
@@ -277,7 +277,7 @@ export default function SettingsPaymentPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as "bank_transfer" | "ewallet")}
-              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             >
               <option value="bank_transfer">{t("dashboard.pages.settingsPayment.bankTransferOption")}</option>
               <option value="ewallet">{t("dashboard.pages.settingsPayment.ewalletOption")}</option>
@@ -288,7 +288,7 @@ export default function SettingsPaymentPage() {
               placeholder={t("dashboard.pages.settingsPayment.providerPlaceholder")}
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
-              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <input
               type="text"
@@ -296,7 +296,7 @@ export default function SettingsPaymentPage() {
               placeholder={t("dashboard.pages.settingsPayment.accountNumberPlaceholder")}
               value={accountNumber}
               onChange={(e) => setAccountNumber(e.target.value)}
-              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <input
               type="text"
@@ -304,13 +304,13 @@ export default function SettingsPaymentPage() {
               placeholder={t("dashboard.pages.settingsPayment.accountNamePlaceholder")}
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
-              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={creating}
-                className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {creating ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
               </button>
@@ -338,7 +338,7 @@ export default function SettingsPaymentPage() {
           <select
             value={frequency}
             onChange={(e) => setFrequency(e.target.value as PayoutSchedule["frequency"])}
-            className="min-w-0 rounded-lg border border-app-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="min-w-0 rounded-lg border border-app-border px-3 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           >
             <option value="manual">{t("dashboard.pages.settingsPayment.frequencyManual")}</option>
             <option value="weekly">{t("dashboard.pages.settingsPayment.frequencyWeekly")}</option>
@@ -350,12 +350,12 @@ export default function SettingsPaymentPage() {
             placeholder={t("dashboard.pages.settingsPayment.minThresholdPlaceholder")}
             value={minThreshold}
             onChange={(e) => setMinThreshold(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
           />
           <button
             type="submit"
             disabled={savingSchedule}
-            className="flex-shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 rounded-xl bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {savingSchedule ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
           </button>

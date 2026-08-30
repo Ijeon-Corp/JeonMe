@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {mobileOpen && (
             <div className="fixed inset-0 z-40 md:hidden">
-              <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
+              <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
               <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero">
                 <button
                   type="button"

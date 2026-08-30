@@ -14,8 +14,8 @@ import { useLocale } from "@/lib/locale-context";
 // StatCard di seluruh app (Ringkasan/Statistik/Saldo/ShopOverviewPanel/
 // admin) TIDAK perlu diubah satu-satu -- cukup ubah definisi di sini.
 const NEUTRAL_TONE = {
-  card: "bg-app-surface text-app-ink border border-primary/10 shadow-refined",
-  icon: "bg-primary-subtle text-primary",
+  card: "bg-app-surface text-app-ink border border-jeon-purple/10 shadow-refined",
+  icon: "bg-jeon-purple/10 text-jeon-purple",
   label: "text-app-ink/65",
   value: "text-app-ink",
   sub: "text-app-muted",
@@ -23,7 +23,7 @@ const NEUTRAL_TONE = {
 
 export const STAT_TONES = {
   brand: {
-    card: "bg-gradient-to-br from-primary-dark to-primary text-white shadow-refined-lg",
+    card: "bg-gradient-to-br from-jeon-purple-dark to-jeon-purple-dark text-white shadow-refined-lg",
     icon: "bg-white/15 text-white",
     label: "text-white/70",
     value: "text-white",
@@ -41,7 +41,7 @@ export function TrendBadge({ pct, onDark = false }: { pct: number | null; onDark
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-        onDark ? "bg-white/15 text-accent-light" : positive ? "bg-secondary-subtle text-secondary-dark" : "bg-red-50 text-red-600"
+        onDark ? "bg-white/15 text-jeon-lavender" : positive ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
       }`}
     >
       <IconTrendArrow className={`h-3 w-3 flex-shrink-0 ${positive ? "" : "rotate-180"}`} />
@@ -81,7 +81,7 @@ export default function StatCard({
     <div className={`relative overflow-hidden rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-0.5 ${t.card}`}>
       {/* Garis emas tipis -- SATU-satunya penanda "kartu utama", dipakai
           hemat (cuma tone brand), bukan aturan dekoratif di semua kartu. */}
-      {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent to-transparent" aria-hidden="true" />}
+      {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-jeon-coral to-transparent" aria-hidden="true" />}
       <div className={`flex items-center gap-2 text-xs font-semibold ${t.label}`}>
         <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${t.icon}`}>{icon}</span>
         {label}

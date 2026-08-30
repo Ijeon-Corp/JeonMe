@@ -39,7 +39,7 @@ function ConnectCard({
   return (
     <div className="glass flex flex-col gap-3 rounded-3xl p-5 shadow-card">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary-subtle text-primary">
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-jeon-purple/10 text-jeon-purple">
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ function ConnectCard({
           <p className="text-xs text-app-muted">{description}</p>
         </div>
         {connection && (
-          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
             <IconCheck className="h-3.5 w-3.5" />
           </span>
         )}
@@ -60,7 +60,7 @@ function ConnectCard({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={connection.avatar_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                 <Icon className="h-4 w-4" />
               </span>
             )}

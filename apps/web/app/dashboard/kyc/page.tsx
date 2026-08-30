@@ -18,7 +18,7 @@ function buildStatusLabel(t: (key: string) => string): Record<KycStatus["status"
 const STATUS_BADGE_CLASS: Record<KycStatus["status"], string> = {
   unverified: "bg-app-surface-2 text-app-muted",
   pending: "bg-amber-50 text-amber-700",
-  verified: "bg-secondary-subtle text-secondary-dark",
+  verified: "bg-jeon-purple/10 text-jeon-purple",
   rejected: "bg-red-50 text-red-600",
 };
 
@@ -106,7 +106,7 @@ export default function DashboardKycPage() {
       {status && (
         <section className="glass mt-4 rounded-3xl p-5 shadow-card">
           <div className="flex items-center gap-2">
-            <IconShield className="h-4 w-4 text-primary" />
+            <IconShield className="h-4 w-4 text-jeon-purple" />
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[status.status]}`}>
               {STATUS_LABEL[status.status]}
             </span>
@@ -123,7 +123,7 @@ export default function DashboardKycPage() {
           )}
 
           {status.status === "verified" && (
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-secondary-dark">
+            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-jeon-purple">
               <IconCheck className="h-3.5 w-3.5" />
               {t("dashboard.pages.kyc.verifiedNote")}
             </p>
@@ -143,7 +143,7 @@ export default function DashboardKycPage() {
               type="text"
               value={fullNameKtp}
               onChange={(e) => setFullNameKtp(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </label>
 
@@ -153,7 +153,7 @@ export default function DashboardKycPage() {
               type="text"
               value={bankAccountName}
               onChange={(e) => setBankAccountName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </label>
 
@@ -163,7 +163,7 @@ export default function DashboardKycPage() {
               value={domicileAddress}
               onChange={(e) => setDomicileAddress(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </label>
 
@@ -173,7 +173,7 @@ export default function DashboardKycPage() {
               value={businessDescription}
               onChange={(e) => setBusinessDescription(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </label>
 
@@ -183,7 +183,7 @@ export default function DashboardKycPage() {
               type="text"
               value={promotionChannels}
               onChange={(e) => setPromotionChannels(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="mt-1 w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
           </label>
 

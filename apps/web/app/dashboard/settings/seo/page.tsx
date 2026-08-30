@@ -85,7 +85,7 @@ export default function SettingsSeoPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary">
+      <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple">
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsSeo.breadcrumb")}
       </Link>
@@ -104,7 +104,7 @@ export default function SettingsSeoPage() {
             value={seoTitle}
             placeholder={`@${page.username} — Jeon.id`}
             onChange={(e) => setSeoTitle(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 
@@ -116,7 +116,7 @@ export default function SettingsSeoPage() {
             placeholder={page.bio || t("dashboard.pages.settingsSeo.seoDescriptionPlaceholder").replace("{username}", page.username)}
             onChange={(e) => setSeoDescription(e.target.value)}
             rows={2}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 

@@ -70,7 +70,7 @@ export default function LoyaltyPointsWidget({
             placeholder="Email kamu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <button
             type="submit"
@@ -94,7 +94,7 @@ export default function LoyaltyPointsWidget({
             {rewards?.map((reward) => (
               <div
                 key={reward.id}
-                className="flex items-center justify-between rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink"
+                className="flex items-center justify-between rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-app-ink"
               >
                 <span>
                   {reward.name} <span className="opacity-70">({reward.points_needed} poin)</span>
@@ -103,7 +103,7 @@ export default function LoyaltyPointsWidget({
                   type="button"
                   onClick={() => handleRedeem(reward)}
                   disabled={redeemingId === reward.id || points < reward.points_needed}
-                  className="flex-shrink-0 rounded bg-primary px-2 py-0.5 text-[10px] font-bold text-white disabled:opacity-40"
+                  className="flex-shrink-0 rounded bg-jeon-purple px-2 py-0.5 text-[10px] font-bold text-white disabled:opacity-40"
                 >
                   {redeemingId === reward.id ? "..." : "Tukar"}
                 </button>

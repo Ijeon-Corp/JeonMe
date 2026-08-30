@@ -159,7 +159,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               type="button"
               onClick={useCurrentLocation}
               disabled={locating}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border px-3.5 py-2 text-xs font-bold text-app-ink hover:border-primary hover:text-primary disabled:opacity-60"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border px-3.5 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
             >
               <IconTarget className="h-3.5 w-3.5" />
               {locating ? t("dashboard.components.locationPickerModal.searching") : t("dashboard.components.locationPickerModal.myLocation")}
@@ -176,7 +176,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
                       setResults([]);
                       setSearch(r.display_name);
                     }}
-                    className="flex w-full items-start gap-2 border-b border-app-border px-3 py-2 text-left text-xs text-app-ink last:border-b-0 hover:bg-primary-subtle"
+                    className="flex w-full items-start gap-2 border-b border-app-border px-3 py-2 text-left text-xs text-app-ink last:border-b-0 hover:bg-jeon-purple/10"
                   >
                     <IconMapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-app-muted" />
                     {r.display_name}

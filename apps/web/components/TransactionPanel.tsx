@@ -22,7 +22,7 @@ function buildStatusLabels(t: (key: string) => string): Record<string, string> {
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600",
-  paid: "bg-secondary-subtle text-secondary-dark",
+  paid: "bg-jeon-purple/10 text-jeon-purple",
   expired: "bg-gray-100 text-app-muted",
   failed: "bg-red-50 text-red-600",
   refunded: "bg-blue-50 text-blue-600",
@@ -79,7 +79,7 @@ export default function TransactionPanel() {
             placeholder={t("dashboard.components.transactionPanel.searchPlaceholder")}
             className="rounded-lg border border-app-border px-3 py-1.5 text-xs text-app-ink"
           />
-          <button type="submit" className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary">
+          <button type="submit" className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple">
             {t("dashboard.components.transactionPanel.searchButton")}
           </button>
         </form>
@@ -116,7 +116,7 @@ export default function TransactionPanel() {
                 <tr
                   key={o.order_id}
                   onClick={() => setSelectedOrderId(o.order_id)}
-                  className="cursor-pointer border-b border-app-border last:border-0 hover:bg-primary-subtle/40"
+                  className="cursor-pointer border-b border-app-border last:border-0 hover:bg-jeon-purple/10/40"
                 >
                   <td className="px-4 py-3 font-semibold text-app-ink">{o.product_name}</td>
                   <td className="px-4 py-3 text-app-ink">{o.buyer_email}</td>
@@ -184,12 +184,12 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-app-surface p-6 shadow-hero">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-primary-subtle"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-jeon-purple/10"
           aria-label={t("dashboard.components.transactionPanel.closeLabel")}
         >
           <IconClose className="h-4 w-4" />

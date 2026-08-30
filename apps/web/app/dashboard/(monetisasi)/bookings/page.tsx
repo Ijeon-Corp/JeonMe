@@ -168,7 +168,7 @@ export default function DashboardBookingsPage() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
           >
             <IconPlus className="h-4 w-4" />
             {t("dashboard.pages.bookings.createButton")}
@@ -183,7 +183,7 @@ export default function DashboardBookingsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("dashboard.pages.bookings.sessionNamePlaceholder")}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div>
@@ -192,7 +192,7 @@ export default function DashboardBookingsPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -204,7 +204,7 @@ export default function DashboardBookingsPage() {
                   min={1000}
                   value={priceIDR}
                   onChange={(e) => setPriceIDR(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </div>
               <div>
@@ -215,7 +215,7 @@ export default function DashboardBookingsPage() {
                   min={5}
                   value={durationMinutes}
                   onChange={(e) => setDurationMinutes(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </div>
             </div>
@@ -247,10 +247,10 @@ export default function DashboardBookingsPage() {
           <div key={booking.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IconCalendar className="h-4 w-4 text-primary" />
+                <IconCalendar className="h-4 w-4 text-jeon-purple" />
                 <p className="text-sm font-bold text-app-ink">{booking.name}</p>
               </div>
-              <span className="text-sm font-bold text-secondary-dark">Rp {booking.price_idr.toLocaleString("id-ID")}</span>
+              <span className="text-sm font-bold text-jeon-purple">Rp {booking.price_idr.toLocaleString("id-ID")}</span>
             </div>
             <p className="mt-1 text-xs text-app-muted">
               {t("dashboard.pages.bookings.slotSummary")
@@ -267,7 +267,7 @@ export default function DashboardBookingsPage() {
               <button
                 type="button"
                 onClick={() => handleOpenSlots(booking)}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary-subtle"
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-jeon-purple hover:bg-jeon-purple/10"
               >
                 {t("dashboard.pages.bookings.manageSlots")}
                 <IconChevronRight className="h-3.5 w-3.5" />
@@ -275,18 +275,18 @@ export default function DashboardBookingsPage() {
             </div>
 
             {managingId === booking.id && (
-              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/20 p-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/10/20 p-3">
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="datetime-local"
                     value={slotTime}
                     onChange={(e) => setSlotTime(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                   />
                   <select
                     value={slotTimezone}
                     onChange={(e) => setSlotTimezone(e.target.value)}
-                    className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   >
                     {TIMEZONE_OPTIONS.map((tz) => (
                       <option key={tz.value} value={tz.value}>

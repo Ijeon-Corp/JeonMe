@@ -20,8 +20,8 @@ const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
 
 const STATUS_BADGE: Record<AdminKycItem["status"], string> = {
   unverified: "bg-gray-100 text-app-muted",
-  pending: "bg-accent-subtle text-accent-dark",
-  verified: "bg-secondary-subtle text-secondary-dark",
+  pending: "bg-jeon-warning/15 text-jeon-warning",
+  verified: "bg-jeon-purple/10 text-jeon-purple",
   rejected: "bg-red-50 text-red-600",
 };
 
@@ -101,8 +101,8 @@ export default function AdminKycPage() {
           onClick={() => handleFilterChange("pending")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "pending"
-              ? "border-primary bg-primary-subtle text-primary"
-              : "border-app-border text-app-muted hover:border-primary/50"
+              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
           Menunggu Review
@@ -112,8 +112,8 @@ export default function AdminKycPage() {
           onClick={() => handleFilterChange("all")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
-              ? "border-primary bg-primary-subtle text-primary"
-              : "border-app-border text-app-muted hover:border-primary/50"
+              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
           Semua Riwayat
@@ -128,10 +128,10 @@ export default function AdminKycPage() {
             key={it.user_id}
             type="button"
             onClick={() => openDetail(it.user_id)}
-            className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface p-4 text-left shadow-card hover:border-primary/50"
+            className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface p-4 text-left shadow-card hover:border-jeon-purple/50"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
                 <IconShield className="h-[18px] w-[18px]" />
               </div>
               <div>
@@ -161,7 +161,7 @@ export default function AdminKycPage() {
       </div>
 
       {(detailLoading || detail) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-app-surface p-6 shadow-hero">
             {detailLoading && <p className="text-sm text-app-muted">Memuat detail...</p>}
             {detail && (
@@ -214,7 +214,7 @@ export default function AdminKycPage() {
                       href={detail.bank_proof_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex aspect-square items-center justify-center rounded-lg border border-app-border bg-primary-subtle/40 text-xs font-semibold text-primary"
+                      className="flex aspect-square items-center justify-center rounded-lg border border-app-border bg-jeon-purple/10/40 text-xs font-semibold text-jeon-purple"
                     >
                       Lihat Bukti
                     </a>
@@ -228,7 +228,7 @@ export default function AdminKycPage() {
                       onChange={(e) => setRejectReason(e.target.value)}
                       placeholder="Alasan penolakan (wajib kalau menolak)"
                       rows={2}
-                      className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                     />
                     <div className="flex gap-2">
                       <button
@@ -260,7 +260,7 @@ export default function AdminKycPage() {
                 <button
                   type="button"
                   onClick={() => setDetail(null)}
-                  className="mt-4 w-full rounded-lg border border-app-border py-2 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
+                  className="mt-4 w-full rounded-lg border border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   Tutup
                 </button>

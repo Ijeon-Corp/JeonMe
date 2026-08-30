@@ -54,7 +54,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             role="status"
             className={`pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-xl border bg-app-surface px-4 py-3 text-sm font-medium shadow-card ${
-              t.variant === "success" ? "border-primary/20 text-primary" : "border-red-200 text-red-600"
+              t.variant === "success" ? "border-jeon-purple/20 text-jeon-purple" : "border-red-200 text-red-600"
             }`}
           >
             {t.variant === "success" ? (

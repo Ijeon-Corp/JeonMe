@@ -22,7 +22,7 @@ import { useLocale } from "@/lib/locale-context";
 // konstanta modul lagi) supaya ikut berganti bahasa.
 function buildOrderStatusLabels(t: (key: string) => string): Record<string, { label: string; className: string }> {
   return {
-    paid: { label: t("dashboard.components.shopOverviewPanel.statusLabels.paid"), className: "bg-secondary-subtle text-secondary-dark" },
+    paid: { label: t("dashboard.components.shopOverviewPanel.statusLabels.paid"), className: "bg-jeon-purple/10 text-jeon-purple" },
     pending: { label: t("dashboard.components.shopOverviewPanel.statusLabels.pending"), className: "bg-amber-50 text-amber-700" },
     expired: { label: t("dashboard.components.shopOverviewPanel.statusLabels.expired"), className: "bg-gray-100 text-app-muted" },
     failed: { label: t("dashboard.components.shopOverviewPanel.statusLabels.failed"), className: "bg-red-50 text-red-600" },
@@ -113,7 +113,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
           {summary.weekly_revenue.map((d) => (
             <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
-              <div className="w-full rounded-t bg-secondary transition-all" style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }} />
+              <div className="w-full rounded-t bg-jeon-purple transition-all" style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }} />
               <span className="text-[10px] text-app-muted">{weekdayLabel[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
             </div>
           ))}
@@ -126,7 +126,7 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
           {summary.top_products.map((p) => (
             <li key={p.product_id} className="flex justify-between text-xs">
               <span className="truncate text-app-ink">{p.name}</span>
-              <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">
+              <span className="ml-2 flex-shrink-0 font-semibold text-jeon-purple">
                 {p.sold_count} {t("dashboard.components.shopOverviewPanel.soldCountSuffix")} &middot; {formatRupiah(p.revenue_idr)}
               </span>
             </li>

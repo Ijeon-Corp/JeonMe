@@ -98,7 +98,7 @@ export default function NotificationBell() {
         onClick={handleToggle}
         title={t("dashboard.components.notificationBell.title")}
         aria-label={t("dashboard.components.notificationBell.title")}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconBell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -113,7 +113,7 @@ export default function NotificationBell() {
           <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-4 py-3">
             <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.notificationBell.title")}</p>
             {unreadCount > 0 && (
-              <button type="button" onClick={handleMarkAllRead} className="text-xs font-bold text-primary hover:underline">
+              <button type="button" onClick={handleMarkAllRead} className="text-xs font-bold text-jeon-purple hover:underline">
                 {t("dashboard.components.notificationBell.markAllRead")}
               </button>
             )}
@@ -133,12 +133,12 @@ export default function NotificationBell() {
                   key={n.id}
                   type="button"
                   onClick={() => handleItemClick(n)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-app-border px-4 py-3 text-left last:border-b-0 hover:bg-primary-subtle/40 ${
-                    n.read ? "" : "bg-primary-subtle/20"
+                  className={`flex w-full flex-col gap-0.5 border-b border-app-border px-4 py-3 text-left last:border-b-0 hover:bg-jeon-purple/10/40 ${
+                    n.read ? "" : "bg-jeon-purple/10/20"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    {!n.read && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" aria-hidden />}
+                    {!n.read && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-jeon-purple" aria-hidden />}
                     <p className="truncate text-sm font-bold text-app-ink">{n.title}</p>
                   </div>
                   <p className="text-xs text-app-muted">{n.body}</p>

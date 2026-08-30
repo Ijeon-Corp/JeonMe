@@ -77,7 +77,7 @@ export default function StorageFilesPanel() {
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      f.is_active ? "bg-secondary-subtle text-secondary-dark" : "bg-gray-100 text-app-muted"
+                      f.is_active ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
                     }`}
                   >
                     {f.is_active

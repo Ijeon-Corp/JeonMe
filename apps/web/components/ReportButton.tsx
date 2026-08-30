@@ -59,7 +59,7 @@ export default function ReportButton({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         rows={2}
-        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
       />
       <button type="submit" className="self-start rounded-md bg-ink/10 px-3 py-1 text-[11px] font-semibold text-current hover:bg-ink/20">
         Kirim Laporan

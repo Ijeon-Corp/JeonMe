@@ -229,7 +229,7 @@ export default function ProdukPageEditor({
   if (!page) {
     return (
       <div className="glass mx-auto max-w-xl rounded-2xl p-8 text-center shadow-card">
-        <IconSparkle className="mx-auto h-8 w-8 text-primary" />
+        <IconSparkle className="mx-auto h-8 w-8 text-jeon-purple" />
         <h2 className="mt-3 font-heading text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.notActive.title")}</h2>
         <p className="mt-2 text-sm text-app-muted">
           {t("dashboard.components.produkPageEditor.notActive.description")}{" "}
@@ -257,15 +257,15 @@ export default function ProdukPageEditor({
             href={`${SITE_URL}/${username}/${page.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            className="flex items-center gap-1 text-xs font-semibold text-jeon-purple hover:underline"
           >
             <IconExternal className="h-3.5 w-3.5" />
             jeon.id/{username}/{page.slug}
           </a>
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
-          <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-secondary" : "bg-muted"}`} />
-          <span className={`text-xs font-semibold ${page.is_published ? "text-secondary-dark" : "text-app-muted"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-jeon-purple" : "bg-muted"}`} />
+          <span className={`text-xs font-semibold ${page.is_published ? "text-jeon-purple" : "text-app-muted"}`}>
             {page.is_published ? t("dashboard.components.produkPageEditor.published") : t("dashboard.components.produkPageEditor.notPublished")}
           </span>
         </div>
@@ -321,7 +321,7 @@ export default function ProdukPageEditor({
               onClick={() => handlePatch({ product_layout: "grid" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
                 !page.product_layout || page.product_layout === "grid"
-                  ? "border-primary bg-primary-subtle text-primary"
+                  ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
                   : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
@@ -331,7 +331,7 @@ export default function ProdukPageEditor({
               type="button"
               onClick={() => handlePatch({ product_layout: "stacked" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "stacked" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
+                page.product_layout === "stacked" ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
               {t("dashboard.components.produkPageEditor.productLayout.stacked")}
@@ -340,7 +340,7 @@ export default function ProdukPageEditor({
               type="button"
               onClick={() => handlePatch({ product_layout: "category" })}
               className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "category" ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted hover:text-app-ink"
+                page.product_layout === "category" ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted hover:text-app-ink"
               }`}
             >
               {t("dashboard.components.produkPageEditor.productLayout.category")}
@@ -370,7 +370,7 @@ export default function ProdukPageEditor({
             type="button"
             onClick={() => setSection(key)}
             className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
-              section === key ? "bg-primary-subtle text-primary" : "text-app-muted hover:text-app-ink"
+              section === key ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-app-ink"
             }`}
           >
             {label}
@@ -658,7 +658,7 @@ function BlockSection({
     <div className="flex flex-col gap-3">
       <section className="glass rounded-2xl p-5 shadow-card">
         {!adding ? (
-          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline">
             <IconPlus className="h-4 w-4" />
             {t("dashboard.components.produkPageEditor.addBlockButton")}
           </button>
@@ -672,7 +672,7 @@ function BlockSection({
                   onClick={() => setBlockType(tile.key)}
                   title={tile.description}
                   className={`flex flex-col items-center gap-1 rounded-xl border p-2.5 text-center ${
-                    blockType === tile.key ? "border-primary bg-primary-subtle text-primary" : "border-app-border text-app-muted"
+                    blockType === tile.key ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted"
                   }`}
                 >
                   <tile.Icon className="h-5 w-5" />
@@ -703,7 +703,7 @@ function BlockSection({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t("dashboard.components.produkPageEditor.blockForm.titlePlaceholder")}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
             </FormField>
 
@@ -718,7 +718,7 @@ function BlockSection({
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -730,7 +730,7 @@ function BlockSection({
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder={t("dashboard.components.produkPageEditor.blockForm.videoUrlPlaceholder")}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -743,7 +743,7 @@ function BlockSection({
                     value={mapsUrl}
                     onChange={(e) => setMapsUrl(e.target.value)}
                     placeholder={t("dashboard.components.produkPageEditor.blockForm.mapsUrlLabel")}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   />
                 </FormField>
                 <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
@@ -760,7 +760,7 @@ function BlockSection({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder={t("dashboard.components.produkPageEditor.blockForm.textPlaceholder")}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -772,7 +772,7 @@ function BlockSection({
                   value={accordionText}
                   onChange={(e) => setAccordionText(e.target.value)}
                   placeholder={t("dashboard.components.produkPageEditor.blockForm.accordionTextPlaceholder")}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -786,7 +786,7 @@ function BlockSection({
                         value={item.question}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)))}
                         placeholder={t("dashboard.components.produkPageEditor.blockForm.faqQuestionPlaceholder")}
-                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                     <FormField label={t("dashboard.components.produkPageEditor.blockForm.faqAnswerLabel")}>
@@ -795,7 +795,7 @@ function BlockSection({
                         value={item.answer}
                         onChange={(e) => setFaqItems((prev) => prev.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)))}
                         placeholder={t("dashboard.components.produkPageEditor.blockForm.faqAnswerLabel")}
-                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                   </div>
@@ -803,7 +803,7 @@ function BlockSection({
                 <button
                   type="button"
                   onClick={() => setFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                  className="self-start text-xs font-semibold text-primary hover:underline"
+                  className="self-start text-xs font-semibold text-jeon-purple hover:underline"
                 >
                   {t("dashboard.components.produkPageEditor.blockForm.addFaqQuestion")}
                 </button>
@@ -875,7 +875,7 @@ function BlockSection({
                 dibalik toggle) karena inti dari blok ini, sama seperti
                 catatan di dashboard/links/page.tsx. */}
             {link.block_type === "gallery" && (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                 <p className="text-[11px] font-semibold text-app-muted">
                   {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
                     .replace("{count}", String(((link.block_data?.images as string[]) ?? []).length))
@@ -898,7 +898,7 @@ function BlockSection({
                   ))}
                   {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                     <label
-                      className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
+                      className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                         galleryUploadingId === link.id ? "opacity-60" : ""
                       }`}
                     >
@@ -923,13 +923,13 @@ function BlockSection({
               </div>
             )}
             {link.block_type === "audio" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.audio_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
                     : t("dashboard.components.produkPageEditor.blockForm.audioEmpty")}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                   {audioUploadingId === link.id
                     ? t("dashboard.components.produkPageEditor.blockForm.uploading")
                     : (link.block_data?.audio_url as string)
@@ -954,13 +954,13 @@ function BlockSection({
                 pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                 pola sama persis seperti panel Kelola audio di atas. */}
             {link.block_type === "file" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.file_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.fileUploaded")
                     : t("dashboard.components.produkPageEditor.blockForm.fileEmpty")}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                   {fileUploadingId === link.id
                     ? t("dashboard.components.produkPageEditor.blockForm.uploading")
                     : (link.block_data?.file_url as string)
@@ -1031,7 +1031,7 @@ function TemaSection({
           }
           className="group flex flex-col items-center gap-1.5"
         >
-          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
               <IconPaintbrush className="h-7 w-7 text-app-muted" />
             </div>
@@ -1051,19 +1051,19 @@ function TemaSection({
           if (!meta) return null;
           return (
             <button key={themeName} type="button" onClick={() => onPatch({ theme: themeName, custom_style_override: false })} className="group flex flex-col items-center gap-1.5">
-              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
                 <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
                 <span className={`absolute left-2.5 top-2 font-heading text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
                   Aa
                 </span>
                 <span className={`absolute inset-x-2.5 bottom-2.5 h-5 rounded-full ring-1 ring-black/10 ${meta.buyButton}`} aria-hidden />
                 {page.theme === themeName && (
-                  <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                  <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-white">
                     <IconCheck className="h-3 w-3" />
                   </span>
                 )}
               </div>
-              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-primary" : "text-app-ink"}`}>{meta.label}</span>
+              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-jeon-purple" : "text-app-ink"}`}>{meta.label}</span>
             </button>
           );
         })}
@@ -1079,7 +1079,7 @@ function TemaSection({
                 type="button"
                 onClick={() => onPatch({ custom_background_type: bgType })}
                 className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold capitalize ${
-                  page.custom_background_type === bgType ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                  page.custom_background_type === bgType ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
                 }`}
               >
                 {bgType === "solid"
@@ -1091,7 +1091,7 @@ function TemaSection({
             ))}
           </div>
           {page.custom_background_type === "image" ? (
-            <label className="cursor-pointer self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
+            <label className="cursor-pointer self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
               {bgUploading ? t("dashboard.components.produkPageEditor.tema.uploading") : t("dashboard.components.produkPageEditor.tema.uploadBackground")}
               <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleBackgroundUpload} disabled={bgUploading} className="hidden" />
             </label>
@@ -1192,11 +1192,11 @@ function HeaderSection({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={page.avatar_url} alt={page.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle font-heading text-base font-bold text-primary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-heading text-base font-bold text-jeon-purple">
               {page.slug.slice(0, 1).toUpperCase()}
             </div>
           )}
-          <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary">
+          <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
             {avatarUploading ? t("dashboard.components.produkPageEditor.header.uploading") : t("dashboard.components.produkPageEditor.header.changePhoto")}
             <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={avatarUploading} className="hidden" />
           </label>
@@ -1210,7 +1210,7 @@ function HeaderSection({
           value={page.display_name}
           onChange={(e) => setPage({ ...page, display_name: e.target.value })}
           onBlur={(e) => onPatch({ display_name: e.target.value })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
         />
       </div>
       <div>
@@ -1221,7 +1221,7 @@ function HeaderSection({
           value={page.bio}
           onChange={(e) => setPage({ ...page, bio: e.target.value })}
           onBlur={(e) => onPatch({ bio: e.target.value })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
         />
       </div>
 
@@ -1240,7 +1240,7 @@ function HeaderSection({
                 onPatch({ layout_variant: opt.value });
               }}
               className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-colors ${
-                page.layout_variant === opt.value ? "border-primary bg-primary-subtle" : "border-app-border bg-app-surface hover:border-primary/50"
+                page.layout_variant === opt.value ? "border-jeon-purple bg-jeon-purple/10" : "border-app-border bg-app-surface hover:border-jeon-purple/50"
               }`}
             >
               <span className="text-[11px] font-bold text-app-ink">{opt.label}</span>
@@ -1276,14 +1276,14 @@ function HeaderSection({
                     onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                     placeholder={`${p.label} · ${p.placeholder}`}
                     aria-label={p.label}
-                    className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-primary focus:outline-none"
+                    className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
                   />
                 </div>
               ))}
             </div>
             <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.header.socialHint")}</p>
             <div className="mt-3 flex items-center gap-2">
-              <button type="button" onClick={saveSocial} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white">
+              <button type="button" onClick={saveSocial} className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white">
                 {t("dashboard.components.produkPageEditor.header.save")}
               </button>
               <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
@@ -1330,7 +1330,7 @@ function TombolSection({
               type="button"
               onClick={() => onStyleOverride({ custom_button_style: opt.value })}
               className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_style === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                page.custom_button_style === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
               }`}
             >
               {opt.label}
@@ -1348,7 +1348,7 @@ function TombolSection({
               onClick={() => onStyleOverride({ custom_button_rounded: opt.value })}
               title={opt.label}
               className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
-                page.custom_button_rounded === opt.value ? "border-primary bg-app-surface" : "border-app-border"
+                page.custom_button_rounded === opt.value ? "border-jeon-purple bg-app-surface" : "border-app-border"
               }`}
             >
               <span className={`block h-3 w-6 border-2 border-ink/60 ${opt.className}`} aria-hidden />
@@ -1365,7 +1365,7 @@ function TombolSection({
               type="button"
               onClick={() => onStyleOverride({ custom_button_shadow: opt.value })}
               className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_shadow === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                page.custom_button_shadow === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
               }`}
             >
               {opt.label}
@@ -1396,7 +1396,7 @@ function FontSection({
         <select
           value={page.custom_font}
           onChange={(e) => onStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
         >
           {CUSTOM_FONT_OPTIONS.map((f) => (
             <option key={f.value} value={f.value}>
@@ -1433,7 +1433,7 @@ function FontSection({
         <select
           value={page.custom_title_font}
           onChange={(e) => onStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
         >
           {CUSTOM_FONT_OPTIONS.map((f) => (
             <option key={f.value} value={f.value}>

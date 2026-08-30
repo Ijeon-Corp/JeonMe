@@ -54,7 +54,7 @@ export default function StickerCanvasEditor({
               type="button"
               onClick={() => handleAdd(shape.value)}
               title={t("dashboard.components.stickerCanvasEditor.addStickerTitle").replace("{shape}", shape.label)}
-              className="flex aspect-square flex-col items-center justify-center rounded-xl border border-app-border bg-app-surface p-2 text-app-ink hover:border-primary hover:text-primary"
+              className="flex aspect-square flex-col items-center justify-center rounded-xl border border-app-border bg-app-surface p-2 text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
             >
               <StickerIcon type={shape.value} className="h-6 w-6" />
             </button>
@@ -62,7 +62,7 @@ export default function StickerCanvasEditor({
         </div>
       </div>
 
-      <p className="flex items-center gap-1 text-xs font-semibold text-primary">
+      <p className="flex items-center gap-1 text-xs font-semibold text-jeon-purple">
         <IconPlus className="h-3 w-3" />
         {t("dashboard.components.stickerCanvasEditor.dragHint")}
       </p>

@@ -65,11 +65,11 @@ export default function AppleCallbackPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold text-ink">Menghubungkan ke Apple...</h1>
+      <h1 className="font-heading text-3xl font-extrabold text-app-ink">Menghubungkan ke Apple...</h1>
       {error ? (
         <>
           <p className="mt-3 text-sm text-red-600">{error}</p>
-          <Link href="/login" className="mt-6 inline-block text-sm font-semibold text-primary hover:underline">
+          <Link href="/login" className="mt-6 inline-block text-sm font-semibold text-jeon-purple hover:underline">
             Kembali ke login
           </Link>
         </>

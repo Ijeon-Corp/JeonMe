@@ -62,7 +62,7 @@ export default function DesignPageShell({
         {backHref && (
           <Link
             href={backHref}
-            className="mb-3 inline-flex items-center gap-1 rounded-full bg-primary-subtle px-3 py-1.5 text-xs font-bold text-primary transition-transform hover:-translate-x-0.5"
+            className="mb-3 inline-flex items-center gap-1 rounded-full bg-jeon-purple/10 px-3 py-1.5 text-xs font-bold text-jeon-purple transition-transform hover:-translate-x-0.5"
           >
             <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
             {t("dashboard.components.designPageShell.backToDesign")}

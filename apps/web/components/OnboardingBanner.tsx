@@ -89,10 +89,10 @@ export default function OnboardingBanner() {
   const nextItem = checklist.find((i) => !i.done);
 
   return (
-    <div className="border-b border-primary/20 bg-primary-subtle/40 px-4 py-2.5 sm:px-6">
+    <div className="border-b border-jeon-purple/20 bg-jeon-purple/10/40 px-4 py-2.5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple text-white">
             <IconSparkle className="h-3.5 w-3.5" />
           </span>
           <div className="min-w-0">
@@ -101,21 +101,21 @@ export default function OnboardingBanner() {
               {doneCount}/{total} {t("dashboard.components.onboardingBanner.completedSuffix")}
             </p>
             <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-white/70 sm:w-48">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+              <div className="h-full rounded-full bg-jeon-purple transition-all" style={{ width: `${pct}%` }} />
             </div>
           </div>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-3">
           {!allDone && nextItem && (
-            <Link href={nextItem.href} className="hidden text-xs font-bold text-primary hover:underline sm:inline">
+            <Link href={nextItem.href} className="hidden text-xs font-bold text-jeon-purple hover:underline sm:inline">
               {nextItem.label} &rarr;
             </Link>
           )}
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+            className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
           >
             {expanded ? t("dashboard.components.onboardingBanner.hideButton") : t("dashboard.components.onboardingBanner.showAllButton")}
             <IconChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
@@ -133,18 +133,18 @@ export default function OnboardingBanner() {
       </div>
 
       {expanded && (
-        <ul className="mt-3 flex flex-col gap-1.5 border-t border-primary/10 pt-3">
+        <ul className="mt-3 flex flex-col gap-1.5 border-t border-jeon-purple/10 pt-3">
           {checklist.map((item) => (
             <li key={item.key}>
               {item.done ? (
                 <span className="flex items-center gap-2 text-xs text-app-muted">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                     <IconCheck className="h-3 w-3" />
                   </span>
                   <span className="line-through">{item.label}</span>
                 </span>
               ) : (
-                <Link href={item.href} className="flex items-center gap-2 text-xs font-semibold text-app-ink hover:text-primary">
+                <Link href={item.href} className="flex items-center gap-2 text-xs font-semibold text-app-ink hover:text-jeon-purple">
                   <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-dashed border-muted" />
                   {item.label}
                 </Link>

@@ -161,14 +161,14 @@ export default function DashboardImportPage() {
   if (!myPage.is_premium) {
     return (
       <div className="glass mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-3xl p-8 text-center shadow-card">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle text-primary">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
           <IconSparkle className="h-6 w-6" />
         </span>
         <p className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.premiumOnlyNote")}</p>
         <button
           type="button"
           onClick={() => router.push("/dashboard/settings/subscription")}
-          className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark"
+          className="mt-2 rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark"
         >
           {t("dashboard.pages.import.upgradeButton")}
         </button>
@@ -181,13 +181,13 @@ export default function DashboardImportPage() {
       <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
         {!applySuccess ? (
           <>
-            <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary-subtle border-t-primary" aria-hidden />
+            <span className="h-10 w-10 animate-spin rounded-full border-4 border-jeon-purple-subtle border-t-primary" aria-hidden />
             <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.generatingTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.import.generatingDesc")}</p>
           </>
         ) : (
           <>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
               <IconCheck className="h-6 w-6" />
             </span>
             <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.successTitle")}</p>
@@ -197,7 +197,7 @@ export default function DashboardImportPage() {
         {applyError && (
           <>
             <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{applyError}</p>
-            <button type="button" onClick={() => setStep("preview")} className="mt-3 text-sm font-semibold text-primary hover:underline">
+            <button type="button" onClick={() => setStep("preview")} className="mt-3 text-sm font-semibold text-jeon-purple hover:underline">
               {t("dashboard.pages.import.backButton")}
             </button>
           </>
@@ -243,7 +243,7 @@ export default function DashboardImportPage() {
     return (
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-5">
-          <button type="button" onClick={() => setStep("input")} className="w-fit text-xs font-semibold text-app-muted hover:text-primary">
+          <button type="button" onClick={() => setStep("input")} className="w-fit text-xs font-semibold text-app-muted hover:text-jeon-purple">
             &larr; {t("dashboard.pages.import.backButton")}
           </button>
 
@@ -251,7 +251,7 @@ export default function DashboardImportPage() {
             <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.import.themeHeading")}</p>
             {hasTheme && result.theme ? (
               <div className="mt-3 flex items-center gap-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                   <IconSparkle className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
@@ -286,7 +286,7 @@ export default function DashboardImportPage() {
                       type="checkbox"
                       checked={checkedLinks[i] ?? false}
                       onChange={() => toggleLink(i)}
-                      className="h-4 w-4 flex-shrink-0 accent-primary"
+                      className="h-4 w-4 flex-shrink-0 accent-jeon-purple"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-app-ink">{l.title}</p>
@@ -316,7 +316,7 @@ export default function DashboardImportPage() {
                   type="button"
                   disabled={applying}
                   onClick={() => handleApply("add")}
-                  className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+                  className="rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
                 >
                   {t("dashboard.pages.import.addToExisting")}
                 </button>
@@ -324,7 +324,7 @@ export default function DashboardImportPage() {
                   type="button"
                   disabled={applying}
                   onClick={() => handleApply("replace")}
-                  className="rounded-full border border-app-border px-5 py-2.5 text-sm font-bold text-app-ink hover:border-primary disabled:opacity-60"
+                  className="rounded-full border border-app-border px-5 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
                 >
                   {t("dashboard.pages.import.replaceExisting")}
                 </button>
@@ -335,7 +335,7 @@ export default function DashboardImportPage() {
               type="button"
               disabled={applying}
               onClick={() => handleApply("add")}
-              className="w-fit rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+              className="w-fit rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
             >
               {hasTheme && hasLinks
                 ? t("dashboard.pages.import.applyButtonBoth")
@@ -374,7 +374,7 @@ export default function DashboardImportPage() {
                 <IconUpload className="h-5 w-5" />
               </span>
             )}
-            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary">
+            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
               {t("dashboard.pages.import.screenshotLabel")}
               <input
                 type="file"
@@ -394,7 +394,7 @@ export default function DashboardImportPage() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t("dashboard.pages.import.urlPlaceholder")}
-            className="w-full rounded-xl border border-app-border bg-app-surface px-3.5 py-2.5 text-sm text-app-ink outline-none focus:border-primary"
+            className="w-full rounded-xl border border-app-border bg-app-surface px-3.5 py-2.5 text-sm text-app-ink outline-none focus:border-jeon-purple"
           />
         </div>
 
@@ -403,7 +403,7 @@ export default function DashboardImportPage() {
         <button
           type="submit"
           disabled={analyzing}
-          className="w-fit rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+          className="w-fit rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
         >
           {analyzing ? t("dashboard.pages.import.analyzingButton") : t("dashboard.pages.import.analyzeButton")}
         </button>

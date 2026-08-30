@@ -152,7 +152,7 @@ export default function DashboardHomePage() {
           type="button"
           onClick={handleExport}
           disabled={exporting || loading}
-          className="flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-primary hover:text-primary disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {exporting ? t("dashboard.pages.home.exportingLabel") : t("dashboard.pages.home.exportCsvButton")}
@@ -201,8 +201,8 @@ export default function DashboardHomePage() {
             onClick={() => handlePreset(d)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               !useCustomRange && rangeDays === d
-                ? "border-primary bg-primary-subtle text-primary"
-                : "border-app-border text-app-muted hover:border-primary/50"
+                ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                : "border-app-border text-app-muted hover:border-jeon-purple/50"
             }`}
           >
             {d} {t("dashboard.pages.home.daysSuffix")}
@@ -220,22 +220,22 @@ export default function DashboardHomePage() {
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
           />
           <span className="text-xs text-app-muted">{t("dashboard.pages.home.dateRangeSeparator")}</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="rounded-lg border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
           />
           <button
             type="button"
             onClick={handleApplyCustomRange}
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
               useCustomRange
-                ? "border-primary bg-primary-subtle text-primary"
-                : "border-app-border text-app-muted hover:border-primary/50"
+                ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                : "border-app-border text-app-muted hover:border-jeon-purple/50"
             }`}
           >
             {t("dashboard.pages.home.applyButton")}
@@ -330,10 +330,10 @@ export default function DashboardHomePage() {
                   </div>
                   <div className="mt-3 flex gap-4 text-[11px] text-app-muted">
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-primary" /> {t("dashboard.pages.home.statLabelViews")}
+                      <span className="h-2 w-2 rounded-full bg-jeon-purple" /> {t("dashboard.pages.home.statLabelViews")}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-accent" /> {t("dashboard.pages.home.legendClicks")}
+                      <span className="h-2 w-2 rounded-full bg-jeon-warning" /> {t("dashboard.pages.home.legendClicks")}
                     </span>
                   </div>
                 </div>
@@ -350,7 +350,7 @@ export default function DashboardHomePage() {
                   {summary.weekly_revenue.map((d) => (
                     <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
                       <div
-                        className="w-full rounded-t bg-secondary transition-all"
+                        className="w-full rounded-t bg-jeon-purple transition-all"
                         style={{ height: `${Math.max(4, (d.revenue_idr / weeklyMax) * 80)}px` }}
                       />
                       <span className="text-[10px] text-app-muted">{weekdayLabel[new Date(d.date + "T00:00:00Z").getUTCDay()]}</span>
@@ -367,7 +367,7 @@ export default function DashboardHomePage() {
                   {summary.top_links.map((l) => (
                     <li key={l.link_id} className="flex justify-between text-xs">
                       <span className="truncate text-app-ink">{l.title}</span>
-                      <span className="ml-2 flex-shrink-0 font-semibold text-primary">{l.clicks}</span>
+                      <span className="ml-2 flex-shrink-0 font-semibold text-jeon-purple">{l.clicks}</span>
                     </li>
                   ))}
                   {summary.top_links.length === 0 && <EmptyRow text={t("dashboard.pages.home.emptyTopLinks")} />}
@@ -380,7 +380,7 @@ export default function DashboardHomePage() {
                   {summary.top_products.map((p) => (
                     <li key={p.product_id} className="flex justify-between text-xs">
                       <span className="truncate text-app-ink">{p.name}</span>
-                      <span className="ml-2 flex-shrink-0 font-semibold text-secondary-dark">{p.sold_count} {t("dashboard.pages.home.soldSuffix")}</span>
+                      <span className="ml-2 flex-shrink-0 font-semibold text-jeon-purple">{p.sold_count} {t("dashboard.pages.home.soldSuffix")}</span>
                     </li>
                   ))}
                   {summary.top_products.length === 0 && <EmptyRow text={t("dashboard.pages.home.emptyTopProducts")} />}
@@ -396,7 +396,7 @@ export default function DashboardHomePage() {
                     {summary.top_referrers.map((r) => (
                       <li key={r.referrer} className="flex justify-between text-xs">
                         <span className="truncate text-app-ink">{r.referrer}</span>
-                        <span className="ml-2 flex-shrink-0 font-semibold text-primary">{r.count}</span>
+                        <span className="ml-2 flex-shrink-0 font-semibold text-jeon-purple">{r.count}</span>
                       </li>
                     ))}
                   </ul>
@@ -412,13 +412,13 @@ export default function DashboardHomePage() {
                         <span className="w-20 flex-shrink-0 truncate text-app-ink">
                           {deviceLabel[d.device_type as keyof typeof deviceLabel] ?? d.device_type}
                         </span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-subtle/50">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/10/50">
                           <div
-                            className="h-full rounded-full bg-primary"
+                            className="h-full rounded-full bg-jeon-purple"
                             style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }}
                           />
                         </div>
-                        <span className="w-8 flex-shrink-0 text-right font-semibold text-primary">{d.count}</span>
+                        <span className="w-8 flex-shrink-0 text-right font-semibold text-jeon-purple">{d.count}</span>
                       </li>
                     ))}
                   </ul>
@@ -428,7 +428,7 @@ export default function DashboardHomePage() {
 
             {summary.total_views === 0 && (
               <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-app-border bg-app-surface/60 p-5 text-center">
-                <IconSparkle className="h-5 w-5 flex-shrink-0 text-accent" />
+                <IconSparkle className="h-5 w-5 flex-shrink-0 text-jeon-warning" />
                 <p className="text-xs text-app-muted">
                   {t("dashboard.pages.home.emptyViewsMessage")}
                 </p>

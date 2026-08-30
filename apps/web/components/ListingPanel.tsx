@@ -81,12 +81,12 @@ export default function ListingPanel({
             <span className="cursor-grab text-app-muted" title={t("dashboard.components.listingPanel.dragTitle")}>
               <IconGripVertical className="h-4 w-4" />
             </span>
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-subtle">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10">
               {p.cover_image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
               ) : (
-                <IconBox className="h-4 w-4 text-primary/40" />
+                <IconBox className="h-4 w-4 text-jeon-purple/40" />
               )}
             </span>
             <div className="min-w-0 flex-1">
@@ -97,7 +97,7 @@ export default function ListingPanel({
               type="button"
               onClick={() => handleToggleFeatured(p)}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-                p.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-app-border text-app-muted hover:border-primary"
+                p.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-app-border text-app-muted hover:border-jeon-purple"
               }`}
             >
               <IconStar className="h-3.5 w-3.5" />

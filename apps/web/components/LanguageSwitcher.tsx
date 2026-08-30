@@ -19,7 +19,7 @@ export default function LanguageSwitcher({ className }: { className?: string }) 
           onClick={() => setLocale(l)}
           aria-pressed={locale === l}
           className={`rounded-full px-2 py-1 uppercase transition-colors ${
-            locale === l ? "bg-primary text-white" : "text-app-muted hover:text-app-ink"
+            locale === l ? "bg-jeon-purple text-white" : "text-app-muted hover:text-app-ink"
           }`}
         >
           {l}

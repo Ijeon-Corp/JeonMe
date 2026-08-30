@@ -90,7 +90,7 @@ export default function DashboardSocialProofPage() {
           <select
             value={displaySeconds}
             onChange={(e) => setDisplaySeconds(Number(e.target.value))}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           >
             {DISPLAY_OPTIONS.map((v) => (
               <option key={v} value={v}>
@@ -105,7 +105,7 @@ export default function DashboardSocialProofPage() {
           <select
             value={intervalSeconds}
             onChange={(e) => setIntervalSeconds(Number(e.target.value))}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           >
             {INTERVAL_OPTIONS.map((v) => (
               <option key={v} value={v}>

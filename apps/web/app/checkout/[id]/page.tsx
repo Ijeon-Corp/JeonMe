@@ -85,7 +85,7 @@ export default function CheckoutStatusPage() {
   }, [status, params.id]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-primary-subtle/40 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-jeon-purple/10/40 px-4">
       {status?.social_proof && (
         <SocialProofToast
           recent={status.social_proof.recent}
@@ -111,7 +111,7 @@ export default function CheckoutStatusPage() {
           <>
             {status.status === "paid" && (
               <>
-                <p className="font-heading text-lg font-bold text-secondary-dark">Pembayaran Berhasil</p>
+                <p className="font-heading text-lg font-bold text-jeon-purple">Pembayaran Berhasil</p>
                 <p className="mt-2 text-sm text-muted">
                   {status.is_payment_link && status.success_message ? (
                     status.success_message
@@ -128,9 +128,9 @@ export default function CheckoutStatusPage() {
                 </p>
 
                 {status.is_booking && status.booked_slot_at && (
-                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Jadwal Konsultasimu</p>
-                    <p className="mt-1 text-sm font-semibold text-ink">
+                    <p className="mt-1 text-sm font-semibold text-app-ink">
                       {new Date(status.booked_slot_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}
                     </p>
                   </div>
@@ -162,15 +162,15 @@ export default function CheckoutStatusPage() {
                     (manual/random_code) diberi tampilan khusus karena
                     pembeli butuh tahu APA yang terjadi selanjutnya. */}
                 {status.delivery_method === "manual" && (
-                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Status Pesanan</p>
                     {status.fulfilled_at ? (
-                      <p className="mt-1 text-sm font-semibold text-secondary-dark">
+                      <p className="mt-1 text-sm font-semibold text-jeon-purple">
                         Sudah diproses penjual pada{" "}
                         {new Date(status.fulfilled_at).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}.
                       </p>
                     ) : (
-                      <p className="mt-1 text-sm text-ink">
+                      <p className="mt-1 text-sm text-app-ink">
                         Pesananmu akan diproses & dikirim langsung oleh penjual (lewat email/WhatsApp). Mohon tunggu.
                       </p>
                     )}
@@ -178,14 +178,14 @@ export default function CheckoutStatusPage() {
                 )}
 
                 {status.delivery_method === "random_code" && (
-                  <div className="mt-4 rounded-xl border border-border bg-primary-subtle/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Kode Kamu</p>
                     {status.claimed_code ? (
-                      <p className="mt-1 select-all rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold text-ink">
+                      <p className="mt-1 select-all rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold text-app-ink">
                         {status.claimed_code}
                       </p>
                     ) : (
-                      <p className="mt-1 text-sm text-ink">
+                      <p className="mt-1 text-sm text-app-ink">
                         Kode sedang disiapkan. Kalau tidak muncul dalam beberapa menit, hubungi penjual.
                       </p>
                     )}
@@ -202,8 +202,8 @@ export default function CheckoutStatusPage() {
                         <VideoEmbedBlock
                           title={`Bab ${i + 1}: ${chapter.title}`}
                           videoUrl={chapter.video_url}
-                          cardClassName="rounded-xl border border-border bg-primary-subtle/20 p-3"
-                          titleClassName="text-ink"
+                          cardClassName="rounded-xl border border-border bg-jeon-purple/10/20 p-3"
+                          titleClassName="text-app-ink"
                         />
                         {chapter.description && <p className="mt-2 text-xs text-muted">{chapter.description}</p>}
                       </div>
@@ -216,7 +216,7 @@ export default function CheckoutStatusPage() {
             )}
             {status.status === "pending" && (
               <>
-                <p className="font-heading text-lg font-bold text-ink">Menunggu Pembayaran</p>
+                <p className="font-heading text-lg font-bold text-app-ink">Menunggu Pembayaran</p>
                 <p className="mt-2 text-sm text-muted">
                   Kami belum menerima konfirmasi pembayaran untuk <b>{status.product_name}</b>. Kalau kamu
                   sudah membayar, tunggu sebentar lalu muat ulang halaman ini.
@@ -279,14 +279,14 @@ function ReviewForm({ orderId }: { orderId: string }) {
 
   if (submitted) {
     return (
-      <div className="mt-4 rounded-xl border border-border bg-secondary-subtle/40 p-3.5 text-left">
-        <p className="text-sm font-semibold text-secondary-dark">Terima kasih atas ulasanmu!</p>
+      <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/40 p-3.5 text-left">
+        <p className="text-sm font-semibold text-jeon-purple">Terima kasih atas ulasanmu!</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-primary-subtle/20 p-3.5 text-left">
+    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-jeon-purple/10/20 p-3.5 text-left">
       <p className="text-xs font-bold uppercase tracking-wider text-muted">Beri Ulasan</p>
       <div className="mt-2 flex gap-1">
         {[1, 2, 3, 4, 5].map((n) => (
@@ -307,7 +307,7 @@ function ReviewForm({ orderId }: { orderId: string }) {
         onChange={(e) => setComment(e.target.value)}
         placeholder="Ceritakan pengalamanmu (opsional)"
         rows={2}
-        className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+        className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
       />
       {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
       <button

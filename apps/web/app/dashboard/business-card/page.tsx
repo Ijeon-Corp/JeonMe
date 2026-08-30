@@ -78,7 +78,7 @@ export default function DashboardBusinessCardPage() {
         <button
           type="button"
           onClick={() => setQrOpen(true)}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-app-border bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-primary hover:text-primary"
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-app-border bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
         >
           <IconQrCode className="h-4 w-4" />
           {t("dashboard.pages.businessCard.viewQrButton")}
@@ -108,7 +108,7 @@ export default function DashboardBusinessCardPage() {
             value={card.full_name}
             onChange={(e) => setCard({ ...card, full_name: e.target.value })}
             maxLength={200}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
         </div>
 
@@ -120,7 +120,7 @@ export default function DashboardBusinessCardPage() {
               value={card.job_title}
               onChange={(e) => setCard({ ...card, job_title: e.target.value })}
               maxLength={200}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
           <div>
@@ -130,7 +130,7 @@ export default function DashboardBusinessCardPage() {
               value={card.company}
               onChange={(e) => setCard({ ...card, company: e.target.value })}
               maxLength={200}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function DashboardBusinessCardPage() {
               value={card.phone}
               onChange={(e) => setCard({ ...card, phone: e.target.value })}
               maxLength={30}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
           <div>
@@ -153,7 +153,7 @@ export default function DashboardBusinessCardPage() {
               value={card.whatsapp_number}
               onChange={(e) => setCard({ ...card, whatsapp_number: e.target.value })}
               maxLength={30}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function DashboardBusinessCardPage() {
             value={card.email}
             onChange={(e) => setCard({ ...card, email: e.target.value })}
             maxLength={255}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
@@ -177,7 +177,7 @@ export default function DashboardBusinessCardPage() {
             onChange={(e) => setCard({ ...card, website: e.target.value })}
             placeholder="https://..."
             maxLength={500}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           />
         </div>
 

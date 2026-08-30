@@ -178,7 +178,7 @@ export default function SettingsProfilePage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsProfile.breadcrumb")}
@@ -187,7 +187,7 @@ export default function SettingsProfilePage() {
       <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsProfile.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
         {t("dashboard.pages.settingsProfile.subtitlePrefix")}{" "}
-        <Link href="/dashboard/design" className="font-semibold text-primary hover:underline">
+        <Link href="/dashboard/design" className="font-semibold text-jeon-purple hover:underline">
           {t("dashboard.pages.settingsProfile.designLinkLabel")}
         </Link>
         .
@@ -219,7 +219,7 @@ export default function SettingsProfilePage() {
           <button
             type="button"
             onClick={() => setQrOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-primary hover:text-primary"
+            className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
           >
             <IconQrCode className="h-4 w-4" />
             {t("dashboard.pages.settingsProfile.viewQrCode")}
@@ -235,10 +235,10 @@ export default function SettingsProfilePage() {
           <div
             className={`mt-1 flex items-center rounded-xl border bg-app-surface transition-colors focus-within:ring-2 ${
               usernameState === "available"
-                ? "border-secondary focus-within:border-secondary focus-within:ring-secondary/20"
+                ? "border-jeon-purple focus-within:border-jeon-purple focus-within:ring-secondary/20"
                 : usernameState === "unavailable"
                 ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
-                : "border-app-border focus-within:border-primary focus-within:ring-primary/20"
+                : "border-app-border focus-within:border-jeon-purple focus-within:ring-jeon-purple/20"
             }`}
           >
             <span className="pl-3 text-sm text-app-muted">jeon.id/</span>
@@ -269,7 +269,7 @@ export default function SettingsProfilePage() {
                 <p
                   className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${
                     usernameState === "available"
-                      ? "text-secondary-dark"
+                      ? "text-jeon-purple"
                       : usernameState === "unavailable"
                       ? "text-red-600"
                       : "text-app-muted"
@@ -307,7 +307,7 @@ export default function SettingsProfilePage() {
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={100}
             placeholder={username}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
@@ -321,7 +321,7 @@ export default function SettingsProfilePage() {
             onChange={(e) => setBio(e.target.value)}
             maxLength={160}
             rows={3}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-right text-[11px] text-app-muted">{bio.length}/160</p>
         </div>
@@ -336,14 +336,14 @@ export default function SettingsProfilePage() {
             onChange={(e) => setCategory(e.target.value)}
             maxLength={50}
             placeholder={t("dashboard.pages.settingsProfile.categoryPlaceholder")}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="mt-2 self-start rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60"
+          className="mt-2 self-start rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
         >
           {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>

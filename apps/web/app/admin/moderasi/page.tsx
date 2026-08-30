@@ -170,7 +170,7 @@ export default function AdminModerationPage() {
             type="button"
             onClick={handleAddKeyword}
             disabled={savingKeyword || !newKeyword.trim()}
-            className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dark disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-jeon-purple px-3 py-1.5 text-xs font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-50"
           >
             <Plus className="h-3.5 w-3.5" />
             Tambah
@@ -253,7 +253,7 @@ export default function AdminModerationPage() {
               type="button"
               onClick={() => setDomainFilter(f)}
               className={`rounded-full px-3 py-1 font-semibold ${
-                domainFilter === f ? "bg-primary text-white" : "border border-app-border text-app-muted hover:border-primary"
+                domainFilter === f ? "bg-jeon-purple text-white" : "border border-app-border text-app-muted hover:border-jeon-purple"
               }`}
             >
               {f === "blocked" ? "Diblokir" : f === "allowed" ? "Diizinkan" : "Semua"}

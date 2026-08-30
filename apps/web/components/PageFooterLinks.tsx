@@ -69,8 +69,8 @@ export default function PageFooterLinks({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-heading text-base font-bold text-ink">{MODAL_TITLES[active]}</h3>
-              <button type="button" onClick={() => setActive(null)} className="text-muted hover:text-ink">
+              <h3 className="font-heading text-base font-bold text-app-ink">{MODAL_TITLES[active]}</h3>
+              <button type="button" onClick={() => setActive(null)} className="text-muted hover:text-app-ink">
                 <IconClose className="h-5 w-5" />
               </button>
             </div>
@@ -84,7 +84,7 @@ export default function PageFooterLinks({
 
             {active === "report" &&
               (pageId ? (
-                <ReportButton pageId={pageId} className="text-ink" autoOpen />
+                <ReportButton pageId={pageId} className="text-app-ink" autoOpen />
               ) : (
                 <p className="text-sm text-muted">Pelaporan tidak tersedia untuk halaman ini.</p>
               ))}
@@ -102,13 +102,13 @@ export default function PageFooterLinks({
             {active === "about" && (
               <div className="flex flex-col gap-1.5 text-sm text-muted">
                 <p>
-                  <span className="font-semibold text-ink">Username:</span> @{username}
+                  <span className="font-semibold text-app-ink">Username:</span> @{username}
                 </p>
                 <p className="flex items-center gap-1">
-                  <span className="font-semibold text-ink">Status:</span>
+                  <span className="font-semibold text-app-ink">Status:</span>
                   {isVerified ? (
                     <>
-                      <IconBadgeCheck className="h-4 w-4 text-primary" /> Terverifikasi
+                      <IconBadgeCheck className="h-4 w-4 text-jeon-purple" /> Terverifikasi
                     </>
                   ) : (
                     "Belum terverifikasi"
@@ -116,7 +116,7 @@ export default function PageFooterLinks({
                 </p>
                 {bio && (
                   <p>
-                    <span className="font-semibold text-ink">Bio:</span> {bio}
+                    <span className="font-semibold text-app-ink">Bio:</span> {bio}
                   </p>
                 )}
               </div>

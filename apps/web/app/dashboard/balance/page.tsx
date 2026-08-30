@@ -133,13 +133,13 @@ export default function DashboardBalancePage() {
               SELALU Rp0 untuk order baru, jadi breakdown per-kanal cuma
               jadi tabel nol yang tidak berguna. Pernyataan tunggal di
               bawah ini menggantikannya, lebih jujur & tidak berulang. */}
-          <div className="flex items-start gap-3 rounded-2xl bg-secondary-subtle px-4 py-3.5">
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-secondary text-white">
+          <div className="flex items-start gap-3 rounded-2xl bg-jeon-purple/10 px-4 py-3.5">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple text-white">
               <IconBadgeCheck className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-bold text-secondary-dark">{t("dashboard.pages.balance.zeroFeeTitle")}</p>
-              <p className="mt-0.5 text-xs text-secondary-dark/80">{t("dashboard.pages.balance.zeroFeeDesc")}</p>
+              <p className="text-sm font-bold text-jeon-purple">{t("dashboard.pages.balance.zeroFeeTitle")}</p>
+              <p className="mt-0.5 text-xs text-jeon-purple/80">{t("dashboard.pages.balance.zeroFeeDesc")}</p>
             </div>
           </div>
 
@@ -161,7 +161,7 @@ export default function DashboardBalancePage() {
         <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
         <p className="mt-1 text-xs text-app-muted">
           {t("dashboard.pages.balance.minimumPrefix")}{" "}
-          <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-primary hover:underline">
+          <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-jeon-purple hover:underline">
             <IconShield className="h-3 w-3" />
             {t("dashboard.pages.balance.kycLinkText")}
           </Link>{" "}
@@ -169,9 +169,9 @@ export default function DashboardBalancePage() {
         </p>
 
         {verifiedMethods.length === 0 ? (
-          <p className="mt-3 rounded-lg bg-primary-subtle/50 px-3 py-2 text-xs text-app-ink">
+          <p className="mt-3 rounded-lg bg-jeon-purple/10/50 px-3 py-2 text-xs text-app-ink">
             {t("dashboard.pages.balance.noMethodPrefix")}{" "}
-            <Link href="/dashboard/settings/payment" className="font-semibold text-primary hover:underline">
+            <Link href="/dashboard/settings/payment" className="font-semibold text-jeon-purple hover:underline">
               {t("dashboard.pages.balance.noMethodLinkText")}
             </Link>{" "}
             {t("dashboard.pages.balance.noMethodSuffix")}
@@ -184,12 +184,12 @@ export default function DashboardBalancePage() {
               placeholder={t("dashboard.pages.balance.amountPlaceholder")}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-40 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-40 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             />
             <select
               value={selectedMethodId}
               onChange={(e) => setPayoutMethodId(e.target.value)}
-              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
             >
               {verifiedMethods.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -220,7 +220,7 @@ export default function DashboardBalancePage() {
               <span
                 className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                   p.status === "completed"
-                    ? "bg-secondary-subtle text-secondary-dark"
+                    ? "bg-jeon-purple/10 text-jeon-purple"
                     : p.status === "failed"
                       ? "bg-red-50 text-red-600"
                       : "bg-gray-100 text-app-muted"

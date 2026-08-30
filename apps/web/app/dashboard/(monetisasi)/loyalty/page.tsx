@@ -141,7 +141,7 @@ export default function DashboardLoyaltyPage() {
             <select
               value={settings.point_type}
               onChange={(e) => setSettings({ ...settings, point_type: e.target.value as "percentage" | "nominal" })}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             >
               <option value="nominal">{t("dashboard.pages.loyalty.pointTypeNominal")}</option>
               <option value="percentage">{t("dashboard.pages.loyalty.pointTypePercentage")}</option>
@@ -155,7 +155,7 @@ export default function DashboardLoyaltyPage() {
               step="0.1"
               value={settings.points_rate}
               onChange={(e) => setSettings({ ...settings, points_rate: Number(e.target.value) })}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
           <div>
@@ -166,7 +166,7 @@ export default function DashboardLoyaltyPage() {
               value={settings.points_limit ?? ""}
               onChange={(e) => setSettings({ ...settings, points_limit: e.target.value ? Number(e.target.value) : null })}
               placeholder={t("dashboard.pages.loyalty.pointsLimitPlaceholder")}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
           <div>
@@ -176,7 +176,7 @@ export default function DashboardLoyaltyPage() {
               min={0}
               value={settings.min_purchase_idr}
               onChange={(e) => setSettings({ ...settings, min_purchase_idr: Number(e.target.value) })}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function DashboardLoyaltyPage() {
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
+              className="flex items-center gap-1.5 text-sm font-bold text-jeon-purple hover:underline"
             >
               <IconPlus className="h-4 w-4" />
               {t("dashboard.pages.loyalty.addReward")}
@@ -214,7 +214,7 @@ export default function DashboardLoyaltyPage() {
               placeholder={t("dashboard.pages.loyalty.rewardNamePlaceholder")}
               value={rewardName}
               onChange={(e) => setRewardName(e.target.value)}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -224,12 +224,12 @@ export default function DashboardLoyaltyPage() {
                 placeholder={t("dashboard.pages.loyalty.pointsNeededPlaceholder")}
                 value={pointsNeeded}
                 onChange={(e) => setPointsNeeded(e.target.value)}
-                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as "percentage" | "nominal")}
-                className="rounded-lg border border-app-border px-2 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-2 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               >
                 <option value="nominal">{t("dashboard.pages.loyalty.discountTypeNominal")}</option>
                 <option value="percentage">{t("dashboard.pages.loyalty.discountTypePercentage")}</option>
@@ -241,7 +241,7 @@ export default function DashboardLoyaltyPage() {
                 placeholder={t("dashboard.pages.loyalty.discountValuePlaceholder")}
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
-                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
             </div>
             <div className="flex gap-2">

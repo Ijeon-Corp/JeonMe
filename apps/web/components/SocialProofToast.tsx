@@ -60,7 +60,7 @@ export default function SocialProofToast({
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
         <IconCheck className="h-4 w-4" />
       </div>
-      <p className="text-xs text-ink">
+      <p className="text-xs text-app-ink">
         <span className="font-bold">{current.masked_email}</span> baru saja membeli{" "}
         <span className="font-bold">{current.product_name}</span>
       </p>

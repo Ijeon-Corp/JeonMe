@@ -53,7 +53,7 @@ export default function DesignTombolPage() {
                 type="button"
                 onClick={() => handleStyleOverride({ custom_button_style: opt.value })}
                 className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                  page.custom_button_style === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                  page.custom_button_style === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
                 }`}
               >
                 {opt.label}
@@ -71,7 +71,7 @@ export default function DesignTombolPage() {
                 onClick={() => handleStyleOverride({ custom_button_rounded: opt.value })}
                 title={opt.label}
                 className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
-                  page.custom_button_rounded === opt.value ? "border-primary bg-app-surface" : "border-app-border"
+                  page.custom_button_rounded === opt.value ? "border-jeon-purple bg-app-surface" : "border-app-border"
                 }`}
               >
                 <span className={`block h-3 w-6 border-2 border-ink/60 ${opt.className}`} aria-hidden />
@@ -88,7 +88,7 @@ export default function DesignTombolPage() {
                 type="button"
                 onClick={() => handleStyleOverride({ custom_button_shadow: opt.value })}
                 className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                  page.custom_button_shadow === opt.value ? "border-primary bg-app-surface text-primary" : "border-app-border text-app-muted"
+                  page.custom_button_shadow === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
                 }`}
               >
                 {opt.label}

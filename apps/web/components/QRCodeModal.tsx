@@ -42,12 +42,12 @@ export default function QRCodeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="relative w-full max-w-xs rounded-2xl bg-app-surface p-6 text-center shadow-hero">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-primary-subtle"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-app-muted hover:bg-jeon-purple/10"
           aria-label={t("dashboard.components.qrCodeModal.closeAriaLabel")}
         >
           <IconClose className="h-4 w-4" />

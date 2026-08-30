@@ -103,14 +103,14 @@ export default function SettingsSubscriptionPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsSubscription.breadcrumb")}
       </Link>
 
       <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
-        <IconStar className="h-6 w-6 text-primary" />
+        <IconStar className="h-6 w-6 text-jeon-purple" />
         {t("dashboard.pages.settingsSubscription.title")}
       </h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSubscription.subtitle")}</p>
@@ -120,7 +120,7 @@ export default function SettingsSubscriptionPage() {
       {status.is_premium ? (
         <section className="mt-6 rounded-3xl border border-app-border bg-app-surface-2 p-5">
           <div className="flex items-center gap-2">
-            <IconStar className="h-5 w-5 text-accent" />
+            <IconStar className="h-5 w-5 text-jeon-warning" />
             <h2 className="font-heading text-sm font-bold text-app-ink">
               {t("dashboard.pages.settingsSubscription.youArePremium").replace("{plan}", planLabel)}
             </h2>
@@ -163,7 +163,7 @@ export default function SettingsSubscriptionPage() {
       )}
 
       {!status.is_premium && isLive && (
-        <p className="mt-3 rounded-lg bg-primary-subtle/40 px-3 py-2 text-xs text-app-muted">
+        <p className="mt-3 rounded-lg bg-jeon-purple/10/40 px-3 py-2 text-xs text-app-muted">
           {t("dashboard.pages.settingsSubscription.paymentProcessing")}
         </p>
       )}
@@ -181,7 +181,7 @@ export default function SettingsSubscriptionPage() {
 function BenefitRow({ text }: { text: string }) {
   return (
     <li className="flex items-center gap-2">
-      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
         <IconCheck className="h-3 w-3" />
       </span>
       {text}
@@ -213,11 +213,11 @@ function PricingCard({
   return (
     <div
       className={`relative rounded-2xl border p-5 ${
-        highlight ? "border-primary bg-primary-subtle/30" : "border-app-border bg-app-surface"
+        highlight ? "border-jeon-purple bg-jeon-purple/10/30" : "border-app-border bg-app-surface"
       }`}
     >
       {badge && (
-        <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-white">
+        <span className="absolute -top-2.5 right-4 rounded-full bg-jeon-purple px-2.5 py-0.5 text-[10px] font-bold text-white">
           {badge}
         </span>
       )}
@@ -230,7 +230,7 @@ function PricingCard({
         type="button"
         onClick={onSubscribe}
         disabled={disabled}
-        className="mt-4 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+        className="mt-4 w-full rounded-xl bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
       >
         {busy ? t("dashboard.pages.settingsSubscription.preparingPayment") : t("dashboard.pages.settingsSubscription.subscribeButton")}
       </button>

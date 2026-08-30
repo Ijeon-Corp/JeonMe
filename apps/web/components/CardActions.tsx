@@ -79,33 +79,33 @@ export default function CardActions({ card }: { card: PublicBusinessCard }) {
             <p className="text-sm font-semibold text-green-700">Terima kasih! Kontakmu sudah dibagikan.</p>
           ) : (
             <form onSubmit={handleSubmitContact} className="flex flex-col gap-2">
-              <p className="text-sm font-bold text-ink">Bagikan kontakmu balik</p>
+              <p className="text-sm font-bold text-app-ink">Bagikan kontakmu balik</p>
               {error && <p className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-600">{error}</p>}
               <input
                 type="text"
                 placeholder="Nama kamu"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Nomor WhatsApp"
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="rounded-lg border border-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-1 rounded-lg border border-border py-2 text-sm font-bold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+                className="mt-1 rounded-lg border border-border py-2 text-sm font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
               >
                 {submitting ? "Mengirim..." : "Bagikan"}
               </button>

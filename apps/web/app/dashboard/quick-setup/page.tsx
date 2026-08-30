@@ -353,9 +353,9 @@ export default function QuickSetupPage() {
               key={c.key}
               type="button"
               onClick={() => openCategory(c.key)}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-primary"
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-subtle text-primary">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                 <c.Icon className="h-5 w-5" />
               </span>
               <span className="text-sm font-bold text-app-ink">{c.label}</span>
@@ -372,20 +372,20 @@ export default function QuickSetupPage() {
       <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
         {!generateSuccess ? (
           <>
-            <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary-subtle border-t-primary" aria-hidden />
+            <span className="h-10 w-10 animate-spin rounded-full border-4 border-jeon-purple-subtle border-t-primary" aria-hidden />
             <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.generatingTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.generatingDesc")}</p>
           </>
         ) : (
           <>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
               <IconCheck className="h-6 w-6" />
             </span>
             <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.successTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.successDesc")}</p>
             {tokoSynced && <p className="mt-2 text-xs text-app-muted">{t("dashboard.pages.quickSetup.tokoSyncedNote")}</p>}
             {appliedMonetizationHint && (
-              <p className="mt-3 max-w-sm rounded-xl bg-primary-subtle px-4 py-3 text-xs font-semibold text-primary">{appliedMonetizationHint}</p>
+              <p className="mt-3 max-w-sm rounded-xl bg-jeon-purple/10 px-4 py-3 text-xs font-semibold text-jeon-purple">{appliedMonetizationHint}</p>
             )}
           </>
         )}
@@ -402,7 +402,7 @@ export default function QuickSetupPage() {
       <button
         type="button"
         onClick={() => setStep("category")}
-        className="mb-1 inline-flex items-center gap-1 rounded-full bg-primary-subtle px-3 py-1.5 text-xs font-bold text-primary transition-transform hover:-translate-x-0.5"
+        className="mb-1 inline-flex items-center gap-1 rounded-full bg-jeon-purple/10 px-3 py-1.5 text-xs font-bold text-jeon-purple transition-transform hover:-translate-x-0.5"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.quickSetup.changeCategoryButton")}
@@ -421,7 +421,7 @@ export default function QuickSetupPage() {
               type="button"
               onClick={() => setTab("template")}
               className={`border-b-2 px-3 py-2 text-sm font-semibold ${
-                tab === "template" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+                tab === "template" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
               {t("dashboard.pages.quickSetup.templateTab")}
@@ -435,7 +435,7 @@ export default function QuickSetupPage() {
               onClick={() => selectedTemplate && setTab("theme")}
               title={!selectedTemplate ? t("dashboard.pages.quickSetup.selectTemplateFirstTitle") : undefined}
               className={`border-b-2 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
-                tab === "theme" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+                tab === "theme" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
               {t("dashboard.pages.quickSetup.themeTab")}
@@ -451,7 +451,7 @@ export default function QuickSetupPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t("dashboard.pages.quickSetup.searchPlaceholder")}
-                  className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
                 />
               </div>
 
@@ -477,7 +477,7 @@ export default function QuickSetupPage() {
                       }
                     }}
                     className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-app-surface text-left shadow-card transition-transform hover:-translate-y-0.5 ${
-                      selectedTemplate?.key === tpl.key ? "border-primary ring-2 ring-primary ring-offset-2" : "border-app-border"
+                      selectedTemplate?.key === tpl.key ? "border-jeon-purple ring-2 ring-jeon-purple ring-offset-2" : "border-app-border"
                     }`}
                   >
                     <div className="relative h-64 w-full overflow-hidden bg-app-surface pointer-events-none" aria-hidden="true">
@@ -542,7 +542,7 @@ export default function QuickSetupPage() {
             type="button"
             onClick={() => selectedTemplate && applyTemplate(previewTemplate ?? selectedTemplate)}
             disabled={!selectedTemplate || submitting}
-            className="mt-4 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="mt-4 w-full rounded-full bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {submitting ? t("dashboard.pages.quickSetup.checkingButton") : t("dashboard.pages.quickSetup.applyTemplateButton")}
           </button>

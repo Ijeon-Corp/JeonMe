@@ -66,7 +66,7 @@ export default function DashboardDesignPage() {
               href={`${SITE_URL}/${page.username}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+              className="flex items-center gap-1 text-xs font-semibold text-jeon-purple hover:underline"
             >
               <IconExternal className="h-3.5 w-3.5" />
               jeon.id/{page.username}
@@ -77,11 +77,11 @@ export default function DashboardDesignPage() {
               proses review manual. */}
           <div
             className={`mt-4 rounded-xl border p-3.5 ${
-              page.verification.is_verified ? "border-primary/30 bg-primary-subtle/40" : "border-app-border bg-app-surface-2"
+              page.verification.is_verified ? "border-jeon-purple/30 bg-jeon-purple/10/40" : "border-app-border bg-app-surface-2"
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-primary" : "text-app-muted"}`} />
+              <IconBadgeCheck className={`h-4 w-4 ${page.verification.is_verified ? "text-jeon-purple" : "text-app-muted"}`} />
               <span className="text-xs font-bold text-app-ink">
                 {page.verification.is_verified
                   ? t("dashboard.pages.design.verifiedBadgeActive")
@@ -89,15 +89,15 @@ export default function DashboardDesignPage() {
               </span>
             </div>
             <ul className="mt-2 flex flex-col gap-1 text-[11px]">
-              <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-secondary-dark" : "text-app-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.email_verified ? "text-jeon-purple" : "text-app-muted"}`}>
                 {page.verification.email_verified ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 {t("dashboard.pages.design.emailVerified")}
               </li>
-              <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-secondary-dark" : "text-app-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.profile_complete ? "text-jeon-purple" : "text-app-muted"}`}>
                 {page.verification.profile_complete ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 {t("dashboard.pages.design.profileComplete")}
               </li>
-              <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-secondary-dark" : "text-app-muted"}`}>
+              <li className={`flex items-center gap-1.5 ${page.verification.has_paid_order ? "text-jeon-purple" : "text-app-muted"}`}>
                 {page.verification.has_paid_order ? <IconCheck className="h-3 w-3" /> : <span className="h-3 w-3 rounded-full border border-muted" />}
                 {t("dashboard.pages.design.minTransaction")}
               </li>
@@ -105,7 +105,7 @@ export default function DashboardDesignPage() {
           </div>
 
           <div className="mt-5 flex flex-col gap-3">
-            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: themeSwatch }} aria-hidden />
                 <div>
@@ -118,13 +118,13 @@ export default function DashboardDesignPage() {
 
             <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.design.customizeSectionLabel")}</p>
 
-            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={page.avatar_url} alt={page.username} className="h-8 w-8 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
                 ) : (
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle font-heading text-sm font-bold text-primary">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 font-heading text-sm font-bold text-jeon-purple">
                     {page.username.slice(0, 1).toUpperCase()}
                   </span>
                 )}
@@ -133,7 +133,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />
                 <div>
@@ -144,7 +144,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-heading text-sm font-bold text-pop-blue" aria-hidden>
                   Aa
@@ -157,7 +157,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-primary/40">
+            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-pink-tint text-pop-pink" aria-hidden>
                   <IconSparkle className="h-4 w-4" />
@@ -191,7 +191,7 @@ export default function DashboardDesignPage() {
                 }
                 className="flex min-w-0 items-center gap-3 text-left"
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-primary" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink/5 text-jeon-purple" aria-hidden>
                   {page.is_premium ? <IconSparkle className="h-4 w-4" /> : <IconLock className="h-4 w-4 text-app-muted" />}
                 </span>
                 <div className="min-w-0">

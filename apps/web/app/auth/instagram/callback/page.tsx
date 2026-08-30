@@ -56,13 +56,13 @@ export default function InstagramCallbackPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
-      <h1 className="font-heading text-2xl font-extrabold text-ink">
+      <h1 className="font-heading text-2xl font-extrabold text-app-ink">
         {!result ? "Menghubungkan ke Instagram..." : result.ok ? "Instagram tersambung!" : "Gagal menyambungkan"}
       </h1>
       {result && !result.ok && (
         <>
           <p className="mt-3 text-sm text-red-600">{result.message}</p>
-          <Link href="/dashboard/social-connect" className="mt-6 text-sm font-semibold text-primary hover:underline">
+          <Link href="/dashboard/social-connect" className="mt-6 text-sm font-semibold text-jeon-purple hover:underline">
             Kembali
           </Link>
         </>

@@ -96,7 +96,7 @@ export default function GlobalSearch() {
         onClick={openPalette}
         title={t("dashboard.components.globalSearch.triggerTitle")}
         aria-label={t("dashboard.components.globalSearch.triggerLabel")}
-        className="flex h-8 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
+        className="flex h-8 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconSearch className="h-3.5 w-3.5" />
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): "sm:inline"
@@ -148,10 +148,10 @@ export default function GlobalSearch() {
                     onClick={() => goTo(item.href)}
                     onMouseEnter={() => setActiveIndex(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${
-                      i === activeIndex ? "bg-primary-subtle/60" : "hover:bg-primary-subtle/40"
+                      i === activeIndex ? "bg-jeon-purple/10/60" : "hover:bg-jeon-purple/10/40"
                     }`}
                   >
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
                       <item.icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">

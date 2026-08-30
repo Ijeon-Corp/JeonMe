@@ -64,7 +64,7 @@ function ThemeTile({
     <button type="button" onClick={onClick} className="group flex flex-col items-center gap-1.5">
       <div
         className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 transition-transform group-hover:scale-[1.02] ${
-          active ? "ring-2 ring-primary ring-offset-2" : ""
+          active ? "ring-2 ring-jeon-purple ring-offset-2" : ""
         }`}
       >
         {children}
@@ -74,12 +74,12 @@ function ThemeTile({
           </div>
         )}
         {active && !locked && (
-          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-white">
             <IconCheck className="h-3 w-3" />
           </span>
         )}
       </div>
-      <span className={`text-[11px] font-semibold ${active ? "text-primary" : "text-app-ink"}`}>
+      <span className={`text-[11px] font-semibold ${active ? "text-jeon-purple" : "text-app-ink"}`}>
         {label}
         {locked && t("dashboard.components.themeGallery.premiumSuffix")}
       </span>
@@ -98,7 +98,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("gradien")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "gradien" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+            tab === "gradien" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           {t("dashboard.components.themeGallery.tabGradient")}
@@ -107,7 +107,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("wallpaper")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "wallpaper" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+            tab === "wallpaper" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           {t("dashboard.components.themeGallery.tabWallpaper")}
@@ -116,7 +116,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("3d")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "3d" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+            tab === "3d" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           {t("dashboard.components.themeGallery.tab3d")}
@@ -125,7 +125,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("video")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "video" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+            tab === "video" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           {t("dashboard.components.themeGallery.tabVideo")}
@@ -134,7 +134,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           type="button"
           onClick={() => setTab("doodle")}
           className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
-            tab === "doodle" ? "border-primary text-primary" : "border-transparent text-app-muted hover:text-app-ink"
+            tab === "doodle" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
           {t("dashboard.components.themeGallery.tabDoodle")}

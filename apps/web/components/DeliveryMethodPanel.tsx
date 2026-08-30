@@ -166,7 +166,7 @@ export default function DeliveryMethodPanel({
         value={product.delivery_method}
         disabled={saving}
         onChange={(e) => handleChangeMethod(e.target.value as DashboardProduct["delivery_method"])}
-        className="mt-1.5 w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none disabled:opacity-60"
+        className="mt-1.5 w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none disabled:opacity-60"
       >
         {METHOD_OPTIONS.map((m) => (
           <option key={m.value} value={m.value}>
@@ -186,7 +186,7 @@ export default function DeliveryMethodPanel({
               placeholder={t("dashboard.components.deliveryMethodPanel.webhookUrlPlaceholder")}
               value={webhookUrlDraft}
               onChange={(e) => setWebhookUrlDraft(e.target.value)}
-              className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+              className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
             />
             <button
               type="button"
@@ -198,12 +198,12 @@ export default function DeliveryMethodPanel({
             </button>
           </div>
           {webhookSecret ? (
-            <div className="flex items-center gap-1.5 rounded-md bg-primary-subtle/40 px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 rounded-md bg-jeon-purple/10/40 px-2.5 py-1.5">
               <code className="min-w-0 flex-1 truncate text-[10px] text-app-ink">{webhookSecret}</code>
               <button
                 type="button"
                 onClick={handleCopySecret}
-                className="flex-shrink-0 text-primary"
+                className="flex-shrink-0 text-jeon-purple"
                 title={t("dashboard.components.deliveryMethodPanel.copyTitle")}
               >
                 {copied ? <IconCheck className="h-3.5 w-3.5" /> : <IconCopy className="h-3.5 w-3.5" />}
@@ -214,7 +214,7 @@ export default function DeliveryMethodPanel({
               type="button"
               disabled={loadingSecret}
               onClick={handleRevealSecret}
-              className="self-start text-[11px] font-semibold text-primary hover:underline disabled:opacity-60"
+              className="self-start text-[11px] font-semibold text-jeon-purple hover:underline disabled:opacity-60"
             >
               {loadingSecret
                 ? t("dashboard.components.deliveryMethodPanel.loadingLabel")
@@ -232,14 +232,14 @@ export default function DeliveryMethodPanel({
         <div className="mt-2.5 flex flex-col gap-2">
           <p className="text-[11px] font-semibold text-app-ink">
             {t("dashboard.components.deliveryMethodPanel.stockAvailableLabel")}{" "}
-            <span className="text-secondary-dark">{product.unclaimed_code_count}</span>
+            <span className="text-jeon-purple">{product.unclaimed_code_count}</span>
           </p>
           <textarea
             placeholder={t("dashboard.components.deliveryMethodPanel.codesPlaceholder")}
             value={newCodesText}
             onChange={(e) => setNewCodesText(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
           />
           <button
             type="button"
@@ -253,7 +253,7 @@ export default function DeliveryMethodPanel({
           </button>
 
           {codes === null ? (
-            <button type="button" onClick={loadCodes} disabled={loadingCodes} className="self-start text-[11px] font-semibold text-primary hover:underline">
+            <button type="button" onClick={loadCodes} disabled={loadingCodes} className="self-start text-[11px] font-semibold text-jeon-purple hover:underline">
               {loadingCodes
                 ? t("dashboard.components.deliveryMethodPanel.loadingLabel")
                 : t("dashboard.components.deliveryMethodPanel.viewCodesButton")}

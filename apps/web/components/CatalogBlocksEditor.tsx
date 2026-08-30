@@ -105,7 +105,7 @@ function CatalogBlockTypePicker({
                   ? t("dashboard.components.catalogBlocksEditor.atLimitTitle")
                   : undefined
             }
-            className={`flex flex-col items-center gap-1 rounded-xl border border-app-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex flex-col items-center gap-1 rounded-xl border border-app-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:cursor-not-allowed disabled:opacity-40 ${
               locked ? "relative" : ""
             }`}
           >
@@ -184,7 +184,7 @@ export function CatalogBlocksEditor({
               onBlur={(e) => updateBlock(block.id, { title: e.target.value })}
               placeholder={t("dashboard.components.catalogBlocksEditor.blockTitlePlaceholder")}
               aria-label={t("dashboard.components.catalogBlocksEditor.blockTitleAriaLabel")}
-              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
             />
             <button
               type="button"
@@ -203,7 +203,7 @@ export function CatalogBlocksEditor({
               placeholder={t("dashboard.components.catalogBlocksEditor.textContentPlaceholder")}
               aria-label={t("dashboard.components.catalogBlocksEditor.textContentAriaLabel")}
               rows={2}
-              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
+              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
             />
           )}
 
@@ -213,7 +213,7 @@ export function CatalogBlocksEditor({
               onBlur={(e) => updateBlock(block.id, { block_data: { ...block.block_data, video_url: e.target.value } })}
               placeholder={t("dashboard.components.catalogBlocksEditor.videoUrlPlaceholder")}
               aria-label={t("dashboard.components.catalogBlocksEditor.videoUrlAriaLabel")}
-              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
+              className="mt-2 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
             />
           )}
 
@@ -224,7 +224,7 @@ export function CatalogBlocksEditor({
                 onBlur={(e) => updateBlock(block.id, { url: e.target.value })}
                 placeholder={t("dashboard.components.catalogBlocksEditor.mapsUrlLabel")}
                 aria-label={t("dashboard.components.catalogBlocksEditor.mapsUrlLabel")}
-                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
+                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
               />
               <p className="text-[10px] text-app-muted">{t("dashboard.components.catalogBlocksEditor.mapsHint")}</p>
             </div>
@@ -305,14 +305,14 @@ export function CatalogNodeEditor({
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <div key={item.id} className="rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+        <div key={item.id} className="rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
           <div className="flex items-center gap-2">
             <input
               defaultValue={item.title}
               onBlur={(e) => updateItem(item.id, { title: e.target.value })}
               placeholder={t("dashboard.components.catalogBlocksEditor.itemTitlePlaceholder")}
               aria-label={t("dashboard.components.catalogBlocksEditor.itemTitleAriaLabel")}
-              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
             />
             <button
               type="button"
@@ -329,7 +329,7 @@ export function CatalogNodeEditor({
             placeholder={t("dashboard.components.catalogBlocksEditor.itemDescriptionPlaceholder")}
             aria-label={t("dashboard.components.catalogBlocksEditor.itemDescriptionAriaLabel")}
             rows={2}
-            className="mt-1.5 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
+            className="mt-1.5 w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <CatalogBlocksEditor blocks={item.blocks ?? []} isPremium={isPremium} depth={depth} onChange={(blocks) => updateItem(item.id, { blocks })} />
         </div>
@@ -337,7 +337,7 @@ export function CatalogNodeEditor({
       <button
         type="button"
         onClick={addItem}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-primary hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconPlus className="h-3.5 w-3.5" /> {t("dashboard.components.catalogBlocksEditor.addItemButton")}
       </button>
@@ -378,7 +378,7 @@ function FaqEmbeddedEditor({
               onBlur={(e) => update(i, { question: e.target.value })}
               placeholder={t("dashboard.components.catalogBlocksEditor.questionPlaceholder")}
               aria-label={t("dashboard.components.catalogBlocksEditor.questionAriaLabel").replace("{n}", String(i + 1))}
-              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-primary focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-app-border px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
             />
             <button
               type="button"
@@ -395,14 +395,14 @@ function FaqEmbeddedEditor({
             placeholder={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}
             aria-label={t("dashboard.components.catalogBlocksEditor.answerAriaLabel").replace("{n}", String(i + 1))}
             rows={2}
-            className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
       ))}
       <button
         type="button"
         onClick={() => onChange([...items, { question: "", answer: "" }])}
-        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-app-border py-1.5 text-[11px] font-semibold text-app-muted hover:border-primary hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-app-border py-1.5 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconPlus className="h-3 w-3" /> {t("dashboard.components.catalogBlocksEditor.addQuestionButton")}
       </button>

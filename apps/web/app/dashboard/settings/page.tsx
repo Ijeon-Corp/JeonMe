@@ -75,21 +75,21 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.profileTitle"),
           description: t("dashboard.pages.settings.items.profileDescription"),
           icon: IconPencil,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/settings/security",
           title: t("dashboard.pages.settings.items.securityTitle"),
           description: t("dashboard.pages.settings.items.securityDescription"),
           icon: IconShield,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/settings/seo",
           title: t("dashboard.pages.settings.items.seoTitle"),
           description: t("dashboard.pages.settings.items.seoDescription"),
           icon: IconSearch,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -102,14 +102,14 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.paymentTitle"),
           description: t("dashboard.pages.settings.items.paymentDescription"),
           icon: IconWallet,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/kyc",
           title: t("dashboard.pages.settings.items.kycTitle"),
           description: t("dashboard.pages.settings.items.kycDescription"),
           icon: IconShield,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -122,21 +122,21 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.subscriptionTitle"),
           description: t("dashboard.pages.settings.items.subscriptionDescription"),
           icon: IconStar,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/team",
           title: t("dashboard.pages.settings.items.teamTitle"),
           description: t("dashboard.pages.settings.items.teamDescription"),
           icon: IconUsers,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/analytics",
           title: t("dashboard.pages.settings.items.analyticsTitle"),
           description: t("dashboard.pages.settings.items.analyticsDescription"),
           icon: IconChart,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus
         // 2026: "saya mau jeonme ini bisa connect ke akun kita contoh nya
@@ -148,7 +148,7 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.socialConnectTitle"),
           description: t("dashboard.pages.settings.items.socialConnectDescription"),
           icon: IconExternal,
-          badgeClass: "bg-primary-subtle text-primary",
+          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -173,7 +173,7 @@ function SettingsCard({ item }: { item: SettingsItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-primary"
+      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
       <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${item.badgeClass}`}>
         <Icon className="h-4 w-4" />
@@ -182,7 +182,7 @@ function SettingsCard({ item }: { item: SettingsItem }) {
         <span className="flex items-center gap-1.5">
           <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
           {item.statusPill && (
-            <span className="flex-shrink-0 rounded-full bg-secondary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-secondary-dark">
+            <span className="flex-shrink-0 rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-jeon-purple">
               {item.statusPill}
             </span>
           )}
@@ -247,7 +247,7 @@ export default function DashboardSettingsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("dashboard.pages.settings.searchPlaceholder")}
-          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-xl border border-app-border bg-app-surface py-2.5 pl-9 pr-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
         />
       </div>
 

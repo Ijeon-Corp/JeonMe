@@ -76,7 +76,7 @@ export default function LockedLinkButton({
 
   return (
     <form onSubmit={handleUnlock} className="flex w-full flex-col gap-1.5 rounded-2xl border border-border bg-white p-3.5 text-left shadow-card">
-      <p className="truncate text-sm font-semibold text-ink">🔒 {title}</p>
+      <p className="truncate text-sm font-semibold text-app-ink">🔒 {title}</p>
 
       {lockType === "age" && (
         <p className="text-xs text-muted">Konten ini untuk usia {lockMinAge ?? 18}+ tahun.</p>
@@ -90,7 +90,7 @@ export default function LockedLinkButton({
           placeholder="Masukkan kode akses"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+          className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
         />
       )}
       {lockType === "subscribe" && (
@@ -100,14 +100,14 @@ export default function LockedLinkButton({
             placeholder="Email kamu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
           />
           <input
             type="tel"
             placeholder="Nomor WhatsApp (opsional)"
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value)}
-            className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
           />
         </>
       )}

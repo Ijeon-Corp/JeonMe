@@ -114,7 +114,7 @@ export default function ShareButton({ title, url, className = "" }: { title: str
         title="Bagikan halaman ini"
         aria-label="Bagikan halaman ini"
         aria-expanded={open}
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/80 text-ink shadow-card backdrop-blur transition-transform hover:scale-105"
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/80 text-app-ink shadow-card backdrop-blur transition-transform hover:scale-105"
       >
         <IconShare className="h-4 w-4" />
       </button>
@@ -126,7 +126,7 @@ export default function ShareButton({ title, url, className = "" }: { title: str
               key={p.key}
               type="button"
               onClick={() => handlePlatformClick(p.action)}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-ink transition-colors hover:bg-ink/5"
+              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-app-ink transition-colors hover:bg-ink/5"
             >
               <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${p.badgeClass}`}>
                 <p.Icon className="h-4 w-4" />
@@ -138,9 +138,9 @@ export default function ShareButton({ title, url, className = "" }: { title: str
           <button
             type="button"
             onClick={handleCopyLink}
-            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-ink transition-colors hover:bg-ink/5"
+            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-app-ink transition-colors hover:bg-ink/5"
           >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-ink/10 text-ink">
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-ink/10 text-app-ink">
               <IconCopy className="h-4 w-4" />
             </span>
             Salin Link
@@ -149,8 +149,8 @@ export default function ShareButton({ title, url, className = "" }: { title: str
       )}
 
       {statusMessage && (
-        <div className="absolute right-0 top-12 z-20 flex w-56 items-center gap-2 rounded-xl border border-border bg-white px-3 py-2.5 text-xs font-semibold text-ink shadow-hero">
-          <IconCheck className="h-4 w-4 flex-shrink-0 text-secondary-dark" />
+        <div className="absolute right-0 top-12 z-20 flex w-56 items-center gap-2 rounded-xl border border-border bg-white px-3 py-2.5 text-xs font-semibold text-app-ink shadow-hero">
+          <IconCheck className="h-4 w-4 flex-shrink-0 text-jeon-purple" />
           {statusMessage}
         </div>
       )}

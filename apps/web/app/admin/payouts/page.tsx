@@ -13,9 +13,9 @@ const STATUS_LABEL: Record<AdminPayout["status"], string> = {
 };
 
 const STATUS_BADGE: Record<AdminPayout["status"], string> = {
-  requested: "bg-accent-subtle text-accent-dark",
-  processing: "bg-primary-subtle text-primary",
-  completed: "bg-secondary-subtle text-secondary-dark",
+  requested: "bg-jeon-warning/15 text-jeon-warning",
+  processing: "bg-jeon-purple/10 text-jeon-purple",
+  completed: "bg-jeon-purple/10 text-jeon-purple",
   failed: "bg-red-50 text-red-600",
 };
 
@@ -78,8 +78,8 @@ export default function AdminPayoutsPage() {
           onClick={() => handleFilterChange("needs_action")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "needs_action"
-              ? "border-primary bg-primary-subtle text-primary"
-              : "border-app-border text-app-muted hover:border-primary/50"
+              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
           Perlu Tindakan
@@ -89,8 +89,8 @@ export default function AdminPayoutsPage() {
           onClick={() => handleFilterChange("all")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
-              ? "border-primary bg-primary-subtle text-primary"
-              : "border-app-border text-app-muted hover:border-primary/50"
+              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
           Semua Riwayat
@@ -104,7 +104,7 @@ export default function AdminPayoutsPage() {
           <div key={p.id} className="rounded-xl border border-app-border bg-app-surface p-4 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
                   <IconWallet className="h-[18px] w-[18px]" />
                 </div>
                 <div>
@@ -119,7 +119,7 @@ export default function AdminPayoutsPage() {
               </div>
               <div className="flex flex-shrink-0 items-center gap-1.5">
                 {p.kyc_status_at_request === "verified" && (
-                  <span className="rounded-full bg-secondary-subtle px-2.5 py-1 text-xs font-semibold text-secondary-dark">
+                  <span className="rounded-full bg-jeon-purple/10 px-2.5 py-1 text-xs font-semibold text-jeon-purple">
                     KYC Terverifikasi
                   </span>
                 )}
@@ -140,7 +140,7 @@ export default function AdminPayoutsPage() {
                     type="button"
                     disabled={busyId === p.id}
                     onClick={() => handleUpdateStatus(p, "processing")}
-                    className="font-semibold text-primary hover:underline disabled:opacity-50"
+                    className="font-semibold text-jeon-purple hover:underline disabled:opacity-50"
                   >
                     Proses
                   </button>
@@ -161,7 +161,7 @@ export default function AdminPayoutsPage() {
                     type="button"
                     disabled={busyId === p.id}
                     onClick={() => handleUpdateStatus(p, "completed")}
-                    className="font-semibold text-secondary-dark hover:underline disabled:opacity-50"
+                    className="font-semibold text-jeon-purple hover:underline disabled:opacity-50"
                   >
                     Tandai Selesai
                   </button>

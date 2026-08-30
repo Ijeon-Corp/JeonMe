@@ -1737,7 +1737,7 @@ export default function DashboardLinksPage() {
             onClick={() => switchToPage(null)}
             disabled={switchingPage || activePage === null}
             className={`rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-              activePage === null ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
+              activePage === null ? "bg-jeon-sidebar text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
             }`}
           >
             Home
@@ -1749,7 +1749,7 @@ export default function DashboardLinksPage() {
               onClick={() => switchToPage({ id: ep.id, slug: ep.slug, pageType: ep.page_type === "landing" ? "landing" : "bio" })}
               disabled={switchingPage || activePage?.id === ep.id}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold transition-colors disabled:cursor-default ${
-                activePage?.id === ep.id ? "bg-ink text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
+                activePage?.id === ep.id ? "bg-jeon-sidebar text-white" : "bg-surface-2 text-app-muted hover:text-app-ink"
               }`}
             >
               {ep.name}
@@ -1774,11 +1774,11 @@ export default function DashboardLinksPage() {
               setCreatingPage(true);
             }}
             title={!page?.is_premium ? t("dashboard.pages.links.pageNav.premiumOnly") : undefined}
-            className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-primary hover:text-primary"
+            className="flex items-center gap-1 rounded-full border border-dashed border-app-border px-3 py-1.5 text-sm font-bold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
           >
             <IconPlus className="h-3.5 w-3.5" />
             Page
-            {!page?.is_premium && <IconStar className="h-3 w-3 text-secondary-dark" />}
+            {!page?.is_premium && <IconStar className="h-3 w-3 text-jeon-purple" />}
           </button>
         </div>
 
@@ -1796,10 +1796,10 @@ export default function DashboardLinksPage() {
                     onChange={(e) => setRenamePageValue(e.target.value)}
                     onBlur={saveRenamePage}
                     onKeyDown={(e) => e.key === "Enter" && saveRenamePage()}
-                    className="rounded-md border border-primary px-2 py-0.5 text-xs text-app-ink focus:outline-none"
+                    className="rounded-md border border-jeon-purple px-2 py-0.5 text-xs text-app-ink focus:outline-none"
                   />
                 ) : (
-                  <button type="button" onClick={() => startRenamePage(activeExtraPage)} className="flex items-center gap-1 hover:text-primary">
+                  <button type="button" onClick={() => startRenamePage(activeExtraPage)} className="flex items-center gap-1 hover:text-jeon-purple">
                     <IconPencil className="h-3 w-3" /> {t("dashboard.pages.links.pageNav.renamePage")}
                   </button>
                 )}
@@ -1841,7 +1841,7 @@ export default function DashboardLinksPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={page.avatar_url} alt={page.username} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary-subtle font-heading text-lg font-bold text-primary">
+                <div className="flex h-full w-full items-center justify-center bg-jeon-purple/10 font-heading text-lg font-bold text-jeon-purple">
                   {page.username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -1867,12 +1867,12 @@ export default function DashboardLinksPage() {
                   onBlur={saveEditProfileField}
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
                   placeholder={page.username}
-                  className="w-full rounded-md border border-primary px-2 py-1 font-heading text-base font-bold text-app-ink focus:outline-none"
+                  className="w-full rounded-md border border-jeon-purple px-2 py-1 font-heading text-base font-bold text-app-ink focus:outline-none"
                 />
               ) : (
                 <div className="flex items-center gap-1.5">
                   <p className="truncate font-heading text-base font-bold text-app-ink">{page.display_name || page.username}</p>
-                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.profile.editDisplayName")}>
+                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editDisplayName")}>
                     <IconPencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -1888,12 +1888,12 @@ export default function DashboardLinksPage() {
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
                   placeholder={t("dashboard.pages.links.profile.addBioPlaceholder")}
                   maxLength={160}
-                  className="mt-1 w-full rounded-md border border-primary px-2 py-1 text-sm text-app-muted focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-jeon-purple px-2 py-1 text-sm text-app-muted focus:outline-none"
                 />
               ) : (
                 <div className="mt-1 flex items-center gap-1.5">
                   <p className="truncate text-sm text-app-muted">{page.bio || t("dashboard.pages.links.profile.addBioPlaceholder")}</p>
-                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.profile.editBio")}>
+                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editBio")}>
                     <IconPencil className="h-3 w-3" />
                   </button>
                 </div>
@@ -1935,7 +1935,7 @@ export default function DashboardLinksPage() {
                         onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
                         placeholder={`${p.label} · ${p.placeholder}`}
                         aria-label={p.label}
-                        className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-primary focus:outline-none"
+                        className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
                       />
                     </div>
                   ))}
@@ -1948,7 +1948,7 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={saveSocial}
                     disabled={savingSocial}
-                    className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                    className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
                   >
                     {savingSocial ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                   </button>
@@ -1977,7 +1977,7 @@ export default function DashboardLinksPage() {
               type="button"
               onClick={() => handleSelectContentTile(tile)}
               title={tile.label}
-              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-muted hover:border-primary hover:text-primary"
+              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
             >
               <tile.Icon className="h-4 w-4" />
               <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app-surface text-[9px] font-bold text-app-ink ring-1 ring-border">
@@ -2023,7 +2023,7 @@ export default function DashboardLinksPage() {
                   placeholder={t("dashboard.pages.links.addLinkForm.titlePlaceholder")}
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </FormField>
               <FormField label={t("dashboard.pages.links.addLinkForm.urlLabel")} hint={t("dashboard.pages.links.addLinkForm.urlHint")}>
@@ -2033,7 +2033,7 @@ export default function DashboardLinksPage() {
                   placeholder="https://..."
                   value={newURL}
                   onChange={(e) => setNewURL(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </FormField>
             </div>
@@ -2048,7 +2048,7 @@ export default function DashboardLinksPage() {
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 maxLength={240}
-                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </FormField>
             <div className="flex justify-end gap-2">
@@ -2087,7 +2087,7 @@ export default function DashboardLinksPage() {
                       | "catalog"
                   )
                 }
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               >
                 <option value="video">{t("dashboard.pages.links.blockForm.options.video")}</option>
                 <option value="contact_form">{t("dashboard.pages.links.blockForm.options.contactForm")}</option>
@@ -2107,7 +2107,7 @@ export default function DashboardLinksPage() {
               blockType === "file" ||
               blockType === "project_showcase" ||
               blockType === "catalog") && (
-              <p className="rounded-lg bg-primary-subtle/50 px-3 py-2 text-[11px] text-app-muted">
+              <p className="rounded-lg bg-jeon-purple/10/50 px-3 py-2 text-[11px] text-app-muted">
                 {blockType === "gallery"
                   ? t("dashboard.pages.links.blockForm.uploadHints.gallery")
                   : blockType === "audio"
@@ -2145,7 +2145,7 @@ export default function DashboardLinksPage() {
                 }
                 value={blockTitle}
                 onChange={(e) => setBlockTitle(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
               />
             </FormField>
             {blockType === "project_showcase" && (
@@ -2156,7 +2156,7 @@ export default function DashboardLinksPage() {
                     placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
                     value={blockShowcaseBadge}
                     onChange={(e) => setBlockShowcaseBadge(e.target.value)}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   />
                 </FormField>
                 <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
@@ -2166,7 +2166,7 @@ export default function DashboardLinksPage() {
                     onChange={(e) => setBlockShowcaseDescription(e.target.value)}
                     rows={2}
                     maxLength={240}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   />
                 </FormField>
                 <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
@@ -2176,7 +2176,7 @@ export default function DashboardLinksPage() {
                     placeholder="https://..."
                     value={blockShowcaseUrl}
                     onChange={(e) => setBlockShowcaseUrl(e.target.value)}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   />
                 </FormField>
                 <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaTextLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaTextHint")}>
@@ -2185,7 +2185,7 @@ export default function DashboardLinksPage() {
                     placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
                     value={blockShowcaseCta}
                     onChange={(e) => setBlockShowcaseCta(e.target.value)}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                   />
                 </FormField>
               </div>
@@ -2197,7 +2197,7 @@ export default function DashboardLinksPage() {
                   value={blockText}
                   onChange={(e) => setBlockText(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -2208,7 +2208,7 @@ export default function DashboardLinksPage() {
                   value={blockAccordionText}
                   onChange={(e) => setBlockAccordionText(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -2219,7 +2219,7 @@ export default function DashboardLinksPage() {
                   placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
                   value={blockVideoUrl}
                   onChange={(e) => setBlockVideoUrl(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                 />
               </FormField>
             )}
@@ -2232,12 +2232,12 @@ export default function DashboardLinksPage() {
                       placeholder={t("dashboard.pages.links.blockForm.maps.placeholderAdd")}
                       value={blockMapsUrl}
                       onChange={(e) => setBlockMapsUrl(e.target.value)}
-                      className="w-full min-w-0 flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      className="w-full min-w-0 flex-1 rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setMapsPickerOpenFor("add")}
-                      className="flex-shrink-0 rounded-lg border border-app-border px-3 py-2 text-xs font-bold text-primary hover:border-primary"
+                      className="flex-shrink-0 rounded-lg border border-app-border px-3 py-2 text-xs font-bold text-jeon-purple hover:border-jeon-purple"
                     >
                       {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                     </button>
@@ -2279,7 +2279,7 @@ export default function DashboardLinksPage() {
                         placeholder={t("dashboard.pages.links.blockForm.faq.questionPlaceholder")}
                         value={item.question}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                     <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
@@ -2288,7 +2288,7 @@ export default function DashboardLinksPage() {
                         value={item.answer}
                         onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                         rows={2}
-                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                   </div>
@@ -2296,7 +2296,7 @@ export default function DashboardLinksPage() {
                 <button
                   type="button"
                   onClick={() => setBlockFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                  className="self-start text-xs font-bold text-primary hover:underline"
+                  className="self-start text-xs font-bold text-jeon-purple hover:underline"
                 >
                   {t("dashboard.pages.links.blockForm.faq.addQuestion")}
                 </button>
@@ -2350,7 +2350,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={libraryIcon.label}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple"
                       >
                         <libraryIcon.Icon className="h-4 w-4" />
                       </span>
@@ -2371,7 +2371,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={blockTypeLabel[link.block_type]}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple"
                       >
                         <DefaultIcon className="h-4 w-4" />
                       </span>
@@ -2387,7 +2387,7 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-sm font-bold text-app-ink focus:outline-none"
+                      className="w-full rounded-md border border-jeon-purple px-2 py-1 text-sm font-bold text-app-ink focus:outline-none"
                     />
                   ) : (
                     <div className="flex items-center gap-1.5">
@@ -2399,7 +2399,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => startEditField(link, "title")}
-                        className="flex-shrink-0 text-app-muted hover:text-primary"
+                        className="flex-shrink-0 text-app-muted hover:text-jeon-purple"
                         title={t("dashboard.pages.links.linkCard.editTitle")}
                       >
                         <IconPencil className="h-3.5 w-3.5" />
@@ -2407,7 +2407,7 @@ export default function DashboardLinksPage() {
                     </div>
                   )}
                   {link.block_type !== "link" && (
-                    <span className="mt-1 inline-block rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="mt-1 inline-block rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
                       {blockTypeLabel[link.block_type]}
                     </span>
                   )}
@@ -2416,7 +2416,7 @@ export default function DashboardLinksPage() {
                   <ShareButton
                     title={link.title}
                     url={link.url}
-                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-primary-subtle hover:!text-primary"
+                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-jeon-purple/10 hover:!text-jeon-purple"
                   />
                 )}
                 <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
@@ -2432,12 +2432,12 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-app-muted focus:outline-none"
+                      className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : (
                     <>
                       <p className="truncate text-xs text-app-muted">{link.url}</p>
-                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-primary" title={t("dashboard.pages.links.linkCard.editUrl")}>
+                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
@@ -2461,7 +2461,7 @@ export default function DashboardLinksPage() {
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
                       maxLength={240}
                       placeholder={t("dashboard.pages.links.linkCard.descriptionPlaceholder")}
-                      className="w-full rounded-md border border-primary px-2 py-1 text-xs text-app-muted focus:outline-none"
+                      className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
                   ) : (
                     <>
@@ -2469,7 +2469,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => startEditField(link, "description")}
-                        className="flex-shrink-0 text-app-muted hover:text-primary"
+                        className="flex-shrink-0 text-app-muted hover:text-jeon-purple"
                         title={t("dashboard.pages.links.linkCard.editDescription")}
                       >
                         <IconPencil className="h-3 w-3" />
@@ -2489,8 +2489,8 @@ export default function DashboardLinksPage() {
                       type="button"
                       onClick={() => openScheduleForm(link)}
                       title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.starts_at && link.ends_at ? "text-primary" : "text-app-muted"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                        link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
                       }`}
                     >
                       <IconClock className="h-4 w-4" />
@@ -2499,8 +2499,8 @@ export default function DashboardLinksPage() {
                       type="button"
                       onClick={() => openLockForm(link)}
                       title={t("dashboard.pages.links.linkCard.lockTooltip")}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                        link.lock_type ? "text-primary" : "text-app-muted"
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                        link.lock_type ? "text-jeon-purple" : "text-app-muted"
                       }`}
                     >
                       <IconLock className="h-4 w-4" />
@@ -2518,8 +2518,8 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={() => handleToggleSensitive(link)}
                     title={link.lock_type === "sensitive" ? t("dashboard.pages.links.linkCard.unmarkSensitive") : t("dashboard.pages.links.linkCard.markSensitive")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                      link.lock_type === "sensitive" ? "text-primary" : "text-app-muted"
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.lock_type === "sensitive" ? "text-jeon-purple" : "text-app-muted"
                     }`}
                   >
                     <span aria-hidden className="text-sm leading-none">⚠️</span>
@@ -2533,8 +2533,8 @@ export default function DashboardLinksPage() {
                     peduli block_type). */}
                 <label
                   title={link.custom_icon_url ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
-                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                    link.custom_icon_url ? "text-primary" : "text-app-muted"
+                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.custom_icon_url ? "text-jeon-purple" : "text-app-muted"
                   }`}
                 >
                   {iconUploadingId === link.id ? (
@@ -2554,8 +2554,8 @@ export default function DashboardLinksPage() {
                   type="button"
                   onClick={() => setIconPickerLinkId(link.id)}
                   title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                    link.icon_key ? "text-primary" : "text-app-muted"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.icon_key ? "text-jeon-purple" : "text-app-muted"
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -2573,7 +2573,7 @@ export default function DashboardLinksPage() {
                 {!link.custom_icon_url && (
                   <label
                     title={link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
-                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-primary-subtle"
+                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10"
                   >
                     {link.icon_color ? (
                       <span
@@ -2624,8 +2624,8 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={() => handleToggleFeatured(link)}
                     title={link.is_featured ? t("dashboard.pages.links.linkCard.unfeature") : t("dashboard.pages.links.linkCard.makeFeatured")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-subtle ${
-                      link.is_featured ? "text-primary" : "text-app-muted"
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.is_featured ? "text-jeon-purple" : "text-app-muted"
                     }`}
                   >
                     <IconStar className="h-4 w-4" />
@@ -2639,7 +2639,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => openContentEdit(link)}
-                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-primary hover:bg-primary-subtle"
+                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
                   >
                     {t("dashboard.pages.links.linkCard.editContent")}
                   </button>
@@ -2656,7 +2656,7 @@ export default function DashboardLinksPage() {
                   type="button"
                   onClick={() => handleDuplicate(link)}
                   title={t("dashboard.pages.links.linkCard.duplicate")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-primary-subtle hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
                 >
                   <IconCopy className="h-4 w-4" />
                 </button>
@@ -2676,7 +2676,7 @@ export default function DashboardLinksPage() {
               </div>
 
               {link.block_type === "link" && link.is_featured && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   {link.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
@@ -2692,7 +2692,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.featuredPanel.noThumbnail")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {thumbnailUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.thumbnail_url ? t("dashboard.pages.links.featuredPanel.changeThumbnail") : t("dashboard.pages.links.featuredPanel.uploadThumbnail")}
                         <input
                           type="file"
@@ -2722,7 +2722,7 @@ export default function DashboardLinksPage() {
                   Featured Link di atas, karena kelola-foto justru INTI dari
                   blok ini, bukan pengaturan sekunder. */}
               {link.block_type === "gallery" && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   <p className="text-[11px] font-semibold text-app-muted">
                     {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} {t("dashboard.pages.links.galleryPanel.photoCountSuffix")}
                   </p>
@@ -2743,7 +2743,7 @@ export default function DashboardLinksPage() {
                     ))}
                     {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                       <label
-                        className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
+                        className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                           galleryUploadingId === link.id ? "opacity-60" : ""
                         }`}
                       >
@@ -2774,7 +2774,7 @@ export default function DashboardLinksPage() {
                   gambar, unggah ulang menimpa) -- BEDA disimpan di
                   block_data.image_url, bukan kolom thumbnail_url. */}
               {link.block_type === "project_showcase" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   {link.block_data?.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -2789,7 +2789,7 @@ export default function DashboardLinksPage() {
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.showcasePanel.imageHint")}</p>
-                    <label className="w-fit cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                    <label className="w-fit cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                       {showcaseUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.block_data?.image_url ? t("dashboard.pages.links.showcasePanel.changeImage") : t("dashboard.pages.links.showcasePanel.uploadImage")}
                       <input
                         type="file"
@@ -2811,7 +2811,7 @@ export default function DashboardLinksPage() {
                   dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
                   supaya tidak terasa terpecah 2 tempat berbeda. */}
               {link.block_type === "catalog" && (
-                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                   {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.catalogPanel.noItems")}</p>}
                   {catalogItemsOf(link).map((item) => {
                     const uploadKey = `${link.id}:${item.id}`;
@@ -2825,7 +2825,7 @@ export default function DashboardLinksPage() {
                                 defaultValue={item.title}
                                 placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
-                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs font-semibold focus:border-jeon-purple focus:outline-none"
                               />
                             </FormField>
                             <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
@@ -2834,7 +2834,7 @@ export default function DashboardLinksPage() {
                                 placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
                                 rows={2}
                                 onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
-                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                               />
                             </FormField>
                           </div>
@@ -2864,7 +2864,7 @@ export default function DashboardLinksPage() {
                           ))}
                           {item.images.length < maxCatalogImagesPerItem && (
                             <label
-                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-primary hover:text-primary ${
+                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
                                 catalogItemImageUploadingKey === uploadKey ? "opacity-60" : ""
                               }`}
                             >
@@ -2912,7 +2912,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) =>
                             setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
                           }
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.catalogPanel.newItemDescriptionLabel")}>
@@ -2923,7 +2923,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) =>
                             setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
                           }
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <button
@@ -2944,8 +2944,8 @@ export default function DashboardLinksPage() {
                   ikon kustom yang sudah generik (baris kontrol ikon di
                   atas), tidak diduplikasi di sini. */}
               {link.block_type === "audio" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-primary ring-1 ring-black/5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconMusicNote className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -2955,7 +2955,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.audioPanel.noAudio")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {audioUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.audio_url as string) ? t("dashboard.pages.links.audioPanel.changeAudio") : t("dashboard.pages.links.audioPanel.uploadAudio")}
                         <input
                           type="file"
@@ -2983,8 +2983,8 @@ export default function DashboardLinksPage() {
                   pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                   pola sama persis seperti panel Kelola audio di atas. */}
               {link.block_type === "file" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-primary ring-1 ring-black/5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconFileText className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -2994,7 +2994,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.filePanel.noFile")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary">
+                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {fileUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.file_url as string) ? t("dashboard.pages.links.filePanel.changeFile") : t("dashboard.pages.links.filePanel.uploadFile")}
                         <input
                           type="file"
@@ -3020,14 +3020,14 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                     <div className="flex gap-1.5">
                       <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
                         <input
                           type="datetime-local"
                           value={scheduleStart}
                           onChange={(e) => setScheduleStart(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.schedulePanel.endLabel")}>
@@ -3035,7 +3035,7 @@ export default function DashboardLinksPage() {
                           type="datetime-local"
                           value={scheduleEnd}
                           onChange={(e) => setScheduleEnd(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                     </div>
@@ -3060,8 +3060,8 @@ export default function DashboardLinksPage() {
                 ) : (
                   link.starts_at &&
                   link.ends_at && (
-                    <div className="ml-11 flex items-center justify-between rounded-lg bg-accent-subtle px-2.5 py-1.5">
-                      <span className="text-[11px] font-semibold text-accent-dark">
+                    <div className="ml-11 flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
+                      <span className="text-[11px] font-semibold text-jeon-warning">
                         {t("dashboard.pages.links.schedulePanel.scheduledLabel")} {new Date(link.starts_at).toLocaleString("id-ID")} {t("dashboard.pages.links.schedulePanel.until")} {new Date(link.ends_at).toLocaleString("id-ID")}
                       </span>
                       <button type="button" onClick={() => handleClearSchedule(link)} className="text-[11px] font-bold text-red-600 hover:underline">
@@ -3073,11 +3073,11 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (lockEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                     >
                       <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
                       <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
@@ -3090,7 +3090,7 @@ export default function DashboardLinksPage() {
                         placeholder={t("dashboard.pages.links.lockPanel.codePlaceholder")}
                         value={lockCodeInput}
                         onChange={(e) => setLockCodeInput(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     )}
                     {lockTypeInput === "age" && (
@@ -3101,7 +3101,7 @@ export default function DashboardLinksPage() {
                         placeholder={t("dashboard.pages.links.lockPanel.minAgePlaceholder")}
                         value={lockMinAgeInput}
                         onChange={(e) => setLockMinAgeInput(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     )}
                     <div className="flex gap-1.5">
@@ -3124,8 +3124,8 @@ export default function DashboardLinksPage() {
                   </div>
                 ) : (
                   link.lock_type && (
-                    <div className="ml-11 flex items-center justify-between rounded-lg bg-secondary-subtle px-2.5 py-1.5">
-                      <span className="text-[11px] font-semibold text-secondary-dark">
+                    <div className="ml-11 flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+                      <span className="text-[11px] font-semibold text-jeon-purple">
                         {t("dashboard.pages.links.lockPanel.lockedLabel")}{" "}
                         {link.lock_type === "code"
                           ? t("dashboard.pages.links.lockPanel.statusTypes.code")
@@ -3149,8 +3149,8 @@ export default function DashboardLinksPage() {
                 link.block_type === "accordion" ||
                 link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-primary-subtle/30 p-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-primary">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-jeon-purple">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
                   {link.block_type === "video" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
                       <input
@@ -3158,7 +3158,7 @@ export default function DashboardLinksPage() {
                         placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
                         value={editVideoUrl}
                         onChange={(e) => setEditVideoUrl(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "text" ? (
@@ -3168,7 +3168,7 @@ export default function DashboardLinksPage() {
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         rows={3}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "accordion" ? (
@@ -3178,7 +3178,7 @@ export default function DashboardLinksPage() {
                         value={editAccordionText}
                         onChange={(e) => setEditAccordionText(e.target.value)}
                         rows={3}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
                   ) : link.block_type === "maps" ? (
@@ -3190,12 +3190,12 @@ export default function DashboardLinksPage() {
                             placeholder={t("dashboard.pages.links.blockForm.maps.placeholderEdit")}
                             value={editMapsUrl}
                             onChange={(e) => setEditMapsUrl(e.target.value)}
-                            className="w-full min-w-0 flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                            className="w-full min-w-0 flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => setMapsPickerOpenFor(link.id)}
-                            className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-primary hover:border-primary"
+                            className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-jeon-purple hover:border-jeon-purple"
                           >
                             {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                           </button>
@@ -3234,7 +3234,7 @@ export default function DashboardLinksPage() {
                           placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
                           value={editShowcaseBadge}
                           onChange={(e) => setEditShowcaseBadge(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
@@ -3244,7 +3244,7 @@ export default function DashboardLinksPage() {
                           onChange={(e) => setEditShowcaseDescription(e.target.value)}
                           rows={2}
                           maxLength={240}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
@@ -3253,7 +3253,7 @@ export default function DashboardLinksPage() {
                           placeholder="https://..."
                           value={editShowcaseUrl}
                           onChange={(e) => setEditShowcaseUrl(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaTextLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaTextHint")}>
@@ -3262,7 +3262,7 @@ export default function DashboardLinksPage() {
                           placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
                           value={editShowcaseCta}
                           onChange={(e) => setEditShowcaseCta(e.target.value)}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-primary focus:outline-none"
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                         />
                       </FormField>
                     </div>
@@ -3276,7 +3276,7 @@ export default function DashboardLinksPage() {
                               placeholder={t("dashboard.pages.links.blockForm.faq.questionPlaceholder")}
                               value={item.question}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-jeon-purple focus:outline-none"
                             />
                           </FormField>
                           <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
@@ -3285,7 +3285,7 @@ export default function DashboardLinksPage() {
                               value={item.answer}
                               onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
                               rows={2}
-                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-jeon-purple focus:outline-none"
                             />
                           </FormField>
                           <button
@@ -3300,7 +3300,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                        className="self-start text-[11px] font-bold text-primary hover:underline"
+                        className="self-start text-[11px] font-bold text-jeon-purple hover:underline"
                       >
                         {t("dashboard.pages.links.blockForm.faq.addQuestion")}
                       </button>
@@ -3457,7 +3457,7 @@ export default function DashboardLinksPage() {
               onChange={(e) => setNewPageTitle(e.target.value)}
               placeholder={t("dashboard.pages.links.createPageModal.titlePlaceholder")}
               maxLength={80}
-              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
             />
             <label htmlFor="new-page-duplicate-from" className="mb-1 mt-3 block text-xs font-semibold text-app-ink">
               {t("dashboard.pages.links.createPageModal.startFromLabel")}
@@ -3466,7 +3466,7 @@ export default function DashboardLinksPage() {
               id="new-page-duplicate-from"
               value={duplicateFromId}
               onChange={(e) => setDuplicateFromId(e.target.value)}
-              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-app-border px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
             >
               <option value="">{t("dashboard.pages.links.createPageModal.blankPage")}</option>
               <option value="primary">{t("dashboard.pages.links.createPageModal.duplicateFromHome")}</option>
@@ -3487,7 +3487,7 @@ export default function DashboardLinksPage() {
               <button
                 type="submit"
                 disabled={!newPageTitle.trim() || savingNewPage}
-                className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="flex-1 rounded-lg bg-jeon-purple py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {savingNewPage ? t("dashboard.pages.links.createPageModal.creating") : t("dashboard.pages.links.createPageModal.createButton")}
               </button>
@@ -3602,9 +3602,9 @@ function AddModal({
             <button
               type="button"
               onClick={() => onQuickPasteLink(search.trim())}
-              className="mb-3 flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary-subtle/30 p-3 text-left hover:bg-primary-subtle/50"
+              className="mb-3 flex w-full items-center gap-3 rounded-xl border border-jeon-purple/30 bg-jeon-purple/10/30 p-3 text-left hover:bg-jeon-purple/10/50"
             >
-              <IconLink className="h-5 w-5 flex-shrink-0 text-primary" />
+              <IconLink className="h-5 w-5 flex-shrink-0 text-jeon-purple" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.links.addModal.addThisLink")}</p>
                 <p className="truncate text-xs text-app-muted">{search.trim()}</p>
@@ -3621,7 +3621,7 @@ function AddModal({
                     type="button"
                     onClick={() => onCategoryChange(cat.key)}
                     className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-                      category === cat.key ? "bg-ink text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
+                      category === cat.key ? "bg-jeon-sidebar text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
                     }`}
                   >
                     {cat.label}
@@ -3635,9 +3635,9 @@ function AddModal({
                     key={tile.key}
                     type="button"
                     onClick={() => onSelectContentTile(tile)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-app-border p-2.5 hover:border-primary/50"
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-app-border p-2.5 hover:border-jeon-purple/50"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                       <tile.Icon className="h-5 w-5" />
                     </span>
                     <span className="text-center text-[11px] font-semibold text-app-ink">{tile.label}</span>
@@ -3659,7 +3659,7 @@ function AddModal({
                 onClick={() => onSelectContentTile(tile)}
                 className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle text-primary">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                   <tile.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

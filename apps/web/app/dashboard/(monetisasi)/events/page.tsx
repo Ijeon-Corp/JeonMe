@@ -149,7 +149,7 @@ export default function DashboardEventsPage() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
           >
             <IconPlus className="h-4 w-4" />
             {t("dashboard.pages.events.createButton")}
@@ -164,7 +164,7 @@ export default function DashboardEventsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("dashboard.pages.events.namePlaceholder")}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div>
@@ -173,7 +173,7 @@ export default function DashboardEventsPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function DashboardEventsPage() {
                 min={1000}
                 value={priceIDR}
                 onChange={(e) => setPriceIDR(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -195,7 +195,7 @@ export default function DashboardEventsPage() {
                   required
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </div>
               <div>
@@ -205,7 +205,7 @@ export default function DashboardEventsPage() {
                   required
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function DashboardEventsPage() {
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               >
                 {TIMEZONE_OPTIONS.map((tz) => (
                   <option key={tz.value} value={tz.value}>
@@ -235,7 +235,7 @@ export default function DashboardEventsPage() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder={t("dashboard.pages.events.locationPlaceholder")}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
                 />
               </div>
             )}
@@ -246,7 +246,7 @@ export default function DashboardEventsPage() {
                 min={1}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
               />
             </div>
             <div className="flex gap-2">
@@ -277,10 +277,10 @@ export default function DashboardEventsPage() {
           <div key={ev.id} className="glass rounded-2xl p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IconCalendar className="h-4 w-4 text-primary" />
+                <IconCalendar className="h-4 w-4 text-jeon-purple" />
                 <p className="text-sm font-bold text-app-ink">{ev.name}</p>
               </div>
-              <span className="text-sm font-bold text-secondary-dark">Rp {ev.price_idr.toLocaleString("id-ID")}</span>
+              <span className="text-sm font-bold text-jeon-purple">Rp {ev.price_idr.toLocaleString("id-ID")}</span>
             </div>
             <p className="mt-1 text-xs text-app-muted">
               {new Date(ev.starts_at).toLocaleString("id-ID")} ({ev.timezone}) &middot;{" "}

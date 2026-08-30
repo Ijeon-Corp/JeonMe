@@ -80,8 +80,8 @@ export default function IconPickerModal({
                       onClick={() => onSelect(icon)}
                       className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
                         currentKey === icon.key
-                          ? "border-primary bg-primary-subtle text-primary"
-                          : "border-app-border text-app-ink hover:border-primary/50 hover:bg-primary-subtle/40"
+                          ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                          : "border-app-border text-app-ink hover:border-jeon-purple/50 hover:bg-jeon-purple/10/40"
                       }`}
                     >
                       <icon.Icon className="h-5 w-5" />

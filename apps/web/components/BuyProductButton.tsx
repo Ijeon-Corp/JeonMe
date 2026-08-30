@@ -5,7 +5,7 @@ import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher
 
 export default function BuyProductButton({
   productId,
-  buttonClassName = "bg-primary text-white hover:opacity-90",
+  buttonClassName = "bg-jeon-purple text-white hover:opacity-90",
   pwywMinPriceIdr,
   hideVoucher = false,
   openLabel = "Beli",
@@ -149,7 +149,7 @@ export default function BuyProductButton({
             min={pwywMinPriceIdr}
             value={buyerAmount}
             onChange={(e) => setBuyerAmount(e.target.value)}
-            className="mt-0.5 w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+            className="mt-0.5 w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
       )}
@@ -159,7 +159,7 @@ export default function BuyProductButton({
         placeholder="Email kamu"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
       />
 
       {/* No.74 (Sprint 8): nomor WhatsApp OPSIONAL -- kolom buyer_contact
@@ -177,7 +177,7 @@ export default function BuyProductButton({
           placeholder="Nomor WhatsApp (opsional)"
           value={whatsappNumber}
           onChange={(e) => setWhatsappNumber(e.target.value)}
-          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
+          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
         />
       )}
 
@@ -202,13 +202,13 @@ export default function BuyProductButton({
                   setVoucherResult(null);
                   setVoucherMessage(null);
                 }}
-                className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs uppercase text-ink focus:border-primary focus:outline-none"
+                className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs uppercase text-app-ink focus:border-jeon-purple focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleApplyVoucher}
                 disabled={checkingVoucher || !voucherCode.trim()}
-                className="flex-shrink-0 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-ink disabled:opacity-60"
+                className="flex-shrink-0 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-app-ink disabled:opacity-60"
               >
                 {checkingVoucher ? "..." : "Terapkan"}
               </button>

@@ -31,7 +31,7 @@ export default function DesignFontPage() {
           <select
             value={page.custom_font}
             onChange={(e) => handleStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -54,7 +54,7 @@ export default function DesignFontPage() {
             <button
               type="button"
               onClick={() => handleStyleOverride({ custom_page_text_color: "" })}
-              className="mt-1 text-[11px] font-semibold text-primary hover:underline"
+              className="mt-1 text-[11px] font-semibold text-jeon-purple hover:underline"
             >
               {t("dashboard.pages.designFont.resetToThemeColor")}
             </button>
@@ -77,7 +77,7 @@ export default function DesignFontPage() {
           <select
             value={page.custom_title_font}
             onChange={(e) => handleStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
           >
             {CUSTOM_FONT_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -100,7 +100,7 @@ export default function DesignFontPage() {
             <button
               type="button"
               onClick={() => handleStyleOverride({ custom_title_color: "" })}
-              className="mt-1 text-[11px] font-semibold text-primary hover:underline"
+              className="mt-1 text-[11px] font-semibold text-jeon-purple hover:underline"
             >
               {t("dashboard.pages.designFont.resetToThemeColor")}
             </button>

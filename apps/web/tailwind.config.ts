@@ -74,25 +74,37 @@ const config: Config = {
         // key tanpa strip diam-diam TIDAK menghasilkan class utility yang
         // dipakai kode (bug nyata bg-app-surface-2, 30 Agustus 2026),
         // verifikasi selalu lewat grep CSS hasil build.
+        // PENTING (bug nyata 31 Agustus 2026, pola sama bg-app-surface-2):
+        // warna berbasis var() di Tailwind v3 TIDAK mendukung modifier
+        // opasitas -- bg-jeon-purple/25 dst diam-diam TIDAK menghasilkan
+        // rule CSS sama sekali (build tetap hijau). Warna BRAND jeon
+        // sengaja konstan di kedua mode, jadi didefinisikan hex LITERAL di
+        // sini (dukungan /opacity penuh); variable CSS-nya di globals.css
+        // TETAP ada untuk pemakaian langsung (shadow, gradient, dsb).
+        // HANYA token permukaan yang flip ikut tema (ink/paper/surface/
+        // surface-2/muted/border) yang tetap var() -- JANGAN pakai
+        // modifier opasitas pada keenam token itu (pakai literal
+        // text-[#111111]/70 dst di permukaan tint konstan, atau token
+        // app-* yang senasib var-nya).
         jeon: {
           ink: "var(--jeon-ink)",
           paper: "var(--jeon-paper)",
           surface: "var(--jeon-surface)",
           "surface-2": "var(--jeon-surface-2)",
-          purple: "var(--jeon-purple)",
-          "purple-dark": "var(--jeon-purple-dark)",
-          lavender: "var(--jeon-lavender)",
-          orange: "var(--jeon-orange)",
-          coral: "var(--jeon-coral)",
-          lime: "var(--jeon-lime)",
-          blue: "var(--jeon-blue)",
-          pink: "var(--jeon-pink)",
-          success: "var(--jeon-success)",
-          warning: "var(--jeon-warning)",
-          danger: "var(--jeon-danger)",
+          purple: "#7657ff",
+          "purple-dark": "#5636e8",
+          lavender: "#d9ceff",
+          orange: "#ff7043",
+          coral: "#ff6448",
+          lime: "#d7ff60",
+          blue: "#8ad5ff",
+          pink: "#ffafd0",
+          success: "#168153",
+          warning: "#d98600",
+          danger: "#d93d36",
           muted: "var(--jeon-muted)",
           border: "var(--jeon-border)",
-          sidebar: "var(--jeon-sidebar)",
+          sidebar: "#17151c",
         },
       },
       borderRadius: {

@@ -120,7 +120,7 @@ export default function DangerZonePage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-primary"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsDangerZone.breadcrumb")}
@@ -134,13 +134,13 @@ export default function DangerZonePage() {
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.deactivateDescription")}</p>
 
         {status?.deactivated ? (
-          <div className="mt-3 flex items-center justify-between rounded-lg bg-primary-subtle/50 px-3 py-2.5">
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-jeon-purple/10/50 px-3 py-2.5">
             <span className="text-xs font-semibold text-app-ink">{t("dashboard.pages.settingsDangerZone.currentlyDeactivated")}</span>
             <button
               type="button"
               onClick={handleReactivate}
               disabled={reactivating}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+              className="rounded-lg bg-jeon-purple px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
             >
               {reactivating ? t("dashboard.pages.settingsDangerZone.processing") : t("dashboard.pages.settingsDangerZone.reactivateButton")}
             </button>
@@ -153,12 +153,12 @@ export default function DangerZonePage() {
               placeholder={t("dashboard.pages.settingsDangerZone.enterPasswordPlaceholder")}
               value={deactivatePassword}
               onChange={(e) => setDeactivatePassword(e.target.value)}
-              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-primary focus:outline-none"
+              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
             />
             <button
               type="submit"
               disabled={deactivating}
-              className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-ink hover:border-primary disabled:opacity-60"
+              className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
             >
               {deactivating ? t("dashboard.pages.settingsDangerZone.processing") : t("dashboard.pages.settingsDangerZone.deactivateButton")}
             </button>
@@ -173,7 +173,7 @@ export default function DangerZonePage() {
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="mt-3 rounded-lg border border-app-border px-4 py-2 text-xs font-bold text-app-ink hover:border-primary disabled:opacity-60"
+          className="mt-3 rounded-lg border border-app-border px-4 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
         >
           {exporting ? t("dashboard.pages.settingsDangerZone.exportPreparing") : t("dashboard.pages.settingsDangerZone.exportButton")}
         </button>
