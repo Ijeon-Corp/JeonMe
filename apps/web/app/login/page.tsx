@@ -75,7 +75,7 @@ export default function LoginPage() {
   if (mfaToken) {
     return (
       <AuthShell>
-        <h1 className="font-heading text-3xl font-extrabold text-app-ink">Verifikasi 2FA</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-app-ink">Verifikasi 2FA</h1>
         <p className="mt-3 text-sm text-app-muted">Masukkan kode dari aplikasi authenticator-mu.</p>
 
         <form onSubmit={handleVerifyMfa} className="mt-8 flex flex-col gap-4">
@@ -87,7 +87,7 @@ export default function LoginPage() {
             placeholder="123456"
             value={mfaCode}
             onChange={(e) => setMfaCode(e.target.value)}
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-center text-lg tracking-[0.3em] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-center text-lg tracking-[0.3em] text-app-ink focus:border-jeon-purple focus:outline-none"
           />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
@@ -132,7 +132,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight leading-tight text-app-ink sm:text-5xl" style={{ textWrap: "balance" }}>
         Masuk ke jeon.id
       </h1>
       <p className="mt-3 text-sm text-app-muted">Kelola halaman dan produkmu.</p>
@@ -145,7 +145,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
         <div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
@@ -175,9 +175,9 @@ export default function LoginPage() {
           SEBELUMNYA di atas form (di atas divider "atau"), sekarang di
           bawah form email/password. */}
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-app-border" />
         <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
-        <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-app-border" />
       </div>
       {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
           "tambahkan juga login via apple". Kedua tombol soft-fail sendiri-

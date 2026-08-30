@@ -105,7 +105,7 @@ export default function RegisterPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-display text-4xl font-extrabold tracking-tight leading-tight text-app-ink sm:text-5xl" style={{ textWrap: "balance" }}>
         Daftar ke jeon.id
       </h1>
       <p className="mt-3 text-sm text-app-muted">
@@ -184,7 +184,7 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
         <div>
@@ -195,7 +195,7 @@ export default function RegisterPage() {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-xs text-app-muted">Minimal 8 karakter.</p>
         </div>
@@ -230,9 +230,9 @@ export default function RegisterPage() {
           -- checkbox tetap wajib tercentang dulu sebelum redirect ke
           Google, cuma posisi tombolnya yang pindah. */}
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-app-border" />
         <span className="text-xs font-semibold uppercase tracking-wide text-app-muted">atau</span>
-        <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-app-border" />
       </div>
       {/* AppleAuthButton -- permintaan langsung pengguna, 20 Agustus 2026:
           "tambahkan juga login via apple". onBeforeRedirect sama persis
