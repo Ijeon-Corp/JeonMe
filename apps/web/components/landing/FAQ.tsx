@@ -15,13 +15,13 @@ export default function FAQ() {
   const { t } = useLocale();
 
   return (
-    <section id="faq" className="bg-app-surface-2 py-20 md:py-28" aria-label="FAQ">
+    <section id="faq" className="bg-jeon-paper py-20 md:py-28" aria-label="FAQ">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-12 text-center">
-          <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+          <h2 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-jeon-ink sm:text-5xl">
             {t("faq.heading1")}
             <br />
-            <span className="text-gradient">{t("faq.headingGradient")}</span>
+            <span className="text-jeon-purple">{t("faq.headingGradient")}</span>
           </h2>
         </div>
 
@@ -46,22 +46,22 @@ export default function FAQ() {
               // (tidak pernah bergantung pada isActive, jadi React tidak
               // pernah menulis ulang elemen itu setelah mount) -- toggle
               // accordion dipindah ke div DALAM yang terpisah.
-              <div key={key} className="reveal overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm">
+              <div key={key} className="reveal overflow-hidden rounded-jlg border-2 border-jeon-ink bg-jeon-surface">
                 <div className={`accordion-item ${isActive ? "active" : ""}`}>
                   <button
                     onClick={() => setActive(isActive ? null : i)}
                     className="flex w-full cursor-pointer items-center justify-between gap-4 p-5 text-left"
                   >
-                    <span className="font-heading text-base font-bold text-app-ink">{t(`faq.items.${key}.q`)}</span>
-                    <span className="accordion-icon flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-subtle">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B4D3E" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                    <span className="font-display text-base font-bold text-jeon-ink">{t(`faq.items.${key}.q`)}</span>
+                    <span className="accordion-icon flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lavender">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111111" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
                     </span>
                   </button>
                   <div className="accordion-content px-5">
-                    <p className="pb-5 text-sm leading-relaxed text-app-muted">{t(`faq.items.${key}.a`)}</p>
+                    <p className="pb-5 text-sm leading-relaxed text-jeon-muted">{t(`faq.items.${key}.a`)}</p>
                   </div>
                 </div>
               </div>

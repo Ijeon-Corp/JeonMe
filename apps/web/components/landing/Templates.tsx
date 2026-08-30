@@ -98,15 +98,17 @@ export default function Templates() {
   const { t: tr } = useLocale();
 
   return (
-    <section id="templates" className="relative overflow-hidden bg-app-surface-2 py-20 md:py-28" aria-label="Template">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="reveal mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+    // Section "story" biru KONSTAN (redesign spec §11.4) -- teks langsung
+    // di atasnya ink konstan #111, lihat catatan di ProductShowcase.tsx.
+    <section id="templates" className="relative overflow-hidden bg-jeon-blue py-20 md:py-28" aria-label="Template">
+      <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
+        <div className="reveal mx-auto mb-10 max-w-3xl text-center">
+          <h2 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-[#111111] sm:text-5xl md:text-6xl">
             {tr("templates.heading1")}
             <br />
-            <span className="text-gradient">{tr("templates.headingGradient")}</span>
+            <span className="text-jeon-purple-dark">{tr("templates.headingGradient")}</span>
           </h2>
-          <p className="text-lg leading-relaxed text-app-muted">{tr("templates.subtitle")}</p>
+          <p className="text-lg leading-relaxed text-[#111111]/70">{tr("templates.subtitle")}</p>
         </div>
 
         <div className="reveal mb-10 flex flex-wrap justify-center gap-2">
@@ -114,10 +116,8 @@ export default function Templates() {
             <button
               key={f.key}
               onClick={() => setActive(f.key)}
-              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                active === f.key
-                  ? "bg-primary text-white"
-                  : "border border-app-border bg-app-surface text-app-muted hover:border-primary hover:text-primary"
+              className={`cursor-pointer rounded-full border-2 border-[#111111] px-4 py-2 text-sm font-bold transition-colors ${
+                active === f.key ? "bg-[#111111] text-white" : "bg-white text-[#111111] hover:bg-jeon-lavender"
               }`}
             >
               {tr(`templates.filters.${f.labelKey}`)}

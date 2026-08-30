@@ -39,30 +39,33 @@ export default function Monetization() {
   return (
     // bg-app-surface-2 (BUKAN bg-primary-subtle/40) -- lihat catatan
     // lengkap soal token app-* vs bg-primary-subtle di ProductShowcase.tsx.
-    <section id="monetization" className="relative overflow-hidden bg-app-surface-2 py-20 md:py-28" aria-label="Monetisasi">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    // Section "story" lime KONSTAN (redesign spec §11.4 "Monetize your
+    // work") -- teks langsung di atasnya ink konstan #111, lihat catatan
+    // warna konstan di ProductShowcase.tsx.
+    <section id="monetization" className="relative overflow-hidden bg-jeon-lime py-20 md:py-28" aria-label="Monetisasi">
+      <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="reveal">
-            <h2 className="mb-5 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+            <h2 className="mb-5 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-[#111111] sm:text-5xl md:text-6xl">
               {t("monetization.heading1")}
               <br />
-              <span className="text-gradient">{t("monetization.headingGradient")}</span>
+              <span className="text-jeon-purple-dark">{t("monetization.headingGradient")}</span>
             </h2>
-            <p className="mb-8 text-lg leading-relaxed text-app-muted">{t("monetization.subtitle")}</p>
+            <p className="mb-8 text-lg leading-relaxed text-[#111111]/70">{t("monetization.subtitle")}</p>
 
             <div className="grid grid-cols-2 gap-3">
               {items.map((item) => (
                 <div
                   key={item.key}
-                  className="flex items-center gap-2.5 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-card"
+                  className="flex items-center gap-2.5 rounded-jmd border-2 border-[#111111] bg-white p-3.5 transition-transform duration-150 hover:-translate-y-0.5"
                 >
                   {"image" in item ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.image} alt="" className="h-12 w-12 flex-shrink-0 object-contain" />
                   ) : (
-                    <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary-subtle">{item.icon}</span>
+                    <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender">{item.icon}</span>
                   )}
-                  <p className="text-xs font-bold leading-snug text-app-ink">{t(`monetization.items.${item.key}`)}</p>
+                  <p className="text-xs font-bold leading-snug text-[#111111]">{t(`monetization.items.${item.key}`)}</p>
                 </div>
               ))}
             </div>

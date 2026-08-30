@@ -13,17 +13,17 @@ export default function FeaturesPageHero() {
   const { t } = useLocale();
 
   return (
-    <section className="relative overflow-hidden bg-app-surface pb-4 pt-36 md:pt-44">
+    <section className="relative overflow-hidden bg-jeon-paper pb-4 pt-36 md:pt-44">
       <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
         <span className="mb-4 inline-block rounded-full border border-primary/15 bg-primary-subtle px-3 py-1.5 text-xs font-semibold text-primary">
           {t("featuresPage.badge")}
         </span>
-        <h1 className="mb-4 font-heading text-4xl font-bold leading-tight text-app-ink sm:text-5xl">
+        <h1 className="mb-4 font-display text-5xl font-extrabold leading-[0.92] tracking-tight text-jeon-ink sm:text-6xl md:text-7xl">
           {t("featuresPage.title1")}
           <br />
-          <span className="text-gradient">{t("featuresPage.titleGradient")}</span>
+          <span className="text-jeon-purple">{t("featuresPage.titleGradient")}</span>
         </h1>
-        <p className="mx-auto max-w-2xl text-lg leading-relaxed text-app-muted">{t("featuresPage.subtitle")}</p>
+        <p className="mx-auto max-w-2xl text-lg leading-relaxed text-jeon-muted">{t("featuresPage.subtitle")}</p>
       </div>
     </section>
   );

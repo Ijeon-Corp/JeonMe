@@ -62,19 +62,18 @@ export default function ProductShowcase() {
     // alternating background di homepage sekarang pakai token app-* supaya
     // ikut gelap/terang bersama section lain, bukan tetap hijau muda kalau
     // dark mode aktif.
-    <section className="dot-grid relative overflow-hidden bg-app-surface-2 py-20 md:py-28" aria-label="Contoh halaman">
-      <div
-        className="absolute inset-0 opacity-[0.5]"
-        aria-hidden="true"
-        style={{ maskImage: "radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent)" }}
-      />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    // Section "story" berwarna lavender KONSTAN (redesign spec §11.4:
+    // tiap section warna berbeda; warna brand tidak ikut flip dark mode)
+    // -- semua teks langsung di atasnya WAJIB ink konstan #111, bukan
+    // token yang flip (lihat catatan colorMap Features.tsx).
+    <section className="relative overflow-hidden rounded-t-jsection border-t-2 border-[#111111] bg-jeon-lavender py-20 md:py-28" aria-label="Contoh halaman">
+      <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-          <div className="max-w-xl">
-            <h2 className="font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-[#111111] sm:text-5xl md:text-6xl">
               {t("productShowcase.heading1")}
               <br />
-              <span className="text-gradient">{t("productShowcase.headingGradient")}</span>
+              <span className="text-jeon-purple-dark">{t("productShowcase.headingGradient")}</span>
             </h2>
           </div>
           <CarouselArrows carouselRef={carouselRef} />
@@ -84,7 +83,7 @@ export default function ProductShowcase() {
           {items.map((item) => (
             <div
               key={item.key}
-              className="tilt-card w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-card"
+              className="w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-jlg border-2 border-[#111111] bg-white shadow-[10px_12px_0_rgba(17,17,17,0.92)]"
             >
               {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola & ukuran
                   SAMA PERSIS dengan galeri Templates.tsx di bawah section
@@ -111,11 +110,15 @@ export default function ProductShowcase() {
                     Templates.tsx). from-app-surface (BUKAN from-white) --
                     memudar ke background KARTU (bg-app-surface di atas),
                     bukan ke background mockup di dalamnya. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-app-surface to-transparent" />
+                {/* from-white (bukan token) -- kartu ini SENGAJA bg-white
+                    konstan di kedua mode karena isinya mockup tema kreator
+                    yang tidak boleh ikut flip (lihat catatan panjang di
+                    atas), jadi fade-nya juga ke putih konstan. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
               </div>
               <div className="p-5 pt-3">
-                <h3 className="font-heading text-sm font-bold text-app-ink">{item.label}</h3>
-                <p className="mt-1 text-xs text-app-muted">{item.description}</p>
+                <h3 className="font-display text-sm font-bold text-[#111111]">{item.label}</h3>
+                <p className="mt-1 text-xs text-[#111111]/60">{item.description}</p>
               </div>
             </div>
           ))}

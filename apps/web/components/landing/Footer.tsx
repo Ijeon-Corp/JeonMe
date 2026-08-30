@@ -41,48 +41,48 @@ export default function Footer() {
   const { t, dict } = useLocale();
 
   return (
-    <footer className="border-t border-app-border bg-app-surface" aria-label="Footer">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <footer className="border-t-2 border-jeon-ink bg-jeon-paper" aria-label="Footer">
+      <div className="mx-auto max-w-[var(--container)] px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Logo className="mb-4" />
-            <p className="max-w-xs text-sm leading-relaxed text-app-muted">{dict.footer.tagline}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-jeon-muted">{dict.footer.tagline}</p>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.product}</h3>
+            <h3 className="mb-4 font-display text-sm font-bold text-jeon-ink">{dict.footer.columns.product}</h3>
             <ul className="space-y-2.5">
               {/* Fitur & Harga -- perbaikan SEO (temuan audit, 15 Agustus
                   2026): halaman terpisah, bukan anchor scroll lagi (lihat
                   komentar Navbar.tsx). Footer ini juga dipakai ulang di
                   /features & /pricing sendiri, jadi anchor polos tidak
                   akan berfungsi benar dari sana. */}
-              <li><Link href="/features" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.features")}</Link></li>
-              <li><Link href="/pricing" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.pricing")}</Link></li>
-              <li><Link href="/#templates" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.templates")}</Link></li>
+              <li><Link href="/features" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.features")}</Link></li>
+              <li><Link href="/pricing" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.pricing")}</Link></li>
+              <li><Link href="/#templates" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.templates")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.help}</h3>
+            <h3 className="mb-4 font-display text-sm font-bold text-jeon-ink">{dict.footer.columns.help}</h3>
             <ul className="space-y-2.5">
-              <li><Link href="/#faq" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.faq")}</Link></li>
-              <li><Link href="/register" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.getStarted")}</Link></li>
+              <li><Link href="/#faq" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.faq")}</Link></li>
+              <li><Link href="/register" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.getStarted")}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 font-heading text-sm font-bold text-app-ink">{dict.footer.columns.legal}</h3>
+            <h3 className="mb-4 font-display text-sm font-bold text-jeon-ink">{dict.footer.columns.legal}</h3>
             <ul className="space-y-2.5">
-              <li><Link href="/privacy" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.privacy")}</Link></li>
-              <li><Link href="/terms" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.terms")}</Link></li>
-              <li><Link href="/cookies" className="cursor-pointer text-sm text-app-muted transition-colors hover:text-primary">{t("footer.links.cookies")}</Link></li>
+              <li><Link href="/privacy" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.privacy")}</Link></li>
+              <li><Link href="/terms" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.terms")}</Link></li>
+              <li><Link href="/cookies" className="cursor-pointer text-sm text-jeon-muted transition-colors hover:text-jeon-purple">{t("footer.links.cookies")}</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-app-border py-6 text-center">
-          <p className="text-sm text-app-muted">{dict.footer.copyright}</p>
+        <div className="border-t border-jeon-border py-6 text-center">
+          <p className="text-sm text-jeon-muted">{dict.footer.copyright.replace("{year}", String(new Date().getFullYear()))}</p>
         </div>
       </div>
     </footer>

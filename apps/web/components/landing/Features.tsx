@@ -79,10 +79,14 @@ const features = [
   },
 ] as const;
 
+// colorMap -- redesign Fase 2 (DESIGN-JEONID-REDESIGN.md §6): warna cerah
+// sebagai pemisah fungsi -- chip ikon bergantian lavender/lime/blue,
+// stroke ikon SELALU ink konstan #111 (chip-nya warna terang konstan di
+// kedua mode, teks/ikon di atasnya tidak boleh ikut flip dark mode).
 const colorMap: Record<string, { bg: string; icon: string; hoverBg: string }> = {
-  primary: { bg: "bg-primary-subtle", icon: "#1B4D3E", hoverBg: "group-hover:bg-primary" },
-  accent: { bg: "bg-accent-subtle", icon: "#C9A24B", hoverBg: "group-hover:bg-accent" },
-  secondary: { bg: "bg-secondary-subtle", icon: "#1F7A6C", hoverBg: "group-hover:bg-secondary" },
+  primary: { bg: "bg-jeon-lavender", icon: "#111111", hoverBg: "group-hover:bg-jeon-purple" },
+  accent: { bg: "bg-jeon-lime", icon: "#111111", hoverBg: "group-hover:bg-jeon-purple" },
+  secondary: { bg: "bg-jeon-blue", icon: "#111111", hoverBg: "group-hover:bg-jeon-purple" },
 };
 
 // compact -- permintaan langsung pengguna, 23 Agustus 2026: "Di section
@@ -105,16 +109,16 @@ export default function Features({ showHeading = true, compact = false }: { show
   const visibleFeatures = compact ? features.filter((f) => COMPACT_KEYS.includes(f.key)) : features;
 
   return (
-    <section id="features" className="relative overflow-hidden bg-app-surface py-20 md:py-28" aria-label="Fitur">
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="features" className="relative overflow-hidden bg-jeon-paper py-20 md:py-28" aria-label="Fitur">
+      <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
         {showHeading && (
-          <div className="reveal mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="mb-4 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">
+          <div className="reveal mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-jeon-ink sm:text-5xl md:text-6xl">
               {t("features.heading1")}
               <br />
-              <span className="text-gradient">{t("features.headingGradient")}</span>
+              <span className="text-jeon-purple">{t("features.headingGradient")}</span>
             </h2>
-            <p className="text-lg leading-relaxed text-app-muted">{t("features.subtitle")}</p>
+            <p className="text-lg leading-relaxed text-jeon-muted">{t("features.subtitle")}</p>
           </div>
         )}
 
@@ -124,7 +128,7 @@ export default function Features({ showHeading = true, compact = false }: { show
             return (
               <div
                 key={f.key}
-                className="pop-card reveal group cursor-pointer rounded-2xl border border-app-border bg-app-surface p-6 text-center shadow-card"
+                className="reveal group cursor-pointer rounded-jlg border-2 border-jeon-ink bg-jeon-surface p-6 text-center shadow-brutal transition-transform duration-150 hover:-translate-y-1"
                 style={{ transitionDelay: `${0.05 + (i % 4) * 0.05}s` }}
               >
                 {"image" in f && f.image ? (
@@ -139,7 +143,7 @@ export default function Features({ showHeading = true, compact = false }: { show
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={f.image} alt="" className="mx-auto mb-4 h-14 w-14 object-contain" />
                 ) : (
-                  <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
+                  <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-jmd border-2 border-[#111111] transition-colors duration-250 ${c.bg} ${c.hoverBg}`}>
                     <svg
                       width="22"
                       height="22"
@@ -155,8 +159,8 @@ export default function Features({ showHeading = true, compact = false }: { show
                     </svg>
                   </div>
                 )}
-                <h3 className="mb-2 font-heading font-bold text-app-ink">{t(`features.items.${f.key}.title`)}</h3>
-                <p className="text-sm leading-relaxed text-app-muted">{t(`features.items.${f.key}.desc`)}</p>
+                <h3 className="mb-2 font-display font-bold text-jeon-ink">{t(`features.items.${f.key}.title`)}</h3>
+                <p className="text-sm leading-relaxed text-jeon-muted">{t(`features.items.${f.key}.desc`)}</p>
               </div>
             );
           })}

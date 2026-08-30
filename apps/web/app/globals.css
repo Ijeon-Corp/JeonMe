@@ -132,6 +132,31 @@
   --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
 }
 
+/* Creator marquee (redesign spec §11.3): strip horizontal berjalan tanpa
+   henti -- track berisi daftar yang DIDUPLIKASI 2x (CreatorMarquee.tsx),
+   translateX -50% = tepat satu salinan penuh, jadi loop mulus tanpa
+   lompatan. Pause saat hover; NONAKTIF total di prefers-reduced-motion
+   (aturan spec §17). Durasi 38s dalam rentang 30-45s spec. */
+@keyframes jeon-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.jeon-marquee-track {
+  animation: jeon-marquee 38s linear infinite;
+}
+.jeon-marquee-track:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jeon-marquee-track {
+    animation: none;
+  }
+}
+
 /* Reskin fokus form premium (permintaan langsung pengguna, "design
    dashboard ini terlalu biasa"): glow lembut warna brand di SEMUA
    input/select/textarea saat fokus, menggantikan garis/outline default

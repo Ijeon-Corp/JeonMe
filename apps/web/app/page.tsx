@@ -1,5 +1,7 @@
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
+import CreatorMarquee from "@/components/landing/CreatorMarquee";
+import AISection from "@/components/landing/AISection";
 import Features from "@/components/landing/Features";
 import ProductShowcase from "@/components/landing/ProductShowcase";
 import Monetization from "@/components/landing/Monetization";
@@ -37,11 +39,13 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
+        <CreatorMarquee />
         <Features compact />
         <ProductShowcase />
         <Monetization />
         <Templates />
         <Analytics />
+        <AISection />
         <Testimonials />
         <Pricing />
         <FAQ />
