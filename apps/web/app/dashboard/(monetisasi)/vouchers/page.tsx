@@ -426,7 +426,7 @@ function VoucherRow({
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
-        compact ? "border-app-border/60 bg-jeon-purple/10/20" : "border-app-border bg-app-surface shadow-card"
+        compact ? "border-app-border/60 bg-jeon-purple/5" : "border-app-border bg-app-surface shadow-card"
       }`}
     >
       <div className="min-w-0 flex-1">

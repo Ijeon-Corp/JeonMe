@@ -275,7 +275,7 @@ export default function DashboardBookingsPage() {
             </div>
 
             {managingId === booking.id && (
-              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/10/20 p-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-3">
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="datetime-local"

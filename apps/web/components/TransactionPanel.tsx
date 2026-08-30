@@ -116,7 +116,7 @@ export default function TransactionPanel() {
                 <tr
                   key={o.order_id}
                   onClick={() => setSelectedOrderId(o.order_id)}
-                  className="cursor-pointer border-b border-app-border last:border-0 hover:bg-jeon-purple/10/40"
+                  className="cursor-pointer border-b border-app-border last:border-0 hover:bg-jeon-purple/5"
                 >
                   <td className="px-4 py-3 font-semibold text-app-ink">{o.product_name}</td>
                   <td className="px-4 py-3 text-app-ink">{o.buyer_email}</td>

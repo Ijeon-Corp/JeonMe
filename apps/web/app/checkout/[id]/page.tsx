@@ -85,7 +85,7 @@ export default function CheckoutStatusPage() {
   }, [status, params.id]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-jeon-purple/10/40 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-jeon-purple/5 px-4">
       {status?.social_proof && (
         <SocialProofToast
           recent={status.social_proof.recent}
@@ -128,7 +128,7 @@ export default function CheckoutStatusPage() {
                 </p>
 
                 {status.is_booking && status.booked_slot_at && (
-                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Jadwal Konsultasimu</p>
                     <p className="mt-1 text-sm font-semibold text-app-ink">
                       {new Date(status.booked_slot_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}
@@ -162,7 +162,7 @@ export default function CheckoutStatusPage() {
                     (manual/random_code) diberi tampilan khusus karena
                     pembeli butuh tahu APA yang terjadi selanjutnya. */}
                 {status.delivery_method === "manual" && (
-                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Status Pesanan</p>
                     {status.fulfilled_at ? (
                       <p className="mt-1 text-sm font-semibold text-jeon-purple">
@@ -178,7 +178,7 @@ export default function CheckoutStatusPage() {
                 )}
 
                 {status.delivery_method === "random_code" && (
-                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/30 p-3.5 text-left">
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted">Kode Kamu</p>
                     {status.claimed_code ? (
                       <p className="mt-1 select-all rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold text-app-ink">
@@ -202,7 +202,7 @@ export default function CheckoutStatusPage() {
                         <VideoEmbedBlock
                           title={`Bab ${i + 1}: ${chapter.title}`}
                           videoUrl={chapter.video_url}
-                          cardClassName="rounded-xl border border-border bg-jeon-purple/10/20 p-3"
+                          cardClassName="rounded-xl border border-border bg-jeon-purple/5 p-3"
                           titleClassName="text-app-ink"
                         />
                         {chapter.description && <p className="mt-2 text-xs text-muted">{chapter.description}</p>}
@@ -279,14 +279,14 @@ function ReviewForm({ orderId }: { orderId: string }) {
 
   if (submitted) {
     return (
-      <div className="mt-4 rounded-xl border border-border bg-jeon-purple/10/40 p-3.5 text-left">
+      <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
         <p className="text-sm font-semibold text-jeon-purple">Terima kasih atas ulasanmu!</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-jeon-purple/10/20 p-3.5 text-left">
+    <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-left">
       <p className="text-xs font-bold uppercase tracking-wider text-muted">Beri Ulasan</p>
       <div className="mt-2 flex gap-1">
         {[1, 2, 3, 4, 5].map((n) => (

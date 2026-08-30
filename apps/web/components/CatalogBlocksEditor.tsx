@@ -305,7 +305,7 @@ export function CatalogNodeEditor({
   return (
     <div className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <div key={item.id} className="rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+        <div key={item.id} className="rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
           <div className="flex items-center gap-2">
             <input
               defaultValue={item.title}

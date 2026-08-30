@@ -89,7 +89,7 @@ export default function OnboardingBanner() {
   const nextItem = checklist.find((i) => !i.done);
 
   return (
-    <div className="border-b border-jeon-purple/20 bg-jeon-purple/10/40 px-4 py-2.5 sm:px-6">
+    <div className="border-b border-jeon-purple/20 bg-jeon-purple/5 px-4 py-2.5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple text-white">

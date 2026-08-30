@@ -240,7 +240,7 @@ export default function SettingsPaymentPage() {
               </div>
 
               {verifyingId === m.id && (
-                <form onSubmit={handleVerify} className="mt-2 flex gap-2 rounded-lg bg-jeon-purple/10/40 p-2.5">
+                <form onSubmit={handleVerify} className="mt-2 flex gap-2 rounded-lg bg-jeon-purple/5 p-2.5">
                   <input
                     type="text"
                     inputMode="numeric"

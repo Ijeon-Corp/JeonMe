@@ -23,7 +23,7 @@ const NEUTRAL_TONE = {
 
 export const STAT_TONES = {
   brand: {
-    card: "bg-gradient-to-br from-jeon-purple-dark to-jeon-purple-dark text-white shadow-refined-lg",
+    card: "bg-gradient-to-br from-jeon-purple-dark to-jeon-purple text-white shadow-refined-lg",
     icon: "bg-white/15 text-white",
     label: "text-white/70",
     value: "text-white",
@@ -57,7 +57,7 @@ export default function StatCard({
   pct,
   sub,
   sparkline,
-  accentHex = "#1B4D3E",
+  accentHex = "#7657ff",
   tone = "blue",
 }: {
   icon: React.ReactNode;
@@ -81,13 +81,13 @@ export default function StatCard({
     <div className={`relative overflow-hidden rounded-jmd p-4 transition-transform duration-200 hover:-translate-y-0.5 ${t.card}`}>
       {/* Garis emas tipis -- SATU-satunya penanda "kartu utama", dipakai
           hemat (cuma tone brand), bukan aturan dekoratif di semua kartu. */}
-      {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-jeon-coral to-transparent" aria-hidden="true" />}
+      {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-jeon-lime to-transparent" aria-hidden="true" />}
       <div className={`flex items-center gap-2 text-xs font-semibold ${t.label}`}>
         <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${t.icon}`}>{icon}</span>
         {label}
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <p className={`font-serifDisplay text-xl font-semibold tabular-nums ${t.value}`}>{value}</p>
+        <p className={`font-display text-2xl font-extrabold tracking-tight tabular-nums ${t.value}`}>{value}</p>
         {pct !== undefined && <TrendBadge pct={pct} onDark={isBrand} />}
       </div>
       {sub !== "" && <p className={`mt-1 text-[11px] ${t.sub}`}>{sub ?? translate("dashboard.components.statCard.defaultSub")}</p>}

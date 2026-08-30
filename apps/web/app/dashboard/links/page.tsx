@@ -54,6 +54,7 @@ import {
   IconCamera,
   IconChart,
   IconChevronRight,
+  IconSettings,
   IconClock,
   IconClose,
   IconCopy,
@@ -463,6 +464,16 @@ export default function DashboardLinksPage() {
   // sebelumnya.
   const [newDescription, setNewDescription] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
+  // toolsOpenId -- restrukturisasi UX baris link (permintaan langsung
+  // pengguna, 31 Agustus 2026: "design dan struktur tiap page masih kurang
+  // secara ui dan ux"): strip 8+ ikon aksi tanpa label (jadwal/kunci/
+  // sensitif/ikon x4/featured/duplikat/hapus) yang SEBELUMNYA selalu
+  // tampil di TIAP kartu membuat baris gemuk & membingungkan -- sekarang
+  // dilipat di balik satu tombol "Kelola" per kartu (accordion inline,
+  // markup & handler aksi TIDAK berubah sama sekali, cuma dibungkus
+  // kondisional). Jumlah klik ikut pindah jadi chip ringkas di baris
+  // header (menggantikan footer sendiri yang memboroskan satu baris penuh).
+  const [toolsOpenId, setToolsOpenId] = useState<string | null>(null);
 
   // Permintaan langsung pengguna: unggah gambar kustom per tautan
   // (menggantikan ikon platform otomatis di halaman publik).
@@ -2107,7 +2118,7 @@ export default function DashboardLinksPage() {
               blockType === "file" ||
               blockType === "project_showcase" ||
               blockType === "catalog") && (
-              <p className="rounded-lg bg-jeon-purple/10/50 px-3 py-2 text-[11px] text-app-muted">
+              <p className="rounded-lg bg-jeon-purple/5 px-3 py-2 text-[11px] text-app-muted">
                 {blockType === "gallery"
                   ? t("dashboard.pages.links.blockForm.uploadHints.gallery")
                   : blockType === "audio"
@@ -2412,6 +2423,26 @@ export default function DashboardLinksPage() {
                     </span>
                   )}
                 </div>
+                {/* Chip jumlah klik -- pindah dari footer kartu ke baris
+                    header (restrukturisasi UX 31 Agustus 2026): informasi
+                    ringkas tak layak memboroskan satu baris penuh sendiri. */}
+                <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-app-surface-2 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-app-muted sm:flex">
+                  <IconChart className="h-3 w-3" />
+                  {link.click_count.toLocaleString("id-ID")}
+                </span>
+                {(link.block_type === "video" ||
+                  link.block_type === "faq" ||
+                  link.block_type === "maps" ||
+                  link.block_type === "text" ||
+                  link.block_type === "project_showcase") && (
+                  <button
+                    type="button"
+                    onClick={() => openContentEdit(link)}
+                    className="flex-shrink-0 rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
+                  >
+                    {t("dashboard.pages.links.linkCard.editContent")}
+                  </button>
+                )}
                 {link.block_type === "link" && (
                   <ShareButton
                     title={link.title}
@@ -2419,6 +2450,18 @@ export default function DashboardLinksPage() {
                     className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-jeon-purple/10 hover:!text-jeon-purple"
                   />
                 )}
+                <button
+                  type="button"
+                  onClick={() => setToolsOpenId((v) => (v === link.id ? null : link.id))}
+                  aria-expanded={toolsOpenId === link.id}
+                  title={t("dashboard.pages.links.linkCard.manageTools")}
+                  className={`flex h-8 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-bold transition-colors ${
+                    toolsOpenId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                  }`}
+                >
+                  <IconSettings className="h-4 w-4" />
+                  <IconChevronRight className={`h-3 w-3 transition-transform ${toolsOpenId === link.id ? "rotate-90" : ""}`} />
+                </button>
                 <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
               </div>
 
@@ -2479,10 +2522,13 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {/* Baris ikon aksi -- jadwal/kunci/featured (khusus tautan biasa),
-                  kontrol ikon (SEMUA block_type, lihat komentar 14 Agustus 2026
-                  di bawah), jumlah klik, hapus. */}
-              <div className="ml-11 flex items-center gap-2">
+              {/* Strip alat kelola -- jadwal/kunci/sensitif/kontrol ikon/
+                  featured/duplikat/hapus. Dilipat di balik tombol "Kelola"
+                  di header (restrukturisasi UX 31 Agustus 2026, lihat
+                  catatan toolsOpenId) -- markup & handler di dalamnya
+                  TIDAK berubah, cuma dibungkus kondisional + kontainer. */}
+              {toolsOpenId === link.id && (
+              <div className="ml-11 flex flex-wrap items-center gap-1.5 rounded-jsm border border-app-border bg-app-surface-2 p-2">
                 {link.block_type === "link" && (
                   <>
                     <button
@@ -2631,19 +2677,8 @@ export default function DashboardLinksPage() {
                     <IconStar className="h-4 w-4" />
                   </button>
                 )}
-                {(link.block_type === "video" ||
-                  link.block_type === "faq" ||
-                  link.block_type === "maps" ||
-                  link.block_type === "text" ||
-                  link.block_type === "project_showcase") && (
-                  <button
-                    type="button"
-                    onClick={() => openContentEdit(link)}
-                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
-                  >
-                    {t("dashboard.pages.links.linkCard.editContent")}
-                  </button>
-                )}
+                {/* "Edit Konten" pindah ke baris header kartu (aksi utama
+                    blok harus selalu terlihat, bukan tersembunyi di strip). */}
                 <div className="flex-1" />
                 {/* Duplikat -- permintaan langsung pengguna, 20 Agustus 2026:
                     "di bagian link bio di blok nya tambahkan fungsi duplicate".
@@ -2674,9 +2709,10 @@ export default function DashboardLinksPage() {
                   <IconTrash className="h-4 w-4" />
                 </button>
               </div>
+              )}
 
               {link.block_type === "link" && link.is_featured && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
@@ -2722,7 +2758,7 @@ export default function DashboardLinksPage() {
                   Featured Link di atas, karena kelola-foto justru INTI dari
                   blok ini, bukan pengaturan sekunder. */}
               {link.block_type === "gallery" && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="text-[11px] font-semibold text-app-muted">
                     {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} {t("dashboard.pages.links.galleryPanel.photoCountSuffix")}
                   </p>
@@ -2774,7 +2810,7 @@ export default function DashboardLinksPage() {
                   gambar, unggah ulang menimpa) -- BEDA disimpan di
                   block_data.image_url, bukan kolom thumbnail_url. */}
               {link.block_type === "project_showcase" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.block_data?.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -2811,7 +2847,7 @@ export default function DashboardLinksPage() {
                   dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
                   supaya tidak terasa terpecah 2 tempat berbeda. */}
               {link.block_type === "catalog" && (
-                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.catalogPanel.noItems")}</p>}
                   {catalogItemsOf(link).map((item) => {
                     const uploadKey = `${link.id}:${item.id}`;
@@ -2944,7 +2980,7 @@ export default function DashboardLinksPage() {
                   ikon kustom yang sudah generik (baris kontrol ikon di
                   atas), tidak diduplikasi di sini. */}
               {link.block_type === "audio" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconMusicNote className="h-5 w-5" />
                   </div>
@@ -2983,7 +3019,7 @@ export default function DashboardLinksPage() {
                   pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                   pola sama persis seperti panel Kelola audio di atas. */}
               {link.block_type === "file" && (
-                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconFileText className="h-5 w-5" />
                   </div>
@@ -3020,7 +3056,7 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                     <div className="flex gap-1.5">
                       <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
                         <input
@@ -3073,7 +3109,7 @@ export default function DashboardLinksPage() {
 
               {link.block_type === "link" &&
                 (lockEditId === link.id ? (
-                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                     <select
                       value={lockTypeInput}
                       onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
@@ -3149,7 +3185,7 @@ export default function DashboardLinksPage() {
                 link.block_type === "accordion" ||
                 link.block_type === "project_showcase") &&
                 contentEditId === link.id && (
-                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-jeon-purple">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
                   {link.block_type === "video" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.video.label")}>
@@ -3322,17 +3358,9 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {/* Statistik klik -- permintaan langsung pengguna, 13 Agustus
-                  2026: "di link bio dan juga product tambahkan dibagian
-                  bawah statistik berapa kali jumlah klik per bloknya".
-                  SENGAJA jadi footer TERPISAH & PALING BAWAH kartu (bukan
-                  lagi menumpang di baris ikon aksi seperti sebelumnya) --
-                  berlaku utk SEMUA block_type (link/video/faq/dst, click_count
-                  sudah dihitung backend untuk semuanya), bukan cuma tautan biasa. */}
-              <div className="ml-11 flex items-center gap-1.5 border-t border-app-border/70 pt-2 text-xs text-app-muted">
-                <IconChart className="h-3.5 w-3.5" />
-                {link.click_count.toLocaleString("id-ID")} {t("dashboard.pages.links.clickCountSuffix")}
-              </div>
+              {/* Statistik klik pindah jadi chip ringkas di baris header
+                  kartu (restrukturisasi UX 31 Agustus 2026) -- footer
+                  terpisah yang lama memboroskan satu baris penuh per kartu. */}
             </li>
           ))}
           {links.length === 0 && <EmptyState as="li" text={t("dashboard.pages.links.emptyState")} />}
@@ -3602,7 +3630,7 @@ function AddModal({
             <button
               type="button"
               onClick={() => onQuickPasteLink(search.trim())}
-              className="mb-3 flex w-full items-center gap-3 rounded-xl border border-jeon-purple/30 bg-jeon-purple/10/30 p-3 text-left hover:bg-jeon-purple/10/50"
+              className="mb-3 flex w-full items-center gap-3 rounded-xl border border-jeon-purple/30 bg-jeon-purple/5 p-3 text-left hover:bg-jeon-purple/5"
             >
               <IconLink className="h-5 w-5 flex-shrink-0 text-jeon-purple" />
               <div className="min-w-0">

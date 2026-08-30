@@ -134,7 +134,7 @@ export default function DangerZonePage() {
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.deactivateDescription")}</p>
 
         {status?.deactivated ? (
-          <div className="mt-3 flex items-center justify-between rounded-lg bg-jeon-purple/10/50 px-3 py-2.5">
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-jeon-purple/5 px-3 py-2.5">
             <span className="text-xs font-semibold text-app-ink">{t("dashboard.pages.settingsDangerZone.currentlyDeactivated")}</span>
             <button
               type="button"

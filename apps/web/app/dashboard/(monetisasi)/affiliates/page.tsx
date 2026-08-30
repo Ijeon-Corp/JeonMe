@@ -201,7 +201,7 @@ export default function DashboardAffiliatesPage() {
                 <IconTrash className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10/60 px-3 py-1.5">
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-app-ink">
                 {a.referral_base_url}?ref={a.referral_code}
               </p>
@@ -248,7 +248,7 @@ export default function DashboardAffiliatesPage() {
         {programs.map((p) => (
           <div key={p.id} className="glass rounded-jmd p-4 shadow-card">
             <p className="text-sm font-bold text-app-ink">@{p.creator_username}</p>
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10/60 px-3 py-1.5">
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-app-ink">{p.referral_url}</p>
               <button
                 type="button"

@@ -875,7 +875,7 @@ function BlockSection({
                 dibalik toggle) karena inti dari blok ini, sama seperti
                 catatan di dashboard/links/page.tsx. */}
             {link.block_type === "gallery" && (
-              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="text-[11px] font-semibold text-app-muted">
                   {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
                     .replace("{count}", String(((link.block_data?.images as string[]) ?? []).length))
@@ -923,7 +923,7 @@ function BlockSection({
               </div>
             )}
             {link.block_type === "audio" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.audio_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
@@ -954,7 +954,7 @@ function BlockSection({
                 pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                 pola sama persis seperti panel Kelola audio di atas. */}
             {link.block_type === "file" && (
-              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+              <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.file_url as string)
                     ? t("dashboard.components.produkPageEditor.blockForm.fileUploaded")

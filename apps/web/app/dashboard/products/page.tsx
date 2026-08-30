@@ -1772,7 +1772,7 @@ export default function DashboardProductsPage() {
 
             <div className="mt-4 flex flex-col gap-2.5">
               {flashSaleEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.flashSaleLabel")}
                   </p>
@@ -1834,7 +1834,7 @@ export default function DashboardProductsPage() {
               )}
 
               {pwywEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                     <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.pwywLabel")}
                   </p>
@@ -1883,7 +1883,7 @@ export default function DashboardProductsPage() {
 
               {activeCollaborators.length > 0 &&
                 (splitsEditId === manageProduct.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                     <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>
                     {splitRows.map((row, i) => (
                       <div key={i} className="flex gap-1.5">
@@ -1965,7 +1965,7 @@ export default function DashboardProductsPage() {
                 field khusus external_link yang bisa diubah setelah dibuat
                 (ProductKind sendiri immutable, lihat catatan di product.go). */}
             {manageProduct.product_kind === "external_link" && (
-              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/10/30 p-2.5">
+              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
                   <IconExternal className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.productLinkLabel")}
                 </p>

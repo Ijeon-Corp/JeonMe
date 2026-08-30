@@ -198,7 +198,7 @@ export default function DeliveryMethodPanel({
             </button>
           </div>
           {webhookSecret ? (
-            <div className="flex items-center gap-1.5 rounded-md bg-jeon-purple/10/40 px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 rounded-md bg-jeon-purple/5 px-2.5 py-1.5">
               <code className="min-w-0 flex-1 truncate text-[10px] text-app-ink">{webhookSecret}</code>
               <button
                 type="button"

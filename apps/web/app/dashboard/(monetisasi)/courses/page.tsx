@@ -321,7 +321,7 @@ export default function DashboardCoursesPage() {
             </div>
 
             {editingId === course.id && (
-              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/10/20 p-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-3">
                 {editChapters.map((ch, i) => (
                   <div key={i} className="rounded-lg border border-app-border bg-app-surface p-3">
                     <div className="flex items-center justify-between">

@@ -133,8 +133,8 @@ export default function NotificationBell() {
                   key={n.id}
                   type="button"
                   onClick={() => handleItemClick(n)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-app-border px-4 py-3 text-left last:border-b-0 hover:bg-jeon-purple/10/40 ${
-                    n.read ? "" : "bg-jeon-purple/10/20"
+                  className={`flex w-full flex-col gap-0.5 border-b border-app-border px-4 py-3 text-left last:border-b-0 hover:bg-jeon-purple/5 ${
+                    n.read ? "" : "bg-jeon-purple/5"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">

@@ -214,7 +214,7 @@ export default function AdminKycPage() {
                       href={detail.bank_proof_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex aspect-square items-center justify-center rounded-lg border border-app-border bg-jeon-purple/10/40 text-xs font-semibold text-jeon-purple"
+                      className="flex aspect-square items-center justify-center rounded-lg border border-app-border bg-jeon-purple/5 text-xs font-semibold text-jeon-purple"
                     >
                       Lihat Bukti
                     </a>

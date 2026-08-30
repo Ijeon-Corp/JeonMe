@@ -29,7 +29,7 @@ export default async function BusinessCardPage({ params }: PageParams) {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center bg-jeon-purple/10/30 px-5 py-10">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center bg-jeon-purple/5 px-5 py-10">
       <div className="w-full rounded-2xl border border-border bg-white p-6 text-center shadow-card">
         {card.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element

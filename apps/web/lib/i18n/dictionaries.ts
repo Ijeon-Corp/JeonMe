@@ -542,6 +542,7 @@ export const dictionaries = {
           },
           linkCard: {
             customIcon: "Ikon kustom",
+            manageTools: "Kelola blok (jadwal, kunci, ikon, dll)",
             editTitle: "Ubah judul",
             activateLabel: "Aktifkan {title}",
             editUrl: "Ubah URL",
@@ -2857,6 +2858,7 @@ export const dictionaries = {
           },
           linkCard: {
             customIcon: "Custom icon",
+            manageTools: "Manage block (schedule, lock, icon, etc)",
             editTitle: "Edit title",
             activateLabel: "Activate {title}",
             editUrl: "Edit URL",

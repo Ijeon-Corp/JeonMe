@@ -174,21 +174,21 @@ export default function DashboardHomePage() {
             icon={<IconLink className="h-5 w-5" />}
             title={t("dashboard.pages.home.quickAccessLinkBioTitle")}
             description={t("dashboard.pages.home.quickAccessLinkBioDescription")}
-            gradient="linear-gradient(135deg, #123328 0%, #1B4D3E 55%, #3E7C59 100%)"
+            gradient="linear-gradient(135deg, #5636e8 0%, #7657ff 60%, #9d85ff 100%)"
           />
           <QuickAccessCard
             href="/dashboard/products"
             icon={<IconBox className="h-5 w-5" />}
             title={t("dashboard.pages.home.quickAccessShopTitle")}
             description={t("dashboard.pages.home.quickAccessShopDescription")}
-            gradient="linear-gradient(135deg, #A9822F 0%, #C9A24B 55%, #E0C378 100%)"
+            gradient="linear-gradient(135deg, #e0492f 0%, #ff6448 60%, #ff8a73 100%)"
           />
           <QuickAccessCard
             href="/dashboard/design"
             icon={<IconSparkle className="h-5 w-5" />}
             title={t("dashboard.pages.home.quickAccessDesignTitle")}
             description={t("dashboard.pages.home.quickAccessDesignDescription")}
-            gradient="linear-gradient(135deg, #145C52 0%, #1F7A6C 55%, #5FB3A3 100%)"
+            gradient="linear-gradient(135deg, #17151c 0%, #2a2733 60%, #4a4560 100%)"
           />
         </div>
       </section>
@@ -289,7 +289,7 @@ export default function DashboardHomePage() {
                 value={summary.total_clicks.toLocaleString("id-ID")}
                 pct={prevSummary ? pctChange(summary.total_clicks, prevSummary.total_clicks) : null}
                 sparkline={clicksPath}
-                accentHex="#C9A24B"
+                accentHex="#ff6448"
               />
               <StatCard
                 tone="lilac"
@@ -316,13 +316,13 @@ export default function DashboardHomePage() {
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
                       <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1B4D3E" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#1B4D3E" stopOpacity="0.02" />
+                        <stop offset="0%" stopColor="#7657ff" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#7657ff" stopOpacity="0.02" />
                       </linearGradient>
                     </defs>
                     <path d={viewsPath.area} fill="url(#viewsGradient)" />
-                    <path d={viewsPath.line} fill="none" stroke="#1B4D3E" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                    <path d={clicksPath.line} fill="none" stroke="#C9A24B" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                    <path d={viewsPath.line} fill="none" stroke="#7657ff" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                    <path d={clicksPath.line} fill="none" stroke="#ff6448" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                   </svg>
                   <div className="mt-2 flex justify-between text-[10px] text-app-muted">
                     <span>{summary.daily_series[0]?.date}</span>
@@ -333,7 +333,7 @@ export default function DashboardHomePage() {
                       <span className="h-2 w-2 rounded-full bg-jeon-purple" /> {t("dashboard.pages.home.statLabelViews")}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-jeon-warning" /> {t("dashboard.pages.home.legendClicks")}
+                      <span className="h-2 w-2 rounded-full bg-jeon-coral" /> {t("dashboard.pages.home.legendClicks")}
                     </span>
                   </div>
                 </div>
@@ -412,7 +412,7 @@ export default function DashboardHomePage() {
                         <span className="w-20 flex-shrink-0 truncate text-app-ink">
                           {deviceLabel[d.device_type as keyof typeof deviceLabel] ?? d.device_type}
                         </span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/10/50">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/5">
                           <div
                             className="h-full rounded-full bg-jeon-purple"
                             style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }}

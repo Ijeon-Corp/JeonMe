@@ -171,7 +171,7 @@ export default function DashboardTeamPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {invitesForMe.length > 0 && (
-        <section className="mt-4 rounded-jlg border border-jeon-purple/30 bg-jeon-purple/10/40 p-5">
+        <section className="mt-4 rounded-jlg border border-jeon-purple/30 bg-jeon-purple/5 p-5">
           <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (

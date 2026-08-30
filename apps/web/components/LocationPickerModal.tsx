@@ -34,7 +34,7 @@ import { useLocale } from "@/lib/locale-context";
 const markerIcon = L.divIcon({
   className: "",
   html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter drop-shadow(0 2px 3px rgba(0,0,0,0.35))">
-    <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.72 11.19 7.01 11.44a1.5 1.5 0 0 0 1.98 0C13.28 21.19 20 15.25 20 10c0-4.42-3.58-8-8-8Z" fill="#1B4D3E"/>
+    <path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.72 11.19 7.01 11.44a1.5 1.5 0 0 0 1.98 0C13.28 21.19 20 15.25 20 10c0-4.42-3.58-8-8-8Z" fill="#7657ff"/>
     <circle cx="12" cy="10" r="3.4" fill="white"/>
   </svg>`,
   iconSize: [34, 34],

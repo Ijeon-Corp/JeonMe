@@ -163,7 +163,7 @@ export default function SettingsSubscriptionPage() {
       )}
 
       {!status.is_premium && isLive && (
-        <p className="mt-3 rounded-lg bg-jeon-purple/10/40 px-3 py-2 text-xs text-app-muted">
+        <p className="mt-3 rounded-lg bg-jeon-purple/5 px-3 py-2 text-xs text-app-muted">
           {t("dashboard.pages.settingsSubscription.paymentProcessing")}
         </p>
       )}
@@ -213,7 +213,7 @@ function PricingCard({
   return (
     <div
       className={`relative rounded-jmd border p-5 ${
-        highlight ? "border-jeon-purple bg-jeon-purple/10/30" : "border-app-border bg-app-surface"
+        highlight ? "border-jeon-purple bg-jeon-purple/5" : "border-app-border bg-app-surface"
       }`}
     >
       {badge && (

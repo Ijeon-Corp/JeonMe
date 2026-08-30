@@ -148,7 +148,7 @@ export default function GlobalSearch() {
                     onClick={() => goTo(item.href)}
                     onMouseEnter={() => setActiveIndex(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${
-                      i === activeIndex ? "bg-jeon-purple/10/60" : "hover:bg-jeon-purple/10/40"
+                      i === activeIndex ? "bg-jeon-purple/10" : "hover:bg-jeon-purple/5"
                     }`}
                   >
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">

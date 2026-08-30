@@ -169,7 +169,7 @@ export default function DashboardBalancePage() {
         </p>
 
         {verifiedMethods.length === 0 ? (
-          <p className="mt-3 rounded-lg bg-jeon-purple/10/50 px-3 py-2 text-xs text-app-ink">
+          <p className="mt-3 rounded-lg bg-jeon-purple/5 px-3 py-2 text-xs text-app-ink">
             {t("dashboard.pages.balance.noMethodPrefix")}{" "}
             <Link href="/dashboard/settings/payment" className="font-semibold text-jeon-purple hover:underline">
               {t("dashboard.pages.balance.noMethodLinkText")}

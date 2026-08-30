@@ -77,7 +77,7 @@ export default function DashboardDesignPage() {
               proses review manual. */}
           <div
             className={`mt-4 rounded-xl border p-3.5 ${
-              page.verification.is_verified ? "border-jeon-purple/30 bg-jeon-purple/10/40" : "border-app-border bg-app-surface-2"
+              page.verification.is_verified ? "border-jeon-purple/30 bg-jeon-purple/5" : "border-app-border bg-app-surface-2"
             }`}
           >
             <div className="flex items-center gap-1.5">

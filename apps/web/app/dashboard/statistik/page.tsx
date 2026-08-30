@@ -137,13 +137,13 @@ export default function StatistikPage() {
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
                   <linearGradient id="statViewsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1B4D3E" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#1B4D3E" stopOpacity="0.02" />
+                    <stop offset="0%" stopColor="#7657ff" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#7657ff" stopOpacity="0.02" />
                   </linearGradient>
                 </defs>
                 <path d={viewsPath.area} fill="url(#statViewsGradient)" />
-                <path d={viewsPath.line} fill="none" stroke="#1B4D3E" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                <path d={clicksPath.line} fill="none" stroke="#C9A24B" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                <path d={viewsPath.line} fill="none" stroke="#7657ff" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                <path d={clicksPath.line} fill="none" stroke="#ff6448" strokeWidth="1" vectorEffect="non-scaling-stroke" />
               </svg>
               <div className="mt-2 flex justify-between text-[10px] text-app-muted">
                 <span>{summary.daily_series[0]?.date}</span>
@@ -154,7 +154,7 @@ export default function StatistikPage() {
                   <span className="h-2 w-2 rounded-full bg-jeon-purple" /> {t("dashboard.pages.statistik.legendViews")}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-jeon-warning" /> {t("dashboard.pages.statistik.legendClicks")}
+                  <span className="h-2 w-2 rounded-full bg-jeon-coral" /> {t("dashboard.pages.statistik.legendClicks")}
                 </span>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function StatistikPage() {
                   {summary.device_breakdown.map((d) => (
                     <li key={d.device_type} className="flex items-center gap-2 text-xs">
                       <span className="w-20 flex-shrink-0 truncate text-app-ink">{DEVICE_LABEL[d.device_type] ?? d.device_type}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/10/50">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-jeon-purple/5">
                         <div className="h-full rounded-full bg-jeon-purple" style={{ width: `${Math.max(4, (d.count / maxDevice) * 100)}%` }} />
                       </div>
                       <span className="w-8 flex-shrink-0 text-right font-semibold text-jeon-purple">{d.count}</span>

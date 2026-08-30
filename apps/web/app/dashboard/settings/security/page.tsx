@@ -221,7 +221,7 @@ export default function SettingsSecurityPage() {
         )}
 
         {setupSecret && (
-          <div className="mt-4 rounded-xl border border-app-border bg-jeon-purple/10/40 p-4">
+          <div className="mt-4 rounded-xl border border-app-border bg-jeon-purple/5 p-4">
             <p className="text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.setupInstructions")}</p>
             <div className="mt-3 flex justify-center">
               <QRCodeCanvas value={setupSecret.otpauth_url} size={180} level="M" marginSize={2} />
