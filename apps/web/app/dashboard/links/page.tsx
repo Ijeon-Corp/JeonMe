@@ -1,7 +1,6 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
-import { CatalogBlocksEditor } from "@/components/CatalogBlocksEditor";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -86,7 +85,6 @@ import {
   IconYoutube,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
-import IconPickerModal from "@/components/IconPickerModal";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
@@ -101,6 +99,17 @@ import { useLocale } from "@/lib/locale-context";
 // dimuat client-only lewat next/dynamic (ssr:false) -- pola standar
 // Next.js untuk library peta, mencegah error render di server.
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), { ssr: false });
+
+// IconPickerModal/CatalogBlocksEditor -- keduanya cuma tampil digerbang
+// state (modal terbuka / blok katalog sedang diedit), TAPI sebelumnya
+// di-static-import sehingga selalu ikut bundle awal halaman ini. Halaman
+// ini salah satu yang terberat di dashboard (3600+ baris) dan diduga jadi
+// penyebab race hidrasi <Link> vs klik pengguna yang bikin sidebar kadang
+// terlihat "refresh"/collapse balik (dilaporkan pengguna 27 Agt 2026) --
+// men-dynamic-import keduanya mengecilkan bundle awal, sama seperti
+// perbaikan di dashboard/products/page.tsx.
+const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
+const CatalogBlocksEditor = dynamic(() => import("@/components/CatalogBlocksEditor").then((mod) => mod.CatalogBlocksEditor));
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi

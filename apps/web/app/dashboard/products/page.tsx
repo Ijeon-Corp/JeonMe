@@ -1,6 +1,7 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnalyticsSummary,
@@ -52,20 +53,31 @@ import {
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
-import ShopOverviewPanel from "@/components/ShopOverviewPanel";
-import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
-import ReviewsPanel from "@/components/ReviewsPanel";
-import ListingPanel from "@/components/ListingPanel";
-import StorageFilesPanel from "@/components/StorageFilesPanel";
-import WebhookEventsPanel from "@/components/WebhookEventsPanel";
-import ShopSettingsPanel from "@/components/ShopSettingsPanel";
-import TransactionPanel from "@/components/TransactionPanel";
-import ProdukPageEditor, { DesignSection } from "@/components/ProdukPageEditor";
+import type { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
+
+// Panel tab Toko (Overview/Reviews/Listing/Storage/Webhook/Settings/Transaction)
+// dan editor Toko dimuat lewat next/dynamic -- hanya 1 dari 8 yang pernah
+// tampil sekaligus (digerbang state `tab`), jadi men-static-import semuanya
+// membengkakkan bundle JS awal halaman ini secara sia-sia. Halaman ini salah
+// satu yang terberat di dashboard (bareng links/page.tsx) dan diduga jadi
+// penyebab race hidrasi <Link> vs klik pengguna yang bikin sidebar kadang
+// terlihat "refresh"/collapse balik (dilaporkan pengguna 27 Agt 2026) --
+// mengecilkan bundle awal mengurangi jendela race itu, sama seperti kenapa
+// halaman ringan (business-card/balance) tidak pernah kena masalah ini.
+const ShopOverviewPanel = dynamic(() => import("@/components/ShopOverviewPanel"));
+const DeliveryMethodPanel = dynamic(() => import("@/components/DeliveryMethodPanel"));
+const ReviewsPanel = dynamic(() => import("@/components/ReviewsPanel"));
+const ListingPanel = dynamic(() => import("@/components/ListingPanel"));
+const StorageFilesPanel = dynamic(() => import("@/components/StorageFilesPanel"));
+const WebhookEventsPanel = dynamic(() => import("@/components/WebhookEventsPanel"));
+const ShopSettingsPanel = dynamic(() => import("@/components/ShopSettingsPanel"));
+const TransactionPanel = dynamic(() => import("@/components/TransactionPanel"));
+const ProdukPageEditor = dynamic(() => import("@/components/ProdukPageEditor"));
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
