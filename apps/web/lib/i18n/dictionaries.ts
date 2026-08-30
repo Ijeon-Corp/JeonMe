@@ -2204,6 +2204,13 @@ export const dictionaries = {
         affiliator: "Affiliator",
         hosting: "Hosting Murah & Berkualitas",
       },
+      mock: {
+        title: "Pendapatan bulan ini",
+        salesLabel: "Penjualan terbaru",
+        product1: "E-book Panduan",
+        product2: "Kelas Online",
+        product3: "Preset Foto",
+      },
     },
     templates: {
       heading1: "Mulai dari",
@@ -2221,6 +2228,10 @@ export const dictionaries = {
         clicks: { title: "Analitik Klik", desc: "Pantau tautan dan tombol mana yang paling banyak mendapat interaksi." },
         conversion: { title: "Pelacakan Konversi", desc: "Pahami apa yang mengubah pengunjung menjadi pelanggan berbayar." },
         revenue: { title: "Analitik Pendapatan", desc: "Pantau penghasilan dari setiap produk, kelas, dan booking." },
+      },
+      mock: {
+        title: "Ringkasan performa",
+        range: "30 hari",
       },
     },
     testimonials: {
@@ -4506,6 +4517,13 @@ export const dictionaries = {
         affiliator: "Affiliate Program",
         hosting: "Affordable, Reliable Hosting",
       },
+      mock: {
+        title: "Revenue this month",
+        salesLabel: "Recent sales",
+        product1: "Guide E-book",
+        product2: "Online Class",
+        product3: "Photo Presets",
+      },
     },
     templates: {
       heading1: "Start with a",
@@ -4523,6 +4541,10 @@ export const dictionaries = {
         clicks: { title: "Click Analytics", desc: "Track which links and buttons get the most engagement." },
         conversion: { title: "Conversion Tracking", desc: "Understand what turns visitors into paying customers." },
         revenue: { title: "Revenue Analytics", desc: "Track earnings from every product, course, and booking." },
+      },
+      mock: {
+        title: "Performance summary",
+        range: "30 days",
       },
     },
     testimonials: {

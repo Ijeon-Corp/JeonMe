@@ -7,6 +7,7 @@ import Analytics from "@/components/landing/Analytics";
 import FinalCTA from "@/components/landing/FinalCTA";
 import Footer from "@/components/landing/Footer";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import SmoothScroll from "@/components/landing/SmoothScroll";
 import FeaturesPageHero from "./FeaturesPageHero";
 
 // Perbaikan SEO (temuan audit, 15 Agustus 2026): sebelumnya /features
@@ -27,6 +28,7 @@ export default function FeaturesPage() {
   return (
     <>
       <ScrollReveal />
+      <SmoothScroll />
       <Navbar />
       <main>
         <FeaturesPageHero />

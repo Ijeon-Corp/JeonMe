@@ -6,6 +6,7 @@ import { faqs } from "@/lib/faq-data";
 import FinalCTA from "@/components/landing/FinalCTA";
 import Footer from "@/components/landing/Footer";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import SmoothScroll from "@/components/landing/SmoothScroll";
 import JsonLd from "@/components/JsonLd";
 import { faqPageSchema } from "@/lib/structured-data";
 import PricingPageHero from "./PricingPageHero";
@@ -42,6 +43,7 @@ export default function PricingPage() {
     <>
       <JsonLd data={faqPageSchema(faqs)} />
       <ScrollReveal />
+      <SmoothScroll />
       <Navbar />
       <main>
         <PricingPageHero />

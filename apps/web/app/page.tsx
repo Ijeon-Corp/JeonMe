@@ -14,6 +14,7 @@ import { faqs } from "@/lib/faq-data";
 import FinalCTA from "@/components/landing/FinalCTA";
 import Footer from "@/components/landing/Footer";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import SmoothScroll from "@/components/landing/SmoothScroll";
 import JsonLd from "@/components/JsonLd";
 import { faqPageSchema, organizationSchema } from "@/lib/structured-data";
 
@@ -36,6 +37,7 @@ export default function HomePage() {
       <JsonLd data={organizationSchema()} />
       <JsonLd data={faqPageSchema(faqs)} />
       <ScrollReveal />
+      <SmoothScroll />
       <Navbar />
       <main>
         <Hero />

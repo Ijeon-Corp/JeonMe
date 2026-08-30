@@ -2,53 +2,33 @@
 
 import { useRef } from "react";
 import Carousel, { CarouselArrows, type CarouselHandle } from "./Carousel";
-import PagePreview from "@/components/PagePreview";
-import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
+import { QUICK_SETUP_TEMPLATES } from "@/lib/quick-setup-templates";
 import { useLocale } from "@/lib/locale-context";
 
-// items -- permintaan langsung pengguna, 28 Agustus 2026: "ganti semua isi
-// product showcase pakai template di quick setup yang tema nya bagus bagus
-// seperti contoh nya yang fullstack web developer". SEBELUMNYA 6 mockup
-// buatan tangan (kotak gradien + 3 balok abu-abu placeholder, BUKAN isi
-// sungguhan apa pun) -- sekarang dirender pakai KOMPONEN PagePreview
-// SUNGGUHAN persis seperti Templates.tsx di bawah section ini (lihat
-// catatan lengkap di sana soal kenapa PagePreview asli, bukan mockup
-// tangan). "fullstack-developer" dipertahankan sesuai contoh yang diminta
-// pengguna, 5 lainnya dipilih beda dari 16 kunci yang sudah dipakai
-// Templates.tsx (CURATED_KEYS di file itu) supaya kreator yang scroll ke
-// bawah TIDAK melihat template yang sama dua kali berturut-turut, sambil
-// tetap mencakup ragam persona yang mirip susunan lama (kreator, developer,
-// kelas, freelancer, toko, coach) + 2 tambahan (wedding organizer, travel
-// agency) supaya carousel ini terasa penuh dengan 8 kartu.
-//
-// Revisi susulan (permintaan langsung pengguna): "ganti template dengan
-// layout hero dengan yang lain ganti 2 itu dan juga course creator yang
-// warna bg kuning ini dengan yang lain" -- "influencer" & "travel-agency"
-// (keduanya layoutVariant "hero") diganti "book-author"/"culinary-tour",
-// dan "course-creator" (tema "golden", latar kekuningan) diganti "teacher"
-// (tema "ocean", biru). Ketiga pengganti sengaja dipilih dengan
-// layoutVariant & tema yang BEDA dari 5 kartu yang tidak berubah (spotlight/
-// banner/card/duo/ticket, console/forest/peach/dune/champagne) supaya
-// kedelapan kartu tetap tidak ada yang kembar layout maupun temanya.
-const CURATED_KEYS = [
-  { key: "fullstack-developer", displayName: "Dimas Aditya", avatarUrl: "https://randomuser.me/api/portraits/men/34.jpg" },
-  { key: "book-author", displayName: "Rian Saputra", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
-  { key: "teacher", displayName: "Sinta Nuraini", avatarUrl: "https://randomuser.me/api/portraits/women/28.jpg" },
-  { key: "freelancer", displayName: "Farah W.", avatarUrl: "https://randomuser.me/api/portraits/women/65.jpg" },
-  { key: "online-store", displayName: "Toko Senja", avatarUrl: "https://randomuser.me/api/portraits/women/50.jpg" },
-  { key: "fitness-coach", displayName: "Coach Budi", avatarUrl: "https://randomuser.me/api/portraits/men/58.jpg" },
-  { key: "wedding-organizer", displayName: "Amara Wedding", avatarUrl: "https://randomuser.me/api/portraits/women/41.jpg" },
-  { key: "culinary-tour", displayName: "Jelajah Nusantara", avatarUrl: "https://randomuser.me/api/portraits/men/22.jpg" },
-] as const;
+// ProductShowcase -- rework konten Fase 2 lanjutan (permintaan langsung
+// pengguna, 31 Agustus 2026: "isinya di sesuaikan dengan tema dulu saja
+// tidak usah pakai image dan icon yang sudah ada dari lama"): carousel
+// mockup <PagePreview> sungguhan DIGANTI kartu mini-bio bergaya token
+// redesign (pola visual sama seperti flip card Hero.tsx) -- nama & jenis
+// template tetap DIAMBIL dari QUICK_SETUP_TEMPLATES asli (konten jujur,
+// template ini benar-benar ada di Quick Setup), hanya visualnya yang
+// jadi mockup stilistik. Bonus nyata: PagePreview (3000+ baris) tidak
+// lagi terbundel di halaman marketing sama sekali (target performa spec
+// §21). Section tint lavender KONSTAN -- teks/outline ink konstan #111.
+const CURATED: { key: string; initial: string; accent: string; pills: string[] }[] = [
+  { key: "fullstack-developer", initial: "D", accent: "bg-jeon-purple", pills: ["bg-jeon-lime", "bg-white", "bg-jeon-blue"] },
+  { key: "book-author", initial: "R", accent: "bg-jeon-coral", pills: ["bg-white", "bg-jeon-pink", "bg-white"] },
+  { key: "teacher", initial: "S", accent: "bg-jeon-blue", pills: ["bg-jeon-lavender", "bg-white", "bg-jeon-lime"] },
+  { key: "freelancer", initial: "F", accent: "bg-jeon-lime", pills: ["bg-white", "bg-jeon-lavender", "bg-white"] },
+  { key: "online-store", initial: "T", accent: "bg-jeon-pink", pills: ["bg-jeon-blue", "bg-white", "bg-jeon-lavender"] },
+  { key: "fitness-coach", initial: "B", accent: "bg-jeon-purple", pills: ["bg-white", "bg-jeon-lime", "bg-white"] },
+  { key: "wedding-organizer", initial: "A", accent: "bg-jeon-coral", pills: ["bg-jeon-pink", "bg-white", "bg-jeon-blue"] },
+  { key: "culinary-tour", initial: "J", accent: "bg-jeon-blue", pills: ["bg-white", "bg-jeon-lavender", "bg-jeon-lime"] },
+];
 
-const items = CURATED_KEYS.map((c) => {
-  const t = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
-  return {
-    key: c.key,
-    label: t.label,
-    description: t.description,
-    data: buildQuickSetupPreviewData(t, c.key.replace(/-/g, ""), c.displayName, c.avatarUrl),
-  };
+const items = CURATED.map((c) => {
+  const tmpl = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
+  return { ...c, label: tmpl.label, description: tmpl.description };
 });
 
 export default function ProductShowcase() {
@@ -56,16 +36,6 @@ export default function ProductShowcase() {
   const { t } = useLocale();
 
   return (
-    // bg-app-surface-2 (BUKAN bg-primary-subtle/40 lagi) -- Modul Dark/Light
-    // Mode: token app-* ikut tema aktif, bg-primary-subtle TIDAK (dia warna
-    // brand tetap, lihat catatan lengkap di globals.css) -- section
-    // alternating background di homepage sekarang pakai token app-* supaya
-    // ikut gelap/terang bersama section lain, bukan tetap hijau muda kalau
-    // dark mode aktif.
-    // Section "story" berwarna lavender KONSTAN (redesign spec §11.4:
-    // tiap section warna berbeda; warna brand tidak ikut flip dark mode)
-    // -- semua teks langsung di atasnya WAJIB ink konstan #111, bukan
-    // token yang flip (lihat catatan colorMap Features.tsx).
     <section className="relative overflow-hidden rounded-t-jsection border-t-2 border-[#111111] bg-jeon-lavender py-20 md:py-28" aria-label="Contoh halaman">
       <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
         <div className="reveal mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
@@ -81,44 +51,23 @@ export default function ProductShowcase() {
 
         <Carousel ref={carouselRef}>
           {items.map((item) => (
-            <div
-              key={item.key}
-              className="w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-jlg border-2 border-[#111111] bg-white shadow-[10px_12px_0_rgba(17,17,17,0.92)]"
-            >
-              {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola & ukuran
-                  SAMA PERSIS dengan galeri Templates.tsx di bawah section
-                  ini (h-[26rem] + zoom:0.5 -- 448px lebar asli PagePreview
-                  jadi 224px, pas dengan lebar kartu w-56 tanpa sisa
-                  ruang kosong di kiri/kanan). pointer-events-none -- mockup
-                  MURNI visual, kartu ini tidak punya link tujuan.
-
-                  bg-white DI SINI (bukan bg-app-surface) SENGAJA tetap
-                  hardcode -- Modul Dark/Light Mode: kotak ini membungkus
-                  <PagePreview> SUNGGUHAN (tema pilihan KREATOR di template
-                  itu sendiri, mis. "console"/"ocean"), bukan cangkang
-                  aplikasi kita -- HARUS tampil identik apa pun preferensi
-                  dark/light PENGUNJUNG situs pemasaran, persis seperti
-                  screenshot. Lihat catatan besar soal batas ini di
-                  globals.css (token app-*). */}
-              <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-                <div className="h-full [zoom:0.5]">
-                  <PagePreview interactive={false} rootClassName="min-h-full" data={item.data} hideFooterChrome />
+            <div key={item.key} className="w-56 flex-shrink-0 scroll-snap-item overflow-hidden rounded-jlg border-2 border-[#111111] bg-white shadow-[10px_12px_0_rgba(17,17,17,0.92)]">
+              {/* Mockup mini-bio stilistik (murni dekoratif). */}
+              <div className="flex flex-col items-center px-5 pb-4 pt-6" aria-hidden="true">
+                <span className={`flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#111111] ${item.accent} font-display text-lg font-extrabold text-white`}>
+                  {item.initial}
+                </span>
+                <span className="mt-2 h-2 w-20 rounded-full bg-[#111111]/80" />
+                <span className="mt-1.5 h-1.5 w-28 rounded-full bg-[#111111]/25" />
+                <div className="mt-4 flex w-full flex-col gap-2">
+                  {item.pills.map((pill, i) => (
+                    <span key={i} className={`h-8 w-full rounded-jsm border-2 border-[#111111] ${pill}`} />
+                  ))}
                 </div>
-                {/* Fade bawah -- konten template panjangnya beda-beda,
-                    menyamarkan garis potong di tengah kalimat jadi transisi
-                    halus ke area putih judul kartu (lihat catatan sama di
-                    Templates.tsx). from-app-surface (BUKAN from-white) --
-                    memudar ke background KARTU (bg-app-surface di atas),
-                    bukan ke background mockup di dalamnya. */}
-                {/* from-white (bukan token) -- kartu ini SENGAJA bg-white
-                    konstan di kedua mode karena isinya mockup tema kreator
-                    yang tidak boleh ikut flip (lihat catatan panjang di
-                    atas), jadi fade-nya juga ke putih konstan. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
               </div>
-              <div className="p-5 pt-3">
+              <div className="border-t-2 border-[#111111] p-4 pt-3">
                 <h3 className="font-display text-sm font-bold text-[#111111]">{item.label}</h3>
-                <p className="mt-1 text-xs text-[#111111]/60">{item.description}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-[#111111]/60">{item.description}</p>
               </div>
             </div>
           ))}

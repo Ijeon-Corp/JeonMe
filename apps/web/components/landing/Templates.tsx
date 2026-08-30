@@ -1,87 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import PagePreview from "@/components/PagePreview";
-import { QUICK_SETUP_TEMPLATES, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
+import { QUICK_SETUP_TEMPLATES } from "@/lib/quick-setup-templates";
 import { useLocale } from "@/lib/locale-context";
 
-// Templates -- dirender pakai KOMPONEN PagePreview SUNGGUHAN (sama persis
-// dipakai halaman publik & dashboard Quick Setup, lihat
-// buildQuickSetupPreviewData) supaya bio/tautan/blok yang tampil di sini
-// benar-benar isi template itu, bukan mockup buatan tangan. Nama & foto
-// profil dummy (randomuser.me -- layanan publik foto wajah acak, bebas
-// dipakai tanpa API key) karena template belum terpasang ke akun
-// sungguhan mana pun.
-//
-// Struktur 4 baris x 4 kolom -- permintaan langsung pengguna, 24 Agustus
-// 2026: "tiap baris saya mau jenis layout yang sama tapi isinya berbeda...
-// karna ini ada 4 baris berarti ada 4 jenis layout". SEBELUMNYA 16 template
-// dikurasi HANYA dari yang bertema wallpaper/video (layoutVariant tercampur
-// acak per kartu) -- sekarang dikurasi per BARIS: satu layoutVariant yang
-// SAMA utk keempat kartu dalam satu baris (array ini diurutkan 4-4-4-4,
-// grid 4 kolom otomatis membariskannya benar tanpa logika render
-// tambahan), isi/tema BEDA-BEDA di dalam baris itu. Dipilih 4 dari 15
-// layoutVariant yang punya kandidat TERKAYA (link+blok terbanyak) --
-// permintaan susulan lain: "isi dari tiap template itu blok nya banyakin
-// saja dan penuhin jangan hanya 1 blok saja karna tampilan nya jelek".
-// Konsekuensinya: TIDAK semua 16 lagi bertema wallpaper/video foto asli
-// (cuma cukup kandidat kaya-konten di sebagian layout) -- 7 dari 16 tetap
-// wallpaper/video, sisanya gradien CSS yang juga rich, SEMUA 16 tema
-// beda-beda (nol duplikasi aset visual, lebih baik dari kurasi sebelumnya
-// yang masih terima 1 pasang kembar). Tema "electric" (video neon
-// segitiga, dipakai gamer & gym-fitness-center) SENGAJA tidak dipakai
-// SAMA SEKALI lagi -- keluhan langsung pengguna: "saya mau ubah bg yang
-// tema game jadi yang lain" (gym-fitness-center masih mewarisi video
-// neon bekas Gamer, kelihatan seperti tema gaming padahal personanya gym).
-//
-// Revisi 27 Agustus 2026 (permintaan langsung pengguna: "jangan tampilkan
-// quick template dengan tipe header hero dan juga background gamer atau
-// kayu"): baris "Hero" (layoutVariant "hero" -- foto profil besar
-// edge-to-edge) DIGANTI SELURUHNYA jadi baris "Cover" (layoutVariant
-// "cover" -- foto sampul lanskap penuh di atas, avatar bulat menumpuk di
-// bawahnya). Tema "kraft" (dipakai batik-craft) juga tetap TIDAK pernah
-// dipakai di kurasi ini -- sama seperti "electric" di atas, dicek ulang
-// supaya tidak kebawa lagi kalau daftar Quick Setup bertambah ke depannya.
-//
-// Revisi 28 Agustus 2026 (permintaan langsung pengguna: "ganti template
-// electric dan ember yang ada di home page dengan template lain"): tema
-// "electric" MEMANG sudah tidak dipakai sama sekali sejak revisi di atas
-// (gamer/gym-fitness-center tidak pernah masuk kurasi ini). Tema "ember"
-// SEMPAT terpakai lewat "musician" (baris Portrait) -- diganti "dj"
-// (tema "downtown", layoutVariant "portrait" juga, kategori entertainment
-// sama seperti musician) supaya baris Portrait tetap 4 tema yang
-// benar-benar berbeda tanpa "ember" ataupun "electric".
+// Templates -- rework konten Fase 2 lanjutan (permintaan langsung
+// pengguna, 31 Agustus 2026: "isinya di sesuaikan dengan tema dulu saja
+// tidak usah pakai image dan icon yang sudah ada dari lama"): mockup
+// <PagePreview> sungguhan + foto randomuser.me DIGANTI mockup stilistik
+// dari token redesign. Struktur kurasi LAMA dipertahankan (permintaan
+// pengguna 24-28 Agustus 2026 yang masih berlaku: 4 baris x 4 kolom,
+// tiap baris satu jenis layout yang sama, nama template DIAMBIL dari
+// QUICK_SETUP_TEMPLATES asli) -- tiap tag layout digambar sebagai
+// skeleton mini yang BENTUKNYA berbeda (Cover: pita sampul + avatar
+// menumpuk; Portrait: foto tegak berbingkai; Spotlight: avatar besar +
+// badge; Masthead: pita identitas selebar penuh) supaya konsep "4 jenis
+// layout" tetap terbaca tanpa merender PagePreview. Bonus: PagePreview
+// tidak lagi terbundel di halaman marketing (target performa spec §21).
+// Section tint blue KONSTAN -- teks/outline ink konstan #111.
+const ACCENTS = ["bg-jeon-purple", "bg-jeon-coral", "bg-jeon-lime", "bg-jeon-pink"];
+
 const CURATED_KEYS = [
-  // Baris 1 -- layout "cover" (foto sampul lanskap + avatar bulat menumpuk).
-  { key: "restaurant", tag: "Cover" as const, displayName: "Bagus Prasetyo", avatarUrl: "https://randomuser.me/api/portraits/men/45.jpg" },
-  { key: "homestay-villa", tag: "Cover" as const, displayName: "Ratna Dewi", avatarUrl: "https://randomuser.me/api/portraits/women/32.jpg" },
-  { key: "event-organizer", tag: "Cover" as const, displayName: "Dimas Wirawan", avatarUrl: "https://randomuser.me/api/portraits/men/91.jpg" },
-  { key: "nonprofit-charity", tag: "Cover" as const, displayName: "Sari Wulandari", avatarUrl: "https://randomuser.me/api/portraits/women/54.jpg" },
-  // Baris 2 -- layout "portrait" (foto tegak dibingkai & berbayang ala poster).
-  { key: "dj", tag: "Portrait" as const, displayName: "Reza Firmansyah", avatarUrl: "https://randomuser.me/api/portraits/men/72.jpg" },
-  { key: "streamer", tag: "Portrait" as const, displayName: "Vanya Kirana", avatarUrl: "https://randomuser.me/api/portraits/women/61.jpg" },
-  { key: "diving-center", tag: "Portrait" as const, displayName: "Nabila Putri", avatarUrl: "https://randomuser.me/api/portraits/women/23.jpg" },
-  { key: "adventure-guide", tag: "Portrait" as const, displayName: "Bianca Alves", avatarUrl: "https://randomuser.me/api/portraits/women/17.jpg" },
-  // Baris 3 -- layout "spotlight" (avatar besar + badge nama).
-  { key: "content-creator", tag: "Spotlight" as const, displayName: "Salsa Amelia", avatarUrl: "https://randomuser.me/api/portraits/women/79.jpg" },
-  { key: "nightlife-venue", tag: "Spotlight" as const, displayName: "Marco Rossi", avatarUrl: "https://randomuser.me/api/portraits/men/12.jpg" },
-  { key: "motivational-speaker", tag: "Spotlight" as const, displayName: "Grace Tanuwijaya", avatarUrl: "https://randomuser.me/api/portraits/women/36.jpg" },
-  { key: "artist", tag: "Spotlight" as const, displayName: "Yusuf Ibrahim", avatarUrl: "https://randomuser.me/api/portraits/men/19.jpg" },
-  // Baris 4 -- layout "masthead" (pita warna berisi identitas langsung di dalamnya).
-  { key: "coworking-space", tag: "Masthead" as const, displayName: "Clarissa Wijaya", avatarUrl: "https://randomuser.me/api/portraits/women/48.jpg" },
-  { key: "food-beverage", tag: "Masthead" as const, displayName: "Rizky Pratama", avatarUrl: "https://randomuser.me/api/portraits/men/76.jpg" },
-  { key: "mosque-community", tag: "Masthead" as const, displayName: "Faisal Rahman", avatarUrl: "https://randomuser.me/api/portraits/men/67.jpg" },
-  { key: "photographer", tag: "Masthead" as const, displayName: "Hana Kobayashi", avatarUrl: "https://randomuser.me/api/portraits/women/26.jpg" },
+  { key: "restaurant", tag: "Cover" as const },
+  { key: "homestay-villa", tag: "Cover" as const },
+  { key: "event-organizer", tag: "Cover" as const },
+  { key: "nonprofit-charity", tag: "Cover" as const },
+  { key: "dj", tag: "Portrait" as const },
+  { key: "streamer", tag: "Portrait" as const },
+  { key: "diving-center", tag: "Portrait" as const },
+  { key: "adventure-guide", tag: "Portrait" as const },
+  { key: "content-creator", tag: "Spotlight" as const },
+  { key: "nightlife-venue", tag: "Spotlight" as const },
+  { key: "motivational-speaker", tag: "Spotlight" as const },
+  { key: "artist", tag: "Spotlight" as const },
+  { key: "coworking-space", tag: "Masthead" as const },
+  { key: "food-beverage", tag: "Masthead" as const },
+  { key: "mosque-community", tag: "Masthead" as const },
+  { key: "photographer", tag: "Masthead" as const },
 ];
 
-const templates = CURATED_KEYS.map((c) => {
+const templates = CURATED_KEYS.map((c, i) => {
   const t = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
-  return {
-    key: c.key,
-    label: t.label,
-    tag: c.tag,
-    data: buildQuickSetupPreviewData(t, c.key.replace(/-/g, ""), c.displayName, c.avatarUrl),
-  };
+  return { key: c.key, label: t.label, tag: c.tag, accent: ACCENTS[i % 4] };
 });
 
 const filters = [
@@ -91,6 +51,49 @@ const filters = [
   { key: "Spotlight", labelKey: "spotlight" },
   { key: "Masthead", labelKey: "masthead" },
 ] as const;
+
+// Skeleton mini per jenis layout -- murni dekoratif (aria-hidden di
+// pemanggil), bentuk tiap varian meniru ciri khas layout aslinya.
+function LayoutSkeleton({ tag, accent }: { tag: (typeof CURATED_KEYS)[number]["tag"]; accent: string }) {
+  const pill = <span className="h-7 w-full rounded-jsm border-2 border-[#111111] bg-white" />;
+  switch (tag) {
+    case "Cover":
+      return (
+        <div className="flex flex-col px-4 pt-4">
+          <div className={`h-16 w-full rounded-jmd border-2 border-[#111111] ${accent}`} />
+          <span className="-mt-5 ml-4 h-10 w-10 rounded-full border-2 border-[#111111] bg-white" />
+          <span className="mt-2 h-2 w-20 rounded-full bg-[#111111]/80" />
+          <div className="mt-3 flex flex-col gap-2">{pill}{pill}</div>
+        </div>
+      );
+    case "Portrait":
+      return (
+        <div className="flex flex-col items-center px-4 pt-4">
+          <div className={`h-24 w-20 rotate-2 rounded-jmd border-2 border-[#111111] ${accent} shadow-[4px_4px_0_rgba(17,17,17,0.9)]`} />
+          <span className="mt-3 h-2 w-20 rounded-full bg-[#111111]/80" />
+          <div className="mt-3 flex w-full flex-col gap-2">{pill}{pill}</div>
+        </div>
+      );
+    case "Spotlight":
+      return (
+        <div className="flex flex-col items-center px-4 pt-4">
+          <span className={`h-16 w-16 rounded-full border-2 border-[#111111] ${accent}`} />
+          <span className="mt-2 rounded-full border-2 border-[#111111] bg-white px-3 py-0.5 text-[9px] font-bold text-[#111111]">✦</span>
+          <div className="mt-3 flex w-full flex-col gap-2">{pill}{pill}</div>
+        </div>
+      );
+    case "Masthead":
+      return (
+        <div className="flex flex-col px-4 pt-4">
+          <div className={`flex items-center gap-2 rounded-jmd border-2 border-[#111111] ${accent} p-2.5`}>
+            <span className="h-8 w-8 flex-shrink-0 rounded-full border-2 border-[#111111] bg-white" />
+            <span className="h-2 w-16 rounded-full bg-white/90" />
+          </div>
+          <div className="mt-3 flex flex-col gap-2">{pill}{pill}</div>
+        </div>
+      );
+  }
+}
 
 export default function Templates() {
   const [active, setActive] = useState<(typeof filters)[number]["key"]>("all");
@@ -129,44 +132,14 @@ export default function Templates() {
           {visible.map((t) => (
             <div
               key={t.key}
-              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-card"
+              className="reveal group flex cursor-pointer flex-col overflow-hidden rounded-jlg border-2 border-[#111111] bg-[#f5f1e8] shadow-[10px_12px_0_rgba(17,17,17,0.92)] transition-transform duration-150 hover:-translate-y-1"
             >
-              {/* Mockup PagePreview SUNGGUHAN, dizoom kecil -- pola SAMA
-                  PERSIS dengan galeri /dashboard/quick-setup (lihat catatan
-                  lengkap di buildQuickSetupPreviewData). pointer-events-none
-                  -- mockup MURNI visual, kartu ini tidak punya link tujuan
-                  (beda dari quick-setup yang buka modal saat diklik).
-                  hideFooterChrome -- footer platform (watermark "Buat
-                  halaman gratis di Jeon.id" + Preferensi Cookie/Laporkan/
-                  Privasi/dst) yang biasanya SELALU tampil di pratinjau
-                  dashboard jadi teks kecil tak terbaca & berantakan di
-                  thumbnail sekecil ini, dipotong khusus di sini (lihat
-                  prop-nya, PagePreview.tsx).
-
-                  bg-white DI SINI SENGAJA tetap hardcode (bukan bg-app-
-                  surface) -- lihat catatan besar soal batas token app-* vs
-                  isi <PagePreview> di ProductShowcase.tsx: mockup ini
-                  menampilkan tema PILIHAN TEMPLATE itu sendiri, harus
-                  identik apa pun preferensi dark/light pengunjung. */}
-              <div className="relative h-[26rem] w-full overflow-hidden bg-white pointer-events-none" aria-hidden="true">
-                <div className="h-full [zoom:0.5]">
-                  <PagePreview interactive={false} rootClassName="min-h-full" data={t.data} hideFooterChrome />
-                </div>
-                {/* Fade bawah -- tanpa ini, tautan/blok terakhir yang tidak
-                    muat di kotak ini terpotong MENTAH di tengah kalimat.
-                    Konten asli tetap beda panjang per template (walau kini
-                    dikurasi supaya sama-sama kaya blok), fade ini
-                    menyamarkan garis potong itu jadi transisi halus ke
-                    area kartu (bg-app-surface) di bawahnya, apa pun warna
-                    latar tema (gelap/terang) di baliknya. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-app-surface to-transparent" />
+              <div className="pb-4 pointer-events-none" aria-hidden="true">
+                <LayoutSkeleton tag={t.tag} accent={t.accent} />
               </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-ink/70 opacity-0 transition-opacity duration-250 group-hover:opacity-100">
-                <span className="rounded-full bg-white px-4 py-2 text-xs font-bold text-ink">{tr("templates.viewTemplate")}</span>
-              </div>
-              <div className="p-4">
-                <h3 className="font-heading text-sm font-bold text-app-ink">{t.label}</h3>
-                <p className="mt-0.5 text-xs text-app-muted">{t.tag}</p>
+              <div className="mt-auto border-t-2 border-[#111111] bg-white p-4">
+                <h3 className="font-display text-sm font-bold text-[#111111]">{t.label}</h3>
+                <p className="mt-0.5 text-xs text-[#111111]/60">{t.tag}</p>
               </div>
             </div>
           ))}
