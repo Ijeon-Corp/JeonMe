@@ -16,6 +16,7 @@ import (
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/moderation"
+	"github.com/jeonme/api/internal/pageimport"
 	"github.com/jeonme/api/internal/storage"
 	"github.com/jeonme/api/internal/tiktokoauth"
 )
@@ -75,6 +76,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	linkModeration := &handlers.LinkModerationChecker{DB: db, AI: moderation.NewClient(cfg.AnthropicAPIKey)}
 	links.Moderation = linkModeration
 	product.Moderation = linkModeration
+	// Fitur Import (permintaan langsung pengguna, 31 Agustus 2026): generate
+	// halaman dari screenshot + URL link-in-bio lama -- lihat catatan lingkap
+	// di handlers.ImportHandler. Pakai ANTHROPIC_API_KEY yang SAMA dengan
+	// moderasi tautan di atas (satu key Anthropic dipakai beberapa fitur),
+	// TIDAK butuh secret baru.
+	importHandler := handlers.NewImportHandler(db, rdb, pageimport.NewVisionClient(cfg.AnthropicAPIKey))
 	balance := handlers.NewBalanceHandler(db, cfg.HoldingPeriodDays, encryptionKey)
 	analytics := handlers.NewAnalyticsHandler(db, encryptionKey, cfg.PublicWebURL)
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
@@ -544,6 +551,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// tidak boleh mengubah identitas pemilik).
 			dashboard.GET("/settings/profile", settingsProfile.Get)
 			dashboard.PATCH("/settings/profile", settingsProfile.Update)
+
+			// Fitur Import -- TIDAK dipasangi ActAsOwner, sama alasan
+			// settings/profile/balance/KYC di atas (kolaborator tidak boleh
+			// akses), DITAMBAH berbiaya nyata per panggilan (Claude vision
+			// API) -- lihat catatan lengkap di handlers.ImportHandler.
+			dashboard.POST("/import/analyze", importHandler.Analyze)
 
 			// Modul Koneksi Sosial (migrasi 000069, permintaan langsung
 			// pengguna: "saya mau jeonme ini bisa connect ke akun kita

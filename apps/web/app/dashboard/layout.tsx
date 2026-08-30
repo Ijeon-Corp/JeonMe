@@ -41,6 +41,7 @@ import {
   IconSettings,
   IconSparkle,
   IconStar,
+  IconUpload,
   IconWallet,
 } from "@/components/icons";
 
@@ -88,6 +89,12 @@ function buildNavItems(t: (key: string) => string): NavEntry[] {
     // sungguh-sungguh membentuk halaman publik, Quick Setup sifatnya
     // wizard sekali-pakai di awal, bukan halaman yang dikelola terus).
     { type: "link", href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
+    // Import -- permintaan langsung pengguna, 31 Agustus 2026: generate
+    // halaman dari screenshot + URL link-in-bio lama (Linktree/Lynk.id/
+    // dst). Baris lepas TERPISAH dari Quick Setup (bukan salah satu
+    // kategorinya) -- bentuk interaksinya beda total (unggah file + URL,
+    // bukan pilih dari galeri template), lihat app/dashboard/import/page.tsx.
+    { type: "link", href: "/dashboard/import", label: t("dashboard.nav.import"), icon: IconUpload },
     {
       type: "group",
       label: t("dashboard.nav.myPageGroup"),

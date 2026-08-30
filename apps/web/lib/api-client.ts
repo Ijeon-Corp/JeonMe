@@ -3618,3 +3618,66 @@ export function markNotificationRead(id: string) {
 export function markAllNotificationsRead() {
   return apiFetch<{ message: string }>("/dashboard/notifications/read-all", { method: "POST" }, { auth: true });
 }
+
+// Fitur Import (permintaan langsung pengguna, 31 Agustus 2026): generate
+// halaman dari screenshot + URL link-in-bio lama -- lihat catatan lengkap
+// di handlers.ImportHandler (backend). ImportCustomTheme bukan re-export
+// CustomThemeConfig (lib/page-themes.ts) SENGAJA -- api-client.ts tidak
+// pernah mengimpor dari page-themes.ts di tempat lain (arah dependency di
+// repo ini selalu sebaliknya), field-nya cukup didefinisikan ulang di sini
+// (bentuknya identik, cukup dipetakan langsung ke updateMyPage() di
+// pemanggil, lihat app/dashboard/import/page.tsx).
+export interface ImportCustomTheme {
+  background_type: "solid" | "gradient";
+  background_value: string;
+  font: string;
+  button_color: string;
+  button_style: string;
+  button_rounded: string;
+  button_text_color: string;
+  page_text_color: string;
+  title_color: string;
+}
+
+export interface ImportThemeResult {
+  theme: string;
+  layout_variant: PageLayoutVariant;
+  custom?: ImportCustomTheme;
+  confidence: "high" | "medium" | "low";
+  notes: string;
+}
+
+export interface ImportScrapedLink {
+  title: string;
+  url: string;
+}
+
+export interface ImportAnalyzeResult {
+  platform: "linktree" | "lynkid" | "generic";
+  theme: ImportThemeResult | null;
+  theme_error?: string;
+  links: ImportScrapedLink[];
+  links_error?: string;
+}
+
+// analyzeImportSource -- pola sama persis uploadAvatar (FormData + fetch +
+// ApiError), field tambahan "url" dikirim sebagai teks biasa di form yang
+// sama (bukan JSON terpisah) supaya backend cukup satu multipart parse.
+export async function analyzeImportSource(screenshot: File | null, url: string): Promise<ImportAnalyzeResult> {
+  const token = getToken();
+  const form = new FormData();
+  if (screenshot) form.append("screenshot", screenshot);
+  form.append("url", url);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/import/analyze`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Import gagal (${res.status})`);
+  }
+  return body;
+}
