@@ -45,19 +45,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebarContent = (
     <>
       <div>
-        {/* Redesain "Premium Refined" -- pola sama persis dengan
-            dashboard/layout.tsx: sidebar hijau tua pekat, item aktif
-            garis emas kiri.
-            Logo -- permintaan langsung pengguna, 10 Agustus 2026:
-            logo-baru.png dibungkus chip putih (warna glyph-nya hijau
-            tua, kontras jelek di atas latar sidebar sehijau ini juga --
-            lihat catatan sama di dashboard/layout.tsx). */}
-        <Link href="/admin" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface p-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-baru.png" alt="Jeon.id" className="h-full w-full object-contain" />
-          </span>
-          <span className="font-heading text-lg font-extrabold text-white">Admin</span>
+        {/* Wordmark redesign Fase 3 (spec §9) -- teks jeon.id huruf kecil
+            + chip Admin, menggantikan logo-baru.png lama; pola sidebar
+            sama persis dashboard/layout.tsx (ungu-hitam jeon-sidebar,
+            item aktif garis ungu kiri). */}
+        <Link href="/admin" className="flex items-baseline gap-1.5 font-display text-lg font-extrabold tracking-tight text-white">
+          <span className="text-jeon-lime" aria-hidden="true">✦</span>jeon.id
+          <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">Admin</span>
         </Link>
 
         <nav className="mt-8 flex flex-col gap-0.5 text-sm">
@@ -71,7 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2.5 font-semibold transition-all ${
                   active
-                    ? "border-accent bg-white/5 text-white"
+                    ? "border-jeon-purple bg-jeon-purple/25 text-white"
                     : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                 }`}
               >
@@ -110,22 +104,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="bg-mesh pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
       <div className="app-shell flex min-h-screen">
         {/* Sidebar desktop */}
-        <aside className="bg-primary-dark sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 shadow-refined-lg md:flex">
+        <aside className="sticky top-0 hidden h-screen w-[var(--dashboard-sidebar)] flex-col justify-between bg-jeon-sidebar p-5 shadow-refined-lg md:flex">
           {sidebarContent}
         </aside>
 
         {/* Top bar + drawer mobile */}
         <div className="flex flex-1 flex-col md:contents">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-            <Link href="/admin" className="flex items-center gap-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-baru.png" alt="Jeon.id" className="h-7 w-auto" />
-              <span className="font-heading text-lg font-extrabold text-app-ink">Admin</span>
+            <Link href="/admin" className="flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight text-app-ink">
+              <span className="text-jeon-purple" aria-hidden="true">✦</span>jeon.id
+              <span className="ml-1 text-sm font-bold text-app-muted">Admin</span>
             </Link>
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-app-ink hover:bg-primary-subtle"
+              className="rounded-lg p-2 text-app-ink hover:bg-app-surface-2"
               aria-label="Buka menu"
             >
               <IconMenu className="h-5 w-5" />
@@ -135,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {mobileOpen && (
             <div className="fixed inset-0 z-40 md:hidden">
               <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-              <aside className="bg-primary-dark absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
+              <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero">
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}

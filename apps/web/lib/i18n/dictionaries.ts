@@ -62,6 +62,8 @@ export const dictionaries = {
       copyLink: "Salin tautan halaman publik",
       linkCopied: "Tersalin!",
       logout: "Keluar",
+      statusLive: "Live",
+      statusDraft: "Draf",
       pages: {
         balance: {
           status: {
@@ -2375,6 +2377,8 @@ export const dictionaries = {
       copyLink: "Copy public page link",
       linkCopied: "Copied!",
       logout: "Log Out",
+      statusLive: "Live",
+      statusDraft: "Draft",
       pages: {
         balance: {
           status: {

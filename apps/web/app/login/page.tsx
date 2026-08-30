@@ -95,7 +95,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+            className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
           >
             {loading ? "Memverifikasi..." : "Verifikasi"}
           </button>
@@ -106,7 +106,7 @@ export default function LoginPage() {
               setMfaCode("");
               setError(null);
             }}
-            className="text-xs font-semibold text-app-muted hover:text-primary"
+            className="text-xs font-semibold text-app-muted hover:text-jeon-purple"
           >
             Kembali ke login
           </button>
@@ -133,7 +133,7 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
-        Masuk ke Jeon.id
+        Masuk ke jeon.id
       </h1>
       <p className="mt-3 text-sm text-app-muted">Kelola halaman dan produkmu.</p>
 
@@ -164,7 +164,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memproses..." : "Masuk"}
         </button>
@@ -193,13 +193,13 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={() => setShowReset((v) => !v)}
-        className="mt-4 text-xs font-semibold text-primary hover:underline"
+        className="mt-4 text-xs font-semibold text-jeon-purple hover:underline"
       >
         Lupa password?
       </button>
 
       {showReset && (
-        <form onSubmit={handleResetRequest} className="mt-3 flex flex-col gap-2 rounded-xl bg-primary-subtle p-3">
+        <form onSubmit={handleResetRequest} className="mt-3 flex flex-col gap-2 rounded-xl bg-jeon-lavender/30 p-3">
           <input
             type="email"
             required
@@ -208,7 +208,7 @@ export default function LoginPage() {
             onChange={(e) => setResetEmail(e.target.value)}
             className="w-full rounded-lg border border-app-border px-3 py-2 text-sm"
           />
-          <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white">
+          <button type="submit" className="rounded-lg bg-jeon-purple px-3 py-2 text-xs font-bold text-white">
             Kirim tautan reset
           </button>
           {resetMessage && <p className="text-xs text-app-ink">{resetMessage}</p>}
@@ -217,7 +217,7 @@ export default function LoginPage() {
 
       <p className="mt-8 text-center text-sm text-app-muted">
         Belum punya akun?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline">
+        <Link href="/register" className="font-semibold text-jeon-purple hover:underline">
           Daftar
         </Link>
       </p>

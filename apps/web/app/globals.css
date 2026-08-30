@@ -26,33 +26,40 @@
    3. [data-theme="dark"] -- override ke DARK lagi di sini supaya toggle
       manual "dark" tetap menang WALAU OS-nya terang (media query di atas
       tidak match kalau OS light, jadi butuh jalur eksplisit sendiri). */
+/* NILAI di bawah di-remap ke palet redesign "Modern Playful Creator
+   Platform" (Fase 3, DESIGN-JEONID-REDESIGN.md §6 + REDESIGN-AUDIT.md §4)
+   -- keluarga hijau lama diganti keluarga paper/ink (terang) &
+   ungu-hitam --jeon-sidebar (gelap). SENGAJA me-remap NILAI variabel,
+   bukan mengganti ratusan className bg-app-* & text-app-* di tiap halaman
+   dashboard -- semua permukaan shell ikut palet baru sekali edit, dan
+   halaman publik kreator tetap tak tersentuh (tidak pernah pakai app-*). */
 :root {
-  --app-bg: #ffffff;
+  --app-bg: #f5f1e8;
   --app-surface: #ffffff;
-  --app-surface-2: #f4f7f5;
-  --app-ink: #1c2b25;
-  --app-muted: #5b6b63;
-  --app-border: #d8ddd9;
+  --app-surface-2: #efe9dd;
+  --app-ink: #111111;
+  --app-muted: #77736c;
+  --app-border: rgba(17, 17, 17, 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --app-bg: #0b1512;
-    --app-surface: #101d18;
-    --app-surface-2: #16241e;
-    --app-ink: #eaf3ef;
-    --app-muted: #9db3a9;
-    --app-border: #24352c;
+    --app-bg: #141218;
+    --app-surface: #1c1a22;
+    --app-surface-2: #242130;
+    --app-ink: #f0edf5;
+    --app-muted: #a49fae;
+    --app-border: rgba(240, 237, 245, 0.16);
   }
 }
 
 [data-theme="dark"] {
-  --app-bg: #0b1512;
-  --app-surface: #101d18;
-  --app-surface-2: #16241e;
-  --app-ink: #eaf3ef;
-  --app-muted: #9db3a9;
-  --app-border: #24352c;
+  --app-bg: #141218;
+  --app-surface: #1c1a22;
+  --app-surface-2: #242130;
+  --app-ink: #f0edf5;
+  --app-muted: #a49fae;
+  --app-border: rgba(240, 237, 245, 0.16);
 }
 
 /* Token redesign "Modern Playful Creator Platform"
@@ -171,7 +178,7 @@
   input:not([type="checkbox"]):not([type="radio"]):focus,
   select:focus,
   textarea:focus {
-    box-shadow: 0 0 0 4px rgba(27, 77, 62, 0.12);
+    box-shadow: 0 0 0 3px rgba(118, 87, 255, 0.18);
     outline: none;
   }
 }
@@ -303,7 +310,7 @@
 html {
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   scrollbar-width: thin;
-  scrollbar-color: #b9d6c8 transparent;
+  scrollbar-color: #cbbcff transparent;
 }
 
 /* Scrollbar tipis warna brand (permintaan langsung pengguna, tema
@@ -323,14 +330,14 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #b9d6c8;
+  background-color: #cbbcff;
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #8fbfa5;
+  background-color: #b09aff;
 }
 
 h1, h2, h3, h4, h5 {
@@ -338,7 +345,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #1b4d3e, #1f7a6c, #c9a24b);
+  background: linear-gradient(135deg, #5636e8, #7657ff, #ff6448);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -362,11 +369,11 @@ h1, h2, h3, h4, h5 {
    screenshot: judul jadi kotak solid buram, bukan teks). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .text-gradient {
-    background-image: linear-gradient(135deg, #3e7c59, #5fb3a3, #e0c378);
+    background-image: linear-gradient(135deg, #9d85ff, #c9b8ff, #ff8a73);
   }
 }
 [data-theme="dark"] .text-gradient {
-  background-image: linear-gradient(135deg, #3e7c59, #5fb3a3, #e0c378);
+  background-image: linear-gradient(135deg, #9d85ff, #c9b8ff, #ff8a73);
 }
 
 /* .brand-logo-img -- ditemukan lewat audit yang sama: logo.png (wordmark
@@ -390,13 +397,13 @@ h1, h2, h3, h4, h5 {
 
 .bg-mesh {
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(27, 77, 62, 0.1) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 85% 25%, rgba(31, 122, 108, 0.1) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 50% at 50% 90%, rgba(201, 162, 75, 0.1) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(118, 87, 255, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 25%, rgba(217, 206, 255, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 90%, rgba(255, 175, 208, 0.1) 0%, transparent 60%);
 }
 
 .gradient-cta {
-  background: linear-gradient(135deg, #1b4d3e 0%, #1f7a6c 55%, #c9a24b 100%);
+  background: linear-gradient(135deg, #5636e8 0%, #7657ff 55%, #ff6448 100%);
 }
 
 .glass {
@@ -416,13 +423,13 @@ h1, h2, h3, h4, h5 {
    seperti .nav-glass. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .glass {
-    background: rgba(16, 29, 24, 0.65);
-    border: 1px solid rgba(36, 53, 44, 0.6);
+    background: rgba(28, 26, 34, 0.68);
+    border: 1px solid rgba(50, 46, 61, 0.6);
   }
 }
 [data-theme="dark"] .glass {
-  background: rgba(16, 29, 24, 0.65);
-  border: 1px solid rgba(36, 53, 44, 0.6);
+  background: rgba(28, 26, 34, 0.68);
+  border: 1px solid rgba(50, 46, 61, 0.6);
 }
 
 .nav-glass {
@@ -438,13 +445,13 @@ h1, h2, h3, h4, h5 {
    manual) -- lihat catatan lengkap di sana. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .nav-glass {
-    background: rgba(11, 21, 18, 0.78);
-    border-bottom: 1px solid rgba(36, 53, 44, 0.8);
+    background: rgba(20, 18, 24, 0.8);
+    border-bottom: 1px solid rgba(50, 46, 61, 0.8);
   }
 }
 [data-theme="dark"] .nav-glass {
-  background: rgba(11, 21, 18, 0.78);
-  border-bottom: 1px solid rgba(36, 53, 44, 0.8);
+  background: rgba(20, 18, 24, 0.8);
+  border-bottom: 1px solid rgba(50, 46, 61, 0.8);
 }
 
 .blob {
@@ -475,18 +482,18 @@ h1, h2, h3, h4, h5 {
 
 .pop-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 50px -10px rgba(27, 77, 62, 0.22);
-  border-color: #b9d6c8;
+  box-shadow: 0 20px 50px -10px rgba(24, 17, 47, 0.22);
+  border-color: #d9ceff;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #1b4d3e, #1f7a6c);
+  background: linear-gradient(135deg, #5636e8, #7657ff);
   transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.2s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px -8px rgba(27, 77, 62, 0.45);
+  box-shadow: 0 14px 32px -8px rgba(86, 54, 232, 0.45);
   filter: brightness(1.08);
 }
 
@@ -499,13 +506,13 @@ h1, h2, h3, h4, h5 {
 }
 
 .btn-ghost:hover {
-  background: rgba(27, 77, 62, 0.06);
+  background: rgba(118, 87, 255, 0.08);
   transform: translateY(-1px);
-  border-color: #1b4d3e;
+  border-color: #7657ff;
 }
 
 .dot-grid {
-  background-image: radial-gradient(circle, rgba(27, 77, 62, 0.18) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, rgba(118, 87, 255, 0.16) 1.5px, transparent 1.5px);
   background-size: 26px 26px;
 }
 
@@ -668,30 +675,30 @@ h1, h2, h3, h4, h5 {
 .swal2-popup {
   border-radius: 1.5rem !important;
   padding: 2rem 1.75rem 1.75rem !important;
-  box-shadow: 0 30px 90px -16px rgba(27, 77, 62, 0.35) !important;
+  box-shadow: 0 30px 90px -16px rgba(24, 17, 47, 0.35) !important;
   font-family: var(--font-body), sans-serif !important;
 }
 
 .swal2-title {
   font-family: var(--font-heading), sans-serif !important;
-  color: #1c2b25 !important;
+  color: #111111 !important;
   font-size: 1.25rem !important;
   padding-top: 0.5rem !important;
 }
 
 .swal2-html-container {
-  color: #5b6b63 !important;
+  color: #77736c !important;
   font-size: 0.875rem !important;
 }
 
 .swal2-icon.swal2-warning {
-  border-color: #c9a24b !important;
-  color: #c9a24b !important;
+  border-color: #d98600 !important;
+  color: #d98600 !important;
 }
 
 .swal2-icon.swal2-question {
-  border-color: #1f7a6c !important;
-  color: #1f7a6c !important;
+  border-color: #7657ff !important;
+  color: #7657ff !important;
 }
 
 .swal2-actions {
@@ -699,7 +706,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .swal2-backdrop-show {
-  background: rgba(28, 43, 37, 0.45) !important;
+  background: rgba(17, 17, 17, 0.5) !important;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -725,7 +732,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .swal-btn-primary {
-  background: linear-gradient(135deg, #1b4d3e, #1f7a6c);
+  background: linear-gradient(135deg, #5636e8, #7657ff);
   color: #fff;
 }
 
@@ -740,6 +747,6 @@ h1, h2, h3, h4, h5 {
 }
 
 .swal-btn-cancel:hover {
-  border-color: #1b4d3e;
-  color: #1b4d3e;
+  border-color: #7657ff;
+  color: #7657ff;
 }

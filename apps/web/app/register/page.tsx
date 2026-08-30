@@ -106,7 +106,7 @@ export default function RegisterPage() {
   return (
     <AuthShell>
       <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
-        Daftar ke Jeon.id
+        Daftar ke jeon.id
       </h1>
       <p className="mt-3 text-sm text-app-muted">
         Buat halaman bio, jualan produk digital, & terima dukungan dari satu link -- <span className="font-semibold text-app-ink">gratis</span>.
@@ -207,7 +207,7 @@ export default function RegisterPage() {
             onChange={(e) => setConsentAccepted(e.target.checked)}
             className="mt-0.5 h-4 w-4 flex-shrink-0"
           />
-          Saya menyetujui pemrosesan data pribadi saya oleh Jeon.id sesuai kebutuhan layanan
+          Saya menyetujui pemrosesan data pribadi saya oleh jeon.id sesuai kebutuhan layanan
           (sesuai UU PDP).
         </label>
 
@@ -216,7 +216,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading || usernameState === "checking" || usernameState === "unavailable"}
-          className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memproses..." : "Daftar Gratis"}
         </button>
@@ -246,7 +246,7 @@ export default function RegisterPage() {
 
       <p className="mt-8 text-center text-sm text-app-muted">
         Sudah punya akun?{" "}
-        <Link href="/login" className="font-semibold text-primary hover:underline">
+        <Link href="/login" className="font-semibold text-jeon-purple hover:underline">
           Masuk
         </Link>
       </p>

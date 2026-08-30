@@ -191,6 +191,12 @@ export default function DashboardLayout({
   // sengaja membuka /dashboard/settings/subscription -- tidak ada penanda
   // apa pun di chip akun top bar (terlihat di SEMUA halaman dashboard).
   const [isPremium, setIsPremium] = useState(false);
+  // isPublished -- redesign Fase 3 (spec §12.3: top bar menampilkan status
+  // Live/Draft DARI DATA BACKEND). null = belum termuat (pil tidak
+  // dirender sama sekali, bukan menebak status). Murni DISPLAY -- toggle
+  // publish tetap di halaman Link Bio (updateMyPage), bukan aksi baru di
+  // topbar.
+  const [isPublished, setIsPublished] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeOwnerId, setActiveOwnerIdState] = useState<string | null>(() => getActiveWorkspaceOwnerId());
@@ -270,6 +276,7 @@ export default function DashboardLayout({
         setUsername(p.username);
         setAvatarUrl(p.avatar_url);
         setIsPremium(p.is_premium);
+        setIsPublished(p.is_published);
       })
       .catch(() => {
         // Chip tautan publik cuma kemudahan tambahan -- kalau gagal dimuat,
@@ -342,8 +349,10 @@ export default function DashboardLayout({
             Logo gambar (logo-baru.png) SENGAJA DIKECUALIKAN di dashboard
             -- permintaan langsung pengguna, 10 Agustus 2026: khusus area
             dashboard tetap teks "Jeon.id" polos, bukan gambar. */}
-        <Link href="/dashboard" className="flex items-center gap-1.5 font-heading text-lg font-extrabold text-white">
-          Jeon.id<span className="text-xs text-accent-light" aria-hidden="true">&#9670;</span>
+        {/* Wordmark redesign (spec §9): huruf kecil "jeon.id", latar gelap
+            = teks putih + aksen lime. */}
+        <Link href="/dashboard" className="flex items-baseline gap-1.5 font-display text-xl font-extrabold tracking-tight text-white">
+          <span className="text-jeon-lime" aria-hidden="true">✦</span>jeon.id
         </Link>
 
         {workspaces.length > 1 && (
@@ -357,7 +366,7 @@ export default function DashboardLayout({
                 setActiveOwnerIdState(e.target.value);
                 handleWorkspaceChange(e.target.value);
               }}
-              className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-2.5 py-2 text-xs font-semibold text-app-ink focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-2.5 py-2 text-xs font-semibold text-app-ink focus:border-jeon-purple focus:outline-none"
             >
               {workspaces.map((w) => (
                 <option key={w.owner_user_id} value={w.owner_user_id}>
@@ -385,7 +394,7 @@ export default function DashboardLayout({
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
                     active
-                      ? "border-accent bg-white/5 text-white"
+                      ? "border-jeon-purple bg-jeon-purple/25 text-white"
                       : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                   }`}
                 >
@@ -405,7 +414,7 @@ export default function DashboardLayout({
                   className="flex w-full items-center justify-between rounded-lg px-3.5 py-1.5 text-left hover:bg-white/5"
                 >
                   <span
-                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-accent-light" : "text-white/35"}`}
+                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-jeon-lavender" : "text-white/35"}`}
                   >
                     {item.label}
                   </span>
@@ -425,7 +434,7 @@ export default function DashboardLayout({
                           onClick={() => setMobileOpen(false)}
                           className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
                             active
-                              ? "border-accent bg-white/5 text-white"
+                              ? "border-jeon-purple bg-jeon-purple/25 text-white"
                               : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                           }`}
                         >
@@ -499,7 +508,7 @@ export default function DashboardLayout({
               globals.css) menggantikan border+bg putih polos, supaya
               sidebar terasa mengambang tipis di atas latar bg-mesh di
               atas, bukan blok solid buram. */}
-          <aside className="bg-primary-dark sticky top-0 hidden h-screen w-64 flex-col justify-between p-5 shadow-refined-lg md:flex">
+          <aside className="sticky top-0 hidden h-screen w-[var(--dashboard-sidebar)] flex-col justify-between bg-jeon-sidebar p-5 shadow-refined-lg md:flex">
             {sidebarContent}
           </aside>
 
@@ -521,13 +530,13 @@ export default function DashboardLayout({
               SEMUA halaman, bukan cuma yang kontennya sendiri "salah". */}
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-              <Link href="/dashboard" className="font-heading text-lg font-extrabold text-gradient">
-                Jeon.id
+              <Link href="/dashboard" className="flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight text-app-ink">
+                <span className="text-jeon-purple" aria-hidden="true">✦</span>jeon.id
               </Link>
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-app-ink hover:bg-primary-subtle"
+                className="rounded-lg p-2 text-app-ink hover:bg-app-surface-2"
                 aria-label="Buka menu"
               >
                 <IconMenu className="h-5 w-5" />
@@ -537,7 +546,7 @@ export default function DashboardLayout({
             {mobileOpen && (
               <div className="fixed inset-0 z-40 md:hidden">
                 <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-                <aside className="bg-primary-dark absolute left-0 top-0 flex h-full w-72 flex-col justify-between p-5 shadow-hero">
+                <aside className="absolute left-0 top-0 flex h-full w-72 flex-col justify-between bg-jeon-sidebar p-5 shadow-hero">
                   <button
                     type="button"
                     onClick={() => setMobileOpen(false)}
@@ -557,7 +566,7 @@ export default function DashboardLayout({
                 sidebar tiap kali. "Enhance" (AI) SENGAJA tidak dibuat --
                 Jeonme belum punya fitur AI enhance apa pun (lihat keputusan
                 yang disepakati). */}
-            <header className="nav-glass sticky top-0 z-20 hidden items-center justify-between gap-3 px-6 py-2.5 md:flex">
+            <header className="nav-glass sticky top-0 z-20 hidden h-[72px] items-center justify-between gap-3 px-6 md:flex">
               {/* Bug ditemukan (5 Agustus 2026, audit responsif): judul
                   DAN grup ikon di kanan sebelumnya sama-sama tidak bisa
                   menyusut -- di lebar tablet (768-1023px) totalnya melebihi
@@ -565,7 +574,7 @@ export default function DashboardLayout({
                   min-w-0+truncate di judul membiarkan JUDUL yang mengalah
                   duluan (konten paling tidak krusial di baris ini) supaya
                   grup ikon (fungsional) tetap utuh. */}
-              <p className="min-w-0 flex-1 truncate font-heading text-base font-bold text-app-ink">
+              <p className="min-w-0 flex-1 truncate font-display text-base font-bold text-app-ink">
                 {currentPageLabel(pathname, navItems, extraPageLabels, t("dashboard.dashboardFallback"))}
               </p>
               <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -577,7 +586,7 @@ export default function DashboardLayout({
                     tombol ikon bulat topbar dashboard (border+bg-app-surface),
                     bukan gaya bawaannya sendiri. */}
                 <LanguageSwitcher className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
-                <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary" />
+                <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                 {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
                     di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
                     bantuan bulat di sini, pola sama seperti ikon bantuan
@@ -587,7 +596,7 @@ export default function DashboardLayout({
                   href="/dashboard/tutorial"
                   title={t("dashboard.extraPages.tutorial")}
                   aria-label={t("dashboard.extraPages.tutorial")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconPlayCircle className="h-4 w-4" />
                 </Link>
@@ -604,17 +613,33 @@ export default function DashboardLayout({
                   href="/dashboard/settings"
                   title={t("dashboard.nav.settings")}
                   aria-label={t("dashboard.nav.settings")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-primary hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconSettings className="h-4 w-4" />
                 </Link>
                 <NotificationBell />
+                {/* Pil status Live/Draft (redesign spec §12.3): status
+                    publish halaman utama DARI DATA BACKEND (pages.is_published,
+                    ikut fetch getMyPage yang sudah ada -- nol request baru).
+                    Murni DISPLAY: toggle publish tetap di halaman Link Bio,
+                    bukan aksi baru di topbar. Tidak dirender sama sekali
+                    sebelum datanya termuat (bukan menebak status). */}
+                {isPublished !== null && (
+                  <span
+                    className={`hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider lg:flex ${
+                      isPublished ? "border-jeon-success/40 text-jeon-success" : "border-app-border text-app-muted"
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isPublished ? "bg-jeon-success" : "bg-app-muted"}`} aria-hidden="true" />
+                    {isPublished ? t("dashboard.statusLive") : t("dashboard.statusDraft")}
+                  </span>
+                )}
                 {username && (
                   <button
                     type="button"
                     onClick={handleCopyLink}
                     title={t("dashboard.copyLink")}
-                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-primary hover:text-primary"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     {/* Teks domain penuh cuma tampil mulai lg: (>=1024px,
                         sama seperti label GlobalSearch) -- di rentang
@@ -622,7 +647,7 @@ export default function DashboardLayout({
                         ikut memaksa halaman melebar horizontal. */}
                     <span className="hidden lg:inline">jeon.id/{username}</span>
                     <IconCopy className="h-3 w-3" />
-                    {copied && <span className="text-primary">{t("dashboard.linkCopied")}</span>}
+                    {copied && <span className="text-jeon-purple">{t("dashboard.linkCopied")}</span>}
                   </button>
                 )}
                 {/* Avatar akun (redesain premium, permintaan langsung
@@ -645,7 +670,7 @@ export default function DashboardLayout({
                       title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
                       aria-haspopup="menu"
                       aria-expanded={profileMenuOpen}
-                      className="flex items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-primary"
+                      className="flex items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
                     >
                       {/* Lencana bintang di sudut avatar + pil "Premium" di
                           sebelah @username -- permintaan langsung pengguna:
@@ -658,14 +683,14 @@ export default function DashboardLayout({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
                         ) : (
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-jeon-lavender font-display text-[11px] font-bold text-[#111111]">
                             {username.slice(0, 1).toUpperCase()}
                           </span>
                         )}
                         {isPremium && (
                           <span
                             aria-hidden="true"
-                            className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-white ring-2 ring-white"
+                            className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-jeon-purple text-white ring-2 ring-white"
                           >
                             <IconStar className="h-2 w-2" />
                           </span>
@@ -674,7 +699,7 @@ export default function DashboardLayout({
                       <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
                         @{username}
                         {isPremium && (
-                          <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+                          <span className="rounded-full bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111]">
                             Premium
                           </span>
                         )}
