@@ -7,7 +7,7 @@
 // di SEMUA state "if (loading) return ...".  animate-pulse bawaan Tailwind
 // (bukan keyframe kustom).
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-primary-subtle/70 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-app-surface-2 ${className}`} />;
 }
 
 export default function PageSkeleton() {

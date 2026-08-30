@@ -53,7 +53,7 @@ const config: Config = {
         app: {
           bg: "var(--app-bg)",
           surface: "var(--app-surface)",
-          surface2: "var(--app-surface-2)",
+          "surface-2": "var(--app-surface-2)",
           ink: "var(--app-ink)",
           muted: "var(--app-muted)",
           border: "var(--app-border)",
