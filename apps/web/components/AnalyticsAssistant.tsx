@@ -42,10 +42,10 @@ export default function AnalyticsAssistant() {
   }
 
   return (
-    <section className="glass mt-4 rounded-2xl p-5 shadow-card">
+    <section className="glass mt-4 rounded-jmd p-5 shadow-card">
       <div className="flex items-center gap-2">
         <IconSparkle className="h-4 w-4 text-jeon-warning" />
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.analyticsAssistant.heading")}</h2>
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.analyticsAssistant.heading")}</h2>
       </div>
       <p className="mt-1 text-[11px] text-app-muted">
         {t("dashboard.components.analyticsAssistant.description")}

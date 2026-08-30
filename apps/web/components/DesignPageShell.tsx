@@ -68,7 +68,7 @@ export default function DesignPageShell({
             {t("dashboard.components.designPageShell.backToDesign")}
           </Link>
         )}
-        <h1 className="font-heading text-2xl font-bold text-app-ink">{title}</h1>
+        <h1 className="font-display text-2xl font-bold text-app-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-app-muted">{description}</p>}
         {children}
       </div>

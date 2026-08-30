@@ -126,11 +126,11 @@ export default function DangerZonePage() {
         {t("dashboard.pages.settingsDangerZone.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.title")}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsDangerZone.subtitle")}</p>
 
-      <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.deactivateTitle")}</h2>
+      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.deactivateTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.deactivateDescription")}</p>
 
         {status?.deactivated ? (
@@ -166,8 +166,8 @@ export default function DangerZonePage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.exportTitle")}</h2>
+      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.exportTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.exportDescription")}</p>
         <button
           type="button"
@@ -179,8 +179,8 @@ export default function DangerZonePage() {
         </button>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-red-200 bg-red-50 p-5">
-        <h2 className="font-heading text-sm font-bold text-red-700">{t("dashboard.pages.settingsDangerZone.deleteTitle")}</h2>
+      <section className="mt-4 rounded-jlg border border-red-200 bg-red-50 p-5">
+        <h2 className="font-display text-sm font-bold text-red-700">{t("dashboard.pages.settingsDangerZone.deleteTitle")}</h2>
 
         {status?.pending ? (
           <>

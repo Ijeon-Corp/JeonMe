@@ -162,11 +162,11 @@ export default function SettingsSecurityPage() {
         {t("dashboard.pages.settingsSecurity.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.title")}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSecurity.subtitle")}</p>
 
-      <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
+      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
         <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
           <input
             type="password"
@@ -195,9 +195,9 @@ export default function SettingsSecurityPage() {
         </form>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.twoFactorTitle")}</h2>
+          <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.twoFactorTitle")}</h2>
           {status && (
             <span
               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
@@ -295,10 +295,10 @@ export default function SettingsSecurityPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.activeSessionsTitle")}</h2>
+            <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.activeSessionsTitle")}</h2>
             <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.activeSessionsSubtitle")}</p>
           </div>
           {/* Audit keamanan 15 Agustus 2026: satu klik cabut semua device lain

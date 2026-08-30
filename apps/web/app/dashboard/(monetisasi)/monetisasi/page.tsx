@@ -117,7 +117,7 @@ function MonetisasiCard({ item }: { item: MonetisasiItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-2xl border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
+      className="flex items-center gap-3 rounded-jmd border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
       <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple">
         <Icon className="h-4 w-4" />

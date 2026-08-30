@@ -228,9 +228,9 @@ export default function ProdukPageEditor({
 
   if (!page) {
     return (
-      <div className="glass mx-auto max-w-xl rounded-2xl p-8 text-center shadow-card">
+      <div className="glass mx-auto max-w-xl rounded-jmd p-8 text-center shadow-card">
         <IconSparkle className="mx-auto h-8 w-8 text-jeon-purple" />
-        <h2 className="mt-3 font-heading text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.notActive.title")}</h2>
+        <h2 className="mt-3 font-display text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.notActive.title")}</h2>
         <p className="mt-2 text-sm text-app-muted">
           {t("dashboard.components.produkPageEditor.notActive.description")}{" "}
           <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
@@ -250,9 +250,9 @@ export default function ProdukPageEditor({
 
   return (
     <div className="min-w-0">
-      <section className="glass rounded-2xl p-5 shadow-card">
+      <section className="glass rounded-jmd p-5 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.pageTitle")}</h2>
+          <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.pageTitle")}</h2>
           <a
             href={`${SITE_URL}/${username}/${page.slug}`}
             target="_blank"
@@ -354,7 +354,7 @@ export default function ProdukPageEditor({
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-2xl p-1.5 shadow-card">
+      <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-jmd p-1.5 shadow-card">
         {(
           [
             ["blok", t("dashboard.components.produkPageEditor.designTabs.blok")],
@@ -387,7 +387,7 @@ export default function ProdukPageEditor({
         {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
         {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
         {section === "stiker" && (
-          <section className="glass rounded-2xl p-5 shadow-card">
+          <section className="glass rounded-jmd p-5 shadow-card">
             <StickerCanvasEditor stickers={page.stickers} onChange={onStickersChange} />
           </section>
         )}
@@ -656,7 +656,7 @@ function BlockSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <section className="glass rounded-2xl p-5 shadow-card">
+      <section className="glass rounded-jmd p-5 shadow-card">
         {!adding ? (
           <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline">
             <IconPlus className="h-4 w-4" />
@@ -1020,7 +1020,7 @@ function TemaSection({
   }
 
   return (
-    <section className="glass rounded-2xl p-5 shadow-card">
+    <section className="glass rounded-jmd p-5 shadow-card">
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
         <button
           type="button"
@@ -1031,7 +1031,7 @@ function TemaSection({
           }
           className="group flex flex-col items-center gap-1.5"
         >
-          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
+          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
             <div className="flex h-full w-full items-center justify-center bg-gray-100">
               <IconPaintbrush className="h-7 w-7 text-app-muted" />
             </div>
@@ -1051,9 +1051,9 @@ function TemaSection({
           if (!meta) return null;
           return (
             <button key={themeName} type="button" onClick={() => onPatch({ theme: themeName, custom_style_override: false })} className="group flex flex-col items-center gap-1.5">
-              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
+              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
                 <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
-                <span className={`absolute left-2.5 top-2 font-heading text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
+                <span className={`absolute left-2.5 top-2 font-display text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
                   Aa
                 </span>
                 <span className={`absolute inset-x-2.5 bottom-2.5 h-5 rounded-full ring-1 ring-black/10 ${meta.buyButton}`} aria-hidden />
@@ -1184,7 +1184,7 @@ function HeaderSection({
   }
 
   return (
-    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.avatarLabel")}</label>
         <div className="flex items-center gap-3">
@@ -1192,7 +1192,7 @@ function HeaderSection({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={page.avatar_url} alt={page.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-heading text-base font-bold text-jeon-purple">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-display text-base font-bold text-jeon-purple">
               {page.slug.slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -1310,7 +1310,7 @@ function TombolSection({
 }) {
   const { t } = useLocale();
   return (
-    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonColor")}</label>
         <input
@@ -1390,7 +1390,7 @@ function FontSection({
 }) {
   const { t } = useLocale();
   return (
-    <section className="glass flex flex-col gap-4 rounded-2xl p-5 shadow-card">
+    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.pageFont")}</label>
         <select

@@ -193,7 +193,7 @@ export default function DashboardHomePage() {
         </div>
       </section>
 
-      <div className="glass mt-4 flex flex-wrap items-center gap-2 rounded-2xl p-2.5 shadow-card">
+      <div className="glass mt-4 flex flex-wrap items-center gap-2 rounded-jmd p-2.5 shadow-card">
         {PRESETS.map((d) => (
           <button
             key={d}
@@ -311,8 +311,8 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               {summary.daily_series.length > 0 && (
-                <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.chartTrendHeading")}</h2>
+                <div className="glass rounded-jlg p-4 shadow-card">
+                  <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.chartTrendHeading")}</h2>
                   <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                     <defs>
                       <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -343,9 +343,9 @@ export default function DashboardHomePage() {
                   hari terakhir (lihat catatan lingkup di backend
                   AnalyticsHandler.computeWeeklyRevenue), independen dari
                   filter rentang tanggal di atas. */}
-              <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.weeklyRevenueHeading")}</h2>
-                <p className="mt-2 font-heading text-xl font-bold tabular-nums text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+              <div className="glass rounded-jlg p-4 shadow-card">
+                <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.weeklyRevenueHeading")}</h2>
+                <p className="mt-2 font-display text-xl font-bold tabular-nums text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
                 <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
                   {summary.weekly_revenue.map((d) => (
                     <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
@@ -361,8 +361,8 @@ export default function DashboardHomePage() {
             </section>
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topLinksHeading")}</h2>
+              <div className="glass rounded-jlg p-4 shadow-card">
+                <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.topLinksHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_links.map((l) => (
                     <li key={l.link_id} className="flex justify-between text-xs">
@@ -374,8 +374,8 @@ export default function DashboardHomePage() {
                 </ul>
               </div>
 
-              <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topProductsHeading")}</h2>
+              <div className="glass rounded-jlg p-4 shadow-card">
+                <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.topProductsHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.top_products.map((p) => (
                     <li key={p.product_id} className="flex justify-between text-xs">
@@ -390,8 +390,8 @@ export default function DashboardHomePage() {
 
             <section className="mt-4 grid gap-3 sm:grid-cols-2">
               {summary.top_referrers.length > 0 && (
-                <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.topReferrersHeading")}</h2>
+                <div className="glass rounded-jlg p-4 shadow-card">
+                  <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.topReferrersHeading")}</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.top_referrers.map((r) => (
                       <li key={r.referrer} className="flex justify-between text-xs">
@@ -404,8 +404,8 @@ export default function DashboardHomePage() {
               )}
 
               {summary.device_breakdown.length > 0 && (
-                <div className="glass rounded-3xl p-4 shadow-card">
-                  <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.home.deviceBreakdownHeading")}</h2>
+                <div className="glass rounded-jlg p-4 shadow-card">
+                  <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.deviceBreakdownHeading")}</h2>
                   <ul className="mt-3 flex flex-col gap-2">
                     {summary.device_breakdown.map((d) => (
                       <li key={d.device_type} className="flex items-center gap-2 text-xs">
@@ -427,7 +427,7 @@ export default function DashboardHomePage() {
             </section>
 
             {summary.total_views === 0 && (
-              <section className="mt-4 flex flex-col items-center gap-2 rounded-3xl border border-dashed border-app-border bg-app-surface/60 p-5 text-center">
+              <section className="mt-4 flex flex-col items-center gap-2 rounded-jlg border border-dashed border-app-border bg-app-surface/60 p-5 text-center">
                 <IconSparkle className="h-5 w-5 flex-shrink-0 text-jeon-warning" />
                 <p className="text-xs text-app-muted">
                   {t("dashboard.pages.home.emptyViewsMessage")}
@@ -464,15 +464,15 @@ function QuickAccessCard({
     <Link
       href={href}
       style={{ background: gradient }}
-      className="group relative overflow-hidden rounded-3xl p-5 text-white shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
+      className="group relative overflow-hidden rounded-jlg p-5 text-white shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
     >
       <div className="flex items-center justify-between">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">{icon}</span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-jmd bg-white/15">{icon}</span>
         <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:translate-x-0.5">
           <IconChevronRight className="h-4 w-4" />
         </span>
       </div>
-      <p className="mt-6 font-heading text-lg font-bold">{title}</p>
+      <p className="mt-6 font-display text-lg font-bold">{title}</p>
       <p className="mt-1 text-xs text-white/80">{description}</p>
     </Link>
   );

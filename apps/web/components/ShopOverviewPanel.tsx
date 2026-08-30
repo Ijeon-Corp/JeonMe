@@ -107,9 +107,9 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
       </section>
       <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.shopOverviewPanel.conversionHint")}</p>
 
-      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.weeklyRevenueTitle")}</h2>
-        <p className="mt-2 font-heading text-xl font-bold text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
+      <div className="glass mt-3 rounded-jlg p-4 shadow-card">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.weeklyRevenueTitle")}</h2>
+        <p className="mt-2 font-display text-xl font-bold text-app-ink">{formatRupiah(summary.weekly_revenue_total_idr)}</p>
         <div className="mt-4 flex items-end gap-1.5" style={{ height: 100 }}>
           {summary.weekly_revenue.map((d) => (
             <div key={d.date} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d.date}: ${formatRupiah(d.revenue_idr)}`}>
@@ -120,8 +120,8 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </div>
       </div>
 
-      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.topProductsTitle")}</h2>
+      <div className="glass mt-3 rounded-jlg p-4 shadow-card">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.topProductsTitle")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {summary.top_products.map((p) => (
             <li key={p.product_id} className="flex justify-between text-xs">
@@ -135,8 +135,8 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
         </ul>
       </div>
 
-      <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.recentTransactionsTitle")}</h2>
+      <div className="glass mt-3 rounded-jlg p-4 shadow-card">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.recentTransactionsTitle")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {(recentOrders ?? []).map((o) => {
             const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-app-muted" };

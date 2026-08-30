@@ -76,7 +76,7 @@ export default function ListingPanel({
             onDragStart={() => setDragId(p.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(p.id)}
-            className="glass flex items-center gap-3 rounded-2xl p-3 shadow-card"
+            className="glass flex items-center gap-3 rounded-jmd p-3 shadow-card"
           >
             <span className="cursor-grab text-app-muted" title={t("dashboard.components.listingPanel.dragTitle")}>
               <IconGripVertical className="h-4 w-4" />

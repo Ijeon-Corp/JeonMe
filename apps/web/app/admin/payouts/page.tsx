@@ -65,7 +65,7 @@ export default function AdminPayoutsPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Penarikan Dana</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Penarikan Dana</h1>
       <p className="mt-1 text-sm text-app-muted">
         Proses pengajuan penarikan kreator secara manual -- transfer dana dilakukan di luar sistem
         (mis. internet banking), lalu tandai statusnya di sini. Kreator dengan KYC terverifikasi

@@ -395,6 +395,28 @@ h1, h2, h3, h4, h5 {
   filter: brightness(1.8) saturate(1.15);
 }
 
+/* Pasangan logo baru (permintaan langsung pengguna, 31 Agustus 2026:
+   "gunakan logo baru jeon-logo-new") -- dua file dirender bersama
+   (Logo.tsx), yang tampil hanya satu sesuai tema: wordmark hitam di
+   terang, putih di gelap. Pola 3 lapis sama dengan token app-*. */
+.brand-logo-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-logo-light {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .brand-logo-dark {
+    display: inline;
+  }
+}
+[data-theme="dark"] .brand-logo-light {
+  display: none;
+}
+[data-theme="dark"] .brand-logo-dark {
+  display: inline;
+}
+
 .bg-mesh {
   background:
     radial-gradient(ellipse 60% 50% at 20% 10%, rgba(118, 87, 255, 0.08) 0%, transparent 60%),
@@ -406,11 +428,19 @@ h1, h2, h3, h4, h5 {
   background: linear-gradient(135deg, #5636e8 0%, #7657ff 55%, #ff6448 100%);
 }
 
+/* .glass -- redesign Fase 5 (permintaan langsung pengguna, 31 Agustus
+   2026: "isinya juga menyesuaikan dengan temanya"): efek kaca buram
+   identitas lama diganti KARTU SOLID tenang bahasa tema baru (permukaan
+   token + border tipis + bayangan lembut ungu-netral) -- satu rule ini
+   dipakai kartu di 40+ halaman dashboard/admin, jadi seluruh "isi"
+   halaman ikut bahasa tema sekali edit. Nama class .glass dipertahankan
+   (ratusan pemakaian) walau tidak lagi kaca -- rename massal berisiko
+   tanpa manfaat visual. Blur dihapus sekalian: lebih tenang (spec:
+   dashboard lebih kalem dari homepage) & lebih ringan dirender. */
 .glass {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 2px 12px rgba(24, 17, 47, 0.05);
 }
 
 /* .glass gelap -- ditemukan lewat audit visual dark mode (permintaan
@@ -423,13 +453,11 @@ h1, h2, h3, h4, h5 {
    seperti .nav-glass. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .glass {
-    background: rgba(28, 26, 34, 0.68);
-    border: 1px solid rgba(50, 46, 61, 0.6);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   }
 }
 [data-theme="dark"] .glass {
-  background: rgba(28, 26, 34, 0.68);
-  border: 1px solid rgba(50, 46, 61, 0.6);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .nav-glass {

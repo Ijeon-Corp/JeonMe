@@ -1841,7 +1841,7 @@ export default function DashboardLinksPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={page.avatar_url} alt={page.username} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-jeon-purple/10 font-heading text-lg font-bold text-jeon-purple">
+                <div className="flex h-full w-full items-center justify-center bg-jeon-purple/10 font-display text-lg font-bold text-jeon-purple">
                   {page.username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -1867,11 +1867,11 @@ export default function DashboardLinksPage() {
                   onBlur={saveEditProfileField}
                   onKeyDown={(e) => e.key === "Enter" && saveEditProfileField()}
                   placeholder={page.username}
-                  className="w-full rounded-md border border-jeon-purple px-2 py-1 font-heading text-base font-bold text-app-ink focus:outline-none"
+                  className="w-full rounded-md border border-jeon-purple px-2 py-1 font-display text-base font-bold text-app-ink focus:outline-none"
                 />
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <p className="truncate font-heading text-base font-bold text-app-ink">{page.display_name || page.username}</p>
+                  <p className="truncate font-display text-base font-bold text-app-ink">{page.display_name || page.username}</p>
                   <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editDisplayName")}>
                     <IconPencil className="h-3.5 w-3.5" />
                   </button>
@@ -2013,7 +2013,7 @@ export default function DashboardLinksPage() {
         </button>
 
         {addingLink && (
-          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-4 shadow-card">
+          <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
             <div className="flex flex-col gap-2 sm:flex-row">
               <FormField label={t("dashboard.pages.links.addLinkForm.titleLabel")} hint={t("dashboard.pages.links.addLinkForm.titleHint")}>
                 <input
@@ -2067,7 +2067,7 @@ export default function DashboardLinksPage() {
         )}
 
         {addingBlock && (
-          <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-3xl p-3.5 shadow-card">
+          <form onSubmit={handleCreateBlock} className="glass mt-4 flex flex-col gap-2 rounded-jlg p-3.5 shadow-card">
             <FormField label={t("dashboard.pages.links.addBlockForm.blockTypeLabel")}>
               <select
                 value={blockType}
@@ -2325,7 +2325,7 @@ export default function DashboardLinksPage() {
               onDragStart={() => setDragId(link.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(link.id)}
-              className={`flex flex-col gap-2.5 rounded-2xl border bg-app-surface p-3.5 shadow-card transition-colors ${
+              className={`flex flex-col gap-2.5 rounded-jmd border bg-app-surface p-3.5 shadow-card transition-colors ${
                 link.is_active ? "border-app-border" : "border-app-border opacity-60"
               }`}
             >
@@ -3392,7 +3392,7 @@ export default function DashboardLinksPage() {
               onClick={() => setConfirmDeleteId(null)}
             >
               <div
-                className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
+                className="w-full max-w-sm rounded-jmd bg-app-surface p-5 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start gap-3">
@@ -3400,7 +3400,7 @@ export default function DashboardLinksPage() {
                     <TriangleAlert className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.links.deleteConfirm.title").replace("{noun}", noun)}</h2>
+                    <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.deleteConfirm.title").replace("{noun}", noun)}</h2>
                     <p className="mt-1 text-xs text-app-muted">
                       {t("dashboard.pages.links.deleteConfirm.body")
                         .replace("{title}", target.title || t("dashboard.pages.links.deleteConfirm.untitled"))}
@@ -3446,9 +3446,9 @@ export default function DashboardLinksPage() {
           <form
             onSubmit={handleCreatePage}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-app-surface p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-jmd bg-app-surface p-5 shadow-2xl"
           >
-            <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.links.createPageModal.title")}</h2>
+            <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.createPageModal.title")}</h2>
             <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.links.createPageModal.subtitle")}</p>
             <input
               type="text"
@@ -3575,9 +3575,9 @@ function AddModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
-          <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.links.addModal.title")}</h2>
+          <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.links.addModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
             <IconClose className="h-5 w-5" />
           </button>

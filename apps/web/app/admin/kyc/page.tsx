@@ -89,7 +89,7 @@ export default function AdminKycPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Review KYC</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Review KYC</h1>
       <p className="mt-1 text-sm text-app-muted">
         Verifikasi identitas & rekening kreator. Tidak memblokir penjualan/penarikan -- hanya
         memprioritaskan antrian proses penarikan dana.
@@ -162,12 +162,12 @@ export default function AdminKycPage() {
 
       {(detailLoading || detail) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-app-surface p-6 shadow-hero">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-jlg bg-app-surface p-6 shadow-hero">
             {detailLoading && <p className="text-sm text-app-muted">Memuat detail...</p>}
             {detail && (
               <>
                 <div className="flex items-center justify-between">
-                  <h2 className="font-heading text-lg font-bold text-app-ink">@{detail.username}</h2>
+                  <h2 className="font-display text-lg font-bold text-app-ink">@{detail.username}</h2>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[detail.status]}`}>
                     {STATUS_LABEL[detail.status]}
                   </span>

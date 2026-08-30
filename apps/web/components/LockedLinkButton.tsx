@@ -75,7 +75,7 @@ export default function LockedLinkButton({
   }
 
   return (
-    <form onSubmit={handleUnlock} className="flex w-full flex-col gap-1.5 rounded-2xl border border-border bg-white p-3.5 text-left shadow-card">
+    <form onSubmit={handleUnlock} className="flex w-full flex-col gap-1.5 rounded-jmd border border-border bg-white p-3.5 text-left shadow-card">
       <p className="truncate text-sm font-semibold text-app-ink">🔒 {title}</p>
 
       {lockType === "age" && (

@@ -353,7 +353,7 @@ export default function QuickSetupPage() {
               key={c.key}
               type="button"
               onClick={() => openCategory(c.key)}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
+              className="flex flex-col items-center gap-2.5 rounded-jmd border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
                 <c.Icon className="h-5 w-5" />
@@ -373,7 +373,7 @@ export default function QuickSetupPage() {
         {!generateSuccess ? (
           <>
             <span className="h-10 w-10 animate-spin rounded-full border-4 border-jeon-purple-subtle border-t-primary" aria-hidden />
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.generatingTitle")}</p>
+            <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.generatingTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.generatingDesc")}</p>
           </>
         ) : (
@@ -381,7 +381,7 @@ export default function QuickSetupPage() {
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
               <IconCheck className="h-6 w-6" />
             </span>
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.successTitle")}</p>
+            <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.successTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.successDesc")}</p>
             {tokoSynced && <p className="mt-2 text-xs text-app-muted">{t("dashboard.pages.quickSetup.tokoSyncedNote")}</p>}
             {appliedMonetizationHint && (
@@ -476,7 +476,7 @@ export default function QuickSetupPage() {
                         pickTemplate(tpl);
                       }
                     }}
-                    className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-app-surface text-left shadow-card transition-transform hover:-translate-y-0.5 ${
+                    className={`flex cursor-pointer flex-col overflow-hidden rounded-jmd border bg-app-surface text-left shadow-card transition-transform hover:-translate-y-0.5 ${
                       selectedTemplate?.key === tpl.key ? "border-jeon-purple ring-2 ring-jeon-purple ring-offset-2" : "border-app-border"
                     }`}
                   >
@@ -490,7 +490,7 @@ export default function QuickSetupPage() {
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className="font-heading text-sm font-bold text-app-ink">{tpl.label}</p>
+                      <p className="font-display text-sm font-bold text-app-ink">{tpl.label}</p>
                       <p className="mt-1 text-xs text-app-muted">{tpl.description}</p>
                     </div>
                   </div>
@@ -526,7 +526,7 @@ export default function QuickSetupPage() {
             efektif -- supaya PagePreview tetap merender proporsional,
             cuma fisiknya lebih besar). */}
         <div className="lg:sticky lg:top-4">
-          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-2xl border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-jmd border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {previewData ? (
               <div className="h-full [zoom:0.75]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />

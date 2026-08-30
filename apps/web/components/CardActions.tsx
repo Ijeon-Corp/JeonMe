@@ -74,7 +74,7 @@ export default function CardActions({ card }: { card: PublicBusinessCard }) {
       </button>
 
       {card.collect_contact_back && (
-        <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
+        <div className="rounded-jmd border border-border bg-white p-4 shadow-card">
           {done ? (
             <p className="text-sm font-semibold text-green-700">Terima kasih! Kontakmu sudah dibagikan.</p>
           ) : (

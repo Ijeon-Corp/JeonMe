@@ -37,13 +37,13 @@ function ConnectCard({
 }) {
   const { t } = useLocale();
   return (
-    <div className="glass flex flex-col gap-3 rounded-3xl p-5 shadow-card">
+    <div className="glass flex flex-col gap-3 rounded-jlg p-5 shadow-card">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-jeon-purple/10 text-jeon-purple">
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-jmd bg-jeon-purple/10 text-jeon-purple">
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-heading text-sm font-bold text-app-ink">{label}</p>
+          <p className="font-display text-sm font-bold text-app-ink">{label}</p>
           <p className="text-xs text-app-muted">{description}</p>
         </div>
         {connection && (

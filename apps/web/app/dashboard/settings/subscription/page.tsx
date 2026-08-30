@@ -109,7 +109,7 @@ export default function SettingsSubscriptionPage() {
         {t("dashboard.pages.settingsSubscription.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 flex items-center gap-2 font-heading text-2xl font-bold text-app-ink">
+      <h1 className="mt-3 flex items-center gap-2 font-display text-2xl font-bold text-app-ink">
         <IconStar className="h-6 w-6 text-jeon-purple" />
         {t("dashboard.pages.settingsSubscription.title")}
       </h1>
@@ -118,10 +118,10 @@ export default function SettingsSubscriptionPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status.is_premium ? (
-        <section className="mt-6 rounded-3xl border border-app-border bg-app-surface-2 p-5">
+        <section className="mt-6 rounded-jlg border border-app-border bg-app-surface-2 p-5">
           <div className="flex items-center gap-2">
             <IconStar className="h-5 w-5 text-jeon-warning" />
-            <h2 className="font-heading text-sm font-bold text-app-ink">
+            <h2 className="font-display text-sm font-bold text-app-ink">
               {t("dashboard.pages.settingsSubscription.youArePremium").replace("{plan}", planLabel)}
             </h2>
           </div>
@@ -212,7 +212,7 @@ function PricingCard({
 }) {
   return (
     <div
-      className={`relative rounded-2xl border p-5 ${
+      className={`relative rounded-jmd border p-5 ${
         highlight ? "border-jeon-purple bg-jeon-purple/10/30" : "border-app-border bg-app-surface"
       }`}
     >
@@ -223,7 +223,7 @@ function PricingCard({
       )}
       <p className="text-sm font-bold text-app-ink">{label}</p>
       <p className="mt-1.5">
-        <span className="font-heading text-2xl font-bold text-app-ink">Rp {priceIDR.toLocaleString("id-ID")}</span>
+        <span className="font-display text-2xl font-bold text-app-ink">Rp {priceIDR.toLocaleString("id-ID")}</span>
         <span className="text-xs text-app-muted">{priceSuffix}</span>
       </p>
       <button

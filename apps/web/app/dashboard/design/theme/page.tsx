@@ -32,7 +32,7 @@ export default function DesignThemePage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
+      <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         {/* Bug dilaporkan pengguna (27 Juli 2026): "jika pilih tema warna
             button text button dan juga semua warna font dan tipe font juga
             ikut disesuaikan berdasarkan tema yang dipilih jadi bukan

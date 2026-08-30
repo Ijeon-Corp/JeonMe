@@ -63,7 +63,7 @@ function ThemeTile({
   return (
     <button type="button" onClick={onClick} className="group flex flex-col items-center gap-1.5">
       <div
-        className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl ring-1 ring-black/5 transition-transform group-hover:scale-[1.02] ${
+        className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 transition-transform group-hover:scale-[1.02] ${
           active ? "ring-2 ring-jeon-purple ring-offset-2" : ""
         }`}
       >
@@ -199,7 +199,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
                 />
               )}
               <span
-                className={`absolute left-2.5 top-2 font-heading text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`}
+                className={`absolute left-2.5 top-2 font-display text-xl font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`}
                 aria-hidden
               >
                 Aa

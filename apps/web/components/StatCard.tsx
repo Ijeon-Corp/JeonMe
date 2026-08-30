@@ -78,7 +78,7 @@ export default function StatCard({
   const isBrand = tone === "brand";
   const { t: translate } = useLocale();
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-0.5 ${t.card}`}>
+    <div className={`relative overflow-hidden rounded-jmd p-4 transition-transform duration-200 hover:-translate-y-0.5 ${t.card}`}>
       {/* Garis emas tipis -- SATU-satunya penanda "kartu utama", dipakai
           hemat (cuma tone brand), bukan aturan dekoratif di semua kartu. */}
       {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-jeon-coral to-transparent" aria-hidden="true" />}

@@ -54,12 +54,12 @@ export default function StorageFilesPanel() {
     <div className="mt-4">
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mb-3 rounded-2xl p-4 shadow-card">
+      <div className="glass mb-3 rounded-jmd p-4 shadow-card">
         <p className="text-xs font-semibold text-app-muted">{t("dashboard.components.storageFilesPanel.totalStorageLabel")}</p>
-        <p className="mt-1 font-heading text-xl font-bold text-app-ink">{formatBytes(data.total_bytes, t)}</p>
+        <p className="mt-1 font-display text-xl font-bold text-app-ink">{formatBytes(data.total_bytes, t)}</p>
       </div>
 
-      <div className="glass overflow-x-auto rounded-2xl shadow-card">
+      <div className="glass overflow-x-auto rounded-jmd shadow-card">
         <table className="w-full min-w-[480px] text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">

@@ -83,7 +83,7 @@ export default function DesignHeaderPage() {
     >
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="glass mt-4 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
+      <section className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designHeader.photoLabel")}</label>
           <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ export default function DesignHeaderPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={page.avatar_url} alt={page.username} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-heading text-base font-bold text-jeon-purple">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-display text-base font-bold text-jeon-purple">
                 {page.username.slice(0, 1).toUpperCase()}
               </div>
             )}
@@ -133,7 +133,7 @@ export default function DesignHeaderPage() {
         </div>
       </section>
 
-      <section className="glass mt-4 flex flex-col gap-3 rounded-3xl p-5 shadow-card">
+      <section className="glass mt-4 flex flex-col gap-3 rounded-jlg p-5 shadow-card">
         <div>
           <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designHeader.layoutLabel")}</label>
           <p className="text-[11px] text-app-muted">{t("dashboard.pages.designHeader.layoutHelp")}</p>

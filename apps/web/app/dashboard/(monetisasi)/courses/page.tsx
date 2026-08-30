@@ -150,7 +150,7 @@ export default function DashboardCoursesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-6 rounded-3xl p-5 shadow-card">
+      <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -286,7 +286,7 @@ export default function DashboardCoursesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {courses.map((course) => (
-          <div key={course.id} className="glass rounded-2xl p-4 shadow-card">
+          <div key={course.id} className="glass rounded-jmd p-4 shadow-card">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-app-ink">{course.name}</p>
               <span className="text-sm font-bold text-jeon-purple">Rp {course.price_idr.toLocaleString("id-ID")}</span>

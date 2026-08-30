@@ -132,8 +132,8 @@ export default function StatistikPage() {
           </section>
 
           {summary.daily_series.length > 0 && (
-            <div className="glass mt-3 rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.trendHeading")}</h2>
+            <div className="glass mt-3 rounded-jlg p-4 shadow-card">
+              <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.trendHeading")}</h2>
               <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
                 <defs>
                   <linearGradient id="statViewsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -161,8 +161,8 @@ export default function StatistikPage() {
           )}
 
           <section className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="glass rounded-3xl p-4 shadow-card">
-              <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.topLinksHeading")}</h2>
+            <div className="glass rounded-jlg p-4 shadow-card">
+              <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.topLinksHeading")}</h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {summary.top_links.map((l) => (
                   <li key={l.link_id} className="flex justify-between text-xs">
@@ -177,8 +177,8 @@ export default function StatistikPage() {
             </div>
 
             {summary.device_breakdown.length > 0 && (
-              <div className="glass rounded-3xl p-4 shadow-card">
-                <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.deviceHeading")}</h2>
+              <div className="glass rounded-jlg p-4 shadow-card">
+                <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.deviceHeading")}</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {summary.device_breakdown.map((d) => (
                     <li key={d.device_type} className="flex items-center gap-2 text-xs">

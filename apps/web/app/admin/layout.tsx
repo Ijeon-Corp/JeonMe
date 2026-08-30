@@ -49,9 +49,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             + chip Admin, menggantikan logo-baru.png lama; pola sidebar
             sama persis dashboard/layout.tsx (ungu-hitam jeon-sidebar,
             item aktif garis ungu kiri). */}
-        <Link href="/admin" className="flex items-baseline gap-1.5 font-display text-lg font-extrabold tracking-tight text-white">
-          <span className="text-jeon-lime" aria-hidden="true">✦</span>jeon.id
-          <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">Admin</span>
+        <Link href="/admin" className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="h-7 w-auto" />
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">Admin</span>
         </Link>
 
         <nav className="mt-8 flex flex-col gap-0.5 text-sm">
@@ -111,9 +112,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top bar + drawer mobile */}
         <div className="flex flex-1 flex-col md:contents">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-            <Link href="/admin" className="flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight text-app-ink">
-              <span className="text-jeon-purple" aria-hidden="true">✦</span>jeon.id
-              <span className="ml-1 text-sm font-bold text-app-muted">Admin</span>
+            <Link href="/admin" className="flex items-center gap-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-7 w-auto" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-7 w-auto" />
+              <span className="text-sm font-bold text-app-muted">Admin</span>
             </Link>
             <button
               type="button"

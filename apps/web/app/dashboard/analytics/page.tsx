@@ -97,7 +97,7 @@ export default function DashboardAnalyticsPage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.analytics.saved")}</p>}
 
-      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-5 rounded-3xl p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card">
         <div>
           <p className="text-sm font-bold text-app-ink">Facebook</p>
 

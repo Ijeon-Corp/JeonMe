@@ -131,10 +131,10 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-jlg bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.components.locationPickerModal.title")}</h2>
+            <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.locationPickerModal.title")}</h2>
             <p className="text-xs text-app-muted">{t("dashboard.components.locationPickerModal.subtitle")}</p>
           </div>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">

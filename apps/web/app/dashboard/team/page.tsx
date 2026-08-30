@@ -171,8 +171,8 @@ export default function DashboardTeamPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {invitesForMe.length > 0 && (
-        <section className="mt-4 rounded-3xl border border-jeon-purple/30 bg-jeon-purple/10/40 p-5">
-          <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
+        <section className="mt-4 rounded-jlg border border-jeon-purple/30 bg-jeon-purple/10/40 p-5">
+          <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
               <li key={inv.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3.5 py-2.5">
@@ -195,8 +195,8 @@ export default function DashboardTeamPage() {
         </section>
       )}
 
-      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.inviteHeading")}</h2>
+      <section className="glass mt-4 rounded-jlg p-5 shadow-card">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.inviteHeading")}</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
           <input
             type="text"
@@ -227,8 +227,8 @@ export default function DashboardTeamPage() {
         </form>
       </section>
 
-      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.team.myCollaboratorsHeading")}</h2>
+      <section className="glass mt-4 rounded-jlg p-5 shadow-card">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.myCollaboratorsHeading")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {collaborators.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-app-border px-4 py-3">
@@ -271,8 +271,8 @@ export default function DashboardTeamPage() {
         </ul>
       </section>
 
-      <section className="glass mt-4 rounded-3xl p-5 shadow-card">
-        <h2 className="flex items-center gap-1.5 font-heading text-sm font-bold text-app-ink">
+      <section className="glass mt-4 rounded-jlg p-5 shadow-card">
+        <h2 className="flex items-center gap-1.5 font-display text-sm font-bold text-app-ink">
           <IconClock className="h-4 w-4 text-app-muted" />
           {t("dashboard.pages.team.activityLogHeading")}
         </h2>

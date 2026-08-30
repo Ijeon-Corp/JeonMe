@@ -55,7 +55,7 @@ export default function ShopSettingsPanel() {
         </p>
       )}
 
-      <div className="glass rounded-2xl p-4 shadow-card">
+      <div className="glass rounded-jmd p-4 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-app-ink">{t("dashboard.components.shopSettingsPanel.pauseTitle")}</p>

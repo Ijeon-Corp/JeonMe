@@ -349,10 +349,12 @@ export default function DashboardLayout({
             Logo gambar (logo-baru.png) SENGAJA DIKECUALIKAN di dashboard
             -- permintaan langsung pengguna, 10 Agustus 2026: khusus area
             dashboard tetap teks "Jeon.id" polos, bukan gambar. */}
-        {/* Wordmark redesign (spec §9): huruf kecil "jeon.id", latar gelap
-            = teks putih + aksen lime. */}
-        <Link href="/dashboard" className="flex items-baseline gap-1.5 font-display text-xl font-extrabold tracking-tight text-white">
-          <span className="text-jeon-lime" aria-hidden="true">✦</span>jeon.id
+        {/* Logo baru (permintaan langsung pengguna, 31 Agustus 2026) --
+            sidebar gelap KONSTAN, langsung pakai varian -dark (wordmark
+            putih), bukan pasangan brand-logo-light/dark. */}
+        <Link href="/dashboard" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="h-8 w-auto" />
         </Link>
 
         {workspaces.length > 1 && (
@@ -530,8 +532,11 @@ export default function DashboardLayout({
               SEMUA halaman, bukan cuma yang kontennya sendiri "salah". */}
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-              <Link href="/dashboard" className="flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight text-app-ink">
-                <span className="text-jeon-purple" aria-hidden="true">✦</span>jeon.id
+              <Link href="/dashboard" className="flex items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-7 w-auto" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-7 w-auto" />
               </Link>
               <button
                 type="button"
@@ -708,7 +713,7 @@ export default function DashboardLayout({
                     {profileMenuOpen && (
                       <div
                         role="menu"
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-2xl border border-app-border bg-app-surface py-1.5 shadow-card"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-jmd border border-app-border bg-app-surface py-1.5 shadow-card"
                       >
                         <Link
                           href="/dashboard/settings/profile"

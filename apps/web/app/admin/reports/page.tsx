@@ -33,7 +33,7 @@ export default function AdminReportsPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Laporan Konten</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Laporan Konten</h1>
       <p className="mt-1 text-sm text-app-muted">Laporan yang masih menunggu tinjauan.</p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

@@ -116,7 +116,7 @@ export default function GlobalSearch() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-app-surface shadow-2xl"
+            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-jmd bg-app-surface shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-shrink-0 items-center gap-2 border-b border-app-border px-4 py-3">

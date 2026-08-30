@@ -90,12 +90,12 @@ export default function SettingsSeoPage() {
         {t("dashboard.pages.settingsSeo.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSeo.title")}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSeo.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSeo.subtitle")}</p>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="glass mt-6 flex flex-col gap-5 rounded-3xl p-5 shadow-card">
+      <form onSubmit={handleSubmit} className="glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card">
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-app-ink">{t("dashboard.pages.settingsSeo.seoTitleLabel")}</label>
           <input

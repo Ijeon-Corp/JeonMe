@@ -100,7 +100,7 @@ export default function TransactionPanel() {
       {orders === null ? (
         <PageSkeleton />
       ) : (
-        <div className="glass overflow-x-auto rounded-2xl shadow-card">
+        <div className="glass overflow-x-auto rounded-jmd shadow-card">
           <table className="w-full min-w-[720px] text-left text-xs">
             <thead>
               <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
@@ -185,7 +185,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-app-surface p-6 shadow-hero">
+      <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jmd bg-app-surface p-6 shadow-hero">
         <button
           type="button"
           onClick={onClose}
@@ -201,7 +201,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
           <PageSkeleton />
         ) : (
           <>
-            <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.transactionPanel.detailTitle")}</p>
+            <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.transactionPanel.detailTitle")}</p>
             <p className="mt-0.5 truncate text-xs text-app-muted">{detail.order_id}</p>
 
             <div className="mt-4 flex flex-col gap-1.5 text-xs">

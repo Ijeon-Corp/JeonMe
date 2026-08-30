@@ -43,7 +43,7 @@ export default function QRCodeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="relative w-full max-w-xs rounded-2xl bg-app-surface p-6 text-center shadow-hero">
+      <div className="relative w-full max-w-xs rounded-jmd bg-app-surface p-6 text-center shadow-hero">
         <button
           type="button"
           onClick={onClose}
@@ -53,7 +53,7 @@ export default function QRCodeModal({
           <IconClose className="h-4 w-4" />
         </button>
 
-        <p className="font-heading text-sm font-bold text-app-ink">{resolvedTitle}</p>
+        <p className="font-display text-sm font-bold text-app-ink">{resolvedTitle}</p>
         <p className="mt-1 text-xs text-app-muted">{resolvedDescription}</p>
 
         <div className="mt-4 flex items-center justify-center">

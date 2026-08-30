@@ -155,16 +155,16 @@ export default function DashboardImportPage() {
     return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{pageLoadError}</p>;
   }
   if (!myPage) {
-    return <div className="h-40 animate-pulse rounded-2xl bg-app-surface-2" />;
+    return <div className="h-40 animate-pulse rounded-jmd bg-app-surface-2" />;
   }
 
   if (!myPage.is_premium) {
     return (
-      <div className="glass mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-3xl p-8 text-center shadow-card">
+      <div className="glass mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-jlg p-8 text-center shadow-card">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
           <IconSparkle className="h-6 w-6" />
         </span>
-        <p className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.premiumOnlyNote")}</p>
+        <p className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.import.premiumOnlyNote")}</p>
         <button
           type="button"
           onClick={() => router.push("/dashboard/settings/subscription")}
@@ -182,7 +182,7 @@ export default function DashboardImportPage() {
         {!applySuccess ? (
           <>
             <span className="h-10 w-10 animate-spin rounded-full border-4 border-jeon-purple-subtle border-t-primary" aria-hidden />
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.generatingTitle")}</p>
+            <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.import.generatingTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.import.generatingDesc")}</p>
           </>
         ) : (
@@ -190,7 +190,7 @@ export default function DashboardImportPage() {
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
               <IconCheck className="h-6 w-6" />
             </span>
-            <p className="mt-4 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.import.successTitle")}</p>
+            <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.import.successTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.import.successDesc")}</p>
           </>
         )}
@@ -247,8 +247,8 @@ export default function DashboardImportPage() {
             &larr; {t("dashboard.pages.import.backButton")}
           </button>
 
-          <section className="glass rounded-3xl p-5 shadow-card">
-            <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.import.themeHeading")}</p>
+          <section className="glass rounded-jlg p-5 shadow-card">
+            <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.import.themeHeading")}</p>
             {hasTheme && result.theme ? (
               <div className="mt-3 flex items-center gap-3">
                 <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
@@ -274,8 +274,8 @@ export default function DashboardImportPage() {
             )}
           </section>
 
-          <section className="glass rounded-3xl p-5 shadow-card">
-            <p className="font-heading text-sm font-bold text-app-ink">
+          <section className="glass rounded-jlg p-5 shadow-card">
+            <p className="font-display text-sm font-bold text-app-ink">
               {t("dashboard.pages.import.linksHeading")} ({result.links.length})
             </p>
             {result.links.length > 0 ? (
@@ -347,7 +347,7 @@ export default function DashboardImportPage() {
         </div>
 
         <div className="mt-8 min-w-0 lg:sticky lg:top-6 lg:mt-0">
-          <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="h-full [zoom:0.72]">
               <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />
             </div>
@@ -362,7 +362,7 @@ export default function DashboardImportPage() {
     <div className="mx-auto max-w-xl">
       <p className="text-sm text-app-muted">{t("dashboard.pages.import.intro")}</p>
 
-      <form onSubmit={handleAnalyze} className="glass mt-5 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
+      <form onSubmit={handleAnalyze} className="glass mt-5 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.import.screenshotLabel")}</label>
           <div className="flex items-center gap-3">

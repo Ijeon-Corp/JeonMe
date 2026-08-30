@@ -123,7 +123,7 @@ export default function DashboardBalancePage() {
       )}
 
       {feeBreakdown && (
-        <section className="glass mt-6 rounded-3xl p-5 shadow-card">
+        <section className="glass mt-6 rounded-jlg p-5 shadow-card">
           {/* Keputusan bisnis resmi (permintaan langsung pengguna, 9
               Agustus 2026, hasil benchmark kompetitor): Jeonme 0% komisi
               transaksi -- diferensiasi eksplisit dari Linktree/Beacons/
@@ -133,7 +133,7 @@ export default function DashboardBalancePage() {
               SELALU Rp0 untuk order baru, jadi breakdown per-kanal cuma
               jadi tabel nol yang tidak berguna. Pernyataan tunggal di
               bawah ini menggantikannya, lebih jujur & tidak berulang. */}
-          <div className="flex items-start gap-3 rounded-2xl bg-jeon-purple/10 px-4 py-3.5">
+          <div className="flex items-start gap-3 rounded-jmd bg-jeon-purple/10 px-4 py-3.5">
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple text-white">
               <IconBadgeCheck className="h-4 w-4" />
             </span>
@@ -143,7 +143,7 @@ export default function DashboardBalancePage() {
             </div>
           </div>
 
-          <h2 className="mt-5 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</h2>
+          <h2 className="mt-5 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</h2>
           <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
 
           <div className="mt-3 flex flex-col gap-1.5">
@@ -157,8 +157,8 @@ export default function DashboardBalancePage() {
         </section>
       )}
 
-      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
+      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
+        <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
         <p className="mt-1 text-xs text-app-muted">
           {t("dashboard.pages.balance.minimumPrefix")}{" "}
           <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-jeon-purple hover:underline">
@@ -208,8 +208,8 @@ export default function DashboardBalancePage() {
         )}
       </section>
 
-      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
-        <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.balance.historyHeading")}</h2>
+      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
+        <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.historyHeading")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
           {payouts.map((p) => (
             <li key={p.id} className="flex items-center justify-between rounded-xl border border-app-border px-4 py-3">

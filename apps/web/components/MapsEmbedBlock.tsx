@@ -54,11 +54,11 @@ export default function MapsEmbedBlock({
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
             <div
-              className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+              className="w-full max-w-md overflow-hidden rounded-jmd bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-border p-3">
-                <p className="truncate font-heading text-sm font-bold text-app-ink">{title || "Lokasi"}</p>
+                <p className="truncate font-display text-sm font-bold text-app-ink">{title || "Lokasi"}</p>
                 <button type="button" onClick={() => setOpen(false)} className="flex-shrink-0 text-muted hover:text-app-ink">
                   <IconClose className="h-5 w-5" />
                 </button>

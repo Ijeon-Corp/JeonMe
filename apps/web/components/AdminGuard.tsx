@@ -27,7 +27,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     return (
       <div className="flex min-h-screen items-center justify-center px-4 text-center">
         <div>
-          <p className="font-heading text-lg font-bold text-red-600">Akses Ditolak</p>
+          <p className="font-display text-lg font-bold text-red-600">Akses Ditolak</p>
           <p className="mt-1 text-sm text-app-muted">Halaman ini hanya untuk admin.</p>
         </div>
       </div>

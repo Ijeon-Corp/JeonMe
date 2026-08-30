@@ -64,7 +64,7 @@ export default function ReviewsPanel() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {avgRating !== null && (
-        <div className="glass mb-3 flex items-center gap-2 rounded-2xl p-4 shadow-card">
+        <div className="glass mb-3 flex items-center gap-2 rounded-jmd p-4 shadow-card">
           <StarRow rating={Math.round(avgRating)} />
           <span className="text-sm font-bold text-app-ink">{avgRating.toFixed(1)}</span>
           <span className="text-xs text-app-muted">
@@ -75,7 +75,7 @@ export default function ReviewsPanel() {
 
       <div className="flex flex-col gap-2.5">
         {reviews.map((r) => (
-          <div key={r.id} className={`rounded-2xl border border-app-border bg-app-surface p-4 shadow-card ${r.is_hidden ? "opacity-60" : ""}`}>
+          <div key={r.id} className={`rounded-jmd border border-app-border bg-app-surface p-4 shadow-card ${r.is_hidden ? "opacity-60" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <StarRow rating={r.rating} />
@@ -108,7 +108,7 @@ export default function ReviewsPanel() {
           </div>
         ))}
         {reviews.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-app-border bg-app-surface/60 p-6 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-jmd border border-dashed border-app-border bg-app-surface/60 p-6 text-center">
             <IconInbox className="h-5 w-5 text-app-muted" />
             <p className="text-xs text-app-muted">{t("dashboard.components.reviewsPanel.emptyState")}</p>
           </div>

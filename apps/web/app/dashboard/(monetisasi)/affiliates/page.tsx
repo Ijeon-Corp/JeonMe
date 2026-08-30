@@ -114,7 +114,7 @@ export default function DashboardAffiliatesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-6 rounded-3xl p-5 shadow-card">
+      <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -189,7 +189,7 @@ export default function DashboardAffiliatesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {affiliates.map((a) => (
-          <div key={a.id} className="glass rounded-2xl p-4 shadow-card">
+          <div key={a.id} className="glass rounded-jmd p-4 shadow-card">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-app-ink">{a.affiliate_email}</p>
               <button
@@ -241,12 +241,12 @@ export default function DashboardAffiliatesPage() {
         )}
       </div>
 
-      <h2 className="mt-10 font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
+      <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.myAffiliationsSubtitle")}</p>
 
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
-          <div key={p.id} className="glass rounded-2xl p-4 shadow-card">
+          <div key={p.id} className="glass rounded-jmd p-4 shadow-card">
             <p className="text-sm font-bold text-app-ink">@{p.creator_username}</p>
             <div className="mt-2 flex items-center gap-2 rounded-lg bg-jeon-purple/10/60 px-3 py-1.5">
               <p className="min-w-0 flex-1 truncate text-xs text-app-ink">{p.referral_url}</p>

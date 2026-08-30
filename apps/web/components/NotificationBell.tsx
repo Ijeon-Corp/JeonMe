@@ -109,9 +109,9 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-2xl">
+        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-jmd border border-app-border bg-app-surface shadow-2xl">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-4 py-3">
-            <p className="font-heading text-sm font-bold text-app-ink">{t("dashboard.components.notificationBell.title")}</p>
+            <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.notificationBell.title")}</p>
             {unreadCount > 0 && (
               <button type="button" onClick={handleMarkAllRead} className="text-xs font-bold text-jeon-purple hover:underline">
                 {t("dashboard.components.notificationBell.markAllRead")}

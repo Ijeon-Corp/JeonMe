@@ -1530,7 +1530,7 @@ function Watermark({ isPremium, hideWatermark }: { isPremium?: boolean; hideWate
     >
       {t("watermark.cta")}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-icon.png" alt="" className="h-4 w-4 flex-shrink-0" />
+      <img src="/icon.png" alt="" className="h-4 w-4 flex-shrink-0" />
       <span>
         jeon<span className="text-secondary-light">.id</span>
       </span>

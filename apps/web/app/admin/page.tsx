@@ -22,7 +22,7 @@ export default function AdminSummaryPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Ringkasan Admin</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Ringkasan Admin</h1>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -47,7 +47,7 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/reports"
-              className="flex items-center gap-3 rounded-2xl border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
+              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-red-200"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
                 <IconFlag className="h-4 w-4" />
@@ -60,7 +60,7 @@ export default function AdminSummaryPage() {
 
             <Link
               href="/admin/payouts"
-              className="flex items-center gap-3 rounded-2xl border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-warning/40"
+              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-warning/40"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-jeon-warning">
                 <IconWallet className="h-4 w-4" />

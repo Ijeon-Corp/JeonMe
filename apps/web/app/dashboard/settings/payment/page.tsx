@@ -170,7 +170,7 @@ export default function SettingsPaymentPage() {
         {t("dashboard.pages.settingsPayment.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsPayment.title")}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsPayment.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
         {t("dashboard.pages.settingsPayment.subtitlePrefix")}{" "}
         <Link href="/dashboard/balance" className="font-semibold text-jeon-purple hover:underline">
@@ -181,8 +181,8 @@ export default function SettingsPaymentPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-6 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.methodsTitle")}</h2>
+      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.methodsTitle")}</h2>
 
         <div className="mt-3 flex flex-col gap-2">
           {methods.map((m) => (
@@ -326,8 +326,8 @@ export default function SettingsPaymentPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-app-border bg-app-surface p-5">
-        <h2 className="font-heading text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.autoWithdrawTitle")}</h2>
+      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.autoWithdrawTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsPayment.autoWithdrawDescription")}</p>
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): baris ini jadi
             flex-row mulai sm: (640px), tapi <select> (lebar minimalnya

@@ -65,11 +65,11 @@ export default function PageFooterLinks({
       {active && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setActive(null)}>
           <div
-            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 text-left shadow-2xl"
+            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-jmd bg-white p-5 text-left shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-heading text-base font-bold text-app-ink">{MODAL_TITLES[active]}</h3>
+              <h3 className="font-display text-base font-bold text-app-ink">{MODAL_TITLES[active]}</h3>
               <button type="button" onClick={() => setActive(null)} className="text-muted hover:text-app-ink">
                 <IconClose className="h-5 w-5" />
               </button>

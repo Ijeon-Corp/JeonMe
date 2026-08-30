@@ -165,7 +165,7 @@ export default function DashboardAudiencePage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
 
-      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.audience.enableTitle")}</p>
@@ -213,13 +213,13 @@ export default function DashboardAudiencePage() {
           worker (lihat CreateBroadcast/HandleAudienceBroadcast di
           backend), form ini cuma menunggu konfirmasi "diantre", bukan
           menunggu semua email benar-benar terkirim satu-satu. */}
-      <section className="glass mt-8 rounded-3xl p-5 shadow-card">
+      <section className="glass mt-8 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pop-blue-tint text-pop-blue">
             <IconMail className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.audience.broadcastHeading")}</h2>
+            <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.audience.broadcastHeading")}</h2>
             <p className="text-xs text-app-muted">
               {t("dashboard.pages.audience.broadcastDescBefore")}
               {subscriberCount}
@@ -280,7 +280,7 @@ export default function DashboardAudiencePage() {
       </section>
 
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="font-heading text-lg font-bold text-app-ink">
+        <h2 className="font-display text-lg font-bold text-app-ink">
           {t("dashboard.pages.audience.managerHeading")} ({contacts.length})
         </h2>
         <button
@@ -293,7 +293,7 @@ export default function DashboardAudiencePage() {
         </button>
       </div>
 
-      <div className="glass mt-3 overflow-x-auto rounded-3xl shadow-card">
+      <div className="glass mt-3 overflow-x-auto rounded-jlg shadow-card">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-app-muted">

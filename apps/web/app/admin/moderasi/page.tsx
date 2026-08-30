@@ -129,7 +129,7 @@ export default function AdminModerationPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Moderasi Tautan</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Moderasi Tautan</h1>
       <p className="mt-1 text-sm text-app-muted">
         Kelola kata kunci &amp; reputasi domain yang dipakai memblokir tautan judi online/konten dewasa saat kreator menyimpan link.
       </p>
@@ -138,7 +138,7 @@ export default function AdminModerationPage() {
 
       {/* Kata kunci */}
       <section className="mt-6">
-        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-app-ink">
+        <h2 className="flex items-center gap-1.5 font-display text-base font-bold text-app-ink">
           <ShieldAlert className="h-4 w-4" />
           Kata Kunci Terblokir
         </h2>
@@ -207,7 +207,7 @@ export default function AdminModerationPage() {
 
       {/* Reputasi domain */}
       <section className="mt-8">
-        <h2 className="flex items-center gap-1.5 font-heading text-base font-bold text-app-ink">
+        <h2 className="flex items-center gap-1.5 font-display text-base font-bold text-app-ink">
           <Ban className="h-4 w-4" />
           Reputasi Domain
         </h2>

@@ -120,7 +120,7 @@ export default function ShareButton({ title, url, className = "" }: { title: str
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-20 w-56 rounded-2xl border border-border bg-white p-1.5 text-left shadow-hero">
+        <div className="absolute right-0 top-12 z-20 w-56 rounded-jmd border border-border bg-white p-1.5 text-left shadow-hero">
           {PLATFORMS.map((p) => (
             <button
               key={p.key}

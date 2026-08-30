@@ -59,9 +59,9 @@ export default function DashboardDesignPage() {
 
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-        <section className="glass mt-6 rounded-3xl p-5 shadow-card">
+        <section className="glass mt-6 rounded-jlg p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.design.pageSettingsHeading")}</h2>
+            <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.design.pageSettingsHeading")}</h2>
             <a
               href={`${SITE_URL}/${page.username}`}
               target="_blank"
@@ -124,7 +124,7 @@ export default function DashboardDesignPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={page.avatar_url} alt={page.username} className="h-8 w-8 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
                 ) : (
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 font-heading text-sm font-bold text-jeon-purple">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 font-display text-sm font-bold text-jeon-purple">
                     {page.username.slice(0, 1).toUpperCase()}
                   </span>
                 )}
@@ -146,7 +146,7 @@ export default function DashboardDesignPage() {
 
             <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-heading text-sm font-bold text-pop-blue" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-display text-sm font-bold text-pop-blue" aria-hidden>
                   Aa
                 </span>
                 <div>

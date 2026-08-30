@@ -53,7 +53,7 @@ export default function SocialProofToast({
 
   return (
     <div
-      className={`fixed bottom-4 left-4 z-50 flex max-w-xs items-center gap-2.5 rounded-2xl border border-border bg-white px-4 py-3 shadow-hero transition-all duration-500 ${
+      className={`fixed bottom-4 left-4 z-50 flex max-w-xs items-center gap-2.5 rounded-jmd border border-border bg-white px-4 py-3 shadow-hero transition-all duration-500 ${
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
       }`}
     >

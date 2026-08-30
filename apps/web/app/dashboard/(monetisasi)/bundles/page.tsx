@@ -112,7 +112,7 @@ export default function DashboardBundlesPage() {
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="glass mt-6 rounded-3xl p-5 shadow-card">
+      <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
             type="button"
@@ -197,7 +197,7 @@ export default function DashboardBundlesPage() {
 
       <div className="mt-6 flex flex-col gap-3">
         {bundles.map((b) => (
-          <div key={b.id} className="glass rounded-2xl p-4 shadow-card">
+          <div key={b.id} className="glass rounded-jmd p-4 shadow-card">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-app-ink">{b.name}</p>
               <div className="flex items-center gap-1.5">

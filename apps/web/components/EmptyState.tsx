@@ -42,10 +42,10 @@ export default function EmptyState({
         // SETELAH @tailwind utilities di globals.css, jadi menang kalau
         // digabung). Efek kaca ditiru manual (bg+blur saja, TANPA
         // shorthand border) supaya `border-dashed` tetap dashed sungguhan.
-        bordered ? "rounded-3xl border border-dashed border-app-border bg-app-surface/65 backdrop-blur-lg" : ""
+        bordered ? "rounded-jlg border-2 border-dashed border-app-border bg-app-surface" : ""
       } ${className}`}
     >
-      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-app-surface-2 text-app-muted">
+      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-jeon-lavender/40 text-jeon-purple">
         <Icon className="h-5 w-5" />
       </span>
       <span>{text}</span>

@@ -48,7 +48,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-heading text-2xl font-bold text-app-ink">Pengguna</h1>
+      <h1 className="font-display text-2xl font-bold text-app-ink">Pengguna</h1>
 
       <form onSubmit={handleSearch} className="mt-4 flex gap-2">
         <input

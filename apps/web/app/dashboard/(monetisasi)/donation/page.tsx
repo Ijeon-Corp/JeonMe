@@ -135,7 +135,7 @@ export default function DashboardDonationPage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.donation.saved")}</p>}
 
-      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-3xl p-5 shadow-card">
+      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.donation.enableBlock")}</p>
@@ -172,7 +172,7 @@ export default function DashboardDonationPage() {
             goal Saweria/Trakteer): progress bar publik, direset ke nol
             setiap kali target diganti (lihat catatan donation_goal_started_at
             di backend) -- BUKAN akumulasi sepanjang masa. */}
-        <div className="rounded-2xl border border-dashed border-app-border p-3">
+        <div className="rounded-jmd border border-dashed border-app-border p-3">
           <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.donation.goalSectionTitle")}</p>
           <div className="mt-2 flex flex-col gap-2">
             <input
@@ -222,13 +222,13 @@ export default function DashboardDonationPage() {
       {/* Wishlist -- Gap #4 benchmark kompetitif: barang yang bisa
           "diwujudkan" pendukung, tampil di halaman publik sebagai pilihan
           saat mendukung (lihat DonationForm di halaman publik). */}
-      <section className="glass mt-6 rounded-3xl p-5 shadow-card">
+      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple">
             <IconGift className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg font-bold text-app-ink">{t("dashboard.pages.donation.wishlistTitle")}</h2>
+            <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.donation.wishlistTitle")}</h2>
             <p className="text-xs text-app-muted">{t("dashboard.pages.donation.wishlistSubtitle")}</p>
           </div>
         </div>

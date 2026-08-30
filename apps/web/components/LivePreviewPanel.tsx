@@ -95,7 +95,7 @@ export default function LivePreviewPanel({
           tetap dipertahankan supaya di layar SANGAT sempit (<280px, mis.
           landscape ponsel kecil) kotak ikut menyusut, bukan meluber. */}
       {page && (
-        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-2xl border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Permintaan susulan: font pratinjau masih terasa besar --
               PagePreview dipakai BERSAMA halaman publik asli, jadi ukuran
               teksnya sendiri (Tailwind class di PagePreview.tsx) TIDAK boleh

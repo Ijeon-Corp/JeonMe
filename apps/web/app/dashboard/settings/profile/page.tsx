@@ -184,7 +184,7 @@ export default function SettingsProfilePage() {
         {t("dashboard.pages.settingsProfile.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-heading text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsProfile.title")}</h1>
+      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsProfile.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">
         {t("dashboard.pages.settingsProfile.subtitlePrefix")}{" "}
         <Link href="/dashboard/design" className="font-semibold text-jeon-purple hover:underline">
