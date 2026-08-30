@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell>
         <div className="flex flex-col items-center py-6 text-center">
-          <span className="success-pop-circle flex h-16 w-16 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+          <span className="success-pop-circle flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lime text-[#111111]">
             <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
               <path
                 d="M5 12.5 9.5 17 19 7"
@@ -66,12 +66,12 @@ export default function ResetPasswordPage() {
               />
             </svg>
           </span>
-          <h1 className="mt-5 font-heading text-2xl font-bold text-app-ink sm:text-3xl">Password Berhasil Diganti!</h1>
+          <h1 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-app-ink sm:text-3xl">Password Berhasil Diganti!</h1>
           <p className="mt-2 text-sm text-app-muted">Masuk lagi pakai password barumu.</p>
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="mt-7 w-full rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5"
+            className="mt-7 w-full rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5"
           >
             Ke Halaman Masuk
           </button>
@@ -82,7 +82,7 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-app-ink sm:text-5xl" style={{ textWrap: "balance" }}>
         Buat Password Baru
       </h1>
       <p className="mt-3 text-sm text-app-muted">Masukkan password baru untuk akunmu. Tautan ini berlaku 1 jam sejak diminta.</p>
@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Minimal 8 karakter"
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-sm text-app-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
         <button
           type="submit"
           disabled={loading || !token || newPassword.length < 8}
-          className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Menyimpan..." : "Reset Password"}
         </button>
@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
 
       <p className="mt-6 text-center text-sm text-app-muted">
         Kembali ke{" "}
-        <Link href="/login" className="font-semibold text-primary hover:underline">
+        <Link href="/login" className="font-semibold text-jeon-purple hover:underline">
           halaman masuk
         </Link>
       </p>

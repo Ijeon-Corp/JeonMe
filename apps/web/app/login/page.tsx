@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, login, requestPasswordReset, setToken, verifyLogin2FA } from "@/lib/api-client";
+import { ApiError, login, setToken, verifyLogin2FA } from "@/lib/api-client";
 import { redirectAfterAuth } from "@/lib/auth-redirect";
 import AuthShell from "@/components/AuthShell";
 import AppleAuthButton from "@/components/AppleAuthButton";
@@ -15,10 +15,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const [showReset, setShowReset] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   // Modul Settings §5: kalau akun ber-2FA, login() TIDAK langsung memberi
   // token -- mfaToken menandai kita sedang menunggu kode dari aplikasi
@@ -115,21 +111,6 @@ export default function LoginPage() {
     );
   }
 
-  async function handleResetRequest(e: React.FormEvent) {
-    e.preventDefault();
-    setResetMessage(null);
-    try {
-      const res = await requestPasswordReset(resetEmail);
-      setResetMessage(
-        res.dev_reset_token
-          ? `${res.message} (mode dev, token: ${res.dev_reset_token})`
-          : res.message
-      );
-    } catch {
-      setResetMessage("Gagal mengirim tautan reset, coba lagi.");
-    }
-  }
-
   return (
     <AuthShell>
       <h1 className="font-display text-4xl font-extrabold tracking-tight leading-tight text-app-ink sm:text-5xl" style={{ textWrap: "balance" }}>
@@ -190,30 +171,13 @@ export default function LoginPage() {
         <AppleAuthButton label="Masuk dengan Apple" />
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowReset((v) => !v)}
-        className="mt-4 text-xs font-semibold text-jeon-purple hover:underline"
-      >
+      {/* Lupa password -- halaman sendiri sekarang (permintaan langsung
+          pengguna, 31 Agustus 2026: "harusnya lupa password itu jadi page
+          sendiri"), bukan lagi form kecil muncul-sembunyi di sini -- lihat
+          app/forgot-password/page.tsx. */}
+      <Link href="/forgot-password" className="mt-4 inline-block text-xs font-semibold text-jeon-purple hover:underline">
         Lupa password?
-      </button>
-
-      {showReset && (
-        <form onSubmit={handleResetRequest} className="mt-3 flex flex-col gap-2 rounded-xl bg-jeon-lavender/30 p-3">
-          <input
-            type="email"
-            required
-            placeholder="Email akunmu"
-            value={resetEmail}
-            onChange={(e) => setResetEmail(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm"
-          />
-          <button type="submit" className="rounded-lg bg-jeon-purple px-3 py-2 text-xs font-bold text-white">
-            Kirim tautan reset
-          </button>
-          {resetMessage && <p className="text-xs text-app-ink">{resetMessage}</p>}
-        </form>
-      )}
+      </Link>
 
       <p className="mt-8 text-center text-sm text-app-muted">
         Belum punya akun?{" "}

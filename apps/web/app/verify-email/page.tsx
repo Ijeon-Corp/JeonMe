@@ -112,7 +112,7 @@ export default function VerifyEmailPage() {
     return (
       <AuthShell>
         <div className="flex flex-col items-center py-6 text-center">
-          <span className="success-pop-circle flex h-16 w-16 items-center justify-center rounded-full bg-secondary-subtle text-secondary-dark">
+          <span className="success-pop-circle flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lime text-[#111111]">
             <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden>
               <path
                 d="M5 12.5 9.5 17 19 7"
@@ -125,13 +125,13 @@ export default function VerifyEmailPage() {
               />
             </svg>
           </span>
-          <h1 className="mt-5 font-heading text-2xl font-bold text-app-ink sm:text-3xl">Verifikasi Berhasil!</h1>
+          <h1 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-app-ink sm:text-3xl">Verifikasi Berhasil!</h1>
           <p className="mt-2 text-sm text-app-muted">Akunmu sudah aktif & siap dipakai.</p>
           <button
             type="button"
             onClick={handleContinue}
             disabled={continuing}
-            className="mt-7 w-full rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+            className="mt-7 w-full rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
           >
             {continuing ? "Memuat..." : "OK"}
           </button>
@@ -142,7 +142,7 @@ export default function VerifyEmailPage() {
 
   return (
     <AuthShell>
-      <h1 className="font-heading text-3xl font-extrabold leading-tight text-app-ink sm:text-4xl" style={{ textWrap: "balance" }}>
+      <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-app-ink sm:text-5xl" style={{ textWrap: "balance" }}>
         Verifikasi Emailmu
       </h1>
       <p className="mt-3 text-sm text-app-muted">
@@ -164,7 +164,7 @@ export default function VerifyEmailPage() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="123456"
-            className="w-full rounded-xl border border-app-border px-3.5 py-3 text-center text-lg font-bold tracking-[0.4em] text-app-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-center text-lg font-bold tracking-[0.4em] text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-xs text-app-muted">Kode berlaku 15 menit sejak diminta.</p>
         </div>
@@ -175,7 +175,7 @@ export default function VerifyEmailPage() {
         <button
           type="submit"
           disabled={loading || code.length !== 6}
-          className="mt-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-card transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memverifikasi..." : "Verifikasi & Masuk"}
         </button>
@@ -187,7 +187,7 @@ export default function VerifyEmailPage() {
           type="button"
           onClick={handleResend}
           disabled={resending || resendCooldown > 0}
-          className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-app-muted disabled:no-underline"
+          className="font-semibold text-jeon-purple hover:underline disabled:cursor-not-allowed disabled:text-app-muted disabled:no-underline"
         >
           {resendCooldown > 0 ? `Kirim ulang (${resendCooldown}d)` : resending ? "Mengirim..." : "Kirim ulang kode"}
         </button>
@@ -195,7 +195,7 @@ export default function VerifyEmailPage() {
 
       <p className="mt-4 text-center text-sm text-app-muted">
         Salah email?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline">
+        <Link href="/register" className="font-semibold text-jeon-purple hover:underline">
           Daftar ulang
         </Link>
       </p>
