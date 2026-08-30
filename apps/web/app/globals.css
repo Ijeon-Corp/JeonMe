@@ -55,6 +55,83 @@
   --app-border: #24352c;
 }
 
+/* Token redesign "Modern Playful Creator Platform"
+   (DESIGN-JEONID-REDESIGN.md §6, Fase 1 Foundation -- lihat pemetaan
+   lengkap & keputusan konflik di REDESIGN-AUDIT.md §4-5).
+
+   DITAMBAHKAN, bukan menggantikan: token app-* / primary-hijau lama TETAP
+   ada selama migrasi bertahap -- halaman yang belum diredesign masih
+   memakainya, dan lib/page-themes.ts (tema halaman publik kreator) TIDAK
+   BOLEH tersentuh sama sekali. Tiap fase redesign memindahkan komponennya
+   sendiri ke token jeon-* ini; token lama baru dibersihkan di Fase 7
+   setelah tidak ada pemakainya (spec §23 "komponen lama dihapus terakhir").
+
+   Warna brand murni (purple/coral/lime/blue/pink/status) SAMA di kedua
+   mode; hanya token PERMUKAAN (paper/surface/ink/muted/border) yang punya
+   varian gelap -- pola 3 lapis yang sama persis dengan app-* di atas.
+   Varian gelap diturunkan dari keluarga --jeon-sidebar #17151c (ungu-
+   hitam), menggantikan nuansa hijau-hitam token lama -- spec diam soal
+   dark mode, tapi dark mode adalah fitur yang baru selesai dibangun &
+   dipertahankan (REDESIGN-AUDIT.md konflik #7). */
+:root {
+  --jeon-ink: #111111;
+  --jeon-paper: #f5f1e8;
+  --jeon-surface: #ffffff;
+  --jeon-surface-2: #efe9dd;
+  --jeon-purple: #7657ff;
+  --jeon-purple-dark: #5636e8;
+  --jeon-lavender: #d9ceff;
+  --jeon-orange: #ff7043;
+  --jeon-coral: #ff6448;
+  --jeon-lime: #d7ff60;
+  --jeon-blue: #8ad5ff;
+  --jeon-pink: #ffafd0;
+  --jeon-success: #168153;
+  --jeon-warning: #d98600;
+  --jeon-danger: #d93d36;
+  --jeon-muted: #77736c;
+  --jeon-border: rgba(17, 17, 17, 0.16);
+  --jeon-sidebar: #17151c;
+
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+  --radius-section: 42px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 12px 35px rgba(24, 17, 47, 0.1);
+  --shadow-card-brutal: 10px 12px 0 rgba(17, 17, 17, 0.92);
+  --shadow-focus: 0 0 0 3px rgba(118, 87, 255, 0.18);
+
+  --container: 1360px;
+  --dashboard-sidebar: 226px;
+  --dashboard-preview: 390px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --jeon-ink: #f0edf5;
+    --jeon-paper: #141218;
+    --jeon-surface: #1c1a22;
+    --jeon-surface-2: #242130;
+    --jeon-muted: #a49fae;
+    --jeon-border: rgba(240, 237, 245, 0.16);
+    --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
+  }
+}
+
+[data-theme="dark"] {
+  --jeon-ink: #f0edf5;
+  --jeon-paper: #141218;
+  --jeon-surface: #1c1a22;
+  --jeon-surface-2: #242130;
+  --jeon-muted: #a49fae;
+  --jeon-border: rgba(240, 237, 245, 0.16);
+  --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
+}
+
 /* Reskin fokus form premium (permintaan langsung pengguna, "design
    dashboard ini terlalu biasa"): glow lembut warna brand di SEMUA
    input/select/textarea saat fokus, menggantikan garis/outline default

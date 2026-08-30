@@ -37,6 +37,19 @@ const heading = localFont({
   variable: "--font-heading",
 });
 
+// display -- Redesign "Modern Playful Creator Platform"
+// (DESIGN-JEONID-REDESIGN.md §7): Inter Tight utk heading display besar
+// marketing & dashboard baru. Variable font (satu file woff2 mencakup
+// weight 600-800), diunduh manual dari fonts.gstatic.com (subset latin)
+// mengikuti aturan self-host di komentar atas file ini -- BUKAN
+// next/font/google. Poppins (`heading` di atas) TETAP ada selama migrasi
+// bertahap; halaman yang belum diredesign masih memakainya.
+const displayFont = localFont({
+  src: [{ path: "./fonts/inter-tight-latin.woff2", weight: "600 800", style: "normal" }],
+  display: "swap",
+  variable: "--font-display",
+});
+
 // No.80 (Sprint 9) + "Desain 2.0": pilihan font kustom untuk halaman publik
 // kreator, di luar font aplikasi (Inter/Poppins) di atas -- daftar awalnya
 // disederhanakan dari "16 pilihan font" versi Lynk.id (temuan riset) jadi 5
@@ -110,7 +123,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${body.variable} ${heading.variable} ${customPlayfair.variable} ${customLora.variable} ${customMontserrat.variable} ${customRobotoMono.variable} ${customPoppins.variable} ${customQuicksand.variable} ${customMerriweather.variable} ${customSpaceGrotesk.variable} scroll-smooth`}
+      className={`${body.variable} ${heading.variable} ${displayFont.variable} ${customPlayfair.variable} ${customLora.variable} ${customMontserrat.variable} ${customRobotoMono.variable} ${customPoppins.variable} ${customQuicksand.variable} ${customMerriweather.variable} ${customSpaceGrotesk.variable} scroll-smooth`}
       suppressHydrationWarning
     >
       {/* THEME_INIT_SCRIPT -- pola standar "no-flash dark mode": jalan

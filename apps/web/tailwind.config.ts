@@ -21,6 +21,12 @@ const config: Config = {
         // untuk kustomisasi font halaman publik kreator, lihat customLora)
         // -- TIDAK menambah font baru sama sekali, nol biaya muat tambahan.
         serifDisplay: ["var(--font-custom-lora)", "Georgia", "serif"],
+        // display -- redesign (spec §7): Inter Tight utk heading display
+        // besar. Self-hosted (lihat app/layout.tsx), fallback sesuai spec.
+        display: ["var(--font-display)", "Helvetica Neue", "Arial", "sans-serif"],
+        // editorial -- aksen serif editorial (spec §7), pakai Georgia
+        // sistem (tanpa file font tambahan).
+        editorial: ["Georgia", "Times New Roman", "serif"],
       },
       colors: {
         // Warna identitas Jeonme, konsisten dengan PRD/TDD & docs/*.pdf.
@@ -58,6 +64,47 @@ const config: Config = {
           muted: "var(--app-muted)",
           border: "var(--app-border)",
         },
+        // jeon-* -- Redesign "Modern Playful Creator Platform"
+        // (DESIGN-JEONID-REDESIGN.md §6). Nilai asli di variable CSS
+        // (globals.css) -- token permukaan (paper/surface/ink/muted/border)
+        // ikut dark mode, warna brand (purple/coral/lime/dst) konstan.
+        // DITAMBAHKAN di samping primary/app-* lama selama migrasi
+        // bertahap -- lihat REDESIGN-AUDIT.md §4. PENTING: key multi-kata
+        // WAJIB pakai strip & dikutip ("purple-dark", BUKAN purpleDark) --
+        // key tanpa strip diam-diam TIDAK menghasilkan class utility yang
+        // dipakai kode (bug nyata bg-app-surface-2, 30 Agustus 2026),
+        // verifikasi selalu lewat grep CSS hasil build.
+        jeon: {
+          ink: "var(--jeon-ink)",
+          paper: "var(--jeon-paper)",
+          surface: "var(--jeon-surface)",
+          "surface-2": "var(--jeon-surface-2)",
+          purple: "var(--jeon-purple)",
+          "purple-dark": "var(--jeon-purple-dark)",
+          lavender: "var(--jeon-lavender)",
+          orange: "var(--jeon-orange)",
+          coral: "var(--jeon-coral)",
+          lime: "var(--jeon-lime)",
+          blue: "var(--jeon-blue)",
+          pink: "var(--jeon-pink)",
+          success: "var(--jeon-success)",
+          warning: "var(--jeon-warning)",
+          danger: "var(--jeon-danger)",
+          muted: "var(--jeon-muted)",
+          border: "var(--jeon-border)",
+          sidebar: "var(--jeon-sidebar)",
+        },
+      },
+      borderRadius: {
+        // Skala radius redesign (spec §6) -- nama diprefiks "j" supaya
+        // tidak menimpa skala bawaan Tailwind (rounded-lg/xl dst) yang
+        // masih dipakai ratusan tempat oleh halaman yang belum dimigrasi.
+        jxs: "var(--radius-xs)",
+        jsm: "var(--radius-sm)",
+        jmd: "var(--radius-md)",
+        jlg: "var(--radius-lg)",
+        jxl: "var(--radius-xl)",
+        jsection: "var(--radius-section)",
       },
       animation: {
         "fade-up": "fadeUp 0.7s ease-out forwards",
@@ -80,6 +127,13 @@ const config: Config = {
         // `card` di seluruh app supaya perubahan tetap tertarget.
         refined: "0 1px 1px rgba(15,46,36,0.04), 0 6px 16px -8px rgba(15,46,36,0.14)",
         "refined-lg": "0 1px 1px rgba(15,46,36,0.04), 0 6px 16px -8px rgba(15,46,36,0.14), 0 24px 48px -20px rgba(15,46,36,0.18)",
+        // Bayangan redesign (spec §6): "brutal" = outline+offset tegas
+        // neo-brutalist utk kartu marketing; "jsoft"/"jfocus" utk
+        // dashboard yang lebih tenang. Nilai via variable CSS supaya
+        // varian dark mode (globals.css) ikut otomatis.
+        brutal: "var(--shadow-card-brutal)",
+        jsoft: "var(--shadow-soft)",
+        jfocus: "var(--shadow-focus)",
       },
     },
   },
