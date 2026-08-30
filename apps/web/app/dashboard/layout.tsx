@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import { ToastProvider } from "@/components/Toast";
 import TwoFactorPrompt from "@/components/TwoFactorPrompt";
@@ -16,9 +16,11 @@ import { useLocale } from "@/lib/locale-context";
 import { SITE_URL } from "@/lib/site";
 import {
   Workspace,
+  clearToken,
   getActiveWorkspaceOwnerId,
   getMyPage,
   listWorkspaces,
+  logout as apiLogout,
   setActiveWorkspaceOwnerId,
 } from "@/lib/api-client";
 import {
@@ -31,6 +33,7 @@ import {
   IconGift,
   IconInbox,
   IconLink,
+  IconLogout,
   IconMenu,
   IconPaintbrush,
   IconPhone,
@@ -161,12 +164,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useLocale();
   const navItems = buildNavItems(t);
   const extraPageLabels = buildExtraPageLabels(t);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
+  // profileMenuOpen -- permintaan langsung pengguna, 30 Agustus 2026: "saat
+  // klik profile di dashboard navbar muncul langsung pilihan profile atau
+  // logout". Dropdown ini HANYA relevan di top bar desktop (avatar tidak
+  // pernah dirender di top bar mobile, lihat catatan di handleLogout
+  // profile/page.tsx) -- Keluar tetap ada juga di halaman Profil & Akun
+  // supaya mobile (yang tidak punya dropdown ini) tetap bisa logout.
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   // isPremium -- permintaan langsung pengguna, 28 Agustus 2026: "akun saya
   // kan sudah berlangganan premium tapi gada informasi nya ... kasih badge
   // di profile". Sebelum ini status Premium HANYA terlihat kalau kreator
@@ -283,6 +295,31 @@ export default function DashboardLayout({
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });
+  }
+
+  // Tutup dropdown profil saat klik di luar area tombol/panelnya -- pola
+  // dropdown standar, satu-satunya menu popover di top bar ini (yang lain
+  // semua navigasi langsung/tautan).
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileMenuOpen]);
+
+  async function handleLogout() {
+    try {
+      await apiLogout();
+    } catch {
+      // Tetap lanjut hapus token lokal walau request revoke ke server gagal.
+    } finally {
+      clearToken();
+      router.push("/login");
+    }
   }
 
   const sidebarContent = (
@@ -585,49 +622,87 @@ export default function DashboardLayout({
                 {/* Avatar akun (redesain premium, permintaan langsung
                     pengguna): SEBELUMNYA top bar cuma ikon-ikon generik,
                     tidak ada penanda akun siapa yang sedang login sama
-                    sekali -- foto/inisial kreator di sini, tautan ke
-                    Profil & Akun. Fallback lingkaran inisial (bukan ikon
-                    generik) kalau belum upload foto, pola yang sama
-                    dipakai di dashboard/design/page.tsx. */}
+                    sekali -- foto/inisial kreator di sini. Fallback
+                    lingkaran inisial (bukan ikon generik) kalau belum
+                    upload foto, pola yang sama dipakai di
+                    dashboard/design/page.tsx.
+
+                    Dropdown (bukan lagi tautan langsung) -- permintaan
+                    langsung pengguna, 30 Agustus 2026: "saat klik profile
+                    di dashboard navbar muncul langsung pilihan profile
+                    atau logout". */}
                 {username && (
-                  <Link
-                    href="/dashboard/settings/profile"
-                    title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
-                    className="ml-0.5 flex flex-shrink-0 items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-primary"
-                  >
-                    {/* Lencana bintang di sudut avatar + pil "Premium" di
-                        sebelah @username -- permintaan langsung pengguna:
-                        "kasih badge di profile". Chip ini terlihat di SEMUA
-                        halaman dashboard (bukan cuma /settings/subscription),
-                        jadi status Premium langsung kelihatan tanpa perlu
-                        buka menu Langganan sama sekali. */}
-                    <span className="relative flex-shrink-0">
-                      {avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
-                      ) : (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
-                          {username.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                      {isPremium && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-white ring-2 ring-white"
+                  <div className="relative ml-0.5 flex-shrink-0" ref={profileMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setProfileMenuOpen((v) => !v)}
+                      title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
+                      aria-haspopup="menu"
+                      aria-expanded={profileMenuOpen}
+                      className="flex items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-primary"
+                    >
+                      {/* Lencana bintang di sudut avatar + pil "Premium" di
+                          sebelah @username -- permintaan langsung pengguna:
+                          "kasih badge di profile". Chip ini terlihat di SEMUA
+                          halaman dashboard (bukan cuma /settings/subscription),
+                          jadi status Premium langsung kelihatan tanpa perlu
+                          buka menu Langganan sama sekali. */}
+                      <span className="relative flex-shrink-0">
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-subtle font-heading text-[11px] font-bold text-primary">
+                            {username.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                        {isPremium && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-white ring-2 ring-white"
+                          >
+                            <IconStar className="h-2 w-2" />
+                          </span>
+                        )}
+                      </span>
+                      <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
+                        @{username}
+                        {isPremium && (
+                          <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+                            Premium
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                    {profileMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-2xl border border-app-border bg-app-surface py-1.5 shadow-card"
+                      >
+                        <Link
+                          href="/dashboard/settings/profile"
+                          role="menuitem"
+                          onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-app-ink hover:bg-app-surface-2"
                         >
-                          <IconStar className="h-2 w-2" />
-                        </span>
-                      )}
-                    </span>
-                    <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
-                      @{username}
-                      {isPremium && (
-                        <span className="rounded-full bg-primary-subtle px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
-                          Premium
-                        </span>
-                      )}
-                    </span>
-                  </Link>
+                          <IconSettings className="h-4 w-4" />
+                          {t("dashboard.extraPages.profileAccount")}
+                        </Link>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setProfileMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-600 hover:bg-app-surface-2"
+                        >
+                          <IconLogout className="h-4 w-4" />
+                          {t("dashboard.logout")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </header>
