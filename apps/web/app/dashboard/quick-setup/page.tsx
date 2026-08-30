@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ApiError,
   ExtraPage,
@@ -23,8 +24,12 @@ import { confirmDelete } from "@/lib/confirm";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
 import ThemeGallery from "@/components/ThemeGallery";
-import PagePreview, { PagePreviewData } from "@/components/PagePreview";
+import type { PagePreviewData } from "@/components/PagePreview";
 import { useLocale } from "@/lib/locale-context";
+
+// PagePreview.tsx -- lihat catatan di components/LivePreviewPanel.tsx,
+// sama-sama di-dynamic-import supaya bundle awal halaman ini lebih kecil.
+const PagePreview = dynamic(() => import("@/components/PagePreview"));
 
 // buildPreviewData -- dipindah ke lib/quick-setup-templates.ts
 // (buildQuickSetupPreviewData) supaya bisa dipakai bareng components/

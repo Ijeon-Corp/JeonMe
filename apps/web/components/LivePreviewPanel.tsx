@@ -1,9 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { IconExternal } from "@/components/icons";
-import PagePreview, { toPreviewData } from "@/components/PagePreview";
+import { toPreviewData } from "@/lib/page-preview-data";
 import { SITE_URL } from "@/lib/site";
+
+// PagePreview.tsx adalah salah satu modul terberat di dashboard (3000+ baris,
+// ~20 komponen blok publik diimpor statis di dalamnya) -- panel ini dipakai
+// oleh KETIGA halaman "Halaman Saya" (Tautan/Produk/Desain), jadi
+// men-dynamic-import di sini langsung mengecilkan bundle awal ketiganya
+// sekaligus. Diduga berkontribusi ke race hidrasi <Link> vs klik pengguna
+// yang bikin sidebar kadang terlihat "refresh" (dilaporkan pengguna 27-30
+// Agustus 2026) -- lihat catatan senada di dashboard/links/page.tsx &
+// dashboard/products/page.tsx. toPreviewData TETAP diimpor sinkron dari
+// lib/page-preview-data.ts (fungsi murni, terpisah dari PagePreview.tsx)
+// karena dipakai langsung di render, bukan cuma sebagai komponen lazy.
+const PagePreview = dynamic(() => import("@/components/PagePreview"));
 
 // Kolom pratinjau langsung yang dipakai bersama oleh ketiga halaman di bawah
 // "Halaman Saya" (Tautan/Produk/Desain) -- sebelumnya blok ini terduplikasi
