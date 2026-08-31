@@ -25,28 +25,54 @@ import {
 } from "@/lib/api-client";
 import {
   IconBell,
+  IconBook,
   IconBox,
+  IconCalendar,
   IconChart,
   IconChevronRight,
+  IconClock,
   IconClose,
   IconCopy,
+  IconExternal,
+  IconFileText,
   IconGift,
+  IconGlobe,
+  IconGrid,
+  IconHeart,
   IconInbox,
   IconLink,
+  IconLock,
   IconLogout,
+  IconMail,
   IconMenu,
   IconPaintbrush,
   IconPhone,
   IconPlayCircle,
+  IconSearch,
   IconSettings,
+  IconShield,
+  IconShoppingBag,
   IconSparkle,
   IconStar,
+  IconTag,
+  IconTarget,
   IconUpload,
+  IconUsers,
   IconWallet,
+  IconWhatsapp,
 } from "@/components/icons";
 
-type NavLeaf = { href: string; label: string; icon: typeof IconChart };
-type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; items: NavLeaf[] };
+// badge -- "baru"/"segera" (opsional). "segera" menandai sub-item yang
+// backend-nya BELUM ada (restrukturisasi IA per DASHBOARD-DESIGN-JEONID.md
+// §3.4/§29.8, keputusan user 31 Agustus 2026: fitur belum ada tampil
+// dengan badge "Segera", BUKAN tombol fungsional). Leaf ber-badge "segera"
+// dirender non-tautan & tidak bisa diklik (href tetap ada utk pemetaan
+// tapi diabaikan render-nya).
+type NavLeaf = { href: string; label: string; icon: typeof IconChart; badge?: "baru" | "segera" };
+type NavEntry =
+  | ({ type: "link" } & NavLeaf)
+  | { type: "group"; label: string; icon: typeof IconChart; items: NavLeaf[] }
+  | { type: "divider" };
 
 // Konsolidasi sidebar (permintaan langsung pengguna, benchmark vs
 // Linktree/Lynk.id, 8 Agustus 2026): sidebar SEBELUMNYA 23 baris nav --
@@ -78,70 +104,122 @@ type NavEntry = ({ type: "link" } & NavLeaf) | { type: "group"; label: string; i
 // berubah, dipanggil ULANG tiap render (bukan dihitung sekali di level
 // modul) di dalam komponen di bawah. Struktur/href/urutan/ikon TIDAK
 // berubah sama sekali dari sebelumnya, cuma sumber teksnya.
+// buildNavItems -- REORGANISASI PENUH ke IA 7-menu-bisnis
+// (DASHBOARD-DESIGN-JEONID.md §5, keputusan user 31 Agustus 2026). Struktur
+// lama (Beranda/QuickSetup/Import/[Link Saya]/Statistik/Monetisasi/[Audiens]
+// /Saldo/Pengaturan) diganti 7 menu bisnis + pemisah + 3 menu sekunder
+// (Integrasi/Tim/Pengaturan), progressive-disclosure lewat expandable group.
+// ROUTE LAMA DIPERTAHANKAN SEMUA (§18) -- yang berubah cuma pengelompokan &
+// label; nol perubahan URL, nol fitur dihapus. Sub-item yang backend-nya
+// BELUM ada diberi badge "segera" (non-tautan, lihat pemetaan lengkap di
+// OLD_TO_NEW_MAPPING.md). Fitur nyata yang tak disebut dokumen (Quick Setup/
+// Import/Kartu Kontak/Social Proof/KYC/Loyalitas) tetap punya jalur masuk
+// (§5.4: fitur existing tidak boleh disembunyikan).
 function buildNavItems(t: (key: string) => string): NavEntry[] {
   return [
     { type: "link", href: "/dashboard", label: t("dashboard.nav.overview"), icon: IconChart },
-    // Quick Setup -- permintaan langsung pengguna, 11 Agustus 2026: menu
-    // template siap-pakai (tema+bio+tautan starter sekaligus). Sempat di
-    // dalam grup "Halaman Saya" -- dipindah jadi baris lepas (susulan
-    // permintaan pengguna, 30 Agustus 2026: "menu My Link isinya link bio,
-    // shop dan design" -- grup itu dipersempit khusus 3 halaman yang
-    // sungguh-sungguh membentuk halaman publik, Quick Setup sifatnya
-    // wizard sekali-pakai di awal, bukan halaman yang dikelola terus).
-    { type: "link", href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
-    // Import -- permintaan langsung pengguna, 31 Agustus 2026: generate
-    // halaman dari screenshot + URL link-in-bio lama (Linktree/Lynk.id/
-    // dst). Baris lepas TERPISAH dari Quick Setup (bukan salah satu
-    // kategorinya) -- bentuk interaksinya beda total (unggah file + URL,
-    // bukan pilih dari galeri template), lihat app/dashboard/import/page.tsx.
-    { type: "link", href: "/dashboard/import", label: t("dashboard.nav.import"), icon: IconUpload },
     {
       type: "group",
       label: t("dashboard.nav.myPageGroup"),
+      icon: IconGrid,
       items: [
-        { href: "/dashboard/links", label: t("dashboard.nav.linkBio"), icon: IconLink },
-        { href: "/dashboard/products", label: t("dashboard.nav.shop"), icon: IconBox },
+        { href: "/dashboard/links", label: t("dashboard.nav.linkBlock"), icon: IconLink },
         { href: "/dashboard/design", label: t("dashboard.nav.design"), icon: IconPaintbrush },
+        { href: "/dashboard/quick-setup", label: t("dashboard.nav.quickSetup"), icon: IconSparkle },
+        { href: "/dashboard/import", label: t("dashboard.nav.import"), icon: IconUpload },
+        { href: "/dashboard/settings/seo", label: t("dashboard.nav.seoSharing"), icon: IconSearch },
       ],
     },
-    { type: "link", href: "/dashboard/statistik", label: t("dashboard.nav.statistics"), icon: IconChart },
-    { type: "link", href: "/dashboard/monetisasi", label: t("dashboard.nav.productsMonetization"), icon: IconGift },
     {
       type: "group",
-      label: t("dashboard.nav.audienceMarketingGroup"),
+      label: t("dashboard.nav.salesGroup"),
+      icon: IconShoppingBag,
       items: [
-        { href: "/dashboard/audience", label: t("dashboard.nav.audience"), icon: IconInbox },
-        { href: "/dashboard/social-proof", label: t("dashboard.nav.socialProof"), icon: IconBell },
-        { href: "/dashboard/business-card", label: t("dashboard.nav.contactCard"), icon: IconPhone },
+        { href: "/dashboard/products", label: t("dashboard.nav.productsOrders"), icon: IconBox },
+        { href: "/dashboard/courses", label: t("dashboard.extraPages.courses"), icon: IconBook },
+        { href: "/dashboard/bookings", label: t("dashboard.extraPages.bookings"), icon: IconClock },
+        { href: "/dashboard/events", label: t("dashboard.extraPages.events"), icon: IconCalendar },
+        { href: "/dashboard/donation", label: t("dashboard.extraPages.donation"), icon: IconHeart },
+        { href: "/dashboard/affiliates", label: t("dashboard.extraPages.affiliates"), icon: IconUsers },
+        { href: "/dashboard/vouchers", label: t("dashboard.extraPages.vouchers"), icon: IconTag },
+        { href: "/dashboard/bundles", label: t("dashboard.extraPages.bundles"), icon: IconGift },
+        { href: "/dashboard/loyalty", label: t("dashboard.extraPages.loyalty"), icon: IconStar },
+        { href: "#", label: t("dashboard.nav.memberArea"), icon: IconLock, badge: "segera" },
       ],
     },
-    { type: "link", href: "/dashboard/balance", label: t("dashboard.nav.balance"), icon: IconWallet },
+    {
+      type: "group",
+      label: t("dashboard.nav.audience"),
+      icon: IconInbox,
+      items: [
+        { href: "/dashboard/audience", label: t("dashboard.nav.contacts"), icon: IconInbox },
+        { href: "/dashboard/business-card", label: t("dashboard.nav.contactCard"), icon: IconPhone },
+        { href: "#", label: t("dashboard.nav.segments"), icon: IconTarget, badge: "segera" },
+      ],
+    },
+    {
+      type: "group",
+      label: t("dashboard.nav.promotion"),
+      icon: IconTarget,
+      items: [
+        { href: "/dashboard/social-proof", label: t("dashboard.nav.socialProof"), icon: IconBell },
+        { href: "/dashboard/audience", label: t("dashboard.nav.emailBroadcast"), icon: IconMail },
+        { href: "#", label: t("dashboard.nav.whatsappBroadcast"), icon: IconWhatsapp, badge: "segera" },
+        { href: "#", label: t("dashboard.nav.autoDm"), icon: IconSparkle, badge: "segera" },
+        { href: "#", label: t("dashboard.nav.automation"), icon: IconSparkle, badge: "segera" },
+      ],
+    },
+    { type: "link", href: "/dashboard/statistik", label: t("dashboard.nav.analytics"), icon: IconChart },
+    {
+      type: "group",
+      label: t("dashboard.nav.finance"),
+      icon: IconWallet,
+      items: [
+        { href: "/dashboard/balance", label: t("dashboard.nav.balance"), icon: IconWallet },
+        { href: "/dashboard/settings/payment", label: t("dashboard.nav.bankAccounts"), icon: IconWallet },
+        { href: "/dashboard/kyc", label: t("dashboard.extraPages.kycVerification"), icon: IconShield },
+        { href: "#", label: t("dashboard.nav.invoiceTax"), icon: IconFileText, badge: "segera" },
+      ],
+    },
+    { type: "divider" },
+    {
+      type: "group",
+      label: t("dashboard.nav.integrations"),
+      icon: IconGlobe,
+      items: [
+        { href: "/dashboard/analytics", label: t("dashboard.nav.analyticsPixels"), icon: IconChart },
+        { href: "/dashboard/social-connect", label: t("dashboard.nav.socialConnect"), icon: IconExternal },
+        { href: "#", label: t("dashboard.nav.apiKeys"), icon: IconGlobe, badge: "segera" },
+      ],
+    },
+    {
+      type: "group",
+      label: t("dashboard.nav.team"),
+      icon: IconUsers,
+      items: [
+        { href: "/dashboard/team", label: t("dashboard.nav.membersRoles"), icon: IconUsers },
+        { href: "#", label: t("dashboard.nav.activityLog"), icon: IconClock, badge: "segera" },
+      ],
+    },
     { type: "link", href: "/dashboard/settings", label: t("dashboard.nav.settings"), icon: IconSettings },
   ];
 }
 
-// buildExtraPageLabels -- halaman yang TIDAK (lagi) muncul sebagai baris
-// nav langsung (dipindah ke dalam hub /dashboard/monetisasi atau
-// /dashboard/settings, lihat catatan konsolidasi di atas) tapi rute-nya
-// TETAP ada persis seperti sebelumnya -- didaftar di sini supaya judul
-// top bar desktop tidak jatuh balik ke "Dashboard" generik saat halaman
-// ini dibuka langsung.
+// buildExtraPageLabels -- judul top bar utk halaman yang rutenya ADA tapi
+// TIDAK muncul sbg item nav langsung (sub-halaman settings, sub-rute
+// desain, hub monetisasi, tutorial). Sebagian besar route lain sudah
+// resolve otomatis lewat currentPageLabel yang memindai grup nav.
 function buildExtraPageLabels(t: (key: string) => string): Record<string, string> {
   return {
     "/dashboard/tutorial": t("dashboard.extraPages.tutorial"),
-    "/dashboard/kyc": t("dashboard.extraPages.kycVerification"),
-    "/dashboard/team": t("dashboard.extraPages.team"),
-    "/dashboard/vouchers": t("dashboard.extraPages.vouchers"),
-    "/dashboard/bundles": t("dashboard.extraPages.bundles"),
-    "/dashboard/donation": t("dashboard.extraPages.donation"),
-    "/dashboard/affiliates": t("dashboard.extraPages.affiliates"),
-    "/dashboard/loyalty": t("dashboard.extraPages.loyalty"),
-    "/dashboard/events": t("dashboard.extraPages.events"),
-    "/dashboard/courses": t("dashboard.extraPages.courses"),
-    "/dashboard/bookings": t("dashboard.extraPages.bookings"),
+    "/dashboard/monetisasi": t("dashboard.nav.productsMonetization"),
+    "/dashboard/design/theme": t("dashboard.nav.design"),
+    "/dashboard/design/header": t("dashboard.nav.design"),
+    "/dashboard/design/tombol": t("dashboard.nav.design"),
+    "/dashboard/design/font": t("dashboard.nav.design"),
+    "/dashboard/design/sticker": t("dashboard.nav.design"),
     "/dashboard/settings/profile": t("dashboard.extraPages.profileAccount"),
     "/dashboard/settings/security": t("dashboard.extraPages.security"),
-    "/dashboard/settings/payment": t("dashboard.extraPages.payment"),
     "/dashboard/settings/subscription": t("dashboard.extraPages.subscription"),
     "/dashboard/settings/danger-zone": t("dashboard.extraPages.dangerZone"),
   };
@@ -337,7 +415,13 @@ export default function DashboardLayout({
 
   const sidebarContent = (
     <>
-      <div>
+      {/* min-h-0 + overflow-y-auto -- IA baru punya 7 grup expandable;
+          kalau beberapa dibuka sekaligus tingginya bisa melebihi viewport,
+          jadi area logo+nav ini di-scroll sendiri (scrollbar disembunyikan)
+          alih-alih terpotong. Blok kontrol bawah (tema/bahasa mobile) tetap
+          di luar area scroll ini, menempel di bawah lewat justify-between
+          aside. */}
+      <div className="min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* Redesain "Premium Refined" (permintaan langsung pengguna, 9
             Agustus 2026, menggantikan arah "Playful Creator" sore
             harinya): sidebar jadi hijau tua PEKAT (bukan lagi glass
@@ -379,13 +463,17 @@ export default function DashboardLayout({
           </div>
         )}
 
-        {/* Item aktif: garis emas tipis di kiri (bukan lagi pil solid
-            warna brand -- di atas latar sidebar yang SUDAH hijau tua,
-            pil bg-jeon-purple nyaris tidak kontras) + latar putih transparan
-            samar. Ikon TANPA badge bulat lagi -- lebih tenang/quiet,
-            sesuai prinsip "satu aksen berani (emas), sisanya netral". */}
+        {/* Nav IA 7-menu (restrukturisasi DASHBOARD-DESIGN-JEONID.md §5-6):
+            menu bisnis utama = baris ikon+label (grup dengan chevron,
+            expandable progressive-disclosure); item aktif = garis + latar
+            ungu. Pemisah membagi 7 menu bisnis dari 3 menu sekunder
+            (Integrasi/Tim/Pengaturan). Badge "Segera" = fitur roadmap yang
+            backend-nya belum ada (non-tautan). */}
         <nav className="mt-6 flex flex-col gap-0.5 text-xs">
-          {navItems.map((item) => {
+          {navItems.map((item, idx) => {
+            if (item.type === "divider") {
+              return <div key={`div-${idx}`} className="my-2.5 h-px bg-white/10" aria-hidden="true" />;
+            }
             if (item.type === "link") {
               const active = pathname === item.href;
               const Icon = item.icon;
@@ -400,44 +488,62 @@ export default function DashboardLayout({
                       : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <Icon className="h-4 w-4 flex-shrink-0" />
                   {item.label}
                 </Link>
               );
             }
 
-            const groupHasActive = item.items.some((sub) => sub.href === pathname);
+            const groupHasActive = item.items.some((sub) => sub.href !== "#" && sub.href === pathname);
             const expanded = expandedGroups.has(item.label);
+            const GroupIcon = item.icon;
             return (
-              <div key={item.label} className="mt-3 first:mt-0">
+              <div key={item.label}>
                 <button
                   type="button"
                   onClick={() => toggleGroup(item.label)}
-                  className="flex w-full items-center justify-between rounded-lg px-3.5 py-1.5 text-left hover:bg-white/5"
+                  aria-expanded={expanded}
+                  className={`flex w-full items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-left font-semibold transition-all ${
+                    groupHasActive && !expanded
+                      ? "border-jeon-purple bg-jeon-purple/15 text-white"
+                      : "border-transparent text-white/60 hover:bg-white/5 hover:text-white/90"
+                  }`}
                 >
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-wider ${groupHasActive ? "text-jeon-lavender" : "text-white/35"}`}
-                  >
-                    {item.label}
-                  </span>
+                  <GroupIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="flex-1">{item.label}</span>
                   <IconChevronRight
-                    className={`h-3.5 w-3.5 flex-shrink-0 text-white/30 transition-transform ${expanded ? "rotate-90" : ""}`}
+                    className={`h-3.5 w-3.5 flex-shrink-0 text-white/40 transition-transform ${expanded ? "rotate-90" : ""}`}
                   />
                 </button>
                 {expanded && (
-                  <div className="mt-1 flex flex-col gap-0.5">
+                  <div className="mb-1 ml-3.5 mt-0.5 flex flex-col gap-0.5 border-l border-white/10 pl-2">
                     {item.items.map((sub) => {
-                      const active = pathname === sub.href;
                       const Icon = sub.icon;
+                      if (sub.badge === "segera") {
+                        return (
+                          <div
+                            key={sub.label}
+                            className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-1.5 font-semibold text-white/30"
+                            title={t("dashboard.nav.comingSoonTitle")}
+                          >
+                            <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="flex-1">{sub.label}</span>
+                            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/45">
+                              {t("dashboard.nav.comingSoonBadge")}
+                            </span>
+                          </div>
+                        );
+                      }
+                      const active = pathname === sub.href;
                       return (
                         <Link
-                          key={sub.href}
+                          key={sub.href + sub.label}
                           href={sub.href}
                           onClick={() => setMobileOpen(false)}
-                          className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
+                          className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-1.5 font-semibold transition-all ${
                             active
                               ? "border-jeon-purple bg-jeon-purple/25 text-white"
-                              : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
+                              : "border-transparent text-white/50 hover:bg-white/5 hover:text-white/85"
                           }`}
                         >
                           <Icon className="h-3.5 w-3.5 flex-shrink-0" />
