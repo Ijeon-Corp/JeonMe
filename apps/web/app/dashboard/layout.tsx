@@ -74,36 +74,11 @@ type NavEntry =
   | { type: "group"; label: string; icon: typeof IconChart; items: NavLeaf[] }
   | { type: "divider" };
 
-// Konsolidasi sidebar (permintaan langsung pengguna, benchmark vs
-// Linktree/Lynk.id, 8 Agustus 2026): sidebar SEBELUMNYA 23 baris nav --
-// jauh lebih berat dari kompetitor, yang menyamaratakan "Home/Shop/
-// Analytics/Appearance" sebagai satu-satunya menu inti yang SELALU
-// tampil. Akar masalahnya BUKAN jumlah fitur (Jeonme memang lebih
-// lengkap), tapi 8 dari 23 baris itu cuma VARIAN TIPE PRODUK (Voucher/
-// Bundel/Dukungan/Afiliasi/Loyalitas/Event/Kelas/Booking) yang di
-// kompetitor cuma PILIHAN dalam satu alur "Tambah Produk", bukan 8 menu
-// terpisah. Perubahan di sini MURNI kedalaman navigasi -- TIDAK ADA
-// fitur/halaman yang dihapus:
-// - 8 baris "Produk & Monetisasi" -> 1 baris ke hub kartu
-//   /dashboard/monetisasi (pola sama seperti /dashboard/settings).
-// - Verifikasi KYC, Tim & Kolaborator -> pindah jadi kartu di dalam
-//   /dashboard/settings (Tim malah SUDAH lama ada di sana juga, cuma
-//   dobel-tampil di sidebar utama sebelumnya).
-// - Tutorial -> bukan lagi baris sidebar permanen, jadi ikon bantuan
-//   bulat di top bar (lihat header desktop di bawah), sejalan dengan
-//   pola Linktree/Lynk.id yang taruh onboarding di ikon "?", bukan slot
-//   menu tetap.
-// Hasil: 23 baris jadi ~14 baris, "Halaman Saya" mengelompokkan
-// Tautan/Produk/Desain jadi satu bagian karena ketiganya sama-sama
-// menentukan apa yang tampil di halaman publik kreator & berbagi satu
-// panel pratinjau langsung (lihat LivePreviewPanel).
-// buildNavItems/buildExtraPageLabels -- FUNGSI (bukan konstanta modul lagi)
-// permintaan langsung pengguna, 29 Agustus 2026: "harusnya berfungsi di
-// semua page termasuk dashboard dll ... untuk ... pilihan bahasa id/en" --
-// label-nya sekarang lewat t() supaya ikut berganti begitu locale
-// berubah, dipanggil ULANG tiap render (bukan dihitung sekali di level
-// modul) di dalam komponen di bawah. Struktur/href/urutan/ikon TIDAK
-// berubah sama sekali dari sebelumnya, cuma sumber teksnya.
+// buildNavItems/buildExtraPageLabels -- FUNGSI (bukan konstanta modul)
+// supaya label ikut locale (dipanggil ulang tiap render). Struktur nav =
+// IA 7-menu-bisnis dari DASHBOARD-DESIGN-JEONID.md §5 (rombak 31 Agustus
+// 2026, menggantikan konsolidasi 23->14 baris sebelumnya). Catatan
+// lengkap keputusan & pemetaan route ada di OLD_TO_NEW_MAPPING.md.
 // buildNavItems -- REORGANISASI PENUH ke IA 7-menu-bisnis
 // (DASHBOARD-DESIGN-JEONID.md §5, keputusan user 31 Agustus 2026). Struktur
 // lama (Beranda/QuickSetup/Import/[Link Saya]/Statistik/Monetisasi/[Audiens]
