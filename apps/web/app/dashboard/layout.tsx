@@ -587,6 +587,55 @@ export default function DashboardLayout({
     </>
   );
 
+  // railContent -- sidebar RINGKAS ikon-saja untuk rentang tablet/desktop
+  // kecil (md..xl, 768-1279px) sesuai DASHBOARD-DESIGN-JEONID.md §21
+  // ("collapsed sidebar 72-80px"). Tiap entri jadi satu ikon: tautan lepas
+  // -> ke href-nya, GRUP -> ke halaman pertama seksi-nya (landing default,
+  // mis. ikon "Produk & Penjualan" -> /products) dengan tooltip nama grup.
+  // Navigasi DALAM seksi tetap lewat secondary-nav tiap halaman
+  // (HalamanSayaTabs, tab produk, hub monetisasi) -- progressive disclosure
+  // §5.3. Sidebar PENUH (label + grup expandable) tetap dipakai di >=xl dan
+  // di drawer mobile; rail ini TAMBAHAN, bukan pengganti. Item ber-badge
+  // "segera" tidak muncul di rail (bukan tautan).
+  const railContent = (
+    <>
+      <Link href="/dashboard" className="mb-3 flex flex-shrink-0 justify-center" aria-label="jeon.id" title="jeon.id">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/favicon-new.png" alt="jeon.id" className="h-9 w-9" />
+      </Link>
+      <nav
+        aria-label={t("dashboard.nav.overview")}
+        className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {navItems.map((item, idx) => {
+          if (item.type === "divider") {
+            return <div key={`rdiv-${idx}`} className="my-1.5 h-px w-7 flex-shrink-0 bg-white/10" aria-hidden="true" />;
+          }
+          const Icon = item.icon;
+          const href = item.type === "link" ? item.href : item.items.find((s) => s.href !== "#")?.href ?? "/dashboard";
+          const active =
+            item.type === "link"
+              ? pathname === item.href
+              : item.items.some((s) => s.href !== "#" && s.href === pathname);
+          return (
+            <Link
+              key={item.type === "link" ? item.href : item.label}
+              href={href}
+              title={item.label}
+              aria-label={item.label}
+              aria-current={active ? "page" : undefined}
+              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
+                active ? "bg-jeon-purple text-white" : "text-white/55 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <Icon className="h-[18px] w-[18px]" />
+            </Link>
+          );
+        })}
+      </nav>
+    </>
+  );
+
   return (
     <AuthGuard>
       <ToastProvider>
@@ -612,8 +661,16 @@ export default function DashboardLayout({
               globals.css) menggantikan border+bg putih polos, supaya
               sidebar terasa mengambang tipis di atas latar bg-mesh di
               atas, bukan blok solid buram. */}
-          <aside className="sticky top-0 hidden h-screen w-[var(--dashboard-sidebar)] flex-col justify-between bg-jeon-sidebar p-5 shadow-refined-lg md:flex">
-            {sidebarContent}
+          {/* Sidebar desktop: RAIL ikon (md..xl, 72px) vs PENUH (>=xl, 226px)
+              -- §21. Lebar & isi ditukar di breakpoint xl; keduanya dirender
+              lalu satu disembunyikan via CSS (bukan JS) supaya bebas
+              hydration-mismatch & tanpa flicker. Di bawah md sidebar ini
+              hidden total (drawer + bottom nav yang ambil alih). */}
+          <aside className="sticky top-0 hidden h-screen w-[72px] flex-col bg-jeon-sidebar shadow-refined-lg md:flex xl:w-[var(--dashboard-sidebar)]">
+            {/* Penuh -- hanya >=xl */}
+            <div className="hidden min-h-0 flex-1 flex-col justify-between p-5 xl:flex">{sidebarContent}</div>
+            {/* Rail ikon -- md..xl */}
+            <div className="flex min-h-0 flex-1 flex-col items-center px-2 py-5 xl:hidden">{railContent}</div>
           </aside>
 
           {/* Kolom konten: top bar (mobile & desktop, beda isi) + drawer
