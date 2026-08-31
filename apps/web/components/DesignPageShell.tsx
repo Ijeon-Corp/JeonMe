@@ -1,10 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import { IconChevronRight } from "@/components/icons";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+
+// Tab kategori Desain (JEONID-DASHBOARD-REDESIGN-SPEC.md §11.1, Phase 4):
+// pindah antar kategori (Tema/Header/Tombol/Font/Stiker) SATU klik dari
+// sub-halaman mana pun, tanpa balik ke landing dulu (audit §2.2 "memaksa
+// user membuka lima sub-route untuk perubahan kecil"). Route subpage tetap
+// berfungsi & tab aktif mengikuti URL (aturan §11.1). Label reuse key
+// judul masing-masing halaman.
+const DESIGN_CATEGORY_TABS = [
+  { href: "/dashboard/design/theme", titleKey: "dashboard.pages.designTheme.title" },
+  { href: "/dashboard/design/header", titleKey: "dashboard.pages.designHeader.title" },
+  { href: "/dashboard/design/tombol", titleKey: "dashboard.pages.designTombol.title" },
+  { href: "/dashboard/design/font", titleKey: "dashboard.pages.designFont.title" },
+  { href: "/dashboard/design/sticker", titleKey: "dashboard.pages.designSticker.title" },
+];
 
 // DesignPageShell -- permintaan langsung pengguna: setiap menu di halaman
 // Desain sekarang halaman tersendiri (bukan accordion) -- komponen ini
@@ -56,6 +72,8 @@ export default function DesignPageShell({
   onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   const { t } = useLocale();
+  const pathname = usePathname();
+  const designTabsV2 = dashRedesignEnabled("page_builder") && Boolean(backHref);
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className={contentMaxWidth}>
@@ -67,6 +85,26 @@ export default function DesignPageShell({
             <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
             {t("dashboard.components.designPageShell.backToDesign")}
           </Link>
+        )}
+        {designTabsV2 && (
+          <div className="mb-4 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {DESIGN_CATEGORY_TABS.map((tab) => {
+              const active = pathname === tab.href;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                    active ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+                  }`}
+                >
+                  {t(tab.titleKey)}
+                  {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+                </Link>
+              );
+            })}
+          </div>
         )}
         <h1 className="font-display text-2xl font-bold text-app-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-app-muted">{description}</p>}

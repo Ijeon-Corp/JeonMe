@@ -593,6 +593,8 @@ export const dictionaries = {
             addThisLink: "Tambahkan tautan ini",
             categories: {
               suggested: "Disarankan",
+              popular: "Populer",
+              advanced: "Lanjutan",
               social: "Sosial Media",
               content: "Konten",
             },
@@ -3006,6 +3008,8 @@ export const dictionaries = {
             addThisLink: "Add this link",
             categories: {
               suggested: "Suggested",
+              popular: "Popular",
+              advanced: "Advanced",
               social: "Social Media",
               content: "Content",
             },

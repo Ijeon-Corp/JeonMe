@@ -95,6 +95,7 @@ import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -509,7 +510,12 @@ export default function DashboardLinksPage() {
 
   // Modal "Tambah" ala Linktree.
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addCategory, setAddCategory] = useState<"disarankan" | "sosial" | "konten">("disarankan");
+  // builderV2 (SPEC §10.5, Phase 4): SATU entry point "Tambah block" --
+  // trio quick-add disembunyikan & kategori modal jadi Populer/Sosial/
+  // Konten/Lanjutan. Murni presentasi; mutasi & wrapper current* TIDAK
+  // berubah (§10.10). Legacy utuh saat flag off.
+  const builderV2 = dashRedesignEnabled("page_builder");
+  const [addCategory, setAddCategory] = useState<AddCategory>(builderV2 ? "populer" : "disarankan");
   const [addSearch, setAddSearch] = useState("");
 
   // Edit inline judul/URL langsung di kartu (ikon pensil) -- sebelumnya
@@ -1995,7 +2001,10 @@ export default function DashboardLinksPage() {
             punya (Video/FAQ/Formulir Kontak), plus tombol "+" generik yang
             membuka modal lengkap yang sama seperti tombol besar di bawah.
             Ikon media/gambar/koleksi ala referensi SENGAJA tidak ditiru --
-            Jeonme belum punya blok galeri gambar/koleksi di halaman utama. */}
+            Jeonme belum punya blok galeri gambar/koleksi di halaman utama.
+            v2 (§10.5): DISEMBUNYIKAN -- satu entry point "Tambah block"
+            (audit §2.4: add flow terpecah 4 jalur membingungkan). */}
+        {!builderV2 && (
         <div className="mt-3 flex items-center gap-2">
           {[
             { tile: contentTiles.find((tile) => tile.key === "video")!, key: "video" },
@@ -2028,11 +2037,12 @@ export default function DashboardLinksPage() {
             <IconPlus className="h-4 w-4" />
           </button>
         </div>
+        )}
 
         <button
           type="button"
           onClick={() => {
-            setAddCategory("disarankan");
+            setAddCategory(builderV2 ? "populer" : "disarankan");
             setAddSearch("");
             setAddModalOpen(true);
           }}
@@ -3423,6 +3433,7 @@ export default function DashboardLinksPage() {
           onSelectPlatform={handleSelectPlatform}
           onSelectContentTile={handleSelectContentTile}
           onQuickPasteLink={(url) => openLinkFormPrefilled("", url)}
+          v2={builderV2}
         />
       )}
 
@@ -3587,13 +3598,37 @@ export default function DashboardLinksPage() {
 // dalam bahasa Indonesia ("disarankan"/"sosial"/"konten") -- itu ID INTERNAL
 // state (addCategory), BUKAN teks yang tampil ke pengguna, jadi TIDAK perlu
 // ikut diterjemahkan.
-function buildAddCategories(t: (key: string) => string) {
+// AddCategory -- union gabungan legacy ("disarankan") + v2 (SPEC §10.5:
+// Populer/Sosial/Konten/Lanjutan). State satu, daftar chip yang tampil
+// tergantung flag builderV2.
+type AddCategory = "disarankan" | "populer" | "sosial" | "konten" | "lanjutan";
+
+function buildAddCategories(t: (key: string) => string): { key: AddCategory; label: string }[] {
   return [
-    { key: "disarankan" as const, label: t("dashboard.pages.links.addModal.categories.suggested") },
-    { key: "sosial" as const, label: t("dashboard.pages.links.addModal.categories.social") },
-    { key: "konten" as const, label: t("dashboard.pages.links.addModal.categories.content") },
+    { key: "disarankan", label: t("dashboard.pages.links.addModal.categories.suggested") },
+    { key: "sosial", label: t("dashboard.pages.links.addModal.categories.social") },
+    { key: "konten", label: t("dashboard.pages.links.addModal.categories.content") },
   ];
 }
+
+function buildAddCategoriesV2(t: (key: string) => string): { key: AddCategory; label: string }[] {
+  return [
+    { key: "populer", label: t("dashboard.pages.links.addModal.categories.popular") },
+    { key: "sosial", label: t("dashboard.pages.links.addModal.categories.social") },
+    { key: "konten", label: t("dashboard.pages.links.addModal.categories.content") },
+    { key: "lanjutan", label: t("dashboard.pages.links.addModal.categories.advanced") },
+  ];
+}
+
+// Pemetaan tile per kategori v2 -- HANYA tipe blok yang benar-benar ada
+// (§0.4: tidak mengarang blok Commerce baru; produk/donasi dirender
+// otomatis di halaman publik, bukan blok manual).
+const V2_TILE_KEYS: Record<string, string[]> = {
+  populer: ["video", "contact_form", "faq"],
+  konten: ["text", "accordion", "maps", "gallery", "audio", "file", "faq", "video"],
+  lanjutan: ["project_showcase", "catalog"],
+  sosial: [],
+};
 
 function isUrlLike(value: string): boolean {
   return /^https?:\/\/\S+\.\S+/i.test(value.trim());
@@ -3608,26 +3643,32 @@ function AddModal({
   onSelectPlatform,
   onSelectContentTile,
   onQuickPasteLink,
+  v2 = false,
 }: {
-  category: "disarankan" | "sosial" | "konten";
-  onCategoryChange: (c: "disarankan" | "sosial" | "konten") => void;
+  category: AddCategory;
+  onCategoryChange: (c: AddCategory) => void;
   search: string;
   onSearchChange: (v: string) => void;
   onClose: () => void;
   onSelectPlatform: (p: PlatformQuickAdd) => void;
   onSelectContentTile: (t: ContentTile) => void;
   onQuickPasteLink: (url: string) => void;
+  // v2 (SPEC §10.5): kategori Populer/Sosial/Konten/Lanjutan + grid tile
+  // per kategori (bukan semua tile sekaligus). Legacy saat false.
+  v2?: boolean;
 }) {
   const { t } = useLocale();
-  const addCategories = buildAddCategories(t);
+  const addCategories = v2 ? buildAddCategoriesV2(t) : buildAddCategories(t);
   const contentTiles = buildContentTiles(t);
   const suggestedPlatforms = buildSuggestedPlatforms(t);
   const searchLower = search.trim().toLowerCase();
   const pastedUrl = isUrlLike(search);
 
+  const gridTiles = v2 ? contentTiles.filter((tile) => (V2_TILE_KEYS[category] ?? []).includes(tile.key)) : contentTiles;
+
   const contentRows = searchLower
     ? contentTiles.filter((tile) => tile.label.toLowerCase().includes(searchLower))
-    : category === "konten"
+    : !v2 && category === "konten"
       ? contentTiles
       : [];
 
@@ -3635,17 +3676,13 @@ function AddModal({
     ? suggestedPlatforms.filter((p) => p.label.toLowerCase().includes(searchLower))
     : category === "sosial"
       ? suggestedPlatforms
-      : category === "disarankan"
+      : category === "disarankan" || category === "populer"
         ? suggestedPlatforms.filter((p) => DISARANKAN_KEYS.includes(p.key))
         : [];
 
   const sectionLabel = searchLower
     ? t("dashboard.pages.links.addModal.searchResults")
-    : category === "disarankan"
-      ? t("dashboard.pages.links.addModal.categories.suggested")
-      : category === "sosial"
-        ? t("dashboard.pages.links.addModal.categories.social")
-        : t("dashboard.pages.links.addModal.categories.content");
+    : (addCategories.find((c) => c.key === category)?.label ?? "");
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
@@ -3704,7 +3741,7 @@ function AddModal({
               </div>
 
               <div className="mb-4 grid grid-cols-4 gap-2">
-                {contentTiles.map((tile) => (
+                {gridTiles.map((tile) => (
                   <button
                     key={tile.key}
                     type="button"
