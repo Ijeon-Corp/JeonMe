@@ -183,6 +183,53 @@
   }
 }
 
+/* Focus ring keyboard yang KONSISTEN untuk elemen interaktif non-form
+   (DASHBOARD-DESIGN-JEONID.md §22 "focus ring jelas" + "sidebar keyboard
+   navigation"): sebelum ini hanya input/select/textarea yang punya
+   indikator fokus kustom -- tautan, tombol, switch, menuitem, dan tab
+   mengandalkan outline bawaan browser yang sering nyaris tak terlihat
+   (apalagi di atas sidebar hijau/ungu gelap). :focus-visible (BUKAN
+   :focus) supaya cincin HANYA muncul saat navigasi keyboard, tidak saat
+   klik mouse. Checkbox/radio & form field sengaja DIKECUALIKAN (sudah
+   punya glow sendiri di blok atas). @layer base = prioritas terendah,
+   utility per-elemen tetap boleh menimpa. */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="tab"]:focus-visible,
+  summary:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid #7657ff;
+    outline-offset: 2px;
+  }
+  /* Sidebar & drawer berlatar gelap TETAP (bg-jeon-sidebar, tidak ikut
+     tema) -- cincin ungu di atas ungu gelap kurang kontras, pakai lavender
+     terang supaya jelas. */
+  .bg-jeon-sidebar a:focus-visible,
+  .bg-jeon-sidebar button:focus-visible {
+    outline-color: #d9ccff;
+  }
+}
+
+/* Reduced motion menyeluruh (§22 "reduced motion"): blok bertarget di atas
+   hanya menonaktifkan animasi tertentu (marquee dst). Reset umum ini
+   menetralkan SEMUA transisi & animasi + smooth-scroll bawaan browser untuk
+   pengguna yang memintanya -- pola standar a11y. !important perlu untuk
+   menang atas durasi utility Tailwind per-elemen. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Reset background native <input>/<textarea>/<select> di dalam SHELL
    aplikasi sendiri (.app-shell -- dashboard/admin/auth, lihat className di
    dashboard/layout.tsx, admin/layout.tsx, AuthShell.tsx) -- ditemukan lewat

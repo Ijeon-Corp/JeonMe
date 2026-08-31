@@ -478,6 +478,7 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
+                  aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
                     active
                       ? "border-jeon-purple bg-jeon-purple/25 text-white"
@@ -536,6 +537,7 @@ export default function DashboardLayout({
                           key={sub.href + sub.label}
                           href={sub.href}
                           onClick={() => setMobileOpen(false)}
+                          aria-current={active ? "page" : undefined}
                           className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-1.5 font-semibold transition-all ${
                             active
                               ? "border-jeon-purple bg-jeon-purple/25 text-white"
