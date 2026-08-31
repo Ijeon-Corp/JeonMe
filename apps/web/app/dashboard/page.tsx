@@ -3,7 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AnalyticsSummary, ApiError, exportAnalyticsCSV, getAnalyticsSummary } from "@/lib/api-client";
+import { AnalyticsSummary, ApiError, exportAnalyticsCSV, getAnalyticsSummary, getMyPage } from "@/lib/api-client";
+import { SITE_URL } from "@/lib/site";
 import {
   IconBox,
   IconChart,
@@ -11,6 +12,7 @@ import {
   IconDownload,
   IconInbox,
   IconLink,
+  IconShare,
   IconSparkle,
   IconWallet,
 } from "@/components/icons";
@@ -75,6 +77,32 @@ export default function DashboardHomePage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [useCustomRange, setUseCustomRange] = useState(false);
+
+  // Header sapaan (DASHBOARD-DESIGN-JEONID.md §8): nama creator + status
+  // halaman + CTA. Data dari getMyPage (nol endpoint baru). greetingKey
+  // dihitung di useEffect (bukan render) supaya tidak beda antara SSR
+  // prerender & klien -- new Date() di render halaman statis bikin
+  // hydration mismatch.
+  const [creator, setCreator] = useState<{ name: string; username: string; published: boolean } | null>(null);
+  const [greetingKey, setGreetingKey] = useState("greetingFallback");
+  const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    getMyPage()
+      .then((p) => setCreator({ name: p.display_name || p.username, username: p.username, published: p.is_published }))
+      .catch(() => {});
+    const h = new Date().getHours();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGreetingKey(h < 11 ? "greetingMorning" : h < 15 ? "greetingAfternoon" : h < 19 ? "greetingEvening" : "greetingNight");
+  }, []);
+
+  function handleShareCopy() {
+    if (!creator) return;
+    navigator.clipboard.writeText(`${SITE_URL}/${creator.username}`).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1800);
+    });
+  }
 
   function currentParams() {
     return useCustomRange && customFrom && customTo
@@ -144,7 +172,59 @@ export default function DashboardHomePage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* Header sapaan + CTA (DASHBOARD-DESIGN-JEONID.md §8): salam waktu +
+          nama creator + status halaman, lalu baris aksi utama (Tambah
+          link / Buat produk / bagikan). CTA menuju flow lama yang sudah
+          ada, bukan aksi baru. */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-app-ink sm:text-3xl">
+            {t(`dashboard.pages.home.${greetingKey}`)}
+            {creator ? `, ${creator.name}` : ""} 👋
+          </h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-app-muted">
+            {creator && (
+              <>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+                    creator.published ? "border-jeon-success/40 text-jeon-success" : "border-app-border text-app-muted"
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${creator.published ? "bg-jeon-success" : "bg-app-muted"}`} aria-hidden="true" />
+                  {creator.published ? t("dashboard.statusLive") : t("dashboard.statusDraft")}
+                </span>
+                <span className="text-app-muted/70">jeon.id/{creator.username}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/dashboard/links"
+            className="flex items-center gap-1.5 rounded-jmd bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5"
+          >
+            <IconLink className="h-4 w-4" /> {t("dashboard.pages.home.ctaAddLink")}
+          </Link>
+          <Link
+            href="/dashboard/products"
+            className="flex items-center gap-1.5 rounded-jmd border-2 border-app-border bg-app-surface px-4 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple"
+          >
+            <IconBox className="h-4 w-4" /> {t("dashboard.pages.home.ctaCreateProduct")}
+          </Link>
+          <button
+            type="button"
+            onClick={handleShareCopy}
+            disabled={!creator}
+            title={t("dashboard.pages.home.ctaShare")}
+            className="flex items-center gap-1.5 rounded-jmd border-2 border-app-border bg-app-surface px-3 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-50"
+          >
+            <IconShare className="h-4 w-4" />
+            {shareCopied ? <span className="text-jeon-purple">{t("dashboard.linkCopied")}</span> : null}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-app-muted">
           {t("dashboard.pages.home.statsRangePrefix")} {summary?.from_date ?? ""} {t("dashboard.pages.home.statsRangeSeparator")} {summary?.to_date ?? ""}.
         </p>
