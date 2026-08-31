@@ -393,7 +393,7 @@ export default function DashboardHomePage() {
               {summary.daily_series.length > 0 && (
                 <div className="glass rounded-jlg p-4 shadow-card">
                   <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.home.chartTrendHeading")}</h2>
-                  <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
+                  <svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label={t("dashboard.pages.home.chartTrendHeading")} className="mt-4 h-40 w-full">
                     <defs>
                       <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#7657ff" stopOpacity="0.35" />

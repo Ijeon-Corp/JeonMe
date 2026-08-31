@@ -60,7 +60,7 @@ export default function StorageFilesPanel() {
       </div>
 
       <div className="glass overflow-x-auto rounded-jmd shadow-card">
-        <table className="w-full min-w-[480px] text-left text-xs">
+        <table aria-label={t("dashboard.components.storageFilesPanel.tableAriaLabel")} className="w-full min-w-[480px] text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">{t("dashboard.components.storageFilesPanel.columnProduct")}</th>

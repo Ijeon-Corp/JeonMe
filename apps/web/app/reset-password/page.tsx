@@ -98,11 +98,13 @@ export default function ResetPasswordPage() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Minimal 8 karakter"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "reset-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p id="reset-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"

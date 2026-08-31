@@ -184,6 +184,8 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "register-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
@@ -195,6 +197,8 @@ export default function RegisterPage() {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "register-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-xs text-app-muted">Minimal 8 karakter.</p>
@@ -211,7 +215,7 @@ export default function RegisterPage() {
           (sesuai UU PDP).
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p id="register-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"

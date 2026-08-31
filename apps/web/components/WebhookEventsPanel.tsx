@@ -29,7 +29,7 @@ export default function WebhookEventsPanel() {
       {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="glass overflow-x-auto rounded-jmd shadow-card">
-        <table className="w-full min-w-[720px] text-left text-xs">
+        <table aria-label={t("dashboard.components.webhookEventsPanel.tableAriaLabel")} className="w-full min-w-[720px] text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnProduct")}</th>

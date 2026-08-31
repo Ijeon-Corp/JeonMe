@@ -92,7 +92,7 @@ export default function StatCard({
       </div>
       {sub !== "" && <p className={`mt-1 text-[11px] ${t.sub}`}>{sub ?? translate("dashboard.components.statCard.defaultSub")}</p>}
       {sparkline && sparkline.line && (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-2 h-10 w-full">
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true" role="presentation" className="mt-2 h-10 w-full">
           <path d={sparkline.area} fill={accentHex} fillOpacity={isBrand ? 0.18 : 0.16} />
           <path d={sparkline.line} fill="none" stroke={accentHex} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
         </svg>

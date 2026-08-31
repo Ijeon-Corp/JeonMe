@@ -50,11 +50,14 @@ export default function ForgotPasswordPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-describedby={message ? "forgot-message" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
-        {message && <p className="rounded-jmd bg-jeon-lavender/30 px-3.5 py-2.5 text-sm text-app-ink">{message}</p>}
+        {/* role=status (bukan alert): pesan ini bisa sukses ATAU gagal, jadi
+            live-region sopan (§22 form error association / status). */}
+        {message && <p id="forgot-message" role="status" className="rounded-jmd bg-jeon-lavender/30 px-3.5 py-2.5 text-sm text-app-ink">{message}</p>}
 
         <button
           type="submit"

@@ -1380,7 +1380,7 @@ export default function DashboardProductsPage() {
 
             {filteredProducts.length > 0 ? (
               <div className="glass mt-4 overflow-x-auto rounded-jlg shadow-card">
-                <table className="w-full min-w-[520px] text-left text-xs">
+                <table aria-label={t("dashboard.pages.products.table.ariaLabel")} className="w-full min-w-[520px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
                       <th className="px-4 py-3">{t("dashboard.pages.products.table.item")}</th>

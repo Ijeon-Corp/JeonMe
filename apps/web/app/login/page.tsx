@@ -83,10 +83,12 @@ export default function LoginPage() {
             placeholder="123456"
             value={mfaCode}
             onChange={(e) => setMfaCode(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "mfa-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-center text-lg tracking-[0.3em] text-app-ink focus:border-jeon-purple focus:outline-none"
           />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p id="mfa-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
@@ -126,6 +128,8 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "login-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
@@ -136,11 +140,17 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "login-error" : undefined}
             className="w-full rounded-jmd border-2 border-app-border bg-app-surface px-3.5 py-3 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {/* role=alert + id: error diumumkan screen reader saat muncul &
+            ditautkan ke kedua field lewat aria-describedby (§22 "form error
+            association"). Error di sini bersifat form-level (email/password
+            salah), jadi kedua field menunjuk pesan yang sama. */}
+        {error && <p id="login-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"

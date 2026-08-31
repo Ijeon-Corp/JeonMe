@@ -803,6 +803,7 @@ export const dictionaries = {
             createProductButton: "Buat Produk",
           },
           table: {
+            ariaLabel: "Daftar produk",
             item: "Item",
             price: "Harga",
             sold: "Terjual",
@@ -1966,6 +1967,7 @@ export const dictionaries = {
           searchPlaceholder: "Cari email pembeli atau nama produk...",
           searchButton: "Cari",
           allStatusOption: "Semua Status",
+          tableAriaLabel: "Daftar transaksi",
           columnProduct: "Produk",
           columnBuyer: "Pembeli",
           columnAmount: "Jumlah",
@@ -2025,6 +2027,7 @@ export const dictionaries = {
         },
         webhookEventsPanel: {
           loadError: "Gagal memuat riwayat webhook.",
+          tableAriaLabel: "Riwayat pengiriman webhook",
           columnProduct: "Produk",
           columnUrl: "URL",
           columnStatus: "Status",
@@ -2048,6 +2051,7 @@ export const dictionaries = {
         },
         storageFilesPanel: {
           unknownSize: "Ukuran tidak diketahui",
+          tableAriaLabel: "Berkas produk digital",
           loadError: "Gagal memuat data penyimpanan.",
           confirmDeleteText: "Hapus file \"{name}\"? Produk akan dinonaktifkan sampai file baru diunggah.",
           deleteError: "Gagal menghapus file.",
@@ -3167,6 +3171,7 @@ export const dictionaries = {
             createProductButton: "Create Product",
           },
           table: {
+            ariaLabel: "Product list",
             item: "Item",
             price: "Price",
             sold: "Sold",
@@ -4330,6 +4335,7 @@ export const dictionaries = {
           searchPlaceholder: "Search buyer email or product name...",
           searchButton: "Search",
           allStatusOption: "All Statuses",
+          tableAriaLabel: "Transactions",
           columnProduct: "Product",
           columnBuyer: "Buyer",
           columnAmount: "Amount",
@@ -4389,6 +4395,7 @@ export const dictionaries = {
         },
         webhookEventsPanel: {
           loadError: "Failed to load webhook history.",
+          tableAriaLabel: "Webhook deliveries",
           columnProduct: "Product",
           columnUrl: "URL",
           columnStatus: "Status",
@@ -4412,6 +4419,7 @@ export const dictionaries = {
         },
         storageFilesPanel: {
           unknownSize: "Unknown size",
+          tableAriaLabel: "Product files",
           loadError: "Failed to load storage data.",
           confirmDeleteText: "Delete file \"{name}\"? The product will be deactivated until a new file is uploaded.",
           deleteError: "Failed to delete file.",

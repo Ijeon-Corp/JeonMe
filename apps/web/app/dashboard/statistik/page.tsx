@@ -134,7 +134,7 @@ export default function StatistikPage() {
           {summary.daily_series.length > 0 && (
             <div className="glass mt-3 rounded-jlg p-4 shadow-card">
               <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.statistik.trendHeading")}</h2>
-              <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-4 h-40 w-full">
+              <svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label={t("dashboard.pages.statistik.trendHeading")} className="mt-4 h-40 w-full">
                 <defs>
                   <linearGradient id="statViewsGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#7657ff" stopOpacity="0.35" />

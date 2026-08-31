@@ -354,7 +354,7 @@ export default function DashboardAudiencePage() {
       </div>
 
       <div className="glass mt-3 overflow-x-auto rounded-jlg shadow-card">
-        <table className="w-full text-left text-xs">
+        <table aria-label={t("dashboard.pages.audience.managerHeading")} className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-app-border text-app-muted">
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colName")}</th>
