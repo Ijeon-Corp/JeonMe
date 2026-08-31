@@ -38,6 +38,7 @@ import {
 import {
   IconBox,
   IconCamera,
+  IconChevronRight,
   IconCheck,
   IconClose,
   IconExternal,
@@ -59,6 +60,7 @@ import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 // Panel tab Toko (Overview/Reviews/Listing/Storage/Webhook/Settings/Transaction)
 // dan editor Toko dimuat lewat next/dynamic -- hanya 1 dari 8 yang pernah
@@ -153,6 +155,16 @@ const TAB_FROM_URL: Record<string, ProductsTab> = {
   webhook: "webhook_events",
   settings: "shop_settings",
 };
+// Tab sekunder di balik menu "Lainnya" (SPEC §13.1) + key label i18n-nya.
+const MORE_TABS: ProductsTab[] = ["reviews", "listing", "storage", "webhook_events", "shop_settings"];
+const MORE_TAB_LABEL_KEY: Partial<Record<ProductsTab, string>> = {
+  reviews: "reviews",
+  listing: "listing",
+  storage: "storage",
+  webhook_events: "webhookEvents",
+  shop_settings: "shopSettings",
+};
+
 const TAB_TO_URL: Record<ProductsTab, string> = {
   overview: "overview",
   manage: "items",
@@ -185,6 +197,21 @@ function DashboardProductsPageInner() {
   // menunggu perubahan query berikutnya).
   const urlTab = TAB_FROM_URL[searchParams.get("tab") ?? "overview"] ?? "overview";
   const [tab, setTab] = useState<ProductsTab>(urlTab);
+
+  // Tab bar dua tingkat v2 (SPEC §13.1, flag "sales").
+  const salesV2 = dashRedesignEnabled("sales");
+  const [moreTabsOpen, setMoreTabsOpen] = useState(false);
+  const moreTabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!moreTabsOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (moreTabsRef.current && !moreTabsRef.current.contains(e.target as Node)) {
+        setMoreTabsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [moreTabsOpen]);
 
   // Sinkron perubahan URL BERIKUTNYA -> state (klik leaf sidebar saat sudah
   // di halaman ini): pola resmi "adjust state during render" (aturan repo
@@ -924,6 +951,78 @@ function DashboardProductsPageInner() {
             x-auto membuat scroll-nya lokal ke baris tab saja, flex-shrink-0
             + whitespace-nowrap di tiap tombol mencegah teksnya sendiri
             terpotong/melipat sebelum scroll sempat aktif. */}
+        {/* Tab bar v2 (SPEC §13.1, Phase 5, flag "sales"): dua tingkat --
+            primer Ringkasan|Produk|Pesanan|Halaman Toko + menu "Lainnya"
+            (Ulasan/Listing/Storage/Webhook/Settings) menggantikan 9 tab
+            sejajar yang overload (audit §2.2). Semua view tetap
+            deep-linkable via ?tab= (§13.8). Legacy di cabang else. */}
+        {salesV2 ? (
+          <div className="flex items-center gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {(
+              [
+                { key: "overview" as ProductsTab, label: t("dashboard.nav.salesOverview") },
+                { key: "manage" as ProductsTab, label: t("dashboard.nav.salesProducts") },
+                { key: "transaction" as ProductsTab, label: t("dashboard.nav.salesOrders") },
+                { key: "halaman_toko" as ProductsTab, label: t("dashboard.pages.products.tabs.halamanToko") },
+              ]
+            ).map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                onClick={() => {
+                  setMoreTabsOpen(false);
+                  setTabAndUrl(tb.key);
+                }}
+                className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+                  tab === tb.key ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {tb.label}
+              </button>
+            ))}
+            <div className="relative flex-shrink-0" ref={moreTabsRef}>
+              <button
+                type="button"
+                onClick={() => setMoreTabsOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={moreTabsOpen}
+                className={`flex items-center gap-1 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+                  MORE_TABS.includes(tab)
+                    ? "border-jeon-purple text-jeon-purple"
+                    : "border-transparent text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {MORE_TABS.includes(tab)
+                  ? t(`dashboard.pages.products.tabs.${MORE_TAB_LABEL_KEY[tab] ?? "more"}`)
+                  : t("dashboard.pages.products.tabs.more")}
+                <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${moreTabsOpen ? "rotate-90" : ""}`} />
+              </button>
+              {moreTabsOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-[calc(100%+0.25rem)] z-30 w-44 overflow-hidden rounded-jmd border border-app-border bg-app-surface py-1.5 shadow-card"
+                >
+                  {MORE_TABS.map((mt) => (
+                    <button
+                      key={mt}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreTabsOpen(false);
+                        setTabAndUrl(mt);
+                      }}
+                      className={`block w-full px-4 py-2 text-left text-sm font-semibold hover:bg-app-surface-2 ${
+                        tab === mt ? "text-jeon-purple" : "text-app-ink"
+                      }`}
+                    >
+                      {t(`dashboard.pages.products.tabs.${MORE_TAB_LABEL_KEY[mt]}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
         <div className="flex gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -1007,6 +1106,7 @@ function DashboardProductsPageInner() {
             {t("dashboard.pages.products.tabs.transaction")}
           </button>
         </div>
+        )}
 
         {tab === "halaman_toko" ? (
           <div className="mt-4">
