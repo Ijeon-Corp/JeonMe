@@ -63,6 +63,11 @@ export const dictionaries = {
         settings: "Pengaturan",
         comingSoonBadge: "Segera",
         comingSoonTitle: "Fitur ini akan segera hadir.",
+        bottomHome: "Beranda",
+        bottomPage: "Halaman",
+        bottomProducts: "Produk",
+        bottomStats: "Statistik",
+        bottomMore: "Menu",
       },
       extraPages: {
         tutorial: "Tutorial",
@@ -2419,6 +2424,11 @@ export const dictionaries = {
         settings: "Settings",
         comingSoonBadge: "Soon",
         comingSoonTitle: "This feature is coming soon.",
+        bottomHome: "Home",
+        bottomPage: "Page",
+        bottomProducts: "Products",
+        bottomStats: "Stats",
+        bottomMore: "Menu",
       },
       extraPages: {
         tutorial: "Tutorial",
