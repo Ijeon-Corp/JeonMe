@@ -106,6 +106,40 @@ const config: Config = {
           border: "var(--jeon-border)",
           sidebar: "#17151c",
         },
+        // Token target redesign dashboard (JEONID-DASHBOARD-REDESIGN-SPEC
+        // §4.1, Phase 1) -- dipakai HANYA oleh components/dashboard/* baru;
+        // halaman lama tetap app-*/jeon-* sampai fasenya tiba. Permukaan =
+        // var() (flip dark, JANGAN pakai modifier opasitas); brand & status
+        // teks/soft juga var() karena status IKUT flip di dark (teks status
+        // terang di atas soft gelap -- beda dari jeon-* yang konstan).
+        dash: {
+          bg: "var(--dash-bg)",
+          surface: "var(--dash-surface)",
+          "surface-subtle": "var(--dash-surface-subtle)",
+          "surface-raised": "var(--dash-surface-raised)",
+          ink: "var(--dash-ink)",
+          "ink-soft": "var(--dash-ink-soft)",
+          muted: "var(--dash-muted)",
+          border: "var(--dash-border)",
+          "border-strong": "var(--dash-border-strong)",
+          "sidebar-bg": "#17151c",
+          "sidebar-surface": "#221f29",
+          "sidebar-text": "#f4f1f8",
+          "sidebar-muted": "#aaa4b3",
+        },
+        brand: {
+          "500": "#6043f5",
+          "600": "#5234e5",
+          "700": "#4328ca",
+          soft: "var(--dash-brand-soft)",
+          lavender: "#d9ceff",
+          lime: "#d9ff5f",
+          "lime-soft": "var(--dash-brand-lime-soft)",
+        },
+        success: { DEFAULT: "var(--dash-success)", soft: "var(--dash-success-soft)" },
+        warning: { DEFAULT: "var(--dash-warning)", soft: "var(--dash-warning-soft)" },
+        danger: { DEFAULT: "var(--dash-danger)", soft: "var(--dash-danger-soft)" },
+        info: { DEFAULT: "var(--dash-info)", soft: "var(--dash-info-soft)" },
       },
       borderRadius: {
         // Skala radius redesign (spec §6) -- nama diprefiks "j" supaya
@@ -146,6 +180,13 @@ const config: Config = {
         brutal: "var(--shadow-card-brutal)",
         jsoft: "var(--shadow-soft)",
         jfocus: "var(--shadow-focus)",
+        // Bayangan target redesign dashboard (spec §4.5) -- via var supaya
+        // varian dark (globals.css) ikut; diprefiks "dash-" karena key
+        // `card`/`focus` sudah dipakai keluarga lama.
+        "dash-card": "var(--dash-shadow-card)",
+        "dash-raised": "var(--dash-shadow-raised)",
+        "dash-overlay": "var(--dash-shadow-overlay)",
+        "dash-focus": "var(--dash-shadow-focus)",
       },
     },
   },

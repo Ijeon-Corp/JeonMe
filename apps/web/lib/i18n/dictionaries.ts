@@ -215,6 +215,16 @@ export const dictionaries = {
           intervalLabel: "Interval Sebelum Notifikasi Berikutnya",
           savingButton: "Menyimpan...",
           saveButton: "Simpan",
+          previewHeading: "Pratinjau",
+          previewDesc: "Beginilah notifikasi tampil untuk pengunjung halamanmu.",
+          previewInactiveNote: "Notifikasi sedang nonaktif -- aktifkan di bawah supaya tampil di halaman publik.",
+          previewSampleEmail: "bud***@gmail.com",
+          previewSampleAction: "baru saja membeli",
+          previewSampleProduct: "E-book Belajar Desain",
+          placementHeading: "Penempatan",
+          placementDesc: "Pilih di halaman mana notifikasi ditampilkan.",
+          timingHeading: "Waktu Tampil",
+          timingDesc: "Atur berapa lama tiap notifikasi tampil dan jeda antar-notifikasi.",
         },
         team: {
           status: {
@@ -2583,6 +2593,16 @@ export const dictionaries = {
           intervalLabel: "Interval Before Next Notification",
           savingButton: "Saving...",
           saveButton: "Save",
+          previewHeading: "Preview",
+          previewDesc: "This is how the notification appears to your page visitors.",
+          previewInactiveNote: "Notifications are currently off -- enable them below to show on your public page.",
+          previewSampleEmail: "bud***@gmail.com",
+          previewSampleAction: "just bought",
+          previewSampleProduct: "Design Basics E-book",
+          placementHeading: "Placement",
+          placementDesc: "Choose which pages show the notification.",
+          timingHeading: "Timing",
+          timingDesc: "Set how long each notification stays visible and the gap between them.",
         },
         team: {
           status: {

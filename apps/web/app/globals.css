@@ -139,6 +139,112 @@
   --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
 }
 
+/* Token target redesign dashboard (JEONID-DASHBOARD-REDESIGN-SPEC.md §4,
+   Phase 1 Foundation §25) -- compatibility layer DI SAMPING token lama,
+   BUKAN pengganti: halaman yang belum dimigrasikan tetap pakai app-* & jeon-*,
+   komponen dashboard baru (components/dashboard) pakai dash-*. Token lama
+   baru dibersihkan di Phase 8 setelah tidak ada pemakainya.
+
+   Deviasi kecil yang disengaja dari nama var di spec: SEMUA di-namespace
+   --dash-* (spec menulis --brand-500/--success/--shadow-focus polos) --
+   --shadow-focus SUDAH dipakai keluarga token jeon (nilai beda), dan nama
+   generik rawan tabrakan; peran & nilai tetap persis spec §4.1/§4.5.
+
+   Dark mode: spec diam soal nilai gelap; varian gelap diturunkan dari palet
+   gelap existing (keluarga #141218/#1c1a22 + teks status terang yang sama
+   dengan override .app-shell) supaya halaman campuran lama/baru tetap
+   koheren selama migrasi. Pola 3-lapis identik dengan blok app-* di atas. */
+:root {
+  --dash-bg: #f7f7fa;
+  --dash-surface: #ffffff;
+  --dash-surface-subtle: #faf9fc;
+  --dash-surface-raised: #ffffff;
+  --dash-ink: #1d1923;
+  --dash-ink-soft: #504a58;
+  --dash-muted: #827d8a;
+  --dash-border: #ebe9f0;
+  --dash-border-strong: #dcd8e4;
+
+  --dash-brand-500: #6043f5;
+  --dash-brand-600: #5234e5;
+  --dash-brand-700: #4328ca;
+  --dash-brand-soft: #eeeaff;
+  --dash-brand-lavender: #d9ceff;
+  --dash-brand-lime: #d9ff5f;
+  --dash-brand-lime-soft: #efffc2;
+
+  --dash-success: #168153;
+  --dash-success-soft: #e5f6ee;
+  --dash-warning: #b56b00;
+  --dash-warning-soft: #fff2d8;
+  --dash-danger: #c93636;
+  --dash-danger-soft: #fee9e9;
+  --dash-info: #2577a8;
+  --dash-info-soft: #e8f6ff;
+
+  --dash-sidebar-bg: #17151c;
+  --dash-sidebar-surface: #221f29;
+  --dash-sidebar-text: #f4f1f8;
+  --dash-sidebar-muted: #aaa4b3;
+
+  --dash-shadow-card: 0 1px 2px rgba(24, 18, 38, 0.03);
+  --dash-shadow-raised: 0 12px 32px rgba(34, 25, 63, 0.1);
+  --dash-shadow-overlay: 0 24px 64px rgba(20, 15, 31, 0.18);
+  --dash-shadow-focus: 0 0 0 3px rgba(96, 67, 245, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --dash-bg: #141218;
+    --dash-surface: #1c1a22;
+    --dash-surface-subtle: #191721;
+    --dash-surface-raised: #221f29;
+    --dash-ink: #f0edf5;
+    --dash-ink-soft: #c9c3d4;
+    --dash-muted: #a49fae;
+    --dash-border: rgba(240, 237, 245, 0.14);
+    --dash-border-strong: rgba(240, 237, 245, 0.26);
+    --dash-brand-soft: rgba(96, 67, 245, 0.18);
+    --dash-brand-lime-soft: rgba(217, 255, 95, 0.14);
+    --dash-success: #4ade80;
+    --dash-success-soft: rgba(22, 101, 52, 0.24);
+    --dash-warning: #fbbf24;
+    --dash-warning-soft: rgba(120, 53, 15, 0.24);
+    --dash-danger: #f87171;
+    --dash-danger-soft: rgba(153, 27, 27, 0.24);
+    --dash-info: #60a5fa;
+    --dash-info-soft: rgba(30, 58, 138, 0.24);
+    --dash-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --dash-shadow-raised: 0 12px 32px rgba(0, 0, 0, 0.45);
+    --dash-shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.6);
+  }
+}
+
+[data-theme="dark"] {
+  --dash-bg: #141218;
+  --dash-surface: #1c1a22;
+  --dash-surface-subtle: #191721;
+  --dash-surface-raised: #221f29;
+  --dash-ink: #f0edf5;
+  --dash-ink-soft: #c9c3d4;
+  --dash-muted: #a49fae;
+  --dash-border: rgba(240, 237, 245, 0.14);
+  --dash-border-strong: rgba(240, 237, 245, 0.26);
+  --dash-brand-soft: rgba(96, 67, 245, 0.18);
+  --dash-brand-lime-soft: rgba(217, 255, 95, 0.14);
+  --dash-success: #4ade80;
+  --dash-success-soft: rgba(22, 101, 52, 0.24);
+  --dash-warning: #fbbf24;
+  --dash-warning-soft: rgba(120, 53, 15, 0.24);
+  --dash-danger: #f87171;
+  --dash-danger-soft: rgba(153, 27, 27, 0.24);
+  --dash-info: #60a5fa;
+  --dash-info-soft: rgba(30, 58, 138, 0.24);
+  --dash-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --dash-shadow-raised: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --dash-shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
 /* Creator marquee (redesign spec §11.3): strip horizontal berjalan tanpa
    henti -- track berisi daftar yang DIDUPLIKASI 2x (CreatorMarquee.tsx),
    translateX -50% = tepat satu salinan penuh, jadi loop mulus tanpa
