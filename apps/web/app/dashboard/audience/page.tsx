@@ -14,7 +14,8 @@ import {
 } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
 import EmptyState from "@/components/EmptyState";
-import { IconMail } from "@/components/icons";
+import StatCard from "@/components/StatCard";
+import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 
 function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], { label: string; className: string }> {
@@ -49,6 +50,11 @@ export default function DashboardAudiencePage() {
   const BROADCAST_STATUS_LABEL = buildBroadcastStatusLabel(t);
   const SOURCE_LABEL = buildSourceLabel(t);
   const [contacts, setContacts] = useState<AudienceContact[]>([]);
+  // newContacts (kontak 30 hari terakhir) DIHITUNG saat fetch, bukan di
+  // badan render -- `Date.now()` di render dilarang eslint-plugin-react-hooks
+  // v7 ("Cannot call impure function during render"), pola sama seperti
+  // greetingKey di Beranda yang juga dihitung di effect.
+  const [newContacts, setNewContacts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +84,13 @@ export default function DashboardAudiencePage() {
         setCollectWhatsapp(s.collect_whatsapp);
         setContacts(c);
         setBroadcasts(b);
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        setNewContacts(
+          c.filter((ct) => {
+            const ts = new Date(ct.joined_at).getTime();
+            return !Number.isNaN(ts) && ts >= thirtyDaysAgo;
+          }).length
+        );
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.audience.loadError")))
       .finally(() => setLoading(false));
@@ -90,6 +103,18 @@ export default function DashboardAudiencePage() {
   // ke kreator SEBELUM kirim cocok dengan yang benar-benar akan dikirimi,
   // bukan salah menjanjikan menyasar semua kontak di tabel bawah.
   const subscriberCount = contacts.filter((c) => c.email && c.sources.includes("lead_capture")).length;
+
+  // Ringkasan Audiens (DASHBOARD-DESIGN-JEONID.md §11.1) -- DIHITUNG dari
+  // `contacts` yang SUDAH di-fetch, bukan endpoint/agregat baru: total,
+  // kontak baru 30 hari (dari joined_at), dan kelengkapan email/WhatsApp.
+  // Field lain di §11.1 (consent status, subscriber growth) TIDAK
+  // ditampilkan -- backend belum mengekspos datanya, jadi sengaja tidak
+  // dikarang (aturan §13.7 "zero bukan loading", jangan tampilkan metrik
+  // yang tidak nyata). Persen dibulatkan; guard pembagian nol.
+  const totalContacts = contacts.length;
+  const emailCount = contacts.filter((c) => c.email).length;
+  const whatsappCount = contacts.filter((c) => c.whatsapp_number).length;
+  const pctOf = (n: number) => (totalContacts === 0 ? 0 : Math.round((n / totalContacts) * 100));
 
   async function handleSendBroadcast(e: React.FormEvent) {
     e.preventDefault();
@@ -161,6 +186,41 @@ export default function DashboardAudiencePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.audience.intro")}</p>
+
+      {/* Ringkasan Audiens (§11.1) -- kartu ringkas dari data kontak yang
+          sudah dimuat, tampil sebelum form supaya angka kunci terbaca
+          lebih dulu (pola sama /balance & Ringkasan). */}
+      <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          tone="brand"
+          icon={<IconUsers className="h-4 w-4" />}
+          label={t("dashboard.pages.audience.overviewTotal")}
+          value={totalContacts.toLocaleString("id-ID")}
+          pct={null}
+          sub=""
+        />
+        <StatCard
+          icon={<IconSparkle className="h-4 w-4" />}
+          label={t("dashboard.pages.audience.overviewNew")}
+          value={newContacts.toLocaleString("id-ID")}
+          pct={null}
+          sub={t("dashboard.pages.audience.overviewNewSub")}
+        />
+        <StatCard
+          icon={<IconMail className="h-4 w-4" />}
+          label={t("dashboard.pages.audience.overviewEmail")}
+          value={emailCount.toLocaleString("id-ID")}
+          pct={null}
+          sub={`${pctOf(emailCount)}% ${t("dashboard.pages.audience.overviewOfTotal")}`}
+        />
+        <StatCard
+          icon={<IconWhatsapp className="h-4 w-4" />}
+          label={t("dashboard.pages.audience.overviewWhatsapp")}
+          value={whatsappCount.toLocaleString("id-ID")}
+          pct={null}
+          sub={`${pctOf(whatsappCount)}% ${t("dashboard.pages.audience.overviewOfTotal")}`}
+        />
+      </section>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
