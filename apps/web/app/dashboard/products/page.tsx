@@ -2,7 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   AnalyticsSummary,
   ApiError,
@@ -57,7 +57,7 @@ import type { DesignSection } from "@/components/ProdukPageEditor";
 import { confirmDelete } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
 
 // Panel tab Toko (Overview/Reviews/Listing/Storage/Webhook/Settings/Transaction)
@@ -126,20 +126,81 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
 // utk UI, backend tetap sumber kebenaran validasinya.
 const PREMIUM_PRODUK_PAGE_LIMIT = 5;
 
+// Adapter URL ?tab= (JEONID-DASHBOARD-REDESIGN-SPEC.md §5.2, Phase 2 shell):
+// sidebar IA baru menautkan Ringkasan/Produk/Pesanan sebagai
+// /products?tab=overview|items|transactions. Param URL <-> state tab internal
+// disinkronkan dua arah; deep-link lama tanpa query tetap jatuh ke overview
+// (default lama). Nama param URL = istilah spec, nama internal tetap.
+type ProductsTab =
+  | "halaman_toko"
+  | "overview"
+  | "manage"
+  | "reviews"
+  | "listing"
+  | "storage"
+  | "webhook_events"
+  | "shop_settings"
+  | "transaction";
+
+const TAB_FROM_URL: Record<string, ProductsTab> = {
+  overview: "overview",
+  items: "manage",
+  transactions: "transaction",
+  store: "halaman_toko",
+  reviews: "reviews",
+  listing: "listing",
+  storage: "storage",
+  webhook: "webhook_events",
+  settings: "shop_settings",
+};
+const TAB_TO_URL: Record<ProductsTab, string> = {
+  overview: "overview",
+  manage: "items",
+  transaction: "transactions",
+  halaman_toko: "store",
+  reviews: "reviews",
+  listing: "listing",
+  storage: "storage",
+  webhook_events: "webhook",
+  shop_settings: "settings",
+};
+
+// useSearchParams butuh Suspense boundary (dok Next use-search-params) --
+// default export tinggal wrapper.
 export default function DashboardProductsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <DashboardProductsPageInner />
+    </Suspense>
+  );
+}
+
+function DashboardProductsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
-  const [tab, setTab] = useState<
-    | "halaman_toko"
-    | "overview"
-    | "manage"
-    | "reviews"
-    | "listing"
-    | "storage"
-    | "webhook_events"
-    | "shop_settings"
-    | "transaction"
-  >("overview");
+
+  // urlTab DIHITUNG SEBELUM useState supaya mount langsung dengan
+  // ?tab=transactions membuka tab itu (bukan default overview lalu
+  // menunggu perubahan query berikutnya).
+  const urlTab = TAB_FROM_URL[searchParams.get("tab") ?? "overview"] ?? "overview";
+  const [tab, setTab] = useState<ProductsTab>(urlTab);
+
+  // Sinkron perubahan URL BERIKUTNYA -> state (klik leaf sidebar saat sudah
+  // di halaman ini): pola resmi "adjust state during render" (aturan repo
+  // react-hooks), bukan effect.
+  const [prevUrlTab, setPrevUrlTab] = useState(urlTab);
+  if (urlTab !== prevUrlTab) {
+    setPrevUrlTab(urlTab);
+    setTab(urlTab);
+  }
+
+  // Sinkron state -> URL saat klik tab internal (replace, tanpa scroll &
+  // tanpa menumpuk history).
+  function setTabAndUrl(next: ProductsTab) {
+    setTab(next);
+    router.replace(`/dashboard/products?tab=${TAB_TO_URL[next]}`, { scroll: false });
+  }
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -866,7 +927,7 @@ export default function DashboardProductsPage() {
         <div className="flex gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
-            onClick={() => setTab("halaman_toko")}
+            onClick={() => setTabAndUrl("halaman_toko")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "halaman_toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -875,7 +936,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("overview")}
+            onClick={() => setTabAndUrl("overview")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "overview" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -884,7 +945,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("manage")}
+            onClick={() => setTabAndUrl("manage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "manage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -893,7 +954,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("reviews")}
+            onClick={() => setTabAndUrl("reviews")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "reviews" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -902,7 +963,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("listing")}
+            onClick={() => setTabAndUrl("listing")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "listing" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -911,7 +972,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("storage")}
+            onClick={() => setTabAndUrl("storage")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "storage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -920,7 +981,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("webhook_events")}
+            onClick={() => setTabAndUrl("webhook_events")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "webhook_events" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -929,7 +990,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("shop_settings")}
+            onClick={() => setTabAndUrl("shop_settings")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "shop_settings" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
@@ -938,7 +999,7 @@ export default function DashboardProductsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setTab("transaction")}
+            onClick={() => setTabAndUrl("transaction")}
             className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
               tab === "transaction" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}

@@ -38,22 +38,22 @@ export const DASHBOARD_PAGE_REGISTRY: DashboardPageMeta[] = [
   { match: "/dashboard/quick-setup", titleKey: "dashboard.nav.quickSetup", parentKey: "dashboard.nav.myPageGroup", domain: "page" },
   { match: "/dashboard/import", titleKey: "dashboard.nav.import", parentKey: "dashboard.nav.myPageGroup", domain: "page" },
 
-  // Jualan
-  { match: "/dashboard/products", titleKey: "dashboard.nav.productsOrders", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
-  { match: "/dashboard/courses", titleKey: "dashboard.extraPages.courses", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
-  { match: "/dashboard/bookings", titleKey: "dashboard.extraPages.bookings", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
-  { match: "/dashboard/events", titleKey: "dashboard.extraPages.events", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
-  { match: "/dashboard/donation", titleKey: "dashboard.extraPages.donation", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
-  { match: "/dashboard/monetisasi", titleKey: "dashboard.nav.productsMonetization", parentKey: "dashboard.nav.salesGroup", domain: "sales" },
+  // Jualan (spec §5: "Produk & Penjualan" -> "Jualan")
+  { match: "/dashboard/products", titleKey: "dashboard.nav.sales", domain: "sales" },
+  { match: "/dashboard/courses", titleKey: "dashboard.extraPages.courses", parentKey: "dashboard.nav.sales", domain: "sales" },
+  { match: "/dashboard/bookings", titleKey: "dashboard.extraPages.bookings", parentKey: "dashboard.nav.sales", domain: "sales" },
+  { match: "/dashboard/events", titleKey: "dashboard.extraPages.events", parentKey: "dashboard.nav.sales", domain: "sales" },
+  { match: "/dashboard/donation", titleKey: "dashboard.extraPages.donation", parentKey: "dashboard.nav.sales", domain: "sales" },
+  { match: "/dashboard/monetisasi", titleKey: "dashboard.nav.productsMonetization", parentKey: "dashboard.nav.sales", domain: "sales" },
 
-  // Marketing
-  { match: "/dashboard/audience", titleKey: "dashboard.nav.contacts", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/business-card", titleKey: "dashboard.nav.contactCard", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/social-proof", titleKey: "dashboard.nav.socialProof", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/vouchers", titleKey: "dashboard.extraPages.vouchers", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/bundles", titleKey: "dashboard.extraPages.bundles", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/affiliates", titleKey: "dashboard.extraPages.affiliates", parentKey: "dashboard.nav.promotion", domain: "marketing" },
-  { match: "/dashboard/loyalty", titleKey: "dashboard.extraPages.loyalty", parentKey: "dashboard.nav.promotion", domain: "marketing" },
+  // Marketing (spec §5: voucher/bundel/affiliate/loyalty/social-proof pindah konseptual)
+  { match: "/dashboard/audience", titleKey: "dashboard.nav.marketingAudience", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/business-card", titleKey: "dashboard.nav.contactCard", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/social-proof", titleKey: "dashboard.nav.socialProof", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/vouchers", titleKey: "dashboard.extraPages.vouchers", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/bundles", titleKey: "dashboard.extraPages.bundles", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/affiliates", titleKey: "dashboard.extraPages.affiliates", parentKey: "dashboard.nav.marketing", domain: "marketing" },
+  { match: "/dashboard/loyalty", titleKey: "dashboard.extraPages.loyalty", parentKey: "dashboard.nav.marketing", domain: "marketing" },
 
   // Analitik
   { match: "/dashboard/statistik", titleKey: "dashboard.nav.analytics", domain: "analytics" },
