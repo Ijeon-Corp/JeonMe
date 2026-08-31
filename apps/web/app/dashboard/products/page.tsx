@@ -1323,6 +1323,11 @@ function DashboardProductsPageInner() {
                 jenis item dulu sebelum masuk ke form spesifiknya. */}
             {addMode === "choose" && (
               <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-jlg p-4 shadow-card sm:grid-cols-3">
+                {salesV2 && (
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
+                    {t("dashboard.pages.products.createStep1")}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
@@ -1361,6 +1366,11 @@ function DashboardProductsPageInner() {
 
             {addMode === "digital" && (
               <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+                {salesV2 && (
+                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                    {t("dashboard.pages.products.createStep2")}
+                  </p>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1412,6 +1422,11 @@ function DashboardProductsPageInner() {
 
             {addMode === "payment_link" && (
               <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+                {salesV2 && (
+                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                    {t("dashboard.pages.products.createStep2")}
+                  </p>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1482,6 +1497,11 @@ function DashboardProductsPageInner() {
 
             {addMode === "external_link" && (
               <form onSubmit={handleCreateExternalLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
+                {salesV2 && (
+                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                    {t("dashboard.pages.products.createStep2")}
+                  </p>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1831,6 +1851,11 @@ function DashboardProductsPageInner() {
                 Eksternal yang tidak punya File Produk sama sekali) --
                 gerbang aktivasi backend (product.go) menolak keduanya kalau
                 salah satu kosong. */}
+            {salesV2 && (
+              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+                {t("dashboard.pages.products.manageModal.sectionMedia")}
+              </p>
+            )}
             <p className="mt-4 text-[11px] leading-relaxed text-app-muted">
               <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintProductFile")}</strong>{" "}
               {t("dashboard.pages.products.manageModal.fileHintMiddle")}{" "}
@@ -1932,6 +1957,11 @@ function DashboardProductsPageInner() {
             </div>
 
             <div className="mt-4 flex flex-col gap-2.5">
+              {salesV2 && (
+              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+                  {t("dashboard.pages.products.manageModal.sectionPricing")}
+              </p>
+              )}
               {flashSaleEditId === manageProduct.id ? (
                 <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
@@ -2042,6 +2072,11 @@ function DashboardProductsPageInner() {
                 </button>
               )}
 
+              {salesV2 && activeCollaborators.length > 0 && (
+              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+                  {t("dashboard.pages.products.manageModal.sectionCollab")}
+              </p>
+              )}
               {activeCollaborators.length > 0 &&
                 (splitsEditId === manageProduct.id ? (
                   <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
@@ -2125,6 +2160,11 @@ function DashboardProductsPageInner() {
             {/* Tautan produk -- Modul Toko (migrasi 000068): satu-satunya
                 field khusus external_link yang bisa diubah setelah dibuat
                 (ProductKind sendiri immutable, lihat catatan di product.go). */}
+            {salesV2 && manageProduct.product_kind !== "payment_link" && (
+              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+                {t("dashboard.pages.products.manageModal.sectionDelivery")}
+              </p>
+            )}
             {manageProduct.product_kind === "external_link" && (
               <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
@@ -2184,6 +2224,11 @@ function DashboardProductsPageInner() {
               />
             )}
 
+            {salesV2 && (
+              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+                {t("dashboard.pages.products.manageModal.sectionDanger")}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => handleDelete(manageProduct)}

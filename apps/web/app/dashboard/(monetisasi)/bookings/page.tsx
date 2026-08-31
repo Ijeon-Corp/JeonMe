@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   DashboardBooking,
@@ -34,6 +36,10 @@ function toRFC3339(localDateTime: string, timezone: string): string {
 
 export default function DashboardBookingsPage() {
   const { t } = useLocale();
+  // Manager template v2 (SPEC §7.2/§14, Phase 5, flag "sales"):
+  // PageHeader + primary create action di kanan; kartu form create hanya
+  // tampil saat `adding`. Legacy (subtitle + tombol toggle) saat flag off.
+  const salesV2 = dashRedesignEnabled("sales");
   const timezoneLabels: Record<string, string> = {
     "Asia/Jakarta": t("dashboard.pages.bookings.timezones.wib"),
     "Asia/Makassar": t("dashboard.pages.bookings.timezones.wita"),
@@ -157,12 +163,19 @@ export default function DashboardBookingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.bookings.subtitle")}
-      </p>
+      {salesV2 ? (
+        <PageHeader
+          title={t("dashboard.extraPages.bookings")}
+          description={t("dashboard.pages.bookings.subtitle")}
+          primaryAction={{ label: t("dashboard.pages.bookings.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+        />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.bookings.subtitle")}</p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!salesV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -241,6 +254,7 @@ export default function DashboardBookingsPage() {
           </form>
         )}
       </div>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {bookings.map((booking) => (

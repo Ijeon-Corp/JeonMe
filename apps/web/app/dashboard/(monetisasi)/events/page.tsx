@@ -8,6 +8,8 @@ import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 
 // Indonesia TIDAK memakai daylight saving time -- offset per zona waktu
 // TETAP sepanjang tahun, jadi cukup peta statis ke offset UTC tanpa
@@ -28,6 +30,10 @@ function toRFC3339(localDateTime: string, timezone: string): string {
 
 export default function DashboardEventsPage() {
   const { t } = useLocale();
+  // Manager template v2 (SPEC §7.2/§14, Phase 5, flag "sales"):
+  // PageHeader + primary create action di kanan; kartu form create hanya
+  // tampil saat `adding`. Legacy (subtitle + tombol toggle) saat flag off.
+  const salesV2 = dashRedesignEnabled("sales");
   const timezoneLabels: Record<string, string> = {
     "Asia/Jakarta": t("dashboard.pages.events.timezones.wib"),
     "Asia/Makassar": t("dashboard.pages.events.timezones.wita"),
@@ -138,12 +144,19 @@ export default function DashboardEventsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.events.subtitle")}
-      </p>
+      {salesV2 ? (
+        <PageHeader
+          title={t("dashboard.extraPages.events")}
+          description={t("dashboard.pages.events.subtitle")}
+          primaryAction={{ label: t("dashboard.pages.events.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+        />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.events.subtitle")}</p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!salesV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -271,6 +284,7 @@ export default function DashboardEventsPage() {
           </form>
         )}
       </div>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {events.map((ev) => (

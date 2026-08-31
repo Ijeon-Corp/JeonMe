@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   CourseChapterInput,
@@ -24,6 +26,10 @@ const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_ur
 
 export default function DashboardCoursesPage() {
   const { t } = useLocale();
+  // Manager template v2 (SPEC §7.2/§14, Phase 5, flag "sales"):
+  // PageHeader + primary create action di kanan; kartu form create hanya
+  // tampil saat `adding`. Legacy (subtitle + tombol toggle) saat flag off.
+  const salesV2 = dashRedesignEnabled("sales");
   const [courses, setCourses] = useState<DashboardCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,12 +150,19 @@ export default function DashboardCoursesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.courses.subtitle")}
-      </p>
+      {salesV2 ? (
+        <PageHeader
+          title={t("dashboard.extraPages.courses")}
+          description={t("dashboard.pages.courses.subtitle")}
+          primaryAction={{ label: t("dashboard.pages.courses.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+        />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.courses.subtitle")}</p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!salesV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -283,6 +296,7 @@ export default function DashboardCoursesPage() {
           </form>
         )}
       </div>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {courses.map((course) => (
