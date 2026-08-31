@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_BUTTON_STYLE_OPTIONS, CUSTOM_FONT_OPTIONS, PAGE_THEMES } from "@/lib/page-themes";
 import { IconBadgeCheck, IconCheck, IconChevronRight, IconExternal, IconLock, IconSparkle } from "@/components/icons";
+import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 import { SITE_URL } from "@/lib/site";
@@ -38,7 +39,7 @@ export default function DashboardDesignPage() {
   const { t } = useLocale();
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
 
-  if (loading || !page) return <PageSkeleton />;
+  if (loading || !page) return (<><HalamanSayaTabs /><PageSkeleton /></>);
 
   const presetMeta = PAGE_THEMES[page.theme as keyof typeof PAGE_THEMES] as (typeof PAGE_THEMES)[keyof typeof PAGE_THEMES] | undefined;
   const themeSwatch = page.theme === "custom" ? page.custom_button_color : (presetMeta?.swatch ?? "#1B4D3E");
@@ -47,6 +48,8 @@ export default function DashboardDesignPage() {
   const fontLabel = CUSTOM_FONT_OPTIONS.find((f) => f.value === page.custom_font)?.label;
 
   return (
+    <>
+    <div className="mx-auto max-w-6xl"><HalamanSayaTabs /></div>
     <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       {/* min-w-0 (pencegahan, bug sejenis di links/page.tsx & products/
           page.tsx -- lihat catatan lengkap di links/page.tsx): max-w-2xl
@@ -216,5 +219,6 @@ export default function DashboardDesignPage() {
 
       <LivePreviewPanel page={page} links={links} products={products} />
     </div>
+    </>
   );
 }

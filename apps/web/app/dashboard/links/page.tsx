@@ -86,6 +86,7 @@ import {
   IconYoutube,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
@@ -1710,11 +1711,11 @@ export default function DashboardLinksPage() {
   if (loading) return <PageSkeleton />;
 
   return (
-    // "max-w-2xl" (kolom konten) & "mx-auto max-w-6xl" (grid) DIHAPUS --
-    // permintaan pengguna: panel pratinjau harus menempel persis di pojok
-    // kanan JENDELA browser (bukan tepi kanan kotak 1152px yang masih
-    // dikelilingi jarak kosong simetris). Lihat catatan lengkap di
-    // DesignPageShell.tsx.
+    // HalamanSayaTabs -- editor bertab (§9), tab "Konten" aktif di halaman
+    // ini. Grid 2-kolom (konten+pratinjau) lama dipertahankan persis di
+    // bawahnya. Lihat catatan lebar/pratinjau di DesignPageShell.tsx.
+    <>
+    <HalamanSayaTabs />
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       {/* min-w-0 (bug dilaporkan pengguna, 18 Agustus 2026, produksi
           jeon.id: "pratinjau itu ga responsif, ketika zoom 100% keatas
@@ -3533,6 +3534,7 @@ export default function DashboardLinksPage() {
         openUrl={activePage ? `${SITE_URL}/${accountUsername}/${activePage.slug}` : undefined}
       />
     </div>
+    </>
   );
 }
 

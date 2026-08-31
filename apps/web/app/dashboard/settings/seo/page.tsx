@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ApiError, MyPage, getMyPage, updateMyPage } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconChevronRight } from "@/components/icons";
+import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import Toggle from "@/components/Toggle";
 import { useLocale } from "@/lib/locale-context";
 
@@ -81,10 +82,15 @@ export default function SettingsSeoPage() {
     }
   }
 
-  if (loading || !page) return <PageSkeleton />;
+  if (loading || !page) return (<><HalamanSayaTabs /><PageSkeleton /></>);
 
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Tab Halaman Saya (§9) -- SEO & Sharing kini salah satu tab editor
+          halaman, bukan lagi sub-settings terpisah. Breadcrumb ke Settings
+          dipertahankan karena rutenya masih /settings/seo (terjangkau dari
+          kedua tempat). */}
+      <HalamanSayaTabs />
       <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple">
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsSeo.breadcrumb")}
