@@ -641,6 +641,16 @@ export default function DashboardLayout({
   return (
     <AuthGuard>
       <ToastProvider>
+        {/* Skip-to-content (DASHBOARD-DESIGN-JEONID.md §22 "landmarks" +
+            keyboard nav): tautan pertama yang bisa difokus keyboard, tak
+            terlihat sampai difokus (sr-only -> not-sr-only saat :focus).
+            Melompati sidebar/topbar langsung ke <main>. */}
+        <a
+          href="#dashboard-main"
+          className="sr-only z-50 rounded-lg bg-jeon-purple px-4 py-2 text-sm font-bold text-white focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
+        >
+          {t("dashboard.skipToContent")}
+        </a>
         <AccountDeletionBanner />
         <OnboardingBanner />
         <TwoFactorPrompt />
@@ -907,7 +917,7 @@ export default function DashboardLayout({
             {/* pb-24 s/d md -- ruang supaya konten tidak tertutup bottom nav
                 mobile (fixed) di bawah; md ke atas bottom nav hilang & padding
                 kembali normal. */}
-            <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6">{children}</main>
+            <main id="dashboard-main" tabIndex={-1} className="flex-1 p-4 pb-24 outline-none sm:p-6 sm:pb-24 md:pb-6">{children}</main>
           </div>
 
           {/* Bottom navigation mobile (§21) -- fixed di bawah, < md saja.

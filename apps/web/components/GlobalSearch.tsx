@@ -68,6 +68,14 @@ export default function GlobalSearch() {
     return () => clearTimeout(id);
   }, [open]);
 
+  // Gulir opsi aktif ke tampilan saat navigasi panah -- DOM sync (scroll),
+  // bukan setState, aman sebagai efek. Menjaga item tersorot selalu terlihat
+  // saat daftar hasil lebih panjang dari area gulir.
+  useEffect(() => {
+    if (!open) return;
+    document.getElementById(`gs-opt-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
+
   function handleQueryChange(value: string) {
     setQuery(value);
     setActiveIndex(0);
@@ -116,14 +124,26 @@ export default function GlobalSearch() {
           onClick={() => setOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("dashboard.components.globalSearch.triggerLabel")}
             className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-jmd bg-app-surface shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-shrink-0 items-center gap-2 border-b border-app-border px-4 py-3">
               <IconSearch className="h-4 w-4 flex-shrink-0 text-app-muted" />
+              {/* Pola ARIA combobox+listbox (§22 "command menu accessible"):
+                  input mengendalikan listbox hasil; aria-activedescendant
+                  menunjuk opsi yang sedang disorot panah supaya screen reader
+                  mengumumkannya tanpa memindah fokus DOM dari input. */}
               <input
                 ref={inputRef}
                 type="text"
+                role="combobox"
+                aria-expanded="true"
+                aria-controls="global-search-listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={results[activeIndex] ? `gs-opt-${activeIndex}` : undefined}
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 onKeyDown={handleInputKeyDown}
@@ -135,7 +155,7 @@ export default function GlobalSearch() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
+            <div id="global-search-listbox" role="listbox" aria-label={t("dashboard.components.globalSearch.triggerLabel")} className="flex-1 overflow-y-auto p-2">
               {results.length === 0 ? (
                 <p className="px-3 py-8 text-center text-xs text-app-muted">
                   {t("dashboard.components.globalSearch.noResults")} &quot;{query}&quot;.
@@ -144,6 +164,9 @@ export default function GlobalSearch() {
                 results.map((item, i) => (
                   <button
                     key={item.href}
+                    id={`gs-opt-${i}`}
+                    role="option"
+                    aria-selected={i === activeIndex}
                     type="button"
                     onClick={() => goTo(item.href)}
                     onMouseEnter={() => setActiveIndex(i)}

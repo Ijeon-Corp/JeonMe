@@ -1690,6 +1690,17 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // persistOrder -- dipakai bersama oleh drag-drop DAN tombol naik/turun
+  // keyboard: hitung ulang position lalu simpan ke server (satu jalur, tidak
+  // ada logika reorder yang terduplikasi/menyimpang antar dua cara).
+  function persistOrder(reordered: typeof links) {
+    const withPositions = reordered.map((l, idx) => ({ ...l, position: idx }));
+    setLinks(withPositions);
+    currentReorderLinks(withPositions.map((l) => ({ id: l.id, position: l.position }))).catch((err) => {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.reorderFailed"));
+    });
+  }
+
   function handleDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
     const from = links.findIndex((l) => l.id === dragId);
@@ -1699,13 +1710,20 @@ export default function DashboardLinksPage() {
     const reordered = [...links];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
-    const withPositions = reordered.map((l, idx) => ({ ...l, position: idx }));
-    setLinks(withPositions);
     setDragId(null);
+    persistOrder(reordered);
+  }
 
-    currentReorderLinks(withPositions.map((l) => ({ id: l.id, position: l.position }))).catch((err) => {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.reorderFailed"));
-    });
+  // Alternatif keyboard untuk drag-reorder (DASHBOARD-DESIGN-JEONID.md §22
+  // "drag alternative move up/down"): geser satu tautan naik/turun satu
+  // langkah lewat tombol yang bisa difokus keyboard, tanpa perlu drag mouse.
+  function moveLinkByOffset(index: number, delta: number) {
+    const to = index + delta;
+    if (to < 0 || to >= links.length) return;
+    const reordered = [...links];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(to, 0, moved);
+    persistOrder(reordered);
   }
 
   if (loading) return <PageSkeleton />;
@@ -2330,7 +2348,7 @@ export default function DashboardLinksPage() {
         )}
 
         <ul className="mt-4 flex flex-col gap-3">
-          {links.map((link) => (
+          {links.map((link, index) => (
             <li
               key={link.id}
               draggable
@@ -2342,7 +2360,33 @@ export default function DashboardLinksPage() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
+                {/* Kontrol urutan -- grip = afordans drag mouse (kartu <li>
+                    draggable), plus dua tombol ▲/▼ yang bisa difokus keyboard
+                    sebagai ALTERNATIF drag (§22 "drag alternative move up/
+                    down"). Nonaktif di batas (item pertama/terakhir). */}
+                <div className="flex flex-shrink-0 flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => moveLinkByOffset(index, -1)}
+                    disabled={index === 0}
+                    aria-label={t("dashboard.pages.links.moveUp")}
+                    title={t("dashboard.pages.links.moveUp")}
+                    className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
+                  >
+                    <IconChevronRight className="h-3.5 w-3.5 -rotate-90" />
+                  </button>
+                  <IconGripVertical className="h-3.5 w-3.5 cursor-grab text-app-muted/70" />
+                  <button
+                    type="button"
+                    onClick={() => moveLinkByOffset(index, 1)}
+                    disabled={index === links.length - 1}
+                    aria-label={t("dashboard.pages.links.moveDown")}
+                    title={t("dashboard.pages.links.moveDown")}
+                    className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
+                  >
+                    <IconChevronRight className="h-3.5 w-3.5 rotate-90" />
+                  </button>
+                </div>
                 {/* Badge ikon -- permintaan langsung pengguna, 14 Agustus 2026:
                     "harusnya semua tipe ini... bisa ubah icon" -- urutan resolusi
                     SAMA PERSIS dgn tautan biasa (custom_icon_url > icon_key galeri

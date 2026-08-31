@@ -88,6 +88,7 @@ export const dictionaries = {
         dangerZone: "Zona Berbahaya",
       },
       dashboardFallback: "Dashboard",
+      skipToContent: "Lompat ke konten utama",
       publicPage: "Lihat halaman publik",
       qrCode: "Kode QR profil",
       copyLink: "Salin tautan halaman publik",
@@ -355,6 +356,8 @@ export const dictionaries = {
           defaultMapsTitle: "Lokasi Kami",
           videoTitleTemplate: "Video {platform}",
           dragToReorderHint: "Seret untuk mengubah urutan. Nonaktifkan tanpa menghapus lewat sakelar.",
+          moveUp: "Pindah ke atas",
+          moveDown: "Pindah ke bawah",
           clickCountSuffix: "klik",
           emptyState: "Belum ada tautan -- klik \"Tambah\" di atas.",
           pageNav: {
@@ -2449,6 +2452,7 @@ export const dictionaries = {
         dangerZone: "Danger Zone",
       },
       dashboardFallback: "Dashboard",
+      skipToContent: "Skip to main content",
       publicPage: "View public page",
       qrCode: "Profile QR code",
       copyLink: "Copy public page link",
@@ -2716,6 +2720,8 @@ export const dictionaries = {
           defaultMapsTitle: "Our Location",
           videoTitleTemplate: "{platform} Video",
           dragToReorderHint: "Drag to reorder. Deactivate without deleting using the toggle.",
+          moveUp: "Move up",
+          moveDown: "Move down",
           clickCountSuffix: "clicks",
           emptyState: "No links yet -- click \"Add\" above.",
           pageNav: {
