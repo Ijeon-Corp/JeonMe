@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   DashboardBundle,
@@ -20,6 +22,9 @@ import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardBundlesPage() {
   const { t } = useLocale();
+  // v2 (SPEC §15.5, Phase 6, flag "marketing"): manager header + baris
+  // HEMAT (harga normal vs bundel vs penghematan pembeli).
+  const marketingV2 = dashRedesignEnabled("marketing");
   const [bundles, setBundles] = useState<DashboardBundle[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,12 +111,21 @@ export default function DashboardBundlesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.bundles.subtitle")}
-      </p>
+      {marketingV2 ? (
+        <PageHeader
+          title={t("dashboard.extraPages.bundles")}
+          description={t("dashboard.pages.bundles.subtitle")}
+          primaryAction={{ label: t("dashboard.pages.bundles.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+        />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">
+          {t("dashboard.pages.bundles.subtitle")}
+        </p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!marketingV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -194,6 +208,7 @@ export default function DashboardBundlesPage() {
           </form>
         )}
       </div>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {bundles.map((b) => (
@@ -206,6 +221,13 @@ export default function DashboardBundlesPage() {
               </div>
             </div>
             <p className="mt-1 text-xs text-app-muted">{b.item_names.join(", ")}</p>
+            {marketingV2 && b.original_total_idr > b.price_idr && (
+              <p className="mt-1.5 inline-flex rounded-full bg-jeon-purple/10 px-2.5 py-1 text-[11px] font-bold text-jeon-purple">
+                {t("dashboard.pages.bundles.savingLabel")
+                  .replace("{amount}", (b.original_total_idr - b.price_idr).toLocaleString("id-ID"))
+                  .replace("{pct}", String(Math.round(((b.original_total_idr - b.price_idr) / b.original_total_idr) * 100)))}
+              </p>
+            )}
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Toggle checked={b.is_active} onChange={() => handleToggleActive(b)} label={t("dashboard.pages.bundles.activateAria").replace("{name}", b.name)} />

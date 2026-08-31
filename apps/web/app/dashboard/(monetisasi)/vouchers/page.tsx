@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   DashboardProduct,
@@ -22,6 +24,12 @@ type Mode = "single" | "bulk";
 
 export default function DashboardVouchersPage() {
   const { t } = useLocale();
+  // v2 (SPEC §15.4, Phase 6, flag "marketing"): manager header + chips
+  // filter kedaluwarsa -- voucher expired tidak lagi memenuhi list utama.
+  // nowTs diambil SAAT FETCH (bukan render; aturan react-hooks impure).
+  const marketingV2 = dashRedesignEnabled("marketing");
+  const [expFilter, setExpFilter] = useState<"all" | "active" | "expired">(marketingV2 ? "active" : "all");
+  const [nowTs, setNowTs] = useState(0);
   const [vouchers, setVouchers] = useState<DashboardVoucher[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +53,7 @@ export default function DashboardVouchersPage() {
   useEffect(() => {
     Promise.all([listVouchers(), listProducts()])
       .then(([v, p]) => {
+        setNowTs(Date.now());
         setVouchers(v);
         setProducts(p);
       })
@@ -129,10 +138,14 @@ export default function DashboardVouchersPage() {
     }
   }
 
+  const isExpired = (v: DashboardVoucher) => Boolean(v.expires_at && nowTs > 0 && new Date(v.expires_at).getTime() < nowTs);
+
   const grouped = useMemo(() => {
     const singles: DashboardVoucher[] = [];
     const batches = new Map<string, DashboardVoucher[]>();
-    for (const v of vouchers) {
+    const source =
+      expFilter === "all" ? vouchers : vouchers.filter((v) => (expFilter === "expired" ? isExpired(v) : !isExpired(v)));
+    for (const v of source) {
       if (v.batch_label) {
         const list = batches.get(v.batch_label) ?? [];
         list.push(v);
@@ -142,7 +155,8 @@ export default function DashboardVouchersPage() {
       }
     }
     return { singles, batches };
-  }, [vouchers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vouchers, expFilter, nowTs]);
 
   function productNames(ids: string[]) {
     if (ids.length === 0) return t("dashboard.pages.vouchers.allProducts");
@@ -159,12 +173,21 @@ export default function DashboardVouchersPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.vouchers.subtitle")}
-      </p>
+      {marketingV2 ? (
+        <PageHeader
+          title={t("dashboard.extraPages.vouchers")}
+          description={t("dashboard.pages.vouchers.subtitle")}
+          primaryAction={{ label: t("dashboard.pages.vouchers.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+        />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">
+          {t("dashboard.pages.vouchers.subtitle")}
+        </p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!marketingV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -358,8 +381,33 @@ export default function DashboardVouchersPage() {
           </form>
         )}
       </div>
+      )}
 
-      <div className="mt-6 flex flex-col gap-3">
+      {marketingV2 && (
+        <div className="mt-6 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("dashboard.pages.vouchers.expiryFilterLabel")}>
+          {([
+            { key: "active" as const, label: t("dashboard.pages.vouchers.filterActive") },
+            { key: "expired" as const, label: t("dashboard.pages.vouchers.filterExpired") },
+            { key: "all" as const, label: t("dashboard.pages.vouchers.filterAll") },
+          ]).map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setExpFilter(f.key)}
+              aria-pressed={expFilter === f.key}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                expFilter === f.key
+                  ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                  : "border-app-border text-app-muted hover:border-jeon-purple/50"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={`${marketingV2 ? "mt-3" : "mt-6"} flex flex-col gap-3`}>
         {grouped.singles.map((v) => (
           <VoucherRow
             key={v.id}

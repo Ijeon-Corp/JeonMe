@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   LoyaltyReward,
@@ -21,6 +23,11 @@ import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardLoyaltyPage() {
   const { t } = useLocale();
+  // v2 (SPEC §15.7, Phase 6, flag "marketing"): tab Pengaturan|Reward +
+  // baris SIMULASI poin ("Belanja Rp100.000 mendapat X poin") supaya
+  // rate abstrak jadi konkret. Data/mutasi tak berubah.
+  const marketingV2 = dashRedesignEnabled("marketing");
+  const [loyTab, setLoyTab] = useState<"settings" | "rewards">("settings");
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +126,39 @@ export default function DashboardLoyaltyPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.loyalty.subtitle")}
-      </p>
+      {marketingV2 ? (
+        <>
+          <PageHeader title={t("dashboard.extraPages.loyalty")} description={t("dashboard.pages.loyalty.subtitle")} />
+          <div className="mb-5 flex items-center gap-1 border-b border-app-border pb-px">
+            {([
+              { key: "settings" as const, label: t("dashboard.pages.loyalty.tabSettings") },
+              { key: "rewards" as const, label: t("dashboard.pages.loyalty.tabRewards") },
+            ]).map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                role="tab"
+                aria-selected={loyTab === tb.key}
+                onClick={() => setLoyTab(tb.key)}
+                className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                  loyTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {tb.label}
+                {loyTab === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">
+          {t("dashboard.pages.loyalty.subtitle")}
+        </p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!marketingV2 || loyTab === "settings") && (
       <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
           <Toggle
@@ -189,8 +223,21 @@ export default function DashboardLoyaltyPage() {
         >
           {savingSettings ? t("dashboard.pages.loyalty.savingSettings") : t("dashboard.pages.loyalty.saveSettings")}
         </button>
+      {marketingV2 && settings.points_rate > 0 && (
+          <p className="mt-4 rounded-xl bg-jeon-purple/5 px-3.5 py-2.5 text-xs font-semibold text-jeon-purple">
+            {t("dashboard.pages.loyalty.simulationText").replace(
+              "{points}",
+              Math.min(
+                settings.point_type === "nominal" ? settings.points_rate * 10 : settings.points_rate,
+                settings.points_limit ?? Number.MAX_SAFE_INTEGER
+              ).toLocaleString("id-ID")
+            )}
+          </p>
+      )}
       </section>
+      )}
 
+      {(!marketingV2 || loyTab === "rewards") && (
       <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.loyalty.catalogHeading")}</h2>
@@ -289,6 +336,7 @@ export default function DashboardLoyaltyPage() {
           {rewards.length === 0 && <EmptyState text={t("dashboard.pages.loyalty.emptyRewards")} />}
         </div>
       </section>
+      )}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ApiError,
   AudienceBroadcast,
@@ -17,6 +18,8 @@ import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 
 function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], { label: string; className: string }> {
   return {
@@ -45,8 +48,36 @@ function toCSV(contacts: AudienceContact[]): string {
   return [header, ...rows].join("\n");
 }
 
+// Split Audiens <-> Broadcast <-> Form Capture (JEONID-DASHBOARD-REDESIGN-
+// SPEC.md §15.2-15.3, Phase 6, flag "marketing"): SATU komponen, section
+// digerbang per-view lewat ?view= (contacts|broadcast|forms) -- nol
+// perpindahan logika/state; sidebar Marketing menautkan Audiens & Broadcast
+// sebagai entri terpisah. Legacy (flag off) = semua section bertumpuk
+// seperti semula. useSearchParams butuh Suspense (dok Next).
+type AudienceView = "contacts" | "broadcast" | "forms";
+const AUDIENCE_VIEW_FROM_URL: Record<string, AudienceView> = {
+  contacts: "contacts",
+  broadcast: "broadcast",
+  forms: "forms",
+};
+
 export default function DashboardAudiencePage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <DashboardAudiencePageInner />
+    </Suspense>
+  );
+}
+
+function DashboardAudiencePageInner() {
   const { t } = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const marketingV2 = dashRedesignEnabled("marketing");
+  const view: AudienceView = AUDIENCE_VIEW_FROM_URL[searchParams.get("view") ?? "contacts"] ?? "contacts";
+  function setView(next: AudienceView) {
+    router.replace(`/dashboard/audience?view=${next}`, { scroll: false });
+  }
   const BROADCAST_STATUS_LABEL = buildBroadcastStatusLabel(t);
   const SOURCE_LABEL = buildSourceLabel(t);
   const [contacts, setContacts] = useState<AudienceContact[]>([]);
@@ -185,11 +216,50 @@ export default function DashboardAudiencePage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.audience.intro")}</p>
+      {marketingV2 ? (
+        <>
+          <PageHeader
+            title={
+              view === "broadcast"
+                ? t("dashboard.nav.marketingBroadcast")
+                : view === "forms"
+                  ? t("dashboard.pages.audience.tabForms")
+                  : t("dashboard.nav.marketingAudience")
+            }
+            description={t("dashboard.pages.audience.intro")}
+          />
+          <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {(
+              [
+                { key: "contacts" as AudienceView, label: t("dashboard.nav.contacts") },
+                { key: "broadcast" as AudienceView, label: t("dashboard.nav.marketingBroadcast") },
+                { key: "forms" as AudienceView, label: t("dashboard.pages.audience.tabForms") },
+              ]
+            ).map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                role="tab"
+                aria-selected={view === tb.key}
+                onClick={() => setView(tb.key)}
+                className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                  view === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {tb.label}
+                {view === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.audience.intro")}</p>
+      )}
 
       {/* Ringkasan Audiens (§11.1) -- kartu ringkas dari data kontak yang
           sudah dimuat, tampil sebelum form supaya angka kunci terbaca
           lebih dulu (pola sama /balance & Ringkasan). */}
+      {(!marketingV2 || view === "contacts") && (
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           tone="brand"
@@ -221,10 +291,12 @@ export default function DashboardAudiencePage() {
           sub={`${pctOf(whatsappCount)}% ${t("dashboard.pages.audience.overviewOfTotal")}`}
         />
       </section>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-      {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
+      {(!marketingV2 || view === "forms") && saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
 
+      {(!marketingV2 || view === "forms") && (
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
@@ -265,6 +337,7 @@ export default function DashboardAudiencePage() {
           {saving ? t("dashboard.pages.audience.saving") : t("dashboard.pages.audience.save")}
         </button>
       </form>
+      )}
 
       {/* Broadcast Email (Gap #3 benchmark kompetitif, 9 Agustus 2026):
           sebelumnya Audiens cuma capture form + ekspor CSV, tidak ada
@@ -273,6 +346,7 @@ export default function DashboardAudiencePage() {
           worker (lihat CreateBroadcast/HandleAudienceBroadcast di
           backend), form ini cuma menunggu konfirmasi "diantre", bukan
           menunggu semua email benar-benar terkirim satu-satu. */}
+      {(!marketingV2 || view === "broadcast") && (
       <section className="glass mt-8 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pop-blue-tint text-pop-blue">
@@ -338,7 +412,10 @@ export default function DashboardAudiencePage() {
           </div>
         )}
       </section>
+      )}
 
+      {(!marketingV2 || view === "contacts") && (
+      <>
       <div className="mt-8 flex items-center justify-between">
         <h2 className="font-display text-lg font-bold text-app-ink">
           {t("dashboard.pages.audience.managerHeading")} ({contacts.length})
@@ -388,6 +465,8 @@ export default function DashboardAudiencePage() {
           <EmptyState bordered={false} text={t("dashboard.pages.audience.emptyContacts")} />
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

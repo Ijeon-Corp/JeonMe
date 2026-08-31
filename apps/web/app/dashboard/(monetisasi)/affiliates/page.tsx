@@ -3,6 +3,8 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
   DashboardProduct,
@@ -21,6 +23,11 @@ import { confirmDelete } from "@/lib/confirm";
 
 export default function DashboardAffiliatesPage() {
   const { t } = useLocale();
+  // v2 (SPEC §15.6, Phase 6, flag "marketing"): dua perspektif dipisah TAB
+  // (Program Saya | Afiliasi yang Saya Ikuti) menggantikan dua daftar
+  // panjang bertumpuk tanpa hierarchy. Data/mutasi tak berubah.
+  const marketingV2 = dashRedesignEnabled("marketing");
+  const [affTab, setAffTab] = useState<"program" | "joined">("program");
   const [affiliates, setAffiliates] = useState<MyAffiliate[]>([]);
   const [programs, setPrograms] = useState<AffiliateProgram[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -108,12 +115,44 @@ export default function DashboardAffiliatesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.affiliates.subtitle")}
-      </p>
+      {marketingV2 ? (
+        <>
+          <PageHeader
+            title={t("dashboard.extraPages.affiliates")}
+            description={t("dashboard.pages.affiliates.subtitle")}
+            primaryAction={{ label: t("dashboard.pages.affiliates.inviteButton"), onClick: () => { setAffTab("program"); setAdding(true); }, icon: <IconPlus className="h-4 w-4" /> }}
+          />
+          <div className="mb-5 flex items-center gap-1 border-b border-app-border pb-px">
+            {([
+              { key: "program" as const, label: t("dashboard.pages.affiliates.tabProgram") },
+              { key: "joined" as const, label: t("dashboard.pages.affiliates.myAffiliationsHeading") },
+            ]).map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                role="tab"
+                aria-selected={affTab === tb.key}
+                onClick={() => setAffTab(tb.key)}
+                className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                  affTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {tb.label}
+                {affTab === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">
+          {t("dashboard.pages.affiliates.subtitle")}
+        </p>
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+      {(!marketingV2 || affTab === "program") && (
+      <>
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
           <button
@@ -240,9 +279,17 @@ export default function DashboardAffiliatesPage() {
           <EmptyState text={t("dashboard.pages.affiliates.emptyAffiliates")} />
         )}
       </div>
+      </>
+      )}
 
-      <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.myAffiliationsSubtitle")}</p>
+      {(!marketingV2 || affTab === "joined") && (
+      <>
+      {!marketingV2 && (
+        <>
+          <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
+          <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.myAffiliationsSubtitle")}</p>
+        </>
+      )}
 
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
@@ -272,6 +319,8 @@ export default function DashboardAffiliatesPage() {
 
         {programs.length === 0 && <EmptyState text={t("dashboard.pages.affiliates.emptyPrograms")} />}
       </div>
+      </>
+      )}
     </div>
   );
 }
