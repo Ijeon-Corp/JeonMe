@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, login, setToken, verifyLogin2FA } from "@/lib/api-client";
+import { ApiError, consumeSessionExpiredFlag, login, setToken, verifyLogin2FA } from "@/lib/api-client";
 import { redirectAfterAuth } from "@/lib/auth-redirect";
 import AuthShell from "@/components/AuthShell";
 import GuestGuard from "@/components/GuestGuard";
@@ -12,14 +12,15 @@ import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 function LoginPageInner() {
   const router = useRouter();
-  // sessionExpired -- ditandai api-client saat token ternyata sudah tidak
-  // berlaku (?session=expired). Dibaca dari window.location, BUKAN
-  // useSearchParams(), supaya halaman ini tidak perlu dibungkus <Suspense>
-  // hanya demi satu pesan. Dibaca di effect supaya render pertama klien
-  // tetap identik dengan HTML server.
+  // sessionExpired -- penanda dari api-client saat token ternyata sudah
+  // tidak berlaku. Sengaja lewat sessionStorage, bukan query string: begitu
+  // token dibersihkan AuthGuard bisa ikut me-replace ke /login polos dan
+  // menang balapan navigasi sehingga parameter URL-nya hilang (terbukti
+  // saat uji staging). Dibaca di effect supaya render pertama klien tetap
+  // identik dengan HTML server, dan dikonsumsi sekali saja.
   const [sessionExpired, setSessionExpired] = useState(false);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("session") === "expired") {
+    if (consumeSessionExpiredFlag()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSessionExpired(true);
     }

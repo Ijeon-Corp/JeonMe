@@ -159,10 +159,37 @@ function handleUnauthorized(path: string, message: unknown): void {
   if (sessionExpiredHandled) return;
   sessionExpiredHandled = true;
   clearToken();
+  // Alasan "sesi berakhir" disimpan di sessionStorage, BUKAN query string.
+  // Alasannya: begitu token dibersihkan, AuthGuard bisa ikut memicu
+  // router.replace("/login") sendiri dan MENANG balapan navigasi -- URL
+  // berparameter kalah lalu pesannya hilang (terbukti saat uji staging).
+  // Penanda ini bertahan lintas jalur redirect mana pun, dan dikonsumsi
+  // sekali oleh halaman login.
+  try {
+    window.sessionStorage.setItem(SESSION_EXPIRED_FLAG, "1");
+  } catch {
+    // sessionStorage bisa tidak tersedia (mode privat) -- pesan hilang,
+    // tapi pemulihan sesi tetap jalan.
+  }
   // Halaman auth tidak perlu diarahkan lagi (mencegah loop navigasi).
   const p = window.location.pathname;
   if (p === "/login" || p === "/register") return;
-  window.location.replace("/login?session=expired");
+  window.location.replace("/login");
+}
+
+export const SESSION_EXPIRED_FLAG = "jeon_session_expired";
+
+// consumeSessionExpiredFlag -- dipakai halaman login: true HANYA sekali,
+// supaya pesan tidak muncul lagi saat pengguna me-refresh halaman login.
+export function consumeSessionExpiredFlag(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.sessionStorage.getItem(SESSION_EXPIRED_FLAG) !== "1") return false;
+    window.sessionStorage.removeItem(SESSION_EXPIRED_FLAG);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ---------- Halaman publik ----------
