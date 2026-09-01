@@ -21,6 +21,8 @@ import { IconCheck, IconClock, IconTrash, IconUsers } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 
 function buildStatusLabel(t: (key: string) => string): Record<DashboardCollaborator["status"], string> {
   return {
@@ -69,6 +71,11 @@ function formatAuditEntry(entry: TeamAuditLogEntry, t: (key: string) => string, 
 export default function DashboardTeamPage() {
   const { showToast } = useToast();
   const { t } = useLocale();
+  // v2 (SPEC §19, Phase 7, flag "settings"): tab Anggota|Undangan|
+  // Aktivitas + deskripsi capability di bawah pilihan peran. Data existing
+  // (listTeamAuditLog dst) -- bukan menunggu roadmap leaf.
+  const settingsV2 = dashRedesignEnabled("settings");
+  const [teamTab, setTeamTab] = useState<"members" | "invites" | "activity">("members");
   const STATUS_LABEL = buildStatusLabel(t);
   const ROLE_LABEL = buildRoleLabel(t);
 
@@ -166,11 +173,38 @@ export default function DashboardTeamPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.team.intro")}</p>
+      {settingsV2 ? (
+        <>
+          <PageHeader title={t("dashboard.nav.membersRoles")} description={t("dashboard.pages.team.intro")} />
+          <div className="mb-5 flex items-center gap-1 border-b border-app-border pb-px">
+            {([
+              { key: "members" as const, label: t("dashboard.pages.team.tabMembers") },
+              { key: "invites" as const, label: t("dashboard.pages.team.tabInvites") },
+              { key: "activity" as const, label: t("dashboard.pages.team.tabActivity") },
+            ]).map((tb) => (
+              <button
+                key={tb.key}
+                type="button"
+                role="tab"
+                aria-selected={teamTab === tb.key}
+                onClick={() => setTeamTab(tb.key)}
+                className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                  teamTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {tb.label}
+                {teamTab === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.team.intro")}</p>
+      )}
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      {invitesForMe.length > 0 && (
+      {(!settingsV2 || teamTab === "invites") && invitesForMe.length > 0 && (
         <section className="mt-4 rounded-jlg border border-jeon-purple/30 bg-jeon-purple/5 p-5">
           <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
@@ -195,6 +229,7 @@ export default function DashboardTeamPage() {
         </section>
       )}
 
+      {(!settingsV2 || teamTab === "invites") && (
       <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.inviteHeading")}</h2>
         <form onSubmit={handleInvite} className="mt-3 flex flex-col gap-3">
@@ -217,6 +252,11 @@ export default function DashboardTeamPage() {
               </option>
             ))}
           </select>
+          {settingsV2 && (
+            <p className="rounded-lg bg-jeon-purple/5 px-3 py-2 text-[11px] text-app-muted">
+              {t(`dashboard.pages.team.roleDesc.${role === "content_admin" ? "contentAdmin" : role === "sales_admin" ? "salesAdmin" : "fullAccess"}`)}
+            </p>
+          )}
           <button
             type="submit"
             disabled={inviting}
@@ -226,7 +266,9 @@ export default function DashboardTeamPage() {
           </button>
         </form>
       </section>
+      )}
 
+      {(!settingsV2 || teamTab === "members") && (
       <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.myCollaboratorsHeading")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
@@ -270,7 +312,9 @@ export default function DashboardTeamPage() {
           {collaborators.length === 0 && <EmptyState as="li" text={t("dashboard.pages.team.emptyCollaborators")} />}
         </ul>
       </section>
+      )}
 
+      {(!settingsV2 || teamTab === "activity") && (
       <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         <h2 className="flex items-center gap-1.5 font-display text-sm font-bold text-app-ink">
           <IconClock className="h-4 w-4 text-app-muted" />
@@ -287,6 +331,7 @@ export default function DashboardTeamPage() {
           {auditLog.length === 0 && <EmptyState as="li" text={t("dashboard.pages.team.emptyActivityLog")} />}
         </ul>
       </section>
+      )}
     </div>
   );
 }

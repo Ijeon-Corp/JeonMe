@@ -9,17 +9,22 @@ import {
   FeeBreakdown,
   Payout,
   PayoutMethod,
+  KycStatus,
   createPayout,
   getBalance,
   getFeeBreakdown,
+  getKycStatus,
   listPayoutMethods,
   listPayouts,
 } from "@/lib/api-client";
-import { IconBadgeCheck, IconShield, IconWallet } from "@/components/icons";
+import { IconBadgeCheck, IconCheck, IconClose, IconShield, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import StatCard from "@/components/StatCard";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
+import StatusBadge from "@/components/dashboard/data/StatusBadge";
 
 function buildStatusLabel(t: (key: string) => string): Record<Payout["status"], string> {
   return {
@@ -42,6 +47,13 @@ export default function DashboardBalancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // v2 (SPEC §17.1, Phase 7, flag "settings"): form payout pindah ke
+  // DIALOG terfokus + quick amounts (min/50%/maks) + checklist kesiapan
+  // (KYC/metode terverifikasi/saldo min) + rincian biaya collapsible.
+  // createPayout & validasi backend TIDAK berubah.
+  const settingsV2 = dashRedesignEnabled("settings");
+  const [payoutOpen, setPayoutOpen] = useState(false);
+  const [kyc, setKyc] = useState<KycStatus | null>(null);
   const [amount, setAmount] = useState("");
   const [payoutMethodId, setPayoutMethodId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +68,11 @@ export default function DashboardBalancePage() {
   }
 
   useEffect(() => {
+    getKycStatus()
+      .then(setKyc)
+      .catch(() => {
+        // Checklist kesiapan cuma bantuan -- gagal muat KYC didiamkan.
+      });
     reload()
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.balance.loadError")))
       .finally(() => setLoading(false));
@@ -87,6 +104,7 @@ export default function DashboardBalancePage() {
     try {
       await createPayout({ amount_idr: amountIDR, payout_method_id: selectedMethodId });
       setAmount("");
+      setPayoutOpen(false);
       await reload();
       showToast(t("dashboard.pages.balance.payoutRequestedToast"));
     } catch (err) {
@@ -100,6 +118,17 @@ export default function DashboardBalancePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {settingsV2 && (
+        <PageHeader
+          title={t("dashboard.nav.balance")}
+          primaryAction={{
+            label: t("dashboard.pages.balance.withdrawCta"),
+            onClick: () => setPayoutOpen(true),
+            disabled: verifiedMethods.length === 0 || (balance?.available_idr ?? 0) < 50000,
+            icon: <IconWallet className="h-4 w-4" />,
+          }}
+        />
+      )}
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -143,6 +172,24 @@ export default function DashboardBalancePage() {
             </div>
           </div>
 
+          {settingsV2 ? (
+            <details className="mt-4 group">
+              <summary className="cursor-pointer list-none">
+                <span className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</span>
+                <span className="ml-2 text-xs text-app-muted">{t("dashboard.pages.balance.feeToggleHint")}</span>
+              </summary>
+              <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
+              <div className="mt-3 flex flex-col gap-1.5">
+                {feeBreakdown.reference.map((r) => (
+                  <div key={r.method} className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-xs">
+                    <span className="font-semibold text-app-ink">{r.label}</span>
+                    <span className="text-app-muted">{r.fee_description}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <>
           <h2 className="mt-5 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</h2>
           <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
 
@@ -154,9 +201,43 @@ export default function DashboardBalancePage() {
               </div>
             ))}
           </div>
+            </>
+          )}
         </section>
       )}
 
+      {settingsV2 && (
+        <section className="glass mt-6 rounded-jlg p-5 shadow-card">
+          <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.readinessHeading")}</h2>
+          <ul className="mt-3 flex flex-col gap-2 text-xs">
+            {[
+              { ok: kyc?.status === "verified", label: t("dashboard.pages.balance.readinessKyc"), href: "/dashboard/kyc" },
+              { ok: verifiedMethods.length > 0, label: t("dashboard.pages.balance.readinessMethod"), href: "/dashboard/settings/payment" },
+              { ok: (balance?.available_idr ?? 0) >= 50000, label: t("dashboard.pages.balance.readinessMinBalance") },
+            ].map((item) => (
+              <li key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2">
+                <span className="flex items-center gap-2 font-semibold text-app-ink">
+                  <span
+                    className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
+                      item.ok ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
+                    }`}
+                  >
+                    {item.ok ? <IconCheck className="h-3 w-3" /> : <IconClose className="h-3 w-3" />}
+                  </span>
+                  {item.label}
+                </span>
+                {!item.ok && item.href && (
+                  <Link href={item.href} className="flex-shrink-0 font-bold text-jeon-purple hover:underline">
+                    {t("dashboard.pages.balance.readinessFixLink")}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!settingsV2 && (
       <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
         <p className="mt-1 text-xs text-app-muted">
@@ -207,6 +288,7 @@ export default function DashboardBalancePage() {
           </form>
         )}
       </section>
+      )}
 
       <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.historyHeading")}</h2>
@@ -217,22 +299,84 @@ export default function DashboardBalancePage() {
                 <p className="text-sm font-semibold text-app-ink">Rp {p.amount_idr.toLocaleString("id-ID")}</p>
                 <p className="text-xs text-app-muted">{p.destination_account}</p>
               </div>
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  p.status === "completed"
-                    ? "bg-jeon-purple/10 text-jeon-purple"
-                    : p.status === "failed"
-                      ? "bg-red-50 text-red-600"
-                      : "bg-gray-100 text-app-muted"
-                }`}
-              >
-                {STATUS_LABEL[p.status]}
-              </span>
+              <StatusBadge status={p.status} label={STATUS_LABEL[p.status]} />
             </li>
           ))}
           {payouts.length === 0 && <EmptyState as="li" text={t("dashboard.pages.balance.emptyHistory")} />}
         </ul>
       </section>
+
+      {/* Dialog Tarik Dana (§17.1) -- form payout terfokus + quick amounts.
+          Validasi (min 50k, metode terverifikasi) & createPayout identik. */}
+      {settingsV2 && payoutOpen && balance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setPayoutOpen(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("dashboard.pages.balance.requestPayoutHeading")}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-jlg bg-app-surface p-5 shadow-hero"
+          >
+            <h2 className="font-display text-base font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
+            <p className="mt-1 text-xs text-app-muted">
+              {t("dashboard.pages.balance.dialogAvailable").replace("{amount}", balance.available_idr.toLocaleString("id-ID"))}
+            </p>
+            <form onSubmit={handleRequestPayout} className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: t("dashboard.pages.balance.quickMin"), value: 50000 },
+                  { label: "50%", value: Math.floor(balance.available_idr / 2) },
+                  { label: t("dashboard.pages.balance.quickMax"), value: balance.available_idr },
+                ].map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => setAmount(String(Math.max(q.value, 0)))}
+                    className="rounded-full border border-app-border px-3 py-1.5 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={50000}
+                placeholder={t("dashboard.pages.balance.amountPlaceholder")}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+              />
+              <select
+                value={selectedMethodId}
+                onChange={(e) => setPayoutMethodId(e.target.value)}
+                className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+              >
+                {verifiedMethods.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.provider} {m.account_number_masked} {m.is_primary ? t("dashboard.pages.balance.primaryLabel") : ""}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayoutOpen(false)}
+                  className="flex-1 rounded-lg border border-app-border py-2.5 text-sm font-semibold text-app-ink"
+                >
+                  {t("dashboard.pages.balance.dialogCancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="btn-primary flex-1 rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {submitting ? t("dashboard.pages.balance.processingButton") : t("dashboard.pages.balance.submitButton")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { ApiError, getAnalyticsSettings, upsertAnalyticsSettings } from "@/lib/a
 import Toggle from "@/components/Toggle";
 import { IconLock } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 
 // DashboardAnalyticsPage -- Modul Analitik Pihak Ketiga (permintaan
 // langsung pengguna, 12 Agustus 2026, referensi tangkapan layar panel
@@ -22,6 +24,10 @@ import { useLocale } from "@/lib/locale-context";
 // baru benar-benar aktif setelah Premium, BUKAN memblokir form.
 export default function DashboardAnalyticsPage() {
   const { t } = useLocale();
+  // v2 (SPEC §18.2, Phase 7, flag "settings"): tiap integrasi jadi kartu
+  // terpisah (Meta Pixel & CAPI / Google Analytics / UTM) dalam SATU form+
+  // simpan; token tetap tidak pernah dikirim balik.
+  const settingsV2 = dashRedesignEnabled("settings");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +89,13 @@ export default function DashboardAnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="flex items-center gap-2">
-        <p className="text-sm text-app-muted">{t("dashboard.pages.analytics.intro")}</p>
-      </div>
+      {settingsV2 ? (
+        <PageHeader title={t("dashboard.nav.analyticsPixels")} description={t("dashboard.pages.analytics.intro")} />
+      ) : (
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-app-muted">{t("dashboard.pages.analytics.intro")}</p>
+        </div>
+      )}
 
       {!isPremium && (
         <p className="mt-3 flex items-start gap-2 rounded-lg bg-jeon-purple/10 px-3 py-2.5 text-xs font-semibold text-jeon-purple">
@@ -97,9 +107,9 @@ export default function DashboardAnalyticsPage() {
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.analytics.saved")}</p>}
 
-      <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card">
-        <div>
-          <p className="text-sm font-bold text-app-ink">Facebook</p>
+      <form onSubmit={handleSave} className={settingsV2 ? "mt-6 flex flex-col gap-4" : "glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card"}>
+        <div className={settingsV2 ? "glass rounded-jlg p-5 shadow-card" : ""}>
+          <p className="text-sm font-bold text-app-ink">{settingsV2 ? "Meta Pixel & Conversions API" : "Facebook"}</p>
 
           <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Pixel ID</label>
           <input
@@ -143,8 +153,8 @@ export default function DashboardAnalyticsPage() {
           {clearToken && <p className="mt-1 text-[11px] font-semibold text-red-600">{t("dashboard.pages.analytics.tokenWillBeCleared")}</p>}
         </div>
 
-        <div>
-          <p className="text-sm font-bold text-app-ink">Google</p>
+        <div className={settingsV2 ? "glass rounded-jlg p-5 shadow-card" : ""}>
+          <p className="text-sm font-bold text-app-ink">{settingsV2 ? "Google Analytics" : "Google"}</p>
           <label className="mb-1 mt-3 block text-xs font-semibold text-app-ink">Google Measurement ID</label>
           <input
             type="text"
@@ -155,7 +165,7 @@ export default function DashboardAnalyticsPage() {
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-app-border pt-4">
+        <div className={settingsV2 ? "glass flex items-center justify-between rounded-jlg p-5 shadow-card" : "flex items-center justify-between border-t border-app-border pt-4"}>
           <div>
             <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.analytics.utmTitle")}</p>
             <p className="mt-0.5 text-xs text-app-muted">{t("dashboard.pages.analytics.utmDescription")}</p>

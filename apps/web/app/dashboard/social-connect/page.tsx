@@ -6,6 +6,9 @@ import { buildInstagramAuthUrl, buildTikTokAuthUrl } from "@/lib/social-oauth";
 import { IconCheck, IconInstagram, IconTiktok, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import PageSkeleton from "@/components/Skeleton";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 
 // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus 2026:
 // "saya mau jeonme ini bisa connect ke akun kita contoh nya instagram
@@ -135,7 +138,8 @@ export default function SocialConnectPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-app-muted">{t("dashboard.pages.socialConnect.loading")}</p>;
+    // v2 (§18.3): skeleton konsisten dgn pola global, bukan teks polos.
+    return dashRedesignEnabled("settings") ? <PageSkeleton /> : <p className="text-sm text-app-muted">{t("dashboard.pages.socialConnect.loading")}</p>;
   }
 
   const instagramConnection = connections.find((c) => c.platform === "instagram");
@@ -143,7 +147,11 @@ export default function SocialConnectPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.socialConnect.intro")}</p>
+      {dashRedesignEnabled("settings") ? (
+        <PageHeader title={t("dashboard.nav.socialConnect")} description={t("dashboard.pages.socialConnect.intro")} />
+      ) : (
+        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.socialConnect.intro")}</p>
+      )}
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
