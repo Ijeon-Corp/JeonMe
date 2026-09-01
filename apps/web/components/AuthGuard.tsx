@@ -31,9 +31,33 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (hasToken !== true) {
+    // Kerangka BERBENTUK SHELL, bukan layar kosong (permintaan langsung
+    // pengguna, 1 September 2026: "ketika di klik jangan ada seperti
+    // flash"). Akar masalahnya: seluruh dashboard dirender di klien, jadi
+    // HTML server halaman /dashboard cuma berisi layar "Memeriksa sesi"
+    // yang di TENGAH -- begitu hydration selesai layarnya berganti total
+    // jadi sidebar+topbar+konten. Pergantian dari layar kosong ke layout
+    // penuh itulah yang terlihat sebagai "flash" setiap kali terjadi
+    // reload keras (mis. klik menu sebelum hydration selesai).
+    // Placeholder ini meniru geometri shell (sidebar gelap + topbar +
+    // area konten) sehingga transisinya nyaris tak terlihat. Murni visual:
+    // logika token/redirect TIDAK berubah, dan teks aslinya tetap ada
+    // untuk screen reader.
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-app-muted">
-        {t("dashboard.components.authGuard.checkingSession")}
+      <div className="app-shell flex min-h-screen" aria-busy="true">
+        <span role="status" className="sr-only">
+          {t("dashboard.components.authGuard.checkingSession")}
+        </span>
+        {/* Sidebar: rail 72px di md..xl, penuh di >=xl -- sama seperti shell */}
+        <div className="hidden w-[72px] flex-shrink-0 bg-jeon-sidebar md:block xl:w-[var(--dashboard-sidebar)]" aria-hidden="true" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="nav-glass h-[56px] flex-shrink-0 md:h-[72px]" aria-hidden="true" />
+          <div className="flex-1 p-4 sm:p-6" aria-hidden="true">
+            <div className="h-6 w-48 animate-pulse rounded-lg bg-app-surface-2" />
+            <div className="mt-4 h-24 w-full animate-pulse rounded-jlg bg-app-surface-2" />
+            <div className="mt-3 h-24 w-full animate-pulse rounded-jlg bg-app-surface-2" />
+          </div>
+        </div>
       </div>
     );
   }

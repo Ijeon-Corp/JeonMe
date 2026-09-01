@@ -363,17 +363,15 @@ export default function DashboardLayout({
       if (raw) {
         const persisted: unknown = JSON.parse(raw);
         if (Array.isArray(persisted)) {
+          // GABUNG grup dari localStorage dengan grup halaman aktif.
+          // SEBELUMNYA v2 melakukan `if (prev.size > 0) return prev` --
+          // artinya begitu URL cocok satu grup, grup yang SENGAJA dibuka
+          // pengguna dibuang. Efeknya: setiap reload keras (mis. klik
+          // sebelum hydration selesai) menu yang sedang terbuka menutup --
+          // keluhan langsung pengguna 1 September 2026. Merge mengembalikan
+          // perilaku tahan-reload seperti sebelum Phase 2.
           // eslint-disable-next-line react-hooks/set-state-in-effect
-          setExpandedGroups((prev) => {
-            // v2 (§6.4 satu-accordion): pertahankan maksimal SATU grup --
-            // prioritas grup berisi halaman aktif (sudah di prev dari
-            // initializer), fallback entri persisted pertama.
-            if (shellV2) {
-              if (prev.size > 0) return prev;
-              return new Set(persisted.slice(0, 1));
-            }
-            return new Set([...prev, ...persisted]);
-          });
+          setExpandedGroups((prev) => new Set([...prev, ...persisted]));
         }
       }
     } catch {
@@ -384,19 +382,15 @@ export default function DashboardLayout({
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
-      // Shell v2 (§6.4): hanya SATU accordion terbuka pada satu waktu --
-      // membuka grup menutup grup lain. Legacy: multi-open seperti semula.
-      // Key localStorage SAMA (kompat mundur, aturan Phase 2 §25).
-      const next = shellV2
-        ? prev.has(label)
-          ? new Set<string>()
-          : new Set([label])
-        : (() => {
-            const n = new Set(prev);
-            if (n.has(label)) n.delete(label);
-            else n.add(label);
-            return n;
-          })();
+      // MULTI-OPEN (permintaan langsung pengguna, 1 September 2026: "menu
+      // yang sedang terbuka jangan tertutup"). SEBELUMNYA shell v2 memakai
+      // aturan satu-accordion SPEC §6.4 -- membuka grup lain menutup grup
+      // yang sedang dibuka, dan itu persis yang dikeluhkan. Instruksi
+      // pengguna menang atas spec; perilaku kembali seperti legacy: tiap
+      // grup buka/tutup independen. Key localStorage tetap sama.
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
       try {
         localStorage.setItem(EXPANDED_GROUPS_STORAGE_KEY, JSON.stringify(Array.from(next)));
       } catch {
