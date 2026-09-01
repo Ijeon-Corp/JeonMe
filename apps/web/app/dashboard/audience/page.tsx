@@ -20,13 +20,16 @@ import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/ico
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
+import StatusBadge from "@/components/dashboard/data/StatusBadge";
 
-function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], { label: string; className: string }> {
+// Label status broadcast (i18n); WARNA kini terpusat di StatusBadge
+// (Phase 8 cleanup) -- queued/sending/sent/failed sudah ada di peta pusat.
+function buildBroadcastStatusLabel(t: (key: string) => string): Record<AudienceBroadcast["status"], string> {
   return {
-    queued: { label: t("dashboard.pages.audience.status.queued"), className: "bg-pop-yellow-tint text-jeon-warning" },
-    sending: { label: t("dashboard.pages.audience.status.sending"), className: "bg-pop-blue-tint text-pop-blue" },
-    sent: { label: t("dashboard.pages.audience.status.sent"), className: "bg-jeon-purple/10 text-jeon-purple" },
-    failed: { label: t("dashboard.pages.audience.status.failed"), className: "bg-red-50 text-red-600" },
+    queued: t("dashboard.pages.audience.status.queued"),
+    sending: t("dashboard.pages.audience.status.sending"),
+    sent: t("dashboard.pages.audience.status.sent"),
+    failed: t("dashboard.pages.audience.status.failed"),
   };
 }
 
@@ -404,9 +407,7 @@ function DashboardAudiencePageInner() {
                     {b.sent_count}/{b.recipient_count} {t("dashboard.pages.audience.sentSuffix")} &middot; {new Date(b.created_at).toLocaleString("id-ID")}
                   </p>
                 </div>
-                <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${BROADCAST_STATUS_LABEL[b.status].className}`}>
-                  {BROADCAST_STATUS_LABEL[b.status].label}
-                </span>
+                <StatusBadge status={b.status} label={BROADCAST_STATUS_LABEL[b.status]} className="text-[10px]" />
               </div>
             ))}
           </div>

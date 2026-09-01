@@ -59,7 +59,7 @@ export default function DashboardImportPage() {
   useEffect(() => {
     getMyPage()
       .then(setMyPage)
-      .catch((err) => setPageLoadError(err instanceof ApiError ? err.message : "Gagal memuat halaman"));
+      .catch((err) => setPageLoadError(err instanceof ApiError ? err.message : t("dashboard.pages.import.pageLoadError")));
   }, []);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function DashboardImportPage() {
   function handleScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     if (file && file.size > maxScreenshotBytes) {
-      setAnalyzeError(`Ukuran screenshot melebihi 8MB`);
+      setAnalyzeError(t("dashboard.pages.import.screenshotTooLarge"));
       return;
     }
     setAnalyzeError(null);
@@ -94,7 +94,7 @@ export default function DashboardImportPage() {
       setExistingLinks(links);
       setStep("preview");
     } catch (err) {
-      setAnalyzeError(err instanceof ApiError ? err.message : "Gagal menganalisis, coba lagi.");
+      setAnalyzeError(err instanceof ApiError ? err.message : t("dashboard.pages.import.analyzeError"));
     } finally {
       setAnalyzing(false);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/api-client";
+import { useLocale } from "@/lib/locale-context";
 
 // Proteksi sesi dashboard (REQ-F-106 terkait): redirect ke /login kalau tidak
 // ada token tersimpan. Pengecekan hanya di klien (token disimpan di
@@ -10,6 +11,7 @@ import { getToken } from "@/lib/api-client";
 // perlu migrasi ke cookie httpOnly nanti.
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { t } = useLocale();
   // Mulai dari null (bukan baca localStorage langsung) supaya render pertama
   // di client SAMA PERSIS dengan HTML dari server -- localStorage tidak ada
   // saat SSR, jadi membacanya langsung di sini akan memicu hydration mismatch.
@@ -31,7 +33,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   if (hasToken !== true) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-app-muted">
-        Memeriksa sesi...
+        {t("dashboard.components.authGuard.checkingSession")}
       </div>
     );
   }

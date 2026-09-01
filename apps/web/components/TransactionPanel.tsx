@@ -6,6 +6,8 @@ import { ApiError, OrderDetail, OrderListItem, getOrderDetail, listOrders, refun
 import { IconClose, IconInbox } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import StatusBadge from "@/components/dashboard/data/StatusBadge";
+import { formatIDR, formatDateTime } from "@/lib/format";
 
 // buildStatusLabel -- status pesanan dipakai di 3 tempat (badge tabel,
 // opsi filter dropdown, detail modal), dibangun lewat t() supaya ikut
@@ -21,21 +23,9 @@ function buildStatusLabels(t: (key: string) => string): Record<string, string> {
   };
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-600",
-  paid: "bg-jeon-purple/10 text-jeon-purple",
-  expired: "bg-gray-100 text-app-muted",
-  failed: "bg-red-50 text-red-600",
-  refunded: "bg-blue-50 text-blue-600",
-};
-
-function formatIDR(n: number): string {
-  return `Rp ${n.toLocaleString("id-ID")}`;
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
-}
+// Warna status kini TERPUSAT di StatusBadge (Phase 8 cleanup §25 --
+// menggantikan peta kelas hard-coded per-file); label tetap dari
+// buildStatusLabels (i18n). Helper format pindah ke lib/format.ts (§24.4).
 
 // Modul Toko (tab Transaction): daftar SEMUA transaksi kreator dengan
 // filter status & pencarian, klik baris membuka detail/invoice + tombol
@@ -148,9 +138,7 @@ export default function TransactionPanel() {
                   <td className="px-4 py-3 text-app-ink">{o.buyer_email}</td>
                   <td className="px-4 py-3 text-app-ink">{formatIDR(o.amount_idr)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_BADGE[o.status] ?? "bg-gray-100 text-app-muted"}`}>
-                      {STATUS_LABEL[o.status] ?? o.status}
-                    </span>
+                    <StatusBadge status={o.status} label={STATUS_LABEL[o.status] ?? o.status} className="text-[10px]" />
                   </td>
                   <td className="px-4 py-3 text-app-muted">{formatDateTime(o.created_at)}</td>
                 </tr>

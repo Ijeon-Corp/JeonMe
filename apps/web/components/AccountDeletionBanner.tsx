@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAccountDeletionStatus } from "@/lib/api-client";
 import { IconTrash } from "@/components/icons";
+import { useLocale } from "@/lib/locale-context";
 
 // Modul Settings §6: akun yang sedang menunggu penghapusan (14 hari) tetap
 // bisa login (lihat catatan AuthHandler.Login -- SENGAJA tidak diblokir,
@@ -11,6 +12,7 @@ import { IconTrash } from "@/components/icons";
 // mengingatkan di SETIAP halaman dashboard, bukan cuma di Zona Berbahaya,
 // supaya jadwal hapus tidak terlewat tanpa sengaja.
 export default function AccountDeletionBanner() {
+  const { t } = useLocale();
   const [scheduledPurgeAt, setScheduledPurgeAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,10 +30,10 @@ export default function AccountDeletionBanner() {
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 py-2.5 sm:px-6">
       <div className="flex items-center gap-2 text-xs font-semibold text-red-700">
         <IconTrash className="h-4 w-4 flex-shrink-0" />
-        Akunmu dijadwalkan dihapus permanen pada {new Date(scheduledPurgeAt).toLocaleString("id-ID")}.
+        {t("dashboard.components.accountDeletionBanner.scheduled").replace("{date}", new Date(scheduledPurgeAt).toLocaleString("id-ID"))}
       </div>
       <Link href="/dashboard/settings/danger-zone" className="text-xs font-bold text-red-700 hover:underline">
-        Batalkan Penghapusan
+        {t("dashboard.components.accountDeletionBanner.cancelLink")}
       </Link>
     </div>
   );
