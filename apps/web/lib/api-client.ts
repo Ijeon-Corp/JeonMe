@@ -100,9 +100,18 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
 
+  // sentToken -- apakah permintaan ini BENAR-BENAR membawa token. Dipakai
+  // handleUnauthorized: 401 pada permintaan TANPA token berarti pengguna
+  // memang belum login (mis. komponen di halaman publik memanggil endpoint
+  // terautentikasi), BUKAN sesi yang berakhir -- tidak ada yang perlu
+  // dibersihkan atau diberitahukan.
+  let sentToken = false;
   if (opts.auth) {
     const token = getToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+      sentToken = true;
+    }
     const workspaceHeaders = activeWorkspaceHeaders();
     for (const [key, value] of Object.entries(workspaceHeaders)) headers.set(key, value);
   }
@@ -112,7 +121,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   const body = isJSON ? await res.json().catch(() => ({})) : undefined;
 
   if (!res.ok) {
-    if (res.status === 401 && opts.auth) handleUnauthorized(path, body?.error);
+    if (res.status === 401 && sentToken) handleUnauthorized(path, body?.error);
     throw new ApiError(res.status, body?.error ?? `Permintaan gagal (${res.status})`, body ?? {});
   }
 
@@ -135,8 +144,13 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
 // Arah gagalnya sengaja AMAN: kalau suatu saat pesan middleware berubah dan
 // tidak lagi cocok, efeknya cuma "tidak auto-logout" (pengguna melihat error
 // biasa), BUKAN logout keliru.
+// Catatan: "token tidak ditemukan" SENGAJA TIDAK dimasukkan. Pesan itu
+// muncul justru ketika permintaan datang TANPA Authorization header --
+// kondisi pengguna yang memang belum login, bukan sesi yang berakhir.
+// Memasukkannya membuat halaman /login menandai "sesimu sudah berakhir"
+// terus-menerus (terbukti saat uji staging: pesan muncul lagi setiap
+// refresh). Pemanggil sudah dijaga ganda lewat `sentToken` di apiFetch.
 const SESSION_INVALID_MESSAGES = new Set([
-  "token tidak ditemukan",
   "token tidak valid atau kedaluwarsa",
   "klaim token tidak valid",
   "sesi sudah logout",
