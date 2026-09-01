@@ -112,10 +112,57 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   const body = isJSON ? await res.json().catch(() => ({})) : undefined;
 
   if (!res.ok) {
+    if (res.status === 401 && opts.auth) handleUnauthorized(path, body?.error);
     throw new ApiError(res.status, body?.error ?? `Permintaan gagal (${res.status})`, body ?? {});
   }
 
   return body as T;
+}
+
+// Pesan 401 yang HANYA dikeluarkan middleware.AuthRequired (apps/api/internal/
+// middleware/middleware.go) -- artinya sesi memang tidak valid lagi.
+//
+// PENTING: status 401 di backend ini AMBIGU. Selain middleware, sejumlah
+// endpoint TERAUTENTIKASI juga membalas 401 untuk INPUT yang salah, bukan
+// sesi yang mati: ganti password ("password lama salah"), nonaktif/hapus
+// akun ("password salah"), verifikasi & nonaktif 2FA ("kode 2FA salah"),
+// dan verifikasi OTP rekening payout ("kode verifikasi salah"). Kalau
+// SEMUA 401 diperlakukan sebagai sesi mati, salah ketik password di
+// Pengaturan > Keamanan akan MELEMPAR PENGGUNA KELUAR -- bug yang lebih
+// parah dari masalah yang mau diperbaiki. Karena itu auto-logout dibatasi
+// ke daftar pesan middleware di bawah ini.
+//
+// Arah gagalnya sengaja AMAN: kalau suatu saat pesan middleware berubah dan
+// tidak lagi cocok, efeknya cuma "tidak auto-logout" (pengguna melihat error
+// biasa), BUKAN logout keliru.
+const SESSION_INVALID_MESSAGES = new Set([
+  "token tidak ditemukan",
+  "token tidak valid atau kedaluwarsa",
+  "klaim token tidak valid",
+  "sesi sudah logout",
+]);
+
+let sessionExpiredHandled = false;
+
+// handleUnauthorized -- token ada tapi sudah tidak berlaku (kedaluwarsa /
+// di-revoke lewat "cabut sesi" / logout di perangkat lain). Sebelum ini
+// tidak ada penanganan sama sekali: dashboard tetap tampil (AuthGuard cuma
+// mengecek token ADA, bukan VALID) lalu semua permintaan gagal 401 dan
+// pengguna terjebak di dashboard rusak. Bersihkan token lalu antar ke
+// /login supaya bisa masuk lagi.
+function handleUnauthorized(path: string, message: unknown): void {
+  if (typeof window === "undefined") return;
+  // Logout memang berujung /login lewat pemanggilnya sendiri -- jangan
+  // menyela dengan navigasi kedua.
+  if (path === "/auth/logout") return;
+  if (!SESSION_INVALID_MESSAGES.has(String(message ?? ""))) return;
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+  clearToken();
+  // Halaman auth tidak perlu diarahkan lagi (mencegah loop navigasi).
+  const p = window.location.pathname;
+  if (p === "/login" || p === "/register") return;
+  window.location.replace("/login?session=expired");
 }
 
 // ---------- Halaman publik ----------

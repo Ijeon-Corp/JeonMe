@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, checkUsername, register } from "@/lib/api-client";
 import AuthShell from "@/components/AuthShell";
+import GuestGuard from "@/components/GuestGuard";
 import AppleAuthButton from "@/components/AppleAuthButton";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { IconCheck, IconClose } from "@/components/icons";
 
 type UsernameCheckState = "idle" | "checking" | "available" | "unavailable";
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -255,5 +256,15 @@ export default function RegisterPage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+// Bungkus GuestGuard (lihat components/GuestGuard.tsx): pengguna yang sudah
+// punya sesi diarahkan ke tujuan pasca-login, tidak lagi melihat form ini.
+export default function RegisterPage() {
+  return (
+    <GuestGuard>
+      <RegisterPageInner />
+    </GuestGuard>
   );
 }

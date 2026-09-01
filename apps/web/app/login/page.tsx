@@ -1,16 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, login, setToken, verifyLogin2FA } from "@/lib/api-client";
 import { redirectAfterAuth } from "@/lib/auth-redirect";
 import AuthShell from "@/components/AuthShell";
+import GuestGuard from "@/components/GuestGuard";
 import AppleAuthButton from "@/components/AppleAuthButton";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
+  // sessionExpired -- ditandai api-client saat token ternyata sudah tidak
+  // berlaku (?session=expired). Dibaca dari window.location, BUKAN
+  // useSearchParams(), supaya halaman ini tidak perlu dibungkus <Suspense>
+  // hanya demi satu pesan. Dibaca di effect supaya render pertama klien
+  // tetap identik dengan HTML server.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("session") === "expired") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSessionExpired(true);
+    }
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +133,12 @@ export default function LoginPage() {
       </h1>
       <p className="mt-3 text-sm text-app-muted">Kelola halaman dan produkmu.</p>
 
+      {sessionExpired && (
+        <p role="status" className="mt-4 rounded-jmd bg-amber-50 px-3.5 py-2.5 text-sm font-semibold text-amber-800">
+          Sesimu sudah berakhir. Silakan masuk lagi.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
@@ -196,5 +215,15 @@ export default function LoginPage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+// Bungkus GuestGuard (lihat components/GuestGuard.tsx): pengguna yang sudah
+// punya sesi diarahkan ke tujuan pasca-login, tidak lagi melihat form ini.
+export default function LoginPage() {
+  return (
+    <GuestGuard>
+      <LoginPageInner />
+    </GuestGuard>
   );
 }
