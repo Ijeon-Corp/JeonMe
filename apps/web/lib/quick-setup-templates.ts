@@ -75,6 +75,11 @@ import {
   IconMusicNote,
   IconPlane,
   IconPlus,
+  IconBox,
+  IconChart,
+  IconShield,
+  IconTarget,
+  IconUsers,
   IconShoppingBag,
   IconSparkle,
 } from "@/components/icons";
@@ -116,6 +121,33 @@ export const QUICK_SETUP_CATEGORIES: QuickSetupCategory[] = [
   // cocok dengan niche mana pun dan lebih suka mulai dari nol lalu susun
   // sendiri lewat editor Link Bio biasa. Selalu ditaruh PALING TERAKHIR di
   // grid kategori (bukan sesuatu yang perlu ditemukan duluan).
+  // 5 kategori berikut ditambahkan 1 September 2026 (permintaan langsung
+  // pengguna: "tambahkan 5 kategori lagi dengan benchmark dari s.id
+  // linktree dan lynk id"). Dasar tiap kategori diambil dari taksonomi
+  // NYATA ketiga platform, bukan karangan:
+  //
+  // - Linktree /s/templates/categories (diambil langsung dari HTML-nya)
+  //   memakai kategori tingkat atas: Fashion, Health and Fitness,
+  //   Influencer and Creator, Marketing, Music, Small Business, Social
+  //   Media, Sports, Telegram, Whatsapp.
+  // - s.id (home.s.id) menyegmentasi audiensnya: Marketing Teams, Content
+  //   Creators, Agencies, E-commerce.
+  // - Lynk.id (lynk.id memblokir fetch non-browser, jadi lewat riset
+  //   sekunder) memposisikan diri di produk digital (ebook, template Canva,
+  //   preset Lightroom, template Notion), kelas online, webinar/workshop,
+  //   dan konsultasi/mentoring 1-on-1.
+  //
+  // Yang SENGAJA TIDAK dijadikan kategori baru karena sudah terwakili:
+  // Fashion/Music/Social Media (sudah ada di shop/entertainment/creator),
+  // Small Business & E-commerce (shop + business), Agencies (business
+  // sudah punya template "Agency"), Real Estate & Wedding (sudah di
+  // "local"). Gym & Sports Facility tetap di "local" karena itu VENUE,
+  // sedangkan "health"/"sports" di bawah ini berisi praktisi/klub.
+  { key: "health", label: "Health & Wellness", Icon: IconShield },
+  { key: "sports", label: "Sports & Athletics", Icon: IconTarget },
+  { key: "coaching", label: "Coaching & Consulting", Icon: IconUsers },
+  { key: "digital", label: "Digital Product", Icon: IconBox },
+  { key: "marketing", label: "Marketing & Social", Icon: IconChart },
   { key: "custom", label: "Other / Custom", Icon: IconPlus },
 ];
 
@@ -2465,6 +2497,615 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
     ],
     monetizationHint: "Aktifkan Dukungan (Donasi) kalau audiensmu ingin membantu biaya operasional produk secara sukarela.",
+  },
+  // ---------- Health & Wellness (benchmark Linktree "Health and Fitness") ----------
+  // Fokus PRAKTISI/LAYANAN kesehatan. Venue-nya (Gym & Fitness Center,
+  // Sports Facility) sengaja tetap di kategori "local".
+  {
+    key: "personal-trainer",
+    category: "health",
+    layoutVariant: "duo",
+    label: "Personal Trainer",
+    description: "Program latihan, jadwal, booking",
+    theme: "surge",
+    bio: "Personal trainer bersertifikat | Program latihan personal",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Program", "Ceritakan targetmu, aku susun programnya"),
+      link("instagram", "Progress Klien", "Dokumentasi transformasi & tips latihan"),
+    ],
+    blocks: [
+      { type: "text", title: "Paket Latihan", text: "Tuliskan paket yang kamu tawarkan (jumlah sesi, durasi, lokasi/online, harga) di sini." },
+      faqBlock([
+        { question: "Latihannya online atau tatap muka?", answer: "Tulis pilihan yang kamu layani beserta area jangkauannya." },
+        { question: "Apakah dapat panduan makan?", answer: "Jelaskan apakah meal plan termasuk dalam paket atau terpisah." },
+      ]),
+      { type: "contact_form", title: "Konsultasi Awal Gratis" },
+    ],
+    monetizationHint: "Pasangkan dengan Booking Konsultasi untuk jadwal sesi, atau Kelas & Kursus untuk program latihan rekaman.",
+  },
+  {
+    key: "yoga-studio",
+    category: "health",
+    layoutVariant: "cover",
+    label: "Yoga & Pilates",
+    description: "Kelas, jadwal, membership",
+    theme: "matcha",
+    bio: "Studio yoga & pilates | Kelas harian untuk semua level",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Daftar Kelas", "Cek jadwal & amankan slotmu"),
+      link("instagram", "Suasana Studio", "Kelas, instruktur, dan jadwal terbaru"),
+    ],
+    blocks: [
+      { type: "text", title: "Jadwal Kelas", text: "Tuliskan jadwal kelas mingguan (hari, jam, jenis kelas, instruktur) di sini." },
+      mapsBlock("Lokasi Studio"),
+      faqBlock([
+        { question: "Pemula boleh ikut?", answer: "Jelaskan kelas mana yang ramah pemula dan apa yang perlu dibawa." },
+        { question: "Apakah sewa matras tersedia?", answer: "Tulis ketentuan peminjaman peralatan di studiomu." },
+      ]),
+    ],
+    monetizationHint: "Cocok dengan Booking Konsultasi (slot kelas) dan Voucher untuk paket trial.",
+  },
+  {
+    key: "nutritionist",
+    category: "health",
+    layoutVariant: "card",
+    label: "Ahli Gizi & Nutrisi",
+    description: "Konsultasi gizi, meal plan",
+    theme: "mint",
+    bio: "Ahli gizi | Meal plan realistis, tanpa diet ekstrem",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Gizi", "Diskusi kebutuhan gizi & target kesehatanmu"),
+      link("instagram", "Edukasi Gizi", "Tips makan harian yang mudah diterapkan"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan", text: "Tuliskan layanan yang kamu tawarkan (konsultasi, meal plan personal, pendampingan berkala) beserta durasinya." },
+      { type: "contact_form", title: "Mulai Konsultasi" },
+    ],
+    monetizationHint: "Pasangkan dengan Booking Konsultasi untuk sesi terjadwal dan Produk Digital untuk panduan meal plan.",
+  },
+  {
+    key: "clinic-practice",
+    category: "health",
+    layoutVariant: "banner",
+    label: "Klinik & Praktik",
+    description: "Jadwal praktik, lokasi, janji temu",
+    theme: "azure",
+    bio: "Klinik kesehatan | Layanan tepercaya untuk keluarga",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Buat Janji Temu", "Reservasi jadwal sebelum datang"),
+      link("googleMaps", "Petunjuk Arah", "Lokasi & area parkir"),
+    ],
+    blocks: [
+      { type: "text", title: "Jadwal Praktik", text: "Tuliskan hari, jam praktik, dan nama tenaga kesehatan yang bertugas di sini." },
+      mapsBlock("Lokasi Klinik"),
+      faqBlock([
+        { question: "Apakah menerima BPJS/asuransi?", answer: "Tulis metode pembayaran & kerja sama asuransi yang kamu terima." },
+        { question: "Perlu janji dulu atau bisa langsung datang?", answer: "Jelaskan alur pendaftaran pasien di kliniknya." },
+      ]),
+    ],
+    monetizationHint: "Booking Konsultasi membantu mengatur antrean janji temu tanpa chat manual.",
+  },
+  {
+    key: "therapist-wellness",
+    category: "health",
+    layoutVariant: "minimal",
+    label: "Terapis & Wellness",
+    description: "Sesi terapi, pijat, relaksasi",
+    theme: "champagne",
+    bio: "Terapis wellness | Sesi relaksasi & pemulihan tubuh",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Reservasi Sesi", "Pilih jenis terapi & jadwal yang kosong"),
+      link("instagram", "Tentang Layanan", "Suasana ruang terapi & testimoni klien"),
+    ],
+    blocks: [
+      { type: "text", title: "Jenis Terapi", text: "Tuliskan jenis terapi yang tersedia beserta durasi dan harganya di sini." },
+      { type: "contact_form", title: "Tanya Ketersediaan" },
+    ],
+    monetizationHint: "Booking Konsultasi cocok untuk mengatur slot sesi; Voucher bisa dipakai untuk paket perawatan.",
+  },
+
+  // ---------- Sports & Athletics (benchmark Linktree "Sports") ----------
+  {
+    key: "athlete-profile",
+    category: "sports",
+    layoutVariant: "spotlight",
+    label: "Atlet",
+    description: "Profil, prestasi, sponsor",
+    theme: "blaze",
+    bio: "Atlet | Prestasi, jadwal bertanding, dan kerja sama",
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel" },
+    links: [
+      link("instagram", "Ikuti Perjalananku", "Latihan harian & momen pertandingan"),
+      link("youtube", "Cuplikan Pertandingan", "Highlight & dokumentasi lomba"),
+      link("email", "Kerja Sama & Sponsor", "Untuk penawaran sponsorship"),
+    ],
+    blocks: [
+      { type: "text", title: "Prestasi", text: "Tuliskan prestasi utamamu (kejuaraan, tahun, capaian) di sini." },
+      showcaseBlock({
+        title: "Jadwal Pertandingan Terdekat",
+        description: "Tuliskan nama kompetisi, tanggal, dan lokasi supaya pendukung bisa hadir atau menonton.",
+        badgeText: "AGENDA",
+        ctaText: "Lihat Detail",
+        url: PLATFORM_URL.instagram,
+      }),
+    ],
+    monetizationHint: "Dukungan (Donasi) memudahkan pendukung membantu biaya latihan & kompetisi.",
+  },
+  {
+    key: "sports-club",
+    category: "sports",
+    layoutVariant: "banner",
+    label: "Klub & Tim",
+    description: "Anggota, jadwal, rekrutmen",
+    theme: "forest",
+    bio: "Klub olahraga | Latihan rutin & terbuka untuk anggota baru",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Gabung Klub", "Tanya syarat & biaya keanggotaan"),
+      link("instagram", "Kegiatan Klub", "Latihan, pertandingan, dan kebersamaan tim"),
+    ],
+    blocks: [
+      { type: "text", title: "Jadwal Latihan", text: "Tuliskan hari, jam, dan lokasi latihan rutin klubmu di sini." },
+      mapsBlock("Lokasi Latihan"),
+      faqBlock([
+        { question: "Boleh ikut kalau masih pemula?", answer: "Jelaskan apakah ada kelompok latihan khusus pemula." },
+        { question: "Berapa iuran anggotanya?", answer: "Tulis besaran iuran dan apa saja yang termasuk di dalamnya." },
+      ]),
+    ],
+    monetizationHint: "Loyalitas atau Voucher bisa dipakai untuk program iuran anggota dan trial gratis.",
+  },
+  {
+    key: "sports-academy",
+    category: "sports",
+    layoutVariant: "hero",
+    label: "Akademi Olahraga",
+    description: "Kelas usia, pelatih, pendaftaran",
+    theme: "emerald",
+    bio: "Akademi olahraga | Membina atlet muda sejak dini",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Daftar Siswa Baru", "Tanya kelas usia & jadwal trial"),
+      link("instagram", "Aktivitas Akademi", "Latihan, turnamen, dan prestasi siswa"),
+    ],
+    blocks: [
+      { type: "text", title: "Kelompok Usia", text: "Tuliskan pembagian kelompok usia, jadwal, dan pelatih penanggung jawab di sini." },
+      mapsBlock("Lokasi Akademi"),
+      { type: "contact_form", title: "Formulir Pendaftaran" },
+    ],
+    monetizationHint: "Kelas & Kursus cocok untuk program berjenjang; Booking untuk sesi trial.",
+  },
+  {
+    key: "sports-tournament",
+    category: "sports",
+    layoutVariant: "ticket",
+    label: "Turnamen & Kompetisi",
+    description: "Pendaftaran tim, jadwal, hadiah",
+    theme: "electric",
+    bio: "Turnamen olahraga | Pendaftaran tim dibuka",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Daftarkan Tim", "Konfirmasi slot & pembayaran pendaftaran"),
+      link("instagram", "Info Turnamen", "Jadwal, bracket, dan pengumuman"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Pendaftaran Dibuka",
+        description: "Tuliskan kategori yang dilombakan, kuota tim, biaya pendaftaran, dan batas waktunya.",
+        badgeText: "OPEN",
+        ctaText: "Daftar Sekarang",
+        url: PLATFORM_URL.whatsapp,
+      }),
+      faqBlock([
+        { question: "Kapan technical meeting-nya?", answer: "Tulis tanggal, jam, dan tempat technical meeting." },
+        { question: "Apa hadiah untuk juara?", answer: "Jelaskan total hadiah dan pembagiannya per juara." },
+      ]),
+      mapsBlock("Lokasi Pertandingan"),
+    ],
+    monetizationHint: "Event & Tiket paling pas untuk mengelola pendaftaran tim dan penonton.",
+  },
+  {
+    key: "running-community",
+    category: "sports",
+    layoutVariant: "duo",
+    label: "Komunitas Lari & Sepeda",
+    description: "Rute, jadwal, gabung komunitas",
+    theme: "tide",
+    bio: "Komunitas lari & sepeda | Gowes dan lari bareng tiap pekan",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Gabung Grup", "Info rute & jadwal terbaru tiap pekan"),
+      link("instagram", "Dokumentasi Rute", "Foto & cerita perjalanan komunitas"),
+    ],
+    blocks: [
+      { type: "text", title: "Jadwal Rutin", text: "Tuliskan hari, jam kumpul, titik start, dan estimasi jarak rute di sini." },
+      mapsBlock("Titik Kumpul"),
+    ],
+    monetizationHint: "Event & Tiket berguna kalau komunitasmu mengadakan fun run atau gowes berbayar.",
+  },
+
+  // ---------- Coaching & Consulting (benchmark Lynk.id: konsultasi 1-on-1,
+  // mentoring, coaching karier). Beda dari template "Consultant" di kategori
+  // business yang berorientasi profil perusahaan -- yang ini berpusat pada
+  // SESI terjadwal per orang.
+  {
+    key: "life-coach",
+    category: "coaching",
+    layoutVariant: "portrait",
+    label: "Life Coach",
+    description: "Sesi 1-on-1, program, testimoni",
+    theme: "peach",
+    bio: "Life coach | Bantu kamu menata arah dan kebiasaan",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Jadwalkan Sesi", "Pilih waktu sesi 1-on-1"),
+      link("instagram", "Insight Harian", "Refleksi singkat & materi latihan diri"),
+    ],
+    blocks: [
+      { type: "text", title: "Cara Kerja Sesi", text: "Jelaskan durasi sesi, media (online/tatap muka), dan apa yang didapat klien setelahnya." },
+      faqBlock([
+        { question: "Berapa lama satu sesi?", answer: "Tulis durasi dan jumlah sesi yang disarankan." },
+        { question: "Apakah ada paket berkelanjutan?", answer: "Jelaskan paket pendampingan beberapa sesi kalau tersedia." },
+      ]),
+      { type: "contact_form", title: "Ceritakan Situasimu" },
+    ],
+    monetizationHint: "Booking Konsultasi untuk jadwal sesi; Kelas & Kursus untuk program rekaman.",
+  },
+  {
+    key: "career-coach",
+    category: "coaching",
+    layoutVariant: "card",
+    label: "Career Coach",
+    description: "Review CV, interview, karier",
+    theme: "corporate",
+    bio: "Career coach | Bantu kamu naik level di dunia kerja",
+    social: { linkedin: "username", instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Karier", "Diskusi target karier & rencana langkahnya"),
+      link("linkedin", "Profil Profesional", "Latar belakang & pengalaman pendampingan"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan", text: "Tuliskan layanan yang kamu tawarkan (review CV, simulasi interview, strategi pindah karier) beserta harganya." },
+      faqBlock([
+        { question: "Apakah CV-nya direvisi langsung?", answer: "Jelaskan bentuk hasil akhir yang klien terima." },
+        { question: "Untuk level apa saja?", answer: "Tulis level karier yang biasa kamu dampingi." },
+      ]),
+    ],
+    monetizationHint: "Produk digital (template CV) bisa jadi pelengkap sesi konsultasi berbayar.",
+  },
+  {
+    key: "business-mentor",
+    category: "coaching",
+    layoutVariant: "split",
+    label: "Business Mentor",
+    description: "Mentoring usaha, strategi, kelas",
+    theme: "downtown",
+    bio: "Mentor bisnis | Dampingi UMKM tumbuh terukur",
+    social: { instagram: "username", linkedin: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Bisnis", "Bahas kondisi usahamu & prioritas perbaikannya"),
+      link("instagram", "Studi Kasus", "Cerita pendampingan & pelajaran praktis"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Program Mentoring",
+        description: "Tuliskan struktur program (durasi, frekuensi pertemuan, hasil yang ditargetkan) supaya calon klien paham komitmennya.",
+        badgeText: "PROGRAM",
+        ctaText: "Lihat Detail",
+        url: PLATFORM_URL.whatsapp,
+      }),
+      { type: "contact_form", title: "Ajukan Sesi Perkenalan" },
+    ],
+    monetizationHint: "Kelas & Kursus untuk materi terstruktur, Booking untuk sesi mentoring privat.",
+  },
+  {
+    key: "psychologist-counselor",
+    category: "coaching",
+    layoutVariant: "minimal",
+    label: "Psikolog & Konselor",
+    description: "Konseling, jadwal, kerahasiaan",
+    theme: "ivory",
+    bio: "Psikolog | Ruang aman untuk bercerita dan pulih",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Buat Janji Konseling", "Pilih jadwal sesi yang tersedia"),
+      link("instagram", "Edukasi Kesehatan Mental", "Materi ringan yang bisa langsung dipakai"),
+    ],
+    blocks: [
+      { type: "text", title: "Alur Konseling", text: "Jelaskan alur sesi, durasi, media (online/tatap muka), dan komitmen kerahasiaan di sini." },
+      faqBlock([
+        { question: "Apakah sesinya rahasia?", answer: "Tegaskan kebijakan kerahasiaan yang kamu terapkan." },
+        { question: "Berapa biaya per sesi?", answer: "Tulis biaya dan metode pembayaran yang diterima." },
+      ]),
+    ],
+    monetizationHint: "Booking Konsultasi menjaga jadwal sesi tetap rapi tanpa bolak-balik chat.",
+  },
+  {
+    key: "one-on-one-consult",
+    category: "coaching",
+    layoutVariant: "headline",
+    label: "Konsultasi 1-on-1",
+    description: "Sesi bayar per jam, bidang apa pun",
+    theme: "polaris",
+    bio: "Konsultasi 1-on-1 | Bayar per sesi, langsung ke inti masalah",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "halo@domainmu.com" },
+    links: [
+      link("whatsapp", "Pesan Sesi", "Pilih durasi sesi & topik yang mau dibahas"),
+      link("email", "Pertanyaan Panjang", "Kirim detail kasusmu lebih dulu"),
+    ],
+    blocks: [
+      { type: "text", title: "Topik yang Bisa Dibahas", text: "Tuliskan bidang keahlianmu dan contoh masalah yang biasa kamu bantu selesaikan." },
+      faqBlock([
+        { question: "Bagaimana kalau butuh lanjutan?", answer: "Jelaskan opsi paket beberapa sesi kalau tersedia." },
+        { question: "Apakah ada rekaman sesinya?", answer: "Tulis kebijakanmu soal rekaman dan catatan sesi." },
+      ]),
+    ],
+    monetizationHint: "Booking Konsultasi adalah inti template ini -- aktifkan supaya slot & pembayaran terkelola otomatis.",
+  },
+
+  // ---------- Digital Product (benchmark Lynk.id: ebook, template Canva,
+  // preset Lightroom, template Notion). "shop" fokus barang fisik/toko,
+  // kategori ini fokus produk yang diunduh.
+  {
+    key: "ebook-author",
+    category: "digital",
+    layoutVariant: "polaroid",
+    label: "Ebook & Panduan",
+    description: "Jual ebook, preview, testimoni",
+    theme: "kraft",
+    bio: "Penulis ebook | Panduan praktis yang bisa langsung dipakai",
+    social: { instagram: "username", email: "halo@domainmu.com" },
+    links: [
+      link("instagram", "Cuplikan Isi", "Potongan materi & respons pembaca"),
+      link("email", "Kerja Sama", "Untuk kolaborasi & bundling"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Ebook Terbaru",
+        description: "Tuliskan judul, untuk siapa ebook ini, dan apa yang pembaca dapat setelah menyelesaikannya.",
+        badgeText: "EBOOK",
+        ctaText: "Lihat Detail",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([
+        { question: "Formatnya apa?", answer: "Tulis format file (PDF/EPUB) dan cara mengaksesnya setelah membeli." },
+        { question: "Apakah ada update gratis?", answer: "Jelaskan kebijakan pembaruan isi ebook." },
+      ]),
+    ],
+    monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
+  },
+  {
+    key: "template-preset-seller",
+    category: "digital",
+    layoutVariant: "masthead",
+    label: "Template & Preset",
+    description: "Canva, Lightroom, desain siap pakai",
+    theme: "candy",
+    bio: "Template & preset siap pakai | Hemat waktu, hasil rapi",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Contoh Hasil", "Before-after & cara pemakaian"),
+      link("tiktok", "Tutorial Singkat", "Cara pasang preset & edit template"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Paket Template Terlaris",
+        description: "Tuliskan isi paket (jumlah template, format, software yang dibutuhkan) supaya pembeli tahu kompatibilitasnya.",
+        badgeText: "BESTSELLER",
+        ctaText: "Lihat Paket",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([
+        { question: "Butuh aplikasi berbayar?", answer: "Tulis software yang dibutuhkan dan apakah versi gratisnya cukup." },
+        { question: "Bisa dipakai untuk klien?", answer: "Jelaskan lisensi penggunaan (pribadi atau komersial)." },
+      ]),
+    ],
+    monetizationHint: "Bundel cocok untuk menjual beberapa paket template sekaligus dengan harga lebih hemat.",
+  },
+  {
+    key: "notion-productivity",
+    category: "digital",
+    layoutVariant: "split",
+    label: "Notion & Spreadsheet",
+    description: "Sistem kerja, tracker, dashboard",
+    theme: "console",
+    bio: "Template Notion & spreadsheet | Rapikan kerja dan keuanganmu",
+    social: { instagram: "username", x: "username" },
+    links: [
+      link("instagram", "Preview Template", "Tampilan dashboard & cara pakainya"),
+      link("x", "Tips Produktivitas", "Trik singkat merapikan sistem kerja"),
+    ],
+    blocks: [
+      { type: "text", title: "Isi Template", text: "Tuliskan halaman/tab apa saja yang ada di dalam template dan masalah apa yang diselesaikannya." },
+      faqBlock([
+        { question: "Cara pakainya bagaimana?", answer: "Jelaskan langkah duplikasi template ke akun pembeli." },
+        { question: "Apakah ada panduan?", answer: "Tulis apakah video atau dokumen panduan disertakan." },
+      ]),
+    ],
+    monetizationHint: "Produk digital dengan file/tautan template -- tambahkan Voucher untuk peluncuran perdana.",
+  },
+  {
+    key: "digital-art-asset",
+    category: "digital",
+    layoutVariant: "spotlight",
+    label: "Digital Art & Aset",
+    description: "Ilustrasi, font, aset desain",
+    theme: "nova",
+    bio: "Digital artist | Ilustrasi & aset desain siap pakai",
+    social: { instagram: "username", tiktok: "username", email: "halo@domainmu.com" },
+    links: [
+      link("instagram", "Galeri Karya", "Kumpulan ilustrasi & aset terbaru"),
+      link("email", "Komisi Custom", "Untuk permintaan karya khusus"),
+    ],
+    blocks: [
+      { type: "text", title: "Portofolio Karya", text: "Tuliskan jenis karya yang kamu buat dan gaya khasmu di sini -- tambahkan blok Galeri lewat editor Link Bio untuk memajang gambarnya." },
+      faqBlock([
+        { question: "Boleh dipakai komersial?", answer: "Jelaskan lisensi pemakaian untuk tiap jenis aset." },
+        { question: "Bisa pesan custom?", answer: "Tulis alur pemesanan komisi dan estimasi waktu pengerjaannya." },
+      ]),
+    ],
+    monetizationHint: "Gabungkan produk digital (aset siap unduh) dengan Booking untuk komisi custom.",
+  },
+  {
+    key: "software-tools",
+    category: "digital",
+    layoutVariant: "hero",
+    label: "Software & Tools",
+    description: "Aplikasi, plugin, langganan",
+    theme: "cyber",
+    bio: "Bikin tools yang menyelesaikan masalah nyata",
+    social: { x: "username", github: "username", email: "halo@domainmu.com" },
+    links: [
+      link("website", "Coba Produknya", "Demo & dokumentasi lengkap"),
+      link("x", "Update Produk", "Fitur baru & catatan pengembangan"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Apa yang Diselesaikan",
+        description: "Tuliskan masalah utama yang dipecahkan produkmu dan untuk siapa produk ini dibuat.",
+        badgeText: "PRODUK",
+        ctaText: "Coba Sekarang",
+        url: PLATFORM_URL.website,
+        imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
+      }),
+      faqBlock([
+        { question: "Apakah ada versi gratis?", answer: "Jelaskan batasan versi gratis dan keuntungan versi berbayar." },
+        { question: "Bagaimana dukungannya?", answer: "Tulis kanal dukungan dan waktu responsmu." },
+      ]),
+    ],
+    monetizationHint: "Payment Link cocok untuk lisensi; Voucher untuk promo early adopter.",
+  },
+
+  // ---------- Marketing & Social (benchmark Linktree "Marketing" +
+  // "Social Media", s.id "Marketing Teams"/"Agencies"). Template "Agency"
+  // di kategori business fokus profil perusahaan; di sini fokus jasa
+  // pemasaran per-spesialisasi.
+  {
+    key: "digital-marketing-agency",
+    category: "marketing",
+    layoutVariant: "banner",
+    label: "Digital Marketing",
+    description: "Jasa iklan, portofolio, konsultasi",
+    theme: "surge",
+    bio: "Digital marketing | Bantu brand tumbuh dengan data",
+    social: { instagram: "username", linkedin: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Gratis", "Ceritakan target & anggaran kampanyemu"),
+      link("linkedin", "Profil Perusahaan", "Tim, layanan, dan klien kami"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan", text: "Tuliskan layanan yang kamu tawarkan (iklan berbayar, SEO, konten, email) beserta cakupannya." },
+      showcaseBlock({
+        title: "Studi Kasus",
+        description: "Ceritakan satu kampanye: kondisi awal, yang kamu kerjakan, dan hasilnya dalam angka.",
+        badgeText: "CASE STUDY",
+        ctaText: "Lihat Hasil",
+        url: PLATFORM_URL.linkedin,
+      }),
+      { type: "contact_form", title: "Minta Penawaran" },
+    ],
+    monetizationHint: "Booking Konsultasi untuk sesi audit awal sebelum klien berkomitmen.",
+  },
+  {
+    key: "social-media-manager",
+    category: "marketing",
+    layoutVariant: "duo",
+    label: "Social Media Manager",
+    description: "Kelola akun, konten, laporan",
+    theme: "blush",
+    bio: "Social media manager | Akunmu aktif, terarah, dan tumbuh",
+    social: { instagram: "username", tiktok: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Diskusi Kebutuhan", "Bahas akun & target pertumbuhanmu"),
+      link("instagram", "Contoh Kelolaan", "Feed & konten yang pernah kutangani"),
+    ],
+    blocks: [
+      { type: "text", title: "Paket Pengelolaan", text: "Tuliskan isi paket (jumlah konten per bulan, platform, laporan) dan harganya di sini." },
+      faqBlock([
+        { question: "Apakah termasuk desain konten?", answer: "Jelaskan apa saja yang kamu kerjakan dan apa yang perlu klien siapkan." },
+        { question: "Bagaimana pelaporannya?", answer: "Tulis format dan frekuensi laporan performa." },
+      ]),
+    ],
+    monetizationHint: "Bundel bisa dipakai untuk paket bulanan; Voucher untuk klien pertama.",
+  },
+  {
+    key: "copywriter",
+    category: "marketing",
+    layoutVariant: "headline",
+    label: "Copywriter",
+    description: "Naskah iklan, website, portofolio",
+    theme: "ivory",
+    bio: "Copywriter | Kata yang bikin orang bergerak",
+    social: { instagram: "username", linkedin: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Diskusi Proyek", "Kirim brief & tenggat waktumu"),
+      link("linkedin", "Portofolio Naskah", "Contoh tulisan & klien sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Jenis Naskah", text: "Tuliskan jenis naskah yang kamu kerjakan (iklan, landing page, email, skrip video) beserta tarifnya." },
+      { type: "contact_form", title: "Kirim Brief" },
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP proyek sebelum pengerjaan dimulai.",
+  },
+  {
+    key: "seo-specialist",
+    category: "marketing",
+    layoutVariant: "split",
+    label: "SEO Specialist",
+    description: "Audit, optimasi, laporan peringkat",
+    theme: "atmos",
+    bio: "SEO specialist | Bawa websitemu ke halaman pertama",
+    social: { linkedin: "username", x: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Minta Audit", "Kirim alamat websitemu untuk ditinjau"),
+      link("linkedin", "Rekam Jejak", "Proyek & hasil optimasi sebelumnya"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Audit SEO Gratis",
+        description: "Jelaskan apa saja yang kamu periksa dalam audit awal dan bentuk laporan yang klien terima.",
+        badgeText: "AUDIT",
+        ctaText: "Ajukan Audit",
+        url: PLATFORM_URL.email,
+      }),
+      faqBlock([
+        { question: "Berapa lama hasilnya terlihat?", answer: "Jelaskan ekspektasi waktu yang realistis untuk kata kunci yang disasar." },
+        { question: "Apakah termasuk penulisan konten?", answer: "Tulis batas cakupan pekerjaanmu." },
+      ]),
+    ],
+    monetizationHint: "Booking Konsultasi untuk sesi audit berbayar; produk digital untuk panduan SEO mandiri.",
+  },
+  {
+    key: "brand-campaign",
+    category: "marketing",
+    layoutVariant: "ticket",
+    label: "Kampanye Brand",
+    description: "Landing kampanye, promo, CTA tunggal",
+    theme: "ember",
+    bio: "Halaman kampanye | Semua info promo ada di sini",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("website", "Ikut Kampanye", "Halaman pendaftaran & syarat lengkap"),
+      link("instagram", "Update Kampanye", "Pengumuman pemenang & keseruan peserta"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Detail Kampanye",
+        description: "Tuliskan mekanisme, periode, hadiah, dan syarat keikutsertaan supaya peserta tidak bertanya berulang.",
+        badgeText: "PERIODE TERBATAS",
+        ctaText: "Ikut Sekarang",
+        url: PLATFORM_URL.website,
+      }),
+      faqBlock([
+        { question: "Sampai kapan periodenya?", answer: "Tulis tanggal mulai dan berakhirnya kampanye." },
+        { question: "Siapa yang boleh ikut?", answer: "Jelaskan syarat peserta dan wilayah yang dijangkau." },
+      ]),
+    ],
+    monetizationHint: "Voucher paling pas untuk kampanye promo dengan kode khusus.",
   },
   // "custom-blank" -- satu-satunya template kategori "custom" (lihat
   // catatan di QUICK_SETUP_CATEGORIES). SENGAJA tanpa bio/links/blocks/
