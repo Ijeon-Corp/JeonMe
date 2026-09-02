@@ -2510,10 +2510,24 @@ export interface AudienceContact {
   whatsapp_number: string;
   sources: string[];
   joined_at: string;
+  // tags/notes -- CRM ringan (benchmark Linktree Earn > Contacts, 3
+  // September 2026). Selalu ada (backend mengirim [] / "").
+  tags: string[];
+  notes: string;
 }
 
 export function getAudience() {
   return apiFetch<AudienceContact[]>("/dashboard/audience", { method: "GET" }, { auth: true });
+}
+
+// Simpan tag & catatan satu kontak. Identitas kontak = email kalau ada,
+// kalau tidak nomor WA (dinormalisasi backend, lihat contactKey()).
+export function upsertAudienceContactMeta(input: { email: string; whatsapp_number: string; tags: string[]; notes: string }) {
+  return apiFetch<{ tags: string[]; notes: string }>(
+    "/dashboard/audience/contact-meta",
+    { method: "POST", body: JSON.stringify(input) },
+    { auth: true },
+  );
 }
 
 // ---------- Dashboard: Broadcast Email Audiens (Gap #3 benchmark

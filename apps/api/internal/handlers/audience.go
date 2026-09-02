@@ -169,6 +169,24 @@ type audienceContact struct {
 	WhatsappNumber string   `json:"whatsapp_number"`
 	Sources        []string `json:"sources"`
 	JoinedAt       string   `json:"joined_at"`
+	// Tags/Notes -- CRM ringan (migrasi 000083), digabung dari
+	// audience_contact_meta lewat contactKey(). Selalu non-nil supaya
+	// klien tidak perlu cek null.
+	Tags  []string `json:"tags"`
+	Notes string   `json:"notes"`
+}
+
+// contactKey -- identitas satu kontak lintas sumber: email (lowercase)
+// kalau ada, kalau tidak nomor WA berawalan "wa:". Dipakai untuk kunci
+// audience_contact_meta DAN untuk mencocokkan saat baca.
+func contactKey(email, whatsapp string) string {
+	if e := strings.ToLower(strings.TrimSpace(email)); e != "" {
+		return e
+	}
+	if w := strings.TrimSpace(whatsapp); w != "" {
+		return "wa:" + w
+	}
+	return ""
 }
 
 // GetAudience — Manajer Audiens: menyentralisasi subscriber (dari form
@@ -233,12 +251,123 @@ func (h *AudienceHandler) GetAudience(c *gin.Context) {
 	}
 	buyerRows.Close()
 
+	// Gabungkan tag/catatan. Soft-fail: kalau tabel meta gagal dibaca,
+	// daftar kontak tetap tampil tanpa tag -- ini fitur pendukung.
+	meta := map[string]struct {
+		tags  []string
+		notes string
+	}{}
+	if metaRows, err := h.DB.Query(ctx, `
+		SELECT contact_key, tags, notes FROM audience_contact_meta WHERE creator_user_id = $1
+	`, userID); err == nil {
+		for metaRows.Next() {
+			var key, notes string
+			var tags []string
+			if err := metaRows.Scan(&key, &tags, &notes); err == nil {
+				meta[key] = struct {
+					tags  []string
+					notes string
+				}{tags, notes}
+			}
+		}
+		metaRows.Close()
+	}
+
 	contacts := make([]audienceContact, 0, len(order))
 	for _, it := range order {
+		it.Tags = []string{}
+		if m, ok := meta[contactKey(it.Email, it.WhatsappNumber)]; ok {
+			if m.tags != nil {
+				it.Tags = m.tags
+			}
+			it.Notes = m.notes
+		}
 		contacts = append(contacts, *it)
 	}
 
 	c.JSON(http.StatusOK, contacts)
+}
+
+// ---------- CRM ringan: tag & catatan per kontak ----------
+
+type upsertContactMetaRequest struct {
+	Email          string   `json:"email"`
+	WhatsappNumber string   `json:"whatsapp_number"`
+	Tags           []string `json:"tags"`
+	Notes          string   `json:"notes"`
+}
+
+// normalizeTags -- rapikan tag: trim, buang kosong/duplikat (case-insensitive),
+// batasi jumlah & panjang supaya UI tetap terbaca dan kolom tidak jadi
+// tempat sampah. Dipisah jadi fungsi murni supaya bisa diuji tanpa DB.
+func normalizeTags(raw []string) []string {
+	const maxTags, maxLen = 20, 30
+	seen := map[string]bool{}
+	out := make([]string, 0, len(raw))
+	for _, t := range raw {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if len([]rune(t)) > maxLen {
+			t = string([]rune(t)[:maxLen])
+		}
+		k := strings.ToLower(t)
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, t)
+		if len(out) == maxTags {
+			break
+		}
+	}
+	return out
+}
+
+func (h *AudienceHandler) UpsertContactMeta(c *gin.Context) {
+	userID := c.GetString("userID")
+	var req upsertContactMetaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "payload tidak valid"})
+		return
+	}
+	key := contactKey(req.Email, req.WhatsappNumber)
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kontak butuh email atau nomor WhatsApp"})
+		return
+	}
+	notes := strings.TrimSpace(req.Notes)
+	if len([]rune(notes)) > 2000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "catatan maksimal 2000 karakter"})
+		return
+	}
+	tags := normalizeTags(req.Tags)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	// Tag kosong & catatan kosong = hapus barisnya, supaya tabel tidak
+	// menumpuk baris hampa untuk kontak yang cuma pernah diedit lalu
+	// dikosongkan lagi.
+	if len(tags) == 0 && notes == "" {
+		if _, err := h.DB.Exec(ctx, `DELETE FROM audience_contact_meta WHERE creator_user_id = $1 AND contact_key = $2`, userID, key); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan kontak"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"tags": []string{}, "notes": ""})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO audience_contact_meta (creator_user_id, contact_key, tags, notes, updated_at)
+		VALUES ($1, $2, $3, $4, now())
+		ON CONFLICT (creator_user_id, contact_key)
+		DO UPDATE SET tags = EXCLUDED.tags, notes = EXCLUDED.notes, updated_at = now()
+	`, userID, key, tags, notes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan kontak"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tags": tags, "notes": notes})
 }
 
 type audienceBroadcastItem struct {

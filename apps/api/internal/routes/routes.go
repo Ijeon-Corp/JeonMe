@@ -453,6 +453,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/lead-capture", audience.GetLeadCaptureSettings)
 			dashboard.PUT("/lead-capture", audience.UpsertLeadCaptureSettings)
 			dashboard.GET("/audience", audience.GetAudience)
+			// Benchmark Linktree Earn > Contacts (3 September 2026): CRM ringan --
+			// tag & catatan per kontak, lihat migrasi 000083.
+			dashboard.POST("/audience/contact-meta", audience.UpsertContactMeta)
 			// Gap #3 benchmark kompetitif (9 Agustus 2026): broadcast email
 			// ke subscriber -- lihat catatan consent di migrations/000059.
 			dashboard.GET("/audience/broadcasts", audience.ListBroadcasts)

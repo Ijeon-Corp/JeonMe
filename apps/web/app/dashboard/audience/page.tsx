@@ -9,6 +9,7 @@ import {
   AudienceContact,
   createBroadcast,
   getAudience,
+  upsertAudienceContactMeta,
   getLeadCaptureSettings,
   listBroadcasts,
   upsertLeadCaptureSettings,
@@ -18,6 +19,7 @@ import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useToast } from "@/components/Toast";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
@@ -42,9 +44,9 @@ function buildSourceLabel(t: (key: string) => string): Record<string, string> {
 }
 
 function toCSV(contacts: AudienceContact[]): string {
-  const header = "name,email,whatsapp_number,sources,joined_at";
+  const header = "name,email,whatsapp_number,sources,joined_at,tags,notes";
   const rows = contacts.map((c) =>
-    [c.name, c.email, c.whatsapp_number, c.sources.join("|"), c.joined_at]
+    [c.name, c.email, c.whatsapp_number, c.sources.join("|"), c.joined_at, (c.tags ?? []).join("|"), c.notes ?? ""]
       .map((v) => `"${v.replace(/"/g, '""')}"`)
       .join(",")
   );
@@ -83,7 +85,15 @@ function DashboardAudiencePageInner() {
   }
   const BROADCAST_STATUS_LABEL = buildBroadcastStatusLabel(t);
   const SOURCE_LABEL = buildSourceLabel(t);
+  const { showToast } = useToast();
   const [contacts, setContacts] = useState<AudienceContact[]>([]);
+  // CRM ringan (benchmark Linktree Earn > Contacts): filter tag/sumber +
+  // editor tag & catatan per kontak. Filter dihitung di klien -- daftar
+  // kontak sudah ada di memori, tidak perlu round-trip.
+  const [tagFilter, setTagFilter] = useState<string>("");
+  const [sourceFilter, setSourceFilter] = useState<string>("");
+  const [editing, setEditing] = useState<{ key: string; tags: string; notes: string } | null>(null);
+  const [savingMeta, setSavingMeta] = useState(false);
   // newContacts (kontak 30 hari terakhir) DIHITUNG saat fetch, bukan di
   // badan render -- `Date.now()` di render dilarang eslint-plugin-react-hooks
   // v7 ("Cannot call impure function during render"), pola sama seperti
@@ -201,6 +211,41 @@ function DashboardAudiencePageInner() {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.audience.saveError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  const contactKeyOf = (c: AudienceContact) => (c.email ? c.email.toLowerCase() : `wa:${c.whatsapp_number}`);
+  const allTags = Array.from(new Set(contacts.flatMap((c) => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
+  const visibleContacts = contacts.filter((c) => {
+    if (sourceFilter && !c.sources.includes(sourceFilter)) return false;
+    if (tagFilter === "__none__") return (c.tags ?? []).length === 0;
+    if (tagFilter && !(c.tags ?? []).includes(tagFilter)) return false;
+    return true;
+  });
+
+  function openEdit(c: AudienceContact) {
+    setEditing({ key: contactKeyOf(c), tags: (c.tags ?? []).join(", "), notes: c.notes ?? "" });
+  }
+
+  async function handleSaveMeta() {
+    if (!editing) return;
+    const target = contacts.find((c) => contactKeyOf(c) === editing.key);
+    if (!target) return;
+    setSavingMeta(true);
+    try {
+      const saved = await upsertAudienceContactMeta({
+        email: target.email,
+        whatsapp_number: target.whatsapp_number,
+        tags: editing.tags.split(",").map((x) => x.trim()).filter(Boolean),
+        notes: editing.notes,
+      });
+      setContacts((prev) => prev.map((c) => (contactKeyOf(c) === editing.key ? { ...c, tags: saved.tags, notes: saved.notes } : c)));
+      setEditing(null);
+      showToast(t("dashboard.pages.audience.contactSaved"));
+    } catch {
+      showToast(t("dashboard.pages.audience.contactSaveFailed"));
+    } finally {
+      setSavingMeta(false);
     }
   }
 
@@ -431,6 +476,81 @@ function DashboardAudiencePageInner() {
         </button>
       </div>
 
+      {contacts.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            aria-label={t("dashboard.pages.audience.colSource")}
+            className="rounded-lg border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+          >
+            <option value="">{t("dashboard.pages.audience.filterAllSources")}</option>
+            {Array.from(new Set(contacts.flatMap((c) => c.sources))).map((src) => (
+              <option key={src} value={src}>{SOURCE_LABEL[src] ?? src}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setTagFilter("")}
+            aria-pressed={tagFilter === ""}
+            className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${tagFilter === "" ? "border-jeon-ink bg-jeon-lavender text-[#111111]" : "border-app-border text-app-muted hover:text-app-ink"}`}
+          >
+            {t("dashboard.pages.audience.filterAllTags")}
+          </button>
+          {allTags.map((tg) => (
+            <button
+              key={tg}
+              type="button"
+              onClick={() => setTagFilter(tg)}
+              aria-pressed={tagFilter === tg}
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${tagFilter === tg ? "border-jeon-ink bg-jeon-lime text-[#111111]" : "border-app-border text-app-muted hover:text-app-ink"}`}
+            >
+              {tg}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setTagFilter("__none__")}
+            aria-pressed={tagFilter === "__none__"}
+            className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${tagFilter === "__none__" ? "border-jeon-ink bg-jeon-lavender text-[#111111]" : "border-app-border text-app-muted hover:text-app-ink"}`}
+          >
+            {t("dashboard.pages.audience.filterNoTag")}
+          </button>
+        </div>
+      )}
+
+      {editing && (
+        <div className="glass mt-3 rounded-jlg p-4 shadow-card" role="dialog" aria-label={t("dashboard.pages.audience.editContactTitle")}>
+          <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.audience.editContactTitle")}</p>
+          <p className="mt-0.5 text-xs text-app-muted">{editing.key.replace(/^wa:/, "")}</p>
+          <label className="mt-3 block text-xs font-semibold text-app-ink">{t("dashboard.pages.audience.tagsLabel")}</label>
+          <input
+            type="text"
+            value={editing.tags}
+            onChange={(e) => setEditing({ ...editing, tags: e.target.value })}
+            placeholder={t("dashboard.pages.audience.tagsHint")}
+            className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+          />
+          <label className="mt-3 block text-xs font-semibold text-app-ink">{t("dashboard.pages.audience.notesLabel")}</label>
+          <textarea
+            value={editing.notes}
+            onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
+            placeholder={t("dashboard.pages.audience.notesPlaceholder")}
+            rows={3}
+            maxLength={2000}
+            className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+          />
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={handleSaveMeta} disabled={savingMeta} className="btn-primary rounded-lg px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
+              {savingMeta ? t("dashboard.pages.audience.savingContact") : t("dashboard.pages.audience.saveContact")}
+            </button>
+            <button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-app-border px-4 py-2 text-xs font-semibold text-app-ink">
+              {t("dashboard.pages.audience.cancelEdit")}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="glass mt-3 overflow-x-auto rounded-jlg shadow-card">
         <table aria-label={t("dashboard.pages.audience.managerHeading")} className="w-full text-left text-xs">
           <thead>
@@ -440,10 +560,12 @@ function DashboardAudiencePageInner() {
               <th className="px-4 py-2.5 font-semibold">WhatsApp</th>
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colSource")}</th>
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colJoined")}</th>
+              <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colTags")}</th>
+              <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody>
-            {contacts.map((c, i) => (
+            {visibleContacts.map((c, i) => (
               <tr key={i} className="border-b border-app-border last:border-0">
                 <td className="px-4 py-2.5 text-app-ink">{c.name || "-"}</td>
                 <td className="px-4 py-2.5 text-app-ink">{c.email || "-"}</td>
@@ -458,12 +580,39 @@ function DashboardAudiencePageInner() {
                   </div>
                 </td>
                 <td className="px-4 py-2.5 text-app-muted">{new Date(c.joined_at).toLocaleDateString("id-ID")}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex flex-wrap gap-1">
+                    {(c.tags ?? []).map((tg) => (
+                      <button
+                        key={tg}
+                        type="button"
+                        onClick={() => setTagFilter(tg)}
+                        className="rounded-full bg-jeon-lime px-2 py-0.5 text-[10px] font-bold text-[#111111]"
+                        title={tg}
+                      >
+                        {tg}
+                      </button>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(c)}
+                    className="rounded-md border border-app-border px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                  >
+                    {t("dashboard.pages.audience.editContact")}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
         {contacts.length === 0 && (
           <EmptyState bordered={false} text={t("dashboard.pages.audience.emptyContacts")} />
+        )}
+        {contacts.length > 0 && visibleContacts.length === 0 && (
+          <p className="px-4 py-6 text-center text-xs text-app-muted">{t("dashboard.pages.audience.filterEmpty")}</p>
         )}
       </div>
       </>
