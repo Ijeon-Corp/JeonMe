@@ -2529,6 +2529,89 @@ export function joinAffiliateMarketplace(productId: string) {
   );
 }
 
+// ---------- Marketplace Brand <-> Kreator: Sponsored Links & Brand Deals
+// (benchmark Linktree Earn, 3 September 2026). Lihat catatan cakupan MVP di
+// migrations/000085: fee informatif, pembayaran belum lewat platform. ----------
+
+export type BrandCampaignKind = "sponsored_link" | "brand_deal";
+export type BrandApplicationStatus = "applied" | "accepted" | "rejected" | "completed";
+
+export interface BrandCampaign {
+  id: string;
+  kind: BrandCampaignKind;
+  title: string;
+  brief: string;
+  url: string;
+  category: string;
+  fee_idr: number;
+  slots: number;
+  status: "open" | "closed";
+  brand_username: string;
+  accepted_count: number;
+  applied_count: number;
+  my_application_status?: BrandApplicationStatus;
+  my_application_id?: string;
+  created_at: string;
+}
+
+export interface BrandMyApplication {
+  id: string;
+  status: BrandApplicationStatus;
+  pitch: string;
+  link_id: string | null;
+  created_at: string;
+  campaign: BrandCampaign;
+}
+
+export interface BrandCampaignApplication {
+  id: string;
+  status: BrandApplicationStatus;
+  pitch: string;
+  link_id: string | null;
+  creator_username: string;
+  created_at: string;
+}
+
+// sisi kreator
+export function listBrandCampaigns(kind?: BrandCampaignKind | "") {
+  const q = kind ? `?kind=${kind}` : "";
+  return apiFetch<BrandCampaign[]>(`/dashboard/brand/campaigns${q}`, { method: "GET" }, { auth: true });
+}
+export function applyBrandCampaign(campaignId: string, pitch: string) {
+  return apiFetch<{ id: string; status: BrandApplicationStatus }>(
+    `/dashboard/brand/campaigns/${campaignId}/apply`,
+    { method: "POST", body: JSON.stringify({ pitch }) },
+    { auth: true },
+  );
+}
+export function listMyBrandApplications() {
+  return apiFetch<BrandMyApplication[]>("/dashboard/brand/applications", { method: "GET" }, { auth: true });
+}
+export function publishSponsoredLink(applicationId: string) {
+  return apiFetch<{ link_id: string }>(`/dashboard/brand/applications/${applicationId}/publish`, { method: "POST" }, { auth: true });
+}
+
+// sisi brand
+export function listMyBrandCampaigns() {
+  return apiFetch<BrandCampaign[]>("/dashboard/brand/my-campaigns", { method: "GET" }, { auth: true });
+}
+export function createBrandCampaign(input: { kind: BrandCampaignKind; title: string; brief: string; url: string; category: string; fee_idr: number; slots: number }) {
+  return apiFetch<{ id: string }>("/dashboard/brand/my-campaigns", { method: "POST", body: JSON.stringify(input) }, { auth: true });
+}
+export function updateBrandCampaignStatus(campaignId: string, status: "open" | "closed") {
+  return apiFetch<{ ok: boolean }>(`/dashboard/brand/my-campaigns/${campaignId}`, { method: "PATCH", body: JSON.stringify({ status }) }, { auth: true });
+}
+export function listBrandCampaignApplications(campaignId: string) {
+  return apiFetch<BrandCampaignApplication[]>(`/dashboard/brand/my-campaigns/${campaignId}/applications`, { method: "GET" }, { auth: true });
+}
+export function decideBrandApplication(campaignId: string, applicationId: string, status: "accepted" | "rejected" | "completed") {
+  return apiFetch<{ ok: boolean }>(
+    `/dashboard/brand/my-campaigns/${campaignId}/applications/${applicationId}`,
+    { method: "PATCH", body: JSON.stringify({ status }) },
+    { auth: true },
+  );
+}
+
 // ---------- Dashboard: Manajer Audiens (Sprint 8, No.73) ----------
 // Blok pengumpulan lead di halaman publik + daftar kontak tersentralisasi
 // (subscriber form + pembeli produk, digabung lewat email).

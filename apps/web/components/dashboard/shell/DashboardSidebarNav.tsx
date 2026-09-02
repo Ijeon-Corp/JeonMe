@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/locale-context";
 import {
   IconBell,
   IconBook,
+  IconBriefcase,
   IconBox,
   IconCalendar,
   IconChart,
@@ -111,6 +112,7 @@ export function buildNavItemsV2(t: (key: string) => string): NavEntryV2[] {
         { href: "/dashboard/vouchers", label: t("dashboard.extraPages.vouchers"), icon: IconTag },
         { href: "/dashboard/bundles", label: t("dashboard.extraPages.bundles"), icon: IconGift },
         { href: "/dashboard/affiliates", label: t("dashboard.extraPages.affiliates"), icon: IconUsers },
+        { href: "/dashboard/brand", label: t("dashboard.extraPages.brand"), icon: IconBriefcase },
         { href: "/dashboard/loyalty", label: t("dashboard.extraPages.loyalty"), icon: IconStar },
         { href: "/dashboard/social-proof", label: t("dashboard.nav.socialProof"), icon: IconBell },
       ],

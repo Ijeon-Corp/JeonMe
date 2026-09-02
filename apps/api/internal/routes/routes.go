@@ -59,6 +59,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	businessCard := handlers.NewBusinessCardHandler(db)
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
+	brand := handlers.NewBrandHandler(db)
 	audience := handlers.NewAudienceHandler(db, rdb, queueClient)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
@@ -484,6 +485,17 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// Marketplace afiliasi: jelajah & bergabung atas nama DIRI SENDIRI --
 			// sengaja di luar grup ActAs (kolaborator tidak boleh mendaftarkan
 			// pemilik workspace sebagai afiliator produk orang lain).
+			// Marketplace Brand <-> Kreator (benchmark Linktree Earn > Sponsored
+			// Links & Brand Deals, 3 September 2026) -- owner-only, di luar ActAs.
+			dashboard.GET("/brand/campaigns", brand.ListOpenCampaigns)
+			dashboard.POST("/brand/campaigns/:id/apply", brand.Apply)
+			dashboard.GET("/brand/applications", brand.ListMyApplications)
+			dashboard.POST("/brand/applications/:id/publish", brand.PublishSponsoredLink)
+			dashboard.GET("/brand/my-campaigns", brand.ListMyCampaigns)
+			dashboard.POST("/brand/my-campaigns", brand.CreateCampaign)
+			dashboard.PATCH("/brand/my-campaigns/:id", brand.UpdateCampaignStatus)
+			dashboard.GET("/brand/my-campaigns/:id/applications", brand.ListCampaignApplications)
+			dashboard.PATCH("/brand/my-campaigns/:id/applications/:appId", brand.DecideApplication)
 			dashboard.GET("/affiliate-marketplace", affiliate.ListMarketplace)
 			dashboard.POST("/affiliate-marketplace/:productId/join", affiliate.JoinMarketplace)
 

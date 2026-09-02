@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
 import {
   IconBook,
+  IconBriefcase,
   IconCalendar,
   IconChevronRight,
   IconClock,
@@ -95,6 +96,12 @@ function buildGroups(t: (key: string) => string): { label: string; items: Moneti
           title: t("dashboard.pages.monetisasi.groups.growth.donation.title"),
           description: t("dashboard.pages.monetisasi.groups.growth.donation.description"),
           icon: IconHeart,
+        },
+        {
+          href: "/dashboard/brand",
+          title: t("dashboard.pages.monetisasi.groups.growth.brand.title"),
+          description: t("dashboard.pages.monetisasi.groups.growth.brand.description"),
+          icon: IconBriefcase,
         },
         {
           href: "/dashboard/affiliates",

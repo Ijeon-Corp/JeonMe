@@ -26,6 +26,7 @@ function buildTabs(t: (key: string) => string) {
     { href: "/dashboard/bundles", label: t("dashboard.pages.monetisasiLayout.tabs.bundles") },
     { href: "/dashboard/donation", label: t("dashboard.pages.monetisasiLayout.tabs.donation") },
     { href: "/dashboard/affiliates", label: t("dashboard.pages.monetisasiLayout.tabs.affiliates") },
+    { href: "/dashboard/brand", label: t("dashboard.pages.monetisasiLayout.tabs.brand") },
     { href: "/dashboard/loyalty", label: t("dashboard.pages.monetisasiLayout.tabs.loyalty") },
     { href: "/dashboard/events", label: t("dashboard.pages.monetisasiLayout.tabs.events") },
     { href: "/dashboard/courses", label: t("dashboard.pages.monetisasiLayout.tabs.courses") },
