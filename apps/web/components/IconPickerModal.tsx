@@ -42,7 +42,7 @@ export default function IconPickerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.iconPickerModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">

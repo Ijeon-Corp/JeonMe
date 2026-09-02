@@ -71,7 +71,7 @@ export default function ResetPasswordPage() {
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="mt-7 w-full rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5"
+            className="mt-7 w-full rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
           >
             Ke Halaman Masuk
           </button>

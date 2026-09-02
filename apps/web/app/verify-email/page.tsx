@@ -131,7 +131,7 @@ export default function VerifyEmailPage() {
             type="button"
             onClick={handleContinue}
             disabled={continuing}
-            className="mt-7 w-full rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+            className="mt-7 w-full rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
           >
             {continuing ? "Memuat..." : "OK"}
           </button>
@@ -175,7 +175,7 @@ export default function VerifyEmailPage() {
         <button
           type="submit"
           disabled={loading || code.length !== 6}
-          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memverifikasi..." : "Verifikasi & Masuk"}
         </button>

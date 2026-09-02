@@ -73,7 +73,7 @@ export default function TransactionPanel() {
             placeholder={t("dashboard.components.transactionPanel.searchPlaceholder")}
             className="rounded-lg border border-app-border px-3 py-1.5 text-xs text-app-ink"
           />
-          <button type="submit" className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple">
+          <button type="submit" className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple">
             {t("dashboard.components.transactionPanel.searchButton")}
           </button>
         </form>
@@ -89,7 +89,7 @@ export default function TransactionPanel() {
                 aria-pressed={statusFilter === st}
                 className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                   statusFilter === st
-                    ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                    ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                     : "border-app-border text-app-muted hover:border-jeon-purple/50"
                 }`}
               >
@@ -119,7 +119,7 @@ export default function TransactionPanel() {
         <div className="glass overflow-x-auto rounded-jmd shadow-card">
           <table aria-label={t("dashboard.components.transactionPanel.tableAriaLabel")} className="w-full min-w-[720px] text-left text-xs">
             <thead>
-              <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
+              <tr className="border-b-2 border-jeon-ink text-[11px] font-semibold uppercase tracking-wide text-app-muted">
                 <th className="px-4 py-3">{t("dashboard.components.transactionPanel.columnProduct")}</th>
                 <th className="px-4 py-3">{t("dashboard.components.transactionPanel.columnBuyer")}</th>
                 <th className="px-4 py-3">{t("dashboard.components.transactionPanel.columnAmount")}</th>
@@ -217,8 +217,8 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
         onClick={(e) => e.stopPropagation()}
         className={
           salesV2
-            ? "absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto bg-app-surface p-6 shadow-hero"
-            : "relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jmd bg-app-surface p-6 shadow-hero"
+            ? "absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal"
+            : "relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jmd bg-app-surface p-6 shadow-brutal"
         }
       >
         <button
@@ -330,7 +330,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
                         type="button"
                         disabled={refunding}
                         onClick={() => setConfirming(false)}
-                        className="flex-1 rounded-lg border border-app-border py-2 text-xs font-semibold text-app-ink"
+                        className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-semibold text-app-ink"
                       >
                         {t("dashboard.components.transactionPanel.cancelButton")}
                       </button>

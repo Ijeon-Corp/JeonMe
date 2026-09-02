@@ -140,7 +140,7 @@ export default function DangerZonePage() {
               type="button"
               onClick={handleReactivate}
               disabled={reactivating}
-              className="rounded-lg bg-jeon-purple px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+              className="rounded-lg btn-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
             >
               {reactivating ? t("dashboard.pages.settingsDangerZone.processing") : t("dashboard.pages.settingsDangerZone.reactivateButton")}
             </button>
@@ -158,7 +158,7 @@ export default function DangerZonePage() {
             <button
               type="submit"
               disabled={deactivating}
-              className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
+              className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
             >
               {deactivating ? t("dashboard.pages.settingsDangerZone.processing") : t("dashboard.pages.settingsDangerZone.deactivateButton")}
             </button>
@@ -173,7 +173,7 @@ export default function DangerZonePage() {
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="mt-3 rounded-lg border border-app-border px-4 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
+          className="mt-3 rounded-lg border-2 border-jeon-ink px-4 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
         >
           {exporting ? t("dashboard.pages.settingsDangerZone.exportPreparing") : t("dashboard.pages.settingsDangerZone.exportButton")}
         </button>

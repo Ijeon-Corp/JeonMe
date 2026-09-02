@@ -176,7 +176,7 @@ function SettingsCard({ item, index }: { item: SettingsItem; index: number }) {
         <span className="flex items-center gap-1.5">
           <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
           {item.statusPill && (
-            <span className="flex-shrink-0 rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-jeon-purple">
+            <span className="flex-shrink-0 rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111]">
               {item.statusPill}
             </span>
           )}

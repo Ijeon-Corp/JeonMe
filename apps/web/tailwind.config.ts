@@ -167,8 +167,8 @@ const config: Config = {
         // 1 September 2026). Dipetakan ke token, BUKAN nilai blur lama,
         // supaya kartu ber-`shadow-card` yang TIDAK memakai .glass tetap
         // seragam dengan yang memakai .glass.
-        card: "var(--shadow-card-dash)",
-        "card-hover": "6px 7px 0 rgba(17,17,17,0.9)",
+        card: "var(--shadow-card-brutal)",
+        "card-hover": "8px 9px 0 rgba(17,17,17,0.9)",
         hero: "0 30px 90px -16px rgba(27,77,62,0.35)",
         glow: "0 0 0 1px rgba(255,255,255,0.4) inset, 0 8px 32px -8px rgba(27,77,62,0.25)",
         // refined/refined-lg -- redesain "Premium Refined": bayangan
@@ -182,6 +182,7 @@ const config: Config = {
         // dashboard yang lebih tenang. Nilai via variable CSS supaya
         // varian dark mode (globals.css) ikut otomatis.
         brutal: "var(--shadow-card-brutal)",
+        btn: "var(--shadow-btn)",
         jsoft: "var(--shadow-soft)",
         jfocus: "var(--shadow-focus)",
         // Bayangan target redesign dashboard (spec §4.5) -- via var supaya

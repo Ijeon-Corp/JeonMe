@@ -131,7 +131,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-jlg bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <div>
             <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.locationPickerModal.title")}</h2>
@@ -159,7 +159,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
               type="button"
               onClick={useCurrentLocation}
               disabled={locating}
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border px-3.5 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border-2 border-jeon-ink px-3.5 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
             >
               <IconTarget className="h-3.5 w-3.5" />
               {locating ? t("dashboard.components.locationPickerModal.searching") : t("dashboard.components.locationPickerModal.myLocation")}
@@ -220,7 +220,7 @@ export default function LocationPickerModal({ onSelect, onClose }: { onSelect: (
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </p>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-app-border px-4 py-2 text-sm font-bold text-app-muted hover:border-ink/30">
+            <button type="button" onClick={onClose} className="rounded-lg border-2 border-jeon-ink px-4 py-2 text-sm font-bold text-app-muted hover:border-ink/30">
               {t("dashboard.components.locationPickerModal.cancel")}
             </button>
             <button type="button" onClick={confirm} className="btn-primary rounded-lg px-4 py-2 text-sm font-bold text-white">

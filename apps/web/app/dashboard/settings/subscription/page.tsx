@@ -230,7 +230,7 @@ function PricingCard({
         type="button"
         onClick={onSubscribe}
         disabled={disabled}
-        className="mt-4 w-full rounded-xl bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+        className="mt-4 w-full rounded-xl btn-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
       >
         {busy ? t("dashboard.pages.settingsSubscription.preparingPayment") : t("dashboard.pages.settingsSubscription.subscribeButton")}
       </button>

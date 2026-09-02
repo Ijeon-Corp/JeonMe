@@ -957,7 +957,7 @@ function DashboardProductsPageInner() {
             sejajar yang overload (audit §2.2). Semua view tetap
             deep-linkable via ?tab= (§13.8). Legacy di cabang else. */}
         {salesV2 ? (
-          <div className="flex items-center gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2 overflow-x-auto border-b-2 border-jeon-ink [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 { key: "overview" as ProductsTab, label: t("dashboard.nav.salesOverview") },
@@ -973,7 +973,7 @@ function DashboardProductsPageInner() {
                   setMoreTabsOpen(false);
                   setTabAndUrl(tb.key);
                 }}
-                className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+                className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
                   tab === tb.key ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
                 }`}
               >
@@ -986,7 +986,7 @@ function DashboardProductsPageInner() {
                 onClick={() => setMoreTabsOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={moreTabsOpen}
-                className={`flex items-center gap-1 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+                className={`flex items-center gap-1 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
                   MORE_TABS.includes(tab)
                     ? "border-jeon-purple text-jeon-purple"
                     : "border-transparent text-app-muted hover:text-app-ink"
@@ -1023,11 +1023,11 @@ function DashboardProductsPageInner() {
             </div>
           </div>
         ) : (
-        <div className="flex gap-2 overflow-x-auto border-b border-app-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto border-b-2 border-jeon-ink [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setTabAndUrl("halaman_toko")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "halaman_toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1036,7 +1036,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("overview")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "overview" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1045,7 +1045,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("manage")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "manage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1054,7 +1054,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("reviews")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "reviews" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1063,7 +1063,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("listing")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "listing" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1072,7 +1072,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("storage")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "storage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1081,7 +1081,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("webhook_events")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "webhook_events" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1090,7 +1090,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("shop_settings")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "shop_settings" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1099,7 +1099,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("transaction")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "transaction" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1254,7 +1254,7 @@ function DashboardProductsPageInner() {
                   onClick={() => setOverviewRangeDays(d)}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     overviewRangeDays === d
-                      ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                      ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                       : "border-app-border text-app-muted hover:border-jeon-purple/50"
                   }`}
                 >
@@ -1331,7 +1331,7 @@ function DashboardProductsPageInner() {
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
+                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
                 >
                   <IconUpload className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
@@ -1340,7 +1340,7 @@ function DashboardProductsPageInner() {
                 <button
                   type="button"
                   onClick={() => setAddMode("payment_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
+                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
                 >
                   <IconWallet className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
@@ -1355,7 +1355,7 @@ function DashboardProductsPageInner() {
                 <button
                   type="button"
                   onClick={() => setAddMode("external_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border border-app-border p-3.5 text-left hover:border-jeon-purple"
+                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
                 >
                   <IconExternal className="h-5 w-5 text-jeon-purple" />
                   <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
@@ -1412,7 +1412,7 @@ function DashboardProductsPageInner() {
                       setCategory("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
+                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     {t("dashboard.pages.products.form.cancel")}
                   </button>
@@ -1487,7 +1487,7 @@ function DashboardProductsPageInner() {
                       setLinkExpiresAt("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
+                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     {t("dashboard.pages.products.form.cancel")}
                   </button>
@@ -1551,7 +1551,7 @@ function DashboardProductsPageInner() {
                       setExternalUrl("");
                       setCoverFile(null);
                     }}
-                    className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
+                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
                   >
                     {t("dashboard.pages.products.form.cancel")}
                   </button>
@@ -1563,7 +1563,7 @@ function DashboardProductsPageInner() {
               <div className="glass mt-4 overflow-x-auto rounded-jlg shadow-card">
                 <table aria-label={t("dashboard.pages.products.table.ariaLabel")} className="w-full min-w-[520px] text-left text-xs">
                   <thead>
-                    <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
+                    <tr className="border-b-2 border-jeon-ink text-[11px] font-semibold uppercase tracking-wide text-app-muted">
                       <th className="px-4 py-3">{t("dashboard.pages.products.table.item")}</th>
                       <th className="px-4 py-3">{t("dashboard.pages.products.table.price")}</th>
                       <th className="px-4 py-3">{t("dashboard.pages.products.table.sold")}</th>
@@ -1596,7 +1596,7 @@ function DashboardProductsPageInner() {
                               <p className="truncate font-semibold text-app-ink">{p.name}</p>
                               <div className="mt-0.5 flex flex-wrap gap-1">
                                 {p.product_kind === "payment_link" && (
-                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
+                                  <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold text-[#111111]">
                                     {t("dashboard.pages.products.badges.paymentLink")}
                                   </span>
                                 )}
@@ -1614,7 +1614,7 @@ function DashboardProductsPageInner() {
                                     href={p.external_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-0.5 rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple hover:underline"
+                                    className="flex items-center gap-0.5 rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold text-[#111111] hover:underline"
                                   >
                                     {t("dashboard.pages.products.badges.externalLink")} <IconExternal className="h-2.5 w-2.5" />
                                   </a>
@@ -1628,12 +1628,12 @@ function DashboardProductsPageInner() {
                                   </span>
                                 )}
                                 {p.pwyw_enabled && (
-                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
+                                  <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold text-[#111111]">
                                     {t("dashboard.pages.products.badges.pwyw")}
                                   </span>
                                 )}
                                 {p.collaborator_splits.length > 0 && (
-                                  <span className="rounded-full bg-jeon-purple/10 px-1.5 py-0.5 text-[9px] font-bold text-jeon-purple">
+                                  <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold text-[#111111]">
                                     {t("dashboard.pages.products.badges.collaboratorsCount").replace("{count}", String(p.collaborator_splits.length))}
                                   </span>
                                 )}
@@ -1675,7 +1675,7 @@ function DashboardProductsPageInner() {
                           <button
                             type="button"
                             onClick={() => setManageProductId(p.id)}
-                            className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                            className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                           >
                             {t("dashboard.pages.products.manage")}
                           </button>
@@ -1707,7 +1707,7 @@ function DashboardProductsPageInner() {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
+                  className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
                 >
                   {t("dashboard.pages.products.pagination.previous")}
                 </button>
@@ -1717,7 +1717,7 @@ function DashboardProductsPageInner() {
                     type="button"
                     onClick={() => setItemsPage(n)}
                     className={`h-8 w-8 rounded-lg text-xs font-semibold ${
-                      n === currentPage ? "bg-jeon-purple text-white" : "text-app-ink hover:bg-jeon-purple/10"
+                      n === currentPage ? "btn-primary text-white" : "text-app-ink hover:bg-jeon-purple/10"
                     }`}
                   >
                     {n}
@@ -1727,7 +1727,7 @@ function DashboardProductsPageInner() {
                   type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setItemsPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
+                  className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-40"
                 >
                   {t("dashboard.pages.products.pagination.next")}
                 </button>
@@ -1745,7 +1745,7 @@ function DashboardProductsPageInner() {
           <form
             onSubmit={handleCreateAdditionalToko}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-jmd bg-app-surface p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
           >
             <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.products.newTokoModal.title")}</h2>
             <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.products.newTokoModal.description")}</p>
@@ -1769,7 +1769,7 @@ function DashboardProductsPageInner() {
               <button
                 type="submit"
                 disabled={!newTokoPageTitle.trim() || savingNewTokoPage}
-                className="flex-1 rounded-lg bg-jeon-purple py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="flex-1 rounded-lg btn-primary py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {savingNewTokoPage ? t("dashboard.pages.products.newTokoModal.creating") : t("dashboard.pages.products.newTokoModal.create")}
               </button>
@@ -1795,7 +1795,7 @@ function DashboardProductsPageInner() {
           onClick={closeManageModal}
         >
           <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg bg-app-surface p-5 shadow-hero"
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
@@ -1822,7 +1822,7 @@ function DashboardProductsPageInner() {
                   onChange={(e) => setCategoryDraft(e.target.value)}
                   className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                 />
-                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
+                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border-2 border-jeon-ink px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
                   {t("dashboard.pages.products.manageModal.cancel")}
                 </button>
                 <button
@@ -1997,7 +1997,7 @@ function DashboardProductsPageInner() {
                     />
                   </div>
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
+                    <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                       {t("dashboard.pages.products.manageModal.cancel")}
                     </button>
                     <button
@@ -2045,7 +2045,7 @@ function DashboardProductsPageInner() {
                     className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                   />
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
+                    <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                       {t("dashboard.pages.products.manageModal.cancel")}
                     </button>
                     <button
@@ -2130,7 +2130,7 @@ function DashboardProductsPageInner() {
                       {t("dashboard.pages.products.manageModal.addCollaborator")}
                     </button>
                     <div className="flex gap-1.5">
-                      <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
+                      <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                         {t("dashboard.pages.products.manageModal.cancel")}
                       </button>
                       <button
@@ -2199,7 +2199,7 @@ function DashboardProductsPageInner() {
                       <button
                         type="button"
                         onClick={() => setExternalUrlEditId(null)}
-                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted hover:border-ink/30"
+                        className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted hover:border-ink/30"
                       >
                         {t("dashboard.pages.products.manageModal.cancel")}
                       </button>

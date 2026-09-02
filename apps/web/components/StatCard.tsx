@@ -46,7 +46,7 @@ export function TrendBadge({ pct, onDark = false }: { pct: number | null; onDark
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-        onDark ? "bg-white/15 text-jeon-lavender" : positive ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
+        onDark ? "bg-white/15 text-jeon-lavender" : positive ? "border-2 border-[#111111] bg-jeon-lavender text-[#111111]" : "border-2 border-[#111111] bg-jeon-coral text-[#111111]"
       }`}
     >
       <IconTrendArrow className={`h-3 w-3 flex-shrink-0 ${positive ? "" : "rotate-180"}`} />

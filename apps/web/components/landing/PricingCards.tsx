@@ -64,7 +64,7 @@ export default function PricingCards({ monthly, yearly, showHeading }: { monthly
           {/* Kartu Premium: ungu brand KONSTAN (sama di kedua mode) --
               semua teks di atasnya putih/putih-transparan konstan. */}
           <div
-            className="reveal relative rounded-jlg border-2 border-[#111111] bg-jeon-purple p-8 text-white shadow-[10px_12px_0_rgba(17,17,17,0.92)]"
+            className="reveal relative rounded-jlg border-2 border-[#111111] bg-jeon-purple p-8 text-white shadow-brutal"
             style={{ transitionDelay: "0.1s" }}
           >
             <span className="absolute -top-3 right-8 rounded-full border-2 border-[#111111] bg-jeon-lime px-3 py-1 text-[11px] font-bold text-[#111111]">

@@ -1984,7 +1984,7 @@ export default function DashboardLinksPage() {
                     type="button"
                     onClick={saveSocial}
                     disabled={savingSocial}
-                    className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                    className="rounded-lg btn-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
                   >
                     {savingSocial ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
                   </button>
@@ -2095,7 +2095,7 @@ export default function DashboardLinksPage() {
               <button
                 type="button"
                 onClick={() => setAddingLink(false)}
-                className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
+                className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.links.common.cancel")}
               </button>
@@ -2277,7 +2277,7 @@ export default function DashboardLinksPage() {
                     <button
                       type="button"
                       onClick={() => setMapsPickerOpenFor("add")}
-                      className="flex-shrink-0 rounded-lg border border-app-border px-3 py-2 text-xs font-bold text-jeon-purple hover:border-jeon-purple"
+                      className="flex-shrink-0 rounded-lg border-2 border-jeon-ink px-3 py-2 text-xs font-bold text-jeon-purple hover:border-jeon-purple"
                     >
                       {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                     </button>
@@ -2346,7 +2346,7 @@ export default function DashboardLinksPage() {
               <button
                 type="button"
                 onClick={() => setAddingBlock(false)}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.links.common.cancel")}
               </button>
@@ -2473,7 +2473,7 @@ export default function DashboardLinksPage() {
                     </div>
                   )}
                   {link.block_type !== "link" && (
-                    <span className="mt-1 inline-block rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
+                    <span className="mt-1 inline-block rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
                       {blockTypeLabel[link.block_type]}
                     </span>
                   )}
@@ -3134,7 +3134,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => setScheduleEditId(null)}
-                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
+                        className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted"
                       >
                         {t("dashboard.pages.links.common.cancel")}
                       </button>
@@ -3199,7 +3199,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => setLockEditId(null)}
-                        className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted"
+                        className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted"
                       >
                         {t("dashboard.pages.links.common.cancel")}
                       </button>
@@ -3286,7 +3286,7 @@ export default function DashboardLinksPage() {
                           <button
                             type="button"
                             onClick={() => setMapsPickerOpenFor(link.id)}
-                            className="flex-shrink-0 rounded-md border border-app-border px-2.5 py-1.5 text-[11px] font-bold text-jeon-purple hover:border-jeon-purple"
+                            className="flex-shrink-0 rounded-md border-2 border-jeon-ink px-2.5 py-1.5 text-[11px] font-bold text-jeon-purple hover:border-jeon-purple"
                           >
                             {t("dashboard.pages.links.blockForm.maps.pickOnMap")}
                           </button>
@@ -3398,7 +3398,7 @@ export default function DashboardLinksPage() {
                     </div>
                   )}
                   <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border border-app-border py-1.5 text-[11px] font-bold text-app-muted">
+                    <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                       {t("dashboard.pages.links.common.cancel")}
                     </button>
                     <button
@@ -3476,11 +3476,11 @@ export default function DashboardLinksPage() {
               onClick={() => setConfirmDeleteId(null)}
             >
               <div
-                className="w-full max-w-sm rounded-jmd bg-app-surface p-5 shadow-2xl"
+                className="w-full max-w-sm rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-coral text-[#111111]">
                     <TriangleAlert className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -3530,7 +3530,7 @@ export default function DashboardLinksPage() {
           <form
             onSubmit={handleCreatePage}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-jmd bg-app-surface p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
           >
             <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.createPageModal.title")}</h2>
             <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.links.createPageModal.subtitle")}</p>
@@ -3571,7 +3571,7 @@ export default function DashboardLinksPage() {
               <button
                 type="submit"
                 disabled={!newPageTitle.trim() || savingNewPage}
-                className="flex-1 rounded-lg bg-jeon-purple py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="flex-1 rounded-lg btn-primary py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {savingNewPage ? t("dashboard.pages.links.createPageModal.creating") : t("dashboard.pages.links.createPageModal.createButton")}
               </button>
@@ -3686,7 +3686,7 @@ function AddModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8 sm:items-center" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg bg-app-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-jlg border-2 border-jeon-ink bg-app-surface shadow-brutal" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-5 py-4">
           <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.links.addModal.title")}</h2>
           <button type="button" onClick={onClose} className="text-app-muted hover:text-app-ink">
@@ -3746,7 +3746,7 @@ function AddModal({
                     key={tile.key}
                     type="button"
                     onClick={() => onSelectContentTile(tile)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-app-border p-2.5 hover:border-jeon-purple/50"
+                    className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-jeon-ink p-2.5 hover:border-jeon-purple/50"
                   >
                     <span className="flex h-9 w-9 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                       <tile.Icon className="h-5 w-5" />

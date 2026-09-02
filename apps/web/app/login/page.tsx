@@ -107,7 +107,7 @@ function LoginPageInner() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+            className="mt-2 rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
           >
             {loading ? "Memverifikasi..." : "Verifikasi"}
           </button>
@@ -175,7 +175,7 @@ function LoginPageInner() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memproses..." : "Masuk"}
         </button>

@@ -88,7 +88,7 @@ export default function ReviewsPanel() {
                 <button
                   type="button"
                   onClick={() => handleToggleHidden(r)}
-                  className="rounded-lg border border-app-border px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
+                  className="rounded-lg border-2 border-jeon-ink px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
                 >
                   {r.is_hidden
                     ? t("dashboard.components.reviewsPanel.showButton")

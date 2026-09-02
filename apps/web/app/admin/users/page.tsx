@@ -58,7 +58,7 @@ export default function AdminUsersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
         />
-        <button type="submit" className="rounded-lg border border-app-border px-4 py-2.5 text-sm font-semibold hover:border-jeon-purple">
+        <button type="submit" className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-semibold hover:border-jeon-purple">
           Cari
         </button>
       </form>

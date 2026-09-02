@@ -101,7 +101,7 @@ export default function AdminKycPage() {
           onClick={() => handleFilterChange("pending")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "pending"
-              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
               : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
@@ -112,7 +112,7 @@ export default function AdminKycPage() {
           onClick={() => handleFilterChange("all")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
-              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
               : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
@@ -162,7 +162,7 @@ export default function AdminKycPage() {
 
       {(detailLoading || detail) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-jlg bg-app-surface p-6 shadow-hero">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal">
             {detailLoading && <p className="text-sm text-app-muted">Memuat detail...</p>}
             {detail && (
               <>
@@ -260,7 +260,7 @@ export default function AdminKycPage() {
                 <button
                   type="button"
                   onClick={() => setDetail(null)}
-                  className="mt-4 w-full rounded-lg border border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+                  className="mt-4 w-full rounded-lg border-2 border-jeon-ink py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   Tutup
                 </button>

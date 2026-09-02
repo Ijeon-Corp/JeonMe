@@ -194,7 +194,7 @@ export default function DashboardBundlesPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.bundles.cancel")}
               </button>
@@ -223,7 +223,7 @@ export default function DashboardBundlesPage() {
             </div>
             <p className="mt-1 text-xs text-app-muted">{b.item_names.join(", ")}</p>
             {marketingV2 && b.original_total_idr > b.price_idr && (
-              <p className="mt-1.5 inline-flex rounded-full bg-jeon-purple/10 px-2.5 py-1 text-[11px] font-bold text-jeon-purple">
+              <p className="mt-1.5 inline-flex rounded-full border-2 border-[#111111] bg-jeon-lavender px-2.5 py-1 text-[11px] font-bold text-[#111111]">
                 {t("dashboard.pages.bundles.savingLabel")
                   .replace("{amount}", (b.original_total_idr - b.price_idr).toLocaleString("id-ID"))
                   .replace("{pct}", String(Math.round(((b.original_total_idr - b.price_idr) / b.original_total_idr) * 100)))}

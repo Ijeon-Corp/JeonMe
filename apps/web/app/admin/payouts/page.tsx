@@ -78,7 +78,7 @@ export default function AdminPayoutsPage() {
           onClick={() => handleFilterChange("needs_action")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "needs_action"
-              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
               : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
@@ -89,7 +89,7 @@ export default function AdminPayoutsPage() {
           onClick={() => handleFilterChange("all")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
             filter === "all"
-              ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+              ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
               : "border-app-border text-app-muted hover:border-jeon-purple/50"
           }`}
         >
@@ -119,7 +119,7 @@ export default function AdminPayoutsPage() {
               </div>
               <div className="flex flex-shrink-0 items-center gap-1.5">
                 {p.kyc_status_at_request === "verified" && (
-                  <span className="rounded-full bg-jeon-purple/10 px-2.5 py-1 text-xs font-semibold text-jeon-purple">
+                  <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2.5 py-1 text-xs font-semibold text-[#111111]">
                     KYC Terverifikasi
                   </span>
                 )}

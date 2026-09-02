@@ -288,7 +288,7 @@ export default function DashboardKycPage() {
               <button
                 type="button"
                 onClick={() => { setError(null); setKycStep((v) => v - 1); }}
-                className="flex-1 rounded-lg border border-app-border py-2.5 text-sm font-semibold text-app-ink"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2.5 text-sm font-semibold text-app-ink"
               >
                 {t("dashboard.pages.kyc.backButton")}
               </button>

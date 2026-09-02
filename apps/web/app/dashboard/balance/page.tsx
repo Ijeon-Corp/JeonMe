@@ -315,7 +315,7 @@ export default function DashboardBalancePage() {
             aria-modal="true"
             aria-label={t("dashboard.pages.balance.requestPayoutHeading")}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-jlg bg-app-surface p-5 shadow-hero"
+            className="w-full max-w-sm rounded-jlg border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
           >
             <h2 className="font-display text-base font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
             <p className="mt-1 text-xs text-app-muted">
@@ -332,7 +332,7 @@ export default function DashboardBalancePage() {
                     key={q.label}
                     type="button"
                     onClick={() => setAmount(String(Math.max(q.value, 0)))}
-                    className="rounded-full border border-app-border px-3 py-1.5 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+                    className="rounded-full border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     {q.label}
                   </button>
@@ -361,7 +361,7 @@ export default function DashboardBalancePage() {
                 <button
                   type="button"
                   onClick={() => setPayoutOpen(false)}
-                  className="flex-1 rounded-lg border border-app-border py-2.5 text-sm font-semibold text-app-ink"
+                  className="flex-1 rounded-lg border-2 border-jeon-ink py-2.5 text-sm font-semibold text-app-ink"
                 >
                   {t("dashboard.pages.balance.dialogCancel")}
                 </button>

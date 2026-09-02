@@ -31,7 +31,7 @@ export default function WebhookEventsPanel() {
       <div className="glass overflow-x-auto rounded-jmd shadow-card">
         <table aria-label={t("dashboard.components.webhookEventsPanel.tableAriaLabel")} className="w-full min-w-[720px] text-left text-xs">
           <thead>
-            <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
+            <tr className="border-b-2 border-jeon-ink text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnProduct")}</th>
               <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnUrl")}</th>
               <th className="px-4 py-3">{t("dashboard.components.webhookEventsPanel.columnStatus")}</th>
@@ -50,7 +50,7 @@ export default function WebhookEventsPanel() {
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      e.status === "success" ? "bg-jeon-purple/10 text-jeon-purple" : "bg-red-50 text-red-600"
+                      e.status === "success" ? "border-2 border-[#111111] bg-jeon-lavender text-[#111111]" : "border-2 border-[#111111] bg-jeon-coral text-[#111111]"
                     }`}
                   >
                     {e.status === "success"

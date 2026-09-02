@@ -269,7 +269,7 @@ export default function DashboardEventsPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.events.cancel")}
               </button>

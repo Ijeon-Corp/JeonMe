@@ -188,7 +188,7 @@ export default function SettingsSecurityPage() {
           <button
             type="submit"
             disabled={savingPassword}
-            className="self-start rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+            className="self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {savingPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.changePasswordButton")}
           </button>
@@ -201,7 +201,7 @@ export default function SettingsSecurityPage() {
           {status && (
             <span
               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                status.enabled ? "bg-jeon-purple/10 text-jeon-purple" : "bg-ink/5 text-app-muted"
+                status.enabled ? "border-2 border-[#111111] bg-jeon-lavender text-[#111111]" : "bg-ink/5 text-app-muted"
               }`}
             >
               {status.enabled ? t("dashboard.pages.settingsSecurity.statusActive") : t("dashboard.pages.settingsSecurity.statusInactive")}
@@ -214,7 +214,7 @@ export default function SettingsSecurityPage() {
           <button
             type="button"
             onClick={handleStart2FA}
-            className="mt-3 rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark"
+            className="mt-3 rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white"
           >
             {t("dashboard.pages.settingsSecurity.enable2faButton")}
           </button>
@@ -244,7 +244,7 @@ export default function SettingsSecurityPage() {
               <button
                 type="submit"
                 disabled={verifying}
-                className="rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+                className="rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
                 {verifying ? t("dashboard.pages.settingsSecurity.verifying") : t("dashboard.pages.settingsSecurity.confirmEnableButton")}
               </button>
@@ -286,7 +286,7 @@ export default function SettingsSecurityPage() {
                   setShowDisableForm(false);
                   setDisablePassword("");
                 }}
-                className="rounded-lg border border-app-border px-3 py-2 text-xs font-semibold text-app-ink"
+                className="rounded-lg border-2 border-jeon-ink px-3 py-2 text-xs font-semibold text-app-ink"
               >
                 {t("dashboard.pages.settingsSecurity.cancel")}
               </button>
@@ -344,7 +344,7 @@ export default function SettingsSecurityPage() {
                     {s.user_agent || t("dashboard.pages.settingsSecurity.unknownDevice")}
                   </p>
                   {s.is_current && (
-                    <span className="flex-shrink-0 rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
+                    <span className="flex-shrink-0 rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
                       {t("dashboard.pages.settingsSecurity.thisSessionBadge")}
                     </span>
                   )}

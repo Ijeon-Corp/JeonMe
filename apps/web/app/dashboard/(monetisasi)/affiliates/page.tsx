@@ -211,7 +211,7 @@ export default function DashboardAffiliatesPage() {
               <button
                 type="button"
                 onClick={() => setAdding(false)}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.affiliates.cancel")}
               </button>

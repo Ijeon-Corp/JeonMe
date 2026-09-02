@@ -93,7 +93,7 @@ export default function ShopSettingsPanel() {
             type="button"
             disabled={saving || message === settings.shop_paused_message}
             onClick={() => save(settings.shop_paused, message)}
-            className="mt-2 rounded-lg border border-app-border px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-50"
+            className="mt-2 rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-50"
           >
             {t("dashboard.components.shopSettingsPanel.saveMessageButton")}
           </button>

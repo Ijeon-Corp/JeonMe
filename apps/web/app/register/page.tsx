@@ -221,7 +221,7 @@ function RegisterPageInner() {
         <button
           type="submit"
           disabled={loading || usernameState === "checking" || usernameState === "unavailable"}
-          className="mt-2 rounded-jmd bg-jeon-purple px-5 py-3.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          className="mt-2 rounded-jmd btn-primary px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {loading ? "Memproses..." : "Daftar Gratis"}
         </button>

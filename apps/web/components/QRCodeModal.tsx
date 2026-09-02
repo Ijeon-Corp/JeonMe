@@ -43,7 +43,7 @@ export default function QRCodeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="relative w-full max-w-xs rounded-jmd bg-app-surface p-6 text-center shadow-hero">
+      <div className="relative w-full max-w-xs rounded-jmd border-2 border-jeon-ink bg-app-surface p-6 text-center shadow-brutal">
         <button
           type="button"
           onClick={onClose}

@@ -127,7 +127,7 @@ export default function GlobalSearch() {
             role="dialog"
             aria-modal="true"
             aria-label={t("dashboard.components.globalSearch.triggerLabel")}
-            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-jmd bg-app-surface shadow-2xl"
+            className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-brutal"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-shrink-0 items-center gap-2 border-b border-app-border px-4 py-3">

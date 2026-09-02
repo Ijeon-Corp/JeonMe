@@ -97,7 +97,7 @@ export default function ListingPanel({
               type="button"
               onClick={() => handleToggleFeatured(p)}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-                p.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-app-border text-app-muted hover:border-jeon-purple"
+                p.is_featured ? "border-amber-300 border-2 border-[#111111] bg-pop-yellow text-[#111111]" : "border-app-border text-app-muted hover:border-jeon-purple"
               }`}
             >
               <IconStar className="h-3.5 w-3.5" />

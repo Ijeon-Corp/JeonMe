@@ -196,13 +196,13 @@ export default function SettingsPaymentPage() {
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-1.5">
                   {m.is_primary && (
-                    <span className="rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
+                    <span className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
                       {t("dashboard.pages.settingsPayment.primaryBadge")}
                     </span>
                   )}
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      m.verified ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
+                      m.verified ? "border-2 border-[#111111] bg-jeon-lavender text-[#111111]" : "bg-gray-100 text-app-muted"
                     }`}
                   >
                     {m.verified ? t("dashboard.pages.settingsPayment.verifiedBadge") : t("dashboard.pages.settingsPayment.unverifiedBadge")}
@@ -223,7 +223,7 @@ export default function SettingsPaymentPage() {
                   <button
                     type="button"
                     onClick={() => handleStartVerify(m.id)}
-                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-jeon-purple hover:border-jeon-purple"
+                    className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-[11px] font-semibold text-jeon-purple hover:border-jeon-purple"
                   >
                     {t("dashboard.pages.settingsPayment.verifyButton")}
                   </button>
@@ -232,7 +232,7 @@ export default function SettingsPaymentPage() {
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(m.id)}
-                    className="rounded-lg border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
+                    className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
                   >
                     {t("dashboard.pages.settingsPayment.makePrimaryButton")}
                   </button>
@@ -253,7 +253,7 @@ export default function SettingsPaymentPage() {
                   <button
                     type="submit"
                     disabled={verifyBusy}
-                    className="rounded-md bg-jeon-purple px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    className="rounded-md btn-primary px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
                   >
                     {verifyBusy ? "..." : t("dashboard.pages.settingsPayment.confirmButton")}
                   </button>
@@ -310,14 +310,14 @@ export default function SettingsPaymentPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                className="rounded-lg btn-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
               >
                 {creating ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
               </button>
               <button
                 type="button"
                 onClick={() => setAdding(false)}
-                className="rounded-lg border border-app-border px-4 py-2 text-xs font-semibold text-app-ink"
+                className="rounded-lg border-2 border-jeon-ink px-4 py-2 text-xs font-semibold text-app-ink"
               >
                 {t("dashboard.pages.settingsPayment.cancel")}
               </button>
@@ -355,7 +355,7 @@ export default function SettingsPaymentPage() {
           <button
             type="submit"
             disabled={savingSchedule}
-            className="flex-shrink-0 rounded-xl bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 rounded-xl btn-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {savingSchedule ? t("dashboard.pages.settingsPayment.saving") : t("dashboard.pages.settingsPayment.save")}
           </button>

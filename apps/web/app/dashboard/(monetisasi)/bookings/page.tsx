@@ -239,7 +239,7 @@ export default function DashboardBookingsPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.bookings.cancel")}
               </button>
@@ -347,7 +347,7 @@ export default function DashboardBookingsPage() {
                 <button
                   type="button"
                   onClick={() => setManagingId(null)}
-                  className="rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                  className="rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
                 >
                   {t("dashboard.pages.bookings.close")}
                 </button>

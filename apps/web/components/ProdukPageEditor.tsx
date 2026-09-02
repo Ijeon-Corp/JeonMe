@@ -829,7 +829,7 @@ function BlockSection({
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.components.produkPageEditor.blockForm.cancel")}
               </button>
@@ -1283,7 +1283,7 @@ function HeaderSection({
             </div>
             <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.header.socialHint")}</p>
             <div className="mt-3 flex items-center gap-2">
-              <button type="button" onClick={saveSocial} className="rounded-lg bg-jeon-purple px-4 py-2 text-xs font-bold text-white">
+              <button type="button" onClick={saveSocial} className="rounded-lg btn-primary px-4 py-2 text-xs font-bold text-white">
                 {t("dashboard.components.produkPageEditor.header.save")}
               </button>
               <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">

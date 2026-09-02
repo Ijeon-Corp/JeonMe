@@ -367,7 +367,7 @@ export default function DashboardVouchersPage() {
                   setAdding(false);
                   resetForm();
                 }}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:border-ink/30"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:border-ink/30"
               >
                 {t("dashboard.pages.vouchers.cancel")}
               </button>
@@ -398,7 +398,7 @@ export default function DashboardVouchersPage() {
               aria-pressed={expFilter === f.key}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 expFilter === f.key
-                  ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                  ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                   : "border-app-border text-app-muted hover:border-jeon-purple/50"
               }`}
             >

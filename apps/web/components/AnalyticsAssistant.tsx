@@ -59,7 +59,7 @@ export default function AnalyticsAssistant() {
               type="button"
               onClick={() => handleAsk(s)}
               disabled={asking}
-              className="rounded-full border border-app-border px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
+              className="rounded-full border-2 border-jeon-ink px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
             >
               {s}
             </button>

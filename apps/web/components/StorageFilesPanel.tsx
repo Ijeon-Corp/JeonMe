@@ -62,7 +62,7 @@ export default function StorageFilesPanel() {
       <div className="glass overflow-x-auto rounded-jmd shadow-card">
         <table aria-label={t("dashboard.components.storageFilesPanel.tableAriaLabel")} className="w-full min-w-[480px] text-left text-xs">
           <thead>
-            <tr className="border-b border-app-border text-[11px] font-semibold uppercase tracking-wide text-app-muted">
+            <tr className="border-b-2 border-jeon-ink text-[11px] font-semibold uppercase tracking-wide text-app-muted">
               <th className="px-4 py-3">{t("dashboard.components.storageFilesPanel.columnProduct")}</th>
               <th className="px-4 py-3">{t("dashboard.components.storageFilesPanel.columnSize")}</th>
               <th className="px-4 py-3">{t("dashboard.components.storageFilesPanel.columnStatus")}</th>
@@ -77,7 +77,7 @@ export default function StorageFilesPanel() {
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      f.is_active ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
+                      f.is_active ? "border-2 border-[#111111] bg-jeon-lavender text-[#111111]" : "bg-gray-100 text-app-muted"
                     }`}
                   >
                     {f.is_active

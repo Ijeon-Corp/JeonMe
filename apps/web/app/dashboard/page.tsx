@@ -304,7 +304,7 @@ function LegacyHomePage() {
             onClick={() => handlePreset(d)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               !useCustomRange && rangeDays === d
-                ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                 : "border-app-border text-app-muted hover:border-jeon-purple/50"
             }`}
           >
@@ -337,7 +337,7 @@ function LegacyHomePage() {
             onClick={handleApplyCustomRange}
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
               useCustomRange
-                ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
+                ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                 : "border-app-border text-app-muted hover:border-jeon-purple/50"
             }`}
           >

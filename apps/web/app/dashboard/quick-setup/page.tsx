@@ -402,7 +402,7 @@ export default function QuickSetupPage() {
       <button
         type="button"
         onClick={() => setStep("category")}
-        className="mb-1 inline-flex items-center gap-1 rounded-full bg-jeon-purple/10 px-3 py-1.5 text-xs font-bold text-jeon-purple transition-transform hover:-translate-x-0.5"
+        className="mb-1 inline-flex items-center gap-1 rounded-full border-2 border-[#111111] bg-jeon-lavender px-3 py-1.5 text-xs font-bold text-[#111111] transition-transform hover:-translate-x-0.5"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.quickSetup.changeCategoryButton")}
@@ -416,11 +416,11 @@ export default function QuickSetupPage() {
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>
-          <div className="flex gap-2 border-b border-app-border">
+          <div className="flex gap-2 border-b-2 border-jeon-ink">
             <button
               type="button"
               onClick={() => setTab("template")}
-              className={`border-b-2 px-3 py-2 text-sm font-semibold ${
+              className={`-mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
                 tab === "template" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
@@ -434,7 +434,7 @@ export default function QuickSetupPage() {
               disabled={!selectedTemplate}
               onClick={() => selectedTemplate && setTab("theme")}
               title={!selectedTemplate ? t("dashboard.pages.quickSetup.selectTemplateFirstTitle") : undefined}
-              className={`border-b-2 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`-mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                 tab === "theme" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
@@ -542,7 +542,7 @@ export default function QuickSetupPage() {
             type="button"
             onClick={() => selectedTemplate && applyTemplate(previewTemplate ?? selectedTemplate)}
             disabled={!selectedTemplate || submitting}
-            className="mt-4 w-full rounded-full bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="mt-4 w-full rounded-full btn-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
           >
             {submitting ? t("dashboard.pages.quickSetup.checkingButton") : t("dashboard.pages.quickSetup.applyTemplateButton")}
           </button>

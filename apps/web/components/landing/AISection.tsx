@@ -33,7 +33,7 @@ export default function AISection() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="reveal flex flex-col rounded-jlg border-2 border-[#111111] bg-jeon-lavender p-7 shadow-[10px_12px_0_rgba(17,17,17,0.92)]">
+          <div className="reveal flex flex-col rounded-jlg border-2 border-[#111111] bg-jeon-lavender p-7 shadow-brutal">
             <p className="font-display text-xl font-bold text-[#111111]">{t("aiSection.importTitle")}</p>
             <p className="mt-2 flex-1 text-sm leading-relaxed text-[#111111]/75">{t("aiSection.importDesc")}</p>
             <div className="mt-5 flex items-center justify-between">

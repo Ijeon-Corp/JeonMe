@@ -37,12 +37,20 @@ const STATUS_TONE: Record<string, StatusTone> = {
   revoked: "danger",
 };
 
+// Ikut pill homepage (permintaan pengguna 2 September 2026, butir 3 audit
+// tema): isian aksen SOLID + garis 2px + teks gelap, seperti chip "Populer"
+// di kartu harga dan chip kategori di marquee landing. SEBELUMNYA tint pucat
+// (bg-success-soft text-success). Makna warna dipertahankan: lime = sukses,
+// kuning = menunggu/peringatan, biru = info, coral = gagal/bahaya.
+// Garis & teks HITAM KONSTAN (bukan jeon-ink yang flip) karena isian aksen
+// selalu terang di kedua mode -- alasan yang sama dengan IconBadge. Kecuali
+// `neutral` yang isiannya latar kartu, jadi garisnya ikut flip.
 const TONE_CLASSES: Record<StatusTone, string> = {
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  info: "bg-info-soft text-info",
-  danger: "bg-danger-soft text-danger",
-  neutral: "bg-dash-surface-subtle text-dash-muted border border-dash-border",
+  success: "border-2 border-[#111111] bg-jeon-lime text-[#111111]",
+  warning: "border-2 border-[#111111] bg-pop-yellow text-[#111111]",
+  info: "border-2 border-[#111111] bg-jeon-blue text-[#111111]",
+  danger: "border-2 border-[#111111] bg-jeon-coral text-[#111111]",
+  neutral: "border-2 border-jeon-ink bg-app-surface text-app-ink",
 };
 
 export function statusToneOf(status: string): StatusTone {

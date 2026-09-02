@@ -168,7 +168,7 @@ export default function DashboardImportPage() {
         <button
           type="button"
           onClick={() => router.push("/dashboard/settings/subscription")}
-          className="mt-2 rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark"
+          className="mt-2 rounded-full btn-primary px-5 py-2.5 text-sm font-bold text-white"
         >
           {t("dashboard.pages.import.upgradeButton")}
         </button>
@@ -305,7 +305,7 @@ export default function DashboardImportPage() {
           {applyError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{applyError}</p>}
 
           {!hasTheme && !hasLinks ? (
-            <button type="button" onClick={() => setStep("input")} className="rounded-full border border-app-border px-5 py-2.5 text-sm font-bold text-app-ink">
+            <button type="button" onClick={() => setStep("input")} className="rounded-full border-2 border-jeon-ink px-5 py-2.5 text-sm font-bold text-app-ink">
               {t("dashboard.pages.import.backButton")}
             </button>
           ) : existingLinks.length > 0 && hasLinks ? (
@@ -316,7 +316,7 @@ export default function DashboardImportPage() {
                   type="button"
                   disabled={applying}
                   onClick={() => handleApply("add")}
-                  className="rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+                  className="rounded-full btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
                 >
                   {t("dashboard.pages.import.addToExisting")}
                 </button>
@@ -324,7 +324,7 @@ export default function DashboardImportPage() {
                   type="button"
                   disabled={applying}
                   onClick={() => handleApply("replace")}
-                  className="rounded-full border border-app-border px-5 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
+                  className="rounded-full border-2 border-jeon-ink px-5 py-2.5 text-sm font-bold text-app-ink hover:border-jeon-purple disabled:opacity-60"
                 >
                   {t("dashboard.pages.import.replaceExisting")}
                 </button>
@@ -335,7 +335,7 @@ export default function DashboardImportPage() {
               type="button"
               disabled={applying}
               onClick={() => handleApply("add")}
-              className="w-fit rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+              className="w-fit rounded-full btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
             >
               {hasTheme && hasLinks
                 ? t("dashboard.pages.import.applyButtonBoth")
@@ -403,7 +403,7 @@ export default function DashboardImportPage() {
         <button
           type="submit"
           disabled={analyzing}
-          className="w-fit rounded-full bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+          className="w-fit rounded-full btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
           {analyzing ? t("dashboard.pages.import.analyzingButton") : t("dashboard.pages.import.analyzeButton")}
         </button>

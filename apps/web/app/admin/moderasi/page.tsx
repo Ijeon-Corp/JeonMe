@@ -170,7 +170,7 @@ export default function AdminModerationPage() {
             type="button"
             onClick={handleAddKeyword}
             disabled={savingKeyword || !newKeyword.trim()}
-            className="flex items-center gap-1 rounded-lg bg-jeon-purple px-3 py-1.5 text-xs font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg btn-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
           >
             <Plus className="h-3.5 w-3.5" />
             Tambah
@@ -182,7 +182,7 @@ export default function AdminModerationPage() {
             <div key={k.id} className="flex items-center justify-between rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-2">
               <div className="flex items-center gap-2 text-sm text-app-ink">
                 <span className="font-mono">{k.keyword}</span>
-                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                <span className="rounded-full border-2 border-[#111111] bg-jeon-coral px-2 py-0.5 text-[11px] font-semibold text-[#111111]">
                   {CATEGORY_LABELS[k.category] ?? k.category}
                 </span>
               </div>
@@ -253,7 +253,7 @@ export default function AdminModerationPage() {
               type="button"
               onClick={() => setDomainFilter(f)}
               className={`rounded-full px-3 py-1 font-semibold ${
-                domainFilter === f ? "bg-jeon-purple text-white" : "border border-app-border text-app-muted hover:border-jeon-purple"
+                domainFilter === f ? "btn-primary text-white" : "border-2 border-jeon-ink text-app-muted hover:border-jeon-purple"
               }`}
             >
               {f === "blocked" ? "Diblokir" : f === "allowed" ? "Diizinkan" : "Semua"}
@@ -269,7 +269,7 @@ export default function AdminModerationPage() {
                   <span className="truncate font-mono">{d.domain}</span>
                   <span
                     className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      d.verdict === "blocked" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                      d.verdict === "blocked" ? "border-2 border-[#111111] bg-jeon-coral text-[#111111]" : "bg-green-50 text-[#111111]"
                     }`}
                   >
                     {d.verdict === "blocked" ? "Diblokir" : "Diizinkan"}

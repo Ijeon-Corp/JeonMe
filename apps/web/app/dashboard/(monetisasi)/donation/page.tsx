@@ -314,7 +314,7 @@ export default function DashboardDonationPage() {
               <button
                 type="button"
                 onClick={() => setAddingWishlist(false)}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted"
               >
                 {t("dashboard.pages.donation.cancel")}
               </button>

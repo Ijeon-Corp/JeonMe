@@ -434,7 +434,7 @@ function DashboardAudiencePageInner() {
       <div className="glass mt-3 overflow-x-auto rounded-jlg shadow-card">
         <table aria-label={t("dashboard.pages.audience.managerHeading")} className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-app-border text-app-muted">
+            <tr className="border-b-2 border-jeon-ink text-app-muted">
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colName")}</th>
               <th className="px-4 py-2.5 font-semibold">Email</th>
               <th className="px-4 py-2.5 font-semibold">WhatsApp</th>
@@ -451,7 +451,7 @@ function DashboardAudiencePageInner() {
                 <td className="px-4 py-2.5">
                   <div className="flex gap-1">
                     {c.sources.map((s) => (
-                      <span key={s} className="rounded-full bg-jeon-purple/10 px-2 py-0.5 text-[10px] font-bold text-jeon-purple">
+                      <span key={s} className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
                         {SOURCE_LABEL[s] ?? s}
                       </span>
                     ))}

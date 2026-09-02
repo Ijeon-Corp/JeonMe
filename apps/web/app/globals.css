@@ -109,16 +109,17 @@
   --radius-pill: 999px;
 
   --shadow-soft: 0 12px 35px rgba(24, 17, 47, 0.1);
-  --shadow-card-brutal: 10px 12px 0 rgba(17, 17, 17, 0.92);
-  /* --shadow-card-dash: versi kecil dari --shadow-card-brutal untuk kartu
-     DASHBOARD (permintaan pengguna 1 September 2026: "semua card juga
-     dibuat sesuai dengan tema nya"). Offset 10px/12px milik brutal dibuat
-     untuk kartu marketing homepage yang besar dan berjarak lebar; di
-     dashboard yang padat (kartu berjejer 2-3 kolom dengan gap kecil)
-     offset sebesar itu saling bertabrakan secara visual. 4px/5px menjaga
-     bahasa yang sama -- outline tegas + offset padat, bukan blur lembut --
-     pada kerapatan dashboard. */
-  --shadow-card-dash: 4px 5px 0 rgba(17, 17, 17, 0.9);
+  /* --shadow-card-brutal: SATU skala bayangan offset untuk seluruh produk --
+     landing DAN dashboard (permintaan pengguna 2 September 2026: "homepage
+     nya harusnya dirubah juga cardnya" setelah dashboard diberi kartu
+     bertema). SEBELUMNYA landing memakai 10px/12px dan dashboard 4px/5px
+     (token terpisah, sekarang dihapus) -- dua skala membuat kedua permukaan
+     terasa dua produk. 6px/7px cukup tegas untuk kartu marketing yang
+     besar, dan masih muat di grid dashboard yang bergap 12px. */
+  --shadow-card-brutal: 6px 7px 0 rgba(17, 17, 17, 0.92);
+  /* --shadow-btn: bayangan offset untuk TOMBOL (lebih kecil dari kartu --
+     tombol dashboard sering setinggi 28-36px, offset 6px/7px terlalu berat). */
+  --shadow-btn: 3px 4px 0 rgba(17, 17, 17, 0.92);
   --shadow-focus: 0 0 0 3px rgba(118, 87, 255, 0.18);
 
   --container: 1360px;
@@ -134,8 +135,8 @@
     --jeon-surface-2: #242130;
     --jeon-muted: #a49fae;
     --jeon-border: rgba(240, 237, 245, 0.16);
-    --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
-    --shadow-card-dash: 4px 5px 0 rgba(0, 0, 0, 0.9);
+    --shadow-card-brutal: 6px 7px 0 rgba(0, 0, 0, 0.92);
+    --shadow-btn: 3px 4px 0 rgba(0, 0, 0, 0.92);
   }
 }
 
@@ -146,8 +147,8 @@
   --jeon-surface-2: #242130;
   --jeon-muted: #a49fae;
   --jeon-border: rgba(240, 237, 245, 0.16);
-  --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
-  --shadow-card-dash: 4px 5px 0 rgba(0, 0, 0, 0.9);
+  --shadow-card-brutal: 6px 7px 0 rgba(0, 0, 0, 0.92);
+  --shadow-btn: 3px 4px 0 rgba(0, 0, 0, 0.92);
 }
 
 /* Token target redesign dashboard (JEONID-DASHBOARD-REDESIGN-SPEC.md §4,
@@ -615,7 +616,7 @@ h1, h2, h3, h4, h5 {
 .glass {
   background: var(--app-surface);
   border: 2px solid var(--jeon-ink);
-  box-shadow: var(--shadow-card-dash);
+  box-shadow: var(--shadow-card-brutal);
 }
 
 /* .glass gelap -- ditemukan lewat audit visual dark mode (permintaan
@@ -628,11 +629,11 @@ h1, h2, h3, h4, h5 {
    seperti .nav-glass. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .glass {
-    box-shadow: var(--shadow-card-dash);
+    box-shadow: var(--shadow-card-brutal);
   }
 }
 [data-theme="dark"] .glass {
-  box-shadow: var(--shadow-card-dash);
+  box-shadow: var(--shadow-card-brutal);
 }
 
 /* Empty state BERSARANG di dalam kartu .glass tidak menggambar kotaknya
@@ -701,19 +702,34 @@ h1, h2, h3, h4, h5 {
   border-color: #d9ceff;
 }
 
+/* .btn-primary -- tombol utama dashboard, ikut tombol homepage (permintaan
+   pengguna 2 September 2026, butir 1 audit tema): isian ungu DATAR + garis
+   2px + bayangan offset, dan MENEKAN tombol menghilangkan bayangannya
+   (tombol "turun" ke halaman) -- persis perilaku tombol "Mulai gratis" di
+   nav landing. SEBELUMNYA gradasi ungu tanpa garis dengan bayangan blur.
+   Didefinisikan SETELAH @tailwind utilities, jadi menang atas utility
+   bayangan lama (mis. shadow-jsoft) di call site tanpa harus dibersihkan
+   satu-satu. Radius sengaja tidak diatur di sini -- 61 call site sudah
+   membawa rounded-* masing-masing. */
 .btn-primary {
-  background: linear-gradient(135deg, #5636e8, #7657ff);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.2s ease;
+  background: var(--jeon-purple);
+  border: 2px solid var(--jeon-ink);
+  box-shadow: var(--shadow-btn);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px -8px rgba(86, 54, 232, 0.45);
-  filter: brightness(1.08);
 }
 
 .btn-primary:active {
   transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-primary:disabled {
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-ghost {

@@ -57,7 +57,7 @@ export default function SocialProofToast({
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
       }`}
     >
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lime text-[#111111]">
         <IconCheck className="h-4 w-4" />
       </div>
       <p className="text-xs text-app-ink">

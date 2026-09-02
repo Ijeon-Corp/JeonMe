@@ -93,11 +93,11 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
 
   return (
     <div>
-      <div className="mb-4 flex gap-2 overflow-x-auto border-b border-app-border">
+      <div className="mb-4 flex gap-2 overflow-x-auto border-b-2 border-jeon-ink">
         <button
           type="button"
           onClick={() => setTab("gradien")}
-          className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
+          className={`flex-shrink-0 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
             tab === "gradien" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
@@ -106,7 +106,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
         <button
           type="button"
           onClick={() => setTab("wallpaper")}
-          className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
+          className={`flex-shrink-0 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
             tab === "wallpaper" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
@@ -115,7 +115,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
         <button
           type="button"
           onClick={() => setTab("3d")}
-          className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
+          className={`flex-shrink-0 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
             tab === "3d" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
@@ -124,7 +124,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
         <button
           type="button"
           onClick={() => setTab("video")}
-          className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
+          className={`flex-shrink-0 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
             tab === "video" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >
@@ -133,7 +133,7 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
         <button
           type="button"
           onClick={() => setTab("doodle")}
-          className={`flex-shrink-0 border-b-2 px-3 py-2 text-sm font-semibold ${
+          className={`flex-shrink-0 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
             tab === "doodle" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
           }`}
         >

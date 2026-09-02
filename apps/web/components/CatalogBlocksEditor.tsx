@@ -105,7 +105,7 @@ function CatalogBlockTypePicker({
                   ? t("dashboard.components.catalogBlocksEditor.atLimitTitle")
                   : undefined
             }
-            className={`flex flex-col items-center gap-1 rounded-xl border border-app-border px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex flex-col items-center gap-1 rounded-xl border-2 border-jeon-ink px-2 py-2.5 text-center text-[10.5px] font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:cursor-not-allowed disabled:opacity-40 ${
               locked ? "relative" : ""
             }`}
           >

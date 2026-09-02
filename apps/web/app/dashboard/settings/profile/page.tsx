@@ -343,7 +343,7 @@ export default function SettingsProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="mt-2 self-start rounded-xl bg-jeon-purple px-5 py-2.5 text-sm font-bold text-white hover:bg-jeon-purple-dark disabled:opacity-60"
+          className="mt-2 self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
           {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>
@@ -353,7 +353,7 @@ export default function SettingsProfilePage() {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-2 rounded-xl border border-app-border px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300"
+          className="flex items-center gap-2 rounded-xl border-2 border-jeon-ink px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300"
         >
           <IconLogout className="h-4 w-4" />
           {t("dashboard.logout")}
