@@ -231,7 +231,7 @@ function DashboardAudiencePageInner() {
             }
             description={t("dashboard.pages.audience.intro")}
           />
-          <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mb-5 flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 { key: "contacts" as AudienceView, label: t("dashboard.nav.contacts") },
@@ -250,7 +250,7 @@ function DashboardAudiencePageInner() {
                 }`}
               >
                 {tb.label}
-                {view === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+                {view === tb.key && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-jeon-purple" aria-hidden="true" />}
               </button>
             ))}
           </div>

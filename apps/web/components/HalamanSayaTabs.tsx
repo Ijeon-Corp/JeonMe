@@ -23,7 +23,7 @@ export default function HalamanSayaTabs() {
   const pathname = usePathname();
   const { t } = useLocale();
   return (
-    <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b-2 border-jeon-ink [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="mb-5 flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {TABS.map((tab) => {
         const active = tab.match(pathname);
         return (
@@ -36,7 +36,7 @@ export default function HalamanSayaTabs() {
             }`}
           >
             {t(`dashboard.nav.${tab.key}`)}
-            {active && <span className="absolute inset-x-2 -bottom-0.5 h-[3px] rounded-full bg-jeon-purple" aria-hidden="true" />}
+            {active && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-jeon-purple" aria-hidden="true" />}
           </Link>
         );
       })}

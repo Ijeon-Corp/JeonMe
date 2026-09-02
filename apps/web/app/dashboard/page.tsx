@@ -224,13 +224,13 @@ function LegacyHomePage() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/dashboard/links"
-            className="flex items-center gap-1.5 rounded-jmd bg-jeon-purple px-4 py-2.5 text-sm font-bold text-white shadow-jsoft transition-transform hover:-translate-y-0.5"
+            className="btn-primary flex items-center gap-1.5 rounded-jmd px-4 py-2.5 text-sm font-bold text-white"
           >
             <IconLink className="h-4 w-4" /> {t("dashboard.pages.home.ctaAddLink")}
           </Link>
           <Link
             href="/dashboard/products"
-            className="flex items-center gap-1.5 rounded-jmd border-2 border-app-border bg-app-surface px-4 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple"
+            className="flex items-center gap-1.5 rounded-jmd border-2 border-jeon-ink bg-app-surface px-4 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple"
           >
             <IconBox className="h-4 w-4" /> {t("dashboard.pages.home.ctaCreateProduct")}
           </Link>
@@ -239,7 +239,7 @@ function LegacyHomePage() {
             onClick={handleShareCopy}
             disabled={!creator}
             title={t("dashboard.pages.home.ctaShare")}
-            className="flex items-center gap-1.5 rounded-jmd border-2 border-app-border bg-app-surface px-3 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-jmd border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-50"
           >
             <IconShare className="h-4 w-4" />
             {shareCopied ? <span className="text-jeon-purple">{t("dashboard.linkCopied")}</span> : null}
@@ -908,13 +908,13 @@ function RedesignedHomePage() {
                         href={`${SITE_URL}/${creator.username}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 rounded-xl border border-dash-border bg-dash-surface px-3 py-1.5 text-xs font-bold text-dash-ink hover:border-brand-500 hover:text-brand-600"
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-brand-500 hover:text-brand-600"
                       >
                         <IconExternal className="h-3.5 w-3.5" /> {t("dashboard.pages.home.openPageCta")}
                       </a>
                       <Link
                         href="/dashboard/links"
-                        className="rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700"
+                        className="btn-primary rounded-xl px-3 py-1.5 text-xs font-bold text-white"
                       >
                         {t("dashboard.pages.home.editPageCta")}
                       </Link>

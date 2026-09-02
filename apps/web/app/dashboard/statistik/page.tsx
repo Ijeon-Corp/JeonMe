@@ -266,7 +266,7 @@ function RedesignedStatistikPage() {
               onClick={() => setTab(tb.key)}
               role="tab"
               aria-selected={tab === tb.key}
-              className={`flex flex-shrink-0 items-center gap-1.5 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+              className={`flex flex-shrink-0 items-center gap-1.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
                 tab === tb.key ? "border-brand-500 text-brand-600" : "border-transparent text-dash-muted hover:text-dash-ink"
               }`}
             >
@@ -407,11 +407,11 @@ function LegacyStatistikPage() {
       <p className="text-sm text-app-muted">{t("dashboard.pages.statistik.intro")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 border-b-2 border-jeon-ink">
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setTab("link-bio")}
-            className={`flex items-center gap-1.5 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex items-center gap-1.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "link-bio" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -421,7 +421,7 @@ function LegacyStatistikPage() {
           <button
             type="button"
             onClick={() => setTab("toko")}
-            className={`flex items-center gap-1.5 -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex items-center gap-1.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >

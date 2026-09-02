@@ -957,7 +957,7 @@ function DashboardProductsPageInner() {
             sejajar yang overload (audit §2.2). Semua view tetap
             deep-linkable via ?tab= (§13.8). Legacy di cabang else. */}
         {salesV2 ? (
-          <div className="flex items-center gap-2 overflow-x-auto border-b-2 border-jeon-ink [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 { key: "overview" as ProductsTab, label: t("dashboard.nav.salesOverview") },
@@ -973,7 +973,7 @@ function DashboardProductsPageInner() {
                   setMoreTabsOpen(false);
                   setTabAndUrl(tb.key);
                 }}
-                className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+                className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
                   tab === tb.key ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
                 }`}
               >
@@ -986,7 +986,7 @@ function DashboardProductsPageInner() {
                 onClick={() => setMoreTabsOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={moreTabsOpen}
-                className={`flex items-center gap-1 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+                className={`flex items-center gap-1 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
                   MORE_TABS.includes(tab)
                     ? "border-jeon-purple text-jeon-purple"
                     : "border-transparent text-app-muted hover:text-app-ink"
@@ -1023,11 +1023,11 @@ function DashboardProductsPageInner() {
             </div>
           </div>
         ) : (
-        <div className="flex gap-2 overflow-x-auto border-b-2 border-jeon-ink [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setTabAndUrl("halaman_toko")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "halaman_toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1036,7 +1036,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("overview")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "overview" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1045,7 +1045,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("manage")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "manage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1054,7 +1054,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("reviews")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "reviews" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1063,7 +1063,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("listing")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "listing" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1072,7 +1072,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("storage")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "storage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1081,7 +1081,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("webhook_events")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "webhook_events" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1090,7 +1090,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("shop_settings")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "shop_settings" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >
@@ -1099,7 +1099,7 @@ function DashboardProductsPageInner() {
           <button
             type="button"
             onClick={() => setTabAndUrl("transaction")}
-            className={`flex-shrink-0 whitespace-nowrap -mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
               tab === "transaction" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
             }`}
           >

@@ -416,11 +416,11 @@ export default function QuickSetupPage() {
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>
-          <div className="flex gap-2 border-b-2 border-jeon-ink">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setTab("template")}
-              className={`-mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+              className={`border-b-[3px] px-3 py-2 text-sm font-semibold ${
                 tab === "template" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >
@@ -434,7 +434,7 @@ export default function QuickSetupPage() {
               disabled={!selectedTemplate}
               onClick={() => selectedTemplate && setTab("theme")}
               title={!selectedTemplate ? t("dashboard.pages.quickSetup.selectTemplateFirstTitle") : undefined}
-              className={`-mb-0.5 border-b-[3px] px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`border-b-[3px] px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                 tab === "theme" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
               }`}
             >

@@ -37,16 +37,16 @@ export default function RangeControl({
 }) {
   const { t } = useLocale();
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-dash-border bg-dash-surface p-2.5 shadow-dash-card">
+    <div className="flex flex-wrap items-center gap-2 rounded-jmd border-2 border-jeon-ink bg-app-surface p-2.5 shadow-card">
       {presets.map((d) => (
         <button
           key={d}
           type="button"
           onClick={() => onPreset(d)}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+          className={`rounded-full border-2 px-3.5 py-1.5 text-xs font-bold transition-colors ${
             !useCustom && rangeDays === d
-              ? "border-brand-500 bg-brand-soft text-brand-600"
-              : "border-dash-border text-dash-muted hover:border-brand-500/50"
+              ? "border-[#111111] bg-jeon-lavender text-[#111111]"
+              : "border-jeon-ink text-app-ink hover:bg-jeon-lavender/40"
           }`}
         >
           {d} {t("dashboard.pages.home.daysSuffix")}
@@ -71,10 +71,10 @@ export default function RangeControl({
         <button
           type="button"
           onClick={onApplyCustom}
-          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+          className={`rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors ${
             useCustom
-              ? "border-brand-500 bg-brand-soft text-brand-600"
-              : "border-dash-border text-dash-muted hover:border-brand-500/50"
+              ? "border-[#111111] bg-jeon-lavender text-[#111111]"
+              : "border-jeon-ink text-app-ink hover:bg-jeon-lavender/40"
           }`}
         >
           {t("dashboard.pages.home.applyButton")}
@@ -85,7 +85,7 @@ export default function RangeControl({
           type="button"
           onClick={onExport}
           disabled={exporting || disabled}
-          className="ml-auto flex items-center gap-1.5 rounded-full border border-dash-border bg-dash-surface px-3.5 py-1.5 text-xs font-bold text-dash-ink hover:border-brand-500 hover:text-brand-600 disabled:opacity-60"
+          className="ml-auto flex items-center gap-1.5 rounded-full border-2 border-jeon-ink bg-app-surface px-3.5 py-1.5 text-xs font-bold text-app-ink hover:border-brand-500 hover:text-brand-600 disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {exporting ? t("dashboard.pages.home.exportingLabel") : t("dashboard.pages.home.exportCsvButton")}

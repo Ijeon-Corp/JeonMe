@@ -10,12 +10,16 @@ import { IconTrendArrow } from "@/components/icons";
 // lama tetap dipakai halaman legacy sampai fasenya.
 export type KpiSemantic = "neutral" | "brand" | "success" | "warning" | "info";
 
+// Ikut tema homepage (permintaan pengguna 3 September 2026: "card di beranda
+// dashboard beberapa masih ada yang belum mengikuti tema") -- komponen ini
+// lapisan Fase-1 (token dash-*) yang terlewat saat .glass/StatCard diubah.
+// Lencana ikon: isian aksen solid + garis hitam konstan (pola IconBadge).
 const ICON_BADGE: Record<KpiSemantic, string> = {
-  neutral: "bg-brand-soft text-brand-600",
-  brand: "bg-white/15 text-white",
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  info: "bg-info-soft text-info",
+  neutral: "border-2 border-[#111111] bg-jeon-lavender text-[#111111]",
+  brand: "border-2 border-white/30 bg-white/20 text-white",
+  success: "border-2 border-[#111111] bg-jeon-lime text-[#111111]",
+  warning: "border-2 border-[#111111] bg-pop-yellow text-[#111111]",
+  info: "border-2 border-[#111111] bg-jeon-blue text-[#111111]",
 };
 
 export default function KpiCard({
@@ -42,7 +46,7 @@ export default function KpiCard({
   const isBrand = semantic === "brand";
   if (loading) {
     return (
-      <div className="rounded-2xl border border-dash-border bg-dash-surface p-4" aria-hidden="true">
+      <div className="rounded-jmd border-2 border-jeon-ink bg-app-surface p-4" aria-hidden="true">
         <Skeleton className="h-3.5 w-20" />
         <Skeleton className="mt-3 h-7 w-24" />
         <Skeleton className="mt-2 h-3 w-16" />
@@ -51,16 +55,14 @@ export default function KpiCard({
   }
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border p-4 shadow-dash-card ${
-        isBrand
-          ? "border-transparent bg-gradient-to-br from-brand-700 to-brand-500 text-white"
-          : "border-dash-border bg-dash-surface"
+      className={`relative overflow-hidden rounded-jmd border-2 border-jeon-ink p-4 shadow-card ${
+        isBrand ? "bg-gradient-to-br from-brand-700 to-brand-500 text-white" : "bg-app-surface"
       }`}
     >
       {/* lime dot momentum (§3.2) hanya di kartu brand */}
       {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-lime to-transparent" aria-hidden="true" />}
       <div className={`flex items-center gap-2 text-xs font-semibold ${isBrand ? "text-white/70" : "text-dash-muted"}`}>
-        {icon && <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${ICON_BADGE[semantic]}`}>{icon}</span>}
+        {icon && <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm ${ICON_BADGE[semantic]}`}>{icon}</span>}
         {label}
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -71,8 +73,8 @@ export default function KpiCard({
               isBrand
                 ? "bg-white/15 text-brand-lavender"
                 : trend >= 0
-                  ? "bg-success-soft text-success"
-                  : "bg-danger-soft text-danger"
+                  ? "border-2 border-[#111111] bg-jeon-lime text-[#111111]"
+                  : "border-2 border-[#111111] bg-jeon-coral text-[#111111]"
             }`}
           >
             <IconTrendArrow className={`h-3 w-3 flex-shrink-0 ${trend >= 0 ? "" : "rotate-180"}`} />

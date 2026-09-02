@@ -6,11 +6,14 @@
 // Radius 16px (spec §4.3 standard card), border lebih dominan dari shadow
 // (prinsip §3.3.4). Judul = H2 (section title) supaya outline heading halaman
 // tetap semantik di bawah H1 PageHeader.
+// Garis semua varian = jeon-ink (ikut flip tema) supaya seragam dengan kartu
+// .glass -- permintaan pengguna 3 September 2026 soal kartu Beranda yang
+// belum bertema. Latar per varian dipertahankan (semuanya token yang flip).
 const VARIANT_CLASSES = {
-  default: "border-dash-border bg-dash-surface",
-  subtle: "border-dash-border bg-dash-surface-subtle",
-  highlighted: "border-brand-500/30 bg-brand-soft",
-  danger: "border-danger/30 bg-danger-soft",
+  default: "border-jeon-ink bg-app-surface",
+  subtle: "border-jeon-ink bg-dash-surface-subtle",
+  highlighted: "border-jeon-ink bg-brand-soft",
+  danger: "border-jeon-ink bg-danger-soft",
 } as const;
 
 export default function SectionCard({
@@ -34,7 +37,7 @@ export default function SectionCard({
 }) {
   const hasHeader = icon || title || description || action;
   return (
-    <section className={`rounded-2xl border p-5 shadow-dash-card ${VARIANT_CLASSES[variant]} ${className}`}>
+    <section className={`rounded-jmd border-2 p-5 shadow-card ${VARIANT_CLASSES[variant]} ${className}`}>
       {hasHeader && (
         <div className={`flex items-start justify-between gap-3 ${children ? "mb-4" : ""}`}>
           <div className="flex min-w-0 items-start gap-2.5">
