@@ -1690,7 +1690,15 @@ function DashboardProductsPageInner() {
                 {t("dashboard.pages.products.noProductsMatch")}
               </p>
             ) : (
-              <EmptyState className="mt-4" text={t("dashboard.pages.products.emptyState")} />
+              <EmptyState
+                className="mt-4"
+                icon={IconBox}
+                accent="lime"
+                title={t("dashboard.pages.products.emptyTitle")}
+                text={t("dashboard.pages.products.emptyState")}
+                ctaLabel={t("dashboard.pages.products.addProduct")}
+                onCtaClick={() => setAddMode("choose")}
+              />
             )}
 
             {totalPages > 1 && (

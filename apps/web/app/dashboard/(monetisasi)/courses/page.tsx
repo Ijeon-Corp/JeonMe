@@ -17,7 +17,8 @@ import {
   replaceCourseChapters,
   updateProduct,
 } from "@/lib/api-client";
-import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
+import { IconBook,
+  IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
@@ -409,7 +410,16 @@ export default function DashboardCoursesPage() {
           </div>
         ))}
 
-        {courses.length === 0 && <EmptyState text={t("dashboard.pages.courses.emptyCourses")} />}
+        {courses.length === 0 && (
+          <EmptyState
+            icon={IconBook}
+            accent="lavender"
+            title={t("dashboard.pages.courses.emptyTitle")}
+            text={t("dashboard.pages.courses.emptyCourses")}
+            ctaLabel={t("dashboard.pages.courses.createButton")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </div>
   );

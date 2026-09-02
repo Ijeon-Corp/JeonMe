@@ -1,59 +1,93 @@
 import { IconInbox } from "@/components/icons";
 
-// Kotak "belum ada data" dipakai berulang persis sama di ~14 halaman
-// dashboard (Tautan/Produk/Voucher/Bundel/dst) -- sebelumnya tiap halaman
-// menulis ulang markup yang sama (ikon+teks sebaris rata KIRI). Permintaan
-// langsung pengguna: konten di ruang yang masih kosong dibuat rata TENGAH.
-// Diekstrak jadi satu komponen bersama supaya tampilannya konsisten di
-// semua halaman, dan perubahan gaya ke depannya cukup satu tempat.
+// Kotak "belum ada data" dipakai berulang persis sama di ~15 titik dashboard
+// (Tautan/Produk/Voucher/Bundel/Course/dst) -- satu komponen bersama supaya
+// tampilannya konsisten dan perubahan gaya cukup di satu tempat.
 //
-// Redesain premium (permintaan langsung pengguna, "design dashboard ini
-// terlalu biasa"): ikon polos kecil diganti lencana bulat besar warna
-// brand -- SATU tempat ini otomatis mengangkat tampilan ke-28 pemakaian
-// tanpa menyentuh satu pun dari 14 file pemanggilnya. `icon`/`ctaLabel`/
-// `onCtaClick` OPSIONAL (default tetap IconInbox, tanpa tombol) --
-// SEBAGIAN BESAR pemanggil yang ada sudah punya tombol aksi sendiri di
-// atas (teks "klik X di atas"), jadi CTA baru di sini TIDAK dipaksakan
-// ke pemanggil lama, cuma tersedia untuk dipakai selektif ke depannya.
+// REDESAIN 1 September 2026 (permintaan langsung pengguna: "page yang isinya
+// sedikit ... layout nya dirubah dan dibuat lebih bagus lagi sesuaikan dengan
+// tema homepage nya"). Masalah yang diperbaiki: pada halaman list yang masih
+// kosong (mis. Courses di tangkapan layar pengguna), SATU-SATUNYA isi halaman
+// adalah kotak putus-putus besar berisi satu baris teks abu -- terasa kosong
+// dan datar, dan tombol aksinya jauh di atas, terpisah dari tempat mata
+// berhenti.
+//
+// Tiga perubahan:
+// 1. Bahasa visual homepage: border tebal + `shadow-brutal` + lencana ikon
+//    beraksen (lavender/lime) + judul `font-display` -- kosakata yang sama
+//    dipakai kartu Features/Pricing/AISection di landing.
+// 2. `title` opsional: judul tegas di atas kalimat penjelas, jadi kotaknya
+//    punya hierarki, bukan satu baris teks mengambang.
+// 3. CTA di DALAM kotak: aksi utama diletakkan tepat di titik pandang, tidak
+//    lagi cuma menyuruh "klik tombol di atas".
+//
+// Token warna sengaja pakai `jeon-ink`/`jeon-surface`/`jeon-muted` (variabel
+// CSS yang FLIP di dark mode) -- BUKAN `#111111` hardcoded seperti sebagian
+// komponen landing, supaya border tebalnya jadi terang di dark mode, bukan
+// kotak hitam di atas latar gelap. `shadow-brutal` juga sudah punya varian
+// gelapnya sendiri (globals.css).
+//
+// Semua prop lama (`text`/`as`/`bordered`/`className`/`icon`/`ctaLabel`/
+// `onCtaClick`) DIPERTAHANKAN apa adanya -- 15 pemanggil lama tidak perlu
+// diubah dan tetap tampil benar tanpa `title`.
 export default function EmptyState({
   text,
+  title,
   as = "div",
   bordered = true,
   className = "",
   icon: Icon = IconInbox,
   ctaLabel,
   onCtaClick,
+  accent = "lavender",
 }: {
   text: React.ReactNode;
+  // title -- judul singkat di atas `text`. Opsional supaya pemanggil lama
+  // (yang cuma mengirim satu kalimat) tetap tampil rapi tanpa judul kosong.
+  title?: string;
   as?: "div" | "li";
   bordered?: boolean;
   className?: string;
   icon?: (props: { className?: string }) => React.ReactElement;
   ctaLabel?: string;
   onCtaClick?: () => void;
+  // accent -- warna lencana ikon, mengikuti palet aksen homepage. Dipakai
+  // hemat supaya tiap halaman tetap terasa satu keluarga.
+  accent?: "lavender" | "lime" | "pink";
 }) {
   const Tag = as;
+  const accentClass = {
+    lavender: "bg-jeon-lavender",
+    lime: "bg-jeon-lime",
+    pink: "bg-jeon-pink",
+  }[accent];
+
   return (
     <Tag
-      className={`flex flex-col items-center justify-center gap-3 px-4 py-10 text-center text-sm text-app-muted ${
-        // Bug dihindari: TIDAK pakai class .glass di sini -- shorthand
-        // `border` milik .glass (solid) akan menang atas utility
-        // `border-dashed` Tailwind pada cascade (.glass didefinisikan
-        // SETELAH @tailwind utilities di globals.css, jadi menang kalau
-        // digabung). Efek kaca ditiru manual (bg+blur saja, TANPA
-        // shorthand border) supaya `border-dashed` tetap dashed sungguhan.
-        bordered ? "rounded-jlg border-2 border-dashed border-app-border bg-app-surface" : ""
+      className={`flex flex-col items-center justify-center gap-3 px-6 py-12 text-center ${
+        // Bordered: kartu bergaya homepage (border tebal + bayangan offset).
+        // Tidak pakai class .glass -- shorthand `border` miliknya akan menang
+        // atas utility border di cascade (lihat catatan lama), jadi latar &
+        // border ditulis eksplisit di sini.
+        bordered ? "rounded-jlg border-2 border-jeon-ink bg-jeon-surface shadow-brutal" : ""
       } ${className}`}
     >
-      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-jeon-lavender/40 text-jeon-purple">
-        <Icon className="h-5 w-5" />
+      {/* Lencana ikon: kotak beraksen bergaris tebal, pola sama dengan kartu
+          fitur homepage (bukan lingkaran pucat seperti versi sebelumnya). */}
+      <span
+        className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-jeon-ink text-[#111111] ${accentClass}`}
+      >
+        <Icon className="h-6 w-6" />
       </span>
-      <span>{text}</span>
+
+      {title && <p className="font-display text-lg font-extrabold tracking-tight text-jeon-ink">{title}</p>}
+      <span className={`max-w-sm text-sm leading-relaxed text-jeon-muted ${title ? "" : "mt-0.5"}`}>{text}</span>
+
       {ctaLabel && onCtaClick && (
         <button
           type="button"
           onClick={onCtaClick}
-          className="btn-primary mt-1 rounded-full px-4 py-2 text-xs font-bold text-white"
+          className="btn-primary mt-2 rounded-jmd border-2 border-jeon-ink px-5 py-2.5 text-sm font-bold text-white"
         >
           {ctaLabel}
         </button>

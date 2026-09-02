@@ -322,7 +322,16 @@ export default function DashboardEventsPage() {
           </div>
         ))}
 
-        {events.length === 0 && <EmptyState text={t("dashboard.pages.events.emptyEvents")} />}
+        {events.length === 0 && (
+          <EmptyState
+            icon={IconCalendar}
+            accent="pink"
+            title={t("dashboard.pages.events.emptyTitle")}
+            text={t("dashboard.pages.events.emptyEvents")}
+            ctaLabel={t("dashboard.pages.events.createButton")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </div>
   );

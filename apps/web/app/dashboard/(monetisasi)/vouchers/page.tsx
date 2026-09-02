@@ -15,7 +15,8 @@ import {
   listVouchers,
   updateVoucher,
 } from "@/lib/api-client";
-import { IconPlus, IconTrash } from "@/components/icons";
+import { IconTag,
+  IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
@@ -447,7 +448,16 @@ export default function DashboardVouchersPage() {
           );
         })}
 
-        {vouchers.length === 0 && <EmptyState text={t("dashboard.pages.vouchers.emptyVouchers")} />}
+        {vouchers.length === 0 && (
+          <EmptyState
+            icon={IconTag}
+            accent="lime"
+            title={t("dashboard.pages.vouchers.emptyTitle")}
+            text={t("dashboard.pages.vouchers.emptyVouchers")}
+            ctaLabel={t("dashboard.pages.vouchers.createButton")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </div>
   );

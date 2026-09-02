@@ -880,7 +880,8 @@ export const dictionaries = {
           activateToggleLabel: "Aktifkan {name}",
           manage: "Kelola",
           noProductsMatch: "Tidak ada produk yang cocok dengan pencarian/filter ini.",
-          emptyState: "Belum ada produk -- klik \"Tambah Produk\" di atas untuk membuat yang pertama.",
+          emptyTitle: "Jual produk pertamamu",
+          emptyState: "Unggah produk digital, buat payment link, atau tautkan produk dari toko lain.",
           pagination: {
             previous: "Sebelumnya",
             next: "Berikutnya",
@@ -1046,6 +1047,7 @@ export const dictionaries = {
           },
         },
         donation: {
+          wishlistEmptyTitle: "Buat wishlist pertamamu",
           subtitle: "Biarkan pengunjung memberi dukungan dengan nominal bebas, tanpa harus membeli produk apa pun.",
           saved: "Pengaturan disimpan.",
           enableBlock: "Aktifkan Blok Dukungan",
@@ -1064,7 +1066,7 @@ export const dictionaries = {
           wishlistTitle: "Wishlist",
           wishlistSubtitle: "Barang yang bisa dipilih pendukung untuk \"diwujudkan\" saat mendukung.",
           deleteWishlistItemTitle: "Hapus item wishlist",
-          wishlistEmpty: "Belum ada item wishlist.",
+          wishlistEmpty: "Tunjukkan barang yang kamu butuhkan supaya pendukung tahu cara membantu.",
           wishlistNamePlaceholder: "Nama barang",
           wishlistPricePlaceholder: "Harga (Rp)",
           wishlistLinkPlaceholder: "Tautan produk (opsional)",
@@ -1081,6 +1083,7 @@ export const dictionaries = {
           },
         },
         bookings: {
+          emptyTitle: "Buka jadwal sesi pertamamu",
           subtitle: "Jual sesi konsultasi berbayar dengan slot waktu yang kamu tentukan sendiri -- bentrok jadwal dicegah otomatis (slot yang sama tidak bisa dipesan dua orang).",
           createButton: "Buat Booking",
           sessionNameLabel: "Nama Sesi",
@@ -1099,7 +1102,7 @@ export const dictionaries = {
           bookedBy: "Dipesan oleh {email}",
           noSlotsYet: "Belum ada slot -- tambahkan di atas.",
           close: "Tutup",
-          emptyBookings: "Belum ada booking -- klik \"Buat Booking\" di atas untuk membuat yang pertama.",
+          emptyBookings: "Buka slot waktumu supaya klien bisa memesan sesi tanpa bolak-balik chat.",
           timezones: {
             wib: "WIB (Jakarta)",
             wita: "WITA (Makassar)",
@@ -1119,6 +1122,7 @@ export const dictionaries = {
           },
         },
         courses: {
+          emptyTitle: "Mulai kelas pertamamu",
           subtitle: "Jual kursus video terstruktur per-bab dengan prasyarat & deskripsi pembelajaran. Video wajib tautan YouTube atau TikTok.",
           createButton: "Buat Kursus",
           nameLabel: "Nama Kursus",
@@ -1143,7 +1147,7 @@ export const dictionaries = {
           deleteTitle: "Hapus kursus",
           saveChapters: "Simpan Bab",
           savingChapters: "Menyimpan...",
-          emptyCourses: "Belum ada kursus -- klik \"Buat Kursus\" di atas untuk membuat yang pertama.",
+          emptyCourses: "Susun materimu jadi kursus per-bab yang bisa dijual berulang kali.",
           confirmDeleteText: "Hapus kursus \"{name}\"? Aksi ini tidak bisa dibatalkan.",
           errors: {
             loadFailed: "Gagal memuat kursus.",
@@ -1157,6 +1161,7 @@ export const dictionaries = {
           },
         },
         vouchers: {
+          emptyTitle: "Buat voucher pertamamu",
           subtitle: "Buat kode diskon untuk produkmu -- kode tunggal (dipakai berkali-kali) atau generate banyak kode sekali pakai untuk afiliasi/influencer.",
           createButton: "Buat Voucher",
           creating: "Membuat...",
@@ -1181,7 +1186,7 @@ export const dictionaries = {
           noProducts: "Belum ada produk.",
           cancel: "Batal",
           codesUsedLabel: "kode terpakai",
-          emptyVouchers: "Belum ada voucher -- klik \"Buat Voucher\" di atas untuk membuat yang pertama.",
+          emptyVouchers: "Beri potongan harga untuk mendorong pembelian pertama atau promo musiman.",
           expiryFilterLabel: "Filter masa berlaku",
           filterActive: "Aktif",
           filterExpired: "Kedaluwarsa",
@@ -1202,6 +1207,7 @@ export const dictionaries = {
           },
         },
         affiliates: {
+          emptyTitle: "Ajak orang menjualkan produkmu",
           subtitle: "Undang afiliator dengan komisi custom per produk. Versi awal: mode privat -- afiliator harus sudah jadi pengguna Jeon.id.",
           inviteButton: "Undang Afiliator",
           emailLabel: "Email Afiliator",
@@ -1218,7 +1224,7 @@ export const dictionaries = {
           copy: "Salin",
           removeCommissionTitle: "Hapus komisi produk ini",
           noCommissions: "Belum ada komisi produk.",
-          emptyAffiliates: "Belum ada afiliator -- klik \"Undang Afiliator\" di atas untuk mengundang yang pertama.",
+          emptyAffiliates: "Ajak orang lain memasarkan produkmu dan bagi komisi dari tiap penjualan.",
           tabProgram: "Program Saya",
           myAffiliationsHeading: "Saya Jadi Afiliator",
           myAffiliationsSubtitle: "Program afiliasi kreator lain yang kamu ikuti.",
@@ -1234,6 +1240,7 @@ export const dictionaries = {
           },
         },
         events: {
+          emptyTitle: "Adakan event pertamamu",
           subtitle: "Jual tiket event online/offline dengan tanggal, waktu, zona waktu, dan kuota peserta.",
           createButton: "Buat Event",
           creating: "Membuat...",
@@ -1258,7 +1265,7 @@ export const dictionaries = {
           activateAria: "Aktifkan {name}",
           activeLabel: "Aktif",
           deleteTitle: "Hapus event",
-          emptyEvents: "Belum ada event -- klik \"Buat Event\" di atas untuk membuat yang pertama.",
+          emptyEvents: "Jual tiket workshop, webinar, atau acara offline langsung dari halamanmu.",
           confirmDeleteText: "Hapus event \"{name}\"? Aksi ini tidak bisa dibatalkan.",
           timezones: {
             wib: "WIB (Jakarta)",
@@ -1276,6 +1283,7 @@ export const dictionaries = {
           },
         },
         bundles: {
+          emptyTitle: "Gabungkan produk jadi bundel",
           savingLabel: "Pembeli hemat Rp {amount} ({pct}%)",
           subtitle: "Gabungkan beberapa produk aktif jadi satu paket dengan harga lebih murah dari jumlah aslinya.",
           createButton: "Buat Bundel",
@@ -1289,7 +1297,7 @@ export const dictionaries = {
           activateAria: "Aktifkan {name}",
           activeLabel: "Aktif",
           deleteTitle: "Hapus bundel",
-          emptyBundles: "Belum ada bundel -- klik \"Buat Bundel\" di atas untuk membuat yang pertama.",
+          emptyBundles: "Satukan beberapa produk dengan harga lebih hemat supaya nilai belanja naik.",
           confirmDeleteText: "Hapus bundel \"{name}\"? Aksi ini tidak bisa dibatalkan.",
           errors: {
             loadFailed: "Gagal memuat bundel.",
@@ -1301,6 +1309,7 @@ export const dictionaries = {
           },
         },
         loyalty: {
+          emptyTitle: "Siapkan reward pertamamu",
           subtitle: "Beri poin ke pembeli setiap transaksi, biarkan mereka menukarnya dengan reward -- mekanisme retensi pembeli berulang, cocok disandingkan dengan voucher.",
           enableAria: "Aktifkan program loyalitas",
           enableLabel: "Aktifkan Program Loyalitas",
@@ -1329,7 +1338,7 @@ export const dictionaries = {
           pointsLabel: "poin",
           redeemedSuffix: "x ditukar",
           publishAria: "Publikasikan {name}",
-          emptyRewards: "Belum ada reward -- tambahkan di atas.",
+          emptyRewards: "Tukarkan poin pelanggan dengan hadiah supaya mereka kembali belanja.",
           confirmDeleteText: "Hapus reward \"{name}\"?",
           errors: {
             loadFailed: "Gagal memuat program loyalitas.",
@@ -3352,7 +3361,8 @@ export const dictionaries = {
           activateToggleLabel: "Activate {name}",
           manage: "Manage",
           noProductsMatch: "No products match this search/filter.",
-          emptyState: "No products yet -- click \"Add Product\" above to create your first one.",
+          emptyTitle: "Sell your first product",
+          emptyState: "Upload a digital product, create a payment link, or link a product from another store.",
           pagination: {
             previous: "Previous",
             next: "Next",
@@ -3518,6 +3528,7 @@ export const dictionaries = {
           },
         },
         donation: {
+          wishlistEmptyTitle: "Create your first wishlist",
           subtitle: "Let visitors give support with any amount, without having to buy a product.",
           saved: "Settings saved.",
           enableBlock: "Enable Support Block",
@@ -3536,7 +3547,7 @@ export const dictionaries = {
           wishlistTitle: "Wishlist",
           wishlistSubtitle: "Items supporters can choose to \"fulfill\" when giving support.",
           deleteWishlistItemTitle: "Delete wishlist item",
-          wishlistEmpty: "No wishlist items yet.",
+          wishlistEmpty: "Show what you need so supporters know exactly how to help.",
           wishlistNamePlaceholder: "Item name",
           wishlistPricePlaceholder: "Price (Rp)",
           wishlistLinkPlaceholder: "Product link (optional)",
@@ -3553,6 +3564,7 @@ export const dictionaries = {
           },
         },
         bookings: {
+          emptyTitle: "Open your first session slot",
           subtitle: "Sell paid consultation sessions with time slots you set yourself -- schedule clashes are prevented automatically (the same slot can't be booked by two people).",
           createButton: "Create Booking",
           sessionNameLabel: "Session Name",
@@ -3571,7 +3583,7 @@ export const dictionaries = {
           bookedBy: "Booked by {email}",
           noSlotsYet: "No slots yet -- add one above.",
           close: "Close",
-          emptyBookings: "No bookings yet -- click \"Create Booking\" above to make your first one.",
+          emptyBookings: "Open your time slots so clients can book sessions without back-and-forth chats.",
           timezones: {
             wib: "WIB (Jakarta)",
             wita: "WITA (Makassar)",
@@ -3591,6 +3603,7 @@ export const dictionaries = {
           },
         },
         courses: {
+          emptyTitle: "Start your first course",
           subtitle: "Sell structured video courses organized by chapter, with prerequisites & learning descriptions. Videos must be YouTube or TikTok links.",
           createButton: "Create Course",
           nameLabel: "Course Name",
@@ -3615,7 +3628,7 @@ export const dictionaries = {
           deleteTitle: "Delete course",
           saveChapters: "Save Chapters",
           savingChapters: "Saving...",
-          emptyCourses: "No courses yet -- click \"Create Course\" above to make your first one.",
+          emptyCourses: "Turn your material into chapter-based courses you can sell again and again.",
           confirmDeleteText: "Delete course \"{name}\"? This action cannot be undone.",
           errors: {
             loadFailed: "Failed to load courses.",
@@ -3629,6 +3642,7 @@ export const dictionaries = {
           },
         },
         vouchers: {
+          emptyTitle: "Create your first voucher",
           subtitle: "Create discount codes for your products -- a single code (reusable) or generate many one-time codes for affiliates/influencers.",
           createButton: "Create Voucher",
           creating: "Creating...",
@@ -3653,7 +3667,7 @@ export const dictionaries = {
           noProducts: "No products yet.",
           cancel: "Cancel",
           codesUsedLabel: "codes used",
-          emptyVouchers: "No vouchers yet -- click \"Create Voucher\" above to make your first one.",
+          emptyVouchers: "Offer discounts to drive first purchases or run seasonal promos.",
           expiryFilterLabel: "Expiry filter",
           filterActive: "Active",
           filterExpired: "Expired",
@@ -3674,6 +3688,7 @@ export const dictionaries = {
           },
         },
         affiliates: {
+          emptyTitle: "Let others sell for you",
           subtitle: "Invite affiliates with a custom commission per product. Initial version: private mode -- the affiliate must already be a Jeon.id user.",
           inviteButton: "Invite Affiliate",
           emailLabel: "Affiliate Email",
@@ -3690,7 +3705,7 @@ export const dictionaries = {
           copy: "Copy",
           removeCommissionTitle: "Remove this product's commission",
           noCommissions: "No product commissions yet.",
-          emptyAffiliates: "No affiliates yet -- click \"Invite Affiliate\" above to invite your first one.",
+          emptyAffiliates: "Let others promote your products and share commission on every sale.",
           tabProgram: "My Program",
           myAffiliationsHeading: "Programs I'm Affiliated With",
           myAffiliationsSubtitle: "Other creators' affiliate programs you've joined.",
@@ -3706,6 +3721,7 @@ export const dictionaries = {
           },
         },
         events: {
+          emptyTitle: "Host your first event",
           subtitle: "Sell online/offline event tickets with date, time, timezone, and attendee capacity.",
           createButton: "Create Event",
           creating: "Creating...",
@@ -3730,7 +3746,7 @@ export const dictionaries = {
           activateAria: "Activate {name}",
           activeLabel: "Active",
           deleteTitle: "Delete event",
-          emptyEvents: "No events yet -- click \"Create Event\" above to make your first one.",
+          emptyEvents: "Sell tickets for workshops, webinars, or offline events straight from your page.",
           confirmDeleteText: "Delete event \"{name}\"? This action cannot be undone.",
           timezones: {
             wib: "WIB (Jakarta)",
@@ -3748,6 +3764,7 @@ export const dictionaries = {
           },
         },
         bundles: {
+          emptyTitle: "Combine products into a bundle",
           savingLabel: "Buyers save Rp {amount} ({pct}%)",
           subtitle: "Combine several active products into one package priced lower than the sum of the originals.",
           createButton: "Create Bundle",
@@ -3761,7 +3778,7 @@ export const dictionaries = {
           activateAria: "Activate {name}",
           activeLabel: "Active",
           deleteTitle: "Delete bundle",
-          emptyBundles: "No bundles yet -- click \"Create Bundle\" above to make your first one.",
+          emptyBundles: "Group several products at a better price to raise your average order value.",
           confirmDeleteText: "Delete bundle \"{name}\"? This action cannot be undone.",
           errors: {
             loadFailed: "Failed to load bundles.",
@@ -3773,6 +3790,7 @@ export const dictionaries = {
           },
         },
         loyalty: {
+          emptyTitle: "Set up your first reward",
           subtitle: "Give points to buyers on every transaction, let them redeem rewards -- a repeat-buyer retention mechanism, pairs well with vouchers.",
           enableAria: "Enable loyalty program",
           enableLabel: "Enable Loyalty Program",
@@ -3801,7 +3819,7 @@ export const dictionaries = {
           pointsLabel: "points",
           redeemedSuffix: "x redeemed",
           publishAria: "Publish {name}",
-          emptyRewards: "No rewards yet -- add one above.",
+          emptyRewards: "Let customers redeem points for rewards so they keep coming back.",
           confirmDeleteText: "Delete reward \"{name}\"?",
           errors: {
             loadFailed: "Failed to load loyalty program.",

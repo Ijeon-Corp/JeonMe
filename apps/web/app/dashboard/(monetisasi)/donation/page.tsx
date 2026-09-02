@@ -269,7 +269,16 @@ export default function DashboardDonationPage() {
               </div>
             );
           })}
-          {wishlist.length === 0 && !addingWishlist && <EmptyState text={t("dashboard.pages.donation.wishlistEmpty")} />}
+          {wishlist.length === 0 && !addingWishlist && (
+          <EmptyState
+            icon={IconGift}
+            accent="pink"
+            title={t("dashboard.pages.donation.wishlistEmptyTitle")}
+            text={t("dashboard.pages.donation.wishlistEmpty")}
+            ctaLabel={t("dashboard.pages.donation.wishlistAddItem")}
+            onCtaClick={() => setAddingWishlist(true)}
+          />
+        )}
         </div>
 
         {addingWishlist ? (

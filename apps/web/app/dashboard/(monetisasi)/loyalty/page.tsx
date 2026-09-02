@@ -16,7 +16,8 @@ import {
   updateLoyaltyReward,
   upsertLoyaltySettings,
 } from "@/lib/api-client";
-import { IconPlus, IconTrash } from "@/components/icons";
+import { IconStar,
+  IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
@@ -333,7 +334,16 @@ export default function DashboardLoyaltyPage() {
               </div>
             </div>
           ))}
-          {rewards.length === 0 && <EmptyState text={t("dashboard.pages.loyalty.emptyRewards")} />}
+          {rewards.length === 0 && (
+          <EmptyState
+            icon={IconStar}
+            accent="lime"
+            title={t("dashboard.pages.loyalty.emptyTitle")}
+            text={t("dashboard.pages.loyalty.emptyRewards")}
+            ctaLabel={t("dashboard.pages.loyalty.addReward")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
         </div>
       </section>
       )}

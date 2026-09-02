@@ -356,7 +356,16 @@ export default function DashboardBookingsPage() {
           </div>
         ))}
 
-        {bookings.length === 0 && <EmptyState text={t("dashboard.pages.bookings.emptyBookings")} />}
+        {bookings.length === 0 && (
+          <EmptyState
+            icon={IconCalendar}
+            accent="lime"
+            title={t("dashboard.pages.bookings.emptyTitle")}
+            text={t("dashboard.pages.bookings.emptyBookings")}
+            ctaLabel={t("dashboard.pages.bookings.createButton")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </div>
   );

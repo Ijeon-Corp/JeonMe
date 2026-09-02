@@ -17,7 +17,8 @@ import {
   revokeAffiliate,
   upsertAffiliate,
 } from "@/lib/api-client";
-import { IconCopy, IconPlus, IconTrash } from "@/components/icons";
+import { IconUsers,
+  IconCopy, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
 
@@ -276,7 +277,14 @@ export default function DashboardAffiliatesPage() {
         ))}
 
         {affiliates.length === 0 && (
-          <EmptyState text={t("dashboard.pages.affiliates.emptyAffiliates")} />
+          <EmptyState
+            icon={IconUsers}
+            accent="lavender"
+            title={t("dashboard.pages.affiliates.emptyTitle")}
+            text={t("dashboard.pages.affiliates.emptyAffiliates")}
+            ctaLabel={t("dashboard.pages.affiliates.inviteButton")}
+            onCtaClick={() => setAdding(true)}
+          />
         )}
       </div>
       </>

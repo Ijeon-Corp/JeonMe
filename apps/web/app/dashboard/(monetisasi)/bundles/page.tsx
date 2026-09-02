@@ -15,7 +15,8 @@ import {
   listProducts,
   updateProduct,
 } from "@/lib/api-client";
-import { IconPlus, IconTrash } from "@/components/icons";
+import { IconGift,
+  IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
@@ -246,7 +247,16 @@ export default function DashboardBundlesPage() {
           </div>
         ))}
 
-        {bundles.length === 0 && <EmptyState text={t("dashboard.pages.bundles.emptyBundles")} />}
+        {bundles.length === 0 && (
+          <EmptyState
+            icon={IconGift}
+            accent="lavender"
+            title={t("dashboard.pages.bundles.emptyTitle")}
+            text={t("dashboard.pages.bundles.emptyBundles")}
+            ctaLabel={t("dashboard.pages.bundles.createButton")}
+            onCtaClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </div>
   );
