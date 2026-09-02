@@ -13,9 +13,14 @@ import { useLocale } from "@/lib/locale-context";
 // sekarang menghasilkan gaya netral yang SAMA) supaya ~16 titik pemanggil
 // StatCard di seluruh app (Ringkasan/Statistik/Saldo/ShopOverviewPanel/
 // admin) TIDAK perlu diubah satu-satu -- cukup ubah definisi di sini.
+// Disesuaikan dengan tema homepage 1 September 2026 (permintaan pengguna
+// "semua card juga dibuat sesuai dengan tema nya"): garis rambut + bayangan
+// berlapis diganti garis tebal + bayangan offset padat, seperti kartu .glass
+// dan kartu fitur landing. Lencana ikonnya ikut pola IconBadge (isian aksen
+// + garis HITAM KONSTAN, karena isian aksen selalu terang di kedua mode).
 const NEUTRAL_TONE = {
-  card: "bg-app-surface text-app-ink border border-jeon-purple/10 shadow-refined",
-  icon: "bg-jeon-purple/10 text-jeon-purple",
+  card: "bg-app-surface text-app-ink border-2 border-jeon-ink shadow-card",
+  icon: "bg-jeon-lavender text-[#111111] border-2 border-[#111111]",
   label: "text-app-ink/65",
   value: "text-app-ink",
   sub: "text-app-muted",
@@ -23,8 +28,8 @@ const NEUTRAL_TONE = {
 
 export const STAT_TONES = {
   brand: {
-    card: "bg-gradient-to-br from-jeon-purple-dark to-jeon-purple text-white shadow-refined-lg",
-    icon: "bg-white/15 text-white",
+    card: "bg-gradient-to-br from-jeon-purple-dark to-jeon-purple text-white border-2 border-jeon-ink shadow-card",
+    icon: "bg-white/20 text-white border-2 border-white/30",
     label: "text-white/70",
     value: "text-white",
     sub: "text-white/55",
@@ -83,7 +88,7 @@ export default function StatCard({
           hemat (cuma tone brand), bukan aturan dekoratif di semua kartu. */}
       {isBrand && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-jeon-lime to-transparent" aria-hidden="true" />}
       <div className={`flex items-center gap-2 text-xs font-semibold ${t.label}`}>
-        <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${t.icon}`}>{icon}</span>
+        <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm ${t.icon}`}>{icon}</span>
         {label}
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-2">

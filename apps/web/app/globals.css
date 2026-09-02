@@ -110,6 +110,15 @@
 
   --shadow-soft: 0 12px 35px rgba(24, 17, 47, 0.1);
   --shadow-card-brutal: 10px 12px 0 rgba(17, 17, 17, 0.92);
+  /* --shadow-card-dash: versi kecil dari --shadow-card-brutal untuk kartu
+     DASHBOARD (permintaan pengguna 1 September 2026: "semua card juga
+     dibuat sesuai dengan tema nya"). Offset 10px/12px milik brutal dibuat
+     untuk kartu marketing homepage yang besar dan berjarak lebar; di
+     dashboard yang padat (kartu berjejer 2-3 kolom dengan gap kecil)
+     offset sebesar itu saling bertabrakan secara visual. 4px/5px menjaga
+     bahasa yang sama -- outline tegas + offset padat, bukan blur lembut --
+     pada kerapatan dashboard. */
+  --shadow-card-dash: 4px 5px 0 rgba(17, 17, 17, 0.9);
   --shadow-focus: 0 0 0 3px rgba(118, 87, 255, 0.18);
 
   --container: 1360px;
@@ -126,6 +135,7 @@
     --jeon-muted: #a49fae;
     --jeon-border: rgba(240, 237, 245, 0.16);
     --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
+    --shadow-card-dash: 4px 5px 0 rgba(0, 0, 0, 0.9);
   }
 }
 
@@ -137,6 +147,7 @@
   --jeon-muted: #a49fae;
   --jeon-border: rgba(240, 237, 245, 0.16);
   --shadow-card-brutal: 10px 12px 0 rgba(0, 0, 0, 0.92);
+  --shadow-card-dash: 4px 5px 0 rgba(0, 0, 0, 0.9);
 }
 
 /* Token target redesign dashboard (JEONID-DASHBOARD-REDESIGN-SPEC.md §4,
@@ -590,10 +601,21 @@ h1, h2, h3, h4, h5 {
    (ratusan pemakaian) walau tidak lagi kaca -- rename massal berisiko
    tanpa manfaat visual. Blur dihapus sekalian: lebih tenang (spec:
    dashboard lebih kalem dari homepage) & lebih ringan dirender. */
+/* .glass -- kartu panel dashboard/admin. Diubah ke bahasa visual homepage
+   (permintaan pengguna 1 September 2026: "semua card juga dibuat sesuai
+   dengan tema nya"): garis tebal + bayangan offset padat menggantikan garis
+   1px + blur lembut. Diubah DI SATU TEMPAT INI, bukan di ~98 call site,
+   supaya tidak ada kartu yang tertinggal versi lama.
+
+   Garis memakai var(--jeon-ink) yang IKUT flip tema -- beda dari lencana
+   ikon di components/IconBadge.tsx yang garisnya hitam konstan. Alasannya:
+   latar kartu (--app-surface) ikut gelap di dark mode, jadi garisnya HARUS
+   ikut terang agar tetap terlihat; sedangkan isian lencana selalu terang di
+   kedua mode. */
 .glass {
   background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  box-shadow: 0 2px 12px rgba(24, 17, 47, 0.05);
+  border: 2px solid var(--jeon-ink);
+  box-shadow: var(--shadow-card-dash);
 }
 
 /* .glass gelap -- ditemukan lewat audit visual dark mode (permintaan
@@ -606,11 +628,23 @@ h1, h2, h3, h4, h5 {
    seperti .nav-glass. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .glass {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-card-dash);
   }
 }
 [data-theme="dark"] .glass {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-card-dash);
+}
+
+/* Empty state BERSARANG di dalam kartu .glass tidak menggambar kotaknya
+   sendiri. Ditemukan lewat verifikasi visual halaman Tim (1 September 2026)
+   setelah .glass diberi garis tebal: hasilnya kotak bergaris tebal DI DALAM
+   kotak bergaris tebal, dan bayangan offset si empty state menabrak keluar
+   melewati garis kartu induknya. Di posisi bersarang, kartu induk yang
+   bertugas membentuk batas -- empty state cukup jadi area isi. */
+.glass .empty-state-box {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .nav-glass {

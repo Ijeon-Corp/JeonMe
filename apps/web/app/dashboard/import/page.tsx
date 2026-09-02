@@ -347,7 +347,7 @@ export default function DashboardImportPage() {
         </div>
 
         <div className="mt-8 min-w-0 lg:sticky lg:top-6 lg:mt-0">
-          <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[580px] w-full max-w-[280px] overflow-y-auto rounded-jmd border-2 border-jeon-ink shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="h-full [zoom:0.72]">
               <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />
             </div>
@@ -374,7 +374,7 @@ export default function DashboardImportPage() {
                 <IconUpload className="h-5 w-5" />
               </span>
             )}
-            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
+            <label className="cursor-pointer rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
               {t("dashboard.pages.import.screenshotLabel")}
               <input
                 type="file"

@@ -104,7 +104,7 @@ export default function GlobalSearch() {
         onClick={openPalette}
         title={t("dashboard.components.globalSearch.triggerTitle")}
         aria-label={t("dashboard.components.globalSearch.triggerLabel")}
-        className="flex h-8 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+        className="flex h-8 items-center gap-1.5 rounded-full border-2 border-jeon-ink bg-app-surface px-3 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconSearch className="h-3.5 w-3.5" />
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): "sm:inline"

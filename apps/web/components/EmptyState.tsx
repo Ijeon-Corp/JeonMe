@@ -69,7 +69,7 @@ export default function EmptyState({
         // Tidak pakai class .glass -- shorthand `border` miliknya akan menang
         // atas utility border di cascade (lihat catatan lama), jadi latar &
         // border ditulis eksplisit di sini.
-        bordered ? "rounded-jlg border-2 border-jeon-ink bg-jeon-surface shadow-brutal" : ""
+        bordered ? "empty-state-box rounded-jlg border-2 border-jeon-ink bg-jeon-surface shadow-brutal" : ""
       } ${className}`}
     >
       {/* Lencana ikon: kotak beraksen bergaris tebal, pola sama dengan kartu

@@ -67,7 +67,7 @@ export default function AdminUsersPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface px-4 py-3 shadow-card">
+          <div key={u.id} className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 shadow-card">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                 <IconUsers className="h-[18px] w-[18px]" />

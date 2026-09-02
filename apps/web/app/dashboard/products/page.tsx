@@ -1000,7 +1000,7 @@ function DashboardProductsPageInner() {
               {moreTabsOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-[calc(100%+0.25rem)] z-30 w-44 overflow-hidden rounded-jmd border border-app-border bg-app-surface py-1.5 shadow-card"
+                  className="absolute left-0 top-[calc(100%+0.25rem)] z-30 w-44 overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface py-1.5 shadow-card"
                 >
                   {MORE_TABS.map((mt) => (
                     <button
@@ -1762,7 +1762,7 @@ function DashboardProductsPageInner() {
               <button
                 type="button"
                 onClick={() => setCreatingTokoPage(false)}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
                 {t("dashboard.pages.products.newTokoModal.cancel")}
               </button>

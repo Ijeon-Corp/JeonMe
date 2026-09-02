@@ -219,7 +219,7 @@ export default function SettingsProfilePage() {
           <button
             type="button"
             onClick={() => setQrOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+            className="flex items-center gap-1.5 rounded-xl border-2 border-jeon-ink bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
           >
             <IconQrCode className="h-4 w-4" />
             {t("dashboard.pages.settingsProfile.viewQrCode")}

@@ -75,7 +75,7 @@ export default function ReviewsPanel() {
 
       <div className="flex flex-col gap-2.5">
         {reviews.map((r) => (
-          <div key={r.id} className={`rounded-jmd border border-app-border bg-app-surface p-4 shadow-card ${r.is_hidden ? "opacity-60" : ""}`}>
+          <div key={r.id} className={`rounded-jmd border-2 border-jeon-ink bg-app-surface p-4 shadow-card ${r.is_hidden ? "opacity-60" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <StarRow rating={r.rating} />

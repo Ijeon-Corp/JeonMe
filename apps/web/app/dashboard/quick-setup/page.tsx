@@ -354,7 +354,7 @@ export default function QuickSetupPage() {
               key={c.key}
               type="button"
               onClick={() => openCategory(c.key)}
-              className="flex flex-col items-center gap-2.5 rounded-jmd border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
+              className="flex flex-col items-center gap-2.5 rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
             >
               {/* accentForIndex: kartu kategori berjejer dalam grid, jadi warnanya
                   dirotasi seperti kartu fitur homepage supaya tidak terasa datar
@@ -526,7 +526,7 @@ export default function QuickSetupPage() {
             efektif -- supaya PagePreview tetap merender proporsional,
             cuma fisiknya lebih besar). */}
         <div className="lg:sticky lg:top-4">
-          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-jmd border border-app-border shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto h-[640px] w-full max-w-[300px] overflow-y-auto rounded-jmd border-2 border-jeon-ink shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {previewData ? (
               <div className="h-full [zoom:0.75]">
                 <PagePreview interactive={false} rootClassName="min-h-full" data={previewData} />

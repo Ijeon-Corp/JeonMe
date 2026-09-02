@@ -101,7 +101,7 @@ export default function AdminPayoutsPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {payouts.map((p) => (
-          <div key={p.id} className="rounded-xl border border-app-border bg-app-surface p-4 shadow-card">
+          <div key={p.id} className="rounded-xl border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">

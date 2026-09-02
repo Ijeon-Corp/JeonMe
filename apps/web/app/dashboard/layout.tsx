@@ -875,7 +875,7 @@ export default function DashboardLayout({
                 {/* v2 (§6.5): di bawah lg tema pindah ke dropdown akun
                     (mengurangi kepadatan topbar); legacy tetap selalu tampil. */}
                 <ThemeToggle
-                  className={`${shellV2 ? "hidden lg:flex" : "flex"} h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple`}
+                  className={`${shellV2 ? "hidden lg:flex" : "flex"} h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple`}
                 />
                 {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
                     di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
@@ -886,7 +886,7 @@ export default function DashboardLayout({
                   href="/dashboard/tutorial"
                   title={t("dashboard.extraPages.tutorial")}
                   aria-label={t("dashboard.extraPages.tutorial")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconPlayCircle className="h-4 w-4" />
                 </Link>
@@ -903,7 +903,7 @@ export default function DashboardLayout({
                   href="/dashboard/settings"
                   title={t("dashboard.nav.settings")}
                   aria-label={t("dashboard.nav.settings")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                 >
                   <IconSettings className="h-4 w-4" />
                 </Link>
@@ -931,7 +931,7 @@ export default function DashboardLayout({
                     type="button"
                     onClick={handleCopyLink}
                     title={t("dashboard.copyLink")}
-                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+                    className="flex flex-shrink-0 items-center gap-1.5 rounded-full border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
                   >
                     {/* Teks domain penuh cuma tampil mulai lg: (>=1024px,
                         sama seperti label GlobalSearch) -- di rentang
@@ -962,7 +962,7 @@ export default function DashboardLayout({
                       title={isPremium ? "Profil & Akun -- Premium" : "Profil & Akun"}
                       aria-haspopup="menu"
                       aria-expanded={profileMenuOpen}
-                      className="flex items-center gap-2 rounded-full border border-app-border bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
+                      className="flex items-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
                     >
                       {/* Lencana bintang di sudut avatar + pil "Premium" di
                           sebelah @username -- permintaan langsung pengguna:
@@ -1000,7 +1000,7 @@ export default function DashboardLayout({
                     {profileMenuOpen && (
                       <div
                         role="menu"
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-jmd border border-app-border bg-app-surface py-1.5 shadow-card"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface py-1.5 shadow-card"
                       >
                         <Link
                           href="/dashboard/settings/profile"
@@ -1016,7 +1016,7 @@ export default function DashboardLayout({
                         {shellV2 && (
                           <div className="flex items-center justify-between gap-2 border-t border-app-border px-4 py-2 lg:hidden">
                             <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
-                            <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
+                            <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
                           </div>
                         )}
                         <button

@@ -57,7 +57,7 @@ function ConnectCard({
       </div>
 
       {connection ? (
-        <div className="flex items-center justify-between rounded-xl border border-app-border bg-app-surface p-3">
+        <div className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface p-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {connection.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element

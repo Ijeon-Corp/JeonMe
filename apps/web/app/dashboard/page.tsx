@@ -255,7 +255,7 @@ function LegacyHomePage() {
           type="button"
           onClick={handleExport}
           disabled={exporting || loading}
-          className="flex items-center gap-1.5 rounded-full border border-app-border bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-full border-2 border-jeon-ink bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink shadow-card hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-60"
         >
           <IconDownload className="h-3.5 w-3.5" />
           {exporting ? t("dashboard.pages.home.exportingLabel") : t("dashboard.pages.home.exportCsvButton")}

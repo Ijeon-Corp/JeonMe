@@ -169,7 +169,7 @@ function SettingsCard({ item, index }: { item: SettingsItem; index: number }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-jmd border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
+      className="flex items-center gap-3 rounded-jmd border-2 border-jeon-ink bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
       <IconBadge icon={item.icon} accent={item.accent ?? accentForIndex(index)} size="sm" />
       <span className="min-w-0 flex-1">

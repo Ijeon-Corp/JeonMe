@@ -78,7 +78,7 @@ export default function DashboardBusinessCardPage() {
         <button
           type="button"
           onClick={() => setQrOpen(true)}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-app-border bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
         >
           <IconQrCode className="h-4 w-4" />
           {t("dashboard.pages.businessCard.viewQrButton")}

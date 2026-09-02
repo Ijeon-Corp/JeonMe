@@ -209,7 +209,7 @@ export default function DashboardTeamPage() {
           <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.invitesForMeHeading")}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {invitesForMe.map((inv) => (
-              <li key={inv.id} className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3.5 py-2.5">
+              <li key={inv.id} className="flex items-center justify-between rounded-lg border-2 border-jeon-ink bg-app-surface px-3.5 py-2.5">
                 <div>
                   <p className="text-sm font-semibold text-app-ink">@{inv.owner_username}</p>
                   <p className="text-[11px] text-app-muted">{ROLE_LABEL[inv.role]}</p>

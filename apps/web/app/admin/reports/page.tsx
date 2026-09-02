@@ -40,7 +40,7 @@ export default function AdminReportsPage() {
 
       <div className="mt-4 flex flex-col gap-2">
         {reports.map((r) => (
-          <div key={r.id} className="rounded-xl border border-app-border bg-app-surface p-4 shadow-card">
+          <div key={r.id} className="rounded-xl border-2 border-jeon-ink bg-app-surface p-4 shadow-card">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-app-muted">
               <IconFlag className="h-3.5 w-3.5 text-red-500" />
               {r.target_type} · {r.target_id}

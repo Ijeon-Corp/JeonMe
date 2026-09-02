@@ -129,7 +129,7 @@ export default function DangerZonePage() {
       <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsDangerZone.subtitle")}</p>
 
-      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.deactivateTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.deactivateDescription")}</p>
 
@@ -166,7 +166,7 @@ export default function DangerZonePage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsDangerZone.exportTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsDangerZone.exportDescription")}</p>
         <button

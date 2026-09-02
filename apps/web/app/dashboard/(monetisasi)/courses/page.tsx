@@ -338,7 +338,7 @@ export default function DashboardCoursesPage() {
             {editingId === course.id && (
               <div className="mt-4 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-3">
                 {editChapters.map((ch, i) => (
-                  <div key={i} className="rounded-lg border border-app-border bg-app-surface p-3">
+                  <div key={i} className="rounded-lg border-2 border-jeon-ink bg-app-surface p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-bold text-app-muted">{t("dashboard.pages.courses.chapterN").replace("{n}", String(i + 1))}</p>
                       {editChapters.length > 1 && (

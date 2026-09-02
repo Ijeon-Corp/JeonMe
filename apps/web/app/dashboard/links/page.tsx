@@ -2016,7 +2016,7 @@ export default function DashboardLinksPage() {
               type="button"
               onClick={() => handleSelectContentTile(tile)}
               title={tile.label}
-              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
             >
               <tile.Icon className="h-4 w-4" />
               <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app-surface text-[9px] font-bold text-app-ink ring-1 ring-border">
@@ -2583,7 +2583,7 @@ export default function DashboardLinksPage() {
                   catatan toolsOpenId) -- markup & handler di dalamnya
                   TIDAK berubah, cuma dibungkus kondisional + kontainer. */}
               {toolsOpenId === link.id && (
-              <div className="ml-11 flex flex-wrap items-center gap-1.5 rounded-jsm border border-app-border bg-app-surface-2 p-2">
+              <div className="ml-11 flex flex-wrap items-center gap-1.5 rounded-jsm border-2 border-jeon-ink bg-app-surface-2 p-2">
                 {link.block_type === "link" && (
                   <>
                     <button
@@ -2783,7 +2783,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.featuredPanel.noThumbnail")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                      <label className="cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {thumbnailUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.thumbnail_url ? t("dashboard.pages.links.featuredPanel.changeThumbnail") : t("dashboard.pages.links.featuredPanel.uploadThumbnail")}
                         <input
                           type="file"
@@ -2880,7 +2880,7 @@ export default function DashboardLinksPage() {
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.showcasePanel.imageHint")}</p>
-                    <label className="w-fit cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                    <label className="w-fit cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                       {showcaseUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.block_data?.image_url ? t("dashboard.pages.links.showcasePanel.changeImage") : t("dashboard.pages.links.showcasePanel.uploadImage")}
                       <input
                         type="file"
@@ -2907,7 +2907,7 @@ export default function DashboardLinksPage() {
                   {catalogItemsOf(link).map((item) => {
                     const uploadKey = `${link.id}:${item.id}`;
                     return (
-                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-app-border bg-app-surface p-2.5">
+                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border-2 border-jeon-ink bg-app-surface p-2.5">
                         <div className="flex items-start gap-2">
                           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                             <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
@@ -3046,7 +3046,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.audioPanel.noAudio")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                      <label className="cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {audioUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.audio_url as string) ? t("dashboard.pages.links.audioPanel.changeAudio") : t("dashboard.pages.links.audioPanel.uploadAudio")}
                         <input
                           type="file"
@@ -3085,7 +3085,7 @@ export default function DashboardLinksPage() {
                         : t("dashboard.pages.links.filePanel.noFile")}
                     </p>
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                      <label className="cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                         {fileUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : (link.block_data?.file_url as string) ? t("dashboard.pages.links.filePanel.changeFile") : t("dashboard.pages.links.filePanel.uploadFile")}
                         <input
                           type="file"
@@ -3495,7 +3495,7 @@ export default function DashboardLinksPage() {
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteId(null)}
-                    className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
+                    className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
                   >
                     {t("dashboard.pages.links.common.cancel")}
                   </button>
@@ -3564,7 +3564,7 @@ export default function DashboardLinksPage() {
               <button
                 type="button"
                 onClick={() => setCreatingPage(false)}
-                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
+                className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2"
               >
                 {t("dashboard.pages.links.common.cancel")}
               </button>

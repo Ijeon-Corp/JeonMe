@@ -425,7 +425,7 @@ function DashboardAudiencePageInner() {
           type="button"
           onClick={handleExportCSV}
           disabled={contacts.length === 0}
-          className="rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-50"
+          className="rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-bold text-app-ink hover:border-jeon-purple disabled:opacity-50"
         >
           {t("dashboard.pages.audience.exportCsv")}
         </button>

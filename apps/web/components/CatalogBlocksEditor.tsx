@@ -177,7 +177,7 @@ export function CatalogBlocksEditor({
       </p>
 
       {blocks.map((block) => (
-        <div key={block.id} className="rounded-lg border border-app-border bg-app-surface p-2.5">
+        <div key={block.id} className="rounded-lg border-2 border-jeon-ink bg-app-surface p-2.5">
           <div className="flex items-center gap-2">
             <input
               defaultValue={block.title}

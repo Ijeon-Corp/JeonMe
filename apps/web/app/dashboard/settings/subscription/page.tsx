@@ -118,7 +118,7 @@ export default function SettingsSubscriptionPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status.is_premium ? (
-        <section className="mt-6 rounded-jlg border border-app-border bg-app-surface-2 p-5">
+        <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface-2 p-5">
           <div className="flex items-center gap-2">
             <IconStar className="h-5 w-5 text-jeon-warning" />
             <h2 className="font-display text-sm font-bold text-app-ink">
@@ -131,7 +131,7 @@ export default function SettingsSubscriptionPage() {
               type="button"
               onClick={handleCancel}
               disabled={canceling}
-              className="mt-3 rounded-lg border border-app-border bg-app-surface px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
+              className="mt-3 rounded-lg border-2 border-jeon-ink bg-app-surface px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
             >
               {canceling ? t("dashboard.pages.settingsSubscription.canceling") : t("dashboard.pages.settingsSubscription.cancelSubscriptionButton")}
             </button>

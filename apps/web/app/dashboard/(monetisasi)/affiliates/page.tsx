@@ -248,7 +248,7 @@ export default function DashboardAffiliatesPage() {
               <button
                 type="button"
                 onClick={() => handleCopy(`${a.referral_base_url}?ref=${a.referral_code}`, a.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border-2 border-jeon-ink bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === a.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}
@@ -308,7 +308,7 @@ export default function DashboardAffiliatesPage() {
               <button
                 type="button"
                 onClick={() => handleCopy(p.referral_url, p.referral_code)}
-                className="flex flex-shrink-0 items-center gap-1 rounded-md border border-app-border bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
+                className="flex flex-shrink-0 items-center gap-1 rounded-md border-2 border-jeon-ink bg-app-surface px-2 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple"
               >
                 <IconCopy className="h-3 w-3" />
                 {copiedCode === p.referral_code ? t("dashboard.pages.affiliates.copied") : t("dashboard.pages.affiliates.copy")}

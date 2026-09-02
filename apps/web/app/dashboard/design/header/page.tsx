@@ -95,7 +95,7 @@ export default function DesignHeaderPage() {
                 {page.username.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
+            <label className="cursor-pointer rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple">
               {avatarUploading ? t("dashboard.pages.designHeader.uploading") : t("dashboard.pages.designHeader.changePhoto")}
               <input
                 type="file"

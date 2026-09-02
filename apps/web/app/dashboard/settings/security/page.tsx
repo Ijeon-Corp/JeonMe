@@ -165,7 +165,7 @@ export default function SettingsSecurityPage() {
       <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSecurity.subtitle")}</p>
 
-      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
         <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
           <input
@@ -195,7 +195,7 @@ export default function SettingsSecurityPage() {
         </form>
       </section>
 
-      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.twoFactorTitle")}</h2>
           {status && (
@@ -295,7 +295,7 @@ export default function SettingsSecurityPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.activeSessionsTitle")}</h2>

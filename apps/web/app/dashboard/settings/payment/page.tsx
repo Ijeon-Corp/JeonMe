@@ -181,7 +181,7 @@ export default function SettingsPaymentPage() {
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <section className="mt-6 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.methodsTitle")}</h2>
 
         <div className="mt-3 flex flex-col gap-2">
@@ -326,7 +326,7 @@ export default function SettingsPaymentPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-jlg border border-app-border bg-app-surface p-5">
+      <section className="mt-4 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.autoWithdrawTitle")}</h2>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsPayment.autoWithdrawDescription")}</p>
         {/* Bug ditemukan (5 Agustus 2026, audit responsif): baris ini jadi

@@ -322,7 +322,7 @@ export default function DashboardBookingsPage() {
                   {slots.map((slot) => (
                     <div
                       key={slot.id}
-                      className="flex items-center justify-between rounded-lg border border-app-border bg-app-surface px-3 py-2 text-xs"
+                      className="flex items-center justify-between rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-2 text-xs"
                     >
                       <div>
                         <p className="font-semibold text-app-ink">

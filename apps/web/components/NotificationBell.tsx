@@ -98,7 +98,7 @@ export default function NotificationBell() {
         onClick={handleToggle}
         title={t("dashboard.components.notificationBell.title")}
         aria-label={t("dashboard.components.notificationBell.title")}
-        className="relative flex h-8 w-8 items-center justify-center rounded-full border border-app-border bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
       >
         <IconBell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -109,7 +109,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-jmd border border-app-border bg-app-surface shadow-2xl">
+        <div className="absolute right-0 top-12 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-2xl">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-app-border px-4 py-3">
             <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.notificationBell.title")}</p>
             {unreadCount > 0 && (

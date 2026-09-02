@@ -852,7 +852,7 @@ function BlockSection({
             onDragStart={() => setDragId(link.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(link.id)}
-            className="flex flex-col gap-2.5 rounded-xl border border-app-border bg-app-surface p-3 shadow-card"
+            className="flex flex-col gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-3 shadow-card"
           >
             <div className="flex items-center gap-2.5">
               <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
@@ -929,7 +929,7 @@ function BlockSection({
                     ? t("dashboard.components.produkPageEditor.blockForm.audioUploaded")
                     : t("dashboard.components.produkPageEditor.blockForm.audioEmpty")}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                   {audioUploadingId === link.id
                     ? t("dashboard.components.produkPageEditor.blockForm.uploading")
                     : (link.block_data?.audio_url as string)
@@ -960,7 +960,7 @@ function BlockSection({
                     ? t("dashboard.components.produkPageEditor.blockForm.fileUploaded")
                     : t("dashboard.components.produkPageEditor.blockForm.fileEmpty")}
                 </p>
-                <label className="flex-shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                <label className="flex-shrink-0 cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
                   {fileUploadingId === link.id
                     ? t("dashboard.components.produkPageEditor.blockForm.uploading")
                     : (link.block_data?.file_url as string)
@@ -1091,7 +1091,7 @@ function TemaSection({
             ))}
           </div>
           {page.custom_background_type === "image" ? (
-            <label className="cursor-pointer self-start rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+            <label className="cursor-pointer self-start rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
               {bgUploading ? t("dashboard.components.produkPageEditor.tema.uploading") : t("dashboard.components.produkPageEditor.tema.uploadBackground")}
               <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleBackgroundUpload} disabled={bgUploading} className="hidden" />
             </label>
@@ -1196,7 +1196,7 @@ function HeaderSection({
               {page.slug.slice(0, 1).toUpperCase()}
             </div>
           )}
-          <label className="cursor-pointer rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+          <label className="cursor-pointer rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
             {avatarUploading ? t("dashboard.components.produkPageEditor.header.uploading") : t("dashboard.components.produkPageEditor.header.changePhoto")}
             <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={avatarUploading} className="hidden" />
           </label>

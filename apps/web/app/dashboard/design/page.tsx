@@ -108,7 +108,7 @@ export default function DashboardDesignPage() {
           </div>
 
           <div className="mt-5 flex flex-col gap-3">
-            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
+            <Link href="/dashboard/design/theme" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: themeSwatch }} aria-hidden />
                 <div>
@@ -121,7 +121,7 @@ export default function DashboardDesignPage() {
 
             <p className="mt-1 text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.design.customizeSectionLabel")}</p>
 
-            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
+            <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 {page.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -136,7 +136,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
+            <Link href="/dashboard/design/tombol" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 flex-shrink-0 rounded-lg ring-1 ring-black/5" style={{ backgroundColor: page.custom_button_color }} aria-hidden />
                 <div>
@@ -147,7 +147,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
+            <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-blue font-display text-sm font-bold text-[#111111]" aria-hidden>
                   Aa
@@ -160,7 +160,7 @@ export default function DashboardDesignPage() {
               <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
             </Link>
 
-            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
+            <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-pink text-[#111111]" aria-hidden>
                   <IconSparkle className="h-4 w-4" />
@@ -184,7 +184,7 @@ export default function DashboardDesignPage() {
                 mengarahkan ke halaman upgrade), kreator Premium bebas
                 menyalakan/mematikan sendiri. Gerbang sungguhan tetap di
                 backend (finishPublicPageResponse, page.go) -- ini murni UI. */}
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3">
               <button
                 type="button"
                 onClick={() =>
