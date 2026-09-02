@@ -1,5 +1,6 @@
 "use client";
 
+import IconBadge, { accentForIndex, type IconBadgeAccent } from "@/components/IconBadge";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getMyPage } from "@/lib/api-client";
@@ -44,7 +45,12 @@ type SettingsItem = {
   title: string;
   description: string;
   icon: (props: { className?: string }) => React.ReactElement;
-  badgeClass: string;
+  // accent -- SEBELUMNYA `badgeClass: string` berisi kelas Tailwind mentah
+  // ("bg-jeon-purple/10 text-jeon-purple"). Diganti nama aksen supaya
+  // presentasinya satu pintu lewat <IconBadge> dan ikut bahasa visual
+  // homepage (permintaan pengguna 1 September 2026). Kosong = ikut rotasi
+  // warna per posisi kartu, seperti kartu fitur homepage.
+  accent?: IconBadgeAccent;
   // statusPill -- opsional, ditambahkan lewat resolveItem() di bawah untuk
   // menandai status YANG SEDANG AKTIF (bukan cuma deskripsi statis) --
   // permintaan langsung pengguna, 28 Agustus 2026: "akun saya kan sudah
@@ -75,21 +81,18 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.profileTitle"),
           description: t("dashboard.pages.settings.items.profileDescription"),
           icon: IconPencil,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/settings/security",
           title: t("dashboard.pages.settings.items.securityTitle"),
           description: t("dashboard.pages.settings.items.securityDescription"),
           icon: IconShield,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/settings/seo",
           title: t("dashboard.pages.settings.items.seoTitle"),
           description: t("dashboard.pages.settings.items.seoDescription"),
           icon: IconSearch,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -102,14 +105,12 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.paymentTitle"),
           description: t("dashboard.pages.settings.items.paymentDescription"),
           icon: IconWallet,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/kyc",
           title: t("dashboard.pages.settings.items.kycTitle"),
           description: t("dashboard.pages.settings.items.kycDescription"),
           icon: IconShield,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -122,21 +123,18 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.subscriptionTitle"),
           description: t("dashboard.pages.settings.items.subscriptionDescription"),
           icon: IconStar,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/team",
           title: t("dashboard.pages.settings.items.teamTitle"),
           description: t("dashboard.pages.settings.items.teamDescription"),
           icon: IconUsers,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         {
           href: "/dashboard/analytics",
           title: t("dashboard.pages.settings.items.analyticsTitle"),
           description: t("dashboard.pages.settings.items.analyticsDescription"),
           icon: IconChart,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
         // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus
         // 2026: "saya mau jeonme ini bisa connect ke akun kita contoh nya
@@ -148,7 +146,6 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.socialConnectTitle"),
           description: t("dashboard.pages.settings.items.socialConnectDescription"),
           icon: IconExternal,
-          badgeClass: "bg-jeon-purple/10 text-jeon-purple",
         },
       ],
     },
@@ -161,23 +158,20 @@ function buildSettingsGroups(t: (key: string) => string): SettingsGroup[] {
           title: t("dashboard.pages.settings.items.dangerZoneTitle"),
           description: t("dashboard.pages.settings.items.dangerZoneDescription"),
           icon: IconTrash,
-          badgeClass: "bg-red-50 text-red-600",
+          accent: "coral",
         },
       ],
     },
   ];
 }
 
-function SettingsCard({ item }: { item: SettingsItem }) {
-  const Icon = item.icon;
+function SettingsCard({ item, index }: { item: SettingsItem; index: number }) {
   return (
     <Link
       href={item.href}
       className="flex items-center gap-3 rounded-jmd border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
-      <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${item.badgeClass}`}>
-        <Icon className="h-4 w-4" />
-      </span>
+      <IconBadge icon={item.icon} accent={item.accent ?? accentForIndex(index)} size="sm" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
@@ -258,8 +252,8 @@ export default function DashboardSettingsPage() {
               {g.label}
             </p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {g.items.map((s) => (
-                <SettingsCard key={s.href} item={resolveItem(s)} />
+              {g.items.map((s, i) => (
+                <SettingsCard key={s.href} item={resolveItem(s)} index={i} />
               ))}
             </div>
           </div>

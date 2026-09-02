@@ -352,7 +352,7 @@ function DashboardAudiencePageInner() {
       {(!marketingV2 || view === "broadcast") && (
       <section className="glass mt-8 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-pop-blue-tint text-pop-blue">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-blue text-[#111111]">
             <IconMail className="h-4 w-4" />
           </span>
           <div>

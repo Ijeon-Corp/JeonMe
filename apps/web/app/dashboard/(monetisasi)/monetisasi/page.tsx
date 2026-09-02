@@ -1,5 +1,6 @@
 "use client";
 
+import IconBadge, { accentForIndex } from "@/components/IconBadge";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
@@ -112,16 +113,13 @@ function buildGroups(t: (key: string) => string): { label: string; items: Moneti
   ];
 }
 
-function MonetisasiCard({ item }: { item: MonetisasiItem }) {
-  const Icon = item.icon;
+function MonetisasiCard({ item, index }: { item: MonetisasiItem; index: number }) {
   return (
     <Link
       href={item.href}
       className="flex items-center gap-3 rounded-jmd border border-app-border bg-app-surface p-3.5 transition-colors hover:border-jeon-purple"
     >
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple">
-        <Icon className="h-4 w-4" />
-      </span>
+      <IconBadge icon={item.icon} accent={accentForIndex(index)} size="sm" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>
         <span className="block truncate text-xs text-app-muted">{item.description}</span>
@@ -167,8 +165,8 @@ export default function DashboardMonetisasiPage() {
           <div key={g.label}>
             <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-app-muted">{g.label}</p>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {g.items.map((s) => (
-                <MonetisasiCard key={s.href} item={s} />
+              {g.items.map((s, i) => (
+                <MonetisasiCard key={s.href} item={s} index={i} />
               ))}
             </div>
           </div>

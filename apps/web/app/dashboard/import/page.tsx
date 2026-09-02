@@ -161,7 +161,7 @@ export default function DashboardImportPage() {
   if (!myPage.is_premium) {
     return (
       <div className="glass mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-jlg p-8 text-center shadow-card">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+        <span className="flex h-12 w-12 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
           <IconSparkle className="h-6 w-6" />
         </span>
         <p className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.import.premiumOnlyNote")}</p>
@@ -187,7 +187,7 @@ export default function DashboardImportPage() {
           </>
         ) : (
           <>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+            <span className="flex h-14 w-14 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
               <IconCheck className="h-6 w-6" />
             </span>
             <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.import.successTitle")}</p>
@@ -251,7 +251,7 @@ export default function DashboardImportPage() {
             <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.import.themeHeading")}</p>
             {hasTheme && result.theme ? (
               <div className="mt-3 flex items-center gap-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                   <IconSparkle className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">

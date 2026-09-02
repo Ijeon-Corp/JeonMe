@@ -55,7 +55,7 @@ function StepCard({ index, title, body, href }: { index: number; title: string; 
       href={href}
       className="flex gap-3 rounded-jmd border border-app-border bg-app-surface p-4 transition-colors hover:border-jeon-purple"
     >
-      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-xs font-bold text-jeon-purple">
+      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-xs font-bold text-[#111111]">
         {index}
       </span>
       <span>

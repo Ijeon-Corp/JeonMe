@@ -21,6 +21,7 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import { confirmDelete } from "@/lib/confirm";
+import IconBadge, { accentForIndex } from "@/components/IconBadge";
 import { QUICK_SETUP_CATEGORIES, QUICK_SETUP_TEMPLATES, QuickSetupTemplate, orderedTemplateItems, buildQuickSetupPreviewData } from "@/lib/quick-setup-templates";
 import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
 import ThemeGallery from "@/components/ThemeGallery";
@@ -348,16 +349,17 @@ export default function QuickSetupPage() {
       <div className="mx-auto max-w-4xl">
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.step1Intro")}</p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {QUICK_SETUP_CATEGORIES.map((c) => (
+          {QUICK_SETUP_CATEGORIES.map((c, i) => (
             <button
               key={c.key}
               type="button"
               onClick={() => openCategory(c.key)}
               className="flex flex-col items-center gap-2.5 rounded-jmd border border-app-border bg-app-surface p-5 text-center shadow-card transition-transform hover:-translate-y-0.5 hover:border-jeon-purple"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
-                <c.Icon className="h-5 w-5" />
-              </span>
+              {/* accentForIndex: kartu kategori berjejer dalam grid, jadi warnanya
+                  dirotasi seperti kartu fitur homepage supaya tidak terasa datar
+                  (permintaan pengguna 1 September 2026 soal ikon dashboard). */}
+              <IconBadge icon={c.Icon} accent={accentForIndex(i)} />
               <span className="text-sm font-bold text-app-ink">{c.label}</span>
             </button>
           ))}
@@ -378,9 +380,7 @@ export default function QuickSetupPage() {
           </>
         ) : (
           <>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
-              <IconCheck className="h-6 w-6" />
-            </span>
+            <IconBadge icon={IconCheck} accent="lime" size="lg" />
             <p className="mt-4 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.quickSetup.successTitle")}</p>
             <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.quickSetup.successDesc")}</p>
             {tokoSynced && <p className="mt-2 text-xs text-app-muted">{t("dashboard.pages.quickSetup.tokoSyncedNote")}</p>}

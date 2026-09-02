@@ -73,9 +73,12 @@ export default function EmptyState({
       } ${className}`}
     >
       {/* Lencana ikon: kotak beraksen bergaris tebal, pola sama dengan kartu
-          fitur homepage (bukan lingkaran pucat seperti versi sebelumnya). */}
+          fitur homepage (bukan lingkaran pucat seperti versi sebelumnya).
+          Garis HITAM KONSTAN (bukan border-jeon-ink yang flip) -- isian aksen
+          selalu terang di kedua mode, jadi garis yang ikut terang di dark mode
+          akan nyaris hilang. Lihat catatan lengkap di components/IconBadge.tsx. */}
       <span
-        className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-jeon-ink text-[#111111] ${accentClass}`}
+        className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] text-[#111111] ${accentClass}`}
       >
         <Icon className="h-6 w-6" />
       </span>

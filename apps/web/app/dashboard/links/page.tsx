@@ -2416,7 +2416,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={libraryIcon.label}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                       >
                         <libraryIcon.Icon className="h-4 w-4" />
                       </span>
@@ -2437,7 +2437,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={blockTypeLabel[link.block_type]}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-jeon-purple"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                       >
                         <DefaultIcon className="h-4 w-4" />
                       </span>
@@ -3748,7 +3748,7 @@ function AddModal({
                     onClick={() => onSelectContentTile(tile)}
                     className="flex flex-col items-center gap-1.5 rounded-xl border border-app-border p-2.5 hover:border-jeon-purple/50"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                       <tile.Icon className="h-5 w-5" />
                     </span>
                     <span className="text-center text-[11px] font-semibold text-app-ink">{tile.label}</span>
@@ -3770,7 +3770,7 @@ function AddModal({
                 onClick={() => onSelectContentTile(tile)}
                 className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                   <tile.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

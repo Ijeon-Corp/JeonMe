@@ -62,7 +62,7 @@ export default function AdminSummaryPage() {
               href="/admin/payouts"
               className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-warning/40"
             >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-pop-yellow-tint text-jeon-warning">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lime text-[#111111]">
                 <IconWallet className="h-4 w-4" />
               </span>
               <span>

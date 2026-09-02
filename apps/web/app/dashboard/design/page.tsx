@@ -149,7 +149,7 @@ export default function DashboardDesignPage() {
 
             <Link href="/dashboard/design/font" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-blue-tint font-display text-sm font-bold text-pop-blue" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-blue font-display text-sm font-bold text-[#111111]" aria-hidden>
                   Aa
                 </span>
                 <div>
@@ -162,7 +162,7 @@ export default function DashboardDesignPage() {
 
             <Link href="/dashboard/design/sticker" className="flex items-center justify-between gap-3 rounded-xl border border-app-border bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pop-pink-tint text-pop-pink" aria-hidden>
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-pink text-[#111111]" aria-hidden>
                   <IconSparkle className="h-4 w-4" />
                 </span>
                 <div>

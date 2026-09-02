@@ -174,7 +174,7 @@ export default function GlobalSearch() {
                       i === activeIndex ? "bg-jeon-purple/10" : "hover:bg-jeon-purple/5"
                     }`}
                   >
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                       <item.icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">

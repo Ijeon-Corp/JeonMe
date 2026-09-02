@@ -138,7 +138,7 @@ export default function OnboardingBanner() {
             <li key={item.key}>
               {item.done ? (
                 <span className="flex items-center gap-2 text-xs text-app-muted">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-jeon-purple/10 text-jeon-purple">
+                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                     <IconCheck className="h-3 w-3" />
                   </span>
                   <span className="line-through">{item.label}</span>

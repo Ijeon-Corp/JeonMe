@@ -39,7 +39,7 @@ export default function SectionCard({
         <div className={`flex items-start justify-between gap-3 ${children ? "mb-4" : ""}`}>
           <div className="flex min-w-0 items-start gap-2.5">
             {icon && (
-              <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-600">
+              <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                 {icon}
               </span>
             )}
