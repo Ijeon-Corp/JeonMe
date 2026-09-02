@@ -398,6 +398,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.DELETE("/affiliates/:id", affiliate.Revoke)
 				productsGroup.DELETE("/affiliates/:id/products/:productId", affiliate.RemoveCommission)
 				productsGroup.GET("/affiliate-programs", affiliate.ListPrograms)
+				// Marketplace afiliasi publik (benchmark Linktree Earn > Affiliate
+				// Products, 3 September 2026): buka/tutup produk sendiri -- domain
+				// produk, boleh kolaborator ber-akses produk.
+				productsGroup.GET("/affiliate-public-products", affiliate.ListMyPublicProducts)
+				productsGroup.PUT("/affiliate-public-products/:productId", affiliate.SetProductPublic)
 
 				// No.90 (Sprint 11): blok event -- juga baris products biasa
 				// (is_event=true), toggle aktif/hapus pakai product.Update/Delete
@@ -475,6 +480,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// (GA4), toggle UTM.
 			dashboard.GET("/analytics-settings", analyticsSettings.Get)
 			dashboard.PUT("/analytics-settings", analyticsSettings.Upsert)
+
+			// Marketplace afiliasi: jelajah & bergabung atas nama DIRI SENDIRI --
+			// sengaja di luar grup ActAs (kolaborator tidak boleh mendaftarkan
+			// pemilik workspace sebagai afiliator produk orang lain).
+			dashboard.GET("/affiliate-marketplace", affiliate.ListMarketplace)
+			dashboard.POST("/affiliate-marketplace/:productId/join", affiliate.JoinMarketplace)
 
 			dashboard.GET("/balance", balance.GetBalance)
 			dashboard.POST("/payouts", balance.CreatePayout)

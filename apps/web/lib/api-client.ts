@@ -2481,6 +2481,54 @@ export function removeAffiliateCommission(affiliateId: string, productId: string
   );
 }
 
+// ---------- Marketplace afiliasi publik (benchmark Linktree Earn >
+// Affiliate Products, 3 September 2026) ----------
+
+export interface AffiliatePublicProduct {
+  product_id: string;
+  name: string;
+  is_active: boolean;
+  affiliate_public: boolean;
+  commission_percent: number;
+}
+
+export interface AffiliateMarketplaceItem {
+  product_id: string;
+  name: string;
+  price_idr: number;
+  cover_image_url: string;
+  creator_username: string;
+  commission_percent: number;
+  joined: boolean;
+  referral_url?: string;
+}
+
+// Produk milik sendiri + status buka/tutup marketplace (domain produk).
+export function listMyAffiliatePublicProducts() {
+  return apiFetch<AffiliatePublicProduct[]>("/dashboard/affiliate-public-products", { method: "GET" }, { auth: true });
+}
+
+export function setAffiliateProductPublic(productId: string, input: { enabled: boolean; commission_percent: number }) {
+  return apiFetch<{ ok: boolean }>(
+    `/dashboard/affiliate-public-products/${productId}`,
+    { method: "PUT", body: JSON.stringify(input) },
+    { auth: true },
+  );
+}
+
+// Produk kreator LAIN yang dibuka untuk afiliator (atas nama diri sendiri).
+export function listAffiliateMarketplace() {
+  return apiFetch<AffiliateMarketplaceItem[]>("/dashboard/affiliate-marketplace", { method: "GET" }, { auth: true });
+}
+
+export function joinAffiliateMarketplace(productId: string) {
+  return apiFetch<{ referral_code: string; referral_url: string; commission_percent: number }>(
+    `/dashboard/affiliate-marketplace/${productId}/join`,
+    { method: "POST" },
+    { auth: true },
+  );
+}
+
 // ---------- Dashboard: Manajer Audiens (Sprint 8, No.73) ----------
 // Blok pengumpulan lead di halaman publik + daftar kontak tersentralisasi
 // (subscriber form + pembeli produk, digabung lewat email).

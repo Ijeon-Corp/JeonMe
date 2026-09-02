@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -332,4 +334,246 @@ func resolveAffiliate(ctx context.Context, db *pgxpool.Pool, referralCode, produ
 		return "", "", 0, false
 	}
 	return affiliateID, affiliateUserID, commissionPercent, true
+}
+
+// ---------- Marketplace afiliasi publik ----------
+//
+// Benchmark Linktree "Earn > Affiliate Products" (3 September 2026). Mode
+// privat di atas (kreator mengundang) tetap ada; marketplace menambah jalur
+// kedua: pemilik produk MEMBUKA produknya dengan satu komisi standar
+// (migrasi 000084), afiliator mana pun bisa bergabung sendiri. Join
+// menghasilkan baris affiliates + affiliate_commissions yang PERSIS sama
+// dengan undangan privat, jadi checkout/ledger tidak tahu bedanya.
+
+type affiliatePublicProduct struct {
+	ProductID         string  `json:"product_id"`
+	Name              string  `json:"name"`
+	IsActive          bool    `json:"is_active"`
+	Public            bool    `json:"affiliate_public"`
+	CommissionPercent float64 `json:"commission_percent"`
+}
+
+// ListMyPublicProducts -- produk milik sendiri beserta status buka/tutup
+// marketplace. Endpoint kecil tersendiri (bukan menambah kolom ke daftar
+// produk umum) supaya handler produk yang besar tidak perlu disentuh.
+func (h *AffiliateHandler) ListMyPublicProducts(c *gin.Context) {
+	userID := c.GetString("userID")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, name, is_active, affiliate_public, affiliate_public_commission_percent
+		FROM products WHERE user_id = $1 ORDER BY name
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat produk"})
+		return
+	}
+	defer rows.Close()
+	out := []affiliatePublicProduct{}
+	for rows.Next() {
+		var it affiliatePublicProduct
+		if err := rows.Scan(&it.ProductID, &it.Name, &it.IsActive, &it.Public, &it.CommissionPercent); err == nil {
+			out = append(out, it)
+		}
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+type setProductPublicRequest struct {
+	Enabled           bool    `json:"enabled"`
+	CommissionPercent float64 `json:"commission_percent"`
+}
+
+// SetProductPublic -- buka/tutup satu produk untuk marketplace. Komisi
+// wajib 0.01-100 saat dibuka; saat ditutup komisi dibiarkan (supaya kalau
+// dibuka lagi nilainya tidak hilang). Afiliator yang SUDAH bergabung tetap
+// punya komisinya sendiri di affiliate_commissions -- menutup marketplace
+// tidak memutus hubungan yang sudah terbentuk, sama seperti mencabut
+// undangan harus eksplisit lewat Revoke.
+func (h *AffiliateHandler) SetProductPublic(c *gin.Context) {
+	userID := c.GetString("userID")
+	productID := c.Param("productId")
+	var req setProductPublicRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "payload tidak valid"})
+		return
+	}
+	if req.Enabled && (req.CommissionPercent < 0.01 || req.CommissionPercent > 100) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "komisi harus antara 0.01% dan 100%"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var tag pgconn.CommandTag
+	var err error
+	if req.Enabled {
+		tag, err = h.DB.Exec(ctx, `
+			UPDATE products SET affiliate_public = true, affiliate_public_commission_percent = $3
+			WHERE id = $1 AND user_id = $2
+		`, productID, userID, req.CommissionPercent)
+	} else {
+		tag, err = h.DB.Exec(ctx, `UPDATE products SET affiliate_public = false WHERE id = $1 AND user_id = $2`, productID, userID)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pengaturan marketplace"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+type marketplaceItem struct {
+	ProductID         string  `json:"product_id"`
+	Name              string  `json:"name"`
+	PriceIDR          int64   `json:"price_idr"`
+	CoverImageURL     string  `json:"cover_image_url"`
+	CreatorUsername   string  `json:"creator_username"`
+	CommissionPercent float64 `json:"commission_percent"`
+	Joined            bool    `json:"joined"`
+	ReferralURL       string  `json:"referral_url,omitempty"`
+}
+
+// ListMarketplace -- produk kreator LAIN yang dibuka untuk afiliator.
+// Produk sendiri dikecualikan (tidak masuk akal mengafiliasi diri sendiri
+// -- dan resolveAffiliate() memang mensyaratkan p.user_id = a.creator_user_id
+// yang berbeda dari afiliator). Untuk yang sudah bergabung, tautan
+// referral ikut dikirim supaya UI tidak perlu panggilan kedua.
+func (h *AffiliateHandler) ListMarketplace(c *gin.Context) {
+	userID := c.GetString("userID")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT p.id, p.name, p.price_idr, COALESCE(p.cover_image_url, ''), u.username,
+		       p.affiliate_public_commission_percent,
+		       COALESCE((
+		           SELECT a.referral_code FROM affiliates a
+		           JOIN affiliate_commissions ac ON ac.affiliate_id = a.id
+		           WHERE a.affiliate_user_id = $1 AND a.creator_user_id = p.user_id AND ac.product_id = p.id
+		           LIMIT 1
+		       ), '') AS my_code
+		FROM products p
+		JOIN users u ON u.id = p.user_id
+		WHERE p.affiliate_public = true AND p.is_active = true AND p.user_id <> $1
+		ORDER BY p.affiliate_public_commission_percent DESC, p.name ASC
+		LIMIT 200
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat marketplace"})
+		return
+	}
+	defer rows.Close()
+	out := []marketplaceItem{}
+	for rows.Next() {
+		var it marketplaceItem
+		var code string
+		if err := rows.Scan(&it.ProductID, &it.Name, &it.PriceIDR, &it.CoverImageURL, &it.CreatorUsername, &it.CommissionPercent, &code); err != nil {
+			continue
+		}
+		if code != "" {
+			it.Joined = true
+			it.ReferralURL = h.PublicWebURL + "/" + it.CreatorUsername + "?ref=" + code
+		}
+		out = append(out, it)
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// JoinMarketplace -- afiliator mendaftar sendiri ke satu produk publik.
+// Idempoten: bergabung dua kali cuma menyegarkan komisi ke nilai publik
+// saat ini. Hubungan affiliates (satu per pasangan kreator<->afiliator,
+// satu kode referral untuk semua produk kreator itu) dibuat kalau belum ada
+// -- pola & retry kode SAMA dengan Upsert (undangan privat).
+func (h *AffiliateHandler) JoinMarketplace(c *gin.Context) {
+	userID := c.GetString("userID")
+	productID := c.Param("productId")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 8*time.Second)
+	defer cancel()
+
+	var ownerID, ownerUsername, productName string
+	var isPublic, isActive bool
+	var pct float64
+	if err := h.DB.QueryRow(ctx, `
+		SELECT p.user_id, u.username, p.name, p.affiliate_public, p.is_active, p.affiliate_public_commission_percent
+		FROM products p JOIN users u ON u.id = p.user_id WHERE p.id = $1
+	`, productID).Scan(&ownerID, &ownerUsername, &productName, &isPublic, &isActive, &pct); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+	if ownerID == userID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tidak bisa mengafiliasi produk sendiri"})
+		return
+	}
+	if !isPublic || !isActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "produk ini tidak dibuka untuk afiliator"})
+		return
+	}
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var affiliateID, code string
+	err = tx.QueryRow(ctx, `
+		SELECT id, referral_code FROM affiliates WHERE creator_user_id = $1 AND affiliate_user_id = $2
+	`, ownerID, userID).Scan(&affiliateID, &code)
+	if err == pgx.ErrNoRows {
+		for attempt := 0; attempt < 5; attempt++ {
+			newCode, genErr := generateVoucherCode()
+			if genErr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode referral"})
+				return
+			}
+			insertErr := tx.QueryRow(ctx, `
+				INSERT INTO affiliates (creator_user_id, affiliate_user_id, referral_code)
+				VALUES ($1, $2, $3) RETURNING id
+			`, ownerID, userID, newCode).Scan(&affiliateID)
+			if insertErr == nil {
+				code = newCode
+				break
+			}
+			if attempt == 4 {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode referral unik"})
+				return
+			}
+		}
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat afiliasi"})
+		return
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO affiliate_commissions (affiliate_id, product_id, commission_percent)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (affiliate_id, product_id) DO UPDATE SET commission_percent = EXCLUDED.commission_percent
+	`, affiliateID, productID, pct); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan komisi"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan afiliasi"})
+		return
+	}
+
+	// Notifikasi ke pemilik produk -- soft-fail, bukan inti transaksi.
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO notifications (user_id, type, title, body, link_url)
+		VALUES ($1, 'affiliate_joined', 'Afiliator baru bergabung', $2, '/dashboard/affiliates')
+	`, ownerID, "Seseorang bergabung sebagai afiliator produk \""+productName+"\" lewat marketplace."); err != nil {
+		log.Printf("affiliate: gagal membuat notifikasi join marketplace untuk %s: %v", ownerID, err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"referral_code":      code,
+		"referral_url":       h.PublicWebURL + "/" + ownerUsername + "?ref=" + code,
+		"commission_percent": pct,
+	})
 }
