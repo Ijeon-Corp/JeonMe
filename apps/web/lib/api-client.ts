@@ -2800,6 +2800,38 @@ export function getFeeBreakdown() {
   return apiFetch<FeeBreakdown>("/dashboard/balance/fee-breakdown", { method: "GET" }, { auth: true });
 }
 
+// ---------- Pendapatan per sumber (benchmark Linktree Earn > Earnings) ----------
+
+// Nilai `source` = enum di migrasi 000082 (ledger_entries.source).
+export type EarningsSource =
+  | "product"
+  | "bundle"
+  | "course"
+  | "booking"
+  | "event"
+  | "donation"
+  | "affiliate_commission"
+  | "collaborator_split"
+  | "other";
+
+export interface EarningsBreakdownItem {
+  source: EarningsSource | string;
+  count: number;
+  total_idr: number;
+}
+
+export interface EarningsBreakdown {
+  range_days: number;
+  total_idr: number;
+  items: EarningsBreakdownItem[];
+}
+
+// rangeDays: 7 | 30 | 90 | 365 | 0 (sepanjang waktu) -- backend meng-clamp
+// nilai lain ke 30.
+export function getEarningsBreakdown(rangeDays: number) {
+  return apiFetch<EarningsBreakdown>(`/dashboard/balance/earnings-breakdown?range_days=${rangeDays}`, { method: "GET" }, { auth: true });
+}
+
 // ---------- Pengaturan: Payment / Payout (Modul Settings §3) ----------
 
 export interface PayoutMethod {

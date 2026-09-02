@@ -266,3 +266,80 @@ func (h *BalanceHandler) GetFeeBreakdown(c *gin.Context) {
 
 	c.JSON(http.StatusOK, feeBreakdownResponse{Reference: feeReferenceTable, Actual: actual})
 }
+
+// ---------- Rincian pendapatan per sumber ----------
+//
+// Benchmark Linktree "Earn > Earnings" (permintaan pengguna, 3 September
+// 2026): kreator perlu tahu uangnya dari mana -- produk, booking, donasi,
+// event, kursus, bundel, komisi afiliasi, split kolaborator -- bukan cuma
+// satu angka saldo. Sumber dicatat per entri di ledger_entries.source
+// (migrasi 000082), jadi endpoint ini cukup agregasi sederhana. Refund
+// SENGAJA tidak dikurangkan dari sumbernya di sini (tampil di riwayat
+// ledger sebagai baris sendiri) supaya angkanya bisa direkonsiliasi
+// satu-satu ke riwayat.
+type earningsBreakdownItem struct {
+	Source   string `json:"source"`
+	Count    int64  `json:"count"`
+	TotalIDR int64  `json:"total_idr"`
+}
+
+type earningsBreakdownResponse struct {
+	RangeDays int                     `json:"range_days"`
+	TotalIDR  int64                   `json:"total_idr"`
+	Items     []earningsBreakdownItem `json:"items"`
+}
+
+// earningsRangeDays -- clamp ke pilihan yang didukung; 0 = sepanjang waktu.
+// Nilai tak dikenal jatuh ke 30 hari (bukan 400) supaya klien tanpa
+// parameter tetap dapat data.
+func earningsRangeDays(raw string) int {
+	switch raw {
+	case "7":
+		return 7
+	case "90":
+		return 90
+	case "365":
+		return 365
+	case "0", "all":
+		return 0
+	default:
+		return 30
+	}
+}
+
+func (h *BalanceHandler) GetEarningsBreakdown(c *gin.Context) {
+	userID := c.GetString("userID")
+	rangeDays := earningsRangeDays(c.Query("range_days"))
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	// Hanya entri PEMASUKAN (amount > 0). payout_reversal dikecualikan
+	// eksplisit: itu uang yang kembali karena payout gagal, bukan pendapatan
+	// baru -- kalau ikut dihitung, satu payout gagal menggelembungkan angka.
+	rows, err := h.DB.Query(ctx, `
+		SELECT source, COUNT(*), COALESCE(SUM(amount_idr), 0)
+		FROM ledger_entries
+		WHERE user_id = $1
+		  AND amount_idr > 0
+		  AND source <> 'payout_reversal'
+		  AND ($2 = 0 OR created_at >= now() - make_interval(days => $2))
+		GROUP BY source
+		ORDER BY SUM(amount_idr) DESC
+	`, userID, rangeDays)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat rincian pendapatan"})
+		return
+	}
+	defer rows.Close()
+
+	resp := earningsBreakdownResponse{RangeDays: rangeDays, Items: []earningsBreakdownItem{}}
+	for rows.Next() {
+		var it earningsBreakdownItem
+		if err := rows.Scan(&it.Source, &it.Count, &it.TotalIDR); err == nil {
+			resp.Items = append(resp.Items, it)
+			resp.TotalIDR += it.TotalIDR
+		}
+	}
+	c.JSON(http.StatusOK, resp)
+}

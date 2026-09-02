@@ -432,8 +432,8 @@ func (h *AdminHandler) UpdatePayoutStatus(c *gin.Context) {
 		newBalance := currentBalance + amountIDR
 		ledgerID := uuid.NewString()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO ledger_entries (id, user_id, type, amount_idr, balance_after, created_at)
-			VALUES ($1, $2, 'credit', $3, $4, now())
+			INSERT INTO ledger_entries (id, user_id, type, amount_idr, balance_after, source, created_at)
+			VALUES ($1, $2, 'credit', $3, $4, 'payout_reversal', now())
 		`, ledgerID, payoutUserID, amountIDR, newBalance); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengembalikan saldo"})
 			return

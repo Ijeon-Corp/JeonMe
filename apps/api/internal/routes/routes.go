@@ -479,6 +479,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 			// No.89 (Sprint 10): transparansi biaya per metode pembayaran.
 			dashboard.GET("/balance/fee-breakdown", balance.GetFeeBreakdown)
+			// Benchmark Linktree Earn > Earnings: pendapatan per sumber.
+			dashboard.GET("/balance/earnings-breakdown", balance.GetEarningsBreakdown)
 
 			// Modul Settings §3 (Payment / Payout) -- sama seperti
 			// settings/profile & security di atas, TIDAK dipasangi

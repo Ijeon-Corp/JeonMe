@@ -910,8 +910,8 @@ func (h *CheckoutHandler) RefundOrder(c *gin.Context) {
 		newBalance := currentBalance - cr.AmountIDR
 		refundLedgerID := uuid.NewString()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
-			VALUES ($1, $2, $3, 'refund_debit', $4, $5, now())
+			INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
+			VALUES ($1, $2, $3, 'refund_debit', $4, $5, 'refund', now())
 		`, refundLedgerID, cr.UserID, orderID, -cr.AmountIDR, newBalance); err != nil {
 			log.Printf("checkout: refund order %s gagal menulis ledger pembalik untuk user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
@@ -1079,9 +1079,9 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			newBalance := currentBalance + netAmount
 			ledgerID := uuid.NewString()
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
-				VALUES ($1, $2, $3, 'credit', $4, $5, now())
-			`, ledgerID, productUserID, orderID, netAmount, newBalance); err != nil {
+				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
+				VALUES ($1, $2, $3, 'credit', $4, $5, ledger_source_for_product($6), now())
+			`, ledgerID, productUserID, orderID, netAmount, newBalance, productID); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger"})
 				return
 			}
@@ -1114,8 +1114,8 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				affiliateNewBalance := affiliateCurrentBalance + affiliateCommissionIDR
 				affiliateLedgerID := uuid.NewString()
 				if _, err := tx.Exec(ctx, `
-					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
-					VALUES ($1, $2, $3, 'credit', $4, $5, now())
+					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
+					VALUES ($1, $2, $3, 'credit', $4, $5, 'affiliate_commission', now())
 				`, affiliateLedgerID, affiliateUserID, orderID, affiliateCommissionIDR, affiliateNewBalance); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger afiliator"})
 					return
@@ -1150,8 +1150,8 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				collabNewBalance := collabCurrentBalance + split.AmountIDR
 				collabLedgerID := uuid.NewString()
 				if _, err := tx.Exec(ctx, `
-					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, created_at)
-					VALUES ($1, $2, $3, 'credit', $4, $5, now())
+					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
+					VALUES ($1, $2, $3, 'credit', $4, $5, 'collaborator_split', now())
 				`, collabLedgerID, split.UserID, orderID, split.AmountIDR, collabNewBalance); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger kolaborator"})
 					return

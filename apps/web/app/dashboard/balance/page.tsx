@@ -7,12 +7,14 @@ import {
   ApiError,
   Balance,
   FeeBreakdown,
+  EarningsBreakdown,
   Payout,
   PayoutMethod,
   KycStatus,
   createPayout,
   getBalance,
   getFeeBreakdown,
+  getEarningsBreakdown,
   getKycStatus,
   listPayoutMethods,
   listPayouts,
@@ -43,6 +45,11 @@ export default function DashboardBalancePage() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
+  // Pendapatan per sumber (benchmark Linktree Earn > Earnings). Rentang
+  // dipilih di UI; 0 = sepanjang waktu. Dimuat terpisah dari Promise.all
+  // awal supaya ganti rentang tidak memuat ulang saldo/riwayat.
+  const [earnings, setEarnings] = useState<EarningsBreakdown | null>(null);
+  const [earningsRange, setEarningsRange] = useState(30);
   const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +73,20 @@ export default function DashboardBalancePage() {
       setPayoutMethods(m);
     });
   }
+
+  useEffect(() => {
+    let alive = true;
+    getEarningsBreakdown(earningsRange)
+      .then((e) => {
+        if (alive) setEarnings(e);
+      })
+      .catch(() => {
+        if (alive) setEarnings(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [earningsRange]);
 
   useEffect(() => {
     getKycStatus()
@@ -150,6 +171,62 @@ export default function DashboardBalancePage() {
           />
         </section>
       )}
+
+      {/* Pendapatan per sumber -- benchmark Linktree "Earn > Earnings"
+          (permintaan pengguna 3 September 2026): saldo saja tidak menjawab
+          "uang ini dari mana". Bar proporsional per sumber, bukan grafik
+          library, supaya ringan dan konsisten dengan tabel biaya di bawah. */}
+      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.earningsHeading")}</h2>
+            <p className="mt-0.5 text-xs text-app-muted">{t("dashboard.pages.balance.earningsSub")}</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("dashboard.pages.balance.earningsHeading")}>
+            {([7, 30, 90, 365, 0] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setEarningsRange(d)}
+                aria-pressed={earningsRange === d}
+                className={`rounded-full border px-3 py-1 text-[11px] font-bold transition-colors ${
+                  earningsRange === d ? "border-jeon-ink bg-jeon-lavender text-[#111111]" : "border-app-border text-app-muted hover:text-app-ink"
+                }`}
+              >
+                {t(d === 0 ? "dashboard.pages.balance.earningsRangeAll" : `dashboard.pages.balance.earningsRange${d}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {earnings && earnings.items.length > 0 ? (
+          <ul className="mt-4 flex flex-col gap-3">
+            {earnings.items.map((it) => {
+              const pct = earnings.total_idr > 0 ? Math.round((it.total_idr / earnings.total_idr) * 100) : 0;
+              return (
+                <li key={it.source}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="font-semibold text-app-ink">{t(`dashboard.pages.balance.earningsSource_${it.source}`)}</span>
+                    <span className="tabular-nums text-app-ink">
+                      Rp {it.total_idr.toLocaleString("id-ID")}
+                      <span className="ml-2 text-xs text-app-muted">{pct}%</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-jeon-purple/10" aria-hidden="true">
+                    <div className="h-full rounded-full bg-jeon-purple" style={{ width: `${Math.max(pct, 2)}%` }} />
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-app-muted">{t("dashboard.pages.balance.earningsCount").replace("{count}", String(it.count))}</p>
+                </li>
+              );
+            })}
+            <li className="flex items-baseline justify-between border-t border-app-border pt-3 text-sm font-bold text-app-ink">
+              <span>{t("dashboard.pages.balance.earningsTotal")}</span>
+              <span className="tabular-nums">Rp {earnings.total_idr.toLocaleString("id-ID")}</span>
+            </li>
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-app-muted">{t("dashboard.pages.balance.earningsEmpty")}</p>
+        )}
+      </section>
 
       {feeBreakdown && (
         <section className="glass mt-6 rounded-jlg p-5 shadow-card">
