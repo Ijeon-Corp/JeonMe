@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnalyticsSummary, RecentOrder, getBalance } from "@/lib/api-client";
 import { IconBox, IconChart, IconInbox, IconTrendArrow, IconWallet } from "@/components/icons";
 import StatCard from "@/components/StatCard";
+import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { useLocale } from "@/lib/locale-context";
 
 // ShopOverviewPanel -- ringkasan performa Toko (Transaksi, Pendapatan,
@@ -17,15 +18,19 @@ import { useLocale } from "@/lib/locale-context";
 // getBalance() di sini (bukan prop) -- kedua pemanggil butuh angka yang
 // sama, mengambilnya sendiri sekali di sini lebih sederhana daripada
 // menduplikasi pemanggilan di 2 tempat.
-// buildOrderStatusLabels -- sama seperti buildStatusLabels di
-// TransactionPanel.tsx (dipanggil ulang tiap render lewat t(), bukan
-// konstanta modul lagi) supaya ikut berganti bahasa.
-function buildOrderStatusLabels(t: (key: string) => string): Record<string, { label: string; className: string }> {
+// buildOrderStatusLabels -- laporan pengguna 3 September 2026 ("ada
+// beberapa card yang tidak mengikuti tema"): SEBELUMNYA warna tint pucat
+// tulis tangan (bg-amber-50, bg-red-50, dst) -- terlewat saat migrasi
+// status ke StatusBadge terpusat (a85e064) karena nilainya di sini
+// dikembalikan lewat objek/fungsi, bukan className JSX langsung, jadi
+// tidak kena pemindaian saat itu. Sekarang cuma memetakan LABEL (StatusBadge
+// sendiri yang menentukan warna dari status via statusToneOf).
+function buildOrderStatusLabels(t: (key: string) => string): Record<string, string> {
   return {
-    paid: { label: t("dashboard.components.shopOverviewPanel.statusLabels.paid"), className: "bg-jeon-purple/10 text-jeon-purple" },
-    pending: { label: t("dashboard.components.shopOverviewPanel.statusLabels.pending"), className: "bg-amber-50 text-amber-700" },
-    expired: { label: t("dashboard.components.shopOverviewPanel.statusLabels.expired"), className: "bg-gray-100 text-app-muted" },
-    failed: { label: t("dashboard.components.shopOverviewPanel.statusLabels.failed"), className: "bg-red-50 text-red-600" },
+    paid: t("dashboard.components.shopOverviewPanel.statusLabels.paid"),
+    pending: t("dashboard.components.shopOverviewPanel.statusLabels.pending"),
+    expired: t("dashboard.components.shopOverviewPanel.statusLabels.expired"),
+    failed: t("dashboard.components.shopOverviewPanel.statusLabels.failed"),
   };
 }
 
@@ -138,16 +143,13 @@ export default function ShopOverviewPanel({ summary, recentOrders }: { summary: 
       <div className="glass mt-3 rounded-jlg p-4 shadow-card">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.shopOverviewPanel.recentTransactionsTitle")}</h2>
         <ul className="mt-3 flex flex-col gap-2">
-          {(recentOrders ?? []).map((o) => {
-            const statusMeta = ORDER_STATUS_LABEL[o.status] ?? { label: o.status, className: "bg-gray-100 text-app-muted" };
-            return (
-              <li key={o.order_id} className="flex items-center justify-between gap-2 text-xs">
-                <span className="min-w-0 flex-1 truncate text-app-ink">{o.product_name}</span>
-                <span className="flex-shrink-0 font-semibold text-app-ink">{formatRupiah(o.amount_idr)}</span>
-                <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusMeta.className}`}>{statusMeta.label}</span>
-              </li>
-            );
-          })}
+          {(recentOrders ?? []).map((o) => (
+            <li key={o.order_id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="min-w-0 flex-1 truncate text-app-ink">{o.product_name}</span>
+              <span className="flex-shrink-0 font-semibold text-app-ink">{formatRupiah(o.amount_idr)}</span>
+              <StatusBadge status={o.status} label={ORDER_STATUS_LABEL[o.status] ?? o.status} className="flex-shrink-0 text-[10px]" />
+            </li>
+          ))}
           {(recentOrders ?? []).length === 0 && <EmptyRow text={t("dashboard.components.shopOverviewPanel.emptyRecentTransactions")} />}
         </ul>
       </div>
