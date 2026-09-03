@@ -56,7 +56,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	course := handlers.NewCourseHandler(db, rdb)
 	booking := handlers.NewBookingHandler(db, rdb)
 	loyalty := handlers.NewLoyaltyHandler(db, rdb)
-	businessCard := handlers.NewBusinessCardHandler(db)
+	businessCard := handlers.NewBusinessCardHandler(db, s3)
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	brand := handlers.NewBrandHandler(db)
@@ -190,6 +190,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// No.95 (Sprint 13): kartu kontak digital -- endpoint dituju QR code
 		// kartu (bukan halaman utama kreator), publik.
 		api.GET("/cards/:username", businessCard.GetPublicCard)
+		// Proxy foto profil untuk komposer PNG kartu nama (lihat AvatarProxy).
+		api.GET("/cards/:username/avatar", businessCard.AvatarProxy)
 		api.POST("/cards/:username/contact", leadsRateLimit, businessCard.SubmitCardContact)
 
 		// Modul Settings §2: dipanggil app/[username]/page.tsx SETELAH

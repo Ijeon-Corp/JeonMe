@@ -155,7 +155,9 @@ export default function DigitalBusinessCard({
         )}
 
         <div className="mt-5 flex items-center gap-4 border-t-2 border-dashed border-[#111111]/20 pt-4">
-          <div className="flex-shrink-0 rounded-jsm border-2 border-[#111111] bg-white p-1.5">
+          {/* data-qr: penanda untuk komposer PNG (ikon baris juga SVG,
+              jadi "svg pertama" bukan QR). */}
+          <div data-qr className="flex-shrink-0 rounded-jsm border-2 border-[#111111] bg-white p-1.5">
             <QRCodeSVG value={url} size={84} level="M" marginSize={0} fgColor="#111111" bgColor="#ffffff" />
           </div>
           <div className="min-w-0">

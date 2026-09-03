@@ -77,33 +77,19 @@ export default function DashboardBusinessCardPage() {
   const cardURL = username ? `${SITE_URL}/card/${username}` : "";
 
   return (
-    <div className="mx-auto max-w-lg">
+    // Layout dua kolom (permintaan pengguna 3 September 2026: "card preview
+    // di sebelah kanan, tempat edit datanya di tengah"): form di kolom
+    // utama, pratinjau kartu di kolom kanan yang sticky supaya tetap terlihat
+    // saat form digulir. Di layar sempit pratinjau tampil DI ATAS form
+    // (order-first) -- tetap terlihat tanpa harus menggulir ke bawah.
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8">
+      <div className="min-w-0">
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.businessCard.intro")}</p>
 
       {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.businessCard.savedMessage")}</p>}
 
-      {card.is_active && username && (
-        <button
-          type="button"
-          onClick={() => setQrOpen(true)}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-        >
-          <IconQrCode className="h-4 w-4" />
-          {t("dashboard.pages.businessCard.viewCardButton")}
-        </button>
-      )}
 
-      {/* Pratinjau langsung: kartu berubah seiring form diketik, jadi kreator
-          tahu persis apa yang akan dilihat orang sebelum menyimpan. */}
-      {username && (
-        <div className="mt-5">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.businessCard.previewHeading")}</p>
-          <div className="flex justify-center">
-            <DigitalBusinessCard card={card} username={username} avatarUrl={avatarUrl} url={cardURL} />
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
@@ -284,6 +270,27 @@ export default function DashboardBusinessCardPage() {
           {saving ? t("dashboard.pages.businessCard.savingButton") : t("dashboard.pages.businessCard.saveButton")}
         </button>
       </form>
+
+      </div>
+
+      {username && (
+        <aside className="order-first lg:order-none lg:sticky lg:top-24">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.businessCard.previewHeading")}</p>
+          <div className="flex justify-center lg:justify-start">
+            <DigitalBusinessCard card={card} username={username} avatarUrl={avatarUrl} url={cardURL} />
+          </div>
+          {card.is_active && (
+            <button
+              type="button"
+              onClick={() => setQrOpen(true)}
+              className="mt-4 flex w-full max-w-sm items-center justify-center gap-1.5 rounded-lg border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+            >
+              <IconQrCode className="h-4 w-4" />
+              {t("dashboard.pages.businessCard.viewCardButton")}
+            </button>
+          )}
+        </aside>
+      )}
 
       {qrOpen && username && (
         <BusinessCardModal card={card} username={username} avatarUrl={avatarUrl} url={cardURL} onClose={() => setQrOpen(false)} />

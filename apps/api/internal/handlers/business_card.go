@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"context"
+	"github.com/jeonme/api/internal/netguard"
+	"github.com/jeonme/api/internal/storage"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -26,10 +29,12 @@ import (
 // Audiens terpadu -- bukan tabel kontak terpisah.
 type BusinessCardHandler struct {
 	DB *pgxpool.Pool
+	// Storage -- proxy avatar untuk komposer PNG kartu nama (lihat AvatarProxy).
+	Storage *storage.Client
 }
 
-func NewBusinessCardHandler(db *pgxpool.Pool) *BusinessCardHandler {
-	return &BusinessCardHandler{DB: db}
+func NewBusinessCardHandler(db *pgxpool.Pool, store *storage.Client) *BusinessCardHandler {
+	return &BusinessCardHandler{DB: db, Storage: store}
 }
 
 type businessCardResponse struct {
@@ -283,4 +288,89 @@ func normalizeHandle(raw string) string {
 		v = v[:100]
 	}
 	return v
+}
+
+// AvatarProxy -- GET /cards/:username/avatar. Mengalirkan foto profil kreator
+// dari origin API sendiri dengan header CORS.
+//
+// KENAPA (laporan pengguna, 3 September 2026: "ketika di-download PNG
+// fotonya tidak ada"): komposer PNG kartu nama menggambar foto ke <canvas>.
+// Browser hanya mengizinkan gambar lintas-origin masuk ke canvas kalau
+// server-nya mengirim header CORS -- bucket storage tidak, dan avatar dari
+// login Google bahkan URL eksternal (googleusercontent). Tanpa itu gambar
+// gagal dimuat dan kartu jatuh ke inisial. Lewat proxy ini foto datang dari
+// origin yang sama (dan tetap diberi Access-Control-Allow-Origin untuk
+// deployment yang memisahkan origin API).
+//
+// Sumber: kunci di bucket sendiri dibaca lewat storage client (bukan lewat
+// URL publik); URL eksternal (https) diambil lewat netguard -- satu-satunya
+// jalur outbound yang diizinkan di codebase ini (proteksi SSRF). Ukuran
+// dibatasi 5 MB, hanya jenis image/* yang diteruskan.
+func (h *BusinessCardHandler) AvatarProxy(c *gin.Context) {
+	username := c.Param("username")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 8*time.Second)
+	defer cancel()
+
+	var avatarURL string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COALESCE(p.avatar_url, '')
+		FROM business_cards bc
+		JOIN users u ON u.id = bc.user_id
+		LEFT JOIN pages p ON p.user_id = u.id AND p.is_primary = true
+		WHERE u.username = $1 AND bc.is_active = true
+	`, username).Scan(&avatarURL); err != nil || avatarURL == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	const maxBytes = 5 << 20
+	var data []byte
+	var contentType string
+	if h.Storage != nil && strings.HasPrefix(avatarURL, h.Storage.PublicURL("")) {
+		key := strings.TrimPrefix(avatarURL, h.Storage.PublicURL(""))
+		b, err := h.Storage.Download(ctx, key)
+		if err != nil || len(b) == 0 || len(b) > maxBytes {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		data = b
+	} else {
+		if err := netguard.ValidateOutboundURL(avatarURL); err != nil || !strings.HasPrefix(avatarURL, "https://") {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, avatarURL, nil)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		resp, err := netguard.NewOutboundClient(6 * time.Second).Do(req)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		b, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+		if err != nil || len(b) == 0 || len(b) > maxBytes {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		data = b
+		contentType = resp.Header.Get("Content-Type")
+	}
+	if contentType == "" || !strings.HasPrefix(contentType, "image/") {
+		contentType = http.DetectContentType(data)
+	}
+	if !strings.HasPrefix(contentType, "image/") {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Cache-Control", "public, max-age=300")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Data(http.StatusOK, contentType, data)
 }

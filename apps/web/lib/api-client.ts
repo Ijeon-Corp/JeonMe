@@ -2261,6 +2261,13 @@ export interface PublicBusinessCard {
   linkedin: string;
 }
 
+// URL foto profil lewat proxy API (same-origin + header CORS) -- dipakai
+// komposer PNG kartu nama supaya canvas tidak "ternoda" (laporan pengguna
+// 3 September 2026: foto hilang di PNG). Lihat AvatarProxy di backend.
+export function cardAvatarProxyURL(username: string) {
+  return `${API_BASE_URL}/cards/${encodeURIComponent(username)}/avatar`;
+}
+
 export async function getPublicBusinessCard(username: string): Promise<PublicBusinessCard | null> {
   // cache: "no-store", bukan ISR -- lihat catatan panjang di getPublicPage
   // (bug ISR + notFound() macet permanen), berlaku sama untuk rute publik

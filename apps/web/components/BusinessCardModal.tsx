@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { cardAvatarProxyURL } from "@/lib/api-client";
 import { QRCodeCanvas } from "qrcode.react";
 import DigitalBusinessCard, { type BusinessCardData } from "@/components/DigitalBusinessCard";
 import { renderBusinessCardPNG } from "@/lib/business-card-png";
@@ -26,17 +27,38 @@ export default function BusinessCardModal({
 }) {
   const { t } = useLocale();
   const qrRef = useRef<HTMLCanvasElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // QR diambil dari SVG yang SUDAH TAMPIL di kartu (diserialisasi ke data
+  // URL), bukan dari canvas tersembunyi: canvas display:none digambar
+  // qrcode.react di useEffect dan di sebagian browser masih kosong saat
+  // tombol ditekan (laporan pengguna 3 September 2026: QR hilang di PNG).
+  // Canvas tersembunyi cuma cadangan kalau SVG tidak ditemukan.
+  function qrDataUrl(): string | null {
+    const svg = cardRef.current?.querySelector("[data-qr] svg");
+    if (svg) {
+      const clone = svg.cloneNode(true) as SVGElement;
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      if (!clone.getAttribute("width")) clone.setAttribute("width", "512");
+      if (!clone.getAttribute("height")) clone.setAttribute("height", "512");
+      const xml = new XMLSerializer().serializeToString(clone);
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+    }
+    const canvas = qrRef.current;
+    return canvas ? canvas.toDataURL("image/png") : null;
+  }
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleDownload() {
-    const qr = qrRef.current;
+    const qr = qrDataUrl();
     if (!qr) return;
     setDownloading(true);
     setError(null);
     try {
-      const blob = await renderBusinessCardPNG({ card, username, avatarUrl, url, qrDataUrl: qr.toDataURL("image/png") });
+      // Foto lewat proxy API (same-origin + CORS) supaya bisa digambar ke canvas.
+      const blob = await renderBusinessCardPNG({ card, username, avatarUrl: avatarUrl ? cardAvatarProxyURL(username) : undefined, url, qrDataUrl: qr });
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
@@ -66,7 +88,7 @@ export default function BusinessCardModal({
         <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.businessCard.cardModalTitle")}</p>
         <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.businessCard.cardModalDescription")}</p>
 
-        <div className="mt-4 flex justify-center">
+        <div ref={cardRef} className="mt-4 flex justify-center">
           <DigitalBusinessCard card={card} username={username} avatarUrl={avatarUrl} url={url} />
         </div>
         <div className="hidden" aria-hidden="true">
