@@ -3138,6 +3138,25 @@ export function cancelSubscription() {
   return apiFetch<{ message: string }>("/dashboard/subscription/cancel", { method: "POST" }, { auth: true });
 }
 
+// Riwayat tagihan langganan (benchmark Linktree More > Billing, 3 September
+// 2026): satu baris per transaksi -- pendaftaran (Snap) dan tiap siklus
+// perpanjangan otomatis. Dicatat backend dari webhook Midtrans (migrasi 000088).
+export interface SubscriptionPayment {
+  id: string;
+  kind: "enrollment" | "cycle";
+  order_id: string;
+  amount_idr: number;
+  status: "paid" | "failed";
+  paid_at: string | null;
+  period_end: string | null;
+  created_at: string;
+  plan: "monthly" | "yearly" | string;
+}
+
+export function listSubscriptionPayments() {
+  return apiFetch<SubscriptionPayment[]>("/dashboard/subscription/payments", { method: "GET" }, { auth: true });
+}
+
 // ---------- Dashboard: verifikasi KYC (Sprint 10, No.84) ----------
 // TIDAK memblokir penarikan -- hanya dipakai admin untuk memprioritaskan
 // antrian proses manual (lihat catatan lingkup di KycHandler backend).

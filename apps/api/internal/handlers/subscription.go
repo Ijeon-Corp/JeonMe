@@ -356,6 +356,16 @@ func maybeHandleSubscriptionEnrollmentPayment(ctx context.Context, db *pgxpool.P
 		return true, fmt.Errorf("subscription: gagal menyimpan status aktif untuk %s: %w", payload.OrderID, err)
 	}
 
+	// Riwayat tagihan (migrasi 000088): pembayaran pendaftaran. Soft-fail
+	// -- kalau pencatatan gagal, langganan tetap aktif (itu inti transaksi).
+	if _, err := db.Exec(ctx, `
+		INSERT INTO subscription_payments (subscription_id, user_id, kind, order_id, transaction_id, amount_idr, status, paid_at, period_end)
+		VALUES ($1, $2, 'enrollment', $3, $4, $5, 'paid', now(), $6)
+		ON CONFLICT (order_id) DO NOTHING
+	`, subscriptionID, userID, payload.OrderID, payload.TransactionID, amountIDR, currentPeriodEnd); err != nil {
+		log.Printf("subscription: gagal mencatat riwayat tagihan pendaftaran %s: %v", payload.OrderID, err)
+	}
+
 	log.Printf("subscription: langganan %s (user %s, plan %s) aktif, midtrans_subscription_id=%s", subscriptionID, userID, plan, sub.ID)
 	return true, nil
 }
@@ -373,10 +383,19 @@ func maybeHandleSubscriptionEnrollmentPayment(ctx context.Context, db *pgxpool.P
 // ulang", bukan sumber kebenaran, jadi keliru/dipalsukan pun paling parah
 // cuma memicu pengecekan ulang yang sah terhadap ID yang disebutkan.
 func (h *SubscriptionHandler) HandleCycleWebhook(c *gin.Context) {
+	// Selain subscription.id, notifikasi siklus Midtrans membawa field
+	// transaksi penagihannya (order_id, transaction_status, gross_amount,
+	// ...). Semua OPSIONAL di sini -- status langganan tetap diverifikasi ke
+	// Midtrans (truth di bawah), field ini hanya untuk riwayat tagihan.
 	var payload struct {
 		Subscription struct {
 			ID string `json:"id"`
 		} `json:"subscription"`
+		OrderID           string `json:"order_id"`
+		TransactionID     string `json:"transaction_id"`
+		TransactionStatus string `json:"transaction_status"`
+		FraudStatus       string `json:"fraud_status"`
+		GrossAmount       string `json:"gross_amount"`
 	}
 	if err := c.ShouldBindJSON(&payload); err != nil || payload.Subscription.ID == "" {
 		// Bentuk payload tidak dikenal -- balas 200 supaya Midtrans tidak
@@ -388,10 +407,11 @@ func (h *SubscriptionHandler) HandleCycleWebhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	var subID, currentStatus string
+	var subID, currentStatus, subUserID string
+	var subAmountIDR int64
 	if err := h.DB.QueryRow(ctx, `
-		SELECT id, status FROM subscriptions WHERE midtrans_subscription_id = $1
-	`, payload.Subscription.ID).Scan(&subID, &currentStatus); err != nil {
+		SELECT id, status, user_id, amount_idr FROM subscriptions WHERE midtrans_subscription_id = $1
+	`, payload.Subscription.ID).Scan(&subID, &currentStatus, &subUserID, &subAmountIDR); err != nil {
 		// ID tidak dikenal ATAU sudah canceled di sisi kita -- diamkan, tidak
 		// perlu aksi apa pun.
 		c.JSON(http.StatusOK, gin.H{"message": "langganan tidak ditemukan, diabaikan"})
@@ -425,5 +445,125 @@ func (h *SubscriptionHandler) HandleCycleWebhook(c *gin.Context) {
 		return
 	}
 
+	// Riwayat tagihan (migrasi 000088): satu baris per notifikasi siklus yang
+	// membawa order_id. Soft-fail; order_id UNIK menahan notifikasi ulang.
+	if payload.OrderID != "" {
+		if payStatus, ok := cyclePaymentStatus(payload.TransactionStatus, payload.FraudStatus); ok {
+			amount := parseGrossAmountIDR(payload.GrossAmount, subAmountIDR)
+			var paidAt *time.Time
+			if payStatus == "paid" {
+				now := time.Now()
+				paidAt = &now
+			}
+			if _, err := h.DB.Exec(ctx, `
+				INSERT INTO subscription_payments (subscription_id, user_id, kind, order_id, transaction_id, amount_idr, status, paid_at, period_end)
+				VALUES ($1, $2, 'cycle', $3, $4, $5, $6, $7, $8)
+				ON CONFLICT (order_id) DO NOTHING
+			`, subID, subUserID, payload.OrderID, payload.TransactionID, amount, payStatus, paidAt, currentPeriodEnd); err != nil {
+				log.Printf("subscription: gagal mencatat riwayat tagihan siklus %s: %v", payload.OrderID, err)
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "status langganan diperbarui"})
+}
+
+// cyclePaymentStatus -- status transaksi Midtrans -> baris riwayat tagihan.
+// "paid" untuk settlement/capture yang lolos fraud, "failed" untuk deny/
+// cancel/expire/failure; status transisi (pending) tidak dicatat (ok=false)
+// karena notifikasi finalnya akan datang lagi. Murni, diuji unit.
+func cyclePaymentStatus(transactionStatus, fraudStatus string) (string, bool) {
+	// "failure" khusus penagihan berulang (kartu ditolak saat charge otomatis)
+	// -- tidak ada di pemetaan checkout biasa, dipetakan eksplisit di sini.
+	if strings.EqualFold(transactionStatus, "failure") {
+		return "failed", true
+	}
+	orderStatus, recognized := midtrans.StatusToOrderStatus(transactionStatus, fraudStatus)
+	if !recognized {
+		return "", false
+	}
+	switch orderStatus {
+	case "paid":
+		return "paid", true
+	case "failed", "expired", "canceled", "refunded":
+		return "failed", true
+	}
+	return "", false
+}
+
+// parseGrossAmountIDR -- gross_amount Midtrans berupa string "49000.00";
+// kalau kosong/tidak valid, pakai nominal langganan sebagai cadangan.
+// Murni, diuji unit.
+func parseGrossAmountIDR(raw string, fallback int64) int64 {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return fallback
+	}
+	if i := strings.IndexByte(raw, '.'); i >= 0 {
+		raw = raw[:i]
+	}
+	var n int64
+	for _, r := range raw {
+		if r < '0' || r > '9' {
+			return fallback
+		}
+		n = n*10 + int64(r-'0')
+	}
+	if n <= 0 {
+		return fallback
+	}
+	return n
+}
+
+type subscriptionPaymentItem struct {
+	ID        string  `json:"id"`
+	Kind      string  `json:"kind"`
+	OrderID   string  `json:"order_id"`
+	AmountIDR int64   `json:"amount_idr"`
+	Status    string  `json:"status"`
+	PaidAt    *string `json:"paid_at"`
+	PeriodEnd *string `json:"period_end"`
+	CreatedAt string  `json:"created_at"`
+	Plan      string  `json:"plan"`
+}
+
+// ListPayments -- GET /dashboard/subscription/payments: riwayat tagihan
+// (benchmark Linktree "More > Billing"), terbaru dulu, maks 36 (3 tahun
+// bulanan).
+func (h *SubscriptionHandler) ListPayments(c *gin.Context) {
+	userID := c.GetString("userID")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	rows, err := h.DB.Query(ctx, `
+		SELECT p.id, p.kind, p.order_id, p.amount_idr, p.status, p.paid_at, p.period_end, p.created_at, s.plan
+		FROM subscription_payments p JOIN subscriptions s ON s.id = p.subscription_id
+		WHERE p.user_id = $1
+		ORDER BY p.created_at DESC
+		LIMIT 36
+	`, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat riwayat tagihan"})
+		return
+	}
+	defer rows.Close()
+	out := []subscriptionPaymentItem{}
+	for rows.Next() {
+		var it subscriptionPaymentItem
+		var paidAt, periodEnd *time.Time
+		var createdAt time.Time
+		if err := rows.Scan(&it.ID, &it.Kind, &it.OrderID, &it.AmountIDR, &it.Status, &paidAt, &periodEnd, &createdAt, &it.Plan); err != nil {
+			continue
+		}
+		if paidAt != nil {
+			v := paidAt.Format(time.RFC3339)
+			it.PaidAt = &v
+		}
+		if periodEnd != nil {
+			v := periodEnd.Format(time.RFC3339)
+			it.PeriodEnd = &v
+		}
+		it.CreatedAt = createdAt.Format(time.RFC3339)
+		out = append(out, it)
+	}
+	c.JSON(http.StatusOK, out)
 }

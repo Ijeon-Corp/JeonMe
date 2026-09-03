@@ -528,6 +528,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.GET("/subscription", subscription.GetStatus)
 			dashboard.POST("/subscription/checkout", subscription.Checkout)
 			dashboard.POST("/subscription/cancel", subscription.Cancel)
+			// Benchmark Linktree More > Billing: riwayat tagihan langganan.
+			dashboard.GET("/subscription/payments", subscription.ListPayments)
 
 			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
 			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).

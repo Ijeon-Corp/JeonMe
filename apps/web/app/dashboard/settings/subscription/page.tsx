@@ -6,12 +6,15 @@ import Link from "next/link";
 import {
   ApiError,
   SubscriptionStatus,
+  SubscriptionPayment,
+  listSubscriptionPayments,
   cancelSubscription,
   checkoutSubscription,
   getSubscriptionStatus,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconCheck, IconChevronRight, IconRefresh, IconStar } from "@/components/icons";
+import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { confirmAction } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 
@@ -45,6 +48,7 @@ export default function SettingsSubscriptionPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [payments, setPayments] = useState<SubscriptionPayment[]>([]);
 
   function reload() {
     return getSubscriptionStatus().then(setStatus);
@@ -52,6 +56,8 @@ export default function SettingsSubscriptionPage() {
 
   useEffect(() => {
     reload().catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSubscription.loadError")));
+    // Riwayat tagihan: pendukung -- gagal memuat tidak menghalangi halaman.
+    listSubscriptionPayments().then(setPayments).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
@@ -291,6 +297,53 @@ export default function SettingsSubscriptionPage() {
           ))}
         </dl>
       </section>
+
+      {/* Riwayat tagihan -- benchmark Linktree "More > Billing". Tampil juga
+          untuk akun yang sudah kembali Gratis (riwayat tetap milik mereka). */}
+      {(status.is_premium || payments.length > 0) && (
+        <section className="mt-6 rounded-jlg border border-jeon-ink bg-app-surface p-5">
+          <h2 className="font-display text-base font-bold text-app-ink">{k("billingHeading")}</h2>
+          <p className="mt-0.5 text-xs text-app-muted">{k("billingSub")}</p>
+          {payments.length === 0 ? (
+            <p className="mt-4 text-sm text-app-muted">{k("billingEmpty")}</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-jeon-ink text-app-muted">
+                    <th className="py-2 pr-3 font-semibold">{k("billingColDate")}</th>
+                    <th className="py-2 pr-3 font-semibold">{k("billingColDesc")}</th>
+                    <th className="py-2 pr-3 text-right font-semibold">{k("billingColAmount")}</th>
+                    <th className="py-2 font-semibold">{k("billingColStatus")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((p) => {
+                    const when = new Date(p.paid_at ?? p.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+                    const plan = p.plan === "yearly" ? k("yearly") : k("monthly");
+                    const desc = (p.kind === "enrollment" ? k("billingEnrollment") : k("billingCycle")).replace("{plan}", plan);
+                    const until = p.period_end ? k("billingPeriodUntil").replace("{date}", new Date(p.period_end).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })) : "";
+                    return (
+                      <tr key={p.id} className="border-b border-app-border last:border-0">
+                        <td className="whitespace-nowrap py-2.5 pr-3 text-app-ink">{when}</td>
+                        <td className="py-2.5 pr-3 text-app-ink">
+                          {desc}
+                          {until && <span className="ml-1 text-app-muted">· {until}</span>}
+                          <span className="mt-0.5 block text-[10px] text-app-muted">{p.order_id}</span>
+                        </td>
+                        <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-app-ink">{fmt(p.amount_idr)}</td>
+                        <td className="py-2.5">
+                          <StatusBadge status={p.status} tone={p.status === "paid" ? "success" : "danger"} label={p.status === "paid" ? k("billingPaid") : k("billingFailed")} className="text-[10px]" />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       <p className="mt-4 text-[11px] text-app-muted">{k("billingNote")}</p>
     </div>
