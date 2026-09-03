@@ -40,16 +40,12 @@ import {
   IconBox,
   IconCamera,
   IconChevronRight,
-  IconCheck,
-  IconClose,
   IconExternal,
   IconPlus,
   IconSearch,
-  IconShield,
   IconSparkle,
   IconTrash,
   IconUpload,
-  IconUsers,
   IconWallet,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
@@ -73,7 +69,6 @@ import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 // mengecilkan bundle awal mengurangi jendela race itu, sama seperti kenapa
 // halaman ringan (business-card/balance) tidak pernah kena masalah ini.
 const ShopOverviewPanel = dynamic(() => import("@/components/ShopOverviewPanel"));
-const DeliveryMethodPanel = dynamic(() => import("@/components/DeliveryMethodPanel"));
 const ReviewsPanel = dynamic(() => import("@/components/ReviewsPanel"));
 const ListingPanel = dynamic(() => import("@/components/ListingPanel"));
 const StorageFilesPanel = dynamic(() => import("@/components/StorageFilesPanel"));
@@ -81,6 +76,7 @@ const WebhookEventsPanel = dynamic(() => import("@/components/WebhookEventsPanel
 const ShopSettingsPanel = dynamic(() => import("@/components/ShopSettingsPanel"));
 const TransactionPanel = dynamic(() => import("@/components/TransactionPanel"));
 const ProdukPageEditor = dynamic(() => import("@/components/ProdukPageEditor"));
+const ManageProductModal = dynamic(() => import("@/components/ManageProductModal"));
 
 // Modul Toko (permintaan langsung pengguna: "ikuti seluruh alur yang ada di
 // gambar ini" -- referensi dashboard toko Overview + Manage Items. Prioritas
@@ -312,9 +308,6 @@ function DashboardProductsPageInner() {
   const [splitsEditId, setSplitsEditId] = useState<string | null>(null);
   const [splitRows, setSplitRows] = useState<CollaboratorSplit[]>([]);
   const [savingSplits, setSavingSplits] = useState(false);
-
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     Promise.all([getMyPage(), listProducts(), listCollaborators()])
@@ -669,6 +662,11 @@ function DashboardProductsPageInner() {
     } finally {
       setCreating(false);
     }
+  }
+
+  function startExternalUrlEdit(product: DashboardProduct) {
+    setExternalUrlEditId(product.id);
+    setExternalUrlDraft(product.external_url);
   }
 
   // handleSaveExternalUrl -- ubah tautan produk external_link yang SUDAH
@@ -1811,463 +1809,64 @@ function DashboardProductsPageInner() {
       />
 
       {manageProduct && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={closeManageModal}
-        >
-          <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="font-display text-sm font-bold text-app-ink">
-                {t("dashboard.pages.products.manageModal.title").replace("{name}", manageProduct.name)}
-              </h2>
-              <button
-                type="button"
-                onClick={closeManageModal}
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
-                aria-label={t("dashboard.pages.products.manageModal.close")}
-              >
-                <IconClose className="h-4 w-4" />
-              </button>
-            </div>
-
-            {categoryEditId === manageProduct.id ? (
-              <div className="mt-2 flex gap-1.5">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder={t("dashboard.pages.products.manageModal.categoryPlaceholder")}
-                  value={categoryDraft}
-                  onChange={(e) => setCategoryDraft(e.target.value)}
-                  className="flex-1 rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                />
-                <button type="button" onClick={() => setCategoryEditId(null)} className="rounded-md border-2 border-jeon-ink px-2.5 py-1.5 text-[11px] font-bold text-app-muted">
-                  {t("dashboard.pages.products.manageModal.cancel")}
-                </button>
-                <button
-                  type="button"
-                  disabled={savingCategory}
-                  onClick={() => handleSaveCategory(manageProduct)}
-                  className="btn-primary rounded-md px-2.5 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                >
-                  {savingCategory ? "..." : t("dashboard.pages.products.manageModal.save")}
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => openCategoryForm(manageProduct)} className="mt-2 text-[11px] font-semibold text-jeon-purple hover:underline">
-                {manageProduct.category
-                  ? t("dashboard.pages.products.manageModal.setCategoryPrefix").replace("{category}", manageProduct.category)
-                  : t("dashboard.pages.products.manageModal.setCategoryButton")}
-              </button>
-            )}
-
-            {/* Permintaan langsung pengguna, 14 Agustus 2026: "saat kelola
-                produk ada 2 yang perlu diunggah yaitu icon dan produk nya,
-                sebagai user saya bingung dengan ui dan ux nya" -- akar
-                masalahnya BUKAN bug (toggle Aktifkan memang bekerja benar),
-                tapi tombol sampul sebelumnya cuma ikon kamera kecil TANPA
-                label teks sama sekali, duduk bersebelahan dengan tombol
-                "Unggah file" yang justru WAJIB utk mengaktifkan produk --
-                gampang tertukar. Sekarang keduanya diberi label & keterangan
-                wajib/opsional yang eksplisit, langsung di dalam modal ini
-                (bukan cuma di atas tabel, yang sudah tidak terlihat lagi
-                begitu modal Kelola terbuka).
-                Diperbarui 19 Agustus 2026 (permintaan langsung pengguna:
-                "sampul jangan dijadikan opsional"): Sampul SEKARANG JUGA
-                wajib untuk semua jenis produk (termasuk Payment Link/Link
-                Eksternal yang tidak punya File Produk sama sekali) --
-                gerbang aktivasi backend (product.go) menolak keduanya kalau
-                salah satu kosong. */}
-            {salesV2 && (
-              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-                {t("dashboard.pages.products.manageModal.sectionMedia")}
-              </p>
-            )}
-            <p className="mt-4 text-[11px] leading-relaxed text-app-muted">
-              <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintProductFile")}</strong>{" "}
-              {t("dashboard.pages.products.manageModal.fileHintMiddle")}{" "}
-              <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintCover")}</strong>{" "}
-              {t("dashboard.pages.products.manageModal.fileHintEnd")}
-            </p>
-            <div className="mt-2.5 flex items-end gap-3">
-              <div className="flex flex-shrink-0 flex-col items-center gap-1">
-                <button
-                  type="button"
-                  disabled={coverBusyId === manageProduct.id}
-                  onClick={() => coverInputRefs.current[manageProduct.id]?.click()}
-                  title={
-                    manageProduct.cover_image_url
-                      ? t("dashboard.pages.products.manageModal.changeCoverTitle")
-                      : t("dashboard.pages.products.manageModal.addCoverTitle")
-                  }
-                  className="relative h-14 w-14 overflow-hidden rounded-xl bg-jeon-purple/10 disabled:opacity-60"
-                >
-                  {manageProduct.cover_image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={manageProduct.cover_image_url} alt={manageProduct.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-jeon-purple/40">
-                      <IconBox className="h-6 w-6" />
-                    </div>
-                  )}
-                  <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
-                    <IconCamera className="h-2.5 w-2.5" />
-                  </span>
-                </button>
-                <span className="text-[10px] font-semibold text-app-muted">{t("dashboard.pages.products.manageModal.coverRequiredLabel")}</span>
-              </div>
-              <input
-                ref={(el) => {
-                  coverInputRefs.current[manageProduct.id] = el;
-                }}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUploadCover(manageProduct, file);
-                  e.target.value = "";
-                }}
-              />
-
-              {manageProduct.product_kind !== "payment_link" && manageProduct.product_kind !== "external_link" && (
-                <>
-                  <input
-                    ref={(el) => {
-                      fileInputRefs.current[manageProduct.id] = el;
-                    }}
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUpload(manageProduct, file);
-                      e.target.value = "";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    disabled={busyId === manageProduct.id}
-                    onClick={() => fileInputRefs.current[manageProduct.id]?.click()}
-                    className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${
-                      manageProduct.has_file ? "bg-jeon-purple/10 text-jeon-purple" : "bg-jeon-purple/10 text-jeon-purple"
-                    }`}
-                  >
-                    {manageProduct.has_file ? <IconCheck className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
-                    {manageProduct.has_file
-                      ? t("dashboard.pages.products.manageModal.fileUploaded")
-                      : t("dashboard.pages.products.manageModal.uploadFileRequired")}
-                  </button>
-                  {manageProduct.has_file && (
-                    <button
-                      type="button"
-                      onClick={() => handleGetDownloadLink(manageProduct.id)}
-                      title={t("dashboard.pages.products.manageModal.viewFileTitle")}
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
-                    >
-                      <IconExternal className="h-4 w-4" />
-                    </button>
-                  )}
-                  {manageProduct.is_pdf && (
-                    <button
-                      type="button"
-                      onClick={() => handleToggleWatermark(manageProduct)}
-                      title={t("dashboard.pages.products.manageModal.watermarkTitle")}
-                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                        manageProduct.watermark_enabled ? "text-jeon-purple" : "text-app-muted"
-                      }`}
-                    >
-                      <IconShield className="h-4 w-4" />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2.5">
-              {salesV2 && (
-              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-                  {t("dashboard.pages.products.manageModal.sectionPricing")}
-              </p>
-              )}
-              {flashSaleEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                    <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.flashSaleLabel")}
-                  </p>
-                  <input
-                    type="number"
-                    placeholder={t("dashboard.pages.products.manageModal.flashPricePlaceholder")}
-                    value={flashPrice}
-                    onChange={(e) => setFlashPrice(e.target.value)}
-                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                  />
-                  <div className="flex gap-1.5">
-                    <input
-                      type="datetime-local"
-                      value={flashStart}
-                      onChange={(e) => setFlashStart(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                    />
-                    <input
-                      type="datetime-local"
-                      value={flashEnd}
-                      onChange={(e) => setFlashEnd(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setFlashSaleEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
-                      {t("dashboard.pages.products.manageModal.cancel")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={savingFlashSale}
-                      onClick={() => handleSaveFlashSale(manageProduct)}
-                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                    >
-                      {savingFlashSale ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
-                    </button>
-                  </div>
-                </div>
-              ) : manageProduct.is_flash_sale_active ? (
-                <div className="flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
-                  <span className="text-[11px] font-semibold text-jeon-warning">
-                    {t("dashboard.pages.products.manageModal.flashSaleUntil").replace(
-                      "{date}",
-                      manageProduct.flash_sale_ends_at ? new Date(manageProduct.flash_sale_ends_at).toLocaleString("id-ID") : ""
-                    )}
-                  </span>
-                  <button type="button" onClick={() => handleClearFlashSale(manageProduct)} className="text-[11px] font-bold text-red-600 hover:underline">
-                    {t("dashboard.pages.products.manageModal.cancelAction")}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openFlashSaleForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-                >
-                  <IconSparkle className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.scheduleFlashSale")}
-                </button>
-              )}
-
-              {pwywEditId === manageProduct.id ? (
-                <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                    <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.pwywLabel")}
-                  </p>
-                  <input
-                    type="number"
-                    placeholder={t("dashboard.pages.products.manageModal.pwywMinPricePlaceholder")}
-                    value={pwywMinPrice}
-                    onChange={(e) => setPwywMinPrice(e.target.value)}
-                    className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                  />
-                  <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setPwywEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
-                      {t("dashboard.pages.products.manageModal.cancel")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={savingPwyw}
-                      onClick={() => handleSavePwyw(manageProduct)}
-                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                    >
-                      {savingPwyw ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
-                    </button>
-                  </div>
-                </div>
-              ) : manageProduct.pwyw_enabled ? (
-                <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
-                  <span className="text-[11px] font-semibold text-jeon-purple">
-                    {t("dashboard.pages.products.manageModal.pwywActiveMin").replace(
-                      "{amount}",
-                      (manageProduct.pwyw_min_price_idr ?? 0).toLocaleString("id-ID")
-                    )}
-                  </span>
-                  <button type="button" onClick={() => handleClearPwyw(manageProduct)} className="text-[11px] font-bold text-red-600 hover:underline">
-                    {t("dashboard.pages.products.manageModal.cancelAction")}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openPwywForm(manageProduct)}
-                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-                >
-                  <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.activatePwyw")}
-                </button>
-              )}
-
-              {salesV2 && activeCollaborators.length > 0 && (
-              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-                  {t("dashboard.pages.products.manageModal.sectionCollab")}
-              </p>
-              )}
-              {activeCollaborators.length > 0 &&
-                (splitsEditId === manageProduct.id ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.products.manageModal.splitsHint")}</p>
-                    {splitRows.map((row, i) => (
-                      <div key={i} className="flex gap-1.5">
-                        <select
-                          value={row.user_id}
-                          onChange={(e) => updateSplitRow(i, { user_id: e.target.value })}
-                          className="flex-1 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        >
-                          <option value="">{t("dashboard.pages.products.manageModal.chooseCollaborator")}</option>
-                          {activeCollaborators.map((c) => (
-                            <option key={c.collaborator_user_id} value={c.collaborator_user_id}>
-                              {c.email}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="0.1"
-                          placeholder="%"
-                          value={row.percent || ""}
-                          onChange={(e) => updateSplitRow(i, { percent: Number(e.target.value) })}
-                          className="w-16 rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setSplitRows((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-red-600 hover:bg-red-50"
-                        >
-                          <IconTrash className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
-                      className="self-start text-[11px] font-semibold text-jeon-purple hover:underline"
-                    >
-                      {t("dashboard.pages.products.manageModal.addCollaborator")}
-                    </button>
-                    <div className="flex gap-1.5">
-                      <button type="button" onClick={() => setSplitsEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
-                        {t("dashboard.pages.products.manageModal.cancel")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingSplits}
-                        onClick={() => handleSaveSplits(manageProduct)}
-                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                      >
-                        {savingSplits ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
-                      </button>
-                    </div>
-                  </div>
-                ) : manageProduct.collaborator_splits.length > 0 ? (
-                  <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
-                    <span className="text-[11px] font-semibold text-jeon-purple">
-                      {t("dashboard.pages.products.manageModal.collaboratorsShare")
-                        .replace("{count}", String(manageProduct.collaborator_splits.length))
-                        .replace("{percent}", String(manageProduct.collaborator_splits.reduce((sum, s) => sum + s.percent, 0)))}
-                    </span>
-                    <button type="button" onClick={() => openSplitsForm(manageProduct)} className="text-[11px] font-bold text-jeon-purple hover:underline">
-                      {t("dashboard.pages.products.manageModal.change")}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => openSplitsForm(manageProduct)}
-                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-                  >
-                    <IconUsers className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.setSplits")}
-                  </button>
-                ))}
-            </div>
-
-            {/* Tautan produk -- Modul Toko (migrasi 000068): satu-satunya
-                field khusus external_link yang bisa diubah setelah dibuat
-                (ProductKind sendiri immutable, lihat catatan di product.go). */}
-            {salesV2 && manageProduct.product_kind !== "payment_link" && (
-              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-                {t("dashboard.pages.products.manageModal.sectionDelivery")}
-              </p>
-            )}
-            {manageProduct.product_kind === "external_link" && (
-              <div className="mt-4 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
-                  <IconExternal className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.productLinkLabel")}
-                </p>
-                {externalUrlEditId === manageProduct.id ? (
-                  <>
-                    <input
-                      type="url"
-                      autoFocus
-                      value={externalUrlDraft}
-                      onChange={(e) => setExternalUrlDraft(e.target.value)}
-                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                    />
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        disabled={savingExternalUrl}
-                        onClick={() => handleSaveExternalUrl(manageProduct)}
-                        className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                      >
-                        {savingExternalUrl ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExternalUrlEditId(null)}
-                        className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted hover:border-ink/30"
-                      >
-                        {t("dashboard.pages.products.manageModal.cancel")}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-[11px] text-app-ink">{manageProduct.external_url}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExternalUrlEditId(manageProduct.id);
-                        setExternalUrlDraft(manageProduct.external_url);
-                      }}
-                      className="flex-shrink-0 text-[11px] font-bold text-jeon-purple hover:underline"
-                    >
-                      {t("dashboard.pages.products.manageModal.change")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {manageProduct.product_kind !== "payment_link" && manageProduct.product_kind !== "external_link" && (
-              <DeliveryMethodPanel
-                key={manageProduct.id}
-                product={manageProduct}
-                onUpdated={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
-                onError={(message) => setError(message)}
-              />
-            )}
-
-            {salesV2 && (
-              <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-                {t("dashboard.pages.products.manageModal.sectionDanger")}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => handleDelete(manageProduct)}
-              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-            >
-              <IconTrash className="h-3.5 w-3.5" />
-              {t("dashboard.pages.products.manageModal.deleteProduct")}
-            </button>
-          </div>
-        </div>
+        <ManageProductModal
+          product={manageProduct}
+          onClose={closeManageModal}
+          salesV2={salesV2}
+          categoryEditId={categoryEditId}
+          categoryDraft={categoryDraft}
+          savingCategory={savingCategory}
+          onCategoryDraftChange={setCategoryDraft}
+          onCancelCategoryEdit={() => setCategoryEditId(null)}
+          onSaveCategory={handleSaveCategory}
+          onOpenCategoryForm={openCategoryForm}
+          coverBusyId={coverBusyId}
+          onUploadCover={handleUploadCover}
+          busyId={busyId}
+          onUpload={handleUpload}
+          onGetDownloadLink={handleGetDownloadLink}
+          onToggleWatermark={handleToggleWatermark}
+          flashSaleEditId={flashSaleEditId}
+          flashPrice={flashPrice}
+          flashStart={flashStart}
+          flashEnd={flashEnd}
+          savingFlashSale={savingFlashSale}
+          onFlashPriceChange={setFlashPrice}
+          onFlashStartChange={setFlashStart}
+          onFlashEndChange={setFlashEnd}
+          onCancelFlashSaleEdit={() => setFlashSaleEditId(null)}
+          onSaveFlashSale={handleSaveFlashSale}
+          onClearFlashSale={handleClearFlashSale}
+          onOpenFlashSaleForm={openFlashSaleForm}
+          pwywEditId={pwywEditId}
+          pwywMinPrice={pwywMinPrice}
+          savingPwyw={savingPwyw}
+          onPwywMinPriceChange={setPwywMinPrice}
+          onCancelPwywEdit={() => setPwywEditId(null)}
+          onSavePwyw={handleSavePwyw}
+          onClearPwyw={handleClearPwyw}
+          onOpenPwywForm={openPwywForm}
+          activeCollaborators={activeCollaborators}
+          splitsEditId={splitsEditId}
+          splitRows={splitRows}
+          savingSplits={savingSplits}
+          onUpdateSplitRow={updateSplitRow}
+          onRemoveSplitRow={(index) => setSplitRows((prev) => prev.filter((_, idx) => idx !== index))}
+          onAddSplitRow={() => setSplitRows((prev) => [...prev, { user_id: "", percent: 0 }])}
+          onCancelSplitsEdit={() => setSplitsEditId(null)}
+          onSaveSplits={handleSaveSplits}
+          onOpenSplitsForm={openSplitsForm}
+          externalUrlEditId={externalUrlEditId}
+          externalUrlDraft={externalUrlDraft}
+          savingExternalUrl={savingExternalUrl}
+          onExternalUrlDraftChange={setExternalUrlDraft}
+          onStartExternalUrlEdit={startExternalUrlEdit}
+          onCancelExternalUrlEdit={() => setExternalUrlEditId(null)}
+          onSaveExternalUrl={handleSaveExternalUrl}
+          onProductPatch={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
+          onError={setError}
+          onDelete={handleDelete}
+        />
       )}
     </div>
   );
