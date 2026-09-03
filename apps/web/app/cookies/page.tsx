@@ -72,9 +72,12 @@ export default function CookiesPage() {
               <div>
                 <h2 className="mb-2 font-heading text-lg font-bold text-app-ink">4. Cara mengontrol</h2>
                 <p className="text-app-muted">
-                  Karena kami tidak memakai cookie pelacak pihak ketiga milik Jeon.id sendiri, belum ada pengaturan consent
-                  granular per kategori cookie di halaman ini. Kamu tetap bisa menghapus local storage/cookie situs lewat
-                  pengaturan browsermu kapan saja -- perlu diingat ini akan otomatis mengeluarkanmu dari sesi login.
+                  Jeon.id sendiri tidak memasang cookie pelacak pihak ketiga. Di halaman kreator yang memasang Google
+                  Analytics atau Meta Pixel, kamu memilih kategori yang boleh aktif (Analitik / Pemasaran) lewat banner
+                  saat pertama berkunjung, dan bisa mengubahnya kapan saja lewat tautan &quot;Preferensi Cookie&quot; di
+                  bagian bawah halaman -- skrip pelacak tidak dimuat sebelum disetujui. Kamu juga tetap bisa menghapus
+                  local storage/cookie situs lewat pengaturan browsermu kapan saja -- perlu diingat ini akan otomatis
+                  mengeluarkanmu dari sesi login.
                 </p>
               </div>
 

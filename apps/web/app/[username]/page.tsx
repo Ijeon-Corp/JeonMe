@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getPublicPage, resolveUsernameRedirect } from "@/lib/api-client";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
+import CookieConsent from "@/components/CookieConsent";
 import PageAnalytics from "@/components/PageAnalytics";
 import PagePreview from "@/components/PagePreview";
 import PublicPageFrame from "@/components/PublicPageFrame";
@@ -94,6 +95,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
       }}
     >
       <AnalyticsScripts analytics={page.analytics} />
+      <CookieConsent hasAnalytics={!!page.analytics?.ga_measurement_id} hasMarketing={!!page.analytics?.fb_pixel_id} />
       <PageAnalytics username={page.username} />
       <PagePreview
         rootClassName="min-h-screen sm:min-h-0"

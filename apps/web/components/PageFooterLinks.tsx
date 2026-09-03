@@ -4,6 +4,7 @@ import { useState } from "react";
 import ReportButton from "@/components/ReportButton";
 import { IconBadgeCheck, IconClose } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
+import { openCookiePreferences } from "@/lib/cookie-consent";
 
 // Baris footer utilitas ala Linktree ("Cookie Preferences · Report ·
 // Privacy · Explore · About this account · More from Linktree"), permintaan
@@ -55,7 +56,16 @@ export default function PageFooterLinks({
         {FOOTER_ITEMS.map((item, i) => (
           <span key={item.key} className="flex items-center gap-1.5">
             {i > 0 && <span className={footerClassName}>·</span>}
-            <button type="button" onClick={() => setActive(item.key)} className={`transition-colors hover:underline ${footerClassName}`}>
+            <button
+              type="button"
+              onClick={() => {
+                // Preferensi Cookie: buka pengaturan per kategori kalau
+                // CookieConsent terpasang di halaman ini (halaman publik);
+                // di pratinjau dashboard jatuh ke teks penjelasan lama.
+                if (item.key === "cookie" && openCookiePreferences()) return;
+                setActive(item.key);
+              }}
+              className={`transition-colors hover:underline ${footerClassName}`}>
               {item.label}
             </button>
           </span>
@@ -77,8 +87,9 @@ export default function PageFooterLinks({
 
             {active === "cookie" && (
               <p className="text-sm leading-relaxed text-muted">
-                Jeon.id memakai cookie/local storage seperlunya untuk menjaga sesi masuk & preferensi tampilan. Belum ada
-                pengaturan cookie granular yang bisa diubah pengunjung dari halaman ini.
+                Jeon.id memakai cookie/local storage seperlunya untuk menjaga sesi masuk & preferensi tampilan. Di halaman
+                kreator yang memasang Google Analytics atau Meta Pixel, pengunjung memilih kategori yang boleh aktif lewat
+                pengaturan cookie -- skrip pelacak tidak dimuat sebelum disetujui.
               </p>
             )}
 

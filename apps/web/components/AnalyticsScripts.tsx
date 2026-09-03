@@ -1,5 +1,9 @@
+"use client";
+
 import Script from "next/script";
+import { useEffect, useState } from "react";
 import type { PublicAnalytics } from "@/lib/api-client";
+import { onCookieConsentChange, readCookieConsent } from "@/lib/cookie-consent";
 
 // AnalyticsScripts -- Modul Analitik Pihak Ketiga (permintaan langsung
 // pengguna, 12 Agustus 2026, referensi tangkapan layar panel "Analytics"
@@ -13,16 +17,33 @@ import type { PublicAnalytics } from "@/lib/api-client";
 // gaMeasurementIDPattern, analytics_settings.go) MEWAJIBKAN formatnya
 // ketat (Pixel ID numerik murni, Measurement ID "G-" + alfanumerik)
 // SEBELUM tersimpan, supaya kolom ini tidak bisa disalahgunakan jadi
-// celah XSS tersimpan (kreator jahat menaruh payload JS di "Pixel ID"
-// yang lantas jalan di browser SEMUA pengunjung halaman publiknya).
-// TIDAK ADA fb_access_token di sini -- itu SECRET, cuma dipakai
-// server-side (lihat publicAnalytics, page.go).
+// celah XSS tersimpan. TIDAK ADA fb_access_token di sini -- itu SECRET,
+// cuma dipakai server-side (lihat publicAnalytics, page.go).
+//
+// PERSETUJUAN COOKIE (3 September 2026, benchmark Linktree "Cookie
+// Preferences"): skrip HANYA dimuat setelah pengunjung menyetujui
+// kategorinya -- GA = "analytics", Meta Pixel = "marketing" (lihat
+// lib/cookie-consent.ts & CookieConsent.tsx). Sebelum ada pilihan, tidak
+// ada yang dimuat. Karena itu komponen ini jadi client component: ia
+// membaca localStorage dan bereaksi saat pilihan berubah, tanpa reload.
 export default function AnalyticsScripts({ analytics }: { analytics: PublicAnalytics | null }) {
+  const [allowAnalytics, setAllowAnalytics] = useState(false);
+  const [allowMarketing, setAllowMarketing] = useState(false);
+
+  useEffect(() => {
+    const apply = (c: { analytics: boolean; marketing: boolean } | null) => {
+      setAllowAnalytics(!!c?.analytics);
+      setAllowMarketing(!!c?.marketing);
+    };
+    apply(readCookieConsent());
+    return onCookieConsentChange(apply);
+  }, []);
+
   if (!analytics) return null;
 
   return (
     <>
-      {analytics.fb_pixel_id && (
+      {analytics.fb_pixel_id && allowMarketing && (
         <Script id="meta-pixel-base" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -38,7 +59,7 @@ export default function AnalyticsScripts({ analytics }: { analytics: PublicAnaly
           `}
         </Script>
       )}
-      {analytics.ga_measurement_id && (
+      {analytics.ga_measurement_id && allowAnalytics && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${analytics.ga_measurement_id}`} strategy="afterInteractive" />
           <Script id="ga4-init" strategy="afterInteractive">
