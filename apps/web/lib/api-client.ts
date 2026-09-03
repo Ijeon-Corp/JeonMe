@@ -317,6 +317,10 @@ export interface PublicLeadCapture {
   title: string;
   collect_email: boolean;
   collect_whatsapp: boolean;
+  // Subscribe v2 (benchmark Linktree "Member", 3 September 2026).
+  collect_telegram: boolean;
+  magnet_title: string; // kosong = tidak ada lead magnet
+  has_voucher: boolean;
 }
 
 // No.92 (Sprint 11): blok booking konsultasi. Slot tersedia dimuat
@@ -531,8 +535,17 @@ export interface PublicPage {
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
 // perlu akun, sama seperti createCheckout/trackClick.
-export function subscribeLead(input: { username: string; email?: string; whatsapp_number?: string }) {
-  return apiFetch<{ message: string }>("/leads", { method: "POST", body: JSON.stringify(input) });
+export interface SubscribeLeadResult {
+  message: string;
+  // Hadiah setelah mendaftar (Subscribe v2): URL unduhan lead magnet
+  // (presigned, 15 menit) dan/atau kode voucher sambutan.
+  download_url?: string;
+  download_name?: string;
+  voucher_code?: string;
+}
+
+export function subscribeLead(input: { username: string; email?: string; whatsapp_number?: string; telegram_username?: string }) {
+  return apiFetch<SubscribeLeadResult>("/leads", { method: "POST", body: JSON.stringify(input) });
 }
 
 /**
@@ -2621,6 +2634,10 @@ export interface LeadCaptureSettings {
   title: string;
   collect_email: boolean;
   collect_whatsapp: boolean;
+  collect_telegram: boolean;
+  // "" = tidak ada. Produk lead magnet harus punya file; voucher harus milik sendiri.
+  magnet_product_id: string;
+  welcome_voucher_id: string;
 }
 
 export function getLeadCaptureSettings() {
@@ -2639,6 +2656,7 @@ export interface AudienceContact {
   name: string;
   email: string;
   whatsapp_number: string;
+  telegram_username: string;
   sources: string[];
   joined_at: string;
   // tags/notes -- CRM ringan (benchmark Linktree Earn > Contacts, 3

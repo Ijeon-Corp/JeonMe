@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"github.com/jeonme/api/internal/storage"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -26,10 +28,13 @@ type AudienceHandler struct {
 	DB    *pgxpool.Pool
 	RDB   *redis.Client
 	Queue *asynq.Client
+	// Storage -- presigned URL file lead magnet (Subscribe v2, migrasi 000086).
+	// Boleh nil di test; lead magnet lalu dilewati (soft-fail).
+	Storage *storage.Client
 }
 
-func NewAudienceHandler(db *pgxpool.Pool, rdb *redis.Client, queueClient *asynq.Client) *AudienceHandler {
-	return &AudienceHandler{DB: db, RDB: rdb, Queue: queueClient}
+func NewAudienceHandler(db *pgxpool.Pool, rdb *redis.Client, queueClient *asynq.Client, store *storage.Client) *AudienceHandler {
+	return &AudienceHandler{DB: db, RDB: rdb, Queue: queueClient, Storage: store}
 }
 
 type leadCaptureSettingsResponse struct {
@@ -37,6 +42,10 @@ type leadCaptureSettingsResponse struct {
 	Title           string `json:"title"`
 	CollectEmail    bool   `json:"collect_email"`
 	CollectWhatsapp bool   `json:"collect_whatsapp"`
+	// Subscribe v2 (benchmark Linktree "Member", migrasi 000086).
+	CollectTelegram  bool   `json:"collect_telegram"`
+	MagnetProductID  string `json:"magnet_product_id"`
+	WelcomeVoucherID string `json:"welcome_voucher_id"`
 }
 
 // GetLeadCaptureSettings — dipakai halaman pengaturan dashboard. Baris
@@ -50,8 +59,10 @@ func (h *AudienceHandler) GetLeadCaptureSettings(c *gin.Context) {
 
 	resp := leadCaptureSettingsResponse{Title: "Dapatkan info terbaru dariku", CollectEmail: true}
 	err := h.DB.QueryRow(ctx, `
-		SELECT is_active, title, collect_email, collect_whatsapp FROM lead_capture_settings WHERE user_id = $1
-	`, userID).Scan(&resp.IsActive, &resp.Title, &resp.CollectEmail, &resp.CollectWhatsapp)
+		SELECT is_active, title, collect_email, collect_whatsapp, collect_telegram,
+		       COALESCE(magnet_product_id::text, ''), COALESCE(welcome_voucher_id::text, '')
+		FROM lead_capture_settings WHERE user_id = $1
+	`, userID).Scan(&resp.IsActive, &resp.Title, &resp.CollectEmail, &resp.CollectWhatsapp, &resp.CollectTelegram, &resp.MagnetProductID, &resp.WelcomeVoucherID)
 	if err != nil && err != pgx.ErrNoRows {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat pengaturan audiens"})
 		return
@@ -65,6 +76,11 @@ type upsertLeadCaptureRequest struct {
 	Title           string `json:"title" binding:"max=200"`
 	CollectEmail    bool   `json:"collect_email"`
 	CollectWhatsapp bool   `json:"collect_whatsapp"`
+	CollectTelegram bool   `json:"collect_telegram"`
+	// MagnetProductID / WelcomeVoucherID -- kosong = tidak ada. Kepemilikan
+	// dicek server-side; produk lead magnet wajib punya file.
+	MagnetProductID  string `json:"magnet_product_id"`
+	WelcomeVoucherID string `json:"welcome_voucher_id"`
 }
 
 // UpsertLeadCaptureSettings — mengaktifkan/menonaktifkan blok pengumpulan
@@ -79,7 +95,7 @@ func (h *AudienceHandler) UpsertLeadCaptureSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "judul blok wajib diisi"})
 		return
 	}
-	if req.IsActive && !req.CollectEmail && !req.CollectWhatsapp {
+	if req.IsActive && !req.CollectEmail && !req.CollectWhatsapp && !req.CollectTelegram {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "pilih minimal satu jenis data yang dikumpulkan"})
 		return
 	}
@@ -89,13 +105,38 @@ func (h *AudienceHandler) UpsertLeadCaptureSettings(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	// Lead magnet: produk harus milik sendiri DAN punya file -- tanpa file
+	// tidak ada yang bisa "diunduh setelah mendaftar".
+	magnetID := strings.TrimSpace(req.MagnetProductID)
+	if magnetID != "" {
+		var fileKey string
+		if err := h.DB.QueryRow(ctx, `SELECT file_key FROM products WHERE id = $1 AND user_id = $2`, magnetID, userID).Scan(&fileKey); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "produk lead magnet tidak ditemukan"})
+			return
+		}
+		if fileKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "produk lead magnet belum punya file"})
+			return
+		}
+	}
+	voucherID := strings.TrimSpace(req.WelcomeVoucherID)
+	if voucherID != "" {
+		var n int
+		if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM vouchers WHERE id = $1 AND user_id = $2`, voucherID, userID).Scan(&n); err != nil || n == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "voucher sambutan tidak ditemukan"})
+			return
+		}
+	}
+
 	if _, err := h.DB.Exec(ctx, `
-		INSERT INTO lead_capture_settings (user_id, is_active, title, collect_email, collect_whatsapp)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO lead_capture_settings (user_id, is_active, title, collect_email, collect_whatsapp, collect_telegram, magnet_product_id, welcome_voucher_id)
+		VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::uuid, NULLIF($8, '')::uuid)
 		ON CONFLICT (user_id) DO UPDATE SET
 			is_active = EXCLUDED.is_active, title = EXCLUDED.title,
-			collect_email = EXCLUDED.collect_email, collect_whatsapp = EXCLUDED.collect_whatsapp
-	`, userID, req.IsActive, strings.TrimSpace(req.Title), req.CollectEmail, req.CollectWhatsapp); err != nil {
+			collect_email = EXCLUDED.collect_email, collect_whatsapp = EXCLUDED.collect_whatsapp,
+			collect_telegram = EXCLUDED.collect_telegram,
+			magnet_product_id = EXCLUDED.magnet_product_id, welcome_voucher_id = EXCLUDED.welcome_voucher_id
+	`, userID, req.IsActive, strings.TrimSpace(req.Title), req.CollectEmail, req.CollectWhatsapp, req.CollectTelegram, magnetID, voucherID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pengaturan audiens"})
 		return
 	}
@@ -105,9 +146,30 @@ func (h *AudienceHandler) UpsertLeadCaptureSettings(c *gin.Context) {
 }
 
 type subscribeLeadRequest struct {
-	Username       string `json:"username" binding:"required"`
-	Email          string `json:"email"`
-	WhatsappNumber string `json:"whatsapp_number"`
+	Username         string `json:"username" binding:"required"`
+	Email            string `json:"email"`
+	WhatsappNumber   string `json:"whatsapp_number"`
+	TelegramUsername string `json:"telegram_username"`
+}
+
+// normalizeTelegram -- "@akbar" / "t.me/akbar" / "akbar" -> "akbar"; hanya
+// huruf/angka/underscore, maks 32 (batas Telegram). Kosong kalau tidak valid.
+// Murni, diuji unit.
+func normalizeTelegram(raw string) string {
+	v := strings.TrimSpace(strings.ToLower(raw))
+	v = strings.TrimPrefix(v, "https://")
+	v = strings.TrimPrefix(v, "http://")
+	v = strings.TrimPrefix(v, "t.me/")
+	v = strings.TrimPrefix(v, "@")
+	if v == "" || len(v) > 32 {
+		return ""
+	}
+	for _, r := range v {
+		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_') {
+			return ""
+		}
+	}
+	return v
 }
 
 // SubscribeLead — endpoint PUBLIK (dipanggil dari blok pengumpulan lead di
@@ -122,8 +184,9 @@ func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 	}
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	whatsapp := strings.TrimSpace(req.WhatsappNumber)
-	if email == "" && whatsapp == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "isi email atau nomor WhatsApp"})
+	telegram := normalizeTelegram(req.TelegramUsername)
+	if email == "" && whatsapp == "" && telegram == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "isi email, nomor WhatsApp, atau username Telegram"})
 		return
 	}
 
@@ -132,11 +195,22 @@ func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 
 	var creatorUserID string
 	var isActive bool
+	// Hadiah setelah mendaftar (Subscribe v2): file lead magnet & kode voucher
+	// sambutan, dibaca dalam satu query supaya tidak ada round-trip tambahan
+	// di jalur publik yang sering dipanggil.
+	var magnetFileKey, magnetName, voucherCode string
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.id, COALESCE(lcs.is_active, false)
-		FROM users u LEFT JOIN lead_capture_settings lcs ON lcs.user_id = u.id
+		SELECT u.id, COALESCE(lcs.is_active, false),
+		       COALESCE(p.file_key, ''), COALESCE(p.name, ''),
+		       COALESCE(CASE WHEN v.is_active AND (v.expires_at IS NULL OR v.expires_at > now())
+		                          AND (v.max_uses IS NULL OR v.used_count < v.max_uses)
+		                     THEN v.code END, '')
+		FROM users u
+		LEFT JOIN lead_capture_settings lcs ON lcs.user_id = u.id
+		LEFT JOIN products p ON p.id = lcs.magnet_product_id
+		LEFT JOIN vouchers v ON v.id = lcs.welcome_voucher_id
 		WHERE u.username = $1
-	`, req.Username).Scan(&creatorUserID, &isActive)
+	`, req.Username).Scan(&creatorUserID, &isActive, &magnetFileKey, &magnetName, &voucherCode)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
@@ -151,22 +225,41 @@ func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 	}
 
 	if _, err := h.DB.Exec(ctx, `
-		INSERT INTO subscribers (creator_user_id, email, whatsapp_number, source)
-		VALUES ($1, $2, $3, 'lead_capture')
+		INSERT INTO subscribers (creator_user_id, email, whatsapp_number, telegram_username, source)
+		VALUES ($1, $2, $3, $4, 'lead_capture')
 		ON CONFLICT (creator_user_id, email) WHERE email <> '' DO UPDATE SET
-			whatsapp_number = CASE WHEN EXCLUDED.whatsapp_number <> '' THEN EXCLUDED.whatsapp_number ELSE subscribers.whatsapp_number END
-	`, creatorUserID, email, whatsapp); err != nil {
+			whatsapp_number = CASE WHEN EXCLUDED.whatsapp_number <> '' THEN EXCLUDED.whatsapp_number ELSE subscribers.whatsapp_number END,
+			telegram_username = CASE WHEN EXCLUDED.telegram_username <> '' THEN EXCLUDED.telegram_username ELSE subscribers.telegram_username END
+	`, creatorUserID, email, whatsapp, telegram); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "berhasil mendaftar"})
+	resp := gin.H{"message": "berhasil mendaftar"}
+	// Lead magnet: presigned URL 15 menit (sama dengan REQ-F-304 unduhan
+	// produk). Soft-fail: kalau storage tidak siap, pendaftaran tetap sukses
+	// -- hadiah adalah pendukung, bukan inti. Watermark PDF sengaja TIDAK
+	// diterapkan: itu terikat identitas pembeli+order, sedangkan lead magnet
+	// memang dibagikan cuma-cuma.
+	if magnetFileKey != "" && h.Storage != nil {
+		if url, err := h.Storage.PresignedDownloadURL(ctx, magnetFileKey, 15*time.Minute); err == nil {
+			resp["download_url"] = url
+			resp["download_name"] = magnetName
+		} else {
+			log.Printf("audience: gagal membuat URL lead magnet untuk %s: %v", creatorUserID, err)
+		}
+	}
+	if voucherCode != "" {
+		resp["voucher_code"] = voucherCode
+	}
+	c.JSON(http.StatusCreated, resp)
 }
 
 type audienceContact struct {
 	Name           string   `json:"name"`
 	Email          string   `json:"email"`
 	WhatsappNumber string   `json:"whatsapp_number"`
+	Telegram       string   `json:"telegram_username"`
 	Sources        []string `json:"sources"`
 	JoinedAt       string   `json:"joined_at"`
 	// Tags/Notes -- CRM ringan (migrasi 000083), digabung dari
@@ -205,19 +298,19 @@ func (h *AudienceHandler) GetAudience(c *gin.Context) {
 	order := []*audienceContact{}
 
 	subRows, err := h.DB.Query(ctx, `
-		SELECT email, whatsapp_number, name, source, created_at FROM subscribers WHERE creator_user_id = $1 ORDER BY created_at DESC
+		SELECT email, whatsapp_number, telegram_username, name, source, created_at FROM subscribers WHERE creator_user_id = $1 ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat subscriber"})
 		return
 	}
 	for subRows.Next() {
-		var email, whatsapp, name, source string
+		var email, whatsapp, telegram, name, source string
 		var joinedAt time.Time
-		if err := subRows.Scan(&email, &whatsapp, &name, &source, &joinedAt); err != nil {
+		if err := subRows.Scan(&email, &whatsapp, &telegram, &name, &source, &joinedAt); err != nil {
 			continue
 		}
-		item := &audienceContact{Email: email, WhatsappNumber: whatsapp, Name: name, Sources: []string{source}, JoinedAt: joinedAt.Format(time.RFC3339)}
+		item := &audienceContact{Email: email, WhatsappNumber: whatsapp, Telegram: telegram, Name: name, Sources: []string{source}, JoinedAt: joinedAt.Format(time.RFC3339)}
 		order = append(order, item)
 		if email != "" {
 			byEmail[email] = item

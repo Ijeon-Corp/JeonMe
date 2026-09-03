@@ -324,6 +324,12 @@ type publicLeadCapture struct {
 	Title           string `json:"title"`
 	CollectEmail    bool   `json:"collect_email"`
 	CollectWhatsapp bool   `json:"collect_whatsapp"`
+	// Subscribe v2 (migrasi 000086): Telegram, judul lead magnet (kosong =
+	// tidak ada), dan apakah ada voucher sambutan -- cukup untuk form publik
+	// menjanjikan hadiah tanpa membocorkan kode sebelum mendaftar.
+	CollectTelegram bool   `json:"collect_telegram"`
+	MagnetTitle     string `json:"magnet_title"`
+	HasVoucher      bool   `json:"has_voucher"`
 }
 
 // publicSocialProof -- No.76 (Sprint 8): notifikasi "X baru saja membeli".
@@ -906,9 +912,14 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	g.Go(func() error {
 		var leadCapture publicLeadCapture
 		if err := h.DB.QueryRow(gctx, `
-			SELECT title, collect_email, collect_whatsapp FROM lead_capture_settings
-			WHERE user_id = $1 AND is_active = true
-		`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp); err == nil {
+			SELECT lcs.title, lcs.collect_email, lcs.collect_whatsapp, lcs.collect_telegram,
+			       COALESCE(CASE WHEN p.file_key <> '' THEN p.name END, ''),
+			       (v.id IS NOT NULL AND v.is_active AND (v.expires_at IS NULL OR v.expires_at > now()))
+			FROM lead_capture_settings lcs
+			LEFT JOIN products p ON p.id = lcs.magnet_product_id
+			LEFT JOIN vouchers v ON v.id = lcs.welcome_voucher_id
+			WHERE lcs.user_id = $1 AND lcs.is_active = true
+		`, userID).Scan(&leadCapture.Title, &leadCapture.CollectEmail, &leadCapture.CollectWhatsapp, &leadCapture.CollectTelegram, &leadCapture.MagnetTitle, &leadCapture.HasVoucher); err == nil {
 			resp.LeadCapture = &leadCapture
 		}
 		return nil

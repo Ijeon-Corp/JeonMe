@@ -60,7 +60,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
 	brand := handlers.NewBrandHandler(db)
-	audience := handlers.NewAudienceHandler(db, rdb, queueClient)
+	audience := handlers.NewAudienceHandler(db, rdb, queueClient, s3)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)

@@ -12,6 +12,10 @@ import {
   upsertAudienceContactMeta,
   getLeadCaptureSettings,
   listBroadcasts,
+  listProducts,
+  listVouchers,
+  DashboardProduct,
+  DashboardVoucher,
   upsertLeadCaptureSettings,
 } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
@@ -44,9 +48,9 @@ function buildSourceLabel(t: (key: string) => string): Record<string, string> {
 }
 
 function toCSV(contacts: AudienceContact[]): string {
-  const header = "name,email,whatsapp_number,sources,joined_at,tags,notes";
+  const header = "name,email,whatsapp_number,telegram_username,sources,joined_at,tags,notes";
   const rows = contacts.map((c) =>
-    [c.name, c.email, c.whatsapp_number, c.sources.join("|"), c.joined_at, (c.tags ?? []).join("|"), c.notes ?? ""]
+    [c.name, c.email, c.whatsapp_number, c.telegram_username ?? "", c.sources.join("|"), c.joined_at, (c.tags ?? []).join("|"), c.notes ?? ""]
       .map((v) => `"${v.replace(/"/g, '""')}"`)
       .join(",")
   );
@@ -108,6 +112,13 @@ function DashboardAudiencePageInner() {
   const [title, setTitle] = useState("");
   const [collectEmail, setCollectEmail] = useState(true);
   const [collectWhatsapp, setCollectWhatsapp] = useState(false);
+  // Subscribe v2 (benchmark Linktree "Member"): Telegram + hadiah setelah
+  // mendaftar (lead magnet = produk berfile, voucher sambutan = voucher toko).
+  const [collectTelegram, setCollectTelegram] = useState(false);
+  const [magnetProductId, setMagnetProductId] = useState("");
+  const [welcomeVoucherId, setWelcomeVoucherId] = useState("");
+  const [fileProducts, setFileProducts] = useState<DashboardProduct[]>([]);
+  const [activeVouchers, setActiveVouchers] = useState<DashboardVoucher[]>([]);
 
   // Broadcast email (Gap #3 benchmark kompetitif, 9 Agustus 2026) --
   // subject/body form, riwayat broadcast, & error terpisah dari form
@@ -120,12 +131,17 @@ function DashboardAudiencePageInner() {
   const [broadcastSent, setBroadcastSent] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getLeadCaptureSettings(), getAudience(), listBroadcasts()])
-      .then(([s, c, b]) => {
+    Promise.all([getLeadCaptureSettings(), getAudience(), listBroadcasts(), listProducts().catch(() => []), listVouchers().catch(() => [])])
+      .then(([s, c, b, prods, vchs]) => {
         setEnabled(s.is_active);
         setTitle(s.title);
         setCollectEmail(s.collect_email);
         setCollectWhatsapp(s.collect_whatsapp);
+        setCollectTelegram(s.collect_telegram);
+        setMagnetProductId(s.magnet_product_id ?? "");
+        setWelcomeVoucherId(s.welcome_voucher_id ?? "");
+        setFileProducts(prods.filter((x) => x.has_file));
+        setActiveVouchers(vchs.filter((v) => v.is_active));
         setContacts(c);
         setBroadcasts(b);
         const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -191,7 +207,7 @@ function DashboardAudiencePageInner() {
       setError(t("dashboard.pages.audience.titleRequired"));
       return;
     }
-    if (enabled && !collectEmail && !collectWhatsapp) {
+    if (enabled && !collectEmail && !collectWhatsapp && !collectTelegram) {
       setError(t("dashboard.pages.audience.dataTypeRequired"));
       return;
     }
@@ -204,6 +220,9 @@ function DashboardAudiencePageInner() {
         title: title.trim(),
         collect_email: collectEmail,
         collect_whatsapp: collectWhatsapp,
+        collect_telegram: collectTelegram,
+        magnet_product_id: magnetProductId,
+        welcome_voucher_id: welcomeVoucherId,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -375,6 +394,51 @@ function DashboardAudiencePageInner() {
             <input type="checkbox" checked={collectWhatsapp} onChange={(e) => setCollectWhatsapp(e.target.checked)} className="h-3.5 w-3.5 accent-jeon-purple" />
             {t("dashboard.pages.audience.collectWhatsapp")}
           </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-app-ink">
+            <input type="checkbox" checked={collectTelegram} onChange={(e) => setCollectTelegram(e.target.checked)} className="h-3.5 w-3.5 accent-jeon-purple" />
+            {t("dashboard.pages.audience.collectTelegram")}
+          </label>
+        </div>
+
+        <div className="rounded-lg border border-app-border p-3">
+          <p className="text-sm font-bold text-app-ink">{t("dashboard.pages.audience.rewardsHeading")}</p>
+          <p className="mt-0.5 text-xs text-app-muted">{t("dashboard.pages.audience.rewardsHint")}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-app-ink">
+              {t("dashboard.pages.audience.magnetLabel")}
+              <select
+                value={magnetProductId}
+                onChange={(e) => setMagnetProductId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+              >
+                <option value="">{t("dashboard.pages.audience.magnetNone")}</option>
+                {fileProducts.map((x) => (
+                  <option key={x.id} value={x.id}>{x.name}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] font-normal text-app-muted">
+                {fileProducts.length === 0 ? t("dashboard.pages.audience.magnetEmpty") : t("dashboard.pages.audience.magnetHint")}
+              </span>
+            </label>
+            <label className="text-xs font-semibold text-app-ink">
+              {t("dashboard.pages.audience.voucherLabel")}
+              <select
+                value={welcomeVoucherId}
+                onChange={(e) => setWelcomeVoucherId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-app-border bg-app-surface px-3 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+              >
+                <option value="">{t("dashboard.pages.audience.voucherNone")}</option>
+                {activeVouchers.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.code} ({v.discount_type === "percentage" ? `${v.discount_value}%` : `Rp ${v.discount_value.toLocaleString("id-ID")}`})
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] font-normal text-app-muted">
+                {activeVouchers.length === 0 ? t("dashboard.pages.audience.voucherEmpty") : t("dashboard.pages.audience.voucherHint")}
+              </span>
+            </label>
+          </div>
         </div>
 
         <button
@@ -558,6 +622,7 @@ function DashboardAudiencePageInner() {
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colName")}</th>
               <th className="px-4 py-2.5 font-semibold">Email</th>
               <th className="px-4 py-2.5 font-semibold">WhatsApp</th>
+              <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colTelegram")}</th>
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colSource")}</th>
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colJoined")}</th>
               <th className="px-4 py-2.5 font-semibold">{t("dashboard.pages.audience.colTags")}</th>
@@ -570,6 +635,7 @@ function DashboardAudiencePageInner() {
                 <td className="px-4 py-2.5 text-app-ink">{c.name || "-"}</td>
                 <td className="px-4 py-2.5 text-app-ink">{c.email || "-"}</td>
                 <td className="px-4 py-2.5 text-app-ink">{c.whatsapp_number || "-"}</td>
+                <td className="px-4 py-2.5 text-app-ink">{c.telegram_username ? `@${c.telegram_username}` : "-"}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex gap-1">
                     {c.sources.map((s) => (

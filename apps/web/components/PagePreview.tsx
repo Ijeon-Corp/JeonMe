@@ -171,6 +171,9 @@ export interface PagePreviewLeadCapture {
   title: string;
   collectEmail: boolean;
   collectWhatsapp: boolean;
+  collectTelegram: boolean;
+  magnetTitle: string;
+  hasVoucher: boolean;
 }
 
 export interface PagePreviewSocialProof {
@@ -2442,6 +2445,9 @@ export default function PagePreview({
                 username={data.username}
                 collectEmail={data.leadCapture.collectEmail}
                 collectWhatsapp={data.leadCapture.collectWhatsapp}
+                collectTelegram={data.leadCapture.collectTelegram}
+                magnetTitle={data.leadCapture.magnetTitle}
+                hasVoucher={data.leadCapture.hasVoucher}
                 inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                 buttonClassName={theme.buyButton}
               />

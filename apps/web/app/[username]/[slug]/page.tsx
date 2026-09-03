@@ -184,6 +184,9 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
                 title: page.lead_capture.title,
                 collectEmail: page.lead_capture.collect_email,
                 collectWhatsapp: page.lead_capture.collect_whatsapp,
+                collectTelegram: page.lead_capture.collect_telegram,
+                magnetTitle: page.lead_capture.magnet_title,
+                hasVoucher: page.lead_capture.has_voucher,
               }
             : undefined,
           socialProof: page.social_proof
