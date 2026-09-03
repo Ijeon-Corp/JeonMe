@@ -4,6 +4,7 @@ import IconBadge, { accentForIndex } from "@/components/IconBadge";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   IconBook,
   IconBriefcase,
@@ -154,7 +155,10 @@ export default function DashboardMonetisasiPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.monetisasi.subtitle")}</p>
+      {/* Judul halaman sendiri -- setelah bilah tab lintas-domain dihapus dari
+          layout (3 September 2026), hub ini tidak lagi "menempel" pada tab
+          "Ringkasan" dan berdiri sebagai direktori alat monetisasi. */}
+      <PageHeader title={t("dashboard.nav.productsMonetization")} description={t("dashboard.pages.monetisasi.subtitle")} />
 
       <div className="relative mt-5">
         <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 // Route group (monetisasi) -- permintaan langsung pengguna, 10 Agustus
 // 2026: "semua yang ada di produk dan monetisasi itu dibuat jadi tab saja
@@ -34,10 +35,28 @@ function buildTabs(t: (key: string) => string) {
   ];
 }
 
+// REVISI 3 September 2026 (permintaan pengguna: "banyak sekali tab yang
+// tidak berkaitan, lalu saat klik tab tiba-tiba pindah page yang jauh"):
+// bilah tab di atas dibuat SEBELUM IA v2 memecah halaman-halaman ini ke
+// grup sidebar Jualan (Kursus/Booking/Event/Dukungan) dan Marketing
+// (Voucher/Bundel/Afiliasi/Brand/Loyalitas). Setelah IA v2 keduanya hidup
+// bersamaan dan saling bertentangan: breadcrumb bilang "Marketing /
+// Afiliasi" tapi bilah tab menawarkan Event/Kursus/Booking -- sekali klik
+// halaman berganti DAN grup sidebar ikut melompat. Di mode v2 bilah tab
+// tidak dirender: sidebar jadi satu-satunya navigasi antar-halaman, tiap
+// halaman punya PageHeader-nya sendiri, dan tab di dalam halaman hanya
+// untuk tampilan yang memang satu halaman (?view=/state), bukan pindah
+// halaman. Bilah tab dipertahankan hanya untuk IA lama (flag "marketing"
+// dimatikan), karena di sana sidebar belum punya grup-grup itu.
 export default function MonetisasiLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLocale();
   const TABS = buildTabs(t);
+  const marketingV2 = dashRedesignEnabled("marketing");
+
+  if (marketingV2) {
+    return <div className="mx-auto max-w-3xl">{children}</div>;
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
