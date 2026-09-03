@@ -840,3 +840,14 @@ export function IconPlane({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconRefresh -- muat ulang status (halaman Langganan, 3 September 2026).
+// Gaya sama dengan ikon lain: goresan {base}, viewBox 24, currentColor.
+export function IconRefresh({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 4v5h-5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

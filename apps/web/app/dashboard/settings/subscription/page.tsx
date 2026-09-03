@@ -11,29 +11,40 @@ import {
   getSubscriptionStatus,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconCheck, IconChevronRight, IconStar } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconRefresh, IconStar } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 
 // Modul Langganan Premium: menghilangkan watermark halaman publik + latar
-// kustom (theme="custom"). Harga BELUM keputusan bisnis final (placeholder,
-// lihat monthly_price_idr/yearly_price_idr dari backend -- TIDAK di-hardcode
-// di sini) -- kreator memilih siklus "Bulanan + Tahunan (diskon)" tapi belum
-// menyebut angka pastinya.
+// kustom + multi-Toko/halaman tambahan. Harga dari backend
+// (monthly_price_idr/yearly_price_idr), TIDAK di-hardcode.
 //
 // Alur checkout: pilih siklus -> POST /dashboard/subscription/checkout ->
-// redirect penuh (bukan popup) ke invoice_url (halaman Snap Midtrans
-// ter-hosting) -> Snap redirect balik ke halaman ini (FinishRedirectURL)
-// setelah bayar -> reload status (webhook backend yang MENGAKTIFKAN
-// langganan biasanya tiba dalam hitungan detik, jadi status sesaat setelah
-// redirect balik bisa saja masih "pending_card" -- lihat catatan di bawah).
+// redirect penuh ke invoice_url (Snap Midtrans) -> Snap redirect balik ke
+// halaman ini setelah bayar -> status dimuat ulang (webhook yang
+// mengaktifkan langganan biasanya tiba dalam hitungan detik, jadi status
+// sesaat setelah kembali bisa masih "pending_card" -- ada tombol muat ulang).
+//
+// REDESAIN 3 September 2026 (permintaan pengguna: "page subscription
+// terlihat masih jelek dan belum mengikuti tema"): halaman mengikuti kartu
+// harga landing (Gratis bergaris tebal, Premium ungu bergaris hitam +
+// bayangan offset), daftar fitur dibaca dari dict.pricing.* -- SATU sumber
+// kebenaran dengan halaman /pricing supaya janji di dashboard tidak pernah
+// menyimpang dari yang dijanjikan di landing. Status langganan jadi bagian
+// dari kartu Premium (bukan kotak terpisah), dan setiap keadaan
+// (menunggu pembayaran / gagal tagih / dibatalkan) punya penjelasan +
+// aksi yang jelas.
+type Cycle = "monthly" | "yearly";
+
 export default function SettingsSubscriptionPage() {
-  const { t } = useLocale();
+  const { t, dict } = useLocale();
   const { showToast } = useToast();
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [checkingOut, setCheckingOut] = useState<"monthly" | "yearly" | null>(null);
+  const [cycle, setCycle] = useState<Cycle>("yearly");
+  const [checkingOut, setCheckingOut] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   function reload() {
     return getSubscriptionStatus().then(setStatus);
@@ -44,14 +55,14 @@ export default function SettingsSubscriptionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali saat mount, `t` tidak boleh memicu reload berulang.
   }, []);
 
-  async function handleCheckout(plan: "monthly" | "yearly") {
-    setCheckingOut(plan);
+  async function handleCheckout() {
+    setCheckingOut(true);
     try {
-      const res = await checkoutSubscription(plan);
+      const res = await checkoutSubscription(cycle);
       window.location.href = res.invoice_url;
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSubscription.checkoutError"), "error");
-      setCheckingOut(null);
+      setCheckingOut(false);
     }
   }
 
@@ -75,165 +86,213 @@ export default function SettingsSubscriptionPage() {
     }
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await reload();
+    } catch {
+      showToast(t("dashboard.pages.settingsSubscription.loadError"), "error");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   if (status === null) {
     return <PageSkeleton />;
   }
 
+  const k = (key: string) => t(`dashboard.pages.settingsSubscription.${key}`);
+  const pending = status.status === "pending_card" && !status.is_premium;
+  const pastDue = status.status === "past_due";
+  const canceled = status.status === "canceled";
   const isLive = status.status === "pending_card" || status.status === "active" || status.status === "past_due";
   const periodEndLabel = status.current_period_end
     ? new Date(status.current_period_end).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : null;
-  const planLabel = status.plan === "yearly" ? t("dashboard.pages.settingsSubscription.yearly") : t("dashboard.pages.settingsSubscription.monthly");
+  const planLabel = status.plan === "yearly" ? k("yearly") : k("monthly");
+  const yearlySavingPct =
+    status.monthly_price_idr > 0 ? Math.max(0, Math.round((1 - status.yearly_price_idr / (status.monthly_price_idr * 12)) * 100)) : 0;
+  const price = cycle === "yearly" ? status.yearly_price_idr : status.monthly_price_idr;
+  const priceSuffix = cycle === "yearly" ? k("perYear") : k("perMonth");
+  const fmt = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
   let statusMessage: string;
-  if (status.status === "canceled") {
-    statusMessage = t("dashboard.pages.settingsSubscription.statusCanceled").replace(
-      "{date}",
-      periodEndLabel ?? t("dashboard.pages.settingsSubscription.endOfPaidPeriod")
-    );
-  } else if (status.status === "past_due") {
-    statusMessage = t("dashboard.pages.settingsSubscription.statusPastDue");
+  if (canceled) {
+    statusMessage = k("statusCanceled").replace("{date}", periodEndLabel ?? k("endOfPaidPeriod"));
+  } else if (pastDue) {
+    statusMessage = k("statusPastDue");
   } else if (periodEndLabel) {
-    statusMessage = t("dashboard.pages.settingsSubscription.statusRenewsOn").replace("{date}", periodEndLabel);
+    statusMessage = k("statusRenewsOn").replace("{date}", periodEndLabel);
   } else {
-    statusMessage = t("dashboard.pages.settingsSubscription.statusActive");
+    statusMessage = k("statusActive");
   }
 
+  const freeItems = (dict.pricing?.free?.items ?? []) as string[];
+  const premiumItems = (dict.pricing?.premium?.items ?? []) as string[];
+  const faq = [
+    { q: k("faq1q"), a: k("faq1a") },
+    { q: k("faq2q"), a: k("faq2a") },
+    { q: k("faq3q"), a: k("faq3a") },
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <Link
-        href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
-      >
+    <div className="mx-auto max-w-3xl">
+      {/* Breadcrumb hanya di layar sempit -- di lebar, sub-nav Pengaturan
+          di kiri sudah menunjukkan posisi. */}
+      <Link href="/dashboard/settings" className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple lg:hidden">
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
-        {t("dashboard.pages.settingsSubscription.breadcrumb")}
+        {k("breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 flex items-center gap-2 font-display text-2xl font-bold text-app-ink">
-        <IconStar className="h-6 w-6 text-jeon-purple" />
-        {t("dashboard.pages.settingsSubscription.title")}
-      </h1>
-      <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSubscription.subtitle")}</p>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-app-ink">{k("title")}</h1>
+          <p className="mt-1 max-w-xl text-sm text-app-muted">{k("subtitle")}</p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-bold ${
+            status.is_premium ? "border-[#111111] bg-jeon-lime text-[#111111]" : "border-jeon-ink bg-app-surface text-app-ink"
+          }`}
+        >
+          <IconStar className="h-3.5 w-3.5" />
+          {status.is_premium ? k("chipPremium").replace("{plan}", planLabel) : k("chipFree")}
+        </span>
+      </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      {status.is_premium ? (
-        <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface-2 p-5">
-          <div className="flex items-center gap-2">
-            <IconStar className="h-5 w-5 text-jeon-warning" />
-            <h2 className="font-display text-sm font-bold text-app-ink">
-              {t("dashboard.pages.settingsSubscription.youArePremium").replace("{plan}", planLabel)}
-            </h2>
+      {/* Keadaan yang butuh perhatian, di atas kartu supaya tidak terlewat. */}
+      {pastDue && (
+        <div role="alert" className="mt-5 rounded-jmd border-2 border-jeon-ink bg-jeon-coral px-4 py-3 text-sm text-[#111111]">
+          <p className="font-bold">{k("pastDueTitle")}</p>
+          <p className="mt-0.5 text-xs">{k("statusPastDue")}</p>
+        </div>
+      )}
+      {pending && (
+        <div role="status" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-jmd border-2 border-jeon-ink bg-jeon-lavender px-4 py-3 text-sm text-[#111111]">
+          <div>
+            <p className="font-bold">{k("pendingTitle")}</p>
+            <p className="mt-0.5 text-xs">{k("paymentProcessing")}</p>
           </div>
-          <p className="mt-2 text-xs text-app-muted">{statusMessage}</p>
-          {status.status !== "canceled" && (
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={canceling}
-              className="mt-3 rounded-lg border-2 border-jeon-ink bg-app-surface px-4 py-2 text-xs font-semibold text-red-600 hover:border-red-300 disabled:opacity-60"
-            >
-              {canceling ? t("dashboard.pages.settingsSubscription.canceling") : t("dashboard.pages.settingsSubscription.cancelSubscriptionButton")}
-            </button>
-          )}
-        </section>
-      ) : (
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <PricingCard
-            label={t("dashboard.pages.settingsSubscription.monthly")}
-            priceIDR={status.monthly_price_idr}
-            priceSuffix={t("dashboard.pages.settingsSubscription.perMonth")}
-            onSubscribe={() => handleCheckout("monthly")}
-            busy={checkingOut === "monthly"}
-            disabled={checkingOut !== null || isLive}
-            t={t}
-          />
-          <PricingCard
-            label={t("dashboard.pages.settingsSubscription.yearly")}
-            priceIDR={status.yearly_price_idr}
-            priceSuffix={t("dashboard.pages.settingsSubscription.perYear")}
-            badge={t("dashboard.pages.settingsSubscription.saveBadge")}
-            highlight
-            onSubscribe={() => handleCheckout("yearly")}
-            busy={checkingOut === "yearly"}
-            disabled={checkingOut !== null || isLive}
-            t={t}
-          />
+          <button type="button" onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-1.5 rounded-lg border-2 border-[#111111] bg-white px-3 py-1.5 text-xs font-bold text-[#111111] disabled:opacity-60">
+            <IconRefresh className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? k("refreshing") : k("refreshStatus")}
+          </button>
         </div>
       )}
 
-      {!status.is_premium && isLive && (
-        <p className="mt-3 rounded-lg bg-jeon-purple/5 px-3 py-2 text-xs text-app-muted">
-          {t("dashboard.pages.settingsSubscription.paymentProcessing")}
-        </p>
-      )}
+      {/* Dua kartu paket -- kosakata kartu harga landing. */}
+      <div className="mt-6 grid items-start gap-5 md:grid-cols-2">
+        <section className="rounded-jlg border-2 border-jeon-ink bg-app-surface p-6">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-bold text-app-ink">{dict.pricing?.free?.name ?? "Gratis"}</h2>
+            {!status.is_premium && <span className="rounded-full border border-jeon-ink px-2 py-0.5 text-[10px] font-bold text-app-ink">{k("yourPlan")}</span>}
+          </div>
+          <p className="mt-1 text-sm text-app-muted">{dict.pricing?.free?.tagline}</p>
+          <p className="mt-4 font-display text-3xl font-extrabold text-app-ink">
+            Rp0<span className="ml-1 text-sm font-medium text-app-muted">{k("perMonth")}</span>
+          </p>
+          <ul className="mt-5 space-y-2.5">
+            {freeItems.map((item) => (
+              <li key={item} className="flex items-start gap-2.5 text-sm text-app-ink">
+                <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-jeon-ink"><IconCheck className="h-2.5 w-2.5" /></span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <ul className="mt-6 flex flex-col gap-2 text-sm text-app-ink">
-        <BenefitRow text={t("dashboard.pages.settingsSubscription.benefitWatermark")} />
-        <BenefitRow text={t("dashboard.pages.settingsSubscription.benefitCustomBackground")} />
-      </ul>
+        <section className="relative rounded-jlg border-2 border-[#111111] bg-jeon-purple p-6 text-white shadow-brutal">
+          {status.is_premium ? (
+            <span className="absolute -top-3 right-6 rounded-full border-2 border-[#111111] bg-jeon-lime px-3 py-1 text-[11px] font-bold text-[#111111]">{k("yourPlan")}</span>
+          ) : (
+            yearlySavingPct > 0 && (
+              <span className="absolute -top-3 right-6 rounded-full border-2 border-[#111111] bg-jeon-lime px-3 py-1 text-[11px] font-bold text-[#111111]">
+                {k("saveBadgePct").replace("{pct}", String(yearlySavingPct))}
+              </span>
+            )
+          )}
+          <h2 className="font-display text-lg font-bold">{dict.pricing?.premium?.name ?? "Premium"}</h2>
+          <p className="mt-1 text-sm text-white/75">{dict.pricing?.premium?.tagline}</p>
 
-      <p className="mt-4 text-[11px] text-app-muted">{t("dashboard.pages.settingsSubscription.billingNote")}</p>
-    </div>
-  );
-}
+          {status.is_premium ? (
+            <div className="mt-4 rounded-jmd border-2 border-[#111111] bg-white/10 p-4">
+              <p className="font-display text-2xl font-extrabold">
+                {fmt(status.amount_idr || (status.plan === "yearly" ? status.yearly_price_idr : status.monthly_price_idr))}
+                <span className="ml-1 text-sm font-medium text-white/75">{status.plan === "yearly" ? k("perYear") : k("perMonth")}</span>
+              </p>
+              <p className={`mt-2 text-xs ${canceled || pastDue ? "font-semibold text-jeon-lime" : "text-white/80"}`}>{statusMessage}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {canceled ? (
+                  <button type="button" onClick={handleCheckout} disabled={checkingOut} className="rounded-jmd border-2 border-[#111111] bg-white px-4 py-2 font-display text-sm font-bold text-[#111111] disabled:opacity-60">
+                    {checkingOut ? k("preparingPayment") : k("reactivateButton")}
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleCancel} disabled={canceling} className="rounded-jmd border-2 border-white/40 px-4 py-2 text-xs font-semibold text-white/85 hover:border-white disabled:opacity-60">
+                    {canceling ? k("canceling") : k("cancelSubscriptionButton")}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 inline-flex rounded-full border-2 border-[#111111] bg-white/10 p-1" role="radiogroup" aria-label={k("cycleLabel")}>
+                {(["monthly", "yearly"] as Cycle[]).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={cycle === c}
+                    onClick={() => setCycle(c)}
+                    className={`rounded-full px-3.5 py-1 text-xs font-bold transition-colors ${cycle === c ? "bg-white text-[#111111]" : "text-white/80 hover:text-white"}`}
+                  >
+                    {c === "yearly" ? k("yearly") : k("monthly")}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 font-display text-3xl font-extrabold">
+                {fmt(price)}
+                <span className="ml-1 text-sm font-medium text-white/75">{priceSuffix}</span>
+              </p>
+              {cycle === "yearly" && status.monthly_price_idr > 0 && (
+                <p className="mt-0.5 text-xs text-white/70">{k("yearlyEquiv").replace("{monthly}", fmt(Math.round(status.yearly_price_idr / 12)))}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleCheckout}
+                disabled={checkingOut || isLive}
+                className="mt-5 block w-full rounded-jmd border-2 border-[#111111] bg-white px-5 py-3 text-center font-display text-sm font-bold text-[#111111] shadow-btn transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+              >
+                {checkingOut ? k("preparingPayment") : k("subscribeButton")}
+              </button>
+              <p className="mt-2 text-center text-[11px] text-white/65">{k("cancelAnytime")}</p>
+            </>
+          )}
 
-function BenefitRow({ text }: { text: string }) {
-  return (
-    <li className="flex items-center gap-2">
-      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
-        <IconCheck className="h-3 w-3" />
-      </span>
-      {text}
-    </li>
-  );
-}
+          <ul className="mt-5 space-y-2.5">
+            {premiumItems.map((item) => (
+              <li key={item} className="flex items-start gap-2.5 text-sm">
+                <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-jeon-lime text-jeon-lime"><IconCheck className="h-2.5 w-2.5" /></span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
 
-function PricingCard({
-  label,
-  priceIDR,
-  priceSuffix,
-  badge,
-  highlight,
-  onSubscribe,
-  busy,
-  disabled,
-  t,
-}: {
-  label: string;
-  priceIDR: number;
-  priceSuffix: string;
-  badge?: string;
-  highlight?: boolean;
-  onSubscribe: () => void;
-  busy: boolean;
-  disabled: boolean;
-  t: (key: string) => string;
-}) {
-  return (
-    <div
-      className={`relative rounded-jmd border p-5 ${
-        highlight ? "border-jeon-purple bg-jeon-purple/5" : "border-app-border bg-app-surface"
-      }`}
-    >
-      {badge && (
-        <span className="absolute -top-2.5 right-4 rounded-full bg-jeon-purple px-2.5 py-0.5 text-[10px] font-bold text-white">
-          {badge}
-        </span>
-      )}
-      <p className="text-sm font-bold text-app-ink">{label}</p>
-      <p className="mt-1.5">
-        <span className="font-display text-2xl font-bold text-app-ink">Rp {priceIDR.toLocaleString("id-ID")}</span>
-        <span className="text-xs text-app-muted">{priceSuffix}</span>
-      </p>
-      <button
-        type="button"
-        onClick={onSubscribe}
-        disabled={disabled}
-        className="mt-4 w-full rounded-xl btn-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-      >
-        {busy ? t("dashboard.pages.settingsSubscription.preparingPayment") : t("dashboard.pages.settingsSubscription.subscribeButton")}
-      </button>
+      <section className="mt-8 rounded-jlg border border-jeon-ink bg-app-surface p-5">
+        <h2 className="font-display text-base font-bold text-app-ink">{k("faqHeading")}</h2>
+        <dl className="mt-3 divide-y divide-app-border">
+          {faq.map((f) => (
+            <div key={f.q} className="py-3 first:pt-0 last:pb-0">
+              <dt className="text-sm font-semibold text-app-ink">{f.q}</dt>
+              <dd className="mt-1 text-xs text-app-muted">{f.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <p className="mt-4 text-[11px] text-app-muted">{k("billingNote")}</p>
     </div>
   );
 }
