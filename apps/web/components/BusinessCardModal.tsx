@@ -34,18 +34,34 @@ export default function BusinessCardModal({
   // qrcode.react di useEffect dan di sebagian browser masih kosong saat
   // tombol ditekan (laporan pengguna 3 September 2026: QR hilang di PNG).
   // Canvas tersembunyi cuma cadangan kalau SVG tidak ditemukan.
+  // svgToDataUrl -- serialisasi SVG yang tampil di kartu (QR & ikon baris)
+  // supaya PNG memakai grafik yang PERSIS sama dengan pratinjau. currentColor
+  // dipatok #111111 karena di luar DOM tidak ada warna induk.
+  function svgToDataUrl(svg: SVGSVGElement, size: number): string {
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", String(size));
+    clone.setAttribute("height", String(size));
+    clone.setAttribute("color", "#111111");
+    clone.style.color = "#111111";
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(clone))}`;
+  }
+
   function qrDataUrl(): string | null {
-    const svg = cardRef.current?.querySelector("[data-qr] svg");
-    if (svg) {
-      const clone = svg.cloneNode(true) as SVGElement;
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      if (!clone.getAttribute("width")) clone.setAttribute("width", "512");
-      if (!clone.getAttribute("height")) clone.setAttribute("height", "512");
-      const xml = new XMLSerializer().serializeToString(clone);
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
-    }
+    const svg = cardRef.current?.querySelector<SVGSVGElement>("[data-qr] svg");
+    if (svg) return svgToDataUrl(svg, 512);
     const canvas = qrRef.current;
     return canvas ? canvas.toDataURL("image/png") : null;
+  }
+
+  function iconDataUrls(): Record<string, string> {
+    const out: Record<string, string> = {};
+    cardRef.current?.querySelectorAll<HTMLElement>("[data-icon]").forEach((el) => {
+      const svg = el.querySelector<SVGSVGElement>("svg");
+      const key = el.dataset.icon;
+      if (svg && key) out[key] = svgToDataUrl(svg, 96);
+    });
+    return out;
   }
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -58,7 +74,7 @@ export default function BusinessCardModal({
     setError(null);
     try {
       // Foto lewat proxy API (same-origin + CORS) supaya bisa digambar ke canvas.
-      const blob = await renderBusinessCardPNG({ card, username, avatarUrl: avatarUrl ? cardAvatarProxyURL(username) : undefined, url, qrDataUrl: qr });
+      const blob = await renderBusinessCardPNG({ card, username, avatarUrl: avatarUrl ? cardAvatarProxyURL(username) : undefined, url, qrDataUrl: qr, icons: iconDataUrls() });
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;

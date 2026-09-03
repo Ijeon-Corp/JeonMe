@@ -5,7 +5,9 @@ import (
 	"github.com/jeonme/api/internal/netguard"
 	"github.com/jeonme/api/internal/storage"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -326,16 +328,17 @@ func (h *BusinessCardHandler) AvatarProxy(c *gin.Context) {
 	const maxBytes = 5 << 20
 	var data []byte
 	var contentType string
-	if h.Storage != nil && strings.HasPrefix(avatarURL, h.Storage.PublicURL("")) {
-		key := strings.TrimPrefix(avatarURL, h.Storage.PublicURL(""))
+	if key, ok := storageKeyFromURL(h.Storage, avatarURL); ok {
 		b, err := h.Storage.Download(ctx, key)
 		if err != nil || len(b) == 0 || len(b) > maxBytes {
+			log.Printf("business-card: avatar proxy gagal membaca kunci %q untuk %s: %v (len=%d)", key, username, err, len(b))
 			c.Status(http.StatusNotFound)
 			return
 		}
 		data = b
 	} else {
 		if err := netguard.ValidateOutboundURL(avatarURL); err != nil || !strings.HasPrefix(avatarURL, "https://") {
+			log.Printf("business-card: avatar proxy menolak URL eksternal %q untuk %s: %v", avatarURL, username, err)
 			c.Status(http.StatusNotFound)
 			return
 		}
@@ -346,6 +349,7 @@ func (h *BusinessCardHandler) AvatarProxy(c *gin.Context) {
 		}
 		resp, err := netguard.NewOutboundClient(6 * time.Second).Do(req)
 		if err != nil {
+			log.Printf("business-card: avatar proxy gagal mengambil %q untuk %s: %v", avatarURL, username, err)
 			c.Status(http.StatusNotFound)
 			return
 		}
@@ -373,4 +377,32 @@ func (h *BusinessCardHandler) AvatarProxy(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=300")
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Data(http.StatusOK, contentType, data)
+}
+
+// storageKeyFromURL -- kunci objek dari avatar_url. avatar_url dibangun
+// handler upload sebagai PublicURL(key) + "?v=<nanodetik>" (cache-buster,
+// lihat page.go), jadi query string HARUS dibuang sebelum jadi kunci --
+// inilah penyebab foto tetap hilang di PNG setelah proxy pertama (laporan
+// pengguna kedua, 3 September 2026): kunci "avatars/x.webp?v=123" tidak
+// pernah ada di bucket. Murni, diuji unit.
+func storageKeyFromURL(store *storage.Client, avatarURL string) (string, bool) {
+	if store == nil {
+		return "", false
+	}
+	u, err := url.Parse(strings.TrimSpace(avatarURL))
+	if err != nil {
+		return "", false
+	}
+	u.RawQuery = ""
+	u.Fragment = ""
+	clean := u.String()
+	prefix := store.PublicURL("")
+	if !strings.HasPrefix(clean, prefix) {
+		return "", false
+	}
+	key := strings.TrimPrefix(clean, prefix)
+	if key == "" {
+		return "", false
+	}
+	return key, true
 }

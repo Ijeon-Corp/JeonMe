@@ -113,31 +113,31 @@ export default function DigitalBusinessCard({
         <ul className="mt-4 flex flex-col gap-2">
           {card.phone && (
             <li className={row}>
-              <span className={rowBadge}><IconPhone className="h-4 w-4" /></span>
+              <span data-icon="phone" className={rowBadge}><IconPhone className="h-4 w-4" /></span>
               <a href={`tel:${card.phone.replace(/\s/g, "")}`} className={link}>{card.phone}</a>
             </li>
           )}
           {card.whatsapp_number && (
             <li className={row}>
-              <span className={rowBadge}><IconWhatsapp className="h-4 w-4" /></span>
+              <span data-icon="whatsapp" className={rowBadge}><IconWhatsapp className="h-4 w-4" /></span>
               <a href={waLink(card.whatsapp_number)} target="_blank" rel="noopener noreferrer" className={link}>{card.whatsapp_number}</a>
             </li>
           )}
           {card.email && (
             <li className={row}>
-              <span className={rowBadge}><IconMail className="h-4 w-4" /></span>
+              <span data-icon="email" className={rowBadge}><IconMail className="h-4 w-4" /></span>
               <a href={`mailto:${card.email}`} className={link}>{card.email}</a>
             </li>
           )}
           {card.website && (
             <li className={row}>
-              <span className={rowBadge}><IconGlobe className="h-4 w-4" /></span>
+              <span data-icon="website" className={rowBadge}><IconGlobe className="h-4 w-4" /></span>
               <a href={card.website} target="_blank" rel="noopener noreferrer" className={link}>{card.website.replace(/^https?:\/\//, "")}</a>
             </li>
           )}
           {card.address && (
             <li className={row}>
-              <span className={rowBadge}><IconMapPin className="h-4 w-4" /></span>
+              <span data-icon="address" className={rowBadge}><IconMapPin className="h-4 w-4" /></span>
               <a href={`https://maps.google.com/?q=${encodeURIComponent(card.address)}`} target="_blank" rel="noopener noreferrer" className="min-w-0 hover:underline">{card.address}</a>
             </li>
           )}
