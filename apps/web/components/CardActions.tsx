@@ -22,6 +22,12 @@ function buildVCard(card: PublicBusinessCard) {
   if (card.whatsapp_number) lines.push(`TEL;TYPE=WORK:${escapeVCard(card.whatsapp_number)}`);
   if (card.email) lines.push(`EMAIL:${escapeVCard(card.email)}`);
   if (card.website) lines.push(`URL:${escapeVCard(card.website)}`);
+  // Kartu Nama v2: alamat, tagline, dan profil sosial ikut ke vCard.
+  if (card.address) lines.push(`ADR;TYPE=WORK:;;${escapeVCard(card.address)};;;;`);
+  if (card.tagline) lines.push(`NOTE:${escapeVCard(card.tagline)}`);
+  if (card.instagram) lines.push(`X-SOCIALPROFILE;TYPE=instagram:https://instagram.com/${escapeVCard(card.instagram)}`);
+  if (card.tiktok) lines.push(`X-SOCIALPROFILE;TYPE=tiktok:https://www.tiktok.com/@${escapeVCard(card.tiktok)}`);
+  if (card.linkedin) lines.push(`X-SOCIALPROFILE;TYPE=linkedin:${escapeVCard(/linkedin\.com/i.test(card.linkedin) ? card.linkedin : `https://www.linkedin.com/in/${card.linkedin}`)}`);
   lines.push("END:VCARD");
   return lines.join("\r\n");
 }

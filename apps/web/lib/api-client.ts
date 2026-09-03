@@ -2220,6 +2220,13 @@ export interface BusinessCard {
   email: string;
   website: string;
   collect_contact_back: boolean;
+  // Kartu Nama v2 (migrasi 000087): tema + data lengkap kartu nama.
+  card_theme: "lavender" | "lime" | "pink" | "blue" | "ink" | string;
+  tagline: string;
+  address: string;
+  instagram: string;
+  tiktok: string;
+  linkedin: string;
 }
 
 export function getBusinessCard() {
@@ -2245,6 +2252,13 @@ export interface PublicBusinessCard {
   email: string;
   website: string;
   collect_contact_back: boolean;
+  // Kartu Nama v2 (migrasi 000087): tema + data lengkap kartu nama.
+  card_theme: "lavender" | "lime" | "pink" | "blue" | "ink" | string;
+  tagline: string;
+  address: string;
+  instagram: string;
+  tiktok: string;
+  linkedin: string;
 }
 
 export async function getPublicBusinessCard(username: string): Promise<PublicBusinessCard | null> {

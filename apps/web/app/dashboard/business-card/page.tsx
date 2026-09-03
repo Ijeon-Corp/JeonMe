@@ -4,7 +4,8 @@ import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, BusinessCard, getBusinessCard, getMyPage, upsertBusinessCard } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
-import QRCodeModal from "@/components/QRCodeModal";
+import BusinessCardModal from "@/components/BusinessCardModal";
+import DigitalBusinessCard, { CARD_THEMES, type BusinessCardTheme } from "@/components/DigitalBusinessCard";
 import { IconQrCode } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
@@ -19,12 +20,19 @@ const EMPTY: BusinessCard = {
   email: "",
   website: "",
   collect_contact_back: false,
+  card_theme: "lavender",
+  tagline: "",
+  address: "",
+  instagram: "",
+  tiktok: "",
+  linkedin: "",
 };
 
 export default function DashboardBusinessCardPage() {
   const { t } = useLocale();
   const [card, setCard] = useState<BusinessCard>(EMPTY);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +42,9 @@ export default function DashboardBusinessCardPage() {
   useEffect(() => {
     Promise.all([getBusinessCard(), getMyPage()])
       .then(([c, p]) => {
-        setCard(c);
+        setCard({ ...EMPTY, ...c });
         setUsername(p.username);
+        setAvatarUrl(p.avatar_url ?? "");
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.businessCard.loadError")))
       .finally(() => setLoading(false));
@@ -81,8 +90,19 @@ export default function DashboardBusinessCardPage() {
           className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
         >
           <IconQrCode className="h-4 w-4" />
-          {t("dashboard.pages.businessCard.viewQrButton")}
+          {t("dashboard.pages.businessCard.viewCardButton")}
         </button>
+      )}
+
+      {/* Pratinjau langsung: kartu berubah seiring form diketik, jadi kreator
+          tahu persis apa yang akan dilihat orang sebelum menyimpan. */}
+      {username && (
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.businessCard.previewHeading")}</p>
+          <div className="flex justify-center">
+            <DigitalBusinessCard card={card} username={username} avatarUrl={avatarUrl} url={cardURL} />
+          </div>
+        </div>
       )}
 
       <form onSubmit={handleSave} className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
@@ -181,6 +201,69 @@ export default function DashboardBusinessCardPage() {
           />
         </div>
 
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.businessCard.taglineLabel")}</label>
+          <input
+            type="text"
+            value={card.tagline}
+            onChange={(e) => setCard({ ...card, tagline: e.target.value })}
+            placeholder={t("dashboard.pages.businessCard.taglinePlaceholder")}
+            maxLength={200}
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.businessCard.addressLabel")}</label>
+          <input
+            type="text"
+            value={card.address}
+            onChange={(e) => setCard({ ...card, address: e.target.value })}
+            placeholder={t("dashboard.pages.businessCard.addressPlaceholder")}
+            maxLength={300}
+            className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {([["instagram", "instagramLabel"], ["tiktok", "tiktokLabel"], ["linkedin", "linkedinLabel"]] as const).map(([key, labelKey]) => (
+            <div key={key}>
+              <label className="mb-1 block text-xs font-semibold text-app-ink">{t(`dashboard.pages.businessCard.${labelKey}`)}</label>
+              <input
+                type="text"
+                value={card[key]}
+                onChange={(e) => setCard({ ...card, [key]: e.target.value })}
+                placeholder={t("dashboard.pages.businessCard.handlePlaceholder")}
+                maxLength={key === "linkedin" ? 200 : 100}
+                className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-app-ink">{t("dashboard.pages.businessCard.themeLabel")}</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("dashboard.pages.businessCard.themeLabel")}>
+            {(Object.keys(CARD_THEMES) as BusinessCardTheme[]).map((key) => {
+              const active = card.card_theme === key;
+              const label = t(`dashboard.pages.businessCard.theme${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setCard({ ...card, card_theme: key })}
+                  className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors ${active ? "border-jeon-ink bg-jeon-lavender text-[#111111]" : "border-app-border text-app-muted hover:text-app-ink"}`}
+                >
+                  <span className="h-4 w-4 rounded-full border-2 border-[#111111]" style={{ backgroundColor: CARD_THEMES[key].hex }} aria-hidden="true" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2.5">
           <div>
             <p className="text-sm font-semibold text-app-ink">{t("dashboard.pages.businessCard.collectBackHeading")}</p>
@@ -203,13 +286,7 @@ export default function DashboardBusinessCardPage() {
       </form>
 
       {qrOpen && username && (
-        <QRCodeModal
-          url={cardURL}
-          username={`card-${username}`}
-          onClose={() => setQrOpen(false)}
-          title={t("dashboard.pages.businessCard.qrModalTitle")}
-          description={t("dashboard.pages.businessCard.qrModalDescription")}
-        />
+        <BusinessCardModal card={card} username={username} avatarUrl={avatarUrl} url={cardURL} onClose={() => setQrOpen(false)} />
       )}
     </div>
   );
