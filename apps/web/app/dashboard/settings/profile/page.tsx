@@ -15,6 +15,7 @@ import {
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { IconCheck, IconChevronRight, IconClose, IconLogout, IconQrCode } from "@/components/icons";
+import PageHeader from "@/components/dashboard/page/PageHeader";
 import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
@@ -176,34 +177,52 @@ export default function SettingsProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {/* REDESAIN 3 September 2026 (permintaan pengguna: "page profile belum
+          mengikuti tema", setelah halaman Langganan dirapikan): breadcrumb
+          hanya di layar sempit (sub-nav Pengaturan sudah menunjukkan posisi
+          di layar lebar, pola sama Langganan), avatar+QR jadi satu kartu
+          identitas bergaris tebal, input diberi garis 2px + latar
+          kontras -- bukan lagi garis 1px nyaris tak terlihat. */}
       <Link
         href="/dashboard/settings"
-        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple"
+        className="flex items-center gap-1 text-xs font-semibold text-app-muted hover:text-jeon-purple lg:hidden"
       >
         <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
         {t("dashboard.pages.settingsProfile.breadcrumb")}
       </Link>
 
-      <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsProfile.title")}</h1>
-      <p className="mt-1 text-sm text-app-muted">
-        {t("dashboard.pages.settingsProfile.subtitlePrefix")}{" "}
-        <Link href="/dashboard/design" className="font-semibold text-jeon-purple hover:underline">
-          {t("dashboard.pages.settingsProfile.designLinkLabel")}
-        </Link>
-        .
-      </p>
+      <div className="mt-3">
+        <PageHeader title={t("dashboard.pages.settingsProfile.title")} />
+        {/* PageHeader.description hanya menerima string -- tautan "Design"
+            dirender terpisah tepat di bawahnya supaya tetap bisa diklik. */}
+        <p className="-mt-1 max-w-2xl text-sm text-app-muted">
+          {t("dashboard.pages.settingsProfile.subtitlePrefix")}{" "}
+          <Link href="/dashboard/design" className="font-semibold text-jeon-purple hover:underline">
+            {t("dashboard.pages.settingsProfile.designLinkLabel")}
+          </Link>
+          .
+        </p>
+      </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 flex items-center gap-3">
-        {original?.avatar_url && (
+      <div className="mt-5 flex items-center gap-4 rounded-jlg border border-jeon-ink bg-app-surface p-4">
+        {original?.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- pratinjau kecil, tidak perlu next/image di sini
           <img
             src={original.avatar_url}
             alt=""
-            className="h-16 w-16 rounded-full border border-app-border object-cover"
+            className="h-16 w-16 flex-shrink-0 rounded-full border-2 border-jeon-ink object-cover"
           />
+        ) : (
+          <span className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lavender font-display text-xl font-extrabold text-[#111111]">
+            {(original?.display_name || original?.username || "?").charAt(0).toUpperCase()}
+          </span>
         )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-app-ink">{original?.display_name || original?.username}</p>
+          <p className="truncate text-xs text-app-muted">jeon.id/{original?.username}</p>
+        </div>
         {/* Kode QR profil (permintaan langsung pengguna, 18 Agustus 2026:
             "tambahkan qr code di settings profile") -- QRCodeModal SUDAH
             dipasang di top bar dashboard (dashboard/layout.tsx) & fitur
@@ -219,7 +238,7 @@ export default function SettingsProfilePage() {
           <button
             type="button"
             onClick={() => setQrOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border-2 border-jeon-ink bg-app-surface px-3.5 py-2 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border-2 border-jeon-ink bg-app-surface px-3.5 py-2 text-xs font-bold text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
           >
             <IconQrCode className="h-4 w-4" />
             {t("dashboard.pages.settingsProfile.viewQrCode")}
@@ -227,18 +246,18 @@ export default function SettingsProfilePage() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4 rounded-jlg border border-jeon-ink bg-app-surface p-5">
         <div>
           <label htmlFor="settings-username" className="text-xs font-bold uppercase tracking-wider text-app-muted">
             {t("dashboard.pages.settingsProfile.usernameLabel")}
           </label>
           <div
-            className={`mt-1 flex items-center rounded-xl border bg-app-surface transition-colors focus-within:ring-2 ${
+            className={`mt-1 flex items-center rounded-xl border-2 bg-app-surface transition-colors focus-within:ring-2 ${
               usernameState === "available"
                 ? "border-jeon-purple focus-within:border-jeon-purple focus-within:ring-secondary/20"
                 : usernameState === "unavailable"
                 ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
-                : "border-app-border focus-within:border-jeon-purple focus-within:ring-jeon-purple/20"
+                : "border-jeon-ink focus-within:border-jeon-purple focus-within:ring-jeon-purple/20"
             }`}
           >
             <span className="pl-3 text-sm text-app-muted">jeon.id/</span>
@@ -307,7 +326,7 @@ export default function SettingsProfilePage() {
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={100}
             placeholder={username}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+            className="mt-1 w-full rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
@@ -321,7 +340,7 @@ export default function SettingsProfilePage() {
             onChange={(e) => setBio(e.target.value)}
             maxLength={160}
             rows={3}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+            className="mt-1 w-full rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
           <p className="mt-1 text-right text-[11px] text-app-muted">{bio.length}/160</p>
         </div>
@@ -336,20 +355,20 @@ export default function SettingsProfilePage() {
             onChange={(e) => setCategory(e.target.value)}
             maxLength={50}
             placeholder={t("dashboard.pages.settingsProfile.categoryPlaceholder")}
-            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+            className="mt-1 w-full rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="mt-2 self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+          className="mt-2 self-start rounded-jmd border-2 border-jeon-ink btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
           {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>
       </form>
 
-      <div className="mt-6 border-t border-app-border pt-5">
+      <div className="mt-6">
         <button
           type="button"
           onClick={handleLogout}
