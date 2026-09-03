@@ -75,9 +75,9 @@ export default function DigitalBusinessCard({
   const link = "min-w-0 truncate hover:underline";
 
   const socials: { key: string; href: string; label: string; icon: React.ReactNode }[] = [];
-  if (card.instagram) socials.push({ key: "ig", href: `https://instagram.com/${card.instagram}`, label: `@${card.instagram}`, icon: <IconInstagram className="h-3.5 w-3.5" /> });
-  if (card.tiktok) socials.push({ key: "tt", href: `https://www.tiktok.com/@${card.tiktok}`, label: `@${card.tiktok}`, icon: <IconTiktok className="h-3.5 w-3.5" /> });
-  if (card.linkedin) socials.push({ key: "li", href: linkedinLink(card.linkedin), label: card.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, ""), icon: <IconLinkedin className="h-3.5 w-3.5" /> });
+  if (card.instagram) socials.push({ key: "instagram", href: `https://instagram.com/${card.instagram}`, label: `@${card.instagram}`, icon: <IconInstagram className="h-3.5 w-3.5" /> });
+  if (card.tiktok) socials.push({ key: "tiktok", href: `https://www.tiktok.com/@${card.tiktok}`, label: `@${card.tiktok}`, icon: <IconTiktok className="h-3.5 w-3.5" /> });
+  if (card.linkedin) socials.push({ key: "linkedin", href: linkedinLink(card.linkedin), label: card.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, ""), icon: <IconLinkedin className="h-3.5 w-3.5" /> });
 
   return (
     <div className={`w-full max-w-sm overflow-hidden rounded-jxl border-2 border-[#111111] bg-white text-[#111111] shadow-brutal ${className}`}>
@@ -146,7 +146,7 @@ export default function DigitalBusinessCard({
         {socials.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
             {socials.map((s) => (
-              <a key={s.key} href={s.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-full border-2 border-[#111111] bg-white px-2.5 py-1 text-[11px] font-bold text-[#111111] hover:bg-[#111111] hover:text-white">
+              <a key={s.key} data-icon={s.key} href={s.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-full border-2 border-[#111111] bg-white px-2.5 py-1 text-[11px] font-bold text-[#111111] hover:bg-[#111111] hover:text-white">
                 {s.icon}
                 {s.label}
               </a>

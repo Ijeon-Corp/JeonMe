@@ -206,32 +206,43 @@ function paint(canvas: HTMLCanvasElement, H: number, input: RenderCardInput, a: 
     y += Math.max(badge + 16, 36 * lines.length + 16);
   }
 
-  // chip sosial
-  const socials: string[] = [];
-  if (input.card.instagram) socials.push(`IG @${input.card.instagram}`);
-  if (input.card.tiktok) socials.push(`TikTok @${input.card.tiktok}`);
-  if (input.card.linkedin) socials.push(`LinkedIn ${input.card.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "")}`);
+  // chip sosial: ikon (dari SVG kartu, kunci data-icon) + @handle -- sama
+  // dengan pratinjau, bukan label teks "IG ..." (laporan pengguna 3
+  // September 2026).
+  const socials: { key: string; label: string }[] = [];
+  if (input.card.instagram) socials.push({ key: "instagram", label: `@${input.card.instagram}` });
+  if (input.card.tiktok) socials.push({ key: "tiktok", label: `@${input.card.tiktok}` });
+  if (input.card.linkedin) socials.push({ key: "linkedin", label: input.card.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "") });
   if (socials.length) {
     y += 10;
     ctx.font = `700 26px ${body}`;
+    const chipH = 50;
+    const iconSz = 28;
     let x = left;
     for (const s of socials) {
-      const w = ctx.measureText(s).width + 40;
+      const icon = a.icons[s.key];
+      const textW = ctx.measureText(s.label).width;
+      const w = 20 + (icon ? iconSz + 10 : 0) + textW + 20;
       if (x + w > left + maxW) {
         x = left;
-        y += 58;
+        y += chipH + 12;
       }
       ctx.fillStyle = "#ffffff";
-      roundRect(ctx, x, y - 30, w, 46, 23);
+      roundRect(ctx, x, y - 32, w, chipH, chipH / 2);
       ctx.fill();
       ctx.lineWidth = 4;
       ctx.strokeStyle = INK;
       ctx.stroke();
+      let tx = x + 20;
+      if (icon) {
+        ctx.drawImage(icon, tx, y - 32 + (chipH - iconSz) / 2, iconSz, iconSz);
+        tx += iconSz + 10;
+      }
       ctx.fillStyle = INK;
-      ctx.fillText(s, x + 20, y + 2);
+      ctx.fillText(s.label, tx, y + 2);
       x += w + 12;
     }
-    y += 40;
+    y += 44;
   }
 
   // pembatas putus-putus + QR, LANGSUNG setelah isi (bukan dipatok di bawah)
