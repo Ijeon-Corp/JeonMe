@@ -305,7 +305,7 @@ export function SidebarFooterV2({ isPremium, onNavigate }: { isPremium: boolean;
         </Link>
       )}
       <Link
-        href="/dashboard/tutorial"
+        href="/dashboard/help"
         onClick={onNavigate}
         className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-white/55 hover:bg-white/5 hover:text-white/85"
       >

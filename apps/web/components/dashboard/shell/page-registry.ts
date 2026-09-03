@@ -80,6 +80,7 @@ export const DASHBOARD_PAGE_REGISTRY: DashboardPageMeta[] = [
 
   // Lain-lain
   { match: "/dashboard/tutorial", titleKey: "dashboard.extraPages.tutorial", domain: "home" },
+  { match: "/dashboard/help", titleKey: "dashboard.extraPages.help", domain: "home" },
   { match: "/dashboard", titleKey: "dashboard.nav.overview", domain: "home" },
 ];
 
