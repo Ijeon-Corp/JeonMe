@@ -22,7 +22,6 @@ import {
   IconExternal,
   IconInbox,
   IconLink,
-  IconShare,
   IconSparkle,
   IconWallet,
 } from "@/components/icons";
@@ -234,16 +233,6 @@ function LegacyHomePage() {
           >
             <IconBox className="h-4 w-4" /> {t("dashboard.pages.home.ctaCreateProduct")}
           </Link>
-          <button
-            type="button"
-            onClick={handleShareCopy}
-            disabled={!creator}
-            title={t("dashboard.pages.home.ctaShare")}
-            className="flex items-center gap-1.5 rounded-jmd border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm font-bold text-app-ink transition-colors hover:border-jeon-purple hover:text-jeon-purple disabled:opacity-50"
-          >
-            <IconShare className="h-4 w-4" />
-            {shareCopied ? <span className="text-jeon-purple">{t("dashboard.linkCopied")}</span> : null}
-          </button>
         </div>
       </div>
 
@@ -746,12 +735,6 @@ function RedesignedHomePage() {
         }
         primaryAction={{ label: t("dashboard.pages.home.ctaAddBlock"), href: "/dashboard/links", icon: <IconLink className="h-4 w-4" /> }}
         secondaryActions={[
-          {
-            label: shareCopied ? t("dashboard.linkCopied") : t("dashboard.pages.home.ctaShare"),
-            onClick: handleShareCopy,
-            icon: <IconShare className="h-4 w-4" />,
-            disabled: !creator,
-          },
           { label: t("dashboard.pages.home.ctaCreateProduct"), href: "/dashboard/products?tab=items", icon: <IconBox className="h-4 w-4" /> },
         ]}
       />

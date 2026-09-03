@@ -327,15 +327,28 @@ export function IconPlus({ className }: IconProps) {
 // sederhana) supaya tetap simetris & jelas di ukuran berapa pun, konsisten
 // dengan gaya ikon sekitarnya di topbar (ThemeToggle, NotificationBell, dst
 // -- bentuk geometris sederhana, bukan path rumit satu potong).
+// IconSettings -- diperbaiki 3 September 2026 (laporan pengguna, membandingkan
+// dengan ikon matahari referensi): bentuk LAMA (lingkaran + 8 garis radial
+// lurus) SECARA STRUKTUR identik dengan IconSun di atas, cuma beda radius --
+// di top bar, dua ikon ini duduk bersebelahan (ThemeToggle lalu tautan
+// Pengaturan), jadi terlihat seperti sepasang ikon tema yang salah satu
+// "rusak", padahal yang kedua sama sekali bukan soal tema. Bentuk BARU
+// adalah roda gigi (gear) sungguhan -- 8 gigi persegi di lingkar luar,
+// bukan garis lurus -- siluetnya tidak mungkin disalahartikan sebagai
+// matahari lagi.
 export function IconSettings({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth={base} />
       <path
-        d="M12 3v2.5M12 18.5V21M21 12h-2.5M5.5 12H3M18.36 5.64l-1.77 1.77M7.41 16.59l-1.77 1.77M18.36 18.36l-1.77-1.77M7.41 7.41 5.64 5.64"
+        d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"
         stroke="currentColor"
         strokeWidth={base}
-        strokeLinecap="round"
+      />
+      <path
+        d="M12 2.75c.55 0 1.02.4 1.11.94l.2 1.24c.62.16 1.2.4 1.74.72l1.03-.73a1.13 1.13 0 0 1 1.44.12l1.04 1.04c.39.39.43.99.12 1.44l-.73 1.03c.32.54.56 1.12.72 1.74l1.24.2c.55.09.94.56.94 1.11v1.47c0 .55-.4 1.02-.94 1.11l-1.24.2c-.16.62-.4 1.2-.72 1.74l.73 1.03c.32.45.27 1.05-.12 1.44l-1.04 1.04a1.13 1.13 0 0 1-1.44.12l-1.03-.73c-.54.32-1.12.56-1.74.72l-.2 1.24c-.09.55-.56.94-1.11.94h-1.47c-.55 0-1.02-.4-1.11-.94l-.2-1.24a7.5 7.5 0 0 1-1.74-.72l-1.03.73a1.13 1.13 0 0 1-1.44-.12l-1.04-1.04a1.13 1.13 0 0 1-.12-1.44l.73-1.03a7.5 7.5 0 0 1-.72-1.74l-1.24-.2a1.13 1.13 0 0 1-.94-1.11v-1.47c0-.55.4-1.02.94-1.11l1.24-.2c.16-.62.4-1.2.72-1.74l-.73-1.03a1.13 1.13 0 0 1 .12-1.44l1.04-1.04a1.13 1.13 0 0 1 1.44-.12l1.03.73c.54-.32 1.12-.56 1.74-.72l.2-1.24c.09-.55.56-.94 1.11-.94h1.47Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
       />
     </svg>
   );

@@ -3,18 +3,15 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ApiError,
   SettingsProfile,
   checkUsername,
-  clearToken,
   getSettingsProfile,
-  logout as apiLogout,
   updateSettingsProfile,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconCheck, IconChevronRight, IconClose, IconLogout, IconQrCode } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconClose, IconQrCode } from "@/components/icons";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
@@ -36,7 +33,6 @@ function formatCooldownDate(iso: string): string {
 // cuma dipratinjau di sini sebagai referensi.
 export default function SettingsProfilePage() {
   const { t } = useLocale();
-  const router = useRouter();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,24 +148,10 @@ export default function SettingsProfilePage() {
     }
   }
 
-  // handleLogout -- permintaan langsung pengguna, 30 Agustus 2026: "fitur
-  // logout pindah ke profile hilangkan dari sidebar". Ditaruh di sini
-  // (bukan dropdown baru di topbar) supaya tetap terjangkau di MOBILE juga
-  // -- drawer sidebar mobile pakai sidebarContent yang SAMA dengan aside
-  // desktop, jadi tombol Keluar yang dihapus dari sana hilang dari kedua
-  // tempat sekaligus kalau tidak dipindah ke suatu halaman yang tetap bisa
-  // dibuka dari mana pun (topbar desktop & menu Pengaturan sidebar mobile
-  // sama-sama mengarah ke halaman Profil & Akun ini).
-  async function handleLogout() {
-    try {
-      await apiLogout();
-    } catch {
-      // Tetap lanjut hapus token lokal walau request revoke ke server gagal.
-    } finally {
-      clearToken();
-      router.push("/login");
-    }
-  }
+  // Tombol Keluar DIHAPUS dari halaman ini (permintaan pengguna, 3
+  // September 2026) -- logout tetap ada lewat dropdown akun di topbar
+  // (avatar kanan atas, lihat handleLogout di app/dashboard/layout.tsx),
+  // jadi pengguna tidak kehilangan cara keluar.
 
   if (loading) {
     return <PageSkeleton />;
@@ -367,17 +349,6 @@ export default function SettingsProfilePage() {
           {saving ? t("dashboard.pages.settingsProfile.saving") : t("dashboard.pages.settingsProfile.saveChanges")}
         </button>
       </form>
-
-      <div className="mt-6">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-2 rounded-xl border-2 border-jeon-ink px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300"
-        >
-          <IconLogout className="h-4 w-4" />
-          {t("dashboard.logout")}
-        </button>
-      </div>
 
       {qrOpen && original?.username && (
         <QRCodeModal url={`${SITE_URL}/${original.username}`} username={original.username} onClose={() => setQrOpen(false)} />
