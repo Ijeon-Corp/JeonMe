@@ -1,6 +1,7 @@
 "use client";
 
 import PageSkeleton from "@/components/Skeleton";
+import { ChartSkeleton, KpiSkeleton } from "@/components/dashboard/feedback/Skeletons";
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -1265,7 +1266,27 @@ function DashboardProductsPageInner() {
 
             {overviewError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{overviewError}</p>}
             <div className="mt-3">
-              {summary ? <ShopOverviewPanel summary={summary} recentOrders={recentOrders} /> : <PageSkeleton />}
+              {summary ? (
+                <ShopOverviewPanel summary={summary} recentOrders={recentOrders} />
+              ) : (
+                // KpiSkeleton+ChartSkeleton (bukan PageSkeleton) -- laporan
+                // pengguna 3 September 2026: "terasa loading 2x". Akar
+                // masalah: tab ini sudah lewat gerbang `if (loading) return
+                // <PageSkeleton />` di atas (daftar produk termuat), TAPI
+                // summary/recentOrders dimuat lewat effect TERPISAH yang
+                // lebih lambat -- begitu chrome halaman (tab, header) sudah
+                // tampil, area ini menampilkan PageSkeleton yang SAMA PERSIS
+                // bentuknya (judul + 3 bar besar) dengan skeleton awal, jadi
+                // terlihat seperti "halaman reset & memuat ulang" padahal
+                // cuma satu panel kecil yang masih menunggu. Bentuk baru ini
+                // meniru KPI grid + grafik ShopOverviewPanel yang sungguhan,
+                // jadi transisinya terasa "detail muncul", bukan "ulang
+                // dari nol".
+                <div className="flex flex-col gap-3">
+                  <KpiSkeleton count={3} />
+                  <ChartSkeleton />
+                </div>
+              )}
             </div>
           </div>
         ) : (

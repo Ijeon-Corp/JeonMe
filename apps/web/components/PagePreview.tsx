@@ -2655,7 +2655,19 @@ export default function PagePreview({
             begitu akun ini punya produk. */}
 
         {!hideFooterChrome && (
-          <div className="mt-10 flex flex-col items-center gap-3">
+          // mt-auto (bukan margin tetap) -- permintaan pengguna 3 September
+          // 2026, temuan audit: di halaman yang isinya sedikit/kosong, blok
+          // watermark+footer ini jadi elemen paling menonjol tepat di bawah
+          // nama, seolah itu "konten" halaman. Kolom induk flex-col
+          // min-h-full, jadi mt-auto mendorong blok ini ke DASAR viewport
+          // kalau ada ruang tersisa -- konsisten dengan bagaimana footer
+          // sistem/utilitas biasa terbaca (terpisah, di bawah, bukan
+          // bersaing dengan konten pribadi kreator). Di halaman yang
+          // kontennya sudah memenuhi/melebihi layar, ruang sisa = 0, jadi
+          // perilakunya identik dengan margin biasa seperti sebelumnya --
+          // tidak ada perubahan pada halaman yang sudah padat. Pola sama di
+          // dua render lain di bawah (layout Toko & varian kedua Bio).
+          <div className="mt-auto flex flex-col items-center gap-3 pt-10">
             {/* Modul Langganan Premium (permintaan langsung pengguna, 8
                 Agustus 2026): kreator gratis SELALU tampil watermark ini,
                 apa pun nilai hideWatermark -- kreator Premium bisa
@@ -2892,7 +2904,7 @@ function LandingPagePreview({
         })}
 
         {!hideFooterChrome && (
-          <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="mt-auto flex flex-col items-center gap-3 pt-6">
             <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             {/* Footer SELALU tampil, termasuk di pratinjau dashboard
                 (interactive=false) -- permintaan langsung pengguna: "tampilkan
@@ -3003,7 +3015,7 @@ function ProdukPagePreview({
         )}
 
         {!hideFooterChrome && (
-          <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="mt-auto flex flex-col items-center gap-3 pt-10">
             <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             <PageFooterLinks
               pageId={data.id}

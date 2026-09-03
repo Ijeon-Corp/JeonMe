@@ -1,6 +1,6 @@
 "use client";
 
-import PageSkeleton from "@/components/Skeleton";
+import { FormSkeleton, TableSkeleton } from "@/components/dashboard/feedback/Skeletons";
 import { useEffect, useState } from "react";
 import { ApiError, OrderDetail, OrderListItem, getOrderDetail, listOrders, refundOrder } from "@/lib/api-client";
 import { IconClose, IconInbox } from "@/components/icons";
@@ -114,7 +114,13 @@ export default function TransactionPanel() {
       </div>
 
       {orders === null ? (
-        <PageSkeleton />
+        // TableSkeleton (bukan PageSkeleton) -- laporan pengguna 3 September
+        // 2026: "terasa loading 2x". Tab ini dimuat lewat next/dynamic
+        // (import() di products/page.tsx) SETELAH chrome halaman produk
+        // sudah tampil; PageSkeleton di sini menduplikasi bentuk skeleton
+        // rute awal persis, terlihat seperti halaman memuat ulang dari nol.
+        // Bentuk tabel di bawah ini meniru tabel sungguhan yang akan tampil.
+        <TableSkeleton rows={6} cols={5} />
       ) : (
         <div className="glass overflow-x-auto rounded-jmd shadow-card">
           <table aria-label={t("dashboard.components.transactionPanel.tableAriaLabel")} className="w-full min-w-[720px] text-left text-xs">
@@ -233,7 +239,11 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
         {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {detail === null ? (
-          <PageSkeleton />
+          // FormSkeleton (bukan PageSkeleton) -- panel ini modal KECIL;
+          // PageSkeleton (dibuat utk lebar halaman penuh) memaksa modal
+          // melompat jauh lebih tinggi lalu menyusut saat data asli datang --
+          // lompatan tinggi itu sendiri terasa seperti "memuat ulang".
+          <FormSkeleton fields={5} />
         ) : (
           <>
             <p className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.transactionPanel.detailTitle")}</p>

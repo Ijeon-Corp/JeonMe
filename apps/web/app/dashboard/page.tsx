@@ -811,6 +811,49 @@ function RedesignedHomePage() {
               />
             </section>
 
+            {/* Rekomendasi tunggal §9.2.9 -- DIPINDAH ke atas, tepat setelah
+                angka KPI (permintaan pengguna 3 September 2026, temuan
+                audit: "Beranda menumpuk 4 kotak Belum ada data" untuk akun
+                baru). SEBELUMNYA render di paling bawah, setelah Tautan
+                Terpopuler/Produk Terlaris/Aktivitas Terbaru yang bertiga
+                kosong berturut-turut untuk akun tanpa trafik -- satu-
+                satunya arahan jelas ("Bagikan halamanmu") baru terlihat
+                setelah menggulir lewat tiga kotak "belum ada apa-apa".
+                Sekarang urutannya: angka -> SATU langkah berikutnya yang
+                jelas -> baru detail pendukung (grafik/daftar, yang boleh
+                tetap kosong -- sudah dijelaskan konteksnya lewat kartu ini). */}
+            {reco && !recoDismissed && (
+              <section className="mt-4">
+                <SectionCard
+                  variant="highlighted"
+                  icon={<IconSparkle className="h-4 w-4" />}
+                  title={reco.title}
+                  description={reco.desc}
+                  action={
+                    <button
+                      type="button"
+                      onClick={handleRecoDismiss}
+                      aria-label={t("dashboard.pages.home.recoDismiss")}
+                      title={t("dashboard.pages.home.recoDismiss")}
+                      className="rounded-lg p-1.5 text-dash-muted hover:bg-dash-surface hover:text-dash-ink"
+                    >
+                      <IconClose className="h-4 w-4" />
+                    </button>
+                  }
+                >
+                  {reco.href ? (
+                    <Link href={reco.href} className="btn-primary inline-block rounded-xl px-4 py-2 text-xs font-bold text-white">
+                      {reco.cta}
+                    </Link>
+                  ) : (
+                    <button type="button" onClick={reco.onClick} className="btn-primary rounded-xl px-4 py-2 text-xs font-bold text-white">
+                      {shareCopied ? t("dashboard.linkCopied") : reco.cta}
+                    </button>
+                  )}
+                </SectionCard>
+              </section>
+            )}
+
             {/* Performance panel §9.2.5 + pendapatan mingguan berlabel jelas. */}
             <section className="mt-4 grid gap-3 lg:grid-cols-[1fr_320px]">
               <SectionCard title={t("dashboard.pages.home.chartTrendHeading")}>
@@ -979,39 +1022,6 @@ function RedesignedHomePage() {
                     ))}
                     {recentOrders.length === 0 && <EmptyRow text={t("dashboard.pages.home.recentActivityEmpty")} />}
                   </ul>
-                </SectionCard>
-              </section>
-            )}
-
-            {/* Rekomendasi tunggal §9.2.9 + assistant collapsible §9.3. */}
-            {reco && !recoDismissed && (
-              <section className="mt-4">
-                <SectionCard
-                  variant="highlighted"
-                  icon={<IconSparkle className="h-4 w-4" />}
-                  title={reco.title}
-                  description={reco.desc}
-                  action={
-                    <button
-                      type="button"
-                      onClick={handleRecoDismiss}
-                      aria-label={t("dashboard.pages.home.recoDismiss")}
-                      title={t("dashboard.pages.home.recoDismiss")}
-                      className="rounded-lg p-1.5 text-dash-muted hover:bg-dash-surface hover:text-dash-ink"
-                    >
-                      <IconClose className="h-4 w-4" />
-                    </button>
-                  }
-                >
-                  {reco.href ? (
-                    <Link href={reco.href} className="btn-primary inline-block rounded-xl px-4 py-2 text-xs font-bold text-white">
-                      {reco.cta}
-                    </Link>
-                  ) : (
-                    <button type="button" onClick={reco.onClick} className="btn-primary rounded-xl px-4 py-2 text-xs font-bold text-white">
-                      {shareCopied ? t("dashboard.linkCopied") : reco.cta}
-                    </button>
-                  )}
                 </SectionCard>
               </section>
             )}
