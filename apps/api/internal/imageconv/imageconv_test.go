@@ -88,3 +88,46 @@ func TestToWebP_RejectsInvalidInput(t *testing.T) {
 		t.Error("ekspektasi error untuk input yang bukan gambar, dapat nil")
 	}
 }
+
+// decodedSize -- helper dekode balik output ToWebP (lewat decoder x/image/
+// webp yang sudah didaftarkan package ini) supaya test bisa memverifikasi
+// dimensi PIKSEL hasil akhir, bukan cuma "berhasil tanpa error".
+func decodedSize(t *testing.T, webpBytes []byte) (w, h int) {
+	t.Helper()
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(webpBytes))
+	if err != nil {
+		t.Fatalf("gagal decode config hasil WebP: %v", err)
+	}
+	return cfg.Width, cfg.Height
+}
+
+// Gambar sisi terpanjang melebihi maxDimension harus dikecilkan proporsional
+// -- ini akar perbaikan Lighthouse "Improve image delivery" (avatar/sampul
+// foto kamera HP 3000-4000px yang cuma tampil sebagai thumbnail kecil).
+func TestToWebP_DownscalesOversizedImage(t *testing.T) {
+	out, err := ToWebP(bytes.NewReader(solidPNG(t, 3000, 2000)))
+	if err != nil {
+		t.Fatalf("ToWebP gagal untuk gambar besar: %v", err)
+	}
+	w, h := decodedSize(t, out)
+	if w != maxDimension {
+		t.Errorf("lebar = %d, ekspektasi sisi terpanjang dikecilkan ke %d", w, maxDimension)
+	}
+	wantH := 2000 * maxDimension / 3000
+	if h != wantH {
+		t.Errorf("tinggi = %d, ekspektasi %d (rasio aspek dipertahankan)", h, wantH)
+	}
+}
+
+// Gambar yang sudah lebih kecil dari maxDimension TIDAK boleh diubah
+// dimensinya (kualitas dipertahankan penuh untuk unggahan yang sudah wajar).
+func TestToWebP_KeepsSmallImageDimensionsUnchanged(t *testing.T) {
+	out, err := ToWebP(bytes.NewReader(solidPNG(t, 400, 300)))
+	if err != nil {
+		t.Fatalf("ToWebP gagal untuk gambar kecil: %v", err)
+	}
+	w, h := decodedSize(t, out)
+	if w != 400 || h != 300 {
+		t.Errorf("dimensi = %dx%d, ekspektasi tetap 400x300 (tidak di-resize)", w, h)
+	}
+}
