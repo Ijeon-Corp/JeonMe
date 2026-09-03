@@ -53,12 +53,6 @@ type createCheckoutRequest struct {
 	VoucherCode    string `json:"voucher_code"`
 	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
 	ReferralCode   string `json:"referral_code"`
-	// SlotID -- No.92 (Sprint 11): wajib diisi kalau produknya booking
-	// konsultasi (is_booking=true), menunjuk slot waktu yang dipilih
-	// pembeli. Diklaim ATOMIK di dalam transaksi yang sama seperti
-	// pembuatan order (lihat di bawah) supaya dua pembeli tidak bisa
-	// merebut slot yang sama.
-	SlotID string `json:"slot_id"`
 	// WishlistItemID -- Gap #4 benchmark kompetitif (9 Agustus 2026):
 	// opsional, cuma relevan kalau ProductID adalah blok Donasi (is_donation
 	// =true) -- pendonor MEMILIH mewujudkan satu item wishlist tertentu,
@@ -90,7 +84,6 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var isEvent bool
 	var eventEndsAt *time.Time
 	var eventCapacity *int
-	var isBooking bool
 	var collaboratorSplitsRaw []byte
 	var productKind string
 	var paymentLimitCount *int
@@ -100,12 +93,12 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
-		SELECT p.user_id, name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, is_booking, collaborator_splits,
+		SELECT p.user_id, name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, collaborator_splits,
 			product_kind, payment_limit_count, link_expires_at, u.shop_paused_at
 		FROM products p
 		JOIN users u ON u.id = p.user_id
 		WHERE p.id = $1 AND p.is_active = true
-	`, req.ProductID).Scan(&productUserID, &productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &isBooking, &collaboratorSplitsRaw,
+	`, req.ProductID).Scan(&productUserID, &productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &collaboratorSplitsRaw,
 		&productKind, &paymentLimitCount, &linkExpiresAt, &shopPausedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -176,32 +169,6 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 				c.JSON(http.StatusGone, gin.H{"error": "payment link ini sudah mencapai batas jumlah pembayaran"})
 				return
 			}
-		}
-	}
-
-	// No.92: booking wajib menyertakan slot_id -- validasi keberadaan &
-	// ketersediaannya di sini (SEBELUM transaksi dibuka) supaya pesan error
-	// jelas; klaim ATOMIK sungguhan terjadi di dalam transaksi di bawah
-	// (mencegah race condition dua pembeli merebut slot yang sama).
-	if isBooking {
-		if req.SlotID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "pilih slot waktu terlebih dahulu"})
-			return
-		}
-		var slotTaken bool
-		if err := h.DB.QueryRow(ctx, `
-			SELECT order_id IS NOT NULL FROM booking_slots WHERE id = $1 AND booking_product_id = $2
-		`, req.SlotID, req.ProductID).Scan(&slotTaken); err != nil {
-			if err == pgx.ErrNoRows {
-				c.JSON(http.StatusNotFound, gin.H{"error": "slot tidak ditemukan"})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa slot"})
-			return
-		}
-		if slotTaken {
-			c.JSON(http.StatusConflict, gin.H{"error": "slot ini sudah dipesan orang lain, pilih slot lain"})
-			return
 		}
 	}
 
@@ -325,26 +292,6 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 	}
 
-	// No.92: klaim slot ATOMIK -- UPDATE ... WHERE order_id IS NULL hanya
-	// berhasil mengubah SATU baris kalau slot memang masih kosong; kalau
-	// RowsAffected()==0 berarti ada pembeli lain yang berhasil merebutnya
-	// lebih dulu tepat di antara pengecekan di atas dan titik ini (race
-	// condition asli, bukan hipotetis -- makanya pengecekan awal TIDAK
-	// cukup sendirian, klaim di sini yang jadi sumber kebenaran akhir).
-	if isBooking {
-		tag, err := tx.Exec(ctx, `
-			UPDATE booking_slots SET order_id = $1 WHERE id = $2 AND booking_product_id = $3 AND order_id IS NULL
-		`, orderID, req.SlotID, req.ProductID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengklaim slot"})
-			return
-		}
-		if tag.RowsAffected() == 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "slot ini sudah dipesan orang lain, pilih slot lain"})
-			return
-		}
-	}
-
 	txn, err := h.Midtrans.CreateTransaction(ctx, midtrans.CreateTransactionRequest{
 		OrderID:           externalID,
 		GrossAmountIDR:    finalAmountIDR,
@@ -441,14 +388,12 @@ type checkoutStatusResponse struct {
 	IsBundle     bool                 `json:"is_bundle"`
 	IsDonation   bool                 `json:"is_donation"`
 	IsCourse     bool                 `json:"is_course"`
-	IsBooking    bool                 `json:"is_booking"`
-	BookedSlotAt *time.Time           `json:"booked_slot_at,omitempty"`
 	SocialProof  *checkoutSocialProof `json:"social_proof"`
 
 	// DeliveryMethod/FulfilledAt/ClaimedCode -- Modul Toko (Fase C): status
 	// penyerahan produk digital biasa (download_link/manual/random_code/
-	// webhook) -- dikosongkan untuk bundel/donasi/kursus/booking (masing-
-	// masing sudah punya jalur tampilan sendiri di frontend).
+	// webhook) -- dikosongkan untuk bundel/donasi/kursus (masing-masing
+	// sudah punya jalur tampilan sendiri di frontend).
 	DeliveryMethod string     `json:"delivery_method,omitempty"`
 	FulfilledAt    *time.Time `json:"fulfilled_at,omitempty"`
 	ClaimedCode    string     `json:"claimed_code,omitempty"`
@@ -480,15 +425,15 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 
 	var resp checkoutStatusResponse
 	var productID, creatorUserID, productKind string
-	var isBundle, isDonation, isEvent, isCourse, isBooking bool
+	var isBundle, isDonation, isEvent, isCourse bool
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.user_id,
+		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.user_id,
 			p.is_event, p.delivery_method, o.fulfilled_at, p.product_kind, p.success_message
 		FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &isBundle, &isDonation, &isCourse, &isBooking, &creatorUserID,
+	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &isBundle, &isDonation, &isCourse, &creatorUserID,
 		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt, &productKind, &resp.SuccessMessage)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -498,31 +443,20 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat status order"})
 		return
 	}
-	resp.IsBundle, resp.IsDonation, resp.IsCourse, resp.IsBooking = isBundle, isDonation, isCourse, isBooking
+	resp.IsBundle, resp.IsDonation, resp.IsCourse = isBundle, isDonation, isCourse
 	resp.IsPaymentLink = productKind == "payment_link"
 	if !resp.IsPaymentLink || resp.Status != "paid" {
 		resp.SuccessMessage = ""
 	}
 
 	// Modul Toko (Fase C): status penyerahan HANYA relevan untuk produk
-	// digital biasa -- bundel/donasi/kursus/booking/event sudah punya
-	// jalur tampilan sendiri di frontend (lihat field IsBundle dkk di atas),
+	// digital biasa -- bundel/donasi/kursus/event sudah punya jalur
+	// tampilan sendiri di frontend (lihat field IsBundle dkk di atas),
 	// jadi delivery_method disembunyikan supaya tidak membingungkan.
-	if isBundle || isDonation || isCourse || isBooking || isEvent || productKind == "payment_link" {
+	if isBundle || isDonation || isCourse || isEvent || productKind == "payment_link" {
 		resp.DeliveryMethod = ""
 	} else if resp.Status == "paid" && resp.DeliveryMethod == "random_code" {
 		_ = h.DB.QueryRow(ctx, `SELECT code FROM product_codes WHERE claimed_by_order_id = $1`, orderID).Scan(&resp.ClaimedCode)
-	}
-
-	// No.92: tampilkan waktu slot yang berhasil dipesan (kalau ada) supaya
-	// pembeli langsung tahu jadwal konsultasinya tanpa perlu buka email.
-	if resp.IsBooking {
-		var bookedAt time.Time
-		if err := h.DB.QueryRow(ctx, `
-			SELECT starts_at FROM booking_slots WHERE order_id = $1
-		`, orderID).Scan(&bookedAt); err == nil {
-			resp.BookedSlotAt = &bookedAt
-		}
 	}
 
 	var spActive, spShowOnCheckout bool
@@ -798,8 +732,8 @@ type refundOrderRequest struct {
 // bernilai negatif, dalam SATU transaksi DB.
 //
 // SENGAJA TIDAK mencoba menarik kembali barang digital yang sudah terkirim
-// (kode acak yang sudah diklaim, slot booking yang sudah dipesan, poin
-// loyalitas yang sudah didapat pembeli) -- itu keputusan bisnis terpisah di
+// (kode acak yang sudah diklaim, poin loyalitas yang sudah didapat
+// pembeli) -- itu keputusan bisnis terpisah di
 // luar cakupan "refund uang" murni yang diminta di sini. Refund SEBAGIAN
 // juga di luar cakupan (butuh pembagian ulang platform fee/afiliasi/
 // kolaborator yang proporsional) -- lihat catatan lingkup di
@@ -1271,12 +1205,12 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	defer cancel()
 
 	var status, fileKey, buyerEmail string
-	var isBundle, isDonation, isCourse, isBooking, watermarkEnabled bool
+	var isBundle, isDonation, isCourse, watermarkEnabled bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.is_booking, p.watermark_enabled FROM orders o
+		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.watermark_enabled FROM orders o
 		JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1
-	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &isBooking, &watermarkEnabled)
+	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &watermarkEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "pesanan tidak ditemukan"})
@@ -1301,9 +1235,7 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 	// No.91: kursus punya banyak bab video (bukan satu file) -- arahkan juga
 	// ke halaman status, yang menampilkan daftar bab lewat
 	// GET /checkout/:id/course-chapters.
-	// No.92: booking tidak pernah punya file sama sekali -- arahkan juga ke
-	// halaman status, yang menampilkan konfirmasi jadwal yang sudah dipesan.
-	if isBundle || isDonation || isCourse || isBooking {
+	if isBundle || isDonation || isCourse {
 		c.Redirect(http.StatusFound, h.PublicWebURL+"/checkout/"+orderID)
 		return
 	}

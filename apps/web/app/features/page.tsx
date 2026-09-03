@@ -20,7 +20,7 @@ import FeaturesPageHero from "./FeaturesPageHero";
 export const metadata: Metadata = {
   title: "Fitur Jeon.id",
   description:
-    "Tautan tanpa batas, tema yang bisa disesuaikan penuh, dashboard analitik, jual produk digital, booking konsultasi, kumpulkan email, dan generator kode QR, semua di satu halaman bio.",
+    "Tautan tanpa batas, tema yang bisa disesuaikan penuh, dashboard analitik, jual produk digital, kumpulkan email, dan generator kode QR, semua di satu halaman bio.",
   alternates: { canonical: "/features" },
 };
 

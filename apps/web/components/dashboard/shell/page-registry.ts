@@ -41,7 +41,6 @@ export const DASHBOARD_PAGE_REGISTRY: DashboardPageMeta[] = [
   // Jualan (spec §5: "Produk & Penjualan" -> "Jualan")
   { match: "/dashboard/products", titleKey: "dashboard.nav.sales", domain: "sales" },
   { match: "/dashboard/courses", titleKey: "dashboard.extraPages.courses", parentKey: "dashboard.nav.sales", domain: "sales" },
-  { match: "/dashboard/bookings", titleKey: "dashboard.extraPages.bookings", parentKey: "dashboard.nav.sales", domain: "sales" },
   { match: "/dashboard/events", titleKey: "dashboard.extraPages.events", parentKey: "dashboard.nav.sales", domain: "sales" },
   { match: "/dashboard/donation", titleKey: "dashboard.extraPages.donation", parentKey: "dashboard.nav.sales", domain: "sales" },
   { match: "/dashboard/monetisasi", titleKey: "dashboard.nav.productsMonetization", parentKey: "dashboard.nav.sales", domain: "sales" },

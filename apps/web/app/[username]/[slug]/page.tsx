@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 // slug sekarang cuma unik PER-USER (migrasi 000079), jadi username wajib
 // ikut jadi bagian URL supaya dua akun berbeda bisa pakai slug yang sama
 // tanpa tabrakan. Memakai ulang PagePreview yang SAMA seperti halaman
-// utama -- produk/event/booking/dst yang tampil SAMA persis (monetisasi
+// utama -- produk/event/dst yang tampil SAMA persis (monetisasi
 // tetap per-akun, bukan per-halaman), hanya bio/avatar/tema/tautan yang
 // berbeda per halaman.
 export default async function ExtraBioPage({ params, searchParams }: PageParams) {
@@ -121,14 +121,6 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             location: e.location,
             isOnline: e.is_online,
             spotsLeft: e.spots_left,
-          })),
-          bookings: page.bookings.map((b) => ({
-            productId: b.product_id,
-            name: b.name,
-            description: b.description,
-            priceIdr: b.price_idr,
-            durationMinutes: b.duration_minutes,
-            availableSlotCount: b.available_slot_count,
           })),
           products: page.products.map((p) => ({
             id: p.id,

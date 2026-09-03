@@ -115,7 +115,6 @@ function buildNavItems(t: (key: string) => string): NavEntry[] {
       items: [
         { href: "/dashboard/products", label: t("dashboard.nav.productsOrders"), icon: IconBox },
         { href: "/dashboard/courses", label: t("dashboard.extraPages.courses"), icon: IconBook },
-        { href: "/dashboard/bookings", label: t("dashboard.extraPages.bookings"), icon: IconClock },
         { href: "/dashboard/events", label: t("dashboard.extraPages.events"), icon: IconCalendar },
         { href: "/dashboard/donation", label: t("dashboard.extraPages.donation"), icon: IconHeart },
         { href: "/dashboard/affiliates", label: t("dashboard.extraPages.affiliates"), icon: IconUsers },
@@ -260,7 +259,7 @@ export default function DashboardLayout({
           href: "/dashboard/products",
           icon: IconShoppingBag,
           match: (p) =>
-            ["/dashboard/products", "/dashboard/courses", "/dashboard/bookings", "/dashboard/events", "/dashboard/donation"].some(
+            ["/dashboard/products", "/dashboard/courses", "/dashboard/events", "/dashboard/donation"].some(
               (b) => p === b || p.startsWith(`${b}/`)
             ),
         },

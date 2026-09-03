@@ -87,7 +87,7 @@ export default function Hero() {
                   <div className="mt-5 flex flex-col gap-2.5">
                     <span className="rounded-jmd border-2 border-[#111111] bg-jeon-lime px-4 py-3 text-center text-sm font-bold text-[#111111]">Playbook Kreator ✦</span>
                     <span className="rounded-jmd border-2 border-jeon-ink bg-jeon-surface px-4 py-3 text-center text-sm font-bold text-jeon-ink">Kelas Editing</span>
-                    <span className="rounded-jmd border-2 border-[#111111] bg-jeon-pink px-4 py-3 text-center text-sm font-bold text-[#111111]">Booking 1-on-1</span>
+                    <span className="rounded-jmd border-2 border-[#111111] bg-jeon-pink px-4 py-3 text-center text-sm font-bold text-[#111111]">Dukung Karyaku ☕</span>
                     <span className="rounded-jmd border-2 border-jeon-ink bg-jeon-surface px-4 py-3 text-center text-sm font-bold text-jeon-ink">YouTube Terbaru</span>
                   </div>
                   <p className="mt-auto text-center text-[11px] font-semibold text-jeon-muted">

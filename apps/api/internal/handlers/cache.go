@@ -9,7 +9,7 @@ import (
 
 // invalidateUserPageCache — helper bersama dipakai SEMUA handler yang
 // mengubah data yang tampil di halaman publik kreator (produk/donasi/
-// event/booking/bundel/kursus), supaya perubahan langsung terlihat alih-alih
+// event/bundel/kursus), supaya perubahan langsung terlihat alih-alih
 // menunggu cache Redis (page.go, publicPageCacheTTL 30 detik) kedaluwarsa
 // sendiri.
 //
@@ -17,8 +17,8 @@ import (
 // product.go) -- 26 Juli 2026 ketahuan bug yang SAMA juga berlaku di
 // donation.go (dilaporkan pengguna: toggle nonaktif tidak langsung hilang
 // dari halaman publik) DAN belum pernah ada sama sekali di
-// bundle.go/course.go/event.go/booking.go -- kelimanya sama-sama mengubah
-// baris `products` (donasi/bundel/kursus/event/booking semua dimodelkan
+// bundle.go/course.go/event.go -- keempatnya sama-sama mengubah
+// baris `products` (donasi/bundel/kursus/event semua dimodelkan
 // sebagai varian baris products, pola yang sama seperti dicatat di
 // masing-masing file) yang tampil di GetPublicPage, tapi TIDAK PERNAH
 // menghapus cache-nya.

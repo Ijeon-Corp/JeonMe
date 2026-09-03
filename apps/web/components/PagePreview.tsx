@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import AudioPlayerBlock from "@/components/AudioPlayerBlock";
-import BookSlotButton from "@/components/BookSlotButton";
 import BuyProductButton from "@/components/BuyProductButton";
 import ContactFormBlock from "@/components/ContactFormBlock";
 import FaqBlock, { FaqItem } from "@/components/FaqBlock";
@@ -157,16 +156,6 @@ export interface PagePreviewEvent {
   spotsLeft: number | null;
 }
 
-// No.92 (Sprint 11): blok booking konsultasi.
-export interface PagePreviewBooking {
-  productId: string;
-  name: string;
-  description: string;
-  priceIdr: number;
-  durationMinutes: number;
-  availableSlotCount: number;
-}
-
 export interface PagePreviewLeadCapture {
   title: string;
   collectEmail: boolean;
@@ -206,7 +195,7 @@ export interface PagePreviewData {
   // (heading/text/image/button/dst) TANPA avatar/produk/monetisasi, beda
   // dari layout bio biasa. Modul Halaman Produk: "produk" merender showcase
   // katalog Toko saja (avatar/nama/bio + grid produk), TANPA
-  // tautan/donasi/lead-capture/event/booking/loyalty. Default "bio" kalau
+  // tautan/donasi/lead-capture/event/loyalty. Default "bio" kalau
   // tidak diisi.
   pageType?: "bio" | "landing" | "produk";
   bio: string;
@@ -234,7 +223,6 @@ export interface PagePreviewData {
   // kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
   productLayout?: "grid" | "stacked" | "category";
   events?: PagePreviewEvent[];
-  bookings?: PagePreviewBooking[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
   // poin pengunjung dicek terpisah lewat LoyaltyPointsWidget (butuh email).
   loyaltyActive?: boolean;
@@ -1672,7 +1660,7 @@ function renderLinkOrBlock(
   // benar pakai theme.card/cardTitle). Disamakan ke theme.card/cardTitle
   // supaya SEMUA item di daftar tautan konsisten ikut warna tombol -- TIDAK
   // menyentuh productCard/productTitle di tempat lain (grid produk/event/
-  // booking/donasi/lead-capture, widget terpisah yang memang sengaja
+  // donasi/lead-capture, widget terpisah yang memang sengaja
   // mengikuti mood tema, bukan bagian dari daftar tautan).
   if (link.blockType === "video") {
     return (
@@ -2294,7 +2282,7 @@ export default function PagePreview({
   hideFooterChrome?: boolean;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
-  // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar/booking
+  // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar
   // dinonaktifkan di frontend juga (bukan cuma backend), supaya pengunjung
   // tidak membuka form checkout yang pasti ditolak.
   const canBuy = interactive && !data.shopPaused;
@@ -2323,7 +2311,7 @@ export default function PagePreview({
   }
 
   // Modul Halaman Produk: showcase katalog Toko saja -- TANPA
-  // tautan/donasi/lead-capture/event/booking/loyalty, beda dari layout bio
+  // tautan/donasi/lead-capture/event/loyalty, beda dari layout bio
   // biasa & dari layout landing (blok manual) di atas.
   if (data.pageType === "produk") {
     return (
@@ -2529,41 +2517,6 @@ export default function PagePreview({
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-
-        {data.bookings && data.bookings.length > 0 && (
-          <div className="mt-8 w-full">
-            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Booking Konsultasi</p>
-            <div className="flex w-full flex-col gap-3">
-              {data.bookings.map((booking) => (
-                <div key={booking.productId} className={`flex flex-col gap-1.5 rounded-xl p-2.5 ${theme.productCard}`}>
-                  <div className="flex items-center gap-2">
-                    <IconCalendar className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
-                    <p className={`text-xs font-semibold ${theme.productTitle}`}>{booking.name}</p>
-                  </div>
-                  <p className={`text-[11px] ${theme.bio}`}>
-                    {booking.durationMinutes} menit &middot; {booking.availableSlotCount} slot tersedia
-                  </p>
-                  {booking.description && <p className={`text-[11px] ${theme.bio}`}>{booking.description}</p>}
-                  <p className={`text-xs font-bold ${theme.productTitle}`}>
-                    Rp {booking.priceIdr.toLocaleString("id-ID")}
-                  </p>
-                  {canBuy ? (
-                    <BookSlotButton productId={booking.productId} buttonClassName={theme.buyButton} />
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                      className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                    >
-                      Pilih Jadwal
-                    </button>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         )}
@@ -2934,7 +2887,7 @@ function LandingPagePreview({
 // lihat catatan lingkup di CreatePage), header avatar+nama+bio + (Modul
 // Halaman Toko, 7 Agustus 2026) blok/tautan sendiri (link/video/faq/
 // contact_form/maps/text -- lihat renderLinkOrBlock) TETAP TANPA donasi/
-// lead-capture/event/booking/loyalty, yang account-wide (satu per akun,
+// lead-capture/event/loyalty, yang account-wide (satu per akun,
 // bukan per-halaman) jadi tidak bisa diduplikasi per halaman tambahan.
 function ProdukPagePreview({
   data,

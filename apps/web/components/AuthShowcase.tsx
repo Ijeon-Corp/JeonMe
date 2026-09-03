@@ -22,7 +22,7 @@ export default function AuthShowcase() {
           <div className="mt-4 flex flex-col gap-2">
             <span className="rounded-jmd border-2 border-[#111111] bg-jeon-lime px-4 py-2.5 text-center text-xs font-bold text-[#111111]">Playbook Kreator ✦</span>
             <span className="rounded-jmd border-2 border-jeon-ink bg-jeon-surface px-4 py-2.5 text-center text-xs font-bold text-jeon-ink">Kelas Editing</span>
-            <span className="rounded-jmd border-2 border-[#111111] bg-jeon-pink px-4 py-2.5 text-center text-xs font-bold text-[#111111]">Booking 1-on-1</span>
+            <span className="rounded-jmd border-2 border-[#111111] bg-jeon-pink px-4 py-2.5 text-center text-xs font-bold text-[#111111]">Dukung Karyaku ☕</span>
           </div>
         </div>
         {/* Chip statistik mengambang */}

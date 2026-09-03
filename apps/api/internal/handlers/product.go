@@ -294,10 +294,10 @@ func (h *ProductHandler) List(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// No.70/71/90/91/92: bundel, blok dukungan, event, kursus, dan booking
-	// TIDAK ikut tampil di sini -- masing-masing punya halaman dashboard
-	// sendiri (/dashboard/bundles, /dashboard/donation, /dashboard/events,
-	// /dashboard/courses, /dashboard/bookings), sama seperti voucher.
+	// No.70/71/90/91: bundel, blok dukungan, event, dan kursus TIDAK ikut
+	// tampil di sini -- masing-masing punya halaman dashboard sendiri
+	// (/dashboard/bundles, /dashboard/donation, /dashboard/events,
+	// /dashboard/courses), sama seperti voucher.
 	// Modul Statistik/Toko (tab "Manage Items"): sold_count -- jumlah order
 	// LUNAS per produk, sumber kebenaran yang SAMA seperti top_products di
 	// AnalyticsHandler ("status = 'paid'" saja) -- ditampilkan sebagai kolom
@@ -327,7 +327,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 			SELECT product_id, COUNT(*) AS click_count FROM analytics_events WHERE event_type = 'product_click' GROUP BY product_id
 		) pcl ON pcl.product_id = p.id
 		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
-			AND p.is_course = false AND p.is_booking = false
+			AND p.is_course = false
 		ORDER BY p.is_featured DESC, p.position ASC
 	`, userID)
 	if err != nil {
@@ -482,12 +482,12 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentFlashSalePriceIDR *int64
 	var currentPwywEnabled bool
 	var currentPwywMinPriceIDR *int64
-	var isBundle, isDonation, isEvent, isCourse, isBooking bool
+	var isBundle, isDonation, isEvent, isCourse bool
 	var currentWebhookSecret, productKind string
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, is_booking, webhook_secret, product_kind, name
+		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, webhook_secret, product_kind, name
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &isBooking, &currentWebhookSecret, &productKind, &currentName)
+	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &currentWebhookSecret, &productKind, &currentName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
@@ -504,17 +504,17 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
-	// No.70/71/90/91/92: bundel, blok dukungan, event, kursus, dan booking
-	// tidak pernah punya file sendiri -- keabsahannya dijamin di tempat lain
-	// (bundel: minimal 2 produk aktif saat dibuat; donasi: selalu bayar-
-	// seikhlasnya; event: yang dijual adalah tiket; kursus: materinya video
-	// per-bab di course_chapters; booking: yang dijual adalah slot waktu),
-	// jadi lewati pengecekan file_key yang berlaku untuk produk biasa.
+	// No.70/71/90/91: bundel, blok dukungan, event, dan kursus tidak pernah
+	// punya file sendiri -- keabsahannya dijamin di tempat lain (bundel:
+	// minimal 2 produk aktif saat dibuat; donasi: selalu bayar-seikhlasnya;
+	// event: yang dijual adalah tiket; kursus: materinya video per-bab di
+	// course_chapters), jadi lewati pengecekan file_key yang berlaku untuk
+	// produk biasa.
 	// Modul Toko (Fase D): payment_link/external_link TIDAK LAGI aktif
 	// otomatis sejak dibuat (lihat Create) -- sejak gerbang sampul di bawah
 	// ini ada, keduanya juga wajib lewat pengecekan yang sama seperti
 	// produk digital biasa.
-	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && !isBooking && productKind != "payment_link" && productKind != "external_link" {
+	if req.IsActive != nil && *req.IsActive && fileKey == "" && !isBundle && !isDonation && !isEvent && !isCourse && productKind != "payment_link" && productKind != "external_link" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah file produk dulu sebelum mengaktifkan"})
 		return
 	}
@@ -523,11 +523,11 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	// "gambar sampul dan juga gambar product itu disamakan saja jadi
 	// sampul jangan dijadikan opsional". Berlaku untuk SEMUA jenis produk
 	// yang tampil di grid Produk publik (digital/payment_link/
-	// external_link/bundel/kursus) -- donasi/event/booking DIKECUALIKAN
-	// karena tidak pernah tampil sebagai kartu grid (masing-masing blok
-	// tersendiri dengan tata letak berbeda, lihat finishPublicPageResponse
-	// di page.go), sampul bukan bagian dari tampilan blok-blok itu.
-	if req.IsActive != nil && *req.IsActive && coverImageURL == "" && !isDonation && !isEvent && !isBooking {
+	// external_link/bundel/kursus) -- donasi/event DIKECUALIKAN karena
+	// tidak pernah tampil sebagai kartu grid (masing-masing blok tersendiri
+	// dengan tata letak berbeda, lihat finishPublicPageResponse di
+	// page.go), sampul bukan bagian dari tampilan blok-blok itu.
+	if req.IsActive != nil && *req.IsActive && coverImageURL == "" && !isDonation && !isEvent {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unggah gambar sampul dulu sebelum mengaktifkan"})
 		return
 	}

@@ -6,7 +6,7 @@
 // blok konten, dipasang sekaligus lewat satu klik di /dashboard/quick-setup.
 //
 // Keputusan cakupan (dikonfirmasi langsung ke pengguna): fitur monetisasi
-// yang perlu data nyata (harga/durasi/dll) -- Donasi/Booking/Event/Kelas/
+// yang perlu data nyata (harga/durasi/dll) -- Donasi/Event/Kelas/
 // Afiliasi -- SENGAJA TIDAK dibuat otomatis (tidak ada cara mengisi nilai
 // itu dengan masuk akal tanpa input pengguna). Template hanya membuat:
 // (1) tema, (2) saran bio (HANYA kalau bio masih kosong -- tidak menimpa
@@ -240,7 +240,7 @@ export interface QuickSetupTemplateBlock {
 
 // QuickSetupTemplateProduct -- permintaan langsung pengguna, 17 Agustus
 // 2026: "tambahkan template untuk produk yang siap pakai juga". BEDA dari
-// Donasi/Booking/Event/Kelas/Afiliasi (SENGAJA tetap tidak dibuat otomatis,
+// Donasi/Event/Kelas/Afiliasi (SENGAJA tetap tidak dibuat otomatis,
 // lihat catatan cakupan di atas) -- produk generik cuma butuh nama/harga/
 // deskripsi, TIDAK butuh tanggal/durasi/jadwal yang mustahil disintesis
 // masuk akal, jadi placeholder yang JELAS-JELAS contoh (sama semangatnya
@@ -895,7 +895,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Bagaimana proses konsultasinya?", answer: "Booking slot yang tersedia, lalu kita diskusi via video call sesuai kebutuhanmu." }]),
       { type: "contact_form", title: "Hubungi Saya" },
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking Konsultasi -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Produk Digital atau Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "agency",
@@ -1007,7 +1007,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
   // Susulan permintaan pengguna, 17 Agustus 2026: "coba tambahkan template
   // untuk produk yang siap pakai juga" -- lihat catatan lengkap di
   // QuickSetupTemplateProduct kenapa ini aman dibuat otomatis (beda dari
-  // Booking/Event/Kelas). 5 dari 6 template di kategori ini dapat SATU
+  // Event/Kelas). 5 dari 6 template di kategori ini dapat SATU
   // produk contoh (affiliate-store SENGAJA tidak -- intinya justru
   // mempromosikan produk ORANG LAIN, bukan produk sendiri). Blok konten
   // juga dirapikan supaya tidak semua template berbentuk sama (jumlah item
@@ -1111,7 +1111,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         coverImagePath: "/quick-setup-products/beauty-store-2.jpg",
       },
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Voucher atau Bundel -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "food-beverage",
@@ -1293,7 +1293,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     social: { whatsapp: "62812xxxxxxxx", email: "kamu@email.com" },
     links: [link("whatsapp", "Booking via WhatsApp", "Booking jadwal les sesuai waktumu")],
     blocks: [faqBlock([{ question: "Bagaimana jadwal lesnya?", answer: "Fleksibel sesuai kesepakatan -- chat dulu buat atur jadwal yang cocok." }])],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "course-creator",
@@ -1446,7 +1446,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
       faqBlock([{ question: "Bisa booking untuk acara apa saja?", answer: "Wedding, corporate event, club, sampai acara privat -- DM lewat Instagram buat cek jadwal & rate." }]),
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking dan Event -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "podcaster",
@@ -1619,7 +1619,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Daftar Harga", text: "Tuliskan layanan & harga di sini." },
       faqBlock([{ question: "Perlu booking dulu atau bisa walk-in?", answer: "Bisa walk-in, tapi disarankan booking dulu via WhatsApp supaya tidak antre lama." }]),
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Voucher untuk paket langganan -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "salon",
@@ -1645,7 +1645,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
       { type: "text", title: "Layanan & Treatment", text: "Tuliskan daftar treatment & harga yang kamu tawarkan di sini." },
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Voucher untuk paket treatment -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "photographer",
@@ -1669,7 +1669,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Paket & Harga", text: "Tuliskan paket foto & harga di sini." },
       faqBlock([{ question: "Apakah harga sudah termasuk edit foto?", answer: "Ya, semua paket sudah termasuk edit dasar. Edit lanjutan tersedia dengan biaya tambahan." }]),
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Bundel untuk paket foto -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "event-organizer",
@@ -1723,7 +1723,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Jadwal & Harga Sewa", text: "Tuliskan jam operasional & harga sewa per jam di sini." },
       faqBlock([{ question: "Apakah bisa booking harian atau harus langganan?", answer: "Bisa booking harian atau paket langganan bulanan -- chat WhatsApp buat cek slot kosong." }]),
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Voucher untuk paket jam sewa -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "nightlife-venue",
@@ -1781,7 +1781,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Apakah bisa bantu proses KPR?", answer: "Bisa, aku bantu proses dari awal sampai akad -- termasuk simulasi & pengajuan KPR ke bank rekanan." }]),
       { type: "contact_form", title: "Konsultasi Gratis" },
     ],
-    monetizationHint: "Cocok dipasangkan dengan Booking Konsultasi -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Produk Digital (panduan/e-book properti) -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "wedding-organizer",
@@ -2093,7 +2093,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Program Latihan", text: "Tuliskan jenis program latihan yang kamu tawarkan (durasi, target, harga) di sini." },
       { type: "contact_form", title: "Konsultasi Gratis" },
     ],
-    monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus atau Booking -- aktifkan di menu Produk & Monetisasi.",
+    monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "beauty-creator",
@@ -2442,14 +2442,14 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         imagePath: "/quick-setup-showcase/dashboard-mockup.jpg",
       }),
     ],
-    monetizationHint: "Tambahkan Konsultasi Berbayar di menu Produk & Monetisasi kalau mau menawarkan sesi review kode/arsitektur berbayar.",
+    monetizationHint: "Tambahkan Produk Digital (paket review kode/arsitektur) di menu Produk & Monetisasi kalau mau menawarkan jasa review berbayar.",
   },
   {
     key: "ui-ux-designer",
     category: "business",
     layoutVariant: "portrait",
     label: "UI/UX Designer",
-    description: "Case study, portfolio visual, dan booking konsultasi",
+    description: "Case study, portfolio visual, dan konsultasi desain",
     theme: "obsidian",
     bio: "UI/UX Designer -- case study, portfolio, dan kolaborasi.",
     social: { website: "websitekamu.com", instagram: "username", linkedin: "username", email: "kamu@email.com" },
@@ -2457,7 +2457,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { title: "Portfolio Lengkap", url: "https://websitekamu.com/portfolio", description: "Seluruh studi kasus & proses desain" },
       { title: "Behance", url: "https://behance.net/username", description: "Galeri visual dan eksplorasi desain" },
       { title: "Dribbble", url: "https://dribbble.com/username", description: "Shot harian & eksperimen UI" },
-      { title: "Booking Konsultasi", url: "https://wa.me/62", description: "Diskusi kebutuhan desain produkmu" },
+      { title: "Konsultasi Desain", url: "https://wa.me/62", description: "Diskusi kebutuhan desain produkmu" },
     ],
     blocks: [
       showcaseBlock({
@@ -2522,7 +2522,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
       { type: "contact_form", title: "Konsultasi Awal Gratis" },
     ],
-    monetizationHint: "Pasangkan dengan Booking Konsultasi untuk jadwal sesi, atau Kelas & Kursus untuk program latihan rekaman.",
+    monetizationHint: "Pasangkan dengan Kelas & Kursus untuk program latihan rekaman.",
   },
   {
     key: "yoga-studio",
@@ -2545,7 +2545,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Apakah sewa matras tersedia?", answer: "Tulis ketentuan peminjaman peralatan di studiomu." },
       ]),
     ],
-    monetizationHint: "Cocok dengan Booking Konsultasi (slot kelas) dan Voucher untuk paket trial.",
+    monetizationHint: "Cocok dengan Kelas & Kursus dan Voucher untuk paket trial.",
   },
   {
     key: "nutritionist",
@@ -2564,7 +2564,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Layanan", text: "Tuliskan layanan yang kamu tawarkan (konsultasi, meal plan personal, pendampingan berkala) beserta durasinya." },
       { type: "contact_form", title: "Mulai Konsultasi" },
     ],
-    monetizationHint: "Pasangkan dengan Booking Konsultasi untuk sesi terjadwal dan Produk Digital untuk panduan meal plan.",
+    monetizationHint: "Pasangkan dengan Produk Digital untuk panduan meal plan.",
   },
   {
     key: "clinic-practice",
@@ -2587,7 +2587,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Perlu janji dulu atau bisa langsung datang?", answer: "Jelaskan alur pendaftaran pasien di kliniknya." },
       ]),
     ],
-    monetizationHint: "Booking Konsultasi membantu mengatur antrean janji temu tanpa chat manual.",
+    monetizationHint: "Voucher bisa dipakai untuk paket pemeriksaan berkala -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "therapist-wellness",
@@ -2606,7 +2606,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Jenis Terapi", text: "Tuliskan jenis terapi yang tersedia beserta durasi dan harganya di sini." },
       { type: "contact_form", title: "Tanya Ketersediaan" },
     ],
-    monetizationHint: "Booking Konsultasi cocok untuk mengatur slot sesi; Voucher bisa dipakai untuk paket perawatan.",
+    monetizationHint: "Voucher bisa dipakai untuk paket perawatan -- aktifkan di menu Produk & Monetisasi.",
   },
 
   // ---------- Sports & Athletics (benchmark Linktree "Sports") ----------
@@ -2677,7 +2677,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       mapsBlock("Lokasi Akademi"),
       { type: "contact_form", title: "Formulir Pendaftaran" },
     ],
-    monetizationHint: "Kelas & Kursus cocok untuk program berjenjang; Booking untuk sesi trial.",
+    monetizationHint: "Kelas & Kursus cocok untuk program berjenjang -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "sports-tournament",
@@ -2753,7 +2753,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
       { type: "contact_form", title: "Ceritakan Situasimu" },
     ],
-    monetizationHint: "Booking Konsultasi untuk jadwal sesi; Kelas & Kursus untuk program rekaman.",
+    monetizationHint: "Kelas & Kursus untuk program rekaman -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "career-coach",
@@ -2800,7 +2800,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
       { type: "contact_form", title: "Ajukan Sesi Perkenalan" },
     ],
-    monetizationHint: "Kelas & Kursus untuk materi terstruktur, Booking untuk sesi mentoring privat.",
+    monetizationHint: "Kelas & Kursus untuk materi terstruktur -- aktifkan di menu Produk & Monetisasi.",
   },
   {
     key: "psychologist-counselor",
@@ -2822,7 +2822,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Berapa biaya per sesi?", answer: "Tulis biaya dan metode pembayaran yang diterima." },
       ]),
     ],
-    monetizationHint: "Booking Konsultasi menjaga jadwal sesi tetap rapi tanpa bolak-balik chat.",
+    monetizationHint: "Produk Digital (worksheet/panduan self-help) bisa melengkapi layanan konselingmu.",
   },
   {
     key: "one-on-one-consult",
@@ -2844,7 +2844,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Apakah ada rekaman sesinya?", answer: "Tulis kebijakanmu soal rekaman dan catatan sesi." },
       ]),
     ],
-    monetizationHint: "Booking Konsultasi adalah inti template ini -- aktifkan supaya slot & pembayaran terkelola otomatis.",
+    monetizationHint: "Produk Digital cocok kalau mau jual paket sesi (mis. 3x konsultasi) dalam satu harga tetap.",
   },
 
   // ---------- Digital Product (benchmark Lynk.id: ebook, template Canva,
@@ -2948,7 +2948,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Bisa pesan custom?", answer: "Tulis alur pemesanan komisi dan estimasi waktu pengerjaannya." },
       ]),
     ],
-    monetizationHint: "Gabungkan produk digital (aset siap unduh) dengan Booking untuk komisi custom.",
+    monetizationHint: "Gabungkan produk digital (aset siap unduh) dengan Bundel untuk komisi custom.",
   },
   {
     key: "software-tools",
@@ -3008,7 +3008,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       }),
       { type: "contact_form", title: "Minta Penawaran" },
     ],
-    monetizationHint: "Booking Konsultasi untuk sesi audit awal sebelum klien berkomitmen.",
+    monetizationHint: "Produk Digital (paket audit awal) bisa jadi entry point sebelum klien berkomitmen.",
   },
   {
     key: "social-media-manager",
@@ -3077,7 +3077,7 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
         { question: "Apakah termasuk penulisan konten?", answer: "Tulis batas cakupan pekerjaanmu." },
       ]),
     ],
-    monetizationHint: "Booking Konsultasi untuk sesi audit berbayar; produk digital untuk panduan SEO mandiri.",
+    monetizationHint: "Produk digital untuk panduan SEO mandiri bisa jadi entry point sebelum sesi audit berbayar.",
   },
   {
     key: "brand-campaign",

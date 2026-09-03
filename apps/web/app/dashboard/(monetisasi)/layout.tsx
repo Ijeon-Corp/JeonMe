@@ -31,17 +31,16 @@ function buildTabs(t: (key: string) => string) {
     { href: "/dashboard/loyalty", label: t("dashboard.pages.monetisasiLayout.tabs.loyalty") },
     { href: "/dashboard/events", label: t("dashboard.pages.monetisasiLayout.tabs.events") },
     { href: "/dashboard/courses", label: t("dashboard.pages.monetisasiLayout.tabs.courses") },
-    { href: "/dashboard/bookings", label: t("dashboard.pages.monetisasiLayout.tabs.bookings") },
   ];
 }
 
 // REVISI 3 September 2026 (permintaan pengguna: "banyak sekali tab yang
 // tidak berkaitan, lalu saat klik tab tiba-tiba pindah page yang jauh"):
 // bilah tab di atas dibuat SEBELUM IA v2 memecah halaman-halaman ini ke
-// grup sidebar Jualan (Kursus/Booking/Event/Dukungan) dan Marketing
+// grup sidebar Jualan (Kursus/Event/Dukungan) dan Marketing
 // (Voucher/Bundel/Afiliasi/Brand/Loyalitas). Setelah IA v2 keduanya hidup
 // bersamaan dan saling bertentangan: breadcrumb bilang "Marketing /
-// Afiliasi" tapi bilah tab menawarkan Event/Kursus/Booking -- sekali klik
+// Afiliasi" tapi bilah tab menawarkan Event/Kursus -- sekali klik
 // halaman berganti DAN grup sidebar ikut melompat. Di mode v2 bilah tab
 // tidak dirender: sidebar jadi satu-satunya navigasi antar-halaman, tiap
 // halaman punya PageHeader-nya sendiri, dan tab di dalam halaman hanya

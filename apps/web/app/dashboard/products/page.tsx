@@ -91,7 +91,7 @@ const ProdukPageEditor = dynamic(() => import("@/components/ProdukPageEditor"));
 // prioritas yang dipilih.
 //
 // "Jenis Produk"/"Stok" dari gambar SENGAJA tidak ditiru -- List() backend
-// cuma mengembalikan produk digital biasa (bundel/donasi/kelas/booking
+// cuma mengembalikan produk digital biasa (bundel/donasi/kelas
 // masing-masing sudah punya halaman kelola sendiri, lihat ProductHandler.List),
 // jadi kolom "Jenis Produk" akan selalu sama untuk semua baris (tidak
 // berguna); dan produk digital Jeonme tidak pernah dibatasi kuantitas (file

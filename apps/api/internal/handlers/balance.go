@@ -270,7 +270,7 @@ func (h *BalanceHandler) GetFeeBreakdown(c *gin.Context) {
 // ---------- Rincian pendapatan per sumber ----------
 //
 // Benchmark Linktree "Earn > Earnings" (permintaan pengguna, 3 September
-// 2026): kreator perlu tahu uangnya dari mana -- produk, booking, donasi,
+// 2026): kreator perlu tahu uangnya dari mana -- produk, donasi,
 // event, kursus, bundel, komisi afiliasi, split kolaborator -- bukan cuma
 // satu angka saldo. Sumber dicatat per entri di ledger_entries.source
 // (migrasi 000082), jadi endpoint ini cukup agregasi sederhana. Refund

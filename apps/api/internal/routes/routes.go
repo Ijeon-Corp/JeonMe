@@ -54,7 +54,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	bundle := handlers.NewBundleHandler(db)
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db, rdb)
-	booking := handlers.NewBookingHandler(db, rdb)
 	loyalty := handlers.NewLoyaltyHandler(db, rdb)
 	businessCard := handlers.NewBusinessCardHandler(db, s3)
 	donation := handlers.NewDonationHandler(db, rdb)
@@ -177,10 +176,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// /dashboard, dst) -- path API publik tidak wajib sama persis
 		// dengan URL halaman publik di Next.js.
 		api.GET("/p/:username/:slug", page.GetPublicPageBySlug)
-
-		// No.92 (Sprint 11): daftar slot booking yang tersedia -- dimuat
-		// pengunjung saat memilih jadwal sebelum checkout.
-		api.GET("/products/:id/available-slots", booking.ListAvailableSlots)
 
 		// No.94 (Sprint 13): pembeli mengecek poin & menukar reward, publik
 		// (tanpa akun, cukup email pembeli seperti checkout).
@@ -420,15 +415,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				productsGroup.POST("/courses", course.Create)
 				productsGroup.GET("/courses/:id/chapters", course.GetChapters)
 				productsGroup.PUT("/courses/:id/chapters", course.ReplaceChapters)
-
-				// No.92 (Sprint 11): booking konsultasi -- lihat catatan lingkup
-				// di BookingHandler (TIDAK terhubung Google Calendar, kuota
-				// dijamin lewat klaim slot atomik di database sendiri).
-				productsGroup.GET("/bookings", booking.List)
-				productsGroup.POST("/bookings", booking.Create)
-				productsGroup.GET("/bookings/:id/slots", booking.ListSlots)
-				productsGroup.POST("/bookings/:id/slots", booking.CreateSlots)
-				productsGroup.DELETE("/bookings/:id/slots/:slotId", booking.DeleteSlot)
 
 				// No.94 (Sprint 13): program poin loyalitas + katalog reward.
 				// Penukaran reward menghasilkan voucher lewat tabel vouchers

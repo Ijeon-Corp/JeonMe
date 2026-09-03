@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { registerAndLogin } from "./fixtures";
 
-// Blok monetisasi tambahan (donasi/event/booking/loyalitas) -- shared lintas
+// Blok monetisasi tambahan (donasi/event/loyalitas) -- shared lintas
 // SEMUA halaman satu akun (lihat CLAUDE.md), belum ada cakupan E2E sama
 // sekali sebelumnya. Satu akun dipakai untuk semua blok (hemat bucket rate-
 // limit auth, lihat catatan panjang di fixtures.ts).
@@ -10,8 +10,8 @@ function toDatetimeLocal(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-test.describe("Blok Monetisasi: Donasi, Event, Booking, Loyalitas", () => {
-  test("keempat blok tersimpan lewat dashboard & tampil di halaman publik", async ({ page }) => {
+test.describe("Blok Monetisasi: Donasi, Event, Loyalitas", () => {
+  test("ketiga blok tersimpan lewat dashboard & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "monetize");
 
     // Donasi.
@@ -49,27 +49,6 @@ test.describe("Blok Monetisasi: Donasi, Event, Booking, Loyalitas", () => {
     // tampil di halaman publik).
     await page.getByRole("switch", { name: `Aktifkan ${eventName}` }).click();
 
-    // Booking + satu slot (booking TANPA slot tidak dianggap tersedia --
-    // pola sama dengan produk yang butuh file sebelum aktif).
-    const bookingName = "Konsultasi E2E";
-    const slotAt = new Date(Date.now() + 48 * 3600 * 1000);
-    await page.goto("/dashboard/bookings");
-    await page.getByRole("button", { name: "Buat Booking" }).click();
-    await page.getByPlaceholder("Konsultasi Karir 30 Menit").fill(bookingName);
-    const bookingNumberInputs = page.locator('input[type="number"]');
-    await bookingNumberInputs.nth(0).fill("30000");
-    await bookingNumberInputs.nth(1).fill("30");
-    await page.getByRole("button", { name: "Buat Booking", exact: true }).click();
-    await expect(page.getByText(bookingName)).toBeVisible({ timeout: 10000 });
-    await page.getByRole("switch", { name: `Aktifkan ${bookingName}` }).click();
-
-    await page.getByRole("button", { name: "Kelola Slot" }).click();
-    await page.locator('input[type="datetime-local"]').fill(toDatetimeLocal(slotAt));
-    await page.getByRole("button", { name: "Tambah Slot" }).click();
-    await expect(page.getByText(slotAt.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }))).toBeVisible({
-      timeout: 10000,
-    });
-
     // Loyalitas: aktifkan program (reward publikasi di luar cakupan test ini
     // -- widget "Poin Loyalitas" di halaman publik tidak bergantung pada ada
     // tidaknya reward, cuma pada loyalty_active).
@@ -82,14 +61,13 @@ test.describe("Blok Monetisasi: Donasi, Event, Booking, Loyalitas", () => {
     await page.getByRole("button", { name: "Simpan Pengaturan" }).click();
 
     // Backend Redis "page:<username>" cache (TTL 30 detik) diinvalidasi tiap
-    // mutasi blok di atas (donation.go/event.go/booking.go, lihat
+    // mutasi blok di atas (donation.go/event.go, lihat
     // invalidateUserPageCache di cache.go) -- toPass jaga-jaga kalau ada
     // yang belum sempat kepropagasi.
     await expect(async () => {
       await page.goto(`/${username}`);
       await expect(page.getByText(donationTitle)).toBeVisible({ timeout: 3000 });
       await expect(page.getByText(eventName)).toBeVisible({ timeout: 3000 });
-      await expect(page.getByText(bookingName)).toBeVisible({ timeout: 3000 });
       await expect(page.getByText("Poin Loyalitas")).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 30000, intervals: [3000] });
   });

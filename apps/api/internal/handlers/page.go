@@ -231,7 +231,6 @@ type publicPageResponse struct {
 	Analytics     *publicAnalytics   `json:"analytics"`
 	IsVerified    bool               `json:"is_verified"`
 	Events        []publicEvent      `json:"events"`
-	Bookings      []publicBooking    `json:"bookings"`
 	// LoyaltyActive -- No.94 (Sprint 13): cuma penanda ada/tidaknya program
 	// poin, BUKAN saldo poin pengunjung (itu perlu email, dicek terpisah
 	// lewat GET /pages/:username/loyalty).
@@ -284,20 +283,6 @@ type publicPageLink struct {
 	Slug      string `json:"slug"`
 	PageType  string `json:"page_type"`
 	IsPrimary bool   `json:"is_primary"`
-}
-
-// publicBooking -- No.92 (Sprint 11): blok booking konsultasi, TIDAK ikut
-// array Products (harus pilih slot dulu sebelum bisa checkout, beda dari
-// alur beli langsung produk biasa). Daftar slot yang tersedia dimuat
-// TERPISAH lewat GET /products/:id/available-slots (lazy, bukan
-// digabungkan di sini) supaya payload halaman utama tetap ringan.
-type publicBooking struct {
-	ProductID          string `json:"product_id"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	PriceIDR           int64  `json:"price_idr"`
-	DurationMinutes    int    `json:"duration_minutes"`
-	AvailableSlotCount int    `json:"available_slot_count"`
 }
 
 // publicEvent -- No.90 (Sprint 11): blok event, TIDAK ikut array Products
@@ -662,7 +647,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 	// Optimasi performa (analisa & benchmark kompetitif, 18 Agustus 2026):
 	// SEBELUMNYA ~12 query Postgres independen (badge verifikasi, status jeda
 	// toko, tautan, produk, feed Instagram/TikTok, donasi+wishlist+goal,
-	// event, booking, lead capture, loyalty, social proof, analitik) jalan
+	// event, lead capture, loyalty, social proof, analitik) jalan
 	// BERURUTAN satu-satu di sini pada SETIAP cache-miss halaman publik --
 	// endpoint dengan traffic tertinggi di seluruh API (cache Redis cuma 30
 	// detik, lihat publicPageCacheTTL), jadi latensi cache-miss dulu = jumlah
@@ -761,9 +746,9 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 		// No.70: bundel TIDAK difilter di sini -- bundel memang harus tampil
 		// di halaman publik sebagai produk yang bisa dibeli, dengan harga
 		// asli (jumlah harga item di dalamnya) dicoret lewat bundle_original_price_idr.
-		// No.71/90/92: blok dukungan/donasi, event, & booking DIFILTER di sini --
-		// masing-masing tampil sebagai blok tersendiri (resp.Donation/resp.
-		// Events/resp.Bookings), bukan kartu di grid Produk.
+		// No.71/90: blok dukungan/donasi & event DIFILTER di sini -- masing-
+		// masing tampil sebagai blok tersendiri (resp.Donation/resp.Events),
+		// bukan kartu di grid Produk.
 		resp.Products = []publicItem{}
 		productRows, err := h.DB.Query(gctx, `
 			SELECT p.id, p.name, p.price_idr, p.cover_image_url, `+effectivePriceExpr+`, p.pwyw_enabled, p.pwyw_min_price_idr,
@@ -772,7 +757,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 				p.is_course,
 				(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
 				p.product_kind = 'external_link', p.external_url, p.category
-			FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false AND p.is_booking = false
+			FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false
 			ORDER BY p.is_featured DESC, p.position ASC
 		`, userID)
 		if err == nil {
@@ -880,29 +865,6 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 						ev.SpotsLeft = &left
 					}
 					resp.Events = append(resp.Events, ev)
-				}
-			}
-		}
-		return nil
-	})
-
-	g.Go(func() error {
-		// No.92 (Sprint 11): hanya booking dengan minimal 1 slot tersedia yang
-		// ditampilkan -- tidak ada gunanya menampilkan blok booking yang tidak
-		// bisa dipesan sama sekali.
-		resp.Bookings = []publicBooking{}
-		bookingRows, err := h.DB.Query(gctx, `
-			SELECT p.id, p.name, p.description, p.price_idr, p.booking_duration_minutes,
-				(SELECT COUNT(*) FROM booking_slots bs WHERE bs.booking_product_id = p.id AND bs.order_id IS NULL AND bs.starts_at > now())
-			FROM products p
-			WHERE p.user_id = $1 AND p.is_active = true AND p.is_booking = true
-		`, userID)
-		if err == nil {
-			defer bookingRows.Close()
-			for bookingRows.Next() {
-				var bk publicBooking
-				if err := bookingRows.Scan(&bk.ProductID, &bk.Name, &bk.Description, &bk.PriceIDR, &bk.DurationMinutes, &bk.AvailableSlotCount); err == nil && bk.AvailableSlotCount > 0 {
-					resp.Bookings = append(resp.Bookings, bk)
 				}
 			}
 		}
@@ -1777,7 +1739,7 @@ func (h *PageHandler) UploadCustomBackgroundForPage(c *gin.Context) {
 //
 // Ditemukan lewat fitur "Your Pages" Linktree -- satu akun bisa kelola
 // beberapa halaman bio terpisah, masing-masing dengan bio/tema/tautan
-// sendiri, tapi TETAP berbagi katalog produk/event/booking/dst yang SAMA
+// sendiri, tapi TETAP berbagi katalog produk/event/dst yang SAMA
 // dengan kreatornya (monetisasi tetap per-USER, bukan per-halaman -- lihat
 // catatan lingkup lengkap di migrasi 000029). Halaman UTAMA (is_primary=true,
 // dibuat otomatis saat registrasi) TIDAK BERUBAH sama sekali -- semua route
