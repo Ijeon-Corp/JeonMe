@@ -155,6 +155,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// rate limit sama supaya kode TOTP tidak bisa di-brute-force.
 			auth_.POST("/2fa/verify-login", authRateLimit, auth.VerifyLogin2FA)
 			auth_.POST("/logout", authRequired, auth.Logout)
+			auth_.GET("/me", authRequired, auth.GetMe)
 			// Perbaikan (audit keamanan 14 Agustus 2026): dulu KEDUA endpoint
 			// ini tanpa rate limit sama sekali (beda dari /login, /register,
 			// /2fa/verify-login di atas) -- dibuktikan lewat 15 request

@@ -507,6 +507,41 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "berhasil logout"})
 }
 
+type meResponse struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
+// GetMe — permintaan langsung pengguna, 5 September 2026: admin bisa masuk
+// ke /dashboard biasa (tidak seharusnya, admin cuma boleh /admin). JWT
+// sengaja TIDAK punya klaim role (lihat middleware.AdminRequired -- selalu
+// cek DB langsung supaya demosi admin langsung berlaku, tidak menunggu
+// token lama kedaluwarsa), jadi frontend tidak punya cara tahu role akun
+// yang sedang login sama sekali sebelum endpoint ini ada. Dipakai
+// dashboard/layout.tsx (redirect admin ke /admin) & admin/layout.tsx
+// (tampilkan identitas akun sendiri di navbar). Diregistrasi DI LUAR grup
+// ActAsOwner mana pun (lihat routes.go) -- ini identitas akun SENDIRI yang
+// sedang login, bukan sesuatu yang boleh ikut tertukar ke identitas
+// pemilik saat kolaborator memakai X-Act-As-Owner.
+func (h *AuthHandler) GetMe(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	resp := meResponse{ID: userID}
+	err := h.DB.QueryRow(ctx, `SELECT email, username, role FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).
+		Scan(&resp.Email, &resp.Username, &resp.Role)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "pengguna tidak ditemukan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 type requestPasswordResetRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }

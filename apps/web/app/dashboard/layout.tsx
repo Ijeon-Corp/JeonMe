@@ -21,6 +21,7 @@ import {
   Workspace,
   clearToken,
   getActiveWorkspaceOwnerId,
+  getMe,
   getMyPage,
   listWorkspaces,
   logout as apiLogout,
@@ -400,6 +401,24 @@ export default function DashboardLayout({
   }
 
   useEffect(() => {
+    // Permintaan langsung pengguna, 5 September 2026: "kenapa admin bisa ke
+    // dashboard harusnya admin cuma punya page admin saja". SEBELUMNYA
+    // AuthGuard cuma mengecek token ADA, tidak pernah cek role -- akun apa
+    // pun yang login (admin ataupun kreator biasa) melewati langsung ke
+    // dashboard kreator penuh. router.replace (bukan push) supaya tombol
+    // "kembali" browser tidak balik ke dashboard yang memang tidak boleh
+    // diakses admin.
+    getMe()
+      .then((me) => {
+        if (me.role === "admin") {
+          router.replace("/admin");
+        }
+      })
+      .catch(() => {
+        // Identitas akun gagal dimuat -- diamkan, jangan blokir dashboard
+        // kreator biasa gara-gara pengecekan tambahan ini gagal.
+      });
+
     getMyPage()
       .then((p) => {
         setUsername(p.username);
@@ -419,7 +438,9 @@ export default function DashboardLayout({
       .catch(() => {
         // Sama seperti di atas -- gagal dimuat diamkan saja.
       });
-  }, []);
+    // router dari useRouter() stabil antar render (dijamin Next.js) -- aman
+    // dimasukkan ke deps tanpa memicu efek ini jalan ulang.
+  }, [router]);
 
   function handleWorkspaceChange(ownerId: string) {
     const isSelf = workspaces.find((w) => w.owner_user_id === ownerId)?.is_self;

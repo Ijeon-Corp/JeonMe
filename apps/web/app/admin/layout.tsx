@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
-import { clearToken, logout as apiLogout } from "@/lib/api-client";
+import { Me, clearToken, getMe, logout as apiLogout } from "@/lib/api-client";
 import { ShieldAlert } from "lucide-react";
 import {
   IconChart,
@@ -30,6 +30,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // me/profileMenuOpen -- permintaan langsung pengguna, 5 September 2026:
+  // "buat navbar juga seperti di dashboard jadi di ujung kanan ada profile
+  // dan tombol logout ketika di klik profile nya". Pola SAMA PERSIS dengan
+  // dashboard/layout.tsx (avatar bulat -> dropdown -> logout), cuma sumber
+  // identitasnya getMe() (email/username akun sendiri), bukan getMyPage()
+  // (data halaman publik kreator -- tidak relevan utk akun admin).
+  const [me, setMe] = useState<Me | null>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getMe()
+      .then(setMe)
+      .catch(() => {
+        // Identitas cuma utk tampilan navbar -- gagal dimuat diamkan saja,
+        // AdminGuard sendiri yang menegakkan akses sungguhan.
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileMenuOpen]);
 
   async function handleLogout() {
     try {
@@ -41,6 +70,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push("/login");
     }
   }
+
+  const identityLabel = me?.username ? `@${me.username}` : me?.email ?? "";
+  const avatarInitial = (me?.username || me?.email || "?").slice(0, 1).toUpperCase();
 
   const sidebarContent = (
     <>
@@ -78,14 +110,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <Link
-          href="/dashboard"
-          onClick={() => setMobileOpen(false)}
-          className="rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/55 hover:bg-white/5 hover:text-white/85"
-        >
-          &larr; Kembali ke Dashboard
-        </Link>
+      {/* "Kembali ke Dashboard" & tombol "Keluar" berdiri sendiri SEBELUMNYA
+          ada di sini -- dihapus (5 September 2026): admin sekarang direct ke
+          /admin begitu login dan TIDAK BISA mengakses /dashboard sama sekali
+          (lihat redirect role di dashboard/layout.tsx), jadi tautan "kembali"
+          itu cuma akan memantul balik ke /admin lewat redirect tsb -- murni
+          membingungkan. Logout pindah ke dropdown profil di top bar (mobile:
+          tetap ada di menu drawer lewat sidebarContent yang sama, lihat blok
+          identitas mobile di bawah). */}
+      <div className="flex flex-col gap-1 border-t border-white/10 pt-3 md:hidden">
+        <div className="flex items-center gap-2.5 px-3.5 py-2">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-jeon-lavender font-display text-xs font-bold text-[#111111]">
+            {avatarInitial}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white/70">{identityLabel}</span>
+        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-red-300 hover:bg-white/5"
@@ -127,6 +166,59 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <IconMenu className="h-5 w-5" />
             </button>
+          </header>
+
+          {/* Top bar desktop -- SEBELUMNYA tidak ada sama sekali di admin
+              (beda dari dashboard/layout.tsx yang selalu punya top bar
+              desktop dengan avatar+dropdown). Permintaan langsung pengguna:
+              profil di ujung kanan, klik -> dropdown berisi identitas +
+              logout, pola SAMA PERSIS dashboard. */}
+          <header className="nav-glass sticky top-0 z-20 hidden h-[72px] items-center justify-between gap-3 px-6 md:flex">
+            <p className="min-w-0 flex-1 truncate font-display text-base font-bold text-app-ink">
+              {NAV_ITEMS.find((item) => item.href === pathname)?.label ?? "Admin"}
+            </p>
+            {me && (
+              <div className="relative flex-shrink-0" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileMenuOpen((v) => !v)}
+                  title={identityLabel}
+                  aria-haspopup="menu"
+                  aria-expanded={profileMenuOpen}
+                  className="flex items-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-1 pl-1 pr-2.5 hover:border-jeon-purple"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-jeon-lavender font-display text-[11px] font-bold text-[#111111]">
+                    {avatarInitial}
+                  </span>
+                  <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
+                    {identityLabel}
+                    <span className="rounded-full bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111]">
+                      Admin
+                    </span>
+                  </span>
+                </button>
+                {profileMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-48 overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface py-1.5 shadow-card"
+                  >
+                    <div className="border-b border-app-border px-4 py-2 text-xs font-semibold text-app-muted">{me.email}</div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-600 hover:bg-app-surface-2"
+                    >
+                      <IconLogout className="h-4 w-4" />
+                      Keluar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </header>
 
           {mobileOpen && (

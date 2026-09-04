@@ -655,6 +655,22 @@ export function logout() {
   return apiFetch<{ message: string }>("/auth/logout", { method: "POST" }, { auth: true });
 }
 
+// Me -- permintaan langsung pengguna, 5 September 2026: admin bisa masuk ke
+// /dashboard biasa, seharusnya cuma /admin. JWT sengaja tidak punya klaim
+// role (server selalu cek DB langsung, lihat komentar GetMe di
+// apps/api/internal/handlers/auth.go), jadi ini satu-satunya cara frontend
+// tahu role akun yang sedang login.
+export interface Me {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
+export function getMe() {
+  return apiFetch<Me>("/auth/me", { method: "GET" }, { auth: true });
+}
+
 // ---------- Modul Koneksi Sosial (Instagram/TikTok) ----------
 // Permintaan langsung pengguna, 17 Agustus 2026: "saya mau jeonme ini bisa
 // connect ke akun kita contoh nya instagram tiktok". BEDA dari googleLogin

@@ -355,3 +355,46 @@ func TestResendSignupVerification_IssuesNewWorkingCode(t *testing.T) {
 		t.Fatalf("confirm dengan kode hasil resend gagal: status %d, body %s", confirmRec.Code, confirmRec.Body.String())
 	}
 }
+
+// TestGetMe_ReturnsOwnIdentityAndRole -- permintaan langsung pengguna, 5
+// September 2026: admin bisa masuk ke /dashboard biasa, seharusnya tidak
+// bisa. JWT sengaja tidak punya klaim role (lihat komentar GetMe di
+// auth.go), jadi frontend butuh endpoint ini utk tahu role akun sendiri.
+// Menguji dua kasus: role default "creator" utk akun baru, dan role
+// "admin" setelah dipromosikan langsung lewat SQL (cara satu-satunya
+// mempromosikan admin di sistem ini, lihat middleware.AdminRequired).
+func TestGetMe_ReturnsOwnIdentityAndRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	auth := newTestAuthHandler(t)
+	userID := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.GET("/me", auth.GetMe)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	rec := doJSON(t, router, http.MethodGet, "/me", nil, headers)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GetMe seharusnya berhasil: status %d, body %s", rec.Code, rec.Body.String())
+	}
+	var resp meResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("gagal decode response: %v", err)
+	}
+	if resp.ID != userID || resp.Role != "creator" {
+		t.Fatalf("resp = %+v, ekspektasi id=%s role=creator", resp, userID)
+	}
+
+	if _, err := auth.DB.Exec(t.Context(), `UPDATE users SET role = 'admin' WHERE id = $1`, userID); err != nil {
+		t.Fatalf("gagal promosikan admin di test: %v", err)
+	}
+
+	adminRec := doJSON(t, router, http.MethodGet, "/me", nil, headers)
+	var adminResp meResponse
+	if err := json.Unmarshal(adminRec.Body.Bytes(), &adminResp); err != nil {
+		t.Fatalf("gagal decode response admin: %v", err)
+	}
+	if adminResp.Role != "admin" {
+		t.Fatalf("role = %q, ekspektasi admin setelah promosi", adminResp.Role)
+	}
+}
