@@ -372,6 +372,41 @@ func (c *Client) Refund(ctx context.Context, orderID, reason string) (*RefundRes
 	return &out, nil
 }
 
+// TransactionStatusResponse -- GET /v2/{order_id}/status (Core API).
+type TransactionStatusResponse struct {
+	OrderID           string `json:"order_id"`
+	TransactionID     string `json:"transaction_id"`
+	TransactionStatus string `json:"transaction_status"`
+	FraudStatus       string `json:"fraud_status"`
+	GrossAmount       string `json:"gross_amount"`
+}
+
+// GetTransactionStatus — audit OWASP A08 (4 September 2026): dipakai
+// HandleCycleWebhook (subscription.go) sebagai SUMBER KEBENARAN untuk
+// riwayat tagihan siklus, PERSIS pola yang sama seperti GetSubscription
+// dipakai sebagai sumber kebenaran status langganan -- SEBELUMNYA
+// order_id/transaction_status/gross_amount/transaction_id yang ditulis ke
+// subscription_payments diambil LANGSUNG dari body webhook siklus (yang
+// endpoint-nya sendiri sengaja TIDAK diverifikasi signature-nya, lihat
+// komentar HandleCycleWebhook), jadi siapa pun yang tahu satu
+// midtrans_subscription_id (tidak diperlakukan sebagai rahasia di mana pun)
+// bisa memalsukan order_id + transaction_status="settlement" untuk
+// menyuntik baris riwayat tagihan palsu ke akun korban. Panggilan ini
+// mengambil status TRANSAKSI SUNGGUHAN dari Midtrans utk order_id yang
+// disebutkan webhook -- kalau order_id itu tidak pernah ada di sisi
+// Midtrans (dipalsukan), panggilan ini gagal dan baris riwayat tidak pernah
+// ditulis, bukan mempercayai klaim webhook begitu saja.
+func (c *Client) GetTransactionStatus(ctx context.Context, orderID string) (*TransactionStatusResponse, error) {
+	if c.ServerKey == "" {
+		return nil, ErrNotConfigured
+	}
+	var out TransactionStatusResponse
+	if err := c.doSubscriptionRequest(ctx, http.MethodGet, "/v2/"+orderID+"/status", nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *Client) doSubscriptionRequest(ctx context.Context, method, path string, payload any, out any) error {
 	var bodyReader io.Reader
 	if payload != nil {

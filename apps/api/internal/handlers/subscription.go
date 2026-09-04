@@ -447,9 +447,22 @@ func (h *SubscriptionHandler) HandleCycleWebhook(c *gin.Context) {
 
 	// Riwayat tagihan (migrasi 000088): satu baris per notifikasi siklus yang
 	// membawa order_id. Soft-fail; order_id UNIK menahan notifikasi ulang.
+	//
+	// Audit OWASP A08 (4 September 2026): field transaksi payload webhook
+	// (order_id/transaction_status/fraud_status/gross_amount/transaction_id)
+	// TIDAK dipercaya langsung lagi -- endpoint ini sengaja tanpa verifikasi
+	// signature (lihat komentar fungsi di atas), jadi payload.OrderID cs
+	// bisa dipalsukan siapa pun yang tahu midtrans_subscription_id korban
+	// untuk menyuntik baris riwayat tagihan palsu. GetTransactionStatus
+	// mengambil status TRANSAKSI SUNGGUHAN dari Midtrans utk order_id yang
+	// disebutkan -- kalau order_id itu tidak pernah ada di Midtrans
+	// (dipalsukan), panggilan ini gagal dan baris riwayat tidak ditulis.
 	if payload.OrderID != "" {
-		if payStatus, ok := cyclePaymentStatus(payload.TransactionStatus, payload.FraudStatus); ok {
-			amount := parseGrossAmountIDR(payload.GrossAmount, subAmountIDR)
+		txStatus, err := h.Midtrans.GetTransactionStatus(ctx, payload.OrderID)
+		if err != nil {
+			log.Printf("subscription: order_id %s dari webhook siklus tidak bisa diverifikasi ke Midtrans, riwayat tagihan tidak dicatat: %v", payload.OrderID, err)
+		} else if payStatus, ok := cyclePaymentStatus(txStatus.TransactionStatus, txStatus.FraudStatus); ok {
+			amount := parseGrossAmountIDR(txStatus.GrossAmount, subAmountIDR)
 			var paidAt *time.Time
 			if payStatus == "paid" {
 				now := time.Now()
@@ -459,8 +472,8 @@ func (h *SubscriptionHandler) HandleCycleWebhook(c *gin.Context) {
 				INSERT INTO subscription_payments (subscription_id, user_id, kind, order_id, transaction_id, amount_idr, status, paid_at, period_end)
 				VALUES ($1, $2, 'cycle', $3, $4, $5, $6, $7, $8)
 				ON CONFLICT (order_id) DO NOTHING
-			`, subID, subUserID, payload.OrderID, payload.TransactionID, amount, payStatus, paidAt, currentPeriodEnd); err != nil {
-				log.Printf("subscription: gagal mencatat riwayat tagihan siklus %s: %v", payload.OrderID, err)
+			`, subID, subUserID, txStatus.OrderID, txStatus.TransactionID, amount, payStatus, paidAt, currentPeriodEnd); err != nil {
+				log.Printf("subscription: gagal mencatat riwayat tagihan siklus %s: %v", txStatus.OrderID, err)
 			}
 		}
 	}
