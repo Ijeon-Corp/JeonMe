@@ -17,6 +17,15 @@ type Config struct {
 	RedisURL    string
 	JWTSecret   string
 
+	// DBPoolMaxConns -- ukuran pgxpool untuk proses `api` (server HTTP),
+	// TIDAK dipakai proses `worker` (lihat runWorker() di main.go, pool
+	// worker sengaja lebih kecil & hardcoded terpisah). Default dinaikkan
+	// dari 20 ke 60 setelah load test produksi 4 Sept 2026 menemukan
+	// MaxConns=20 jadi bottleneck (lihat komentar lengkap di
+	// database.NewPostgresPoolWithMaxConns) -- overridable via env kalau
+	// perlu tuning lanjutan tanpa redeploy kode.
+	DBPoolMaxConns int
+
 	MidtransServerKey    string
 	MidtransClientKey    string
 	MidtransIsProduction bool
@@ -158,9 +167,10 @@ func Load() *Config {
 	cfg := &Config{
 		AppEnv:      appEnv,
 		AppPort:     getEnv("APP_PORT", "8080"),
-		DatabaseURL: mustGetEnv("DATABASE_URL"),
-		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
-		JWTSecret:   mustGetEnv("JWT_SECRET"),
+		DatabaseURL:    mustGetEnv("DATABASE_URL"),
+		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6379/0"),
+		JWTSecret:      mustGetEnv("JWT_SECRET"),
+		DBPoolMaxConns: getEnvInt("DB_POOL_MAX_CONNS", 60),
 
 		MidtransServerKey:    getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransClientKey:    getEnv("MIDTRANS_CLIENT_KEY", ""),

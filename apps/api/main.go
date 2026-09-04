@@ -62,7 +62,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	db, err := database.NewPostgresPool(cfg.DatabaseURL)
+	db, err := database.NewPostgresPoolWithMaxConns(cfg.DatabaseURL, int32(cfg.DBPoolMaxConns))
 	if err != nil {
 		log.Fatalf("gagal konek database: %v", err)
 	}
@@ -199,7 +199,12 @@ func main() {
 func runWorker() {
 	cfg := config.Load()
 
-	db, err := database.NewPostgresPool(cfg.DatabaseURL)
+	// Pool worker sengaja jauh lebih kecil dari api (DBPoolMaxConns, default
+	// 60) -- worker cuma memproses job asynq di background, throughput-nya
+	// dibatasi concurrency asynq sendiri, bukan oleh jumlah pengguna aktif
+	// yang mengakses web (lihat komentar lengkap di
+	// database.NewPostgresPoolWithMaxConns).
+	db, err := database.NewPostgresPoolWithMaxConns(cfg.DatabaseURL, 15)
 	if err != nil {
 		log.Fatalf("worker: gagal konek database: %v", err)
 	}
