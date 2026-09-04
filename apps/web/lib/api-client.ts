@@ -2169,17 +2169,39 @@ export interface PublicLoyaltyReward {
   valid_until: string | null;
 }
 
-export function getMyLoyaltyPoints(username: string, email: string) {
+// requestLoyaltyVerificationCode/verifyLoyaltyCode -- audit OWASP A04 (4
+// September 2026): GetMyPoints/RedeemReward SEBELUMNYA cuma percaya email
+// yang diketik, tanpa bukti kepemilikan -- siapa pun yang tahu email
+// pembeli sungguhan bisa melihat & menukar poin orang lain. Alur baru:
+// minta kode 6-digit dikirim ke email (request-code), tukar kode itu jadi
+// verification_token (verify-code) yang dipakai ulang oleh getMyLoyaltyPoints/
+// redeemLoyaltyReward selama sesi berlangsung (30 menit) -- pembeli cuma
+// perlu masukkan kode SEKALI per kunjungan, bukan tiap aksi.
+export function requestLoyaltyVerificationCode(username: string, email: string) {
+  return apiFetch<{ message: string; dev_verification_code?: string }>(`/pages/${username}/loyalty/request-code`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function verifyLoyaltyCode(username: string, email: string, code: string) {
+  return apiFetch<{ verification_token: string }>(`/pages/${username}/loyalty/verify-code`, {
+    method: "POST",
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export function getMyLoyaltyPoints(username: string, email: string, verificationToken: string) {
   return apiFetch<{ total_points: number; rewards: PublicLoyaltyReward[] }>(
-    `/pages/${username}/loyalty?email=${encodeURIComponent(email)}`,
+    `/pages/${username}/loyalty?email=${encodeURIComponent(email)}&verification_token=${encodeURIComponent(verificationToken)}`,
     { method: "GET" }
   );
 }
 
-export function redeemLoyaltyReward(rewardId: string, buyerEmail: string) {
+export function redeemLoyaltyReward(rewardId: string, buyerEmail: string, verificationToken: string) {
   return apiFetch<{ message: string; voucher_code: string; reward_name: string }>(
     `/loyalty/rewards/${rewardId}/redeem`,
-    { method: "POST", body: JSON.stringify({ buyer_email: buyerEmail }) }
+    { method: "POST", body: JSON.stringify({ buyer_email: buyerEmail, verification_token: verificationToken }) }
   );
 }
 

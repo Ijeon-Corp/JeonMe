@@ -61,6 +61,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeAudienceBroadcast, h.HandleAudienceBroadcast)
 	mux.HandleFunc(queue.TypeSignupVerificationEmail, h.HandleSignupVerificationEmail)
 	mux.HandleFunc(queue.TypePasswordResetEmail, h.HandlePasswordResetEmail)
+	mux.HandleFunc(queue.TypeLoyaltyVerificationEmail, h.HandleLoyaltyVerificationEmail)
 	return mux
 }
 
@@ -88,6 +89,32 @@ func (h *Handler) HandleSignupVerificationEmail(_ context.Context, t *asynq.Task
 	}
 
 	log.Printf("worker: kode verifikasi akun terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandleLoyaltyVerificationEmail -- kode verifikasi kepemilikan email
+// sebelum lihat/tukar poin loyalitas (lihat catatan lengkap di
+// queue.TypeLoyaltyVerificationEmail & LoyaltyHandler.RequestVerificationCode).
+// Pola sama persis dengan HandleSignupVerificationEmail.
+func (h *Handler) HandleLoyaltyVerificationEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.LoyaltyVerificationPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Kode verifikasi poin loyalitas Jeon.id"
+	body := fmt.Sprintf(
+		"Kode verifikasinya: %s\n\nMasukkan kode ini untuk melihat & menukar poin loyalitasmu. "+
+			"Kode berlaku 10 menit sejak diminta.\n\nKalau kamu tidak meminta ini, abaikan saja email ini -- "+
+			"poinmu tetap aman.\n\nSalam,\nTim Jeon.id",
+		payload.Code,
+	)
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim kode verifikasi loyalitas: %w", err)
+	}
+
+	log.Printf("worker: kode verifikasi loyalitas terkirim ke %s", payload.Email)
 	return nil
 }
 

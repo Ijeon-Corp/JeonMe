@@ -54,7 +54,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	bundle := handlers.NewBundleHandler(db)
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db, rdb)
-	loyalty := handlers.NewLoyaltyHandler(db, rdb)
+	loyalty := handlers.NewLoyaltyHandler(db, rdb, queueClient, cfg.AppEnv)
 	businessCard := handlers.NewBusinessCardHandler(db, s3)
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL, cfg.PlatformFeePercent)
@@ -201,6 +201,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// No.94 (Sprint 13): pembeli mengecek poin & menukar reward, publik
 		// (tanpa akun, cukup email pembeli seperti checkout).
+		// Audit OWASP A04 (4 September 2026): request-code/verify-code
+		// menegakkan bukti kepemilikan email SEBELUM GetMyPoints/
+		// RedeemReward mau menunjukkan/membelanjakan poin -- lihat catatan
+		// lengkap di LoyaltyHandler.RequestVerificationCode.
+		api.POST("/pages/:username/loyalty/request-code", loyaltyRateLimit, loyalty.RequestVerificationCode)
+		api.POST("/pages/:username/loyalty/verify-code", loyaltyRateLimit, loyalty.VerifyCode)
 		api.GET("/pages/:username/loyalty", loyaltyRateLimit, loyalty.GetMyPoints)
 		api.POST("/loyalty/rewards/:id/redeem", loyaltyRateLimit, loyalty.RedeemReward)
 

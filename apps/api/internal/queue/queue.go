@@ -191,6 +191,30 @@ func NewPasswordResetTask(email, resetURL string) (*asynq.Task, error) {
 	return asynq.NewTask(TypePasswordResetEmail, payload), nil
 }
 
+// TypeLoyaltyVerificationEmail -- audit OWASP A04 (4 September 2026):
+// GetMyPoints/RedeemReward (loyalty.go) sebelumnya cuma percaya buyer_email
+// tanpa bukti kepemilikan -- lihat catatan lengkap di migrasi
+// 000090_loyalty_verification. ASINKRON (pola sama dengan
+// auth:signup_verification_email) supaya lambatnya SMTP tidak membuat
+// LoyaltyHandler.RequestVerificationCode menunggu. Payload membawa kode
+// MENTAH (bukan hash) dengan alasan sama seperti SignupVerificationPayload
+// -- DB cuma menyimpan hash-nya, kode asli ini satu-satunya salinan yang
+// ada setelah request HTTP selesai.
+const TypeLoyaltyVerificationEmail = "loyalty:verification_email"
+
+type LoyaltyVerificationPayload struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+func NewLoyaltyVerificationTask(email, code string) (*asynq.Task, error) {
+	payload, err := json.Marshal(LoyaltyVerificationPayload{Email: email, Code: code})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload verifikasi loyalitas %s: %w", email, err)
+	}
+	return asynq.NewTask(TypeLoyaltyVerificationEmail, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

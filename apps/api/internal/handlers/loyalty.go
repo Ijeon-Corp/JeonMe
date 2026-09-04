@@ -9,9 +9,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/jeonme/api/internal/queue"
 )
 
 // LoyaltyHandler mengimplementasikan No.94 (Sprint 13): program poin
@@ -23,12 +26,17 @@ import (
 // diskon baru sama sekali, cukup membuat satu baris voucher max_uses=1
 // begitu ditukar, dipakai lewat alur checkout+voucher yang sudah teruji.
 type LoyaltyHandler struct {
-	DB  *pgxpool.Pool
-	RDB *redis.Client
+	DB    *pgxpool.Pool
+	RDB   *redis.Client
+	Queue *asynq.Client
+	// AppEnv -- pola sama seperti AuthHandler (dev_verification_code):
+	// dipakai RequestVerificationCode supaya test/dev lokal bisa dapat
+	// kode mentah tanpa mailbox sungguhan, TIDAK PERNAH di production.
+	AppEnv string
 }
 
-func NewLoyaltyHandler(db *pgxpool.Pool, rdb *redis.Client) *LoyaltyHandler {
-	return &LoyaltyHandler{DB: db, RDB: rdb}
+func NewLoyaltyHandler(db *pgxpool.Pool, rdb *redis.Client, queueClient *asynq.Client, appEnv string) *LoyaltyHandler {
+	return &LoyaltyHandler{DB: db, RDB: rdb, Queue: queueClient, AppEnv: appEnv}
 }
 
 // awardLoyaltyPoints — dipanggil dari CheckoutHandler.Webhook SETELAH
@@ -282,6 +290,158 @@ func (h *LoyaltyHandler) DeleteReward(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "reward dihapus"})
 }
 
+type requestLoyaltyCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// RequestVerificationCode -- langkah 1/2 verifikasi kepemilikan email
+// SEBELUM lihat/tukar poin (audit OWASP A04, 4 September 2026 -- lihat
+// catatan lengkap di migrasi 000090_loyalty_verification: GetMyPoints/
+// RedeemReward sebelumnya cuma percaya buyer_email tanpa bukti kepemilikan
+// apa pun, siapa pun yang tahu email pembeli sungguhan bisa melihat &
+// menukar poin orang lain). SELALU membalas pesan generik yang SAMA
+// terlepas dari apakah username/email ini benar-benar punya poin --
+// pola sama seperti RequestPasswordReset (auth.go) -- supaya endpoint ini
+// tidak bisa dipakai sebagai oracle "email siapa saja yang pernah belanja
+// di kreator ini".
+func (h *LoyaltyHandler) RequestVerificationCode(c *gin.Context) {
+	username := c.Param("username")
+	var req requestLoyaltyCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+	buyerEmail := strings.ToLower(strings.TrimSpace(req.Email))
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	const genericResponse = "Kalau email ini pernah belanja di sini, kode verifikasi sudah dikirim"
+
+	var creatorUserID string
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM users WHERE username = $1`, username).Scan(&creatorUserID); err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": genericResponse})
+		return
+	}
+
+	rawCode, codeHash, genErr := generateVerificationCode()
+	if genErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO loyalty_verifications (id, creator_user_id, buyer_email, code_hash, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`, uuid.NewString(), creatorUserID, buyerEmail, codeHash, time.Now().Add(10*time.Minute)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat kode verifikasi"})
+		return
+	}
+
+	// Soft-fail (pola sama seperti SMTP/S3/WhatsApp di seluruh repo ini).
+	if h.Queue != nil {
+		if task, err := queue.NewLoyaltyVerificationTask(buyerEmail, rawCode); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
+	}
+
+	resp := gin.H{"message": genericResponse}
+	if h.AppEnv != "production" {
+		// TODO: hapus begitu verifikasi loyalitas sudah teruji stabil di
+		// production sungguhan -- pola sama seperti dev_verification_code
+		// (auth.go)/dev_reset_token.
+		resp["dev_verification_code"] = rawCode
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+type verifyLoyaltyCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Code  string `json:"code" binding:"required,len=6"`
+}
+
+// VerifyCode -- langkah 2/2: menukar kode 6-digit yang baru dikirim jadi
+// verification_token (token acak baru, BUKAN kode itu sendiri) yang
+// dipakai ulang GetMyPoints/RedeemReward selama sesi 30 menit -- supaya
+// pembeli tidak perlu memasukkan kode lagi tiap kali menukar reward
+// berbeda dalam satu kunjungan. Lockout percobaan kode SENGAJA dibagi
+// dengan mekanisme yang sama seperti verifikasi signup (checkVerifyLockout/
+// recordVerifyFailure, auth.go) -- ambang & tujuannya identik (brute-force
+// kode 6-digit), tidak perlu duplikat aturan baru.
+func (h *LoyaltyHandler) VerifyCode(c *gin.Context) {
+	username := c.Param("username")
+	var req verifyLoyaltyCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+	buyerEmail := strings.ToLower(strings.TrimSpace(req.Email))
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if h.RDB != nil {
+		if locked, retryAfter := checkVerifyLockout(ctx, h.RDB, buyerEmail); locked {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "terlalu banyak percobaan, coba lagi nanti", "retry_after_seconds": int(retryAfter.Seconds())})
+			return
+		}
+	}
+
+	var creatorUserID string
+	if err := h.DB.QueryRow(ctx, `SELECT id FROM users WHERE username = $1`, username).Scan(&creatorUserID); err != nil {
+		recordVerifyFailure(ctx, h.RDB, buyerEmail)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "kode salah atau kedaluwarsa"})
+		return
+	}
+
+	codeHash := hashToken(req.Code)
+	var verificationID string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT id FROM loyalty_verifications
+		WHERE creator_user_id = $1 AND buyer_email = $2 AND code_hash = $3
+			AND verified_at IS NULL AND expires_at > now()
+		ORDER BY created_at DESC LIMIT 1
+	`, creatorUserID, buyerEmail, codeHash).Scan(&verificationID); err != nil {
+		recordVerifyFailure(ctx, h.RDB, buyerEmail)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "kode salah atau kedaluwarsa"})
+		return
+	}
+	clearVerifyFailures(ctx, h.RDB, buyerEmail)
+
+	rawSessionToken, sessionHash, genErr := generateToken()
+	if genErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat sesi verifikasi"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `
+		UPDATE loyalty_verifications SET verified_at = now(), session_token_hash = $1, expires_at = now() + interval '30 minutes'
+		WHERE id = $2
+	`, sessionHash, verificationID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan sesi verifikasi"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"verification_token": rawSessionToken})
+}
+
+// verifyLoyaltySession -- true kalau verificationToken cocok sesi yang
+// SUDAH diverifikasi (verified_at terisi) & belum kedaluwarsa untuk
+// creator+email PERSIS ini. Dipakai GetMyPoints & RedeemReward supaya
+// keduanya menegakkan bukti kepemilikan email yang sama.
+func verifyLoyaltySession(ctx context.Context, db *pgxpool.Pool, creatorUserID, buyerEmail, verificationToken string) bool {
+	if verificationToken == "" {
+		return false
+	}
+	var exists bool
+	_ = db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM loyalty_verifications
+			WHERE creator_user_id = $1 AND buyer_email = $2 AND session_token_hash = $3
+				AND verified_at IS NOT NULL AND expires_at > now()
+		)
+	`, creatorUserID, buyerEmail, hashToken(verificationToken)).Scan(&exists)
+	return exists
+}
+
 // GetMyPoints — REQ publik: pembeli mengecek saldo poinnya SENDIRI di
 // kreator TERTENTU (poin per-kreator, bukan lintas platform), dan daftar
 // reward yang sudah dipublikasikan supaya bisa memutuskan mau menukar yang mana.
@@ -299,6 +459,13 @@ func (h *LoyaltyHandler) GetMyPoints(c *gin.Context) {
 	var creatorUserID string
 	if err := h.DB.QueryRow(ctx, `SELECT id FROM users WHERE username = $1`, username).Scan(&creatorUserID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "kreator tidak ditemukan"})
+		return
+	}
+
+	// Audit OWASP A04 (4 September 2026): lihat catatan lengkap di
+	// RequestVerificationCode/VerifyCode di atas.
+	if !verifyLoyaltySession(ctx, h.DB, creatorUserID, buyerEmail, c.Query("verification_token")) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "verifikasi email diperlukan -- minta & masukkan kode verifikasi dulu"})
 		return
 	}
 
@@ -343,6 +510,11 @@ func (h *LoyaltyHandler) GetMyPoints(c *gin.Context) {
 
 type redeemRewardRequest struct {
 	BuyerEmail string `json:"buyer_email" binding:"required,email"`
+	// VerificationToken -- audit OWASP A04 (4 September 2026): lihat
+	// catatan lengkap di RequestVerificationCode/VerifyCode/
+	// verifyLoyaltySession -- diperoleh dari VerifyCode setelah pembeli
+	// membuktikan kepemilikan buyer_email di atas.
+	VerificationToken string `json:"verification_token" binding:"required"`
 }
 
 // RedeemReward — REQ publik: pembeli menukar poin dengan reward. Saldo
@@ -382,6 +554,13 @@ func (h *LoyaltyHandler) RedeemReward(c *gin.Context) {
 	}
 	if !isPublished {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "reward ini belum dipublikasikan"})
+		return
+	}
+	// Audit OWASP A04 (4 September 2026): lihat catatan lengkap di
+	// RequestVerificationCode/VerifyCode -- dicek SEBELUM transaksi
+	// dimulai, gagal cepat sebelum mengunci saldo poin sia-sia.
+	if !verifyLoyaltySession(ctx, h.DB, creatorUserID, buyerEmail, req.VerificationToken) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "verifikasi email diperlukan -- minta & masukkan kode verifikasi dulu"})
 		return
 	}
 	if validUntil != nil && validUntil.Before(time.Now()) {
