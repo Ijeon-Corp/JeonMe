@@ -79,7 +79,6 @@ import {
 import EmptyState from "@/components/EmptyState";
 import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
-import ShareButton from "@/components/ShareButton";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
@@ -2387,13 +2386,6 @@ export default function DashboardLinksPage() {
                   >
                     {t("dashboard.pages.links.linkCard.editContent")}
                   </button>
-                )}
-                {link.block_type === "link" && (
-                  <ShareButton
-                    title={link.title}
-                    url={link.url}
-                    className="!h-8 !w-8 flex-shrink-0 !rounded-lg !bg-transparent !text-app-muted !shadow-none hover:!bg-jeon-purple/10 hover:!text-jeon-purple"
-                  />
                 )}
                 <button
                   type="button"
