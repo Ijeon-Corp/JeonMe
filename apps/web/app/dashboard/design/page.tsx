@@ -11,6 +11,7 @@ import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Struktur halaman ini diikutkan tangkapan layar halaman Design Linktree:
 // satu baris "Theme" berdiri sendiri di atas, lalu label "Customize", lalu
@@ -38,6 +39,7 @@ export default function DashboardDesignPage() {
   const router = useRouter();
   const { t } = useLocale();
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
+  useErrorToast(error);
 
   if (loading || !page) return (<><HalamanSayaTabs /><PageSkeleton /></>);
 
@@ -60,7 +62,6 @@ export default function DashboardDesignPage() {
       <div className="min-w-0 max-w-2xl">
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.design.subtitle")}</p>
 
-        {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         <section className="glass mt-6 rounded-jlg p-5 shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2">

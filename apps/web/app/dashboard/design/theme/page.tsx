@@ -6,6 +6,7 @@ import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import ThemeGallery from "@/components/ThemeGallery";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Galeri tema (tab Warna & Gradien/Wallpaper/3D-Live/Video/Doodle + tile
 // Custom) diekstrak ke components/ThemeGallery.tsx, 27 Agustus 2026 --
@@ -17,6 +18,7 @@ import { useLocale } from "@/lib/locale-context";
 export default function DesignThemePage() {
   const { t } = useLocale();
   const { page, links, products, loading, error, handlePageSettingChange } = useDesignData();
+  useErrorToast(error);
   const router = useRouter();
 
   if (loading || !page) return <PageSkeleton />;
@@ -30,7 +32,6 @@ export default function DesignThemePage() {
       title={t("dashboard.pages.designTheme.title")}
       description={t("dashboard.pages.designTheme.description")}
     >
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         {/* Bug dilaporkan pengguna (27 Juli 2026): "jika pilih tema warna

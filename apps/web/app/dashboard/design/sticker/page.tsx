@@ -5,6 +5,7 @@ import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // DesignStickerPage -- Modul Desain (koreksi langsung pengguna, 8 Agustus
 // 2026, disempurnakan lagi hari yang sama: "langsung edit di bagian
@@ -17,6 +18,7 @@ import { useLocale } from "@/lib/locale-context";
 export default function DesignStickerPage() {
   const { t } = useLocale();
   const { page, loading, error, links, products, handleStickersChange } = useDesignData();
+  useErrorToast(error);
 
   if (loading || !page) return <PageSkeleton />;
 
@@ -31,7 +33,6 @@ export default function DesignStickerPage() {
       editableStickers
       onStickersChange={handleStickersChange}
     >
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 rounded-jlg p-5 shadow-card">
         <StickerCanvasEditor stickers={page.stickers} onChange={handleStickersChange} />

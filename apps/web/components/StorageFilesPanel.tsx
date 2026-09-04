@@ -6,6 +6,7 @@ import { ApiError, StorageFileItem, deleteProductFile, listStorage } from "@/lib
 import { IconInbox, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Toko (Fase E3): tab Storage & Files -- daftar file produk + total
 // penyimpanan terpakai. file_size_bytes bisa null (file lama sebelum
@@ -24,6 +25,7 @@ export default function StorageFilesPanel() {
   const { t } = useLocale();
   const [data, setData] = useState<{ files: StorageFileItem[]; total_bytes: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +54,6 @@ export default function StorageFilesPanel() {
 
   return (
     <div className="mt-4">
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="glass mb-3 rounded-jmd p-4 shadow-card">
         <p className="text-xs font-semibold text-app-muted">{t("dashboard.components.storageFilesPanel.totalStorageLabel")}</p>

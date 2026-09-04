@@ -35,6 +35,7 @@ import KpiCard from "@/components/dashboard/data/KpiCard";
 import RangeControl from "@/components/dashboard/data/RangeControl";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { KpiSkeleton, ChartSkeleton } from "@/components/dashboard/feedback/Skeletons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const PRESETS = [7, 30, 90];
 
@@ -92,6 +93,7 @@ function LegacyHomePage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [prevSummary, setPrevSummary] = useState<AnalyticsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -335,7 +337,6 @@ function LegacyHomePage() {
         </div>
       </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <AnalyticsAssistant />
 

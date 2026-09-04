@@ -4,6 +4,7 @@ import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useErrorToast } from "@/lib/use-error-toast";
 import {
   ApiError,
   CatalogItem,
@@ -303,6 +304,12 @@ export default function DashboardLinksPage() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Permintaan langsung pengguna, 5 September 2026: pesan error (mis.
+  // penolakan moderasi tautan) sebelumnya cuma <p> inline dekat atas
+  // halaman -- tidak kelihatan kalau sudah scroll ke form tambah-tautan
+  // yang letaknya jauh di bawah. Toast tengah selalu kelihatan berapa pun
+  // posisi scroll.
+  useErrorToast(error);
 
   // Modul Halaman Tambahan Fase 2 (permintaan langsung pengguna, 28 Agustus
   // 2026, referensi UI kompetitor "+ Page" + navigation pill): editor Link
@@ -1744,8 +1751,6 @@ export default function DashboardLinksPage() {
           })()}
 
         <p className="mt-3 text-sm text-app-muted">{t("dashboard.pages.links.dragToReorderHint")}</p>
-
-        {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {/* Baris profil -- BISA DIEDIT langsung dari sini (permintaan
             langsung pengguna): nama tampilan & bio inline-editable (ikon

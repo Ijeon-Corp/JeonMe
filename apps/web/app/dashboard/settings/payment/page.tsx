@@ -20,6 +20,7 @@ import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Settings §3 (Payment / Payout). Rekening baru WAJIB verifikasi
 // (kode OTP) sebelum bisa jadi utama -- lihat PayoutMethodHandler backend.
@@ -30,6 +31,7 @@ export default function SettingsPaymentPage() {
   const [methods, setMethods] = useState<PayoutMethod[] | null>(null);
   const [schedule, setSchedule] = useState<PayoutSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   const [adding, setAdding] = useState(false);
   const [type, setType] = useState<"bank_transfer" | "ewallet">("bank_transfer");
@@ -179,7 +181,6 @@ export default function SettingsPaymentPage() {
         .
       </p>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsPayment.methodsTitle")}</h2>

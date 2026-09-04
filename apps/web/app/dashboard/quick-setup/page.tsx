@@ -27,6 +27,7 @@ import { IconCheck, IconChevronRight, IconSearch } from "@/components/icons";
 import ThemeGallery from "@/components/ThemeGallery";
 import type { PagePreviewData } from "@/components/PagePreview";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // PagePreview.tsx -- lihat catatan di components/LivePreviewPanel.tsx,
 // sama-sama di-dynamic-import supaya bundle awal halaman ini lebih kecil.
@@ -94,6 +95,7 @@ export default function QuickSetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [tokoSynced, setTokoSynced] = useState(false);
   const [appliedMonetizationHint, setAppliedMonetizationHint] = useState<string | null>(null);
   // myPage -- dipakai HANYA supaya mockup pratinjau template pakai
@@ -389,7 +391,6 @@ export default function QuickSetupPage() {
             )}
           </>
         )}
-        {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       </div>
     );
   }
@@ -412,7 +413,6 @@ export default function QuickSetupPage() {
         {t("dashboard.pages.quickSetup.categorySuffix")}
       </p>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px] lg:items-start">
         <div>

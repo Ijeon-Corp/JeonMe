@@ -57,6 +57,7 @@ import Toggle from "@/components/Toggle";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
 
@@ -203,6 +204,7 @@ export default function ProdukPageEditor({
 }) {
   const router = useRouter();
   const { t } = useLocale();
+  useErrorToast(error);
 
   async function handlePatch(patch: Parameters<typeof updateExtraPage>[1]) {
     if (!page) return;
@@ -235,7 +237,6 @@ export default function ProdukPageEditor({
           {t("dashboard.components.produkPageEditor.notActive.description")}{" "}
           <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
         </p>
-        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button
           type="button"
           onClick={onCreateNow}
@@ -352,7 +353,6 @@ export default function ProdukPageEditor({
         </div>
       </section>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-jmd p-1.5 shadow-card">
         {(

@@ -7,6 +7,7 @@ import DigitalBusinessCard, { type BusinessCardData } from "@/components/Digital
 import { renderBusinessCardPNG } from "@/lib/business-card-png";
 import { IconClose, IconCopy, IconDownload, IconExternal } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Pengganti QRCodeModal untuk Kartu Kontak (permintaan pengguna 3 September
 // 2026): yang tampil kartu nama UTUH bertema Jeonme, bukan QR saja. QR
@@ -66,6 +67,7 @@ export default function BusinessCardModal({
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   async function handleDownload() {
     const qr = qrDataUrl();
@@ -111,7 +113,6 @@ export default function BusinessCardModal({
           <QRCodeCanvas ref={qrRef} value={url} size={512} level="M" marginSize={1} />
         </div>
 
-        {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <button type="button" onClick={handleDownload} disabled={downloading} className="btn-primary flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-bold text-white disabled:opacity-60">

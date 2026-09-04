@@ -18,6 +18,7 @@ import {
 import { toPreviewData } from "@/lib/page-preview-data";
 import { IconCheck, IconSparkle, IconUpload } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // PagePreview.tsx -- lihat catatan di components/LivePreviewPanel.tsx,
 // di-dynamic-import supaya bundle awal halaman ini lebih kecil.
@@ -47,6 +48,7 @@ export default function DashboardImportPage() {
   const [url, setUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  useErrorToast(analyzeError);
 
   const [result, setResult] = useState<ImportAnalyzeResult | null>(null);
   const [checkedLinks, setCheckedLinks] = useState<boolean[]>([]);
@@ -55,6 +57,7 @@ export default function DashboardImportPage() {
   const [applying, setApplying] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
+  useErrorToast(applyError);
 
   useEffect(() => {
     getMyPage()
@@ -195,12 +198,9 @@ export default function DashboardImportPage() {
           </>
         )}
         {applyError && (
-          <>
-            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{applyError}</p>
-            <button type="button" onClick={() => setStep("preview")} className="mt-3 text-sm font-semibold text-jeon-purple hover:underline">
-              {t("dashboard.pages.import.backButton")}
-            </button>
-          </>
+          <button type="button" onClick={() => setStep("preview")} className="mt-3 text-sm font-semibold text-jeon-purple hover:underline">
+            {t("dashboard.pages.import.backButton")}
+          </button>
         )}
       </div>
     );
@@ -302,7 +302,6 @@ export default function DashboardImportPage() {
             )}
           </section>
 
-          {applyError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{applyError}</p>}
 
           {!hasTheme && !hasLinks ? (
             <button type="button" onClick={() => setStep("input")} className="rounded-full border-2 border-jeon-ink px-5 py-2.5 text-sm font-bold text-app-ink">
@@ -398,7 +397,6 @@ export default function DashboardImportPage() {
           />
         </div>
 
-        {analyzeError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{analyzeError}</p>}
 
         <button
           type="submit"

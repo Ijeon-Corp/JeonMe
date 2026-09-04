@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiError, PublicBusinessCard, submitCardContact } from "@/lib/api-client";
 import { IconDownload } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // No.95 (Sprint 13): dua aksi utama kartu kontak sisi klien --
 // (1) unduh vCard (.vcf) standar, dibuat di browser tanpa integrasi Wallet
@@ -38,6 +39,7 @@ export default function CardActions({ card }: { card: PublicBusinessCard }) {
   const [whatsapp, setWhatsapp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [done, setDone] = useState(false);
 
   function handleDownloadVCard() {
@@ -86,7 +88,6 @@ export default function CardActions({ card }: { card: PublicBusinessCard }) {
           ) : (
             <form onSubmit={handleSubmitContact} className="flex flex-col gap-2">
               <p className="text-sm font-bold text-app-ink">Bagikan kontakmu balik</p>
-              {error && <p className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-600">{error}</p>}
               <input
                 type="text"
                 placeholder="Nama kamu"

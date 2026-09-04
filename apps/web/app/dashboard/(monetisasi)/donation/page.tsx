@@ -18,6 +18,7 @@ import {
 import Toggle from "@/components/Toggle";
 import EmptyState from "@/components/EmptyState";
 import { IconGift, IconTrash } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 function formatRupiah(n: number): string {
   return "Rp" + n.toLocaleString("id-ID");
@@ -32,6 +33,7 @@ export default function DashboardDonationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [saved, setSaved] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
@@ -47,6 +49,7 @@ export default function DashboardDonationPage() {
   // tambah/hapus item tidak perlu submit ulang form Simpan di atas.
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [wishlistError, setWishlistError] = useState<string | null>(null);
+  useErrorToast(wishlistError);
   const [addingWishlist, setAddingWishlist] = useState(false);
   const [wishlistName, setWishlistName] = useState("");
   const [wishlistPrice, setWishlistPrice] = useState("");
@@ -141,7 +144,6 @@ export default function DashboardDonationPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.donation.subtitle")}</p>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.donation.saved")}</p>}
 
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
@@ -242,7 +244,6 @@ export default function DashboardDonationPage() {
           </div>
         </div>
 
-        {wishlistError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{wishlistError}</p>}
 
         <div className="mt-4 flex flex-col gap-2">
           {wishlist.map((w) => {

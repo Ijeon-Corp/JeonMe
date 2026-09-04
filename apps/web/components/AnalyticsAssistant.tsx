@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ApiError, askAnalyticsAssistant } from "@/lib/api-client";
 import { IconSparkle } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 type ChatEntry = { question: string; answer: string };
 
@@ -18,6 +19,7 @@ export default function AnalyticsAssistant() {
   const [history, setHistory] = useState<ChatEntry[]>([]);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const suggestions = dict.dashboard.components.analyticsAssistant.suggestions;
 
   async function handleAsk(q: string) {
@@ -80,7 +82,6 @@ export default function AnalyticsAssistant() {
         </div>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-600">{error}</p>}
 
       <form onSubmit={handleSubmit} className="mt-3 flex gap-1.5">
         <input

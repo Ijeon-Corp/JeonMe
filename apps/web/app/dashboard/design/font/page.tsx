@@ -7,10 +7,12 @@ import { CUSTOM_FONT_OPTIONS } from "@/lib/page-themes";
 import { MyPage } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function DesignFontPage() {
   const { t } = useLocale();
   const { page, setPage, links, products, loading, error, handleStyleOverride } = useDesignData();
+  useErrorToast(error);
 
   if (loading || !page) return <PageSkeleton />;
 
@@ -23,7 +25,6 @@ export default function DesignFontPage() {
       title={t("dashboard.pages.designFont.title")}
       description={t("dashboard.pages.designFont.description")}
     >
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div>

@@ -10,6 +10,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Indonesia TIDAK memakai daylight saving time -- offset per zona waktu
 // TETAP sepanjang tahun, jadi cukup peta statis ke offset UTC tanpa
@@ -43,6 +44,7 @@ export default function DashboardEventsPage() {
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
@@ -154,7 +156,6 @@ export default function DashboardEventsPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.events.subtitle")}</p>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {(!salesV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">

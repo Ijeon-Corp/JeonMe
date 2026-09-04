@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ApiError, WebhookEventItem, listWebhookEvents } from "@/lib/api-client";
 import { IconInbox } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Toko (Fase E4): tab Webhook Events -- log pengiriman webhook dari
 // produk dengan metode penyerahan "webhook" (lihat worker.HandleProductWebhookDelivery).
@@ -13,6 +14,7 @@ export default function WebhookEventsPanel() {
   const { t } = useLocale();
   const [events, setEvents] = useState<WebhookEventItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   useEffect(() => {
     listWebhookEvents()
@@ -26,7 +28,6 @@ export default function WebhookEventsPanel() {
 
   return (
     <div className="mt-4">
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="glass overflow-x-auto rounded-jmd shadow-card">
         <table aria-label={t("dashboard.components.webhookEventsPanel.tableAriaLabel")} className="w-full min-w-[720px] text-left text-xs">

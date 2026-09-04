@@ -5,10 +5,12 @@ import Link from "next/link";
 import { AdminSummary, ApiError, getAdminSummary } from "@/lib/api-client";
 import { IconChart, IconFlag, IconShield, IconUsers, IconWallet } from "@/components/icons";
 import StatCard from "@/components/StatCard";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function AdminSummaryPage() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,7 +26,6 @@ export default function AdminSummaryPage() {
     <div className="max-w-3xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Ringkasan Admin</h1>
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {summary && (
         <>

@@ -26,6 +26,7 @@ import {
   publishSponsoredLink,
   updateBrandCampaignStatus,
 } from "@/lib/api-client";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Marketplace Brand <-> Kreator (benchmark Linktree "Earn > Sponsored Links"
 // & "Brand Deals", 3 September 2026). Tiga tampilan lewat ?view= -- pola
@@ -65,6 +66,7 @@ function BrandPageInner() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [campaigns, setCampaigns] = useState<BrandCampaign[]>([]);
   const [applications, setApplications] = useState<BrandMyApplication[]>([]);
   const [mine, setMine] = useState<BrandCampaign[]>([]);
@@ -249,7 +251,6 @@ function BrandPageInner() {
         ))}
       </div>
 
-      {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {view === "opportunities" && (
         <>

@@ -23,6 +23,7 @@ import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 function buildStatusLabel(t: (key: string) => string): Record<DashboardCollaborator["status"], string> {
   return {
@@ -84,6 +85,7 @@ export default function DashboardTeamPage() {
   const [auditLog, setAuditLog] = useState<TeamAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -202,7 +204,6 @@ export default function DashboardTeamPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.team.intro")}</p>
       )}
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {(!settingsV2 || teamTab === "invites") && invitesForMe.length > 0 && (
         <section className="mt-4 rounded-jlg border border-jeon-purple/30 bg-jeon-purple/5 p-5">

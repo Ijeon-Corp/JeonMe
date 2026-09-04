@@ -20,6 +20,7 @@ import SectionCard from "@/components/dashboard/page/SectionCard";
 import KpiCard from "@/components/dashboard/data/KpiCard";
 import RangeControl from "@/components/dashboard/data/RangeControl";
 import { KpiSkeleton, ChartSkeleton } from "@/components/dashboard/feedback/Skeletons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Statistik. v2 (JEONID-DASHBOARD-REDESIGN-SPEC.md §16, Phase 3, flag
 // "home" -- Beranda & Analitik satu fase §25): tab Overview BARU (KPI
@@ -86,6 +87,7 @@ function RedesignedStatistikPage() {
   const [prevSummary, setPrevSummary] = useState<AnalyticsSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -384,6 +386,7 @@ function LegacyStatistikPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
   const [rangeDays, setRangeDays] = useState(30);
 
@@ -448,7 +451,6 @@ function LegacyStatistikPage() {
         </div>
       </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {loading || !summary ? (
         <PageSkeleton />

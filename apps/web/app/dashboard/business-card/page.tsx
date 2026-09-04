@@ -9,6 +9,7 @@ import DigitalBusinessCard, { CARD_THEMES, type BusinessCardTheme } from "@/comp
 import { IconQrCode } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const EMPTY: BusinessCard = {
   is_active: false,
@@ -36,6 +37,7 @@ export default function DashboardBusinessCardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [saved, setSaved] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -86,7 +88,6 @@ export default function DashboardBusinessCardPage() {
       <div className="min-w-0">
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.businessCard.intro")}</p>
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.businessCard.savedMessage")}</p>}
 
 

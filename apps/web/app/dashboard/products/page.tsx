@@ -58,6 +58,7 @@ import { slugifyTitle } from "@/lib/slug";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Panel tab Toko (Overview/Reviews/Listing/Storage/Webhook/Settings/Transaction)
 // dan editor Toko dimuat lewat next/dynamic -- hanya 1 dari 8 yang pernah
@@ -230,6 +231,7 @@ function DashboardProductsPageInner() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -237,6 +239,7 @@ function DashboardProductsPageInner() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[] | null>(null);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+  useErrorToast(overviewError);
   const [overviewRangeDays, setOverviewRangeDays] = useState(30);
 
   // addMode -- Modul Toko (Fase B3): "+ Tambah Produk" sekarang membuka
@@ -1262,7 +1265,6 @@ function DashboardProductsPageInner() {
               ))}
             </div>
 
-            {overviewError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{overviewError}</p>}
             <div className="mt-3">
               {summary ? (
                 <ShopOverviewPanel summary={summary} recentOrders={recentOrders} />
@@ -1291,7 +1293,6 @@ function DashboardProductsPageInner() {
           <div className="mt-4">
             <p className="text-sm text-app-muted">{t("dashboard.pages.products.uploadHint")}</p>
 
-            {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-1 flex-col gap-2 sm:flex-row">

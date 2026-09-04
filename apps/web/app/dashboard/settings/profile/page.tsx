@@ -17,6 +17,7 @@ import { confirmAction } from "@/lib/confirm";
 import QRCodeModal from "@/components/QRCodeModal";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -37,6 +38,7 @@ export default function SettingsProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   const [original, setOriginal] = useState<SettingsProfile | null>(null);
   const [username, setUsername] = useState("");
@@ -186,7 +188,6 @@ export default function SettingsProfilePage() {
         </p>
       </div>
 
-      {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-5 flex items-center gap-4 rounded-jlg border border-jeon-ink bg-app-surface p-4">
         {original?.avatar_url ? (

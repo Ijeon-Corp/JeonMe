@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminReport, ApiError, listAdminReports, resolveReport, restoreReport } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { IconFlag, IconInbox } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const PAGE_SIZE = 50;
 
@@ -24,6 +25,7 @@ export default function AdminReportsPage() {
   // walau backend sudah mendukung status apa pun.
   const [status, setStatus] = useState("pending");
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -121,7 +123,6 @@ export default function AdminReportsPage() {
         ))}
       </div>
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <p className="mt-4 text-sm text-app-muted">Memuat...</p>

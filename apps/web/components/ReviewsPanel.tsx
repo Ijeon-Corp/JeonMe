@@ -6,6 +6,7 @@ import { ApiError, ProductReview, deleteReview, listReviews, setReviewHidden } f
 import { IconInbox, IconStar, IconTrash } from "@/components/icons";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Toko (Fase E1): tab Reviews -- semua ulasan lintas produk milik
 // kreator, dengan aksi sembunyikan (reversibel) / hapus (permanen).
@@ -23,6 +24,7 @@ export default function ReviewsPanel() {
   const { t } = useLocale();
   const [reviews, setReviews] = useState<ProductReview[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   useEffect(() => {
     listReviews()
@@ -61,7 +63,6 @@ export default function ReviewsPanel() {
 
   return (
     <div className="mt-4">
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {avgRating !== null && (
         <div className="glass mb-3 flex items-center gap-2 rounded-jmd p-4 shadow-card">

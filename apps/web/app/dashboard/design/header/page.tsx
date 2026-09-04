@@ -6,6 +6,7 @@ import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { ApiError, MyPage, uploadAvatar } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // LAYOUT_OPTIONS -- permintaan langsung pengguna, 13 Agustus 2026: "buat
 // saja yang penting semua kebutuhan terpenuhi untuk membuat new layout
@@ -52,6 +53,7 @@ const LAYOUT_VALUES: MyPage["layout_variant"][] = [
 export default function DesignHeaderPage() {
   const { t } = useLocale();
   const { page, setPage, links, products, loading, error, setError, handlePageSettingChange } = useDesignData();
+  useErrorToast(error);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -81,7 +83,6 @@ export default function DesignHeaderPage() {
       title={t("dashboard.pages.designHeader.title")}
       description={t("dashboard.pages.designHeader.description")}
     >
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div>

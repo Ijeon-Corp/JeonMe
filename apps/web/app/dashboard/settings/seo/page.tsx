@@ -9,6 +9,7 @@ import { IconChevronRight } from "@/components/icons";
 import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import Toggle from "@/components/Toggle";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // SettingsSeoPage -- permintaan langsung pengguna, 12 Agustus 2026
 // (referensi tangkapan layar panel "SEO and discoverability" Linktree):
@@ -34,6 +35,7 @@ export default function SettingsSeoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   const [page, setPage] = useState<MyPage | null>(null);
   const [seoTitle, setSeoTitle] = useState("");
@@ -99,7 +101,6 @@ export default function SettingsSeoPage() {
       <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSeo.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSeo.subtitle")}</p>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <form onSubmit={handleSubmit} className="glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card">
         <div>

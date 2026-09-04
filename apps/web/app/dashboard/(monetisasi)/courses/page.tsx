@@ -22,6 +22,7 @@ import { IconBook,
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_url: "" };
 
@@ -34,6 +35,7 @@ export default function DashboardCoursesPage() {
   const [courses, setCourses] = useState<DashboardCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
@@ -161,7 +163,6 @@ export default function DashboardCoursesPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.courses.subtitle")}</p>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {(!salesV2 || adding) && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">

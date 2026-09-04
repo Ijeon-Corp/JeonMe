@@ -4,6 +4,7 @@ import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { ApiError, ShopSettings, getShopSettings, updateShopSettings } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Toko (Fase E5): tab Shop Settings -- saat ini cuma "Toko Dijeda"
 // (menyembunyikan tombol beli & menolak checkout baru di seluruh toko
@@ -15,6 +16,7 @@ export default function ShopSettingsPanel() {
   const [settings, setSettings] = useState<ShopSettings | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -48,7 +50,6 @@ export default function ShopSettingsPanel() {
 
   return (
     <div className="mt-4 max-w-xl">
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && (
         <p className="mb-3 rounded-lg bg-jeon-purple/10 px-3 py-2 text-sm text-jeon-purple">
           {t("dashboard.components.shopSettingsPanel.savedMessage")}

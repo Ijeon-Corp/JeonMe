@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { formatIDR, formatDateTime } from "@/lib/format";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // buildStatusLabel -- status pesanan dipakai di 3 tempat (badge tabel,
 // opsi filter dropdown, detail modal), dibangun lewat t() supaya ikut
@@ -38,6 +39,7 @@ export default function TransactionPanel() {
   const salesV2 = dashRedesignEnabled("sales");
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -63,7 +65,6 @@ export default function TransactionPanel() {
 
   return (
     <div className="mt-4">
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mb-3 flex flex-wrap gap-2">
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
@@ -185,6 +186,7 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
   const salesV2 = dashRedesignEnabled("sales");
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [reason, setReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -236,7 +238,6 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
           <IconClose className="h-4 w-4" />
         </button>
 
-        {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {detail === null ? (
           // FormSkeleton (bukan PageSkeleton) -- panel ini modal KECIL;

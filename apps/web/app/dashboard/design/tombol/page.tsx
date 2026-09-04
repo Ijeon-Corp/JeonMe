@@ -5,10 +5,12 @@ import DesignPageShell from "@/components/DesignPageShell";
 import { useDesignData } from "@/lib/useDesignData";
 import { CUSTOM_BUTTON_ROUNDED_OPTIONS, CUSTOM_BUTTON_SHADOW_OPTIONS, CUSTOM_BUTTON_STYLE_OPTIONS } from "@/lib/page-themes";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function DesignTombolPage() {
   const { t } = useLocale();
   const { page, setPage, links, products, loading, error, handleStyleOverride } = useDesignData();
+  useErrorToast(error);
 
   if (loading || !page) return <PageSkeleton />;
 
@@ -21,7 +23,6 @@ export default function DesignTombolPage() {
       title={t("dashboard.pages.designTombol.title")}
       description={t("dashboard.pages.designTombol.description")}
     >
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <section className="glass mt-4 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div>

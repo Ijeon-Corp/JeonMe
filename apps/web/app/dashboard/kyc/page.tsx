@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 function buildStatusLabel(t: (key: string) => string): Record<KycStatus["status"], string> {
   return {
@@ -26,6 +27,7 @@ export default function DashboardKycPage() {
   const [status, setStatus] = useState<KycStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [submitting, setSubmitting] = useState(false);
   // v2 (SPEC §17.3, Phase 7, flag "settings"): form jadi STEPPER 4 langkah
   // (Identitas -> Bisnis -> Dokumen -> Review) dengan SATU submitKyc di
@@ -133,7 +135,6 @@ export default function DashboardKycPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.kyc.intro")}</p>
       )}
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {status && (
         <section className="glass mt-4 rounded-jlg p-5 shadow-card">

@@ -27,6 +27,7 @@ import { IconUsers,
   IconCopy, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function DashboardAffiliatesPage() {
   const { t } = useLocale();
@@ -48,6 +49,7 @@ export default function DashboardAffiliatesPage() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
@@ -201,7 +203,6 @@ export default function DashboardAffiliatesPage() {
         </p>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {(!marketingV2 || affTab === "program") && (
       <>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminUser, ApiError, activateUser, listAdminUsers, suspendUser } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { IconInbox, IconUsers } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const PAGE_SIZE = 50;
 
@@ -14,6 +15,7 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -125,7 +127,6 @@ export default function AdminUsersPage() {
         </button>
       </form>
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <p className="mt-3 text-xs text-app-muted">
         Menampilkan {users.length} dari {total} pengguna.

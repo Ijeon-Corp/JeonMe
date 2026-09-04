@@ -27,6 +27,7 @@ import { useToast } from "@/components/Toast";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Label status broadcast (i18n); WARNA kini terpusat di StatusBadge
 // (Phase 8 cleanup) -- queued/sending/sent/failed sudah ada di peta pusat.
@@ -106,6 +107,7 @@ function DashboardAudiencePageInner() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [saved, setSaved] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
@@ -128,6 +130,7 @@ function DashboardAudiencePageInner() {
   const [broadcastBody, setBroadcastBody] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  useErrorToast(broadcastError);
   const [broadcastSent, setBroadcastSent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -360,7 +363,6 @@ function DashboardAudiencePageInner() {
       </section>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {(!marketingV2 || view === "forms") && saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
 
       {(!marketingV2 || view === "forms") && (
@@ -474,7 +476,6 @@ function DashboardAudiencePageInner() {
           </div>
         </div>
 
-        {broadcastError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{broadcastError}</p>}
         {broadcastSent && <p className="mt-3 rounded-lg bg-jeon-purple/10 px-3 py-2 text-sm text-jeon-purple">{broadcastSent}</p>}
 
         <form onSubmit={handleSendBroadcast} className="mt-4 flex flex-col gap-3">

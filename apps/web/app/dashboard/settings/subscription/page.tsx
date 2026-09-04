@@ -17,6 +17,7 @@ import { IconCheck, IconChevronRight, IconRefresh, IconStar } from "@/components
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { confirmAction } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Langganan Premium: menghilangkan watermark halaman publik + latar
 // kustom + multi-Toko/halaman tambahan. Harga dari backend
@@ -44,6 +45,7 @@ export default function SettingsSubscriptionPage() {
   const { showToast } = useToast();
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [cycle, setCycle] = useState<Cycle>("yearly");
   const [checkingOut, setCheckingOut] = useState(false);
   const [canceling, setCanceling] = useState(false);
@@ -165,7 +167,6 @@ export default function SettingsSubscriptionPage() {
         </span>
       </div>
 
-      {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {/* Keadaan yang butuh perhatian, di atas kartu supaya tidak terlewat. */}
       {pastDue && (

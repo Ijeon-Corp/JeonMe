@@ -27,6 +27,7 @@ import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 function buildStatusLabel(t: (key: string) => string): Record<Payout["status"], string> {
   return {
@@ -53,6 +54,7 @@ export default function DashboardBalancePage() {
   const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   // v2 (SPEC §17.1, Phase 7, flag "settings"): form payout pindah ke
   // DIALOG terfokus + quick amounts (min/50%/maks) + checklist kesiapan
@@ -151,7 +153,6 @@ export default function DashboardBalancePage() {
         />
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {balance && (
         <section className="mt-6 grid grid-cols-2 gap-3">

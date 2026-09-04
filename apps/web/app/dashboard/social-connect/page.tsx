@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/locale-context";
 import PageSkeleton from "@/components/Skeleton";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // Modul Koneksi Sosial -- permintaan langsung pengguna, 17 Agustus 2026:
 // "saya mau jeonme ini bisa connect ke akun kita contoh nya instagram
@@ -106,6 +107,7 @@ export default function SocialConnectPage() {
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<"instagram" | "tiktok" | null>(null);
 
   const instagramAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID;
@@ -153,7 +155,6 @@ export default function SocialConnectPage() {
         <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.socialConnect.intro")}</p>
       )}
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-5 flex flex-col gap-3">
         <ConnectCard

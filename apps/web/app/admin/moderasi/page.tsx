@@ -16,6 +16,7 @@ import {
   upsertDomainVerdict,
 } from "@/lib/api-client";
 import { IconInbox } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const CATEGORY_LABELS: Record<ModerationCategory, string> = {
   judi_online: "Judi online",
@@ -53,6 +54,7 @@ export default function AdminModerationPage() {
   const [domainFilter, setDomainFilter] = useState<"blocked" | "allowed" | undefined>("blocked");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   const [newKeyword, setNewKeyword] = useState("");
   const [newKeywordCategory, setNewKeywordCategory] = useState<ModerationCategory>("judi_online");
@@ -146,7 +148,6 @@ export default function AdminModerationPage() {
         Kelola kata kunci &amp; reputasi domain yang dipakai memblokir tautan judi online/konten dewasa saat kreator menyimpan link.
       </p>
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {/* Kata kunci */}
       <section className="mt-6">

@@ -8,6 +8,7 @@ import { IconLock } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 // DashboardAnalyticsPage -- Modul Analitik Pihak Ketiga (permintaan
 // langsung pengguna, 12 Agustus 2026, referensi tangkapan layar panel
@@ -31,6 +32,7 @@ export default function DashboardAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [saved, setSaved] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
 
@@ -104,7 +106,6 @@ export default function DashboardAnalyticsPage() {
         </p>
       )}
 
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.analytics.saved")}</p>}
 
       <form onSubmit={handleSave} className={settingsV2 ? "mt-6 flex flex-col gap-4" : "glass mt-6 flex flex-col gap-5 rounded-jlg p-5 shadow-card"}>

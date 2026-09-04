@@ -12,6 +12,7 @@ import {
 } from "@/lib/api-client";
 import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { IconInbox, IconShield } from "@/components/icons";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
   unverified: "Belum diajukan",
@@ -37,6 +38,7 @@ export default function AdminKycPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
 
   const [detail, setDetail] = useState<AdminKycDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -210,7 +212,6 @@ export default function AdminKycPage() {
         </form>
       </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <p className="mt-4 text-sm text-app-muted">Memuat...</p>

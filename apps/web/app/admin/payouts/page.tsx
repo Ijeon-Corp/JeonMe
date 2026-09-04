@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminPayout, ApiError, listAdminPayouts, updatePayoutStatus } from "@/lib/api-client";
 import { IconInbox, IconWallet } from "@/components/icons";
 import { confirmAction } from "@/lib/confirm";
+import { useErrorToast } from "@/lib/use-error-toast";
 
 const STATUS_LABEL: Record<AdminPayout["status"], string> = {
   requested: "Diajukan",
@@ -28,6 +29,7 @@ export default function AdminPayoutsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   function reload(f: "needs_action" | "all", offset = 0) {
@@ -117,7 +119,6 @@ export default function AdminPayoutsPage() {
         </button>
       </div>
 
-      {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 flex flex-col gap-2">
         {payouts.map((p) => (
