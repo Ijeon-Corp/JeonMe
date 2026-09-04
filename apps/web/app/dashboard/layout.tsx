@@ -494,7 +494,7 @@ export default function DashboardLayout({
 
         {workspaces.length > 1 && (
           <div className="mt-4">
-            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
+            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-white/50">
               Kelola sebagai
             </label>
             <select

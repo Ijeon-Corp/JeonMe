@@ -230,7 +230,7 @@ function NavList({
                 {item.items.map((sub) => {
                   if ("kind" in sub) {
                     return (
-                      <p key={sub.label} className="px-3 pb-0.5 pt-2 text-[9px] font-extrabold uppercase tracking-widest text-white/30">
+                      <p key={sub.label} className="px-3 pb-0.5 pt-2 text-[9px] font-extrabold uppercase tracking-widest text-white/50">
                         {sub.label}
                       </p>
                     );

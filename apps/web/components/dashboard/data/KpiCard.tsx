@@ -65,8 +65,13 @@ export default function KpiCard({
         {icon && <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm ${ICON_BADGE[semantic]}`}>{icon}</span>}
         {label}
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <p className={`font-display text-2xl font-extrabold tracking-tight tabular-nums ${isBrand ? "text-white" : "text-dash-ink"}`}>{value}</p>
+      <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-2">
+        <p
+          className={`min-w-0 truncate font-display text-2xl font-extrabold tracking-tight tabular-nums ${isBrand ? "text-white" : "text-dash-ink"}`}
+          title={value}
+        >
+          {value}
+        </p>
         {trend !== undefined && trend !== null && (
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${

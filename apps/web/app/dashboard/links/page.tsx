@@ -1798,7 +1798,7 @@ export default function DashboardLinksPage() {
               ) : (
                 <div className="flex items-center gap-1.5">
                   <p className="truncate font-display text-base font-bold text-app-ink">{page.display_name || page.username}</p>
-                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editDisplayName")}>
+                  <button type="button" onClick={() => startEditProfileField("name")} className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editDisplayName")}>
                     <IconPencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -1819,7 +1819,7 @@ export default function DashboardLinksPage() {
               ) : (
                 <div className="mt-1 flex items-center gap-1.5">
                   <p className="truncate text-sm text-app-muted">{page.bio || t("dashboard.pages.links.profile.addBioPlaceholder")}</p>
-                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editBio")}>
+                  <button type="button" onClick={() => startEditProfileField("bio")} className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.profile.editBio")}>
                     <IconPencil className="h-3 w-3" />
                   </button>
                 </div>
@@ -2355,7 +2355,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => startEditField(link, "title")}
-                        className="flex-shrink-0 text-app-muted hover:text-jeon-purple"
+                        className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
                         title={t("dashboard.pages.links.linkCard.editTitle")}
                       >
                         <IconPencil className="h-3.5 w-3.5" />
@@ -2425,7 +2425,7 @@ export default function DashboardLinksPage() {
                   ) : (
                     <>
                       <p className="truncate text-xs text-app-muted">{link.url}</p>
-                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
+                      <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
@@ -2457,7 +2457,7 @@ export default function DashboardLinksPage() {
                       <button
                         type="button"
                         onClick={() => startEditField(link, "description")}
-                        className="flex-shrink-0 text-app-muted hover:text-jeon-purple"
+                        className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
                         title={t("dashboard.pages.links.linkCard.editDescription")}
                       >
                         <IconPencil className="h-3 w-3" />

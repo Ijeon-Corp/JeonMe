@@ -315,7 +315,7 @@ export default function DashboardAffiliatesPage() {
                       type="button"
                       onClick={() => handleRemoveCommission(a.id, c.product_id)}
                       title={t("dashboard.pages.affiliates.removeCommissionTitle")}
-                      className="text-app-muted hover:text-red-600"
+                      className="p-1 text-app-muted hover:text-red-600"
                     >
                       <IconTrash className="h-3 w-3" />
                     </button>

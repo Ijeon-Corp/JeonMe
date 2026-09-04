@@ -91,8 +91,10 @@ export default function StatCard({
         <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-jsm ${t.icon}`}>{icon}</span>
         {label}
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <p className={`font-display text-2xl font-extrabold tracking-tight tabular-nums ${t.value}`}>{value}</p>
+      <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-2">
+        <p className={`min-w-0 truncate font-display text-2xl font-extrabold tracking-tight tabular-nums ${t.value}`} title={value}>
+          {value}
+        </p>
         {pct !== undefined && <TrendBadge pct={pct} onDark={isBrand} />}
       </div>
       {sub !== "" && <p className={`mt-1 text-[11px] ${t.sub}`}>{sub ?? translate("dashboard.components.statCard.defaultSub")}</p>}
