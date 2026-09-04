@@ -122,6 +122,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// (10/menit) karena dipanggil tiap kali pengguna berhenti mengetik,
 		// bukan cuma sekali per submit.
 		checkUsernameRateLimit := middleware.RateLimit(rdb, "check-username", 30, time.Minute)
+		// Audit 4 September 2026: AvatarProxy (lihat catatan di
+		// businessCard.AvatarProxy) melakukan download S3 atau fetch
+		// outbound live per request TANPA cache -- endpoint publik pertama
+		// yang begitu, dan sebelum ini satu-satunya tanpa rate limit sama
+		// sekali. Tanpa batas, klien terskrip bisa memicu fetch origin
+		// berulang (biaya S3, koneksi outbound) tanpa henti.
+		avatarProxyRateLimit := middleware.RateLimit(rdb, "avatar-proxy", 30, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -186,7 +193,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// kartu (bukan halaman utama kreator), publik.
 		api.GET("/cards/:username", businessCard.GetPublicCard)
 		// Proxy foto profil untuk komposer PNG kartu nama (lihat AvatarProxy).
-		api.GET("/cards/:username/avatar", businessCard.AvatarProxy)
+		api.GET("/cards/:username/avatar", avatarProxyRateLimit, businessCard.AvatarProxy)
 		api.POST("/cards/:username/contact", leadsRateLimit, businessCard.SubmitCardContact)
 
 		// Modul Settings §2: dipanggil app/[username]/page.tsx SETELAH
