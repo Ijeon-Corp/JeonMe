@@ -3624,11 +3624,18 @@ export function updatePayoutStatus(id: string, status: "processing" | "completed
 // yang sensitif contoh nya link judol link 18+ dll") ----------
 
 export type ModerationCategory = "judi_online" | "konten_dewasa" | "lainnya";
+// ModerationMatchType -- "substring" (default) dicek longgar di mana pun
+// dalam URL+judul, cocok utk frasa multi-kata. "domain_exact" (5 September
+// 2026, perbaikan lubang deteksi "slot.com" lolos moderasi) HANYA cocok
+// kalau salah satu label domain PERSIS SAMA dgn kata kunci -- aman dipakai
+// utk kata generik satu-suku-kata yang tidak aman sbg substring bebas.
+export type ModerationMatchType = "substring" | "domain_exact";
 
 export interface BlockedKeyword {
   id: string;
   keyword: string;
   category: ModerationCategory;
+  match_type: ModerationMatchType;
   created_at: string;
 }
 
@@ -3636,10 +3643,10 @@ export function listBlockedKeywords() {
   return apiFetch<BlockedKeyword[]>("/admin/moderation/keywords", { method: "GET" }, { auth: true });
 }
 
-export function createBlockedKeyword(keyword: string, category: ModerationCategory) {
+export function createBlockedKeyword(keyword: string, category: ModerationCategory, matchType: ModerationMatchType = "substring") {
   return apiFetch<BlockedKeyword>(
     "/admin/moderation/keywords",
-    { method: "POST", body: JSON.stringify({ keyword, category }) },
+    { method: "POST", body: JSON.stringify({ keyword, category, match_type: matchType }) },
     { auth: true }
   );
 }

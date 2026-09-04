@@ -137,13 +137,35 @@ func (m *LinkModerationChecker) Check(ctx context.Context, rawURL, title string)
 
 	// Domain belum pernah dilihat: cek kata kunci terhadap URL+judul.
 	haystack := normalizeForKeywordMatch(rawURL + " " + title)
-	rows, err := m.DB.Query(ctx, `SELECT keyword, category FROM blocked_keywords`)
+	// domainLabels -- bagian domain antar titik (mis. "slot.co.id" ->
+	// ["slot","co","id"]), dipakai match_type "domain_exact" (lihat migrasi
+	// 000091): kata generik satu-suku-kata seperti "slot" tidak aman dicek
+	// sbg substring longgar terhadap teks bebas (salah blokir "waktu slot
+	// konsultasi"), tapi aman kalau HARUS persis SAMA dgn salah satu label
+	// domain -- domain yang isinya cuma kata itu sendiri praktis selalu
+	// judol/konten dewasa.
+	domainLabels := strings.Split(domain, ".")
+	rows, err := m.DB.Query(ctx, `SELECT keyword, category, match_type FROM blocked_keywords`)
 	if err == nil {
 		type match struct{ keyword, category string }
 		var hit *match
 		for rows.Next() {
-			var kw, cat string
-			if scanErr := rows.Scan(&kw, &cat); scanErr == nil && strings.Contains(haystack, kw) {
+			var kw, cat, matchType string
+			if scanErr := rows.Scan(&kw, &cat, &matchType); scanErr != nil {
+				continue
+			}
+			matched := false
+			if matchType == "domain_exact" {
+				for _, label := range domainLabels {
+					if label == kw {
+						matched = true
+						break
+					}
+				}
+			} else {
+				matched = strings.Contains(haystack, kw)
+			}
+			if matched {
 				hit = &match{kw, cat}
 				break
 			}

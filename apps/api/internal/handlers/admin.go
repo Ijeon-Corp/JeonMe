@@ -535,6 +535,7 @@ type blockedKeywordItem struct {
 	ID        string    `json:"id"`
 	Keyword   string    `json:"keyword"`
 	Category  string    `json:"category"`
+	MatchType string    `json:"match_type"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -544,7 +545,7 @@ func (h *AdminHandler) ListBlockedKeywords(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	rows, err := h.DB.Query(ctx, `SELECT id, keyword, category, created_at FROM blocked_keywords ORDER BY created_at DESC`)
+	rows, err := h.DB.Query(ctx, `SELECT id, keyword, category, match_type, created_at FROM blocked_keywords ORDER BY created_at DESC`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kata kunci"})
 		return
@@ -554,16 +555,23 @@ func (h *AdminHandler) ListBlockedKeywords(c *gin.Context) {
 	items := []blockedKeywordItem{}
 	for rows.Next() {
 		var it blockedKeywordItem
-		if err := rows.Scan(&it.ID, &it.Keyword, &it.Category, &it.CreatedAt); err == nil {
+		if err := rows.Scan(&it.ID, &it.Keyword, &it.Category, &it.MatchType, &it.CreatedAt); err == nil {
 			items = append(items, it)
 		}
 	}
 	c.JSON(http.StatusOK, items)
 }
 
+// createBlockedKeywordRequest -- MatchType default "substring" (perilaku
+// lama, aman utk frasa multi-kata). "domain_exact" (migrasi 000091) HANYA
+// dipakai utk kata generik satu-suku-kata yang tidak aman dicek sbg
+// substring bebas (mis. "slot") -- lihat komentar match_type di
+// moderation.go utk penjelasan lengkap kenapa dua strategi ini perlu
+// dipisah, bukan satu mode saja.
 type createBlockedKeywordRequest struct {
-	Keyword  string `json:"keyword" binding:"required,max=100"`
-	Category string `json:"category" binding:"omitempty,oneof=judi_online konten_dewasa lainnya"`
+	Keyword   string `json:"keyword" binding:"required,max=100"`
+	Category  string `json:"category" binding:"omitempty,oneof=judi_online konten_dewasa lainnya"`
+	MatchType string `json:"match_type" binding:"omitempty,oneof=substring domain_exact"`
 }
 
 // CreateBlockedKeyword — tambah satu kata kunci baru ke blocklist.
@@ -578,6 +586,9 @@ func (h *AdminHandler) CreateBlockedKeyword(c *gin.Context) {
 	if req.Category == "" {
 		req.Category = "lainnya"
 	}
+	if req.MatchType == "" {
+		req.MatchType = "substring"
+	}
 	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
 	if keyword == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "kata kunci tidak boleh kosong"})
@@ -589,14 +600,14 @@ func (h *AdminHandler) CreateBlockedKeyword(c *gin.Context) {
 
 	id := uuid.NewString()
 	if _, err := h.DB.Exec(ctx, `
-		INSERT INTO blocked_keywords (id, keyword, category, created_at) VALUES ($1, $2, $3, now())
-	`, id, keyword, req.Category); err != nil {
+		INSERT INTO blocked_keywords (id, keyword, category, match_type, created_at) VALUES ($1, $2, $3, $4, now())
+	`, id, keyword, req.Category, req.MatchType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menambah kata kunci (mungkin sudah ada)"})
 		return
 	}
 	_ = audit.Log(ctx, h.DB, adminID, "blocked_keyword.created", "blocked_keyword", id, nil)
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "keyword": keyword, "category": req.Category})
+	c.JSON(http.StatusCreated, gin.H{"id": id, "keyword": keyword, "category": req.Category, "match_type": req.MatchType})
 }
 
 // DeleteBlockedKeyword — hapus satu kata kunci dari blocklist.

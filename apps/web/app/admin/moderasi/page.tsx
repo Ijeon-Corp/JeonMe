@@ -7,6 +7,7 @@ import {
   BlockedKeyword,
   DomainVerdict,
   ModerationCategory,
+  ModerationMatchType,
   createBlockedKeyword,
   deleteBlockedKeyword,
   deleteDomainVerdict,
@@ -20,6 +21,16 @@ const CATEGORY_LABELS: Record<ModerationCategory, string> = {
   judi_online: "Judi online",
   konten_dewasa: "Konten dewasa",
   lainnya: "Lainnya",
+};
+
+// MATCH_TYPE_LABELS -- lihat komentar ModerationMatchType di api-client.ts:
+// "domain_exact" ditambahkan 5 September 2026 setelah ditemukan "slot.com"
+// (domain BARE tanpa hiasan apa pun) lolos moderasi -- substring longgar
+// sengaja tidak dipakai utk kata generik satu-suku-kata spt "slot" supaya
+// tidak salah blokir teks bebas yang kebetulan memuat kata itu.
+const MATCH_TYPE_LABELS: Record<ModerationMatchType, string> = {
+  substring: "Substring (di mana saja di URL/judul)",
+  domain_exact: "Domain persis (hanya kalau domain PERSIS kata ini)",
 };
 
 const SOURCE_LABELS: Record<DomainVerdict["source"], string> = {
@@ -45,6 +56,7 @@ export default function AdminModerationPage() {
 
   const [newKeyword, setNewKeyword] = useState("");
   const [newKeywordCategory, setNewKeywordCategory] = useState<ModerationCategory>("judi_online");
+  const [newKeywordMatchType, setNewKeywordMatchType] = useState<ModerationMatchType>("substring");
   const [savingKeyword, setSavingKeyword] = useState(false);
 
   const [newDomain, setNewDomain] = useState("");
@@ -79,7 +91,7 @@ export default function AdminModerationPage() {
     setSavingKeyword(true);
     setError(null);
     try {
-      await createBlockedKeyword(keyword, newKeywordCategory);
+      await createBlockedKeyword(keyword, newKeywordCategory, newKeywordMatchType);
       setNewKeyword("");
       await reloadKeywords();
     } catch (err) {
@@ -166,6 +178,18 @@ export default function AdminModerationPage() {
               </option>
             ))}
           </select>
+          <select
+            value={newKeywordMatchType}
+            onChange={(e) => setNewKeywordMatchType(e.target.value as ModerationMatchType)}
+            title="Substring: cocok kalau kata ini muncul di mana pun dalam URL/judul (aman utk frasa spesifik multi-kata). Domain persis: HANYA cocok kalau domainnya PERSIS kata ini (aman utk kata generik satu-suku-kata spt 'slot')."
+            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
+          >
+            {Object.entries(MATCH_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={handleAddKeyword}
@@ -185,6 +209,14 @@ export default function AdminModerationPage() {
                 <span className="rounded-full border-2 border-[#111111] bg-jeon-coral px-2 py-0.5 text-[11px] font-semibold text-[#111111]">
                   {CATEGORY_LABELS[k.category] ?? k.category}
                 </span>
+                {k.match_type === "domain_exact" && (
+                  <span
+                    title={MATCH_TYPE_LABELS.domain_exact}
+                    className="rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[11px] font-semibold text-[#111111]"
+                  >
+                    Domain persis
+                  </span>
+                )}
               </div>
               <button
                 type="button"

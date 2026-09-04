@@ -503,3 +503,58 @@ func TestLinksCreate_BlocksSensitiveKeywordAndCachesDomainVerdict(t *testing.T) 
 		t.Fatalf("tautan domain bersih seharusnya lolos: status %d, body %s", okRec.Code, okRec.Body.String())
 	}
 }
+
+// TestLinksCreate_DomainExactMatchType -- perbaikan lubang deteksi
+// ditemukan pengguna 5 September 2026: "https://slot.com" (domain BARE
+// tanpa hiasan apa pun) lolos moderasi karena "slot" sengaja tidak
+// diikutkan sbg substring bare (lihat migrasi 000091). Menguji match_type
+// "domain_exact": (1) domain yang PERSIS SAMA dgn kata kunci harus
+// diblokir walau tidak ada frasa apa pun di title/path, (2) kata kunci yang
+// cuma jadi SUBSTRING sebuah label domain lain (bukan label itu sendiri)
+// TIDAK ikut diblokir -- justru itulah alasan match_type ini dipisah dari
+// "substring", supaya kata generik satu-suku-kata tidak salah blokir
+// brand/bisnis sah yang kebetulan memuat kata itu.
+func TestLinksCreate_DomainExactMatchType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	links, auth := newTestLinksHandler(t)
+	links.Moderation = &LinkModerationChecker{DB: links.DB}
+	userID := registerTestUser(t, auth)
+
+	ctx := t.Context()
+	testWord := "kwtestexact" + uuid.NewString()[:8]
+	exactDomain := testWord + ".example"
+	substringDomain := "safe" + testWord + "brand.example"
+	if _, err := links.DB.Exec(ctx, `INSERT INTO blocked_keywords (id, keyword, category, match_type, created_at) VALUES ($1, $2, 'judi_online', 'domain_exact', now())`,
+		uuid.NewString(), testWord); err != nil {
+		t.Fatalf("gagal seed kata kunci domain_exact test: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx := context.Background()
+		_, _ = links.DB.Exec(cleanupCtx, `DELETE FROM blocked_keywords WHERE keyword = $1`, testWord)
+		_, _ = links.DB.Exec(cleanupCtx, `DELETE FROM link_domain_verdicts WHERE domain IN ($1, $2)`, exactDomain, substringDomain)
+	})
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/links", links.Create)
+	headers := map[string]string{"X-Test-UserID": userID}
+
+	// 1. Domain PERSIS SAMA dgn kata kunci -- tanpa frasa/hiasan apa pun di
+	// judul/path -- harus ditolak.
+	blockedRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Biasa Saja", "url": "https://" + exactDomain + "/",
+	}, headers)
+	if blockedRec.Code != http.StatusBadRequest {
+		t.Fatalf("domain persis kata kunci domain_exact seharusnya ditolak: status %d, body %s", blockedRec.Code, blockedRec.Body.String())
+	}
+
+	// 2. Kata kunci yang sama, tapi cuma jadi SUBSTRING label domain lain
+	// (bukan label itu sendiri) -- HARUS lolos, ini justru poin utama
+	// match_type "domain_exact" (beda dari "substring").
+	safeRec := doJSON(t, router, http.MethodPost, "/links", map[string]string{
+		"title": "Tautan Brand Sah", "url": "https://" + substringDomain + "/halaman",
+	}, headers)
+	if safeRec.Code != http.StatusCreated {
+		t.Fatalf("kata kunci domain_exact sbg substring label lain seharusnya TETAP lolos: status %d, body %s", safeRec.Code, safeRec.Body.String())
+	}
+}
