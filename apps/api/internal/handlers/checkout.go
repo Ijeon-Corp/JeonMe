@@ -1255,16 +1255,37 @@ func (h *CheckoutHandler) DownloadFile(c *gin.Context) {
 }
 
 // downloadURLFor — No.85: kalau watermark diaktifkan kreator DAN file
-// berformat PDF, unduh file asli, sisipkan watermark (email pembeli + ID
-// pesanan), lalu unggah SALINANNYA ke key terpisah ("watermarked/...")
-// sebelum di-presign -- file asli di key produk TIDAK PERNAH diubah.
-// Presigned URL dibuat ulang tiap dipanggil (pola sama seperti sebelumnya,
-// lihat komentar DownloadFile), begitu juga proses watermarking -- bukan
-// dipersiapkan sekali di muka, supaya perubahan pengaturan watermark
-// kreator langsung berlaku untuk unduhan berikutnya tanpa perlu migrasi data.
+// berformat PDF, sisipkan watermark (email pembeli + ID pesanan) lalu
+// simpan SALINANNYA di key terpisah ("watermarked/...") -- file asli di
+// key produk TIDAK PERNAH diubah. watermarkedEnabled=false (kreator
+// mematikan watermark) tetap langsung berlaku ke unduhan berikutnya (jalur
+// awal fungsi ini melewati semua logika watermark/cache sama sekali).
+//
+// Audit performa 4 September 2026: SEBELUMNYA download+watermark+upload
+// diulang di SETIAP panggilan, bahkan untuk order yang SAMA (buyer klik
+// link unduhan dua kali, atau dari 2 perangkat) -- kerja CPU+jaringan penuh
+// terbuang percuma pada request sinkron yang cuma dikasih 5s context
+// timeout oleh DownloadFile, berisiko timeout untuk file besar tepat
+// setelah pembeli membayar. watermarkedKey sekarang menyertakan ETag file
+// asli (lihat storage.Client.ETag) supaya key SECARA OTOMATIS berubah
+// kalau kreator mengunggah ulang file dengan nama sama (product.go
+// UploadFile pakai key deterministik per nama file, bukan per versi) --
+// panggilan berulang untuk file yang TIDAK berubah lewat cepat via
+// Storage.Exists, sementara file yang berubah tetap diproses ulang dengan
+// benar (bukan menyajikan salinan usang ke pembeli).
 func (h *CheckoutHandler) downloadURLFor(ctx context.Context, fileKey string, watermarkEnabled bool, buyerEmail, orderID string) (string, error) {
 	if !watermarkEnabled || !isPdfKey(fileKey) {
 		return h.Storage.PresignedDownloadURL(ctx, fileKey, 15*time.Minute)
+	}
+
+	etag, err := h.Storage.ETag(ctx, fileKey)
+	if err != nil {
+		return "", fmt.Errorf("gagal memeriksa file asli: %w", err)
+	}
+	watermarkedKey := fmt.Sprintf("watermarked/%s/%s/%s", orderID, etag, fileKey)
+
+	if h.Storage.Exists(ctx, watermarkedKey) {
+		return h.Storage.PresignedDownloadURL(ctx, watermarkedKey, 15*time.Minute)
 	}
 
 	original, err := h.Storage.Download(ctx, fileKey)
@@ -1277,7 +1298,6 @@ func (h *CheckoutHandler) downloadURLFor(ctx context.Context, fileKey string, wa
 		return "", err
 	}
 
-	watermarkedKey := fmt.Sprintf("watermarked/%s/%s", orderID, fileKey)
 	if err := h.Storage.Upload(ctx, watermarkedKey, bytes.NewReader(watermarked), int64(len(watermarked)), "application/pdf"); err != nil {
 		return "", fmt.Errorf("gagal mengunggah salinan ber-watermark: %w", err)
 	}

@@ -148,3 +148,31 @@ func (c *Client) PresignedDownloadURL(ctx context.Context, key string, expiry ti
 	}
 	return u.String(), nil
 }
+
+// ETag — audit performa 4 September 2026: dipakai checkout.go
+// (downloadURLFor) supaya bisa membuat KEY salinan ber-watermark yang
+// mengikutsertakan versi file asli, bukan cuma nama file. Tanpa ini, kalau
+// kreator mengunggah ULANG file dengan nama yang sama (key S3 identik --
+// lihat product.go UploadFile: key = "products/<id>/<nama file>"), salinan
+// ber-watermark LAMA yang di-cache di bawah key yang sama akan tetap
+// dianggap "sudah ada" dan diserahkan ke pembeli walau isinya sudah usang.
+// Menyertakan ETag di key watermarked membuat perubahan file otomatis
+// menghasilkan key baru (cache miss, diproses ulang), tanpa perlu logika
+// invalidasi eksplisit di mana pun.
+func (c *Client) ETag(ctx context.Context, key string) (string, error) {
+	info, err := c.mc.StatObject(ctx, c.Bucket, key, minio.StatObjectOptions{})
+	if err != nil {
+		return "", fmt.Errorf("gagal memeriksa file: %w", err)
+	}
+	return info.ETag, nil
+}
+
+// Exists — cek murah (HEAD, bukan download) apakah object dengan key
+// tertentu sudah ada. Dipakai untuk short-circuit pekerjaan mahal (watermark
+// PDF) yang menulis ke key deterministik, supaya panggilan berulang untuk
+// order yang sama (buyer klik link unduhan dua kali, atau dari 2 perangkat)
+// tidak mengunduh+watermark+unggah ulang file yang identik.
+func (c *Client) Exists(ctx context.Context, key string) bool {
+	_, err := c.mc.StatObject(ctx, c.Bucket, key, minio.StatObjectOptions{})
+	return err == nil
+}
