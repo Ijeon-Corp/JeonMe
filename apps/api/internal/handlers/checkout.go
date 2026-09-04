@@ -276,6 +276,43 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// Audit OWASP A04 (4 September 2026): kuota event & batas payment link
+	// di atas dicek lewat SELECT COUNT(*) TERPISAH sebelum transaksi ini --
+	// dua (atau lebih) checkout konkuren untuk produk yang SAMA bisa
+	// sama-sama lolos pengecekan itu sebelum salah satu order ini commit,
+	// menjual lebih banyak dari kuota/batas yang kreator tentukan. Kunci
+	// baris produk (FOR UPDATE) di sini membuat checkout konkuren untuk
+	// PRODUK YANG SAMA berjalan bergantian (bukan bersamaan), lalu
+	// pengecekan diulang di bawah dengan data yang sudah pasti terbaru --
+	// permintaan kedua dst akan melihat hasil INSERT permintaan sebelumnya
+	// yang sudah commit, bukan snapshot basi dari sebelum transaksi ini.
+	if _, err := tx.Exec(ctx, `SELECT id FROM products WHERE id = $1 FOR UPDATE`, req.ProductID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci produk"})
+		return
+	}
+	if productKind == "payment_link" && paymentLimitCount != nil {
+		var paidCount int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE product_id = $1 AND status = 'paid'`, req.ProductID).Scan(&paidCount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa batas pembayaran"})
+			return
+		}
+		if paidCount >= *paymentLimitCount {
+			c.JSON(http.StatusGone, gin.H{"error": "payment link ini sudah mencapai batas jumlah pembayaran"})
+			return
+		}
+	}
+	if isEvent && eventCapacity != nil {
+		var attendeeCount int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE product_id = $1`, req.ProductID).Scan(&attendeeCount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa kuota event"})
+			return
+		}
+		if attendeeCount >= *eventCapacity {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "kuota event ini sudah penuh"})
+			return
+		}
+	}
+
 	_, err = tx.Exec(ctx, `
 		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, donation_wishlist_item_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, $13, now())
@@ -286,8 +323,25 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	}
 
 	if voucherID != nil {
-		if _, err := tx.Exec(ctx, `UPDATE vouchers SET used_count = used_count + 1 WHERE id = $1`, *voucherID); err != nil {
+		// Audit OWASP A04 (4 September 2026): resolveVoucher() di atas
+		// SUDAH mengecek used_count < max_uses, tapi itu SELECT terpisah
+		// sebelum transaksi ini -- dua checkout konkuren memakai kode
+		// max_uses=1 yang sama bisa sama-sama lolos pengecekan itu sebelum
+		// salah satu UPDATE ini commit, membuat kode sekali-pakai terpakai
+		// dua kali. WHERE di bawah mengunci ulang invarian yang SAMA di
+		// dalam UPDATE atomik itu sendiri (pola sama seperti perbaikan
+		// race slot brand.go sesi ini) -- max_uses IS NULL berarti tak
+		// terbatas, tetap lolos.
+		tag, err := tx.Exec(ctx, `
+			UPDATE vouchers SET used_count = used_count + 1
+			WHERE id = $1 AND (max_uses IS NULL OR used_count < max_uses)
+		`, *voucherID)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat pemakaian voucher"})
+			return
+		}
+		if tag.RowsAffected() == 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "voucher ini baru saja mencapai batas pemakaian -- coba tanpa voucher"})
 			return
 		}
 	}
@@ -891,6 +945,14 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	// Xendit sebelumnya) WAJIB diverifikasi sebelum payload diproses sama
 	// sekali.
 	if !midtrans.VerifySignature(payload.OrderID, payload.StatusCode, payload.GrossAmount, h.MidtransServerKey, payload.SignatureKey) {
+		// Audit OWASP A09 (4 September 2026): SEBELUMNYA penolakan ini
+		// tidak pernah tercatat di mana pun -- endpoint ini menggerbang
+		// pengkreditan uang sungguhan, jadi percobaan forge signature
+		// berulang (mencari celah bypass, atau menebak server key yang
+		// bocor) sebelumnya sama sekali tidak terlihat setelah kejadian.
+		// IP dicatat (bukan payload/signature mentah -- signature tidak
+		// berguna utk investigasi & order_id sudah cukup utk korelasi).
+		log.Printf("checkout: webhook DITOLAK -- signature tidak valid untuk order_id=%s dari IP=%s", payload.OrderID, c.ClientIP())
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "signature webhook tidak valid"})
 		return
 	}

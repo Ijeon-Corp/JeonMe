@@ -200,6 +200,38 @@ func TestCheckoutCreate_PaymentLinkLimitReached_Rejects(t *testing.T) {
 	}
 }
 
+// No.90 (Sprint 11): kuota event (event_capacity) harus ditolak begitu
+// jumlah SELURUH order (bukan cuma yang lunas -- lihat komentar
+// CheckoutHandler.Create) mencapai kuota.
+func TestCheckoutCreate_EventCapacityReached_Rejects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	checkout, auth := newTestCheckoutHandler(t, "")
+	userID := registerTestUser(t, auth)
+
+	productID := uuid.NewString()
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO products (id, user_id, name, price_idr, is_active, is_event, event_capacity)
+		VALUES ($1, $2, 'Workshop Kuota Terbatas', 50000, true, true, 1)
+	`, productID, userID); err != nil {
+		t.Fatalf("gagal setup event test: %v", err)
+	}
+	if _, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES ($1, 'peserta-pertama@example.com', 50000, 'pending')
+	`, productID); err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/checkout", checkout.Create)
+
+	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
+		"product_id": productID, "buyer_email": "peserta-kedua@example.com",
+	}, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, ekspektasi 400 (kuota penuh). Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
 // Modul Toko (Fase E5): toko yang dijeda pemiliknya (shop_paused_at terisi)
 // harus menolak checkout baru DI BACKEND, bukan cuma disembunyikan di
 // frontend -- mengikuti pola yang sama seperti pengecekan gating premium.
