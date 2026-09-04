@@ -512,9 +512,31 @@ func (h *BrandHandler) DecideApplication(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "slot kreator sudah penuh"})
 		return
 	}
-	if _, err := h.DB.Exec(ctx, `UPDATE brand_campaign_applications SET status = $2, updated_at = now() WHERE id = $1`,
-		c.Param("appId"), req.Status); err != nil {
+	// Audit 4 September 2026: SELECT slot di atas + UPDATE ini SEBELUMNYA
+	// dua round-trip terpisah tanpa lock -- dua keputusan "accepted" yang
+	// konkuren (double-click, dua tab, atau request yang di-retry) bisa
+	// sama-sama lolos pengecekan `accepted >= slots` di atas sebelum salah
+	// satu UPDATE benar-benar commit, mendorong accepted_count melebihi
+	// slots. WHERE di bawah mengunci ulang KEDUA invarian (status masih
+	// persis yang tadi dibaca, DAN utk status="accepted" slot masih
+	// tersedia) di dalam UPDATE atomik yang sama -- kalau ada race,
+	// RowsAffected()==0 dan request kedua gagal dengan pesan generik,
+	// bukan ikut ter-commit ganda.
+	tag, err := h.DB.Exec(ctx, `
+		UPDATE brand_campaign_applications SET status = $2, updated_at = now()
+		WHERE id = $1
+		  AND status = $3
+		  AND ($2 != 'accepted' OR (
+		      SELECT COUNT(*) FROM brand_campaign_applications x
+		      WHERE x.campaign_id = $4 AND x.status IN ('accepted', 'completed')
+		  ) < (SELECT slots FROM brand_campaigns WHERE id = $4))
+	`, c.Param("appId"), req.Status, current, c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui lamaran"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "status lamaran ini sudah berubah (mis. slot terisi kreator lain) -- muat ulang halaman"})
 		return
 	}
 	switch req.Status {
