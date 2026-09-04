@@ -343,6 +343,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	).Scan(&id, &passwordHash, &suspendedAt, &twoFactorEnabledAt, &emailVerifiedAt)
 	if err != nil {
 		recordLoginFailure(ctx, h.RDB, req.Email)
+		// Audit OWASP A09 (4 September 2026): SEBELUMNYA percobaan login
+		// gagal hanya menaikkan counter Redis (loginFailKey, TTL 15 menit)
+		// tanpa jejak durabel apa pun -- begitu TTL habis atau Redis
+		// di-flush/tidak tersedia (lockout memang sengaja fail-open), tidak
+		// ada cara mengetahui percobaan brute-force pernah terjadi.
+		log.Printf("auth: login GAGAL (email tidak ditemukan) untuk email=%s dari IP=%s", req.Email, c.ClientIP())
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
 	}
@@ -354,6 +360,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*passwordHash), []byte(req.Password)); err != nil {
 		recordLoginFailure(ctx, h.RDB, req.Email)
+		log.Printf("auth: login GAGAL (password salah) untuk email=%s dari IP=%s", req.Email, c.ClientIP())
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
 		return
 	}
@@ -444,6 +451,13 @@ func (h *AuthHandler) VerifyLogin2FA(c *gin.Context) {
 	}
 
 	if !totp.Validate(req.Code, secret) {
+		// Audit OWASP A09 (4 September 2026): SEBELUMNYA kode 2FA salah
+		// tidak pernah tercatat sama sekali (beda dari login password
+		// salah, yang setidaknya menaikkan counter lockout) -- satu-
+		// satunya pertahanan adalah authRateLimit per-IP yang tidak
+		// membedakan "kode 2FA salah" dari lalu lintas lain, dan tidak
+		// membantu deteksi upaya lambat/multi-IP terhadap SATU akun.
+		log.Printf("auth: verifikasi 2FA GAGAL (kode salah) untuk userID=%s dari IP=%s", userID, c.ClientIP())
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "kode 2FA salah"})
 		return
 	}
@@ -608,6 +622,15 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan password baru"})
 		return
 	}
+
+	// Audit OWASP A07 (4 September 2026): berbeda dari ChangePassword
+	// (lihat catatan di security.go) -- alur reset password ini TIDAK
+	// datang dari sesi terautentikasi sama sekali (token reset dikirim ke
+	// email, dipakai oleh siapa pun yang punya akses ke email itu), jadi
+	// tidak ada "sesi pemanggil" yang perlu dipertahankan -- exceptJTI=""
+	// mencabut SEMUA sesi tanpa kecuali. Ini justru skenario paling umum
+	// pengguna me-reset password: curiga akunnya diakses orang lain.
+	revokeAllUserSessions(ctx, h.RDB, userID, "")
 
 	c.JSON(http.StatusOK, gin.H{"message": "password berhasil diperbarui"})
 }

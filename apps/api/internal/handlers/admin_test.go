@@ -29,7 +29,7 @@ func newTestAdminHandler(t *testing.T) (*AdminHandler, *AuthHandler) {
 	}
 	t.Cleanup(func() { rdb.Close() })
 
-	return NewAdminHandler(db), NewAuthHandler(db, rdb, "test-secret", "test")
+	return NewAdminHandler(db, rdb), NewAuthHandler(db, rdb, "test-secret", "test")
 }
 
 // promoteToAdmin mensimulasikan satu-satunya cara menjadi admin: SQL manual

@@ -85,7 +85,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	analytics := handlers.NewAnalyticsHandler(db, encryptionKey, cfg.PublicWebURL)
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
 	account := handlers.NewAccountHandler(db, rdb, s3)
-	admin := handlers.NewAdminHandler(db)
+	admin := handlers.NewAdminHandler(db, rdb)
 	kyc := handlers.NewKycHandler(db, s3)
 	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
 	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
@@ -129,6 +129,21 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// sekali. Tanpa batas, klien terskrip bisa memicu fetch origin
 		// berulang (biaya S3, koneksi outbound) tanpa henti.
 		avatarProxyRateLimit := middleware.RateLimit(rdb, "avatar-proxy", 30, time.Minute)
+		// Audit OWASP A04 (4 September 2026): loyalitas (publik, keduanya
+		// keyed cuma dari email pembeli, tanpa bukti kepemilikan -- lihat
+		// catatan di LoyaltyHandler) & pengiriman dokumen KYC sebelumnya
+		// tidak dibatasi sama sekali, padahal keduanya endpoint yang
+		// menyentuh nilai/nilai riwayat sungguhan.
+		loyaltyRateLimit := middleware.RateLimit(rdb, "loyalty", 20, time.Minute)
+		kycRateLimit := middleware.RateLimit(rdb, "kyc-submit", 5, time.Minute)
+		// checkoutStatusRateLimit -- LEBIH LONGGAR dari checkoutRateLimit
+		// (20/menit) SENGAJA: app/checkout/[id]/page.tsx (frontend) polling
+		// status TIAP 2 DETIK selagi menunggu konfirmasi pembayaran (~30
+		// request/menit WAJAR untuk SATU pembeli menunggu) -- limit yang
+		// sama dengan checkout/review/validate-voucher akan memblokir
+		// pembeli sah di tengah menunggu, bukan cuma mencegah
+		// penyalahgunaan.
+		checkoutStatusRateLimit := middleware.RateLimit(rdb, "checkout-status", 60, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -186,8 +201,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// No.94 (Sprint 13): pembeli mengecek poin & menukar reward, publik
 		// (tanpa akun, cukup email pembeli seperti checkout).
-		api.GET("/pages/:username/loyalty", loyalty.GetMyPoints)
-		api.POST("/loyalty/rewards/:id/redeem", loyalty.RedeemReward)
+		api.GET("/pages/:username/loyalty", loyaltyRateLimit, loyalty.GetMyPoints)
+		api.POST("/loyalty/rewards/:id/redeem", loyaltyRateLimit, loyalty.RedeemReward)
 
 		// No.95 (Sprint 13): kartu kontak digital -- endpoint dituju QR code
 		// kartu (bukan halaman utama kreator), publik.
@@ -527,7 +542,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// No.84 (Sprint 10): verifikasi KYC dasar -- lihat catatan lingkup
 			// di KycHandler (TIDAK memblokir penarikan, hanya memprioritaskan).
 			dashboard.GET("/kyc", kyc.Get)
-			dashboard.POST("/kyc", kyc.Submit)
+			dashboard.POST("/kyc", kycRateLimit, kyc.Submit)
 
 			dashboard.GET("/analytics/summary", analytics.GetSummary)
 
@@ -597,10 +612,19 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// Modul Settings §5 (Security) -- sama seperti profile di atas,
 			// TIDAK dipasangi ActAsOwner (kolaborator tidak boleh mengganti
 			// password/2FA/sesi pemilik).
-			dashboard.PATCH("/security/password", security.ChangePassword)
+			// Audit OWASP A01/A07 (4 September 2026): ChangePassword &
+			// Disable2FA membanding-bcrypt password lama TANPA rate limit
+			// atau lockout apa pun (beda dari Login yang punya keduanya) --
+			// pemegang JWT curian (localStorage, bukan httpOnly by design)
+			// tapi bukan password asli sebelumnya punya oracle brute-force
+			// tanpa batas terhadap password sungguhan pengguna.
+			// 2fa/verify (konfirmasi AKTIFKAN 2FA) juga sebelumnya tanpa
+			// limit, beda dari 2fa/verify-login yang sudah dilindungi
+			// authRateLimit.
+			dashboard.PATCH("/security/password", authRateLimit, security.ChangePassword)
 			dashboard.POST("/security/2fa/enable", security.Enable2FA)
-			dashboard.POST("/security/2fa/verify", security.Verify2FA)
-			dashboard.POST("/security/2fa/disable", security.Disable2FA)
+			dashboard.POST("/security/2fa/verify", authRateLimit, security.Verify2FA)
+			dashboard.POST("/security/2fa/disable", authRateLimit, security.Disable2FA)
 			dashboard.POST("/security/2fa/snooze", security.Snooze2FA)
 			dashboard.GET("/security/2fa/status", security.Status2FA)
 			dashboard.GET("/security/sessions", security.ListSessions)
@@ -651,7 +675,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
 		api.POST("/checkout", checkoutRateLimit, checkout.Create)
-		api.GET("/checkout/:id/status", checkout.GetStatus)
+		// Audit OWASP A04 (4 September 2026): status/download sebelumnya
+		// tanpa rate limit sama sekali -- dimitigasi sebagian oleh orderID
+		// UUID yang tak-tertebak, tapi download SECARA KHUSUS memicu
+		// streaming dari S3 (mahal dipukul berulang) per request.
+		api.GET("/checkout/:id/status", checkoutStatusRateLimit, checkout.GetStatus)
 
 		// Modul Toko (Fase E1): ulasan pembeli -- publik, sama seperti seluruh
 		// alur checkout (pembeli tidak punya akun).
@@ -664,7 +692,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// REQ-F-405: tautan unduhan permanen yang diklik dari email
 		// notifikasi -- publik (pembeli tidak punya akun), lihat komentar
 		// CheckoutHandler.DownloadFile.
-		api.GET("/checkout/:id/download", checkout.DownloadFile)
+		api.GET("/checkout/:id/download", checkoutRateLimit, checkout.DownloadFile)
 
 		// No.70: daftar unduhan multi-file untuk bundel yang sudah lunas --
 		// publik, cuma bisa diakses kalau tahu orderID yang valid & lunas.

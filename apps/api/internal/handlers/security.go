@@ -70,6 +70,18 @@ func (h *SecurityHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	// Audit OWASP A07 (4 September 2026): SEBELUMNYA sesi lain TIDAK ikut
+	// dicabut -- pengguna yang mengganti password karena curiga akunnya
+	// diakses orang lain (skenario paling umum untuk mengganti password)
+	// akan MENGIRA ini langsung mengunci perangkat penyerang, padahal JWT
+	// yang sudah terlanjur dicuri tetap valid sampai kedaluwarsa sendiri
+	// (maks 24 jam). exceptJTI = sesi saat ini supaya pengguna yang baru
+	// saja membuktikan identitasnya (re-auth password lama di atas) tidak
+	// ikut ter-logout oleh aksinya sendiri.
+	currentJTI, _ := c.Get("jti")
+	currentJTIStr, _ := currentJTI.(string)
+	revokeAllUserSessions(ctx, h.RDB, userID, currentJTIStr)
+
 	_ = audit.Log(ctx, h.DB, userID, "security.password_changed", "user", userID, nil)
 
 	c.JSON(http.StatusOK, gin.H{"message": "password berhasil diganti"})
@@ -187,6 +199,16 @@ func (h *SecurityHandler) Disable2FA(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menonaktifkan 2FA"})
 		return
 	}
+
+	// Audit OWASP A07 (4 September 2026): lihat catatan sama di
+	// ChangePassword -- menonaktifkan 2FA menurunkan keamanan akun, sesi
+	// lain (termasuk yang mungkin sudah dicuri) sebaiknya ikut dicabut
+	// supaya perubahan ini benar-benar berarti "cuma sesi ini yang tahu
+	// akun ini sekarang tanpa 2FA", bukan diam-diam berlaku ke sesi lama.
+	currentJTI, _ := c.Get("jti")
+	currentJTIStr, _ := currentJTI.(string)
+	revokeAllUserSessions(ctx, h.RDB, userID, currentJTIStr)
+
 	_ = audit.Log(ctx, h.DB, userID, "security.2fa_disabled", "user", userID, nil)
 
 	c.JSON(http.StatusOK, gin.H{"message": "2FA dinonaktifkan"})
@@ -339,6 +361,14 @@ func (h *SecurityHandler) RevokeSession(c *gin.Context) {
 	}
 	forgetSession(ctx, h.RDB, userID, jti)
 
+	// Audit OWASP A09 (4 September 2026): SEBELUMNYA pencabutan sesi tidak
+	// pernah tercatat -- pola account-takeover klasik (penyerang ganti
+	// password lalu mencabut sesi pemilik asli untuk mengunci mereka)
+	// sebelumnya meninggalkan jejak pada langkah ganti password saja,
+	// langkah pencabutan sesi yang benar-benar menyelesaikan penguncian
+	// tidak terlihat sama sekali di audit_log.
+	_ = audit.Log(ctx, h.DB, userID, "security.session_revoked", "user", userID, nil)
+
 	c.JSON(http.StatusOK, gin.H{"message": "sesi dicabut"})
 }
 
@@ -346,8 +376,7 @@ func (h *SecurityHandler) RevokeSession(c *gin.Context) {
 // cabut SEMUA sesi lain (semua device lain) kecuali sesi yang sedang dipakai
 // pemanggil. Membantu pengguna yang curiga akunnya diakses dari device tidak
 // dikenal: satu klik keluarkan semua sesi lain tanpa harus logout satu-satu
-// dari daftar ListSessions. Pola IDENTIK dengan RevokeSession (denylist jti
-// per-sesi + forgetSession), cuma di-loop untuk semua jti != currentJTI.
+// dari daftar ListSessions.
 func (h *SecurityHandler) RevokeAllSessions(c *gin.Context) {
 	userID := c.GetString("userID")
 	currentJTI, _ := c.Get("jti")
@@ -361,17 +390,41 @@ func (h *SecurityHandler) RevokeAllSessions(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	revoked := revokeAllUserSessions(ctx, h.RDB, userID, currentJTIStr)
+	_ = audit.Log(ctx, h.DB, userID, "security.all_sessions_revoked", "user", userID, nil)
+	c.JSON(http.StatusOK, gin.H{"message": "semua sesi lain dicabut", "revoked": revoked})
+}
+
+// revokeAllUserSessions -- diekstrak dari RevokeAllSessions (audit OWASP
+// A01/A07, 4 September 2026: temuan "SuspendUser tidak mencabut sesi
+// target -- pengguna yang di-suspend tetap bisa memakai dashboard, termasuk
+// menarik saldo, sampai JWT-nya kedaluwarsa sendiri (maks 24 jam)", dan
+// temuan serupa untuk ChangePassword/ConfirmPasswordReset/Disable2FA --
+// pengguna MENGIRA aksi itu langsung mengunci perangkat lain, padahal
+// token yang sudah terlanjur dicuri tetap valid). Dipakai ulang oleh
+// SEMUA titik yang perlu mencabut sesi: SuspendUser (admin.go, exceptJTI
+// kosong -- tidak ada "sesi pemanggil" yang perlu dipertahankan karena
+// yang bertindak adalah admin, bukan target), ChangePassword/Disable2FA
+// (exceptJTI = sesi saat ini, supaya pengguna yang baru saja membuktikan
+// identitasnya tidak ikut ter-logout oleh aksinya sendiri), dan
+// ConfirmPasswordReset (exceptJTI kosong -- alur reset password TIDAK
+// datang dari sesi terautentikasi sama sekali, jadi wajar mencabut semua).
+// exceptJTI="" berarti cabut SEMUA tanpa pengecualian.
+func revokeAllUserSessions(ctx context.Context, rdb *redis.Client, userID, exceptJTI string) int {
+	if rdb == nil {
+		return 0
+	}
 	prefix := sessionKey(userID, "")
-	iter := h.RDB.Scan(ctx, 0, prefix+"*", 100).Iterator()
+	iter := rdb.Scan(ctx, 0, prefix+"*", 100).Iterator()
 	revoked := 0
 	for iter.Next(ctx) {
 		key := iter.Val()
 		jti := strings.TrimPrefix(key, prefix)
-		if jti == currentJTIStr {
+		if exceptJTI != "" && jti == exceptJTI {
 			continue // pertahankan sesi yang sedang dipakai
 		}
 
-		data, err := h.RDB.Get(ctx, key).Bytes()
+		data, err := rdb.Get(ctx, key).Bytes()
 		if err != nil {
 			continue
 		}
@@ -380,13 +433,12 @@ func (h *SecurityHandler) RevokeAllSessions(c *gin.Context) {
 			continue
 		}
 		if ttl := time.Until(rec.ExpiresAt); ttl > 0 {
-			if err := h.RDB.Set(ctx, "revoked_jti:"+jti, "1", ttl).Err(); err != nil {
+			if err := rdb.Set(ctx, "revoked_jti:"+jti, "1", ttl).Err(); err != nil {
 				continue
 			}
 		}
-		forgetSession(ctx, h.RDB, userID, jti)
+		forgetSession(ctx, rdb, userID, jti)
 		revoked++
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "semua sesi lain dicabut", "revoked": revoked})
+	return revoked
 }

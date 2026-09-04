@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
 )
@@ -24,11 +25,12 @@ import (
 // id=...), sengaja tidak diekspos lewat API sama sekali supaya tidak ada
 // jalur eskalasi privilese lewat aplikasi.
 type AdminHandler struct {
-	DB *pgxpool.Pool
+	DB  *pgxpool.Pool
+	RDB *redis.Client
 }
 
-func NewAdminHandler(db *pgxpool.Pool) *AdminHandler {
-	return &AdminHandler{DB: db}
+func NewAdminHandler(db *pgxpool.Pool, rdb *redis.Client) *AdminHandler {
+	return &AdminHandler{DB: db, RDB: rdb}
 }
 
 type adminUserItem struct {
@@ -100,6 +102,21 @@ func (h *AdminHandler) SuspendUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
 		return
 	}
+
+	// Audit OWASP A01 (4 September 2026), temuan PALING SERIUS di audit
+	// ini: SEBELUMNYA suspended_at cuma diperiksa di 3 titik LOGIN (login
+	// password, callback Google/Apple) -- middleware.AuthRequired yang
+	// menggerbang SEMUA endpoint dashboard/API TIDAK PERNAH mengecek
+	// status suspend, cuma validasi signature JWT + denylist jti. Akibatnya
+	// user yang di-suspend admin (mis. karena penipuan) tetap bisa memakai
+	// JWT yang sudah terlanjur diterbitkan (berlaku sampai 24 jam) untuk
+	// terus memakai dashboard -- TERMASUK menarik saldo lewat
+	// POST /dashboard/payouts sebelum ada yang sempat mencegahnya. Dicabut
+	// di sini (di luar transaksi DB -- kegagalan Redis tidak boleh
+	// membatalkan suspend yang sudah berhasil, hanya berarti sesi lama
+	// bertahan sedikit lebih lama, sama seperti risiko residual sebelum
+	// perbaikan ini, bukan lebih buruk).
+	revokeAllUserSessions(ctx, h.RDB, targetID, "")
 
 	c.JSON(http.StatusOK, gin.H{"message": "user ditangguhkan"})
 }
