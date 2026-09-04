@@ -494,12 +494,22 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	var currentPwywMinPriceIDR *int64
 	var isBundle, isDonation, isEvent, isCourse bool
 	var currentWebhookSecret, productKind string
+	var moderationLocked bool
 	err := h.DB.QueryRow(ctx, `
-		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, webhook_secret, product_kind, name
+		SELECT file_key, cover_image_url, price_idr, flash_sale_price_idr, pwyw_enabled, pwyw_min_price_idr, is_bundle, is_donation, is_event, is_course, webhook_secret, product_kind, name, moderation_locked_at IS NOT NULL
 		FROM products WHERE id = $1 AND user_id = $2
-	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &currentWebhookSecret, &productKind, &currentName)
+	`, productID, userID).Scan(&fileKey, &coverImageURL, &currentPriceIDR, &currentFlashSalePriceIDR, &currentPwywEnabled, &currentPwywMinPriceIDR, &isBundle, &isDonation, &isEvent, &isCourse, &currentWebhookSecret, &productKind, &currentName, &moderationLocked)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+		return
+	}
+
+	// moderation_locked_at (migrasi 000092, audit fitur admin 5 September
+	// 2026): admin pernah men-takedown produk ini lewat laporan -- lihat
+	// catatan lengkap di isPageModerationLocked (page.go), pola yang sama
+	// persis diterapkan di sini utk produk.
+	if req.IsActive != nil && *req.IsActive && moderationLocked {
+		c.JSON(http.StatusForbidden, gin.H{"error": "produk ini dinonaktifkan admin karena laporan, tidak bisa diaktifkan ulang sendiri -- hubungi support kalau menurutmu ini keliru"})
 		return
 	}
 

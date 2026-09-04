@@ -4,17 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/queue"
 )
 
 // AdminHandler mengimplementasikan REQ-F-701 (manajemen user), REQ-F-702
@@ -27,10 +31,62 @@ import (
 type AdminHandler struct {
 	DB  *pgxpool.Pool
 	RDB *redis.Client
+	// Queue -- audit fitur admin (5 September 2026): SEBELUMNYA tidak satu
+	// pun aksi admin (suspend/aktivasi user, resolusi laporan, status
+	// penarikan, review KYC) memberi tahu pengguna yang terdampak sama
+	// sekali -- mereka baru sadar lewat efek samping (gagal login, saldo
+	// berubah, dst). Di-set terpisah setelah NewAdminHandler (pola sama
+	// seperti AuthHandler.Queue di routes.go) -- boleh nil, soft-fail sama
+	// seperti operasi sampingan lain (lihat CLAUDE.md).
+	Queue *asynq.Client
 }
 
 func NewAdminHandler(db *pgxpool.Pool, rdb *redis.Client) *AdminHandler {
 	return &AdminHandler{DB: db, RDB: rdb}
+}
+
+// paginatedResponse -- audit fitur admin (5 September 2026): SEMUA daftar
+// admin (Pengguna/Laporan/Penarikan/KYC) sebelumnya pakai LIMIT tetap tanpa
+// cara melihat sisanya begitu jumlah baris melebihi limit itu. total dikirim
+// terpisah dari items supaya frontend tahu kapan berhenti menampilkan
+// tombol "Muat lebih" tanpa perlu request tambahan cuma untuk itu.
+type paginatedResponse[T any] struct {
+	Items []T `json:"items"`
+	Total int `json:"total"`
+}
+
+// parseLimitOffset -- default limit 50 (maks 100, mencegah query sekali
+// tarik ribuan baris), offset default 0. Dipakai seragam oleh semua list
+// admin.
+func parseLimitOffset(c *gin.Context) (limit, offset int) {
+	limit, offset = 50, 0
+	if v, err := strconv.Atoi(c.Query("limit")); err == nil && v > 0 {
+		limit = v
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if v, err := strconv.Atoi(c.Query("offset")); err == nil && v >= 0 {
+		offset = v
+	}
+	return
+}
+
+// notifyUser -- insert notifikasi dalam-app, soft-fail (bukan inti transaksi
+// aksi admin), pola sama persis affiliate.go/brand.go. Fungsi package-level
+// (bukan method) supaya dipakai bersama AdminHandler (admin.go) DAN
+// KycHandler (kyc.go) -- dua struct berbeda, satu sumber notifikasi admin.
+// HANYA cocok utk pengguna yang MASIH bisa login (bell notifikasi cuma
+// terlihat setelah masuk) -- utk kasus sebaliknya (mis. suspend, akun yang
+// justru tidak bisa login sama sekali), enqueue email lewat
+// queue.NewAccountSuspendedTask langsung di pemanggil, bukan lewat fungsi
+// ini.
+func notifyUser(ctx context.Context, db *pgxpool.Pool, userID, notifType, title, body, linkURL string) {
+	if _, err := db.Exec(ctx, `
+		INSERT INTO notifications (user_id, type, title, body, link_url) VALUES ($1, $2, $3, $4, $5)
+	`, userID, notifType, title, body, linkURL); err != nil {
+		log.Printf("admin: gagal membuat notifikasi %s untuk user %s: %v", notifType, userID, err)
+	}
 }
 
 type adminUserItem struct {
@@ -43,20 +99,46 @@ type adminUserItem struct {
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 }
 
-// ListUsers — REQ-F-701. search (opsional) mencocokkan email/username.
+// ListUsers — REQ-F-701. search (opsional) mencocokkan email/username;
+// role & status (opsional) memfilter; limit/offset mengontrol halaman
+// (audit fitur admin 5 September 2026 -- lihat paginatedResponse).
 func (h *AdminHandler) ListUsers(c *gin.Context) {
 	search := "%" + c.Query("search") + "%"
+	role := c.Query("role")
+	status := c.Query("status") // "", "active", "suspended", "deleted"
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	rows, err := h.DB.Query(ctx, `
+	where := "WHERE (email ILIKE $1 OR username ILIKE $1)"
+	args := []any{search}
+	if role != "" {
+		args = append(args, role)
+		where += fmt.Sprintf(" AND role = $%d", len(args))
+	}
+	switch status {
+	case "active":
+		where += " AND suspended_at IS NULL AND deleted_at IS NULL"
+	case "suspended":
+		where += " AND suspended_at IS NOT NULL"
+	case "deleted":
+		where += " AND deleted_at IS NOT NULL"
+	}
+
+	var total int
+	if err := h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM users "+where, args...).Scan(&total); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar user"})
+		return
+	}
+
+	args = append(args, limit, offset)
+	rows, err := h.DB.Query(ctx, fmt.Sprintf(`
 		SELECT id, email, username, role, created_at, suspended_at, deleted_at
-		FROM users
-		WHERE email ILIKE $1 OR username ILIKE $1
+		FROM users %s
 		ORDER BY created_at DESC
-		LIMIT 100
-	`, search)
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar user"})
 		return
@@ -71,7 +153,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, paginatedResponse[adminUserItem]{Items: items, Total: total})
 }
 
 // SuspendUser — REQ-F-701. Berbeda dari hapus akun: reversibel, identitas
@@ -83,6 +165,7 @@ func (h *AdminHandler) SuspendUser(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	var targetEmail string
 	tx, err := h.DB.Begin(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
@@ -90,7 +173,7 @@ func (h *AdminHandler) SuspendUser(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `UPDATE users SET suspended_at = now() WHERE id = $1`, targetID); err != nil {
+	if err := tx.QueryRow(ctx, `UPDATE users SET suspended_at = now() WHERE id = $1 RETURNING email`, targetID).Scan(&targetEmail); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menangguhkan user"})
 		return
 	}
@@ -101,6 +184,16 @@ func (h *AdminHandler) SuspendUser(c *gin.Context) {
 	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
 		return
+	}
+
+	// Notifikasi EMAIL, bukan bell dalam-app -- audit fitur admin (5
+	// September 2026): user yang disuspend justru TIDAK BISA login, jadi
+	// notifikasi dalam-app (yang cuma terlihat setelah masuk) tidak akan
+	// pernah terlihat olehnya. Email satu-satunya kanal yang menjangkau.
+	if h.Queue != nil {
+		if task, err := queue.NewAccountSuspendedTask(targetEmail); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
 	}
 
 	// Audit OWASP A01 (4 September 2026), temuan PALING SERIUS di audit
@@ -129,6 +222,7 @@ func (h *AdminHandler) ActivateUser(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	var targetEmail string
 	tx, err := h.DB.Begin(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
@@ -136,7 +230,7 @@ func (h *AdminHandler) ActivateUser(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `UPDATE users SET suspended_at = NULL WHERE id = $1`, targetID); err != nil {
+	if err := tx.QueryRow(ctx, `UPDATE users SET suspended_at = NULL WHERE id = $1 RETURNING email`, targetID).Scan(&targetEmail); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengaktifkan user"})
 		return
 	}
@@ -147,6 +241,12 @@ func (h *AdminHandler) ActivateUser(c *gin.Context) {
 	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
 		return
+	}
+
+	if h.Queue != nil {
+		if task, err := queue.NewAccountActivatedTask(targetEmail); err == nil {
+			_, _ = h.Queue.Enqueue(task)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user diaktifkan kembali"})
@@ -193,17 +293,36 @@ type reportItem struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-// ListReports — REQ-F-702 (bagian admin). status default "pending".
+// ListReports — REQ-F-702 (bagian admin). status default "pending"; pakai
+// "all" utk melihat seluruh riwayat (resolved/dismissed/takedown) --
+// SEBELUMNYA frontend cuma pernah memanggil "pending", laporan yang sudah
+// diproses hilang total dari tampilan (audit fitur admin, 5 September
+// 2026). limit/offset mengontrol halaman.
 func (h *AdminHandler) ListReports(c *gin.Context) {
 	status := c.DefaultQuery("status", "pending")
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	rows, err := h.DB.Query(ctx, `
+	where := ""
+	args := []any{}
+	if status != "all" {
+		where = "WHERE status = $1"
+		args = append(args, status)
+	}
+
+	var total int
+	if err := h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM reports "+where, args...).Scan(&total); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat laporan"})
+		return
+	}
+
+	args = append(args, limit, offset)
+	rows, err := h.DB.Query(ctx, fmt.Sprintf(`
 		SELECT id, target_type, target_id, reason, reporter_email, status, created_at
-		FROM reports WHERE status = $1 ORDER BY created_at ASC LIMIT 100
-	`, status)
+		FROM reports %s ORDER BY created_at ASC LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat laporan"})
 		return
@@ -218,7 +337,7 @@ func (h *AdminHandler) ListReports(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, paginatedResponse[reportItem]{Items: items, Total: total})
 }
 
 type resolveReportRequest struct {
@@ -260,15 +379,29 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	var ownerID, contentLabel string
 	newStatus := "dismissed"
 	if req.Action == "takedown" {
 		newStatus = "takedown"
+		// moderation_locked_at (migrasi 000092) -- audit fitur admin (5
+		// September 2026): SEBELUMNYA takedown cuma flip is_published/
+		// is_active, kolom yang SAMA dipakai endpoint edit pemilik sendiri,
+		// jadi pemilik bisa langsung mempublikasikan ulang sendiri tanpa
+		// admin pernah tahu. Selama terkunci, PageHandler.UpdateMyPage &
+		// ProductHandler.Update menolak menyalakan lagi -- lihat komentar
+		// lengkap di kedua file itu.
 		var takedownErr error
 		switch targetType {
 		case "page":
-			_, takedownErr = tx.Exec(ctx, `UPDATE pages SET is_published = false WHERE id = $1`, targetID)
+			takedownErr = tx.QueryRow(ctx, `
+				UPDATE pages SET is_published = false, moderation_locked_at = now()
+				WHERE id = $1 RETURNING user_id, COALESCE(NULLIF(display_name, ''), 'Halaman'::varchar)
+			`, targetID).Scan(&ownerID, &contentLabel)
 		case "product":
-			_, takedownErr = tx.Exec(ctx, `UPDATE products SET is_active = false WHERE id = $1`, targetID)
+			takedownErr = tx.QueryRow(ctx, `
+				UPDATE products SET is_active = false, moderation_locked_at = now()
+				WHERE id = $1 RETURNING user_id, name
+			`, targetID).Scan(&ownerID, &contentLabel)
 		}
 		if takedownErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menonaktifkan konten"})
@@ -293,7 +426,100 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 		return
 	}
 
+	if req.Action == "takedown" && ownerID != "" {
+		targetLabel := "Halaman"
+		if targetType == "product" {
+			targetLabel = "Produk"
+		}
+		notifyUser(ctx, h.DB, ownerID, "content_takedown",
+			targetLabel+" \""+contentLabel+"\" dinonaktifkan admin",
+			targetLabel+" \""+contentLabel+"\" dinonaktifkan karena melanggar ketentuan setelah ditinjau tim kami. Hubungi support kalau menurutmu ini keliru.",
+			"/admin",
+		)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "laporan diproses"})
+}
+
+// RestoreReport — kebalikan dari ResolveReport(action=takedown): mencabut
+// moderation_locked_at (migrasi 000092) supaya pemilik konten bisa
+// mempublikasikan/mengaktifkan lagi sendiri, DAN langsung menyalakan
+// kembali is_published/is_active (simetris dgn takedown, bukan sekadar
+// membuka gembok lalu meninggalkan kontennya nonaktif tanpa penjelasan).
+// Hanya berlaku utk laporan berstatus "takedown" (guard WHERE di bawah).
+func (h *AdminHandler) RestoreReport(c *gin.Context) {
+	reportID := c.Param("id")
+	adminID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var targetType, targetID string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT target_type, target_id FROM reports WHERE id = $1 AND status = 'takedown'
+	`, reportID).Scan(&targetType, &targetID); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "laporan tidak ditemukan atau bukan hasil takedown"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat laporan"})
+		return
+	}
+
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var ownerID, contentLabel string
+	var restoreErr error
+	switch targetType {
+	case "page":
+		restoreErr = tx.QueryRow(ctx, `
+			UPDATE pages SET is_published = true, moderation_locked_at = NULL
+			WHERE id = $1 RETURNING user_id, COALESCE(NULLIF(display_name, ''), 'Halaman'::varchar)
+		`, targetID).Scan(&ownerID, &contentLabel)
+	case "product":
+		restoreErr = tx.QueryRow(ctx, `
+			UPDATE products SET is_active = true, moderation_locked_at = NULL
+			WHERE id = $1 RETURNING user_id, name
+		`, targetID).Scan(&ownerID, &contentLabel)
+	}
+	if restoreErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulihkan konten"})
+		return
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE reports SET status = 'restored', resolved_by = $1, resolved_at = now() WHERE id = $2
+	`, adminID, reportID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui laporan"})
+		return
+	}
+
+	if err := audit.Log(ctx, tx, adminID, "report.restored", "report", reportID, nil); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
+		return
+	}
+
+	targetLabel := "Halaman"
+	if targetType == "product" {
+		targetLabel = "Produk"
+	}
+	notifyUser(ctx, h.DB, ownerID, "content_restored",
+		targetLabel+" \""+contentLabel+"\" dipulihkan admin",
+		targetLabel+" \""+contentLabel+"\" sudah diaktifkan kembali oleh admin setelah ditinjau ulang.",
+		"/dashboard",
+	)
+
+	c.JSON(http.StatusOK, gin.H{"message": "konten dipulihkan"})
 }
 
 type adminPayoutItem struct {
@@ -315,31 +541,41 @@ type adminPayoutItem struct {
 // yang sudah selesai/gagal.
 func (h *AdminHandler) ListPayouts(c *gin.Context) {
 	status := c.DefaultQuery("status", "")
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	query := `
-		SELECT p.id, u.username, u.email, p.amount_idr, p.destination_account, p.status,
-		       p.kyc_status_at_request, p.requested_at, p.completed_at
-		FROM payouts p JOIN users u ON u.id = p.user_id
-	`
+	where := ""
 	args := []any{}
 	switch status {
 	case "", "needs_action":
-		query += `WHERE p.status IN ('requested', 'processing')`
+		where = `WHERE p.status IN ('requested', 'processing')`
 	case "all":
 		// tanpa filter
 	default:
-		query += `WHERE p.status = $1`
 		args = append(args, status)
+		where = `WHERE p.status = $1`
 	}
+
+	var total int
+	if err := h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM payouts p "+where, args...).Scan(&total); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar penarikan"})
+		return
+	}
+
 	// Kreator terverifikasi KYC diprioritaskan lebih dulu dalam antrian
 	// (No.84) -- TIDAK memblokir yang belum terverifikasi, hanya diproses
 	// belakangan sesuai urutan pengajuan di antara sesama status yang sama.
-	query += ` ORDER BY (p.kyc_status_at_request = 'verified') DESC, p.requested_at ASC LIMIT 200`
-
-	rows, err := h.DB.Query(ctx, query, args...)
+	args = append(args, limit, offset)
+	rows, err := h.DB.Query(ctx, fmt.Sprintf(`
+		SELECT p.id, u.username, u.email, p.amount_idr, p.destination_account, p.status,
+		       p.kyc_status_at_request, p.requested_at, p.completed_at
+		FROM payouts p JOIN users u ON u.id = p.user_id
+		%s
+		ORDER BY (p.kyc_status_at_request = 'verified') DESC, p.requested_at ASC
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar penarikan"})
 		return
@@ -354,7 +590,7 @@ func (h *AdminHandler) ListPayouts(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, paginatedResponse[adminPayoutItem]{Items: items, Total: total})
 }
 
 // payoutTransitions — state machine eksplisit: "completed"/"failed" adalah
@@ -474,6 +710,22 @@ func (h *AdminHandler) UpdatePayoutStatus(c *gin.Context) {
 		return
 	}
 
+	// Notifikasi dalam-app -- audit fitur admin (5 September 2026):
+	// SEBELUMNYA kreator tidak diberi tahu sama sekali saat status
+	// penarikannya berubah, termasuk saat saldo dikembalikan (kasus
+	// "failed" di atas) -- baru sadar kalau kebetulan buka halaman saldo.
+	switch req.Status {
+	case "processing":
+		notifyUser(ctx, h.DB, payoutUserID, "payout_processing", "Penarikan sedang diproses",
+			fmt.Sprintf("Penarikan Rp%d sedang diproses admin.", amountIDR), "/dashboard/balance")
+	case "completed":
+		notifyUser(ctx, h.DB, payoutUserID, "payout_completed", "Penarikan berhasil",
+			fmt.Sprintf("Penarikan Rp%d sudah selesai ditransfer.", amountIDR), "/dashboard/balance")
+	case "failed":
+		notifyUser(ctx, h.DB, payoutUserID, "payout_failed", "Penarikan gagal, saldo dikembalikan",
+			fmt.Sprintf("Penarikan Rp%d gagal diproses -- saldo sudah dikembalikan ke akunmu.", amountIDR), "/dashboard/balance")
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "status penarikan diperbarui"})
 }
 
@@ -484,6 +736,11 @@ type adminSummaryResponse struct {
 	TotalRevenueIDR int64 `json:"total_revenue_idr"`
 	PendingReports  int64 `json:"pending_reports"`
 	PendingPayouts  int64 `json:"pending_payouts"`
+	// PendingKyc -- audit fitur admin (5 September 2026): SEBELUMNYA
+	// Ringkasan tidak menampilkan backlog KYC sama sekali walau punya
+	// halaman review sendiri -- cuma terlihat kalau admin sengaja membuka
+	// /admin/kyc, beda dari laporan/penarikan yang sudah tampil di sini.
+	PendingKyc int64 `json:"pending_kyc"`
 }
 
 // GetSummary — REQ-F-703.
@@ -515,6 +772,11 @@ func (h *AdminHandler) GetSummary(c *gin.Context) {
 
 	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM payouts WHERE status IN ('requested', 'processing')`).Scan(&resp.PendingPayouts); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung penarikan tertunda"})
+		return
+	}
+
+	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM kyc_verifications WHERE status = 'pending'`).Scan(&resp.PendingKyc); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung KYC tertunda"})
 		return
 	}
 

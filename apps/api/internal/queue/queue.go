@@ -215,6 +215,37 @@ func NewLoyaltyVerificationTask(email, code string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeLoyaltyVerificationEmail, payload), nil
 }
 
+// AccountStatusEmailPayload -- dipakai bersama oleh
+// TypeAccountSuspendedEmail & TypeAccountActivatedEmail (audit fitur admin,
+// 5 September 2026): SuspendUser/ActivateUser (admin.go) sebelumnya tidak
+// memberi tahu user terdampak sama sekali. Notifikasi dalam-app (tabel
+// notifications) TIDAK CUKUP di sini -- user yang disuspend justru tidak
+// bisa login utk melihat bell notifikasi -- email satu-satunya kanal yang
+// pasti menjangkau, baik saat disuspend MAUPUN saat diaktifkan kembali.
+type AccountStatusEmailPayload struct {
+	Email string `json:"email"`
+}
+
+const TypeAccountSuspendedEmail = "account:suspended_email"
+
+func NewAccountSuspendedTask(email string) (*asynq.Task, error) {
+	payload, err := json.Marshal(AccountStatusEmailPayload{Email: email})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload akun disuspend %s: %w", email, err)
+	}
+	return asynq.NewTask(TypeAccountSuspendedEmail, payload), nil
+}
+
+const TypeAccountActivatedEmail = "account:activated_email"
+
+func NewAccountActivatedTask(email string) (*asynq.Task, error) {
+	payload, err := json.Marshal(AccountStatusEmailPayload{Email: email})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload akun diaktifkan %s: %w", email, err)
+	}
+	return asynq.NewTask(TypeAccountActivatedEmail, payload), nil
+}
+
 // RedisOptFromURL menerjemahkan REDIS_URL (format yang sama dipakai
 // database.NewRedisClient) ke opsi koneksi asynq -- supaya konfigurasi
 // Redis cukup didaftarkan sekali lewat REDIS_URL, tidak perlu format host/

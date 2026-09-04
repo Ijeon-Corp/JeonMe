@@ -3557,10 +3557,22 @@ export interface AdminSummary {
   total_revenue_idr: number;
   pending_reports: number;
   pending_payouts: number;
+  // pending_kyc -- audit fitur admin (5 September 2026): SEBELUMNYA
+  // backlog KYC tidak tampil sama sekali di Ringkasan.
+  pending_kyc: number;
 }
 
 export function getAdminSummary() {
   return apiFetch<AdminSummary>("/admin/summary", { method: "GET" }, { auth: true });
+}
+
+// Paginated -- audit fitur admin (5 September 2026): SEMUA daftar admin
+// (Pengguna/Laporan/Penarikan/KYC) sebelumnya pakai LIMIT tetap tanpa cara
+// melihat sisanya. total dipakai utk menampilkan sisa/menyembunyikan tombol
+// "Muat lebih" tanpa perlu request tambahan.
+export interface Paginated<T> {
+  items: T[];
+  total: number;
 }
 
 export interface AdminUser {
@@ -3573,9 +3585,14 @@ export interface AdminUser {
   deleted_at?: string;
 }
 
-export function listAdminUsers(search?: string) {
-  const query = search ? `?search=${encodeURIComponent(search)}` : "";
-  return apiFetch<AdminUser[]>(`/admin/users${query}`, { method: "GET" }, { auth: true });
+export function listAdminUsers(params?: { search?: string; role?: string; status?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  if (params?.search) q.set("search", params.search);
+  if (params?.role) q.set("role", params.role);
+  if (params?.status) q.set("status", params.status);
+  q.set("limit", String(params?.limit ?? 50));
+  q.set("offset", String(params?.offset ?? 0));
+  return apiFetch<Paginated<AdminUser>>(`/admin/users?${q.toString()}`, { method: "GET" }, { auth: true });
 }
 
 export function suspendUser(id: string) {
@@ -3596,8 +3613,12 @@ export interface AdminReport {
   created_at: string;
 }
 
-export function listAdminReports(status = "pending") {
-  return apiFetch<AdminReport[]>(`/admin/reports?status=${status}`, { method: "GET" }, { auth: true });
+export function listAdminReports(params?: { status?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  q.set("status", params?.status ?? "pending");
+  q.set("limit", String(params?.limit ?? 50));
+  q.set("offset", String(params?.offset ?? 0));
+  return apiFetch<Paginated<AdminReport>>(`/admin/reports?${q.toString()}`, { method: "GET" }, { auth: true });
 }
 
 export function resolveReport(id: string, action: "takedown" | "dismiss") {
@@ -3606,6 +3627,14 @@ export function resolveReport(id: string, action: "takedown" | "dismiss") {
     { method: "PATCH", body: JSON.stringify({ action }) },
     { auth: true }
   );
+}
+
+// restoreReport -- audit fitur admin (5 September 2026, migrasi 000092):
+// kebalikan dari resolveReport(action="takedown") -- mencabut kunci
+// moderasi & menyalakan lagi is_published/is_active. Hanya berlaku utk
+// laporan berstatus "takedown".
+export function restoreReport(id: string) {
+  return apiFetch<{ message: string }>(`/admin/reports/${id}/restore`, { method: "PATCH" }, { auth: true });
 }
 
 export interface AdminPayout {
@@ -3623,8 +3652,12 @@ export interface AdminPayout {
 // REQ-F-505: rekonsiliasi disbursement lintas kreator. status default
 // ("needs_action") menampilkan hanya "requested"+"processing" -- kirim
 // "all" untuk melihat riwayat lengkap termasuk yang sudah selesai/gagal.
-export function listAdminPayouts(status: string = "needs_action") {
-  return apiFetch<AdminPayout[]>(`/admin/payouts?status=${status}`, { method: "GET" }, { auth: true });
+export function listAdminPayouts(params?: { status?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  q.set("status", params?.status ?? "needs_action");
+  q.set("limit", String(params?.limit ?? 50));
+  q.set("offset", String(params?.offset ?? 0));
+  return apiFetch<Paginated<AdminPayout>>(`/admin/payouts?${q.toString()}`, { method: "GET" }, { auth: true });
 }
 
 export function updatePayoutStatus(id: string, status: "processing" | "completed" | "failed") {
@@ -3717,8 +3750,13 @@ export interface AdminKycItem {
   submitted_at?: string;
 }
 
-export function listAdminKyc(status: string = "pending") {
-  return apiFetch<AdminKycItem[]>(`/admin/kyc?status=${status}`, { method: "GET" }, { auth: true });
+export function listAdminKyc(params?: { status?: string; search?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  q.set("status", params?.status ?? "pending");
+  if (params?.search) q.set("search", params.search);
+  q.set("limit", String(params?.limit ?? 50));
+  q.set("offset", String(params?.offset ?? 0));
+  return apiFetch<Paginated<AdminKycItem>>(`/admin/kyc?${q.toString()}`, { method: "GET" }, { auth: true });
 }
 
 export interface AdminKycDetail extends AdminKycItem {
@@ -3740,6 +3778,18 @@ export function reviewKyc(userId: string, input: { status: "verified" | "rejecte
   return apiFetch<{ message: string }>(
     `/admin/kyc/${userId}`,
     { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// revokeKyc -- audit fitur admin (5 September 2026): SEBELUMNYA "verified"
+// tidak punya jalur balik sama sekali dari sisi admin -- satu-satunya cara
+// memperbaiki verifikasi keliru/fraud adalah UPDATE manual lewat SQL
+// langsung. Transisi ke "rejected" di backend, reason WAJIB diisi.
+export function revokeKyc(userId: string, reason: string) {
+  return apiFetch<{ message: string }>(
+    `/admin/kyc/${userId}/revoke`,
+    { method: "PATCH", body: JSON.stringify({ reason }) },
     { auth: true }
   );
 }

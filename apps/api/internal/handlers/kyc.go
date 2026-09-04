@@ -239,24 +239,39 @@ type adminKycItem struct {
 
 // AdminList — daftar pengajuan KYC lintas kreator. Default filter ke
 // "pending" (yang perlu ditindak) -- kirim ?status=all untuk riwayat penuh.
+// AdminList -- status default "pending", "all" utk seluruh riwayat. search
+// (opsional) mencocokkan username/email. limit/offset mengontrol halaman
+// (audit fitur admin 5 September 2026 -- SEBELUMNYA LIMIT 200 tetap tanpa
+// cara melihat sisanya, dan tidak ada search sama sekali).
 func (h *KycHandler) AdminList(c *gin.Context) {
 	status := c.DefaultQuery("status", "pending")
+	search := "%" + c.Query("search") + "%"
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	query := `
+	where := "WHERE (u.username ILIKE $1 OR u.email ILIKE $1)"
+	args := []any{search}
+	if status != "all" {
+		args = append(args, status)
+		where += fmt.Sprintf(" AND k.status = $%d", len(args))
+	}
+
+	var total int
+	if err := h.DB.QueryRow(ctx, "SELECT COUNT(*) FROM kyc_verifications k JOIN users u ON u.id = k.user_id "+where, args...).Scan(&total); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar KYC"})
+		return
+	}
+
+	args = append(args, limit, offset)
+	rows, err := h.DB.Query(ctx, fmt.Sprintf(`
 		SELECT k.user_id, u.username, u.email, k.status, k.full_name_ktp, k.submitted_at
 		FROM kyc_verifications k JOIN users u ON u.id = k.user_id
-	`
-	args := []any{}
-	if status != "all" {
-		query += ` WHERE k.status = $1`
-		args = append(args, status)
-	}
-	query += ` ORDER BY k.submitted_at ASC NULLS LAST LIMIT 200`
-
-	rows, err := h.DB.Query(ctx, query, args...)
+		%s
+		ORDER BY k.submitted_at ASC NULLS LAST
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat daftar KYC"})
 		return
@@ -271,7 +286,7 @@ func (h *KycHandler) AdminList(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, paginatedResponse[adminKycItem]{Items: items, Total: total})
 }
 
 type adminKycDetailResponse struct {
@@ -384,5 +399,64 @@ func (h *KycHandler) AdminReview(c *gin.Context) {
 	metadata, _ := json.Marshal(gin.H{"status": req.Status, "rejection_reason": req.RejectionReason, "reviewed_by": adminID})
 	_ = audit.Log(ctx, h.DB, targetUserID, "kyc."+req.Status, "kyc_verification", targetUserID, metadata)
 
+	// Notifikasi dalam-app -- audit fitur admin (5 September 2026):
+	// SEBELUMNYA kreator tidak diberi tahu sama sekali, cuma tahu lewat
+	// mengecek sendiri halaman KYC-nya.
+	if req.Status == "verified" {
+		notifyUser(ctx, h.DB, targetUserID, "kyc_verified", "KYC kamu disetujui",
+			"Verifikasi KYC kamu disetujui -- penarikan saldo kamu sekarang diprioritaskan.", "/dashboard/kyc")
+	} else {
+		notifyUser(ctx, h.DB, targetUserID, "kyc_rejected", "KYC kamu ditolak",
+			"Pengajuan verifikasi KYC kamu ditolak. Alasan: "+req.RejectionReason+". Kamu bisa mengajukan ulang.", "/dashboard/kyc")
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "status KYC diperbarui"})
+}
+
+type revokeKycRequest struct {
+	Reason string `json:"reason" binding:"required,max=1000"`
+}
+
+// AdminRevoke -- audit fitur admin (5 September 2026): SEBELUMNYA
+// "verified" adalah status TERMINAL dari sisi admin -- tidak ada jalur
+// balik lewat API kalau kreator ternyata terverifikasi keliru atau
+// belakangan terbukti fraud, satu-satunya cara memperbaiki adalah UPDATE
+// manual lewat SQL langsung di database. Transisi ke "rejected" (BUKAN
+// status baru) supaya UI/alur penolakan yang sudah ada -- termasuk
+// menampilkan alasan ke kreator & mengizinkan pengajuan ulang -- langsung
+// terpakai ulang, tidak perlu membangun tampilan status baru.
+func (h *KycHandler) AdminRevoke(c *gin.Context) {
+	targetUserID := c.Param("userId")
+	adminID := c.GetString("userID")
+
+	var req revokeKycRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	tag, err := h.DB.Exec(ctx, `
+		UPDATE kyc_verifications SET status = 'rejected', rejection_reason = $1, reviewed_at = now(),
+		       reviewed_by = $2, updated_at = now()
+		WHERE user_id = $3 AND status = 'verified'
+	`, req.Reason, adminID, targetUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencabut verifikasi KYC"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "pengajuan KYC tidak ditemukan atau belum terverifikasi"})
+		return
+	}
+
+	metadata, _ := json.Marshal(gin.H{"reason": req.Reason, "revoked_by": adminID})
+	_ = audit.Log(ctx, h.DB, targetUserID, "kyc.revoked", "kyc_verification", targetUserID, metadata)
+
+	notifyUser(ctx, h.DB, targetUserID, "kyc_revoked", "Verifikasi KYC kamu dicabut",
+		"Status verifikasi KYC kamu dicabut admin. Alasan: "+req.Reason, "/dashboard/kyc")
+
+	c.JSON(http.StatusOK, gin.H{"message": "verifikasi KYC dicabut"})
 }

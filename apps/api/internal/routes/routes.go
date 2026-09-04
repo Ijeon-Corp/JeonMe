@@ -86,6 +86,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	analyticsSettings := handlers.NewAnalyticsSettingsHandler(db, rdb, encryptionKey)
 	account := handlers.NewAccountHandler(db, rdb, s3)
 	admin := handlers.NewAdminHandler(db, rdb)
+	admin.Queue = queueClient
 	kyc := handlers.NewKycHandler(db, s3)
 	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
 	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
@@ -658,6 +659,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 			adminGroup.GET("/reports", admin.ListReports)
 			adminGroup.PATCH("/reports/:id/resolve", admin.ResolveReport)
+			adminGroup.PATCH("/reports/:id/restore", admin.RestoreReport)
 
 			// REQ-F-505: rekonsiliasi disbursement lintas kreator -- admin
 			// memproses pengajuan penarikan secara manual (belum ada
@@ -669,6 +671,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.GET("/kyc", kyc.AdminList)
 			adminGroup.GET("/kyc/:userId", kyc.AdminGetDetail)
 			adminGroup.PATCH("/kyc/:userId", kyc.AdminReview)
+			adminGroup.PATCH("/kyc/:userId/revoke", kyc.AdminRevoke)
 
 			// Moderasi tautan sensitif -- permintaan langsung pengguna, 22
 			// Agustus 2026, lihat catatan lengkap di handlers.LinkModerationChecker.

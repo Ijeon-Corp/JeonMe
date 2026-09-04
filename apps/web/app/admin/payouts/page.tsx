@@ -19,15 +19,23 @@ const STATUS_BADGE: Record<AdminPayout["status"], string> = {
   failed: "bg-red-50 text-red-600",
 };
 
+const PAGE_SIZE = 50;
+
 export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState<AdminPayout[]>([]);
+  const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<"needs_action" | "all">("needs_action");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  function reload(f: "needs_action" | "all") {
-    return listAdminPayouts(f).then(setPayouts);
+  function reload(f: "needs_action" | "all", offset = 0) {
+    return listAdminPayouts({ status: f, limit: PAGE_SIZE, offset }).then((res) => {
+      setTotal(res.total);
+      if (offset === 0) setPayouts(res.items);
+      else setPayouts((prev) => [...prev, ...res.items]);
+    });
   }
 
   function handleFilterChange(f: "needs_action" | "all") {
@@ -41,6 +49,18 @@ export default function AdminPayoutsPage() {
       .finally(() => setLoading(false));
   }, [filter]);
 
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    setError(null);
+    try {
+      await reload(filter, payouts.length);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat penarikan lainnya.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   async function handleUpdateStatus(payout: AdminPayout, status: "processing" | "completed" | "failed") {
     if (status === "failed") {
       const confirmed = await confirmAction(
@@ -53,7 +73,7 @@ export default function AdminPayoutsPage() {
     setBusyId(payout.id);
     try {
       await updatePayoutStatus(payout.id, status);
-      await reload(filter);
+      await reload(filter, 0);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status penarikan.");
     } finally {
@@ -186,6 +206,22 @@ export default function AdminPayoutsPage() {
           </div>
         )}
       </div>
+
+      {payouts.length > 0 && (
+        <p className="mt-3 text-xs text-app-muted">
+          Menampilkan {payouts.length} dari {total} penarikan.
+        </p>
+      )}
+      {payouts.length < total && (
+        <button
+          type="button"
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="mt-2 w-full rounded-lg border-2 border-jeon-ink py-2 text-sm font-semibold hover:border-jeon-purple disabled:opacity-50"
+        >
+          {loadingMore ? "Memuat..." : "Muat lebih"}
+        </button>
+      )}
     </div>
   );
 }

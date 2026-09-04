@@ -1238,6 +1238,20 @@ type updatePageRequest struct {
 // tidak kehilangan pengaturannya kalau sementara ganti-ganti preset untuk
 // dibandingkan, DAN supaya kustomisasi tombol/font bisa diterapkan di atas
 // preset apa pun, bukan cuma di atas latar "custom".
+// isPageModerationLocked -- audit fitur admin (5 September 2026, migrasi
+// 000092): true kalau admin pernah men-takedown halaman ini lewat laporan
+// (AdminHandler.ResolveReport) dan belum dipulihkan (RestoreReport).
+// SEBELUMNYA is_published dikunci admin cuma sebentar -- pemilik bisa
+// langsung menyalakannya lagi sendiri lewat alur edit biasa, membatalkan
+// keputusan moderasi tanpa admin pernah tahu. UpdateMyPage/UpdatePage
+// menolak permintaan mempublikasikan ULANG (bukan mengedit konten lain)
+// selama halaman masih terkunci.
+func isPageModerationLocked(ctx context.Context, db *pgxpool.Pool, where string, args ...any) bool {
+	var locked bool
+	_ = db.QueryRow(ctx, "SELECT moderation_locked_at IS NOT NULL FROM pages WHERE "+where, args...).Scan(&locked)
+	return locked
+}
+
 func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	var req updatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1282,6 +1296,11 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 		req.CustomBackgroundType != nil || req.CustomBackgroundValue != nil
 	if wantsCustomBackground && !isPremiumUser(ctx, h.DB, userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang custom hanya untuk kreator Premium, upgrade dulu di Pengaturan > Langganan"})
+		return
+	}
+
+	if req.IsPublished != nil && *req.IsPublished && isPageModerationLocked(ctx, h.DB, "user_id = $1 AND is_primary = true", userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "halaman ini dinonaktifkan admin karena laporan, tidak bisa dipublikasikan ulang sendiri -- hubungi support kalau menurutmu ini keliru"})
 		return
 	}
 
@@ -2341,6 +2360,11 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 		req.CustomBackgroundType != nil || req.CustomBackgroundValue != nil
 	if wantsCustomBackground && !isPremiumUser(ctx, h.DB, userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "latar belakang kustom khusus untuk kreator Premium"})
+		return
+	}
+
+	if req.IsPublished != nil && *req.IsPublished && isPageModerationLocked(ctx, h.DB, "id = $1 AND user_id = $2", pageID, userID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "halaman ini dinonaktifkan admin karena laporan, tidak bisa dipublikasikan ulang sendiri -- hubungi support kalau menurutmu ini keliru"})
 		return
 	}
 

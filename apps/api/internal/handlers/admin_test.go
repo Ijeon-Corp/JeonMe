@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -142,13 +143,30 @@ func TestReportTakedown_UnpublishesPage(t *testing.T) {
 		t.Fatalf("create report gagal: status %d, body %s", createRec.Code, createRec.Body.String())
 	}
 
-	listRec := doJSON(t, router, http.MethodGet, "/admin/reports", nil, map[string]string{"X-Test-UserID": adminID})
-	var reports []reportItem
-	if err := json.Unmarshal(listRec.Body.Bytes(), &reports); err != nil || len(reports) != 1 {
-		t.Fatalf("list reports = %+v (err=%v), ekspektasi tepat 1 laporan pending", reports, err)
+	// Filter by targetID SENDIRI, bukan asumsi "cuma ada 1 laporan pending
+	// di seluruh sistem" -- endpoint ini tidak di-scope per-test, test lain
+	// (atau run sebelumnya) bisa saja sudah/masih punya laporan pending
+	// lain yang tidak terkait.
+	listRec := doJSON(t, router, http.MethodGet, "/admin/reports?limit=100", nil, map[string]string{"X-Test-UserID": adminID})
+	var reportsResp paginatedResponse[reportItem]
+	if err := json.Unmarshal(listRec.Body.Bytes(), &reportsResp); err != nil {
+		t.Fatalf("gagal decode list reports: %v, body: %s", err, listRec.Body.String())
 	}
+	var reportID string
+	for _, r := range reportsResp.Items {
+		if r.TargetID == pageID {
+			reportID = r.ID
+			break
+		}
+	}
+	if reportID == "" {
+		t.Fatalf("laporan utk pageID=%s tidak ditemukan di list: %+v", pageID, reportsResp)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.DB.Exec(context.Background(), `DELETE FROM reports WHERE id = $1`, reportID)
+	})
 
-	resolveRec := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reports[0].ID+"/resolve", map[string]string{
+	resolveRec := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reportID+"/resolve", map[string]string{
 		"action": "takedown",
 	}, map[string]string{"X-Test-UserID": adminID})
 	if resolveRec.Code != http.StatusOK {
@@ -156,10 +174,53 @@ func TestReportTakedown_UnpublishesPage(t *testing.T) {
 	}
 
 	var isPublished bool
-	if err := admin.DB.QueryRow(t.Context(), `SELECT is_published FROM pages WHERE id = $1`, pageID).Scan(&isPublished); err != nil {
+	var moderationLocked bool
+	if err := admin.DB.QueryRow(t.Context(), `SELECT is_published, moderation_locked_at IS NOT NULL FROM pages WHERE id = $1`, pageID).Scan(&isPublished, &moderationLocked); err != nil {
 		t.Fatalf("gagal query pages: %v", err)
 	}
 	if isPublished {
 		t.Error("halaman masih is_published=true setelah takedown, ekspektasi false")
+	}
+	if !moderationLocked {
+		t.Error("moderation_locked_at kosong setelah takedown, ekspektasi terisi (migrasi 000092)")
+	}
+
+	// Pemilik konten TIDAK BOLEH bisa mempublikasikan ulang sendiri selama
+	// terkunci -- ini justru poin utama migrasi 000092 (audit fitur admin,
+	// 5 September 2026): SEBELUMNYA takedown bisa langsung dibatalkan
+	// sendiri oleh pemiliknya lewat alur edit biasa.
+	page, _ := newTestPageHandler(t)
+	pageRouter := gin.New()
+	pageRouter.Group("/", fakeAuth()).PATCH("/dashboard/page", page.UpdateMyPage)
+	republishRec := doJSON(t, pageRouter, http.MethodPatch, "/dashboard/page", map[string]any{
+		"is_published": true,
+	}, map[string]string{"X-Test-UserID": reportedUserID})
+	if republishRec.Code != http.StatusForbidden {
+		t.Fatalf("republish sendiri selagi terkunci = %d, ekspektasi 403. Body: %s", republishRec.Code, republishRec.Body.String())
+	}
+
+	// RestoreReport (kebalikan takedown) -- admin memulihkan, HARUS
+	// menyalakan lagi is_published DAN mencabut kunci sekaligus.
+	restoreRouter := gin.New()
+	restoreRouter.Group("/", fakeAuth(), middleware.AdminRequired(admin.DB)).PATCH("/admin/reports/:id/restore", admin.RestoreReport)
+	restoreRec2 := doJSON(t, restoreRouter, http.MethodPatch, "/admin/reports/"+reportID+"/restore", nil, map[string]string{"X-Test-UserID": adminID})
+	if restoreRec2.Code != http.StatusOK {
+		t.Fatalf("restore gagal: status %d, body %s", restoreRec2.Code, restoreRec2.Body.String())
+	}
+
+	var isPublishedAfterRestore, moderationLockedAfterRestore bool
+	if err := admin.DB.QueryRow(t.Context(), `SELECT is_published, moderation_locked_at IS NOT NULL FROM pages WHERE id = $1`, pageID).Scan(&isPublishedAfterRestore, &moderationLockedAfterRestore); err != nil {
+		t.Fatalf("gagal query pages setelah restore: %v", err)
+	}
+	if !isPublishedAfterRestore || moderationLockedAfterRestore {
+		t.Errorf("setelah restore: is_published=%v moderation_locked=%v, ekspektasi true/false", isPublishedAfterRestore, moderationLockedAfterRestore)
+	}
+
+	var notifCount int
+	if err := admin.DB.QueryRow(t.Context(), `SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND type IN ('content_takedown', 'content_restored')`, reportedUserID).Scan(&notifCount); err != nil {
+		t.Fatalf("gagal query notifications: %v", err)
+	}
+	if notifCount != 2 {
+		t.Errorf("notifCount = %d, ekspektasi 2 (takedown + restored)", notifCount)
 	}
 }

@@ -7,8 +7,10 @@ import {
   ApiError,
   getAdminKycDetail,
   listAdminKyc,
+  revokeKyc,
   reviewKyc,
 } from "@/lib/api-client";
+import { confirmAction, confirmDelete } from "@/lib/confirm";
 import { IconInbox, IconShield } from "@/components/icons";
 
 const STATUS_LABEL: Record<AdminKycItem["status"], string> = {
@@ -25,19 +27,29 @@ const STATUS_BADGE: Record<AdminKycItem["status"], string> = {
   rejected: "bg-red-50 text-red-600",
 };
 
+const PAGE_SIZE = 50;
+
 export default function AdminKycPage() {
   const [items, setItems] = useState<AdminKycItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [detail, setDetail] = useState<AdminKycDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [revokeReason, setRevokeReason] = useState("");
   const [busy, setBusy] = useState(false);
 
-  function reload(f: "pending" | "all") {
-    return listAdminKyc(f).then(setItems);
+  function reload(f: "pending" | "all", offset = 0) {
+    return listAdminKyc({ status: f, search, limit: PAGE_SIZE, offset }).then((res) => {
+      setTotal(res.total);
+      if (offset === 0) setItems(res.items);
+      else setItems((prev) => [...prev, ...res.items]);
+    });
   }
 
   function handleFilterChange(f: "pending" | "all") {
@@ -49,12 +61,39 @@ export default function AdminKycPage() {
     reload(filter)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat pengajuan KYC."))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await reload(filter, 0);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mencari pengajuan KYC.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    setError(null);
+    try {
+      await reload(filter, items.length);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat pengajuan lainnya.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function openDetail(userId: string) {
     setError(null);
     setDetail(null);
     setRejectReason("");
+    setRevokeReason("");
     setDetailLoading(true);
     try {
       const d = await getAdminKycDetail(userId);
@@ -66,18 +105,32 @@ export default function AdminKycPage() {
     }
   }
 
+  // handleReview -- audit fitur admin (5 September 2026): Setujui/Tolak
+  // sebelumnya langsung eksekusi tanpa jeda konfirmasi.
   async function handleReview(status: "verified" | "rejected") {
     if (!detail) return;
     if (status === "rejected" && !rejectReason.trim()) {
       setError("Alasan penolakan wajib diisi.");
       return;
     }
+    const confirmed =
+      status === "verified"
+        ? await confirmAction(`Setujui verifikasi KYC @${detail.username}? Penarikan saldonya akan diprioritaskan.`, {
+            title: "Setujui KYC?",
+            confirmButtonText: "Ya, Setujui",
+          })
+        : await confirmDelete(`Tolak pengajuan KYC @${detail.username}? Kreator akan diberi tahu & bisa mengajukan ulang.`, {
+            title: "Tolak KYC?",
+            confirmButtonText: "Ya, Tolak",
+          });
+    if (!confirmed) return;
+
     setError(null);
     setBusy(true);
     try {
       await reviewKyc(detail.user_id, { status, rejection_reason: rejectReason.trim() || undefined });
       setDetail(null);
-      await reload(filter);
+      await reload(filter, 0);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal memperbarui status KYC.");
     } finally {
@@ -85,7 +138,32 @@ export default function AdminKycPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-app-muted">Memuat...</p>;
+  // handleRevoke -- audit fitur admin (5 September 2026): SEBELUMNYA
+  // "verified" tidak punya jalur balik sama sekali dari panel admin.
+  async function handleRevoke() {
+    if (!detail) return;
+    if (!revokeReason.trim()) {
+      setError("Alasan pencabutan wajib diisi.");
+      return;
+    }
+    const confirmed = await confirmDelete(
+      `Cabut verifikasi KYC @${detail.username}? Statusnya akan berubah jadi ditolak & kreator diberi tahu.`,
+      { title: "Cabut verifikasi KYC?", confirmButtonText: "Ya, Cabut" }
+    );
+    if (!confirmed) return;
+
+    setError(null);
+    setBusy(true);
+    try {
+      await revokeKyc(detail.user_id, revokeReason.trim());
+      setDetail(null);
+      await reload(filter, 0);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal mencabut verifikasi KYC.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-3xl">
@@ -95,7 +173,7 @@ export default function AdminKycPage() {
         memprioritaskan antrian proses penarikan dana.
       </p>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => handleFilterChange("pending")}
@@ -118,47 +196,81 @@ export default function AdminKycPage() {
         >
           Semua Riwayat
         </button>
+        <form onSubmit={handleSearch} className="ml-auto flex gap-1.5">
+          <input
+            type="text"
+            placeholder="Cari username/email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-48 rounded-lg border border-app-border px-3 py-1.5 text-xs focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+          />
+          <button type="submit" className="rounded-lg border-2 border-jeon-ink px-3 py-1.5 text-xs font-semibold hover:border-jeon-purple">
+            Cari
+          </button>
+        </form>
       </div>
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 flex flex-col gap-2">
-        {items.map((it) => (
-          <button
-            key={it.user_id}
-            type="button"
-            onClick={() => openDetail(it.user_id)}
-            className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface p-4 text-left shadow-card hover:border-jeon-purple/50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
-                <IconShield className="h-[18px] w-[18px]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-app-ink">
-                  {it.full_name_ktp || "(nama belum diisi)"}
-                  <span className="ml-2 font-normal text-app-muted">
-                    @{it.username} ({it.email})
-                  </span>
-                </p>
-                {it.submitted_at && (
-                  <p className="text-xs text-app-muted">Diajukan {new Date(it.submitted_at).toLocaleString("id-ID")}</p>
-                )}
-              </div>
-            </div>
-            <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[it.status]}`}>
-              {STATUS_LABEL[it.status]}
-            </span>
-          </button>
-        ))}
+      {loading ? (
+        <p className="mt-4 text-sm text-app-muted">Memuat...</p>
+      ) : (
+        <>
+          <div className="mt-4 flex flex-col gap-2">
+            {items.map((it) => (
+              <button
+                key={it.user_id}
+                type="button"
+                onClick={() => openDetail(it.user_id)}
+                className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface p-4 text-left shadow-card hover:border-jeon-purple/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
+                    <IconShield className="h-[18px] w-[18px]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-app-ink">
+                      {it.full_name_ktp || "(nama belum diisi)"}
+                      <span className="ml-2 font-normal text-app-muted">
+                        @{it.username} ({it.email})
+                      </span>
+                    </p>
+                    {it.submitted_at && (
+                      <p className="text-xs text-app-muted">Diajukan {new Date(it.submitted_at).toLocaleString("id-ID")}</p>
+                    )}
+                  </div>
+                </div>
+                <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[it.status]}`}>
+                  {STATUS_LABEL[it.status]}
+                </span>
+              </button>
+            ))}
 
-        {items.length === 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
-            <IconInbox className="h-4 w-4 flex-shrink-0" />
-            {filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."}
+            {items.length === 0 && (
+              <div className="flex items-center gap-2 rounded-xl border border-dashed border-app-border bg-app-surface/60 px-4 py-6 text-sm text-app-muted">
+                <IconInbox className="h-4 w-4 flex-shrink-0" />
+                {filter === "pending" ? "Tidak ada pengajuan yang menunggu review." : "Belum ada riwayat pengajuan KYC."}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {items.length > 0 && (
+            <p className="mt-3 text-xs text-app-muted">
+              Menampilkan {items.length} dari {total} pengajuan.
+            </p>
+          )}
+          {items.length < total && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="mt-2 w-full rounded-lg border-2 border-jeon-ink py-2 text-sm font-semibold hover:border-jeon-purple disabled:opacity-50"
+            >
+              {loadingMore ? "Memuat..." : "Muat lebih"}
+            </button>
+          )}
+        </>
+      )}
 
       {(detailLoading || detail) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -255,6 +367,31 @@ export default function AdminKycPage() {
                   <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
                     Alasan penolakan: {detail.rejection_reason}
                   </p>
+                )}
+
+                {/* Cabut verifikasi -- audit fitur admin (5 September 2026):
+                    SEBELUMNYA "verified" tidak punya jalur balik sama
+                    sekali dari sini, cuma bisa lewat UPDATE manual di
+                    database. */}
+                {detail.status === "verified" && (
+                  <div className="mt-4 flex flex-col gap-2 border-t border-app-border pt-4">
+                    <p className="text-xs font-bold uppercase text-app-muted">Cabut Verifikasi</p>
+                    <textarea
+                      value={revokeReason}
+                      onChange={(e) => setRevokeReason(e.target.value)}
+                      placeholder="Alasan pencabutan (wajib)"
+                      rows={2}
+                      className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={handleRevoke}
+                      className="rounded-lg border border-red-300 py-2.5 text-sm font-bold text-red-600 disabled:opacity-60"
+                    >
+                      Cabut Verifikasi
+                    </button>
+                  </div>
                 )}
 
                 <button

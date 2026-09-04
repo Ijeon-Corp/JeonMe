@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminSummary, ApiError, getAdminSummary } from "@/lib/api-client";
-import { IconChart, IconFlag, IconUsers, IconWallet } from "@/components/icons";
+import { IconChart, IconFlag, IconShield, IconUsers, IconWallet } from "@/components/icons";
 import StatCard from "@/components/StatCard";
 
 export default function AdminSummaryPage() {
@@ -70,11 +70,28 @@ export default function AdminSummaryPage() {
                 <span className="block font-serifDisplay text-2xl font-semibold text-jeon-warning">{summary.pending_payouts}</span>
               </span>
             </Link>
+
+            {/* KYC Tertunda -- audit fitur admin (5 September 2026):
+                SEBELUMNYA backlog KYC tidak tampil sama sekali di sini
+                walau punya halaman review sendiri, beda dari
+                laporan/penarikan yang sudah tampil. */}
+            <Link
+              href="/admin/kyc"
+              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-purple/40"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-lavender/40 text-jeon-purple">
+                <IconShield className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="block text-xs font-semibold text-app-muted">KYC Tertunda</span>
+                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-purple">{summary.pending_kyc}</span>
+              </span>
+            </Link>
           </section>
 
-          {(summary.pending_reports > 0 || summary.pending_payouts > 0) && (
+          {(summary.pending_reports > 0 || summary.pending_payouts > 0 || summary.pending_kyc > 0) && (
             <p className="mt-4 text-xs text-app-muted">
-              Ada hal yang perlu ditinjau -- klik kartu &quot;Laporan Tertunda&quot; atau &quot;Penarikan Tertunda&quot; di atas.
+              Ada hal yang perlu ditinjau -- klik kartu &quot;Laporan Tertunda&quot;, &quot;Penarikan Tertunda&quot;, atau &quot;KYC Tertunda&quot; di atas.
             </p>
           )}
         </>

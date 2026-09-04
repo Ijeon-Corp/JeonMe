@@ -62,6 +62,8 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeSignupVerificationEmail, h.HandleSignupVerificationEmail)
 	mux.HandleFunc(queue.TypePasswordResetEmail, h.HandlePasswordResetEmail)
 	mux.HandleFunc(queue.TypeLoyaltyVerificationEmail, h.HandleLoyaltyVerificationEmail)
+	mux.HandleFunc(queue.TypeAccountSuspendedEmail, h.HandleAccountSuspendedEmail)
+	mux.HandleFunc(queue.TypeAccountActivatedEmail, h.HandleAccountActivatedEmail)
 	return mux
 }
 
@@ -115,6 +117,47 @@ func (h *Handler) HandleLoyaltyVerificationEmail(_ context.Context, t *asynq.Tas
 	}
 
 	log.Printf("worker: kode verifikasi loyalitas terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandleAccountSuspendedEmail -- lihat catatan lengkap di
+// queue.TypeAccountSuspendedEmail & AdminHandler.SuspendUser (audit fitur
+// admin, 5 September 2026).
+func (h *Handler) HandleAccountSuspendedEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.AccountStatusEmailPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Akun Jeon.id kamu ditangguhkan"
+	body := "Akun Jeon.id kamu telah ditangguhkan oleh admin, dan untuk sementara tidak bisa dipakai untuk masuk.\n\n" +
+		"Kalau menurutmu ini keliru, silakan hubungi tim support kami.\n\nSalam,\nTim Jeon.id"
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim email penangguhan akun: %w", err)
+	}
+
+	log.Printf("worker: email penangguhan akun terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandleAccountActivatedEmail -- lawan dari HandleAccountSuspendedEmail,
+// lihat catatan lengkap di queue.TypeAccountActivatedEmail &
+// AdminHandler.ActivateUser.
+func (h *Handler) HandleAccountActivatedEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.AccountStatusEmailPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Akun Jeon.id kamu aktif kembali"
+	body := "Kabar baik -- penangguhan akun Jeon.id kamu sudah dicabut, kamu sudah bisa masuk seperti biasa lagi.\n\nSalam,\nTim Jeon.id"
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim email aktivasi akun: %w", err)
+	}
+
+	log.Printf("worker: email aktivasi akun terkirim ke %s", payload.Email)
 	return nil
 }
 
