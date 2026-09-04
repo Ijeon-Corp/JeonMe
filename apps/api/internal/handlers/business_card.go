@@ -106,7 +106,7 @@ type upsertBusinessCardRequest struct {
 func (h *BusinessCardHandler) UpsertCard(c *gin.Context) {
 	var req upsertBusinessCardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.IsActive && strings.TrimSpace(req.FullName) == "" {
@@ -210,7 +210,7 @@ func (h *BusinessCardHandler) SubmitCardContact(c *gin.Context) {
 
 	var req submitCardContactRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	name := strings.TrimSpace(req.Name)

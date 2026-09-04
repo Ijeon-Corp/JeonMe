@@ -115,7 +115,7 @@ func (h *LoyaltyHandler) GetSettings(c *gin.Context) {
 func (h *LoyaltyHandler) UpsertSettings(c *gin.Context) {
 	var req upsertLoyaltySettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.PointType == "" {
@@ -160,7 +160,7 @@ type createRewardRequest struct {
 func (h *LoyaltyHandler) CreateReward(c *gin.Context) {
 	var req createRewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *LoyaltyHandler) UpdateReward(c *gin.Context) {
 
 	var req updateRewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -356,7 +356,7 @@ func (h *LoyaltyHandler) RedeemReward(c *gin.Context) {
 
 	var req redeemRewardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	buyerEmail := strings.ToLower(strings.TrimSpace(req.BuyerEmail))

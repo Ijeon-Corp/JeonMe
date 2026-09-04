@@ -79,7 +79,7 @@ func (h *CollaboratorHandler) Invite(c *gin.Context) {
 
 	var req inviteCollaboratorRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if !validTeamRoles[req.Role] {
@@ -203,7 +203,7 @@ func (h *CollaboratorHandler) UpdateRole(c *gin.Context) {
 
 	var req updateCollaboratorRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if !validTeamRoles[req.Role] {

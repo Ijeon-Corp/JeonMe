@@ -1241,7 +1241,7 @@ type updatePageRequest struct {
 func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 	var req updatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -1356,7 +1356,7 @@ type updateStickersRequest struct {
 func (h *PageHandler) UpdateMyPageStickers(c *gin.Context) {
 	var req updateStickersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if msg, ok := validateStickers(req.Stickers); !ok {
@@ -1899,7 +1899,7 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 func (h *PageHandler) CreatePage(c *gin.Context) {
 	var req createExtraPageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	slug := strings.ToLower(strings.TrimSpace(req.Slug))
@@ -2277,7 +2277,7 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 
 	var req updateExtraPageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.Theme != nil && !availableThemes[*req.Theme] {
@@ -2421,7 +2421,7 @@ func (h *PageHandler) UpdatePageStickers(c *gin.Context) {
 
 	var req updateStickersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if msg, ok := validateStickers(req.Stickers); !ok {

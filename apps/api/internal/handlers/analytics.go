@@ -749,7 +749,7 @@ type askAssistantRequest struct {
 func (h *AnalyticsHandler) Ask(c *gin.Context) {
 	var req askAssistantRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

@@ -72,7 +72,7 @@ func validateChapters(chapters []chapterInput) (string, bool) {
 func (h *CourseHandler) Create(c *gin.Context) {
 	var req createCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -216,7 +216,7 @@ func (h *CourseHandler) ReplaceChapters(c *gin.Context) {
 
 	var req replaceChaptersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if msg, ok := validateChapters(req.Chapters); !ok {

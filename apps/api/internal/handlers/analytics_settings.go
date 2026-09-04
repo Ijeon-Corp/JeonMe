@@ -102,7 +102,7 @@ type upsertAnalyticsSettingsRequest struct {
 func (h *AnalyticsSettingsHandler) Upsert(c *gin.Context) {
 	var req upsertAnalyticsSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.FbPixelID != "" && !fbPixelIDPattern.MatchString(req.FbPixelID) {

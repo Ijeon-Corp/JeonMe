@@ -92,7 +92,7 @@ type createPayoutRequest struct {
 func (h *BalanceHandler) CreatePayout(c *gin.Context) {
 	var req createPayoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

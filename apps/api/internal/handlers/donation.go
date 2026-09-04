@@ -96,7 +96,7 @@ type upsertDonationRequest struct {
 func (h *DonationHandler) Upsert(c *gin.Context) {
 	var req upsertDonationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.Enabled && req.Title == "" {
@@ -236,7 +236,7 @@ type createWishlistItemRequest struct {
 func (h *DonationHandler) CreateWishlistItem(c *gin.Context) {
 	var req createWishlistItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

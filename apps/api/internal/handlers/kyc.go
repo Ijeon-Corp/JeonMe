@@ -356,7 +356,7 @@ func (h *KycHandler) AdminReview(c *gin.Context) {
 
 	var req reviewKycRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.Status == "rejected" && strings.TrimSpace(req.RejectionReason) == "" {

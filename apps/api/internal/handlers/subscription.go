@@ -166,7 +166,7 @@ type checkoutSubscriptionRequest struct {
 func (h *SubscriptionHandler) Checkout(c *gin.Context) {
 	var req checkoutSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

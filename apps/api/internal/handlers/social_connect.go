@@ -105,7 +105,7 @@ type connectInstagramRequest struct {
 func (h *SocialConnectHandler) ConnectInstagram(c *gin.Context) {
 	var req connectInstagramRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	userID := c.GetString("userID")
@@ -161,7 +161,7 @@ type connectTikTokRequest struct {
 func (h *SocialConnectHandler) ConnectTikTok(c *gin.Context) {
 	var req connectTikTokRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	userID := c.GetString("userID")

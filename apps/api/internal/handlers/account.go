@@ -60,7 +60,7 @@ func (h *AccountHandler) Deactivate(c *gin.Context) {
 
 	var req deactivateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -121,7 +121,7 @@ func (h *AccountHandler) RequestDeletion(c *gin.Context) {
 
 	var req requestDeletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

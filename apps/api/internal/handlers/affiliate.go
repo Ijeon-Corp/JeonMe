@@ -76,7 +76,7 @@ type upsertAffiliateRequest struct {
 func (h *AffiliateHandler) Upsert(c *gin.Context) {
 	var req upsertAffiliateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

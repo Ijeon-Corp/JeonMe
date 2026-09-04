@@ -88,7 +88,7 @@ type upsertLeadCaptureRequest struct {
 func (h *AudienceHandler) UpsertLeadCaptureSettings(c *gin.Context) {
 	var req upsertLeadCaptureRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.IsActive && strings.TrimSpace(req.Title) == "" {
@@ -179,7 +179,7 @@ func normalizeTelegram(raw string) string {
 func (h *AudienceHandler) SubscribeLead(c *gin.Context) {
 	var req subscribeLeadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	email := strings.TrimSpace(strings.ToLower(req.Email))
@@ -526,7 +526,7 @@ type createBroadcastRequest struct {
 func (h *AudienceHandler) CreateBroadcast(c *gin.Context) {
 	var req createBroadcastRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	subject := strings.TrimSpace(req.Subject)

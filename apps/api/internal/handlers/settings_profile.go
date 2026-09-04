@@ -102,7 +102,7 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 
 	var req updateSettingsProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

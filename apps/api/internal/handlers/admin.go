@@ -164,7 +164,7 @@ type createReportRequest struct {
 func (h *AdminHandler) CreateReport(c *gin.Context) {
 	var req createReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -234,7 +234,7 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 
 	var req resolveReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -386,7 +386,7 @@ func (h *AdminHandler) UpdatePayoutStatus(c *gin.Context) {
 
 	var req updatePayoutStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -572,7 +572,7 @@ func (h *AdminHandler) CreateBlockedKeyword(c *gin.Context) {
 
 	var req createBlockedKeywordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.Category == "" {
@@ -684,7 +684,7 @@ func (h *AdminHandler) UpsertDomainVerdict(c *gin.Context) {
 
 	var req upsertDomainVerdictRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.Verdict == "blocked" && req.Category == "" {

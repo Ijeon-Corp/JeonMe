@@ -185,7 +185,7 @@ type createProductRequest struct {
 func (h *ProductHandler) Create(c *gin.Context) {
 	var req createProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -464,7 +464,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 	var req updateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -755,7 +755,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 func (h *ProductHandler) Reorder(c *gin.Context) {
 	var req []reorderItem
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -835,7 +835,7 @@ func (h *ProductHandler) AddCodes(c *gin.Context) {
 
 	var req addProductCodesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -1123,7 +1123,7 @@ func (h *ProductHandler) UpdateShopSettings(c *gin.Context) {
 	userID := c.GetString("userID")
 	var req updateShopSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if len(req.ShopPausedMessage) > 200 {

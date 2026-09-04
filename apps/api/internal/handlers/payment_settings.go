@@ -97,7 +97,7 @@ func (h *PayoutMethodHandler) Create(c *gin.Context) {
 
 	var req createPayoutMethodRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *PayoutMethodHandler) Verify(c *gin.Context) {
 
 	var req verifyPayoutMethodRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -338,7 +338,7 @@ func (h *PayoutScheduleHandler) Upsert(c *gin.Context) {
 
 	var req upsertPayoutScheduleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

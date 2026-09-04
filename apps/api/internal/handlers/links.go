@@ -199,7 +199,7 @@ type createLinkRequest struct {
 func (h *LinksHandler) Create(c *gin.Context) {
 	var req createLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -799,7 +799,7 @@ type createBlockRequest struct {
 func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	var req createBlockRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.BlockData == nil {
@@ -974,7 +974,7 @@ func (h *LinksHandler) Update(c *gin.Context) {
 
 	var req updateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.IconColor != nil && *req.IconColor != "" && !hexColorPattern.MatchString(*req.IconColor) {
@@ -2263,7 +2263,7 @@ func (h *LinksHandler) Unlock(c *gin.Context) {
 
 	var req unlockLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -2342,7 +2342,7 @@ func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
 
 	var req contactFormRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -2485,7 +2485,7 @@ type reorderItem struct {
 func (h *LinksHandler) Reorder(c *gin.Context) {
 	var req []reorderItem
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -2533,7 +2533,7 @@ func (h *LinksHandler) ReorderForPage(c *gin.Context) {
 
 	var req []reorderItem
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -2641,7 +2641,7 @@ func (h *LinksHandler) CreateForPage(c *gin.Context) {
 
 	var req createLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
@@ -2688,7 +2688,7 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 
 	var req createBlockRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 	if req.BlockData == nil {

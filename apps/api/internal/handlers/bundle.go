@@ -38,7 +38,7 @@ type createBundleRequest struct {
 func (h *BundleHandler) Create(c *gin.Context) {
 	var req createBundleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 

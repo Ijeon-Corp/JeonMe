@@ -32,7 +32,7 @@ type appleLoginRequest struct {
 func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	var req appleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
 		return
 	}
 
