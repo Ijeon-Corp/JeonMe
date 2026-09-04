@@ -1,21 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
-import AudioPlayerBlock from "@/components/AudioPlayerBlock";
+import type { FaqItem } from "@/components/FaqBlock";
 import BuyProductButton from "@/components/BuyProductButton";
-import ContactFormBlock from "@/components/ContactFormBlock";
-import FaqBlock, { FaqItem } from "@/components/FaqBlock";
-import FileDownloadBlock from "@/components/FileDownloadBlock";
-import GalleryBlock from "@/components/GalleryBlock";
-import LeadCaptureForm from "@/components/LeadCaptureForm";
-import LoyaltyPointsWidget from "@/components/LoyaltyPointsWidget";
 import LockedLinkButton from "@/components/LockedLinkButton";
-import MapsEmbedBlock from "@/components/MapsEmbedBlock";
-import SocialProofToast from "@/components/SocialProofToast";
 import TrackedLink from "@/components/TrackedLink";
-import VideoEmbedBlock from "@/components/VideoEmbedBlock";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
@@ -39,6 +31,29 @@ import { getLibraryIcon } from "@/lib/icon-library";
 import { SocialPlatformKey, buildFilledSocialLinks } from "@/lib/social-links";
 import { ChevronLeft, HelpCircle, Images as GalleryIcon, LayoutGrid, Video as VideoIcon } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
+
+// Blok konten "langka" -- audit performa 4 September 2026 (laporan
+// pengguna: "audit semua kode dari security performance ui ux dll"):
+// PagePreview merender halaman publik SUNGGUHAN (bukan cuma pratinjau
+// dashboard -- lihat pemanggil di app/[username]/page.tsx), rute trafik
+// TERTINGGI di seluruh sistem (lihat komentar di page.go). Sebelumnya
+// SEMUA 10 tipe blok ini di-import statis di atas walau kebanyakan halaman
+// kreator TIDAK memakai sebagian besar tipe blok ini sama sekali (mis.
+// halaman bio 5-tautan polos tanpa galeri/audio/maps/FAQ/loyalitas) --
+// setiap pengunjung tetap mengunduh JS untuk SEMUANYA. next/dynamic (TANPA
+// ssr:false -- blok yang benar-benar dipakai kreator tetap harus di-SSR
+// demi SEO/initial paint) memecah tiap tipe jadi chunk terpisah yang cuma
+// diambil browser kalau link.blockType-nya benar-benar cocok.
+const AudioPlayerBlock = dynamic(() => import("@/components/AudioPlayerBlock"));
+const ContactFormBlock = dynamic(() => import("@/components/ContactFormBlock"));
+const FaqBlock = dynamic(() => import("@/components/FaqBlock"));
+const FileDownloadBlock = dynamic(() => import("@/components/FileDownloadBlock"));
+const GalleryBlock = dynamic(() => import("@/components/GalleryBlock"));
+const LeadCaptureForm = dynamic(() => import("@/components/LeadCaptureForm"));
+const LoyaltyPointsWidget = dynamic(() => import("@/components/LoyaltyPointsWidget"));
+const MapsEmbedBlock = dynamic(() => import("@/components/MapsEmbedBlock"));
+const SocialProofToast = dynamic(() => import("@/components/SocialProofToast"));
+const VideoEmbedBlock = dynamic(() => import("@/components/VideoEmbedBlock"));
 
 export interface PagePreviewLink {
   id: string;
