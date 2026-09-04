@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/crypto"
 )
 
 // MinIDR -- PLACEHOLDER bisnis (sama seperti minPayoutIDR lama di
@@ -92,8 +93,18 @@ func Create(ctx context.Context, db *pgxpool.Pool, userID string, amountIDR int6
 		return "", fmt.Errorf("payout: gagal mencatat ledger penarikan: %w", err)
 	}
 
+	// Audit OWASP A02 (4 September 2026): destination_account (nomor
+	// rekening/e-wallet penuh, sudah didekripsi dari payout_methods di atas
+	// utk keperluan transfer sungguhan) SEBELUMNYA ditulis APA ADANYA ke
+	// audit_log.metadata -- melewati proteksi enkripsi-saat-simpan yang
+	// justru sudah benar diterapkan di payout_methods.account_number_encrypted.
+	// crypto.Mask (pola sama seperti daftar payout_methods yang ditampilkan
+	// ke pengguna) sudah cukup untuk jejak audit -- admin yang investigasi
+	// tidak perlu nomor penuh dari log, cukup 4 digit terakhir + payoutID
+	// untuk berkorelasi ke payouts.destination_account kalau nomor lengkap
+	// SUNGGUHAN dibutuhkan.
 	metadata, _ := json.Marshal(map[string]any{
-		"amount_idr": amountIDR, "destination_account": destinationAccount,
+		"amount_idr": amountIDR, "destination_account_masked": crypto.Mask(destinationAccount),
 		"balance_after": newBalance, "triggered_by": triggeredBy,
 	})
 	if err := audit.Log(ctx, tx, userID, "payout.requested", "payout", payoutID, metadata); err != nil {
