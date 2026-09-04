@@ -1944,6 +1944,31 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 	premium := isPremiumUser(ctx, h.DB, userID)
 	isAutoProdukSlug := false
 
+	// Audit OWASP A04 (4 September 2026): produkPageCount/extraPageCount di
+	// bawah SEBELUMNYA dibaca lewat SELECT COUNT(*) terpisah, jauh sebelum
+	// INSERT (yang letaknya bisa di salah satu dari TIGA cabang berbeda di
+	// bawah) -- dua panggilan CreatePage konkuren dari akun yang sama bisa
+	// sama-sama lolos pengecekan limit sebelum salah satu INSERT commit,
+	// menghasilkan lebih banyak halaman dari batas Premium/gratis yang
+	// seharusnya. SELECT ... FOR UPDATE di baris users mengunci baris itu
+	// untuk SISA fungsi ini (dilepas otomatis saat tx di-commit/rollback)
+	// -- panggilan konkuren dari user yang SAMA jadi berjalan bergantian,
+	// pengecekan berikutnya melihat hasil INSERT sebelumnya yang sudah
+	// commit, bukan snapshot basi. Satu tx dipakai bersama KETIGA cabang
+	// insert di bawah (menggantikan tx terpisah yang sebelumnya cuma ada
+	// di cabang duplicateFrom) supaya lock ini benar-benar menaungi
+	// pengecekan DAN insert dalam satu unit atomik yang sama.
+	tx, err := h.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SELECT id FROM users WHERE id = $1 FOR UPDATE`, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci akun"})
+		return
+	}
+
 	if pageType == "produk" {
 		// Modul Halaman Produk: pool TERPISAH dari bio/landing di bawah --
 		// kreator gratis TETAP boleh, sampai 1 halaman.
@@ -1952,7 +1977,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			limit = premiumProdukPageLimit
 		}
 		var produkPageCount int
-		if err := h.DB.QueryRow(ctx, `
+		if err := tx.QueryRow(ctx, `
 			SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false AND page_type = 'produk'
 		`, userID).Scan(&produkPageCount); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
@@ -1979,7 +2004,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			return
 		}
 		var extraPageCount int
-		if err := h.DB.QueryRow(ctx, `
+		if err := tx.QueryRow(ctx, `
 			SELECT COUNT(*) FROM pages WHERE user_id = $1 AND is_primary = false AND page_type != 'produk'
 		`, userID).Scan(&extraPageCount); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa jumlah halaman"})
@@ -1993,7 +2018,6 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 
 	name := strings.TrimSpace(req.Name)
 	var pageID string
-	var err error
 
 	if isAutoProdukSlug {
 		// Toko pertama (gratis): slug=username, langsung published, DAN
@@ -2004,7 +2028,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		var username, bio, avatarURL, theme string
 		var stickersRaw []byte
 		var hideWatermark bool
-		if scanErr := h.DB.QueryRow(ctx, `
+		if scanErr := tx.QueryRow(ctx, `
 			SELECT u.username, pg.bio, pg.avatar_url, pg.theme, pg.stickers, pg.hide_watermark
 			FROM users u JOIN pages pg ON pg.user_id = u.id AND pg.is_primary = true
 			WHERE u.id = $1
@@ -2016,7 +2040,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		if name == "" {
 			name = "Toko " + username
 		}
-		err = h.DB.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
 			VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8) RETURNING id
 		`, userID, name, slug, bio, avatarURL, theme, stickersRaw, hideWatermark).Scan(&pageID)
@@ -2024,20 +2048,13 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 		// INSERT ... SELECT ... FROM pages (pola sama LinksHandler.Duplicate,
 		// links.go) -- menyalin SELURUH kolom tampilan (bio/avatar/tema/
 		// stiker/watermark/show_profile_header/SEO/kustomisasi/sosial) di
-		// level SQL, tanpa perlu scan bolak-balik ke struct Go. Dibungkus
-		// transaksi bersama INSERT tautan di bawah supaya "duplikat" benar-
-		// benar atomik -- halaman baru TIDAK PERNAH setengah tersalin
-		// (halaman ada tapi tautannya gagal ikut, atau sebaliknya).
+		// level SQL, tanpa perlu scan bolak-balik ke struct Go. Bagian dari
+		// tx yang SAMA dengan lock+pengecekan limit di atas (bukan tx
+		// terpisah lagi) supaya "duplikat" TETAP atomik terhadap INSERT
+		// tautan di bawah, DAN terhadap limit halaman sekaligus.
 		if name == "" {
 			name = "Salinan"
 		}
-		var tx pgx.Tx
-		tx, err = h.DB.Begin(ctx)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
-			return
-		}
-		defer func() { _ = tx.Rollback(ctx) }()
 
 		err = tx.QueryRow(ctx, `
 			INSERT INTO pages (
@@ -2079,11 +2096,8 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 				FROM links WHERE page_id = $2
 			`, pageID, duplicateFromPageID)
 		}
-		if err == nil {
-			err = tx.Commit(ctx)
-		}
 	} else {
-		err = h.DB.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published) VALUES ($1, false, $2, $3, $4, false) RETURNING id
 		`, userID, name, slug, pageType).Scan(&pageID)
 	}
@@ -2093,6 +2107,10 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat halaman"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan halaman"})
 		return
 	}
 
