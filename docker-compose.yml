@@ -44,7 +44,10 @@ services:
         condition: service_started
 
   minio:
-    image: minio/minio:latest
+    # Audit OWASP A08 (4 September 2026): dikunci ke versi tetap, sama
+    # seperti docker-compose.prod.yml/staging.yml, supaya dev lokal
+    # memakai versi MinIO yang sama dengan yang sungguhan berjalan.
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000" # API S3-compatible

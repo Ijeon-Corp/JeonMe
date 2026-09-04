@@ -85,7 +85,7 @@ jobs:
       # ulang -- ditemukan bareng dengan kasus staging saat menambah service
       # `minio` di Sprint 2 (lihat deploy-staging.yml untuk detail lengkap).
       - name: Sinkronkan docker-compose.prod.yml ke VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
@@ -100,7 +100,7 @@ jobs:
       # akan gagal 401/denied. Gunakan token read-only khusus VPS (scope
       # read:packages saja), bukan PAT developer pribadi.
       - name: Login GHCR di VPS
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
@@ -122,7 +122,7 @@ jobs:
       # turun (skema tidak backward-compatible), itu tetap perlu keputusan
       # manual, lihat catatan di scripts/rollback.sh.
       - name: Jalankan migrasi database (production)
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
@@ -150,7 +150,7 @@ jobs:
             docker compose -f docker-compose.prod.yml run --rm api migrate up
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
@@ -211,7 +211,7 @@ jobs:
       # PROD_HEALTH_TOKEN di repo GitHub DAN baris HEALTH_TOKEN=<nilai yang
       # sama> di /opt/jeonme-production/.env (lihat pesan error di bawah).
       - name: Health check (via SSH loopback di VPS)
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
