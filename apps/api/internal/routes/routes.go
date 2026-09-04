@@ -48,7 +48,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	socialConnect.TikTok = tiktokoauth.NewClient(cfg.TikTokClientKey, cfg.TikTokClientSecret)
 	page.Instagram = socialConnect.Instagram
 	page.TikTok = socialConnect.TikTok
-	product := handlers.NewProductHandler(db, s3, rdb)
+	product := handlers.NewProductHandler(db, s3, rdb, cfg.PlatformFeePercent)
 	voucher := handlers.NewVoucherHandler(db)
 	review := handlers.NewReviewHandler(db)
 	bundle := handlers.NewBundleHandler(db)
@@ -57,7 +57,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	loyalty := handlers.NewLoyaltyHandler(db, rdb)
 	businessCard := handlers.NewBusinessCardHandler(db, s3)
 	donation := handlers.NewDonationHandler(db, rdb)
-	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL)
+	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL, cfg.PlatformFeePercent)
 	brand := handlers.NewBrandHandler(db)
 	audience := handlers.NewAudienceHandler(db, rdb, queueClient, s3)
 	socialProof := handlers.NewSocialProofHandler(db, rdb)

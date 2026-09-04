@@ -99,10 +99,17 @@ type ProductHandler struct {
 	// online/18+, lihat LinkModerationChecker (moderation.go). Instance
 	// yang SAMA dibagi dengan LinksHandler, diwiring di routes.go.
 	Moderation *LinkModerationChecker
+	// PlatformFeePercent -- audit 4 September 2026 (temuan: split kolaborator
+	// & komisi afiliasi divalidasi TERPISAH, masing-masing cuma mengecek diri
+	// sendiri <= 100%, tidak pernah dijumlah bersama biaya platform -- lihat
+	// catatan panjang di validateCollaboratorSplits/affiliate.go Upsert).
+	// Diteruskan ke validateCollaboratorSplits supaya validasi split tahu
+	// berapa persen "jatah" yang tersisa setelah biaya platform.
+	PlatformFeePercent float64
 }
 
-func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client, rdb *redis.Client) *ProductHandler {
-	return &ProductHandler{DB: db, Storage: s3, RDB: rdb}
+func NewProductHandler(db *pgxpool.Pool, s3 *storage.Client, rdb *redis.Client, platformFeePercent float64) *ProductHandler {
+	return &ProductHandler{DB: db, Storage: s3, RDB: rdb, PlatformFeePercent: platformFeePercent}
 }
 
 // invalidatePageCache — bug ditemukan 16 Juli 2026: perubahan produk (buat/
@@ -190,7 +197,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID); err != nil {
+	// productID kosong -- produk belum ada, jadi belum mungkin ada komisi
+	// afiliasi yang perlu dicek (Upsert/SetProductPublic di affiliate.go
+	// mensyaratkan produk sudah ada lebih dulu).
+	if err := validateCollaboratorSplits(ctx, h.DB, req.CollaboratorSplits, userID, "", h.PlatformFeePercent); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -674,7 +684,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 	// kosong (`[]`) yang berarti "hapus semua split".
 	var collaboratorSplitsJSON []byte
 	if req.CollaboratorSplits != nil {
-		if err := validateCollaboratorSplits(ctx, h.DB, *req.CollaboratorSplits, userID); err != nil {
+		if err := validateCollaboratorSplits(ctx, h.DB, *req.CollaboratorSplits, userID, productID, h.PlatformFeePercent); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

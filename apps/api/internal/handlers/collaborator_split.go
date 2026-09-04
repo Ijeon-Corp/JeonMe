@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -35,7 +36,22 @@ type CollaboratorSplitSnapshot struct {
 // totalnya tidak melebihi 100% (kalau melebihi, bagian kreator sendiri
 // bisa jadi negatif -- lihat checkout.go tempat ini dipotong dari netAmount
 // kreator, pola sama dengan komisi afiliasi).
-func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []CollaboratorSplit, ownerUserID string) error {
+//
+// productID + platformFeePercent -- audit 4 September 2026: SEBELUMNYA
+// fungsi ini cuma mengecek total split KOLABORATOR sendiri <= 100%, tanpa
+// tahu produk yang sama mungkin JUGA punya komisi afiliasi aktif (private
+// lewat affiliate_commissions, atau marketplace publik lewat
+// products.affiliate_public_commission_percent) -- affiliate.go Upsert/
+// SetProductPublic sebaliknya juga cuma mengecek komisinya sendiri, tanpa
+// tahu produk sudah punya split kolaborator. checkout.go memotong KEDUANYA
+// (plus platform fee) dari amountIDR yang SAMA (netAmount := amountIDR -
+// platformFeeIDR - affiliateCommissionIDR - totalCollaboratorSplitIDR) --
+// kalau totalnya lebih dari 100%, netAmount kreator jadi NEGATIF dan
+// tetap dicatat begitu saja sebagai ledger 'credit' (tidak ada CHECK
+// constraint yang mencegahnya). productID "" (produk belum dibuat, lewat
+// ProductHandler.Create) berarti belum mungkin ada komisi afiliasi untuk
+// dicek -- affiliate.go mensyaratkan produk sudah ada lebih dulu.
+func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []CollaboratorSplit, ownerUserID string, productID string, platformFeePercent float64) error {
 	if len(splits) == 0 {
 		return nil
 	}
@@ -69,5 +85,38 @@ func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []
 	if total > 100 {
 		return errors.New("collaborator_splits: total persen tidak boleh lebih dari 100%")
 	}
+
+	if productID != "" {
+		maxAffiliateCommission, err := maxAffiliateCommissionPercent(ctx, db, productID)
+		if err != nil {
+			return errors.New("collaborator_splits: gagal memeriksa komisi afiliasi produk")
+		}
+		if total+maxAffiliateCommission+platformFeePercent > 100 {
+			return fmt.Errorf(
+				"collaborator_splits: total split (%.2f%%) + komisi afiliasi produk ini (%.2f%%) + biaya platform (%.2f%%) melebihi 100%% -- kurangi salah satunya",
+				total, maxAffiliateCommission, platformFeePercent,
+			)
+		}
+	}
 	return nil
+}
+
+// maxAffiliateCommissionPercent -- persen komisi afiliasi TERTINGGI yang
+// aktif untuk satu produk, dari kedua jalur yang ada (private lewat
+// affiliate_commissions, marketplace publik lewat
+// products.affiliate_public_commission_percent). Dipakai sebagai batas
+// atas konservatif -- checkout memakai SATU komisi (siapa pun afiliator
+// yang kode referralnya dipakai), jadi yang perlu dijamin aman adalah
+// kasus TERBURUK (komisi tertinggi yang mungkin terpakai), bukan rata-rata.
+func maxAffiliateCommissionPercent(ctx context.Context, db *pgxpool.Pool, productID string) (float64, error) {
+	var maxPercent float64
+	err := db.QueryRow(ctx, `
+		SELECT COALESCE(MAX(percent), 0) FROM (
+			SELECT commission_percent AS percent FROM affiliate_commissions WHERE product_id = $1
+			UNION ALL
+			SELECT affiliate_public_commission_percent AS percent FROM products
+				WHERE id = $1 AND affiliate_public = true
+		) combined
+	`, productID).Scan(&maxPercent)
+	return maxPercent, err
 }

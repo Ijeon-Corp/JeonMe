@@ -30,7 +30,7 @@ func newTestProductHandler(t *testing.T) (*ProductHandler, *AuthHandler) {
 
 	// Storage sengaja nil -- test ini tidak menyentuh upload/download
 	// sungguhan, cuma logika ownership & activation-gate di database.
-	return NewProductHandler(db, nil, rdb), NewAuthHandler(db, rdb, "test-secret", "test")
+	return NewProductHandler(db, nil, rdb, 0), NewAuthHandler(db, rdb, "test-secret", "test")
 }
 
 // Produk BELUM boleh diaktifkan sebelum file diunggah (file_key kosong) --

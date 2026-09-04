@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -26,10 +28,39 @@ import (
 type AffiliateHandler struct {
 	DB           *pgxpool.Pool
 	PublicWebURL string
+	// PlatformFeePercent -- lihat catatan panjang di
+	// collaborator_split.go/validateCollaboratorSplits (audit 4 September
+	// 2026): dipakai di sini utk arah SEBALIKNYA -- validasi komisi
+	// afiliasi baru harus tahu produk yang sama sudah "menjatah" berapa
+	// persen ke split kolaborator, supaya keduanya + biaya platform tidak
+	// pernah lebih dari 100% dari amount yang sama.
+	PlatformFeePercent float64
 }
 
-func NewAffiliateHandler(db *pgxpool.Pool, publicWebURL string) *AffiliateHandler {
-	return &AffiliateHandler{DB: db, PublicWebURL: publicWebURL}
+func NewAffiliateHandler(db *pgxpool.Pool, publicWebURL string, platformFeePercent float64) *AffiliateHandler {
+	return &AffiliateHandler{DB: db, PublicWebURL: publicWebURL, PlatformFeePercent: platformFeePercent}
+}
+
+// collaboratorSplitsTotalPercent -- total persen split kolaborator yang
+// SUDAH aktif di satu produk (products.collaborator_splits, jsonb -- lihat
+// CollaboratorSplit di collaborator_split.go). Dipakai sebagai batas bawah
+// "jatah" yang tersisa saat memvalidasi komisi afiliasi baru.
+func collaboratorSplitsTotalPercent(ctx context.Context, db *pgxpool.Pool, productID string) (float64, error) {
+	var raw []byte
+	if err := db.QueryRow(ctx, `SELECT COALESCE(collaborator_splits, '[]') FROM products WHERE id = $1`, productID).Scan(&raw); err != nil {
+		return 0, err
+	}
+	var splits []CollaboratorSplit
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &splits); err != nil {
+			return 0, err
+		}
+	}
+	var total float64
+	for _, s := range splits {
+		total += s.Percent
+	}
+	return total, nil
 }
 
 type upsertAffiliateRequest struct {
@@ -80,6 +111,24 @@ func (h *AffiliateHandler) Upsert(c *gin.Context) {
 	}
 	if productOwnerID != creatorUserID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "produk ini bukan milikmu"})
+		return
+	}
+
+	// Audit 4 September 2026: lihat catatan panjang di
+	// collaborator_split.go/validateCollaboratorSplits -- komisi afiliasi +
+	// split kolaborator + biaya platform tidak boleh lebih dari 100% dari
+	// amount yang sama, atau bagian kreator sendiri bisa jadi negatif saat
+	// checkout.
+	collaboratorTotal, err := collaboratorSplitsTotalPercent(ctx, h.DB, req.ProductID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa split kolaborator produk"})
+		return
+	}
+	if req.CommissionPercent+collaboratorTotal+h.PlatformFeePercent > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf(
+			"komisi afiliasi (%.2f%%) + split kolaborator produk ini (%.2f%%) + biaya platform (%.2f%%) melebihi 100%% -- kurangi salah satunya",
+			req.CommissionPercent, collaboratorTotal, h.PlatformFeePercent,
+		)})
 		return
 	}
 
@@ -405,6 +454,44 @@ func (h *AffiliateHandler) SetProductPublic(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Audit 4 September 2026: lihat catatan panjang di
+	// collaborator_split.go/validateCollaboratorSplits -- dicek lewat query
+	// yang SAMA (WHERE id = $1 AND user_id = $2) yang nanti dipakai UPDATE
+	// di bawah, supaya tidak membuka info split kolaborator produk ORANG
+	// LAIN lewat pesan error (produk yang bukan milik pemanggil harus tetap
+	// 404, bukan 400 dengan detail persen).
+	if req.Enabled {
+		var collaboratorTotal float64
+		var raw []byte
+		if err := h.DB.QueryRow(ctx, `
+			SELECT COALESCE(collaborator_splits, '[]') FROM products WHERE id = $1 AND user_id = $2
+		`, productID, userID).Scan(&raw); err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memeriksa split kolaborator produk"})
+			return
+		}
+		var splits []CollaboratorSplit
+		if len(raw) > 0 {
+			if err := json.Unmarshal(raw, &splits); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca split kolaborator produk"})
+				return
+			}
+		}
+		for _, s := range splits {
+			collaboratorTotal += s.Percent
+		}
+		if req.CommissionPercent+collaboratorTotal+h.PlatformFeePercent > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf(
+				"komisi afiliasi (%.2f%%) + split kolaborator produk ini (%.2f%%) + biaya platform (%.2f%%) melebihi 100%% -- kurangi salah satunya",
+				req.CommissionPercent, collaboratorTotal, h.PlatformFeePercent,
+			)})
+			return
+		}
+	}
 
 	var tag pgconn.CommandTag
 	var err error
