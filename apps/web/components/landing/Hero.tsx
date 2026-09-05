@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
 
 // Hero -- Redesign "Modern Playful Creator Platform"
-// (DESIGN-JEONID-REDESIGN.md §11.2, Fase 2): headline display raksasa 2
-// baris ("Bangun / kehadiranmu."), CTA coral (semantic mapping spec §6:
-// CTA marketing = coral). Gambar hero-v2.png lama (mockup hijau identitas
-// lama) sempat diganti FLIP CARD interaktif murni CSS (klik untuk lihat
-// sisi bio fiktif "maya.lin" vs sisi statistik fiktif).
+// (DESIGN-JEONID-REDESIGN.md §11.2, Fase 2): headline display raksasa
+// (awalnya SELALU 2 baris, "Bangun / kehadiranmu." -- lihat susulan 6
+// September 2026 di bawah soal kenapa sekarang kadang 3 baris), CTA
+// coral (semantic mapping spec §6: CTA marketing = coral). Gambar
+// hero-v2.png lama (mockup hijau identitas lama) sempat diganti FLIP
+// CARD interaktif murni CSS (klik untuk lihat sisi bio fiktif "maya.lin"
+// vs sisi statistik fiktif).
 //
 // Direvisi lagi (permintaan langsung pengguna, 6 September 2026: "sekarang
 // di bagian hero section pakai gambar yang ada di folder homepage
@@ -44,9 +46,37 @@ export default function Hero() {
       </div>
 
       <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-14 lg:grid-cols-[1.2fr_1fr] lg:gap-8">
+        {/* minmax(0,Nfr) -- permintaan langsung pengguna, 6 September
+            2026: "di homepage gambar nya kecil bangett buat jadi besar".
+            Tanpa minmax(0,...) di sini, track grid tanpa minmax eksplisit
+            defaultnya minmax(auto,Nfr) -- kata tak terpisah di headline
+            ("kehadiranmu.", satu kata utuh tanpa spasi) diam-diam memaksa
+            lebar MINIMUM kolom kiri jauh melebihi porsi 1.2fr-nya,
+            menyisakan kolom kanan cuma ~330px di HAMPIR SEMUA lebar
+            viewport (bukan sekadar layar sempit) -- baru ketahuan sesudah
+            gambar hero.png dipasang (sebelumnya "tersembunyi" karena flip
+            card lama memang sengaja fixed 300px, kebetulan pas dengan
+            batas ini). minmax(0,Nfr) mematikan minimum otomatis itu
+            supaya rasio 1.2:1 sungguhan berlaku -- gambar sekarang
+            ~1.7x lebih besar (lihat max-w-[640px] di bawah, ~527-575px
+            tercapai di kebanyakan lebar).
+            Konsekuensi: h1 di bawah diberi break-words supaya AMAN kalau
+            kolom kiri jadi lebih sempit dari kata terpanjang (browser
+            membelah di tengah kata alih-alih meluber ke kolom gambar
+            seperti percobaan pertama tanpa break-words) -- efek
+            sampingnya headline "Bangun/kehadiranmu." yang tadinya SELALU
+            2 baris sekarang pecah jadi 3 baris ("Bangun/kehadiran/mu.")
+            di kebanyakan lebar layar, karena kata itu memang tidak pernah
+            muat 1 baris dalam kolom seukuran apa pun yang masih
+            menyisakan porsi wajar utk gambar. Dicoba rasio 1.4fr:1fr
+            (kolom kiri lebih lega) tapi TETAP pecah 3 baris di lebar
+            desktop umum (1024-1440px) -- kata itu sesederhana terlalu
+            lebar pada clamp(...,9rem), jadi 1.2fr dipertahankan supaya
+            gambar dapat porsi maksimal alih-alih basa-basi rasio yang
+            tidak menyelamatkan apa pun di headline. */}
+        <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-8">
           <div className="text-center lg:text-left">
-            <h1 className="reveal mb-7 font-display font-extrabold leading-[0.88] tracking-[-0.03em] text-jeon-ink">
+            <h1 className="reveal mb-7 break-words font-display font-extrabold leading-[0.88] tracking-[-0.03em] text-jeon-ink">
               <span className="block text-[clamp(3.5rem,10vw,9rem)]">{t("hero.title1")}</span>
               <span className="block text-[clamp(3.5rem,10vw,9rem)] text-jeon-purple">{t("hero.titleGradient")}</span>
             </h1>
@@ -74,27 +104,12 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* max-w-[420px] BUKAN percobaan pertama -- kolom kanan grid ini
-              lebarnya dibatasi min-content kolom kiri (kata tak terpisah
-              di headline raksasa, mis. "kehadiranmu." pada
-              clamp(...,9rem), menuntut lebar minimum sendiri) BUKAN murni
-              rasio 1.2fr:1fr, jadi ruang yang benar-benar tersedia di
-              sini natural-nya ~330-380px di kebanyakan lebar viewport --
-              persis alasan kartu flip lama juga fixed 300px, bukan
-              kebetulan. minmax(0,fr) SEMPAT dicoba supaya rasio fr
-              benar-benar berlaku, tapi headline jadi overflow menimpa
-              gambar. 420px dipilih setelah verifikasi visual di beberapa
-              lebar viewport (1024/1440/1920) -- tidak pernah terpotong
-              oleh cap ini (constraint asli grid selalu lebih ketat),
-              cap ini murni jaring pengaman kalau suatu saat headline
-              diperpendek/font diperkecil dan ruang kanan jadi lebih
-              lega dari sekarang. */}
           <div className="flex justify-center pb-4 lg:justify-end">
             {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
             <img
               src="/homepage/hero.png"
               alt="Contoh halaman jeon.id -- bio, konten, dan statistik kreator dalam satu tautan"
-              className="w-full max-w-[420px]"
+              className="w-full max-w-[640px]"
             />
           </div>
         </div>
