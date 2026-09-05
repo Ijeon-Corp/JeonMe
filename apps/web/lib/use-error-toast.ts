@@ -49,6 +49,17 @@ export function useErrorToast(message: string | null | undefined) {
         timer: 4000,
         timerProgressBar: true,
         buttonsStyling: false,
+        // backdrop:false -- ditemukan pengguna 5 September 2026 (bar hitam
+        // besar di belakang toast): globals.css punya aturan
+        // `.swal2-backdrop-show { background: ... !important }` yang
+        // ditulis utk dialog konfirmasi (confirmDelete/confirmAction di
+        // lib/confirm.ts, MEMANG butuh backdrop gelap). !important itu
+        // mengalahkan aturan bawaan SweetAlert2 sendiri yang seharusnya
+        // membuat backdrop toast transparan (toast:true harusnya tidak
+        // pernah menggelapkan halaman). backdrop:false eksplisit di sini
+        // mencegah kelas swal2-backdrop-show itu terpasang sama sekali,
+        // jadi aturan !important di globals.css tidak pernah kena.
+        backdrop: false,
         customClass: { popup: "rounded-2xl" },
       });
     });

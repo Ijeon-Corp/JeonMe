@@ -790,6 +790,16 @@ export default function DashboardLinksPage() {
   async function handleCreateLink(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim() || !newURL.trim()) return;
+    // setError(null) SEBELUM percobaan -- ditemukan pengguna 5 September
+    // 2026: tanpa ini, percobaan KEDUA yang gagal dgn pesan error PERSIS
+    // SAMA (mis. tautan yang sama masih diblokir moderasi) tidak pernah
+    // memicu toast lagi -- React membatalkan re-render kalau setState
+    // dipanggil dgn nilai yang Object.is-sama dgn state saat ini, jadi
+    // useErrorToast (bergantung pada [message] berubah) tidak pernah
+    // jalan ulang. Reset ke null dulu memaksa transisi nilai yang
+    // sungguhan terjadi, pola yang sama sudah dipakai handler lain di
+    // file ini (mis. handleToggleActive).
+    setError(null);
     try {
       const created = await currentCreateLink({ title: newTitle, url: newURL, description: newDescription.trim() });
       setLinks((prev) => [...prev, created]);
