@@ -7,41 +7,53 @@ import { useLocale } from "@/lib/locale-context";
 // Templates -- rework konten Fase 2 lanjutan (permintaan langsung
 // pengguna, 31 Agustus 2026: "isinya di sesuaikan dengan tema dulu saja
 // tidak usah pakai image dan icon yang sudah ada dari lama"): mockup
-// <PagePreview> sungguhan + foto randomuser.me DIGANTI mockup stilistik
-// dari token redesign. Struktur kurasi LAMA dipertahankan (permintaan
-// pengguna 24-28 Agustus 2026 yang masih berlaku: 4 baris x 4 kolom,
-// tiap baris satu jenis layout yang sama, nama template DIAMBIL dari
-// QUICK_SETUP_TEMPLATES asli) -- tiap tag layout digambar sebagai
-// skeleton mini yang BENTUKNYA berbeda (Cover: pita sampul + avatar
-// menumpuk; Portrait: foto tegak berbingkai; Spotlight: avatar besar +
-// badge; Masthead: pita identitas selebar penuh) supaya konsep "4 jenis
-// layout" tetap terbaca tanpa merender PagePreview. Bonus: PagePreview
-// tidak lagi terbundel di halaman marketing (target performa spec §21).
+// <PagePreview> sungguhan + foto randomuser.me sempat diganti mockup
+// stilistik murni CSS (skeleton per jenis layout).
+//
+// Direvisi lagi (permintaan langsung pengguna, 6 September 2026: "untuk
+// di section templates di homepage gunakan semua gambar yang ada di
+// folder templates") -- skeleton CSS DIGANTI 8 gambar mockup foto asli
+// public/homepage/templates/templates1-8.png (gaya sama dengan
+// hero-joyful.png & public/homepage/product/*.png). Tiap gambar SUDAH
+// mencantumkan label kategori + pil tag layout-nya sendiri di bagian
+// bawah kartu (didesain sebagai satu kartu utuh, bukan foto polos) --
+// jadi tidak perlu lagi footer <h3>/<p> terpisah seperti versi skeleton
+// lama, cukup render gambarnya langsung.
+//
+// CATATAN TEKNIS: file PNG asli diekspor dengan latar checkerboard abu-
+// abu OPAK (bukan transparan sungguhan, RGB bukan RGBA) -- diproses satu
+// kali di sesi ini (chroma-key connected-component lewat scipy, bukan
+// utilitas berulang di kode) supaya file yang disimpan di git SUDAH
+// RGBA transparan, siap pakai langsung sebagai <img>.
+//
+// Cuma 8 dari 16 kategori kurasi lama yang punya gambar jadi (2 per tag
+// layout, bukan 4) -- 8 SISANYA (content-creator/nightlife-venue/
+// motivational-speaker/artist/coworking-space/food-beverage/
+// mosque-community/photographer) DIHAPUS dari kurasi sampai gambarnya
+// juga dibuat, pola sama seperti ProductShowcase.tsx (jangan campur
+// gambar asli dengan placeholder di grid yang sama). Tag layout tiap
+// kartu MENGIKUTI apa yang tercetak di gambarnya sendiri (kategorisasi
+// visual marketing, independen dari layoutVariant teknis di
+// quick-setup-templates.ts -- lihat catatan lama di
+// QuickSetupTemplate.layoutVariant soal keduanya sengaja terpisah),
+// BUKAN pengelompokan lama di kode ini (beberapa berubah, mis.
+// event-organizer/nonprofit-charity sekarang "Spotlight" bukan "Cover",
+// diving-center/adventure-guide sekarang "Masthead" bukan "Portrait").
 // Section tint blue KONSTAN -- teks/outline ink konstan #111.
-const ACCENTS = ["bg-jeon-purple", "bg-jeon-coral", "bg-jeon-lime", "bg-jeon-pink"];
-
 const CURATED_KEYS = [
-  { key: "restaurant", tag: "Cover" as const },
-  { key: "homestay-villa", tag: "Cover" as const },
-  { key: "event-organizer", tag: "Cover" as const },
-  { key: "nonprofit-charity", tag: "Cover" as const },
-  { key: "dj", tag: "Portrait" as const },
-  { key: "streamer", tag: "Portrait" as const },
-  { key: "diving-center", tag: "Portrait" as const },
-  { key: "adventure-guide", tag: "Portrait" as const },
-  { key: "content-creator", tag: "Spotlight" as const },
-  { key: "nightlife-venue", tag: "Spotlight" as const },
-  { key: "motivational-speaker", tag: "Spotlight" as const },
-  { key: "artist", tag: "Spotlight" as const },
-  { key: "coworking-space", tag: "Masthead" as const },
-  { key: "food-beverage", tag: "Masthead" as const },
-  { key: "mosque-community", tag: "Masthead" as const },
-  { key: "photographer", tag: "Masthead" as const },
+  { key: "homestay-villa", tag: "Cover" as const, image: "templates1.png" },
+  { key: "restaurant", tag: "Cover" as const, image: "templates2.png" },
+  { key: "event-organizer", tag: "Spotlight" as const, image: "templates3.png" },
+  { key: "nonprofit-charity", tag: "Spotlight" as const, image: "templates4.png" },
+  { key: "dj", tag: "Portrait" as const, image: "templates5.png" },
+  { key: "streamer", tag: "Portrait" as const, image: "templates6.png" },
+  { key: "diving-center", tag: "Masthead" as const, image: "templates7.png" },
+  { key: "adventure-guide", tag: "Masthead" as const, image: "templates8.png" },
 ];
 
-const templates = CURATED_KEYS.map((c, i) => {
+const templates = CURATED_KEYS.map((c) => {
   const t = QUICK_SETUP_TEMPLATES.find((x) => x.key === c.key)!;
-  return { key: c.key, label: t.label, tag: c.tag, accent: ACCENTS[i % 4] };
+  return { key: c.key, label: t.label, tag: c.tag, image: c.image };
 });
 
 const filters = [
@@ -51,49 +63,6 @@ const filters = [
   { key: "Spotlight", labelKey: "spotlight" },
   { key: "Masthead", labelKey: "masthead" },
 ] as const;
-
-// Skeleton mini per jenis layout -- murni dekoratif (aria-hidden di
-// pemanggil), bentuk tiap varian meniru ciri khas layout aslinya.
-function LayoutSkeleton({ tag, accent }: { tag: (typeof CURATED_KEYS)[number]["tag"]; accent: string }) {
-  const pill = <span className="h-7 w-full rounded-jsm border-2 border-[#111111] bg-white" />;
-  switch (tag) {
-    case "Cover":
-      return (
-        <div className="flex flex-col px-4 pt-4">
-          <div className={`h-16 w-full rounded-jmd border-2 border-[#111111] ${accent}`} />
-          <span className="-mt-5 ml-4 h-10 w-10 rounded-full border-2 border-[#111111] bg-white" />
-          <span className="mt-2 h-2 w-20 rounded-full bg-[#111111]/80" />
-          <div className="mt-3 flex flex-col gap-2">{pill}{pill}</div>
-        </div>
-      );
-    case "Portrait":
-      return (
-        <div className="flex flex-col items-center px-4 pt-4">
-          <div className={`h-24 w-20 rotate-2 rounded-jmd border-2 border-[#111111] ${accent} shadow-[4px_4px_0_rgba(17,17,17,0.9)]`} />
-          <span className="mt-3 h-2 w-20 rounded-full bg-[#111111]/80" />
-          <div className="mt-3 flex w-full flex-col gap-2">{pill}{pill}</div>
-        </div>
-      );
-    case "Spotlight":
-      return (
-        <div className="flex flex-col items-center px-4 pt-4">
-          <span className={`h-16 w-16 rounded-full border-2 border-[#111111] ${accent}`} />
-          <span className="mt-2 rounded-full border-2 border-[#111111] bg-white px-3 py-0.5 text-[9px] font-bold text-[#111111]">✦</span>
-          <div className="mt-3 flex w-full flex-col gap-2">{pill}{pill}</div>
-        </div>
-      );
-    case "Masthead":
-      return (
-        <div className="flex flex-col px-4 pt-4">
-          <div className={`flex items-center gap-2 rounded-jmd border-2 border-[#111111] ${accent} p-2.5`}>
-            <span className="h-8 w-8 flex-shrink-0 rounded-full border-2 border-[#111111] bg-white" />
-            <span className="h-2 w-16 rounded-full bg-white/90" />
-          </div>
-          <div className="mt-3 flex flex-col gap-2">{pill}{pill}</div>
-        </div>
-      );
-  }
-}
 
 export default function Templates() {
   const [active, setActive] = useState<(typeof filters)[number]["key"]>("all");
@@ -130,17 +99,9 @@ export default function Templates() {
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((t) => (
-            <div
-              key={t.key}
-              className="reveal group flex cursor-pointer flex-col overflow-hidden rounded-jlg border-2 border-[#111111] bg-[#f5f1e8] shadow-[10px_12px_0_rgba(17,17,17,0.92)] transition-transform duration-150 hover:-translate-y-1"
-            >
-              <div className="pb-4 pointer-events-none" aria-hidden="true">
-                <LayoutSkeleton tag={t.tag} accent={t.accent} />
-              </div>
-              <div className="mt-auto border-t-2 border-[#111111] bg-white p-4">
-                <h3 className="font-display text-sm font-bold text-[#111111]">{t.label}</h3>
-                <p className="mt-0.5 text-xs text-[#111111]/60">{t.tag}</p>
-              </div>
+            <div key={t.key} className="reveal cursor-pointer transition-transform duration-150 hover:-translate-y-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
+              <img src={`/homepage/templates/${t.image}`} alt={`${t.label} (${t.tag})`} className="w-full" />
             </div>
           ))}
         </div>
