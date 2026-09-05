@@ -2153,6 +2153,51 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "saya mau buatkan 10 template yang sesuai dengan tema web
+  // ini") -- mengisi celah niche kuliner & parenting yang belum
+  // terwakili di kategori ini (5 template sebelumnya semua soal
+  // travel/fitness/beauty/gaya hidup umum/fashion, belum ada yang
+  // berpusat pada makanan atau keluarga).
+  {
+    key: "food-content-creator",
+    category: "lifestyle",
+    layoutVariant: "hero",
+    label: "Food Content Creator",
+    description: "Review kuliner, resep, rekomendasi tempat makan",
+    theme: "terracotta",
+    bio: "Food creator | Review jujur tempat makan & resep rumahan",
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel" },
+    links: [
+      link("tiktok", "Review Tempat Makan", "Rekomendasi kuliner terbaru tiap minggu"),
+      link("instagram", "Resep & Tips Dapur", "Resep simpel yang sering ditanyakan follower"),
+    ],
+    blocks: [
+      { type: "text", title: "Kerja Sama Review", text: "Tuliskan jenis kerja sama yang kamu terima (endorse, visit resto, video review) beserta rate-nya di sini." },
+      faqBlock([{ question: "Bagaimana cara ajak kerja sama?", answer: "Jelaskan cara & informasi yang perlu disiapkan calon klien sebelum menghubungimu." }]),
+      { type: "contact_form", title: "Ajak Kolaborasi" },
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "parenting-creator",
+    category: "lifestyle",
+    layoutVariant: "banner",
+    label: "Parenting & Mom Blogger",
+    description: "Tips parenting, rekomendasi produk anak",
+    theme: "blush",
+    bio: "Mom blogger | Cerita & tips seputar tumbuh kembang anak",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Cerita Parenting", "Momen & tips keseharian bersama anak"),
+      link("tiktok", "Rekomendasi Produk Anak", "Barang yang benar-benar aku pakai"),
+    ],
+    blocks: [
+      { type: "text", title: "Tentang Aku & Keluarga", text: "Tuliskan cerita singkat tentang kamu, usia anak, dan topik parenting yang sering kamu bahas di sini." },
+      faqBlock([{ question: "Produk yang direkomendasikan beli di mana?", answer: "Cek deskripsi tautan produk di atas -- link belanja selalu aku cantumkan di sana." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
+  },
 
   // ---------- Special Purpose ----------
   {
@@ -2608,6 +2653,33 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Voucher bisa dipakai untuk paket perawatan -- aktifkan di menu Produk & Monetisasi.",
   },
+  // Ditambahkan 6 September 2026 (permintaan langsung pengguna: "saya mau
+  // buatkan 10 template yang sesuai dengan tema web ini") -- mengisi celah
+  // niche pemulihan cedera/medis, beda dari personal-trainer (fokus
+  // performa/otot) dan clinic-practice (praktik umum) di kategori ini.
+  {
+    key: "physiotherapist",
+    category: "health",
+    layoutVariant: "split",
+    label: "Fisioterapi & Rehabilitasi",
+    description: "Jadwal terapi, konsultasi, booking",
+    theme: "azure",
+    bio: "Fisioterapis | Pemulihan cedera & nyeri gerak tubuh",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Buat Janji Terapi", "Ceritakan keluhan sebelum jadwal ditentukan"),
+      link("instagram", "Edukasi Gerak Tubuh", "Tips pemulihan & pencegahan cedera"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Terapi", text: "Tuliskan jenis keluhan yang kamu tangani (cedera olahraga, nyeri punggung, pasca operasi, dst) beserta durasi sesinya." },
+      mapsBlock("Lokasi Praktik"),
+      faqBlock([
+        { question: "Perlu rujukan dokter dulu?", answer: "Jelaskan apakah pasien bisa datang langsung atau perlu rujukan." },
+        { question: "Berapa kali sesi biasanya dibutuhkan?", answer: "Tulis perkiraan jumlah sesi tergantung jenis keluhan." },
+      ]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk paket beberapa sesi terapi -- aktifkan di menu Produk & Monetisasi.",
+  },
 
   // ---------- Sports & Athletics (benchmark Linktree "Sports") ----------
   {
@@ -2727,6 +2799,32 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Event & Tiket berguna kalau komunitasmu mengadakan fun run atau gowes berbayar.",
   },
+  // Ditambahkan 6 September 2026 (permintaan langsung pengguna: "saya mau
+  // buatkan 10 template yang sesuai dengan tema web ini") -- esports belum
+  // terwakili di kategori Sports (4 template sebelumnya semua olahraga
+  // fisik konvensional), beda dari "gamer" di kategori Creator (itu profil
+  // INDIVIDU/streamer, ini identitas TIM/organisasi).
+  {
+    key: "esports-team",
+    category: "sports",
+    layoutVariant: "masthead",
+    label: "Tim Esports",
+    description: "Roster, jadwal turnamen, sponsor",
+    theme: "pixel",
+    bio: "Tim esports | Roster, jadwal tanding, dan merchandise",
+    social: { instagram: "username", youtube: "@namachannel", tiktok: "username" },
+    links: [
+      link("youtube", "Siaran Ulang Match", "Highlight & VOD pertandingan tim"),
+      link("instagram", "Update Roster & Jadwal", "Pengumuman line-up & jadwal tanding"),
+      link("email", "Kerja Sama Sponsor", "Untuk penawaran sponsorship tim"),
+    ],
+    blocks: [
+      { type: "text", title: "Roster Tim", text: "Tuliskan nama pemain, role/posisi masing-masing, dan game yang dikompetisikan tim ini di sini." },
+      { type: "text", title: "Jadwal Turnamen", text: "Tuliskan turnamen yang sedang/akan diikuti beserta tanggal tandingnya di sini." },
+      faqBlock([{ question: "Bagaimana cara jadi sponsor?", answer: "Jelaskan paket sponsorship & benefit yang didapat sponsor." }]),
+    ],
+    monetizationHint: "Toko Online cocok untuk jual jersey & merchandise tim.",
+  },
 
   // ---------- Coaching & Consulting (benchmark Lynk.id: konsultasi 1-on-1,
   // mentoring, coaching karier). Beda dari template "Consultant" di kategori
@@ -2845,6 +2943,56 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
     ],
     monetizationHint: "Produk Digital cocok kalau mau jual paket sesi (mis. 3x konsultasi) dalam satu harga tetap.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "saya mau buatkan 10 template yang sesuai dengan tema web
+  // ini") -- mengisi celah niche keuangan pribadi & public speaking, belum
+  // terwakili di 5 template sebelumnya (life/career/bisnis/psikolog/
+  // konsultasi umum).
+  {
+    key: "financial-coach",
+    category: "coaching",
+    layoutVariant: "banner",
+    label: "Konsultan Keuangan",
+    description: "Konsultasi keuangan, budgeting, investasi",
+    theme: "corporate",
+    bio: "Konsultan keuangan | Bantu kamu atur uang & mulai investasi",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx", email: "halo@domainmu.com" },
+    links: [
+      link("whatsapp", "Konsultasi Keuangan", "Cek kondisi keuangan & susun rencana"),
+      link("instagram", "Tips Uang Harian", "Edukasi budgeting & investasi ringan"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Konsultasi", text: "Tuliskan topik yang kamu bantu (budgeting, dana darurat, investasi, utang) beserta format sesinya di sini." },
+      faqBlock([
+        { question: "Konsultasinya online atau tatap muka?", answer: "Tulis media konsultasi yang kamu layani." },
+        { question: "Apakah aman berbagi data keuangan?", answer: "Jelaskan kebijakan kerahasiaan data klien." },
+      ]),
+      { type: "contact_form", title: "Mulai Konsultasi" },
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket konsultasi beberapa sesi dalam satu harga tetap.",
+  },
+  {
+    key: "public-speaking-coach",
+    category: "coaching",
+    layoutVariant: "spotlight",
+    label: "Coach Public Speaking",
+    description: "Pelatihan presentasi, workshop, booking",
+    theme: "champagne",
+    bio: "Coach public speaking | Percaya diri bicara di depan umum",
+    social: { instagram: "username", youtube: "@namachannel", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Kelas", "Pilih format privat atau grup"),
+      link("youtube", "Cuplikan Materi", "Tips singkat & momen kelas sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Program Pelatihan", text: "Tuliskan format pelatihan (privat/grup/workshop kantor) beserta durasi dan harganya di sini." },
+      faqBlock([
+        { question: "Cocok untuk pemula yang gugupan?", answer: "Jelaskan pendekatan yang kamu pakai untuk peserta pemula." },
+        { question: "Apakah ada sertifikat?", answer: "Tulis apakah peserta mendapat sertifikat setelah pelatihan." },
+      ]),
+    ],
+    monetizationHint: "Kelas & Kursus cocok untuk workshop rekaman yang bisa dijual berulang.",
   },
 
   // ---------- Digital Product (benchmark Lynk.id: ebook, template Canva,
@@ -2979,6 +3127,66 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Payment Link cocok untuk lisensi; Voucher untuk promo early adopter.",
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "saya mau buatkan 10 template yang sesuai dengan tema web
+  // ini") -- mengisi celah niche produk audio & kuliner, beda dari 5
+  // template sebelumnya yang semuanya soal dokumen/desain/software.
+  {
+    key: "beat-producer",
+    category: "digital",
+    layoutVariant: "cover",
+    label: "Beat & Sound Kit",
+    description: "Jual beat, sample pack, lisensi",
+    theme: "vapor",
+    bio: "Music producer | Beat & sound kit siap pakai",
+    social: { instagram: "username", youtube: "@namachannel", email: "halo@domainmu.com" },
+    links: [
+      link("spotify", "Dengerin Portofolio", "Beat & lagu yang pernah aku produksi"),
+      link("youtube", "Preview Beat Baru", "Cuplikan beat terbaru tiap minggu"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Beat Pack Terbaru",
+        description: "Tuliskan genre, jumlah beat dalam pack, dan jenis lisensi (non-eksklusif/eksklusif) yang kamu tawarkan.",
+        badgeText: "SOUND KIT",
+        ctaText: "Dengerin Sekarang",
+        url: PLATFORM_URL.youtube,
+      }),
+      faqBlock([
+        { question: "Lisensinya bagaimana?", answer: "Jelaskan perbedaan lisensi non-eksklusif dan eksklusif serta hak penggunaannya." },
+        { question: "Formatnya apa saja?", answer: "Tulis format file yang didapat pembeli (MP3/WAV/stems)." },
+      ]),
+    ],
+    monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
+  },
+  {
+    key: "recipe-ebook",
+    category: "digital",
+    layoutVariant: "ribbon",
+    label: "Ebook Resep Masakan",
+    description: "Jual ebook resep, tips masak",
+    theme: "cocoa",
+    bio: "Food creator | Kumpulan resep rumahan siap coba",
+    social: { instagram: "username", tiktok: "username", email: "halo@domainmu.com" },
+    links: [
+      link("instagram", "Resep Gratis Harian", "Cuplikan resep & tips dapur"),
+      link("tiktok", "Video Cara Masak", "Tutorial singkat langkah demi langkah"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Ebook Resep Terbaru",
+        description: "Tuliskan tema ebook (mis. masakan rumahan 30 menit), jumlah resep, dan format filenya.",
+        badgeText: "EBOOK RESEP",
+        ctaText: "Lihat Isi Ebook",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([
+        { question: "Resepnya untuk berapa porsi?", answer: "Tulis standar porsi tiap resep dan apakah bisa disesuaikan." },
+        { question: "Ada video panduannya juga?", answer: "Jelaskan apakah ebook dilengkapi tautan video tutorial." },
+      ]),
+    ],
+    monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
+  },
 
   // ---------- Marketing & Social (benchmark Linktree "Marketing" +
   // "Social Media", s.id "Marketing Teams"/"Agencies"). Template "Agency"
@@ -3106,6 +3314,56 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
     ],
     monetizationHint: "Voucher paling pas untuk kampanye promo dengan kode khusus.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "saya mau buatkan 10 template yang sesuai dengan tema web
+  // ini") -- mengisi celah jasa kreatif visual & iklan berbayar, beda dari
+  // digital-marketing-agency (profil AGENSI) dan social-media-manager
+  // (kelola akun) yang sudah ada -- dua ini fokus KEAHLIAN spesifik
+  // freelancer perorangan.
+  {
+    key: "video-editor",
+    category: "marketing",
+    layoutVariant: "portrait",
+    label: "Video Editor",
+    description: "Jasa edit video, portofolio, harga",
+    theme: "obsidian",
+    bio: "Video editor | Bikin kontenmu enak ditonton",
+    social: { instagram: "username", youtube: "@namachannel", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Diskusi Proyek", "Kirim raw footage & referensi gaya editing"),
+      link("youtube", "Portofolio Edit", "Contoh hasil edit untuk berbagai klien"),
+    ],
+    blocks: [
+      { type: "text", title: "Jenis Layanan Edit", text: "Tuliskan jenis video yang kamu tangani (reels, YouTube, iklan, dokumentasi acara) beserta tarif dan estimasi pengerjaannya." },
+      faqBlock([
+        { question: "Revisi berapa kali?", answer: "Tulis jumlah revisi yang termasuk dalam satu paket harga." },
+        { question: "Berapa lama pengerjaannya?", answer: "Jelaskan estimasi waktu pengerjaan per jenis proyek." },
+      ]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP proyek sebelum pengerjaan dimulai.",
+  },
+  {
+    key: "ads-specialist",
+    category: "marketing",
+    layoutVariant: "minimal",
+    label: "Ads Specialist",
+    description: "Kelola iklan Meta/Google, laporan performa",
+    theme: "ivory",
+    bio: "Ads specialist | Iklan yang benar-benar menghasilkan penjualan",
+    social: { instagram: "username", linkedin: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Audit Iklan Gratis", "Kirim akun iklanmu untuk dicek dulu"),
+      link("linkedin", "Studi Kasus", "Hasil kampanye klien sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Iklan", text: "Tuliskan platform yang kamu kelola (Meta Ads/Google Ads/TikTok Ads), model kerja sama, dan tarifnya di sini." },
+      faqBlock([
+        { question: "Budget minimum berapa?", answer: "Tulis budget iklan minimum yang kamu sarankan untuk hasil optimal." },
+        { question: "Laporannya seperti apa?", answer: "Jelaskan frekuensi dan format laporan performa iklan." },
+      ]),
+    ],
+    monetizationHint: "Payment Link cocok untuk menagih fee bulanan pengelolaan iklan.",
   },
   // "custom-blank" -- satu-satunya template kategori "custom" (lihat
   // catatan di QUICK_SETUP_CATEGORIES). SENGAJA tanpa bio/links/blocks/
