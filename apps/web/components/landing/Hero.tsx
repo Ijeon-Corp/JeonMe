@@ -1,26 +1,37 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
 
 // Hero -- Redesign "Modern Playful Creator Platform"
 // (DESIGN-JEONID-REDESIGN.md §11.2, Fase 2): headline display raksasa 2
 // baris ("Bangun / kehadiranmu."), CTA coral (semantic mapping spec §6:
-// CTA marketing = coral), dan FLIP CARD interaktif menggantikan gambar
-// hero-v2.png lama (mockup hijau identitas lama). Kartu memakai data
-// FIKTIF "maya.lin" (spec §9 contoh URL jeon.id/mayalin; §11.3
-// mengizinkan fictional placeholder) -- flip lewat KLIK (bukan cuma
-// hover) supaya tetap bisa dioperasikan keyboard/sentuh, transisi murni
-// transform (spec §17) dan berhenti mulus di prefers-reduced-motion
-// lewat media query global yang sudah ada.
+// CTA marketing = coral). Gambar hero-v2.png lama (mockup hijau identitas
+// lama) sempat diganti FLIP CARD interaktif murni CSS (klik untuk lihat
+// sisi bio fiktif "maya.lin" vs sisi statistik fiktif).
 //
-// Badge "Dipercaya 10.000+ kreator" LAMA DIHAPUS -- spec §11.2: badge
-// jumlah kreator hanya boleh kalau datanya benar & bisa dibuktikan;
-// tidak ada sumber angka terverifikasi (REDESIGN-AUDIT.md konflik #8).
+// Direvisi lagi (permintaan langsung pengguna, 6 September 2026: "sekarang
+// di bagian hero section pakai gambar yang ada di folder homepage
+// hero.png") -- flip card DIGANTI gambar mockup foto asli
+// public/homepage/hero.png (persona sama "Maya Lin", gaya sama dengan
+// hero-joyful.png/public/homepage/product|templates/*.png). Gambar ini
+// SUDAH mengandung chip statistik + badge mengambangnya sendiri (Kreator
+// berkembang/24 produk terjual/BARU/+1.248 klik hari ini/Dipakai 50K+
+// kreator), jadi interaksi flip tidak lagi relevan -- satu gambar statis
+// sudah menyampaikan bio DAN statistik sekaligus tanpa perlu diklik.
+//
+// CATATAN soal badge "Dipakai 50K+ kreator" YANG SUDAH TERCETAK DI
+// GAMBAR: ini SECARA LANGSUNG bertentangan dengan keputusan lama di
+// bawah (badge "Dipercaya 10.000+ kreator" dihapus karena tidak ada
+// angka terverifikasi, REDESIGN-AUDIT.md konflik #8) -- dikonfirmasi
+// ULANG lewat AskUserQuestion sebelum gambar ini dipasang (6 September
+// 2026), pengguna memilih "Pakai apa adanya (angka ini akurat/disetujui)"
+// -- jadi ini BUKAN pelanggaran diam-diam atas kebijakan lama, melainkan
+// keputusan bisnis baru yang sengaja menimpanya. Kalau suatu saat
+// angkanya berubah/tidak lagi akurat, gambarnya sendiri yang perlu
+// diperbarui (teksnya baked-in di raster, bukan string i18n).
 export default function Hero() {
   const { t } = useLocale();
-  const [flipped, setFlipped] = useState(false);
 
   return (
     <section className="relative overflow-hidden bg-jeon-paper pb-20 pt-28 md:pb-28 md:pt-40" aria-label="Hero">
@@ -63,58 +74,28 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Flip card interaktif (spec §11.2) -- depan: mini halaman bio
-              fiktif; belakang: mini statistik. Data 100% fiktif. */}
+          {/* max-w-[420px] BUKAN percobaan pertama -- kolom kanan grid ini
+              lebarnya dibatasi min-content kolom kiri (kata tak terpisah
+              di headline raksasa, mis. "kehadiranmu." pada
+              clamp(...,9rem), menuntut lebar minimum sendiri) BUKAN murni
+              rasio 1.2fr:1fr, jadi ruang yang benar-benar tersedia di
+              sini natural-nya ~330-380px di kebanyakan lebar viewport --
+              persis alasan kartu flip lama juga fixed 300px, bukan
+              kebetulan. minmax(0,fr) SEMPAT dicoba supaya rasio fr
+              benar-benar berlaku, tapi headline jadi overflow menimpa
+              gambar. 420px dipilih setelah verifikasi visual di beberapa
+              lebar viewport (1024/1440/1920) -- tidak pernah terpotong
+              oleh cap ini (constraint asli grid selalu lebih ketat),
+              cap ini murni jaring pengaman kalau suatu saat headline
+              diperpendek/font diperkecil dan ruang kanan jadi lebih
+              lega dari sekarang. */}
           <div className="flex justify-center pb-4 lg:justify-end">
-            <button
-              type="button"
-              onClick={() => setFlipped((v) => !v)}
-              aria-label={flipped ? "Lihat sisi halaman bio" : "Lihat sisi statistik"}
-              className="group cursor-pointer [perspective:1400px]"
-            >
-              <div
-                className={`relative h-[480px] w-[300px] transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none ${
-                  flipped ? "[transform:rotateY(180deg)]" : ""
-                }`}
-              >
-                {/* Sisi depan: halaman bio fiktif */}
-                <div className="absolute inset-0 flex flex-col rounded-jxl border-2 border-jeon-ink bg-jeon-surface p-6 shadow-brutal [backface-visibility:hidden]">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-lavender font-display text-xl font-extrabold text-[#111111]">
-                    M
-                  </div>
-                  <p className="mt-3 text-center font-display text-lg font-bold text-jeon-ink">maya.lin</p>
-                  <p className="text-center text-xs text-jeon-muted">jeon.id/mayalin</p>
-                  <div className="mt-5 flex flex-col gap-2.5">
-                    <span className="rounded-jmd border-2 border-[#111111] bg-jeon-lime px-4 py-3 text-center text-sm font-bold text-[#111111]">Playbook Kreator ✦</span>
-                    <span className="rounded-jmd border-2 border-jeon-ink bg-jeon-surface px-4 py-3 text-center text-sm font-bold text-jeon-ink">Kelas Editing</span>
-                    <span className="rounded-jmd border-2 border-[#111111] bg-jeon-pink px-4 py-3 text-center text-sm font-bold text-[#111111]">Dukung Karyaku ☕</span>
-                    <span className="rounded-jmd border-2 border-jeon-ink bg-jeon-surface px-4 py-3 text-center text-sm font-bold text-jeon-ink">YouTube Terbaru</span>
-                  </div>
-                  <p className="mt-auto text-center text-[11px] font-semibold text-jeon-muted">
-                    {t("hero.flipHint")}
-                  </p>
-                </div>
-                {/* Sisi belakang: statistik fiktif */}
-                <div className="absolute inset-0 flex flex-col rounded-jxl border-2 border-jeon-ink bg-jeon-sidebar p-6 shadow-brutal [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                  <p className="font-display text-lg font-bold text-white">✦ {t("hero.flipStatsTitle")}</p>
-                  <div className="mt-5 flex flex-col gap-3">
-                    <div className="rounded-jmd border-2 border-white/20 bg-white/5 p-4 text-left">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-jeon-lime">{t("hero.flipStatViews")}</p>
-                      <p className="font-display text-3xl font-extrabold text-white">12.480</p>
-                    </div>
-                    <div className="rounded-jmd border-2 border-white/20 bg-white/5 p-4 text-left">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-jeon-blue">{t("hero.flipStatClicks")}</p>
-                      <p className="font-display text-3xl font-extrabold text-white">3.921</p>
-                    </div>
-                    <div className="rounded-jmd border-2 border-white/20 bg-white/5 p-4 text-left">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-jeon-pink">{t("hero.flipStatSales")}</p>
-                      <p className="font-display text-3xl font-extrabold text-white">Rp2,4jt</p>
-                    </div>
-                  </div>
-                  <p className="mt-auto text-center text-[11px] font-semibold text-white/60">{t("hero.flipHintBack")}</p>
-                </div>
-              </div>
-            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
+            <img
+              src="/homepage/hero.png"
+              alt="Contoh halaman jeon.id -- bio, konten, dan statistik kreator dalam satu tautan"
+              className="w-full max-w-[420px]"
+            />
           </div>
         </div>
       </div>
