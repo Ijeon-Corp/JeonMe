@@ -174,7 +174,7 @@ export default function DashboardAffiliatesPage() {
             description={t("dashboard.pages.affiliates.subtitle")}
             primaryAction={{ label: t("dashboard.pages.affiliates.inviteButton"), onClick: () => { setAffTab("program"); setAdding(true); }, icon: <IconPlus className="h-4 w-4" /> }}
           />
-          <div className="mb-5 flex items-center gap-1 border-b border-app-border pb-px">
+          <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {([
               { key: "program" as const, label: t("dashboard.pages.affiliates.tabProgram") },
               { key: "joined" as const, label: t("dashboard.pages.affiliates.myAffiliationsHeading") },
@@ -187,7 +187,7 @@ export default function DashboardAffiliatesPage() {
                 role="tab"
                 aria-selected={affTab === tb.key}
                 onClick={() => setAffTab(tb.key)}
-                className={`relative whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+                className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
                   affTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
                 }`}
               >

@@ -95,18 +95,18 @@ export default function AdminUsersPage() {
     <div className="max-w-3xl">
       <h1 className="font-display text-2xl font-bold text-app-ink">Pengguna</h1>
 
-      <form onSubmit={handleFilter} className="mt-4 flex flex-wrap gap-2">
+      <form onSubmit={handleFilter} className="mt-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap">
         <input
           type="text"
           placeholder="Cari email/username..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[160px] flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+          className="min-w-0 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20 lg:min-w-[160px] lg:flex-1"
         />
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
+          className="min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
         >
           <option value="">Semua role</option>
           <option value="creator">Creator</option>
@@ -115,14 +115,14 @@ export default function AdminUsersPage() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
+          className="min-w-0 rounded-lg border border-app-border px-2.5 py-2.5 text-sm"
         >
           <option value="">Semua status</option>
           <option value="active">Aktif</option>
           <option value="suspended">Ditangguhkan</option>
           <option value="deleted">Dihapus</option>
         </select>
-        <button type="submit" className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-semibold hover:border-jeon-purple">
+        <button type="submit" className="flex-shrink-0 rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-semibold hover:border-jeon-purple">
           Cari
         </button>
       </form>
@@ -134,16 +134,16 @@ export default function AdminUsersPage() {
 
       <div className="mt-2 flex flex-col gap-2">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 shadow-card">
-            <div className="flex items-center gap-3">
+          <div key={u.id} className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 shadow-card">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
                 <IconUsers className="h-[18px] w-[18px]" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-app-ink">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-app-ink">
                   {u.username} <span className="font-normal text-app-muted">({u.email})</span>
                 </p>
-                <p className="text-xs text-app-muted">
+                <p className="truncate text-xs text-app-muted">
                   {u.role}
                   {u.deleted_at && " · dihapus"}
                   {u.suspended_at && !u.deleted_at && " · ditangguhkan"}

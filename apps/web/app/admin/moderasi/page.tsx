@@ -159,19 +159,19 @@ export default function AdminModerationPage() {
           Dicek terhadap URL+judul tautan baru, hanya untuk domain yang belum pernah dilihat sebelumnya.
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:flex-wrap">
           <input
             type="text"
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddKeyword()}
             placeholder="mis. slot gacor"
-            className="flex-1 min-w-[160px] rounded-lg border border-app-border px-3 py-1.5 text-sm"
+            className="min-w-0 rounded-lg border border-app-border px-3 py-1.5 text-sm lg:min-w-[160px] lg:flex-1"
           />
           <select
             value={newKeywordCategory}
             onChange={(e) => setNewKeywordCategory(e.target.value as ModerationCategory)}
-            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -183,7 +183,7 @@ export default function AdminModerationPage() {
             value={newKeywordMatchType}
             onChange={(e) => setNewKeywordMatchType(e.target.value as ModerationMatchType)}
             title="Substring: cocok kalau kata ini muncul di mana pun dalam URL/judul (aman utk frasa spesifik multi-kata). Domain persis: HANYA cocok kalau domainnya PERSIS kata ini (aman utk kata generik satu-suku-kata spt 'slot')."
-            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(MATCH_TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -195,7 +195,7 @@ export default function AdminModerationPage() {
             type="button"
             onClick={handleAddKeyword}
             disabled={savingKeyword || !newKeyword.trim()}
-            className="flex items-center gap-1 rounded-lg btn-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            className="flex flex-shrink-0 items-center justify-center gap-1 rounded-lg btn-primary px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
           >
             <Plus className="h-3.5 w-3.5" />
             Tambah
@@ -248,19 +248,19 @@ export default function AdminModerationPage() {
           Cache keputusan per domain -- dikurasi admin manual di sini, atau hasil klasifikasi otomatis (kata kunci/AI) yang bisa ditinjau/dibatalkan di sini.
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:flex-wrap">
           <input
             type="text"
             value={newDomain}
             onChange={(e) => setNewDomain(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddDomain()}
             placeholder="mis. contoh-judol.com"
-            className="flex-1 min-w-[160px] rounded-lg border border-app-border px-3 py-1.5 text-sm"
+            className="min-w-0 rounded-lg border border-app-border px-3 py-1.5 text-sm lg:min-w-[160px] lg:flex-1"
           />
           <select
             value={newDomainCategory}
             onChange={(e) => setNewDomainCategory(e.target.value as ModerationCategory)}
-            className="rounded-lg border border-app-border px-2 py-1.5 text-sm"
+            className="min-w-0 rounded-lg border border-app-border px-2 py-1.5 text-sm"
           >
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -272,7 +272,7 @@ export default function AdminModerationPage() {
             type="button"
             onClick={handleAddDomain}
             disabled={savingDomain || !newDomain.trim()}
-            className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+            className="flex flex-shrink-0 items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
           >
             <Ban className="h-3.5 w-3.5" />
             Blokir domain

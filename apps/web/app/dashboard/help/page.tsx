@@ -63,7 +63,7 @@ export default function DashboardHelpPage() {
         <h2 id="help-quick" className="text-xs font-bold uppercase tracking-wider text-app-muted">{k("quickHeading")}</h2>
         <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
           {quick.map((item, i) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-jmd border border-jeon-ink bg-app-surface p-3.5 transition-colors hover:border-jeon-purple">
+            <Link key={item.href} href={item.href} className="flex min-w-0 items-center gap-3 rounded-jmd border border-jeon-ink bg-app-surface p-3.5 transition-colors hover:border-jeon-purple">
               <IconBadge icon={item.icon} accent={accentForIndex(i)} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-app-ink">{item.title}</span>

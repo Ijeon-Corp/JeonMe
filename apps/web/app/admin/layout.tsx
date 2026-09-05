@@ -148,8 +148,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {sidebarContent}
         </aside>
 
-        {/* Top bar + drawer mobile */}
-        <div className="flex flex-1 flex-col md:contents">
+        {/* Top bar + drawer mobile -- SEBELUMNYA pakai "md:contents" (div ini
+            "menghilang" jadi kotak layout begitu masuk md:+, anak-anaknya
+            langsung jadi flex item app-shell). Itu justru penyebab overflow
+            horizontal +169px di tablet: min-w-0 yang dipasang DI SINI ikut
+            hilang tak berlaku begitu md:contents aktif, dan <main> jadi flex
+            item BARU tanpa min-w-0 sendiri. dashboard/layout.tsx (pola yang
+            sudah terbukti benar) TIDAK PERNAH pakai trik ini sama sekali --
+            disamakan di sini, div selalu jadi kotak flex sungguhan di semua
+            breakpoint. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
             <Link href="/admin" className="flex items-center gap-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}

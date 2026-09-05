@@ -34,7 +34,7 @@ export default function AdminSummaryPage() {
               bawah SENGAJA TIDAK ikut jadi StatCard -- warna merah/amber di
               situ SEMANTIK (perlu ditinjau admin), bukan aksen dekoratif,
               dan keduanya harus tetap <Link> yang bisa diklik. */}
-          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
             <StatCard tone="blue" icon={<IconUsers className="h-4 w-4" />} label="Total Pengguna" value={String(summary.total_users)} sub="" />
             <StatCard tone="yellow" icon={<IconChart className="h-4 w-4" />} label="Baru (7 hari)" value={String(summary.new_users_7_days)} sub="" />
             <StatCard tone="lilac" icon={<IconChart className="h-4 w-4" />} label="Total Transaksi Lunas" value={String(summary.total_orders)} sub="" />
