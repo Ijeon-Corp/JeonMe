@@ -515,11 +515,16 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 	var buyerEmail, buyerContact, productName, status, sellerUserID string
 	var amountIDR int64
 	var isDonation bool
+	var notifyWhatsappEnabled bool
+	var notifyWhatsappMessage string
+	var sellerWhatsappNumber *string
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.buyer_email, o.buyer_contact, p.name, o.status, p.is_donation, p.user_id, o.amount_idr
-		FROM orders o JOIN products p ON p.id = o.product_id
+		SELECT o.buyer_email, o.buyer_contact, p.name, o.status, p.is_donation, p.user_id, o.amount_idr,
+			p.notify_whatsapp_enabled, p.notify_whatsapp_message, u.notification_whatsapp_number
+		FROM orders o JOIN products p ON p.id = o.product_id JOIN users u ON u.id = p.user_id
 		WHERE o.id = $1
-	`, payload.OrderID).Scan(&buyerEmail, &buyerContact, &productName, &status, &isDonation, &sellerUserID, &amountIDR)
+	`, payload.OrderID).Scan(&buyerEmail, &buyerContact, &productName, &status, &isDonation, &sellerUserID, &amountIDR,
+		&notifyWhatsappEnabled, &notifyWhatsappMessage, &sellerWhatsappNumber)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			log.Printf("worker: order %s tidak ditemukan, lewati notifikasi", payload.OrderID)
@@ -590,6 +595,25 @@ func (h *Handler) HandleOrderPaidNotification(ctx context.Context, t *asynq.Task
 			log.Printf("worker: order %s -- gagal kirim notifikasi WhatsApp ke %s: %v", payload.OrderID, normalized, err)
 		} else {
 			log.Printf("worker: order %s -- notifikasi WhatsApp terkirim ke %s", payload.OrderID, normalized)
+		}
+	}
+
+	// Advance Option "Enable Whatsapp notification" (permintaan langsung
+	// pengguna, 5 September 2026) -- ARAH BERBEDA dari blok WhatsApp di
+	// atas (itu ke PEMBELI, ini ke KREATOR), best-effort sama seperti blok
+	// itu -- kegagalan di sini TIDAK boleh membuat asynq retry seluruh
+	// task. Toggle per-produk (notify_whatsapp_enabled) DAN kreator harus
+	// sudah mengisi nomornya sendiri (notification_whatsapp_number, diisi
+	// lewat Pengaturan > Profil -- BEDA dari whatsapp_number di fitur Kartu
+	// Nama Digital yang tujuannya kontak publik, bukan notifikasi internal).
+	if notifyWhatsappEnabled && sellerWhatsappNumber != nil && *sellerWhatsappNumber != "" {
+		normalizedSeller, err := whatsapp.NormalizeIndonesianPhone(*sellerWhatsappNumber)
+		if err != nil {
+			log.Printf("worker: order %s -- nomor WhatsApp kreator %q tidak valid, lewati notifikasi penjualan: %v", payload.OrderID, *sellerWhatsappNumber, err)
+		} else if err := h.WhatsApp.SendCreatorSaleNotification(ctx, normalizedSeller, []string{productName, formatRupiah(amountIDR), notifyWhatsappMessage}); err != nil {
+			log.Printf("worker: order %s -- gagal kirim notifikasi WhatsApp penjualan ke kreator %s: %v", payload.OrderID, normalizedSeller, err)
+		} else {
+			log.Printf("worker: order %s -- notifikasi WhatsApp penjualan terkirim ke kreator %s", payload.OrderID, normalizedSeller)
 		}
 	}
 

@@ -90,6 +90,11 @@ export function toPreviewData(
         isExternalLink: p.product_kind === "external_link",
         externalUrl: p.external_url,
         category: p.category,
+        // show_sold_count menggerbang tampil di publik (lihat
+        // PagePreviewProduct.soldCount) -- pratinjau live harus mencerminkan
+        // itu, BUKAN selalu tampilkan sold_count mentah (yang di dashboard
+        // memang selalu ada, dipakai kolom "Terjual" di tabel Kelola).
+        soldCount: p.show_sold_count ? p.sold_count : undefined,
       })),
   };
 }

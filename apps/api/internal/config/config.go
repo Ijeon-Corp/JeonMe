@@ -152,6 +152,14 @@ type Config struct {
 	WhatsAppPhoneNumberID string
 	WhatsAppTemplateName  string
 	WhatsAppTemplateLang  string
+	// WhatsAppSaleNotificationTemplateName/Lang -- Advance Option "Enable
+	// Whatsapp notification" (permintaan langsung pengguna, 5 September
+	// 2026), lihat catatan lengkap di whatsapp.Client.
+	// SaleNotificationTemplateName. Kosong secara default -- template BARU
+	// ini juga perlu disetujui Meta Business Manager terpisah dari
+	// WhatsAppTemplateName sebelum bisa benar-benar dipakai.
+	WhatsAppSaleNotificationTemplateName string
+	WhatsAppSaleNotificationTemplateLang string
 }
 
 // Load membaca .env (jika ada) lalu environment variable asli.
@@ -228,12 +236,21 @@ func Load() *Config {
 
 		// Keputusan bisnis RESMI (permintaan langsung pengguna, 9 Agustus
 		// 2026, hasil benchmark kompetitor -- lihat laporan gap kompetitif):
-		// Jeonme TIDAK memotong komisi transaksi sama sekali, cuma
-		// meneruskan biaya prosesor pembayaran (Midtrans) apa adanya --
-		// diferensiasi eksplisit dari Linktree (12%->0%), Beacons (9%->0%),
-		// Lynk.id (~3%). Kreator dapat 100% dari harga jual; Jeonme
-		// monetisasi murni dari langganan Premium. INI BUKAN LAGI
-		// placeholder Sprint 4 -- 0.0 adalah nilai final, bukan sementara.
+		// Jeonme TIDAK memotong komisi transaksi PERSENTASE GLOBAL sama
+		// sekali dari nilai ini, cuma meneruskan biaya prosesor pembayaran
+		// (Midtrans) apa adanya -- diferensiasi eksplisit dari Linktree
+		// (12%->0%), Beacons (9%->0%), Lynk.id (~3%). 0.0 di sini TETAP
+		// nilai final utk dimensi PERSENTASE GLOBAL ini, bukan sementara.
+		//
+		// Susulan (permintaan pengguna langsung, 5 September 2026, Advance
+		// Option "Fee"): kebijakan "kreator dapat 100%" di atas TIDAK LAGI
+		// berlaku mutlak -- ada dimensi TERPISAH & independen, opt-in PER
+		// PRODUK (products.transaction_fee_enabled, migrasi 000093,
+		// flatTransactionFeeIDR di checkout.go, jumlah tetap Rp 600, bukan
+		// persentase, bukan diatur di sini). Field PlatformFeePercent ini
+		// SENDIRI tetap 0% sesuai keputusan 9 Agustus -- yang berubah adalah
+		// bahwa sekarang ADA jalur fee lain di luar field ini, bukan field
+		// ini yang dinaikkan dari 0.
 		// HoldingPeriodDays (3 hari anti-fraud) TETAP placeholder terpisah,
 		// belum diputuskan lewat keputusan yang sama.
 		PlatformFeePercent: getEnvFloat("PLATFORM_FEE_PERCENT", 0.0),
@@ -267,6 +284,8 @@ func Load() *Config {
 		WhatsAppPhoneNumberID: getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
 		WhatsAppTemplateName:  getEnv("WHATSAPP_TEMPLATE_NAME", "order_confirmation"),
 		WhatsAppTemplateLang:  getEnv("WHATSAPP_TEMPLATE_LANG", "id"),
+		WhatsAppSaleNotificationTemplateName: getEnv("WHATSAPP_SALE_NOTIFICATION_TEMPLATE_NAME", ""),
+		WhatsAppSaleNotificationTemplateLang: getEnv("WHATSAPP_SALE_NOTIFICATION_TEMPLATE_LANG", "id"),
 	}
 
 	if len(cfg.EncryptionKey) != 32 {

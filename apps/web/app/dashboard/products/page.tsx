@@ -312,6 +312,21 @@ function DashboardProductsPageInner() {
   const [splitRows, setSplitRows] = useState<CollaboratorSplit[]>([]);
   const [savingSplits, setSavingSplits] = useState(false);
 
+  // Advance Option (permintaan langsung pengguna, 5 September 2026): Release
+  // Time, Fee, notifikasi WhatsApp, Custom Message, Show Unit Sold.
+  const [releaseAtEditId, setReleaseAtEditId] = useState<string | null>(null);
+  const [releaseAtDraft, setReleaseAtDraft] = useState("");
+  const [savingReleaseAt, setSavingReleaseAt] = useState(false);
+
+  const [notifyWhatsappEditId, setNotifyWhatsappEditId] = useState<string | null>(null);
+  const [notifyWhatsappEnabledDraft, setNotifyWhatsappEnabledDraft] = useState(false);
+  const [notifyWhatsappMessageDraft, setNotifyWhatsappMessageDraft] = useState("");
+  const [savingNotifyWhatsapp, setSavingNotifyWhatsapp] = useState(false);
+
+  const [successMessageEditId, setSuccessMessageEditId] = useState<string | null>(null);
+  const [successMessageDraft, setSuccessMessageDraft] = useState("");
+  const [savingSuccessMessage, setSavingSuccessMessage] = useState(false);
+
   useEffect(() => {
     Promise.all([getMyPage(), listProducts(), listCollaborators()])
       .then(([p, prod, collabs]) => {
@@ -755,6 +770,9 @@ function DashboardProductsPageInner() {
     setPwywEditId(null);
     setSplitsEditId(null);
     setCategoryEditId(null);
+    setReleaseAtEditId(null);
+    setNotifyWhatsappEditId(null);
+    setSuccessMessageEditId(null);
   }
 
   function openCategoryForm(p: DashboardProduct) {
@@ -874,6 +892,109 @@ function DashboardProductsPageInner() {
       setProducts(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.disablePwyw"));
+    }
+  }
+
+  function openReleaseAtForm(product: DashboardProduct) {
+    setReleaseAtEditId(product.id);
+    setReleaseAtDraft(product.release_at ? product.release_at.slice(0, 16) : "");
+  }
+
+  async function handleSaveReleaseAt(product: DashboardProduct) {
+    if (!releaseAtDraft) {
+      setError(t("dashboard.pages.products.errors.releaseTimeRequired"));
+      return;
+    }
+    setError(null);
+    setSavingReleaseAt(true);
+    try {
+      await updateProduct(product.id, { release_at: new Date(releaseAtDraft).toISOString() });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setReleaseAtEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.scheduleRelease"));
+    } finally {
+      setSavingReleaseAt(false);
+    }
+  }
+
+  async function handleClearReleaseAt(product: DashboardProduct) {
+    setError(null);
+    try {
+      await updateProduct(product.id, { clear_release_at: true });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.cancelRelease"));
+    }
+  }
+
+  async function handleToggleTransactionFee(product: DashboardProduct) {
+    const next = !product.transaction_fee_enabled;
+    setError(null);
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, transaction_fee_enabled: next } : p)));
+    try {
+      await updateProduct(product.id, { transaction_fee_enabled: next });
+    } catch (err) {
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, transaction_fee_enabled: product.transaction_fee_enabled } : p)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateTransactionFee"));
+    }
+  }
+
+  function openNotifyWhatsappForm(product: DashboardProduct) {
+    setNotifyWhatsappEditId(product.id);
+    setNotifyWhatsappEnabledDraft(product.notify_whatsapp_enabled);
+    setNotifyWhatsappMessageDraft(product.notify_whatsapp_message);
+  }
+
+  async function handleSaveNotifyWhatsapp(product: DashboardProduct) {
+    setError(null);
+    setSavingNotifyWhatsapp(true);
+    try {
+      await updateProduct(product.id, {
+        notify_whatsapp_enabled: notifyWhatsappEnabledDraft,
+        notify_whatsapp_message: notifyWhatsappMessageDraft.trim(),
+      });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setNotifyWhatsappEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateNotifyWhatsapp"));
+    } finally {
+      setSavingNotifyWhatsapp(false);
+    }
+  }
+
+  function openSuccessMessageForm(product: DashboardProduct) {
+    setSuccessMessageEditId(product.id);
+    setSuccessMessageDraft(product.success_message);
+  }
+
+  async function handleSaveSuccessMessage(product: DashboardProduct) {
+    setError(null);
+    setSavingSuccessMessage(true);
+    try {
+      await updateProduct(product.id, { success_message: successMessageDraft.trim() });
+      const refreshed = await listProducts();
+      setProducts(refreshed);
+      setSuccessMessageEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateSuccessMessage"));
+    } finally {
+      setSavingSuccessMessage(false);
+    }
+  }
+
+  async function handleToggleShowSoldCount(product: DashboardProduct) {
+    const next = !product.show_sold_count;
+    setError(null);
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, show_sold_count: next } : p)));
+    try {
+      await updateProduct(product.id, { show_sold_count: next });
+    } catch (err) {
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, show_sold_count: product.show_sold_count } : p)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateShowSoldCount"));
     }
   }
 
@@ -1867,6 +1988,32 @@ function DashboardProductsPageInner() {
           onProductPatch={(patch) => setProducts((prev) => prev.map((p) => (p.id === manageProduct.id ? { ...p, ...patch } : p)))}
           onError={setError}
           onDelete={handleDelete}
+          releaseAtEditId={releaseAtEditId}
+          releaseAtDraft={releaseAtDraft}
+          savingReleaseAt={savingReleaseAt}
+          onReleaseAtDraftChange={setReleaseAtDraft}
+          onCancelReleaseAtEdit={() => setReleaseAtEditId(null)}
+          onSaveReleaseAt={handleSaveReleaseAt}
+          onClearReleaseAt={handleClearReleaseAt}
+          onOpenReleaseAtForm={openReleaseAtForm}
+          onToggleTransactionFee={handleToggleTransactionFee}
+          notifyWhatsappEditId={notifyWhatsappEditId}
+          notifyWhatsappEnabledDraft={notifyWhatsappEnabledDraft}
+          notifyWhatsappMessageDraft={notifyWhatsappMessageDraft}
+          savingNotifyWhatsapp={savingNotifyWhatsapp}
+          onNotifyWhatsappEnabledDraftChange={setNotifyWhatsappEnabledDraft}
+          onNotifyWhatsappMessageDraftChange={setNotifyWhatsappMessageDraft}
+          onCancelNotifyWhatsappEdit={() => setNotifyWhatsappEditId(null)}
+          onSaveNotifyWhatsapp={handleSaveNotifyWhatsapp}
+          onOpenNotifyWhatsappForm={openNotifyWhatsappForm}
+          successMessageEditId={successMessageEditId}
+          successMessageDraft={successMessageDraft}
+          savingSuccessMessage={savingSuccessMessage}
+          onSuccessMessageDraftChange={setSuccessMessageDraft}
+          onCancelSuccessMessageEdit={() => setSuccessMessageEditId(null)}
+          onSaveSuccessMessage={handleSaveSuccessMessage}
+          onOpenSuccessMessageForm={openSuccessMessageForm}
+          onToggleShowSoldCount={handleToggleShowSoldCount}
         />
       )}
     </div>

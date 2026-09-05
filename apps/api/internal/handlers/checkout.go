@@ -62,6 +62,15 @@ type createCheckoutRequest struct {
 	WishlistItemID string `json:"wishlist_item_id"`
 }
 
+// flatTransactionFeeIDR -- Advance Option "Fee" (permintaan langsung
+// pengguna, 5 September 2026): jumlah TETAP, bukan diatur kreator per
+// produk -- toggle transaction_fee_enabled (migrasi 000093) cuma
+// menyalakan/mematikan, bukan mengatur besarannya. MENGUBAH kebijakan
+// "0% fee, final" yang tercatat di config.go (9 Agustus 2026) -- keputusan
+// sadar, bukan regresi: dimensi baru yang independen & opt-in per produk,
+// PlatformFeePercent global tetap 0% sesuai kebijakan lama itu.
+const flatTransactionFeeIDR int64 = 600
+
 // Create — REQ-F-401: checkout cukup email/WhatsApp, TANPA perlu bikin akun.
 // Produk harus is_active=true (sudah lolos gate upload file, lihat Sprint 2).
 func (h *CheckoutHandler) Create(c *gin.Context) {
@@ -89,17 +98,18 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	var paymentLimitCount *int
 	var linkExpiresAt *time.Time
 	var shopPausedAt *time.Time
+	var transactionFeeEnabled bool
 	// No.68: priceIDR di sini SUDAH harga efektif (harga flash sale kalau
 	// sedang aktif) -- voucher (No.67) di bawah menumpuk di atas harga ini,
 	// bukan di atas harga asli.
 	err := h.DB.QueryRow(ctx, `
 		SELECT p.user_id, name, `+effectivePriceExpr+`, pwyw_enabled, pwyw_min_price_idr, is_event, event_ends_at, event_capacity, collaborator_splits,
-			product_kind, payment_limit_count, link_expires_at, u.shop_paused_at
+			product_kind, payment_limit_count, link_expires_at, u.shop_paused_at, p.transaction_fee_enabled
 		FROM products p
 		JOIN users u ON u.id = p.user_id
 		WHERE p.id = $1 AND p.is_active = true
 	`, req.ProductID).Scan(&productUserID, &productName, &priceIDR, &flashSaleActive, &pwywEnabled, &pwywMinPriceIDR, &isEvent, &eventEndsAt, &eventCapacity, &collaboratorSplitsRaw,
-		&productKind, &paymentLimitCount, &linkExpiresAt, &shopPausedAt)
+		&productKind, &paymentLimitCount, &linkExpiresAt, &shopPausedAt, &transactionFeeEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan atau belum aktif"})
@@ -263,7 +273,21 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	orderID := uuid.NewString()
 	externalID := "jeonme-order-" + orderID
+	// Advance Option "Fee" -- keputusan pengguna langsung 5 September 2026,
+	// MENGUBAH kebijakan "0% fee, final" (config.go, 9 Agustus 2026) --
+	// lihat catatan lengkap di flatTransactionFeeIDR. Opt-in PER PRODUK
+	// (transaction_fee_enabled, migrasi 000093), bukan perubahan
+	// PlatformFeePercent global yang tetap 0% -- dua dimensi independen,
+	// dijumlah di sini karena keduanya sama-sama dikurangkan dari kredit
+	// ledger kreator (lihat Webhook: netAmount = amount_idr - platform_fee_idr - ...),
+	// TIDAK menambah apa yang dibayar pembeli (Midtrans GrossAmountIDR
+	// tetap finalAmountIDR apa adanya, lihat pemanggilan CreateTransaction
+	// di bawah) -- pembeli membayar harga yang sama persis seperti yang
+	// tertera, fee ini murni mengurangi bagian yang diteruskan ke kreator.
 	platformFeeIDR := int64(float64(finalAmountIDR) * h.PlatformFeePercent / 100)
+	if transactionFeeEnabled {
+		platformFeeIDR += flatTransactionFeeIDR
+	}
 
 	// Order disimpan dalam transaksi yang BELUM di-commit sampai Midtrans
 	// benar-benar berhasil membuat transaksi Snap -- kalau panggilan Midtrans
@@ -499,7 +523,12 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	}
 	resp.IsBundle, resp.IsDonation, resp.IsCourse = isBundle, isDonation, isCourse
 	resp.IsPaymentLink = productKind == "payment_link"
-	if !resp.IsPaymentLink || resp.Status != "paid" {
+	// Advance Option "Custom Message" -- permintaan langsung pengguna, 5
+	// September 2026: SEBELUMNYA success_message cuma ditampilkan utk
+	// product_kind="payment_link" (gate `!resp.IsPaymentLink ||` yang
+	// dihapus di sini) -- sekarang berlaku utk SEMUA jenis produk, cuma
+	// tetap disembunyikan sebelum order benar-benar "paid".
+	if resp.Status != "paid" {
 		resp.SuccessMessage = ""
 	}
 

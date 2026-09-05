@@ -168,6 +168,7 @@ export default async function CreatorPage({ params, searchParams }: PageParams) 
             isExternalLink: p.is_external_link,
             externalUrl: p.external_url,
             category: p.category,
+            soldCount: p.sold_count,
           })),
           // instagramFeed/tiktokFeed -- Modul Koneksi Sosial (migrasi
           // 000069, permintaan langsung pengguna: "saya mau jeonme ini

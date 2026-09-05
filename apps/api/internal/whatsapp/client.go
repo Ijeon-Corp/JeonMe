@@ -47,7 +47,17 @@ type Client struct {
 	PhoneNumberID string
 	TemplateName  string
 	TemplateLang  string
-	HTTP          *http.Client
+	// SaleNotificationTemplateName/Lang -- Advance Option "Enable Whatsapp
+	// notification" (permintaan langsung pengguna, 5 September 2026):
+	// notifikasi ke KREATOR (bukan pembeli, beda arah dari TemplateName/
+	// SendOrderConfirmation di atas) saat produk mereka terjual. Template
+	// TERPISAH karena BEDA isi/tujuan -- WhatsApp Business API mengharuskan
+	// tiap template disetujui Meta Business Manager satu per satu, tidak
+	// bisa reuse template konfirmasi pembeli. Boleh kosong (belum
+	// dikonfigurasi) -- lihat IsSaleNotificationConfigured.
+	SaleNotificationTemplateName string
+	SaleNotificationTemplateLang string
+	HTTP                         *http.Client
 }
 
 func NewClient(apiToken, phoneNumberID, templateName, templateLang string) *Client {
@@ -66,6 +76,15 @@ func NewClient(apiToken, phoneNumberID, templateName, templateLang string) *Clie
 // depan) bisa memeriksa status konfigurasi tanpa mencoba mengirim pesan.
 func (c *Client) IsConfigured() bool {
 	return c.APIToken != "" && c.PhoneNumberID != ""
+}
+
+// IsSaleNotificationConfigured -- lihat catatan SaleNotificationTemplateName
+// di atas. Terpisah dari IsConfigured karena auth (APIToken/PhoneNumberID)
+// bisa sudah siap sementara template notifikasi-ke-kreator belum pernah
+// dibuat/disetujui Meta -- dicek keduanya sebelum SendCreatorSaleNotification
+// benar-benar mencoba mengirim.
+func (c *Client) IsSaleNotificationConfigured() bool {
+	return c.IsConfigured() && c.SaleNotificationTemplateName != ""
 }
 
 var digitsOnly = regexp.MustCompile(`\D`)
@@ -143,7 +162,26 @@ func (c *Client) SendOrderConfirmation(ctx context.Context, to string, bodyParam
 		log.Printf("whatsapp: belum dikonfigurasi, lewati pengiriman ke %s", to)
 		return nil
 	}
+	return c.send(ctx, to, c.TemplateName, c.TemplateLang, bodyParams)
+}
 
+// SendCreatorSaleNotification -- Advance Option "Enable Whatsapp
+// notification" (permintaan langsung pengguna, 5 September 2026): notifikasi
+// ke KREATOR saat produk mereka terjual, lihat catatan lengkap di
+// SaleNotificationTemplateName. to HARUS sudah dinormalisasi lewat
+// NormalizeIndonesianPhone, sama seperti SendOrderConfirmation.
+func (c *Client) SendCreatorSaleNotification(ctx context.Context, to string, bodyParams []string) error {
+	if !c.IsSaleNotificationConfigured() {
+		log.Printf("whatsapp: notifikasi penjualan belum dikonfigurasi, lewati pengiriman ke %s", to)
+		return nil
+	}
+	return c.send(ctx, to, c.SaleNotificationTemplateName, c.SaleNotificationTemplateLang, bodyParams)
+}
+
+// send -- inti pengiriman satu pesan template, dipakai bersama
+// SendOrderConfirmation & SendCreatorSaleNotification (dua template BEDA,
+// auth/transport SAMA) supaya logika HTTP/error-handling tidak digandakan.
+func (c *Client) send(ctx context.Context, to, templateName, templateLang string, bodyParams []string) error {
 	params := make([]templateParameter, len(bodyParams))
 	for i, p := range bodyParams {
 		params[i] = templateParameter{Type: "text", Text: p}
@@ -153,8 +191,8 @@ func (c *Client) SendOrderConfirmation(ctx context.Context, to string, bodyParam
 	reqBody.MessagingProduct = "whatsapp"
 	reqBody.To = to
 	reqBody.Type = "template"
-	reqBody.Template.Name = c.TemplateName
-	reqBody.Template.Language.Code = c.TemplateLang
+	reqBody.Template.Name = templateName
+	reqBody.Template.Language.Code = templateLang
 	reqBody.Template.Components = []templateComponent{{Type: "body", Parameters: params}}
 
 	encoded, err := json.Marshal(reqBody)

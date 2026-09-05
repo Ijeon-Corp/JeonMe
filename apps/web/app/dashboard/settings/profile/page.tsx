@@ -45,6 +45,7 @@ export default function SettingsProfilePage() {
   const [category, setCategory] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [notificationWhatsappNumber, setNotificationWhatsappNumber] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
   const [usernameCheck, setUsernameCheck] = useState<{ username: string; state: UsernameCheckState; message: string }>({
     username: "",
@@ -60,6 +61,7 @@ export default function SettingsProfilePage() {
         setCategory(p.category);
         setDisplayName(p.display_name);
         setBio(p.bio);
+        setNotificationWhatsappNumber(p.notification_whatsapp_number);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsProfile.loadError")))
       .finally(() => setLoading(false));
@@ -126,6 +128,8 @@ export default function SettingsProfilePage() {
         category: category !== original.category ? category : undefined,
         display_name: displayName !== original.display_name ? displayName : undefined,
         bio: bio !== original.bio ? bio : undefined,
+        notification_whatsapp_number:
+          notificationWhatsappNumber !== original.notification_whatsapp_number ? notificationWhatsappNumber : undefined,
       });
       setOriginal({
         ...original,
@@ -133,6 +137,7 @@ export default function SettingsProfilePage() {
         category,
         display_name: displayName,
         bio,
+        notification_whatsapp_number: notificationWhatsappNumber,
         // Cooldown 30 hari mulai berlaku SEKARANG kalau username baru saja
         // diganti -- dihitung optimis di klien (bukan menunggu GET ulang)
         // supaya field langsung ter-disable, konsisten dengan apa yang
@@ -340,6 +345,21 @@ export default function SettingsProfilePage() {
             placeholder={t("dashboard.pages.settingsProfile.categoryPlaceholder")}
             className="mt-1 w-full rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
+        </div>
+
+        <div>
+          <label htmlFor="settings-notification-whatsapp" className="text-xs font-bold uppercase tracking-wider text-app-muted">
+            {t("dashboard.pages.settingsProfile.notificationWhatsappLabel")}
+          </label>
+          <input
+            id="settings-notification-whatsapp"
+            type="tel"
+            value={notificationWhatsappNumber}
+            onChange={(e) => setNotificationWhatsappNumber(e.target.value)}
+            placeholder={t("dashboard.pages.settingsProfile.notificationWhatsappPlaceholder")}
+            className="mt-1 w-full rounded-xl border-2 border-jeon-ink bg-app-surface px-3 py-2.5 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+          />
+          <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsProfile.notificationWhatsappHelper")}</p>
         </div>
 
         <button

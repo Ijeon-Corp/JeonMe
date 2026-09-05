@@ -4,15 +4,19 @@ import { useRef } from "react";
 import {
   IconBox,
   IconCamera,
+  IconChart,
   IconCheck,
+  IconClock,
   IconClose,
   IconExternal,
   IconShield,
   IconSparkle,
+  IconTextLines,
   IconTrash,
   IconUpload,
   IconUsers,
   IconWallet,
+  IconWhatsapp,
 } from "@/components/icons";
 import DeliveryMethodPanel from "@/components/DeliveryMethodPanel";
 import { CollaboratorSplit, DashboardCollaborator, DashboardProduct } from "@/lib/api-client";
@@ -94,6 +98,32 @@ export default function ManageProductModal({
   onProductPatch,
   onError,
   onDelete,
+  releaseAtEditId,
+  releaseAtDraft,
+  savingReleaseAt,
+  onReleaseAtDraftChange,
+  onCancelReleaseAtEdit,
+  onSaveReleaseAt,
+  onClearReleaseAt,
+  onOpenReleaseAtForm,
+  onToggleTransactionFee,
+  notifyWhatsappEditId,
+  notifyWhatsappEnabledDraft,
+  notifyWhatsappMessageDraft,
+  savingNotifyWhatsapp,
+  onNotifyWhatsappEnabledDraftChange,
+  onNotifyWhatsappMessageDraftChange,
+  onCancelNotifyWhatsappEdit,
+  onSaveNotifyWhatsapp,
+  onOpenNotifyWhatsappForm,
+  successMessageEditId,
+  successMessageDraft,
+  savingSuccessMessage,
+  onSuccessMessageDraftChange,
+  onCancelSuccessMessageEdit,
+  onSaveSuccessMessage,
+  onOpenSuccessMessageForm,
+  onToggleShowSoldCount,
 }: {
   product: DashboardProduct;
   onClose: () => void;
@@ -151,6 +181,32 @@ export default function ManageProductModal({
   onProductPatch: (patch: Partial<DashboardProduct>) => void;
   onError: (message: string) => void;
   onDelete: (product: DashboardProduct) => void;
+  releaseAtEditId: string | null;
+  releaseAtDraft: string;
+  savingReleaseAt: boolean;
+  onReleaseAtDraftChange: (value: string) => void;
+  onCancelReleaseAtEdit: () => void;
+  onSaveReleaseAt: (product: DashboardProduct) => void;
+  onClearReleaseAt: (product: DashboardProduct) => void;
+  onOpenReleaseAtForm: (product: DashboardProduct) => void;
+  onToggleTransactionFee: (product: DashboardProduct) => void;
+  notifyWhatsappEditId: string | null;
+  notifyWhatsappEnabledDraft: boolean;
+  notifyWhatsappMessageDraft: string;
+  savingNotifyWhatsapp: boolean;
+  onNotifyWhatsappEnabledDraftChange: (value: boolean) => void;
+  onNotifyWhatsappMessageDraftChange: (value: string) => void;
+  onCancelNotifyWhatsappEdit: () => void;
+  onSaveNotifyWhatsapp: (product: DashboardProduct) => void;
+  onOpenNotifyWhatsappForm: (product: DashboardProduct) => void;
+  successMessageEditId: string | null;
+  successMessageDraft: string;
+  savingSuccessMessage: boolean;
+  onSuccessMessageDraftChange: (value: string) => void;
+  onCancelSuccessMessageEdit: () => void;
+  onSaveSuccessMessage: (product: DashboardProduct) => void;
+  onOpenSuccessMessageForm: (product: DashboardProduct) => void;
+  onToggleShowSoldCount: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -579,6 +635,205 @@ export default function ManageProductModal({
         {product.product_kind !== "payment_link" && product.product_kind !== "external_link" && (
           <DeliveryMethodPanel key={product.id} product={product} onUpdated={onProductPatch} onError={onError} />
         )}
+
+        {/* Advance Option -- permintaan langsung pengguna, 5 September
+            2026: 5 toggle pengaturan lanjutan perilaku produk (Release
+            Time, Fee, notifikasi WhatsApp, Custom Message, Show Unit
+            Sold). */}
+        {salesV2 && (
+          <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+            {t("dashboard.pages.products.manageModal.sectionAdvanced")}
+          </p>
+        )}
+        <div className="mt-4 flex flex-col gap-2.5">
+          {releaseAtEditId === product.id ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
+                <IconClock className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.releaseTimeLabel")}
+              </p>
+              <input
+                type="datetime-local"
+                value={releaseAtDraft}
+                onChange={(e) => onReleaseAtDraftChange(e.target.value)}
+                className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+              />
+              <div className="flex gap-1.5">
+                <button type="button" onClick={onCancelReleaseAtEdit} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                  {t("dashboard.pages.products.manageModal.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={savingReleaseAt}
+                  onClick={() => onSaveReleaseAt(product)}
+                  className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                >
+                  {savingReleaseAt ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
+                </button>
+              </div>
+            </div>
+          ) : product.release_at ? (
+            <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+              <span className="text-[11px] font-semibold text-jeon-purple">
+                {t("dashboard.pages.products.manageModal.releaseScheduled").replace(
+                  "{date}",
+                  new Date(product.release_at).toLocaleString("id-ID")
+                )}
+              </span>
+              <button type="button" onClick={() => onClearReleaseAt(product)} className="text-[11px] font-bold text-red-600 hover:underline">
+                {t("dashboard.pages.products.manageModal.cancelAction")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenReleaseAtForm(product)}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+            >
+              <IconClock className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.scheduleRelease")}
+            </button>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg border border-app-border px-2.5 py-1.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-app-ink">
+              <IconWallet className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.transactionFeeLabel")}
+            </span>
+            <button
+              type="button"
+              onClick={() => onToggleTransactionFee(product)}
+              aria-pressed={product.transaction_fee_enabled}
+              className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
+                product.transaction_fee_enabled ? "bg-jeon-purple" : "bg-app-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                  product.transaction_fee_enabled ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+
+          {notifyWhatsappEditId === product.id ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
+                <IconWhatsapp className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.notifyWhatsappLabel")}
+              </p>
+              <label className="flex items-center gap-1.5 text-[11px] text-app-ink">
+                <input
+                  type="checkbox"
+                  checked={notifyWhatsappEnabledDraft}
+                  onChange={(e) => onNotifyWhatsappEnabledDraftChange(e.target.checked)}
+                />
+                {t("dashboard.pages.products.manageModal.notifyWhatsappToggleHint")}
+              </label>
+              <textarea
+                placeholder={t("dashboard.pages.products.manageModal.notifyWhatsappMessagePlaceholder")}
+                value={notifyWhatsappMessageDraft}
+                onChange={(e) => onNotifyWhatsappMessageDraftChange(e.target.value)}
+                rows={2}
+                maxLength={500}
+                className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+              />
+              <div className="flex gap-1.5">
+                <button type="button" onClick={onCancelNotifyWhatsappEdit} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                  {t("dashboard.pages.products.manageModal.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={savingNotifyWhatsapp}
+                  onClick={() => onSaveNotifyWhatsapp(product)}
+                  className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                >
+                  {savingNotifyWhatsapp ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
+                </button>
+              </div>
+            </div>
+          ) : product.notify_whatsapp_enabled ? (
+            <div className="flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-jeon-purple">
+                <IconWhatsapp className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.notifyWhatsappActive")}
+              </span>
+              <button type="button" onClick={() => onOpenNotifyWhatsappForm(product)} className="text-[11px] font-bold text-jeon-purple hover:underline">
+                {t("dashboard.pages.products.manageModal.change")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenNotifyWhatsappForm(product)}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+            >
+              <IconWhatsapp className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.activateNotifyWhatsapp")}
+            </button>
+          )}
+
+          {successMessageEditId === product.id ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
+                <IconTextLines className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.customMessageLabel")}
+              </p>
+              <textarea
+                placeholder={t("dashboard.pages.products.manageModal.customMessagePlaceholder")}
+                value={successMessageDraft}
+                onChange={(e) => onSuccessMessageDraftChange(e.target.value)}
+                rows={2}
+                className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+              />
+              <div className="flex gap-1.5">
+                <button type="button" onClick={onCancelSuccessMessageEdit} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                  {t("dashboard.pages.products.manageModal.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={savingSuccessMessage}
+                  onClick={() => onSaveSuccessMessage(product)}
+                  className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                >
+                  {savingSuccessMessage ? t("dashboard.pages.products.manageModal.savingEllipsis") : t("dashboard.pages.products.manageModal.save")}
+                </button>
+              </div>
+            </div>
+          ) : product.success_message ? (
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+              <span className="min-w-0 truncate text-[11px] font-semibold text-jeon-purple">{product.success_message}</span>
+              <button
+                type="button"
+                onClick={() => onOpenSuccessMessageForm(product)}
+                className="flex-shrink-0 text-[11px] font-bold text-jeon-purple hover:underline"
+              >
+                {t("dashboard.pages.products.manageModal.change")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenSuccessMessageForm(product)}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-app-border px-3 py-2 text-[11px] font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+            >
+              <IconTextLines className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.setCustomMessage")}
+            </button>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg border border-app-border px-2.5 py-1.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-app-ink">
+              <IconChart className="h-3.5 w-3.5" /> {t("dashboard.pages.products.manageModal.showSoldCountLabel")}
+            </span>
+            <button
+              type="button"
+              onClick={() => onToggleShowSoldCount(product)}
+              aria-pressed={product.show_sold_count}
+              className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
+                product.show_sold_count ? "bg-jeon-purple" : "bg-app-border"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                  product.show_sold_count ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
 
         {salesV2 && (
           <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">

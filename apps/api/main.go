@@ -227,6 +227,8 @@ func runWorker() {
 
 	mailerClient := mailer.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFromAddr)
 	whatsappClient := whatsapp.NewClient(cfg.WhatsAppAPIToken, cfg.WhatsAppPhoneNumberID, cfg.WhatsAppTemplateName, cfg.WhatsAppTemplateLang)
+	whatsappClient.SaleNotificationTemplateName = cfg.WhatsAppSaleNotificationTemplateName
+	whatsappClient.SaleNotificationTemplateLang = cfg.WhatsAppSaleNotificationTemplateLang
 	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey))
 
 	// Modul Settings §3: asynq.Scheduler ENQUEUE task ke Redis sesuai jadwal

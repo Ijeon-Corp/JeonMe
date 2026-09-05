@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/whatsapp"
 )
 
 // usernameChangeCooldown -- permintaan langsung pengguna, 19 Agustus 2026:
@@ -46,6 +47,14 @@ type settingsProfileResponse struct {
 	DisplayName string `json:"display_name"`
 	Bio         string `json:"bio"`
 	AvatarURL   string `json:"avatar_url"`
+	// NotificationWhatsappNumber -- Advance Option "Enable Whatsapp
+	// notification" (permintaan langsung pengguna, 5 September 2026):
+	// nomor WhatsApp KREATOR SENDIRI, khusus notifikasi internal saat
+	// produknya terjual -- BEDA dari whatsapp_number di fitur Kartu Nama
+	// Digital (itu utk kontak PUBLIK). Kosong = belum diisi, notifikasi
+	// WhatsApp per-produk tidak akan pernah terkirim walau toggle produk
+	// menyala (lihat worker.HandleOrderPaidNotification).
+	NotificationWhatsappNumber string `json:"notification_whatsapp_number"`
 	// UsernameChangeAvailableAt -- permintaan langsung pengguna, 19 Agustus
 	// 2026 (cooldown 30 hari). null berarti boleh ganti sekarang juga
 	// (belum pernah ganti sama sekali, atau cooldown sebelumnya sudah
@@ -62,15 +71,19 @@ func (h *SettingsProfileHandler) Get(c *gin.Context) {
 	defer cancel()
 
 	var resp settingsProfileResponse
+	var notificationWhatsappNumber *string
 	err := h.DB.QueryRow(ctx, `
-		SELECT u.username, u.category, p.display_name, p.bio, p.avatar_url
+		SELECT u.username, u.category, p.display_name, p.bio, p.avatar_url, u.notification_whatsapp_number
 		FROM users u
 		JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.id = $1
-	`, userID).Scan(&resp.Username, &resp.Category, &resp.DisplayName, &resp.Bio, &resp.AvatarURL)
+	`, userID).Scan(&resp.Username, &resp.Category, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &notificationWhatsappNumber)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat profil"})
 		return
+	}
+	if notificationWhatsappNumber != nil {
+		resp.NotificationWhatsappNumber = *notificationWhatsappNumber
 	}
 
 	var lastChangedAt *time.Time
@@ -90,6 +103,11 @@ type updateSettingsProfileRequest struct {
 	Category    *string `json:"category"`
 	DisplayName *string `json:"display_name"`
 	Bio         *string `json:"bio"`
+	// NotificationWhatsappNumber -- lihat catatan lengkap di
+	// settingsProfileResponse. String kosong (bukan nil) berarti HAPUS
+	// nomor yang tersimpan -- beda dari nil yang berarti "tidak diubah",
+	// pola sama seperti field opsional lain di codebase ini.
+	NotificationWhatsappNumber *string `json:"notification_whatsapp_number"`
 }
 
 // Update — PATCH sebagian (semua field opsional, cuma yang dikirim yang
@@ -117,6 +135,23 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 	if req.DisplayName != nil && len(*req.DisplayName) > 100 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "nama tampilan maksimal 100 karakter"})
 		return
+	}
+
+	var normalizedWhatsappNumber *string
+	if req.NotificationWhatsappNumber != nil {
+		trimmed := strings.TrimSpace(*req.NotificationWhatsappNumber)
+		if trimmed == "" {
+			// String kosong = hapus nomor tersimpan (lihat catatan di
+			// updateSettingsProfileRequest).
+			normalizedWhatsappNumber = &trimmed
+		} else {
+			normalized, err := whatsapp.NormalizeIndonesianPhone(trimmed)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "nomor WhatsApp tidak valid"})
+				return
+			}
+			normalizedWhatsappNumber = &normalized
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
@@ -183,6 +218,17 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 	if req.Category != nil {
 		if _, err := tx.Exec(ctx, `UPDATE users SET category = $1 WHERE id = $2`, *req.Category, userID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui kategori"})
+			return
+		}
+	}
+
+	if normalizedWhatsappNumber != nil {
+		var toStore *string
+		if *normalizedWhatsappNumber != "" {
+			toStore = normalizedWhatsappNumber
+		}
+		if _, err := tx.Exec(ctx, `UPDATE users SET notification_whatsapp_number = $1 WHERE id = $2`, toStore, userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui nomor WhatsApp"})
 			return
 		}
 	}

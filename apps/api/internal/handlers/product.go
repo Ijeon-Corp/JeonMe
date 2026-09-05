@@ -319,7 +319,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 			COALESCE(o.sold_count, 0) AS sold_count, p.category,
 			p.delivery_method, p.webhook_url, COALESCE(pc.unclaimed_count, 0) AS unclaimed_code_count,
 			p.product_kind, p.success_message, p.payment_limit_count, p.link_expires_at, p.external_url,
-			p.position, p.is_featured, COALESCE(pcl.click_count, 0) AS click_count
+			p.position, p.is_featured, COALESCE(pcl.click_count, 0) AS click_count,
+			p.release_at, p.transaction_fee_enabled, p.notify_whatsapp_enabled, p.notify_whatsapp_message, p.show_sold_count
 		FROM products p
 		LEFT JOIN (
 			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
@@ -378,6 +379,12 @@ func (h *ProductHandler) List(c *gin.Context) {
 		IsFeatured         bool                `json:"is_featured"`
 		// ClickCount -- lihat catatan lengkap di query SELECT di atas.
 		ClickCount int64 `json:"click_count"`
+		// Advance Option -- lihat migrasi 000093.
+		ReleaseAt             *time.Time `json:"release_at"`
+		TransactionFeeEnabled bool       `json:"transaction_fee_enabled"`
+		NotifyWhatsappEnabled bool       `json:"notify_whatsapp_enabled"`
+		NotifyWhatsappMessage string     `json:"notify_whatsapp_message"`
+		ShowSoldCount         bool       `json:"show_sold_count"`
 	}
 	items := []item{}
 	for rows.Next() {
@@ -388,7 +395,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 			&it.PwywEnabled, &it.PwywMinPriceIDR, &it.WatermarkEnabled, &it.IsPdf, &splitsRaw, &it.SoldCount, &it.Category,
 			&it.DeliveryMethod, &it.WebhookURL, &it.UnclaimedCodeCount,
 			&it.ProductKind, &it.SuccessMessage, &it.PaymentLimitCount, &it.LinkExpiresAt, &it.ExternalURL,
-			&it.Position, &it.IsFeatured, &it.ClickCount); err == nil {
+			&it.Position, &it.IsFeatured, &it.ClickCount,
+			&it.ReleaseAt, &it.TransactionFeeEnabled, &it.NotifyWhatsappEnabled, &it.NotifyWhatsappMessage, &it.ShowSoldCount); err == nil {
 			if len(splitsRaw) > 0 {
 				_ = json.Unmarshal(splitsRaw, &it.CollaboratorSplits)
 			}
@@ -453,6 +461,25 @@ type updateProductRequest struct {
 	// memperbaiki tautan yang salah/kedaluwarsa tanpa perlu membuat ulang
 	// produknya dari awal.
 	ExternalURL *string `json:"external_url" binding:"omitempty,http_url,max=2048"`
+
+	// Advance Option -- permintaan langsung pengguna, 5 September 2026,
+	// lihat migrasi 000093 utk catatan lengkap tiap kolom.
+	ReleaseAt      *string `json:"release_at"`
+	ClearReleaseAt bool    `json:"clear_release_at"`
+	// TransactionFeeEnabled -- MENGUBAH kebijakan "0% fee" yang tercatat di
+	// config.go (keputusan pengguna langsung, 5 September 2026) -- opt-in
+	// PER PRODUK, jumlah tetap (lihat flatTransactionFeeIDR di checkout.go),
+	// bukan pengganti PlatformFeePercent global yang tetap 0%.
+	TransactionFeeEnabled *bool `json:"transaction_fee_enabled"`
+	// NotifyWhatsappEnabled/Message -- notifikasi WhatsApp ke KREATOR
+	// (bukan pembeli) saat produk ini terjual. Message diisikan sbg
+	// parameter template WhatsApp (lihat whatsapp.Client.
+	// SendCreatorSaleNotification), bukan pesan bebas.
+	NotifyWhatsappEnabled *bool   `json:"notify_whatsapp_enabled"`
+	NotifyWhatsappMessage *string `json:"notify_whatsapp_message" binding:"omitempty,max=500"`
+	// ShowSoldCount -- tampilkan "X terjual" di halaman publik. Penghitungan
+	// sendiri sudah ada (List di bawah), ini cuma toggle visibilitas publik.
+	ShowSoldCount *bool `json:"show_sold_count"`
 }
 
 // Update — REQ-F-301 (lanjutan: edit) & REQ-F-303 (aktifkan/nonaktifkan).
@@ -689,6 +716,24 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
+	// Advance Option: release_at -- pola sama seperti link_expires_at (nil
+	// berarti tidak diubah, ClearReleaseAt berarti tampilkan langsung lagi).
+	var releaseAt *time.Time
+	if req.ReleaseAt != nil && *req.ReleaseAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.ReleaseAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "format release_at tidak valid (pakai RFC3339)"})
+			return
+		}
+		releaseAt = &t
+	}
+	if req.ClearReleaseAt {
+		if _, err := h.DB.Exec(ctx, `UPDATE products SET release_at = NULL WHERE id = $1`, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus jadwal rilis"})
+			return
+		}
+	}
+
 	// Modul Settings §3: divalidasi SEBELUM UPDATE dijalankan -- nil berarti
 	// field ini tidak dikirim sama sekali (tidak diubah), beda dari slice
 	// kosong (`[]`) yang berarti "hapus semua split".
@@ -742,13 +787,19 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			payment_limit_count = COALESCE($23, payment_limit_count),
 			link_expires_at = COALESCE($24, link_expires_at),
 			is_featured = COALESCE($25, is_featured),
-			external_url = COALESCE($26, external_url)
+			external_url = COALESCE($26, external_url),
+			release_at = COALESCE($27, release_at),
+			transaction_fee_enabled = COALESCE($28, transaction_fee_enabled),
+			notify_whatsapp_enabled = COALESCE($29, notify_whatsapp_enabled),
+			notify_whatsapp_message = COALESCE($30, notify_whatsapp_message),
+			show_sold_count = COALESCE($31, show_sold_count)
 		WHERE id = $18
 	`, req.Name, req.Description, req.PriceIDR, req.IsActive, req.FlashSalePriceIDR, flashStarts, flashEnds,
 		req.PwywEnabled, req.PwywMinPriceIDR, req.WatermarkEnabled,
 		eventStarts, eventEnds, req.EventLocation, req.EventIsOnline, req.EventCapacity, collaboratorSplitsJSON, req.Category, productID,
 		req.DeliveryMethod, req.WebhookURL, newWebhookSecret,
-		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured, req.ExternalURL)
+		req.SuccessMessage, req.PaymentLimitCount, linkExpiresAt, req.IsFeatured, req.ExternalURL,
+		releaseAt, req.TransactionFeeEnabled, req.NotifyWhatsappEnabled, req.NotifyWhatsappMessage, req.ShowSoldCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui produk"})
 		return

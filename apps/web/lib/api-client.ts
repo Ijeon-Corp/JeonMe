@@ -276,6 +276,11 @@ export interface PublicProduct {
   // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
   // kategori di grid Produk (lihat PagePreview.tsx).
   category: string;
+  // sold_count -- Advance Option "Show Unit Sold" (permintaan langsung
+  // pengguna, 5 September 2026). null berarti toggle-nya mati (BUKAN
+  // "belum pernah terjual") -- backend cuma isi angka kalau kreator
+  // menyalakan show_sold_count.
+  sold_count: number | null;
 }
 
 export interface PublicWishlistItem {
@@ -1698,6 +1703,23 @@ export interface DashboardProduct {
   // (event_type="product_click"), dihitung backend, pola sama seperti
   // LinkItem.click_count.
   click_count: number;
+  // Advance Option (permintaan langsung pengguna, 5 September 2026): 5
+  // toggle pengaturan lanjutan perilaku produk.
+  // release_at -- jadwal rilis, null berarti langsung tampil (pola sama
+  // links.starts_at).
+  release_at: string | null;
+  // transaction_fee_enabled -- potongan flat Rp 600 dari Jeonme, per-produk
+  // opt-in (BUKAN kebijakan platform global -- lihat catatan lengkap di
+  // checkout.go flatTransactionFeeIDR).
+  transaction_fee_enabled: boolean;
+  // notify_whatsapp_enabled/notify_whatsapp_message -- notifikasi WhatsApp
+  // ke KREATOR saat produk ini terjual (perlu notification_whatsapp_number
+  // terisi di Settings, lihat SettingsProfile).
+  notify_whatsapp_enabled: boolean;
+  notify_whatsapp_message: string;
+  // show_sold_count -- tampilkan "X terjual" di halaman publik (lihat
+  // PublicProduct.sold_count).
+  show_sold_count: boolean;
 }
 
 export function reorderProducts(items: { id: string; position: number }[]) {
@@ -1823,6 +1845,12 @@ export function updateProduct(
     clear_link_expiration: boolean;
     is_featured: boolean;
     external_url: string;
+    release_at: string;
+    clear_release_at: boolean;
+    transaction_fee_enabled: boolean;
+    notify_whatsapp_enabled: boolean;
+    notify_whatsapp_message: string;
+    show_sold_count: boolean;
   }>
 ) {
   return apiFetch<{ message: string }>(
@@ -3429,6 +3457,11 @@ export interface SettingsProfile {
   display_name: string;
   bio: string;
   avatar_url: string;
+  // Nomor WhatsApp kreator sendiri, khusus notifikasi internal saat produk
+  // terjual (Advance Option "Enable Whatsapp notification") -- beda dari
+  // whatsapp_number Kartu Nama Digital yang untuk kontak publik. Kosong
+  // berarti belum diisi.
+  notification_whatsapp_number: string;
   // Cooldown ganti username 1x/30 hari (permintaan langsung pengguna, 19
   // Agustus 2026) -- null berarti boleh ganti sekarang, string RFC3339
   // berarti baru boleh ganti lagi mulai tanggal itu.
@@ -3444,6 +3477,7 @@ export function updateSettingsProfile(input: {
   category?: string;
   display_name?: string;
   bio?: string;
+  notification_whatsapp_number?: string;
 }) {
   return apiFetch<{ message: string; username: string }>(
     "/dashboard/settings/profile",

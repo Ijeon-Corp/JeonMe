@@ -119,6 +119,10 @@ export interface PagePreviewProduct {
   // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
   // kategori di grid Produk, lihat renderCategoryTabs di bawah.
   category?: string;
+  // soldCount -- Advance Option "Show Unit Sold" (permintaan langsung
+  // pengguna, 5 September 2026). undefined/null berarti toggle-nya mati,
+  // BUKAN "belum pernah terjual" -- jangan render badge sama sekali.
+  soldCount?: number | null;
 }
 
 // PagePreviewSocialFeed -- Modul Koneksi Sosial (migrasi 000069). item.url
@@ -438,6 +442,8 @@ export interface PreviewSourceProduct {
   product_kind?: string;
   external_url?: string;
   category?: string;
+  show_sold_count?: boolean;
+  sold_count?: number;
 }
 
 // getProductCategories/renderCategoryTabs -- permintaan langsung pengguna,
@@ -732,6 +738,9 @@ function renderProductGrid(
                 <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
                 {product.isCourse && (
                   <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
+                )}
+                {typeof product.soldCount === "number" && (
+                  <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.soldCount} terjual</p>
                 )}
                 {priceBlock}
                 {canBuy ? (

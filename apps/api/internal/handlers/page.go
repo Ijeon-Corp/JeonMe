@@ -431,6 +431,12 @@ type publicItem struct {
 	// murni label internal manajemen. Sekarang dipakai frontend untuk
 	// tab/filter kategori di grid Produk (lihat PagePreview.tsx).
 	Category string `json:"category"`
+	// SoldCount -- Advance Option "Show Unit Sold" (migrasi 000093).
+	// Penghitungan SUDAH ada & teruji utk dashboard kreator (ProductHandler.
+	// List, "status='paid' saja") -- di sini NULL kalau kreator tidak
+	// mengaktifkan show_sold_count utk produk ini (lihat query SELECT,
+	// CASE WHEN show_sold_count), bukan berarti belum pernah terjual.
+	SoldCount *int64 `json:"sold_count"`
 }
 
 // GetPublicPage — REQ-F-201: diakses tanpa login di jeon.id/{username}.
@@ -756,8 +762,10 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 				(SELECT SUM(ip.price_idr) FROM bundle_items bi JOIN products ip ON ip.id = bi.item_product_id WHERE bi.bundle_product_id = p.id),
 				p.is_course,
 				(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
-				p.product_kind = 'external_link', p.external_url, p.category
+				p.product_kind = 'external_link', p.external_url, p.category,
+				CASE WHEN p.show_sold_count THEN (SELECT COUNT(*) FROM orders o WHERE o.product_id = p.id AND o.status = 'paid') END
 			FROM products p WHERE p.user_id = $1 AND p.is_active = true AND p.is_donation = false AND p.is_event = false
+				AND (p.release_at IS NULL OR p.release_at <= now())
 			ORDER BY p.is_featured DESC, p.position ASC
 		`, userID)
 		if err == nil {
@@ -766,7 +774,7 @@ func (h *PageHandler) finishPublicPageResponse(c *gin.Context, ctx context.Conte
 				var p publicItem
 				if err := productRows.Scan(&p.ID, &p.Name, &p.PriceIDR, &p.CoverImage, &p.EffectivePriceIDR, &p.IsFlashSaleActive,
 					&p.PwywEnabled, &p.PwywMinPriceIDR, &p.IsBundle, &p.BundleOriginalPriceIDR,
-					&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL, &p.Category); err == nil {
+					&p.IsCourse, &p.ChapterCount, &p.IsExternalLink, &p.ExternalURL, &p.Category, &p.SoldCount); err == nil {
 					resp.Products = append(resp.Products, p)
 				}
 			}
