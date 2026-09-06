@@ -78,6 +78,7 @@ import {
   IconX,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
+import FormField from "@/components/FormField";
 import HalamanSayaTabs from "@/components/HalamanSayaTabs";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
 import Toggle from "@/components/Toggle";
@@ -236,41 +237,9 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
   catalog: IconGrid,
 };
 
-// FormField -- permintaan langsung pengguna, 25 Agustus 2026: "saya mau
-// itu ada kejelasan apa yang diubah misal link di blok ataupun
-// description jadi saya mau buat ux dan ui nya diperjelas untuk user
-// jangan membingungkan". SEBELUMNYA form tambah/edit tautan & blok cuma
-// mengandalkan placeholder (hilang begitu diisi, jadi form dengan banyak
-// field -- terutama "Project Unggulan" yang punya 4 field mirip: badge/
-// deskripsi/tautan CTA/teks CTA -- gampang bikin bingung field mana yang
-// mana). Label eksplisit yang TETAP terlihat, dipakai konsisten di form
-// tambah tautan/blok maupun form edit konten, satu komponen kecil supaya
-// gaya labelnya seragam di semua tempat.
-// <label> MEMBUNGKUS input (bukan sekadar elemen bersebelahan) supaya
-// asosiasinya BENAR secara aksesibilitas (screen reader, klik label ikut
-// fokus ke input) tanpa perlu pasangan id/htmlFor manual di tiap
-// pemanggilan -- efek sampingnya juga bagus: getByLabel() Playwright bisa
-// menemukan field ini di e2e test, tidak cuma bergantung ke placeholder.
-// hint SENGAJA di LUAR <label> (bukan ikut dibungkus) -- pernah dicoba di
-// dalam, tapi teks hint (kalimat bebas) jadi ikut MASUK ke accessible
-// name field ini (label membungkus mengumpulkan SELURUH teks di
-// dalamnya), bikin nama field jadi panjang & bisa TIDAK SENGAJA
-// bertabrakan dgn nama field lain (ditemukan lewat regresi e2e sungguhan:
-// hint field Deskripsi kebetulan memuat kata "judul", jadi getByLabel
-// ("Judul") ikut cocok ke field Deskripsi juga). Dipisah -- <label> HANYA
-// membungkus judul+input (accessible name tetap bersih), hint jadi teks
-// biasa di bawahnya, murni visual.
-function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="flex flex-col gap-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-app-muted">{label}</span>
-        {children}
-      </label>
-      {hint && <p className="text-[10.5px] text-app-muted">{hint}</p>}
-    </div>
-  );
-}
+// FormField -- dipindahkan ke components/FormField.tsx (6 September 2026,
+// redesain drill-down Katalog/FAQ, lihat components/BlockDrilldownEditor.tsx)
+// supaya dipakai bersama tanpa import silang page<->komponen dynamic-loaded.
 
 // Redesain halaman ini mengikuti PERSIS tangkapan layar halaman "Links"
 // Linktree sungguhan yang dikirim pengguna: tombol "+ Add" besar & mencolok

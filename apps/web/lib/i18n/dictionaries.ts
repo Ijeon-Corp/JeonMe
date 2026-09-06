@@ -746,6 +746,12 @@ export const dictionaries = {
             makeFeatured: "Jadikan Featured (kartu thumbnail besar)",
             editContent: "Edit Konten",
             duplicate: "Duplikat",
+            // itemCount/questionCount -- chip jumlah di baris blok Katalog/FAQ
+            // (redesain drill-down gaya Linktree, 6 September 2026), pengganti
+            // visual untuk panel "Kelola Katalog" yang dihapus supaya blok
+            // katalog/FAQ tidak terkesan kosong dari luar sebelum diklik masuk.
+            itemCount: "{n} item",
+            questionCount: "{n} pertanyaan",
           },
           featuredPanel: {
             hasThumbnail: "Thumbnail kartu Featured.",
@@ -2432,6 +2438,35 @@ export const dictionaries = {
           answerAriaLabel: "Jawaban FAQ {n}",
           addQuestionButton: "Tambah Pertanyaan",
         },
+        // blockDrilldown -- BlockDrilldownEditor.tsx, redesain editor blok
+        // Katalog/FAQ jadi drill-down gaya Linktree (permintaan langsung
+        // pengguna, 6 September 2026: "saya mau jika ada blok di dalam blok
+        // buat workflow nya sama seperti di linktree jadi di klik blok nya
+        // lalu masuk ke dalam blok nya baru bisa edit isinya"). Label field
+        // yang SUDAH ada (judul/deskripsi item, pertanyaan/jawaban FAQ, blok
+        // tertanam) dipakai ulang dari catalogPanel/catalogBlocksEditor di
+        // atas -- namespace ini cuma untuk konsep yang benar-benar baru di
+        // navigasi drill-down (tombol kembali, status "sudah tidak ada",
+        // hint autosave, dst).
+        blockDrilldown: {
+          back: "Kembali",
+          notFound: "Item ini sudah tidak ada -- mungkin baru saja dihapus atau dipindahkan.",
+          autosaveHint: "Perubahan tersimpan otomatis.",
+          emptyItems: "Belum ada item -- tambahkan di bawah.",
+          maxItemsReached: "Batas maksimal item tercapai.",
+          untitledItem: "Item tanpa judul",
+          photosHeading: "Foto",
+          photosNestedUnsupported: "Unggah foto cuma didukung untuk item tingkat atas (belum untuk item di dalam katalog bersarang).",
+          blocksHeading: "Blok Tambahan",
+          blocksCount: "{n} blok",
+          emptyQuestions: "Belum ada pertanyaan -- tambahkan di bawah.",
+          newQuestion: "+ Tambah Pertanyaan",
+          untitledQuestion: "Pertanyaan baru",
+          faqIncomplete: "Isi pertanyaan DAN jawaban sebelum menyimpan.",
+          faqMinOne: "Blok FAQ minimal punya 1 pertanyaan -- hapus blok-nya saja lewat menu blok kalau memang tidak perlu.",
+          confirmDeleteQuestionTitle: "Hapus Pertanyaan",
+          confirmDeleteQuestionText: "Hapus pertanyaan ini?",
+        },
         deliveryMethodPanel: {
           methodDownloadLink: "Download Link",
           methodDownloadLinkDesc: "Pembeli mengunduh file yang kamu unggah (default, sudah ada).",
@@ -3442,6 +3477,8 @@ export const dictionaries = {
             makeFeatured: "Make Featured (large thumbnail card)",
             editContent: "Edit Content",
             duplicate: "Duplicate",
+            itemCount: "{n} items",
+            questionCount: "{n} questions",
           },
           featuredPanel: {
             hasThumbnail: "Featured card thumbnail.",
@@ -5127,6 +5164,25 @@ export const dictionaries = {
           answerPlaceholder: "Answer",
           answerAriaLabel: "FAQ answer {n}",
           addQuestionButton: "Add Question",
+        },
+        blockDrilldown: {
+          back: "Back",
+          notFound: "This item no longer exists -- it may have just been deleted or moved.",
+          autosaveHint: "Changes save automatically.",
+          emptyItems: "No items yet -- add one below.",
+          maxItemsReached: "Maximum item limit reached.",
+          untitledItem: "Untitled item",
+          photosHeading: "Photos",
+          photosNestedUnsupported: "Photo upload is only supported for top-level items (not yet for items inside a nested catalog).",
+          blocksHeading: "Additional Blocks",
+          blocksCount: "{n} blocks",
+          emptyQuestions: "No questions yet -- add one below.",
+          newQuestion: "+ Add Question",
+          untitledQuestion: "New question",
+          faqIncomplete: "Fill in both the question AND the answer before saving.",
+          faqMinOne: "An FAQ block needs at least 1 question -- delete the block itself from the block menu if you don't need it.",
+          confirmDeleteQuestionTitle: "Delete Question",
+          confirmDeleteQuestionText: "Delete this question?",
         },
         deliveryMethodPanel: {
           methodDownloadLink: "Download Link",
