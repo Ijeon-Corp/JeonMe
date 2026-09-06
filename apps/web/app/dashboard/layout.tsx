@@ -121,7 +121,6 @@ function buildNavItems(t: (key: string) => string): NavEntry[] {
         { href: "/dashboard/affiliates", label: t("dashboard.extraPages.affiliates"), icon: IconUsers },
         { href: "/dashboard/vouchers", label: t("dashboard.extraPages.vouchers"), icon: IconTag },
         { href: "/dashboard/bundles", label: t("dashboard.extraPages.bundles"), icon: IconGift },
-        { href: "/dashboard/loyalty", label: t("dashboard.extraPages.loyalty"), icon: IconStar },
         { href: "#", label: t("dashboard.nav.memberArea"), icon: IconLock, badge: "segera" },
       ],
     },

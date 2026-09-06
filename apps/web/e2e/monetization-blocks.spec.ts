@@ -1,17 +1,22 @@
 import { test, expect } from "@playwright/test";
 import { registerAndLogin } from "./fixtures";
 
-// Blok monetisasi tambahan (donasi/event/loyalitas) -- shared lintas
-// SEMUA halaman satu akun (lihat CLAUDE.md), belum ada cakupan E2E sama
-// sekali sebelumnya. Satu akun dipakai untuk semua blok (hemat bucket rate-
-// limit auth, lihat catatan panjang di fixtures.ts).
+// Blok monetisasi tambahan (donasi/event) -- shared lintas SEMUA halaman
+// satu akun (lihat CLAUDE.md), belum ada cakupan E2E sama sekali
+// sebelumnya. Satu akun dipakai untuk semua blok (hemat bucket rate-limit
+// auth, lihat catatan panjang di fixtures.ts).
+//
+// Loyalitas SENGAJA dikeluarkan dari test ini (6 September 2026, permintaan
+// langsung pengguna "remove menu royalti dan semua fungsinya" -- menu
+// "Loyalitas" dihapus dari dashboard & halaman publik, backend/DB
+// dibiarkan hidup untuk kemungkinan diaktifkan lagi nanti).
 function toDatetimeLocal(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-test.describe("Blok Monetisasi: Donasi, Event, Loyalitas", () => {
-  test("ketiga blok tersimpan lewat dashboard & tampil di halaman publik", async ({ page }) => {
+test.describe("Blok Monetisasi: Donasi, Event", () => {
+  test("kedua blok tersimpan lewat dashboard & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "monetize");
 
     // Donasi.
@@ -49,17 +54,6 @@ test.describe("Blok Monetisasi: Donasi, Event, Loyalitas", () => {
     // tampil di halaman publik).
     await page.getByRole("switch", { name: `Aktifkan ${eventName}` }).click();
 
-    // Loyalitas: aktifkan program (reward publikasi di luar cakupan test ini
-    // -- widget "Poin Loyalitas" di halaman publik tidak bergantung pada ada
-    // tidaknya reward, cuma pada loyalty_active).
-    await page.goto("/dashboard/loyalty");
-    await page.getByRole("switch", { name: "Aktifkan program loyalitas" }).click();
-    // Toggle ini HANYA mengubah state lokal (setSettings) -- beda dari
-    // pola Toggle lain di app ini yang auto-save di onChange, harus disusul
-    // klik "Simpan Pengaturan" eksplisit (ditemukan lewat percobaan pertama
-    // test ini: toggle ter-klik tapi tidak pernah tersimpan ke server).
-    await page.getByRole("button", { name: "Simpan Pengaturan" }).click();
-
     // Backend Redis "page:<username>" cache (TTL 30 detik) diinvalidasi tiap
     // mutasi blok di atas (donation.go/event.go, lihat
     // invalidateUserPageCache di cache.go) -- toPass jaga-jaga kalau ada
@@ -68,7 +62,6 @@ test.describe("Blok Monetisasi: Donasi, Event, Loyalitas", () => {
       await page.goto(`/${username}`);
       await expect(page.getByText(donationTitle)).toBeVisible({ timeout: 3000 });
       await expect(page.getByText(eventName)).toBeVisible({ timeout: 3000 });
-      await expect(page.getByText("Poin Loyalitas")).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 30000, intervals: [3000] });
   });
 });

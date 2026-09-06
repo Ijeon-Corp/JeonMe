@@ -13,7 +13,6 @@ import {
   IconGift,
   IconHeart,
   IconSearch,
-  IconStar,
   IconTag,
   IconUsers,
 } from "@/components/icons";
@@ -102,12 +101,6 @@ function buildGroups(t: (key: string) => string): { label: string; items: Moneti
           title: t("dashboard.pages.monetisasi.groups.growth.affiliates.title"),
           description: t("dashboard.pages.monetisasi.groups.growth.affiliates.description"),
           icon: IconUsers,
-        },
-        {
-          href: "/dashboard/loyalty",
-          title: t("dashboard.pages.monetisasi.groups.growth.loyalty.title"),
-          description: t("dashboard.pages.monetisasi.groups.growth.loyalty.description"),
-          icon: IconStar,
         },
       ],
     },

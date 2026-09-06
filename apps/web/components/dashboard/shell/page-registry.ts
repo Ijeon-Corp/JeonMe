@@ -53,7 +53,6 @@ export const DASHBOARD_PAGE_REGISTRY: DashboardPageMeta[] = [
   { match: "/dashboard/bundles", titleKey: "dashboard.extraPages.bundles", parentKey: "dashboard.nav.marketing", domain: "marketing" },
   { match: "/dashboard/affiliates", titleKey: "dashboard.extraPages.affiliates", parentKey: "dashboard.nav.marketing", domain: "marketing" },
   { match: "/dashboard/brand", titleKey: "dashboard.extraPages.brand", parentKey: "dashboard.nav.marketing", domain: "marketing" },
-  { match: "/dashboard/loyalty", titleKey: "dashboard.extraPages.loyalty", parentKey: "dashboard.nav.marketing", domain: "marketing" },
 
   // Analitik
   { match: "/dashboard/statistik", titleKey: "dashboard.nav.analytics", domain: "analytics" },

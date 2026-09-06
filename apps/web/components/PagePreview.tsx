@@ -50,7 +50,6 @@ const FaqBlock = dynamic(() => import("@/components/FaqBlock"));
 const FileDownloadBlock = dynamic(() => import("@/components/FileDownloadBlock"));
 const GalleryBlock = dynamic(() => import("@/components/GalleryBlock"));
 const LeadCaptureForm = dynamic(() => import("@/components/LeadCaptureForm"));
-const LoyaltyPointsWidget = dynamic(() => import("@/components/LoyaltyPointsWidget"));
 const MapsEmbedBlock = dynamic(() => import("@/components/MapsEmbedBlock"));
 const SocialProofToast = dynamic(() => import("@/components/SocialProofToast"));
 const VideoEmbedBlock = dynamic(() => import("@/components/VideoEmbedBlock"));
@@ -2473,17 +2472,6 @@ export default function PagePreview({
                 Daftar
               </button>
             )}
-          </div>
-        )}
-
-        {data.loyaltyActive && interactive && (
-          <div className={`mt-8 w-full rounded-xl p-3 text-left ${theme.productCard}`}>
-            <LoyaltyPointsWidget
-              username={data.username}
-              cardClassName=""
-              titleClassName={theme.productTitle}
-              buttonClassName={theme.buyButton}
-            />
           </div>
         )}
 

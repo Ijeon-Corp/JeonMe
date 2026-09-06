@@ -59,7 +59,6 @@ export const SEARCH_INDEX: SearchEntry[] = [
   { label: "Bundel", href: "/dashboard/bundles", description: "Gabungkan beberapa produk jadi satu paket.", icon: IconGift, keywords: ["bundel", "paket"] },
   { label: "Dukungan", href: "/dashboard/donation", description: "Blok dukungan/donasi nominal bebas.", icon: IconHeart, keywords: ["donasi", "dukungan", "support"] },
   { label: "Afiliasi", href: "/dashboard/affiliates", description: "Program afiliasi privat dengan komisi custom.", icon: IconUsers, keywords: ["afiliasi", "komisi", "referral"] },
-  { label: "Loyalitas", href: "/dashboard/loyalty", description: "Poin & reward untuk pembeli berulang.", icon: IconStar, keywords: ["loyalitas", "poin", "reward"] },
   { label: "Event", href: "/dashboard/events", description: "Jual tiket event online/offline.", icon: IconCalendar, keywords: ["event", "acara", "tiket"] },
   { label: "Kelas & Kursus", href: "/dashboard/courses", description: "Kursus video terstruktur per-bab.", icon: IconBook, keywords: ["kelas", "kursus", "course"] },
   { label: "Audiens", href: "/dashboard/audience", description: "Kontak subscriber & pembeli, lead capture.", icon: IconInbox, keywords: ["audiens", "subscriber", "lead"] },
