@@ -741,6 +741,11 @@ type adminSummaryResponse struct {
 	// halaman review sendiri -- cuma terlihat kalau admin sengaja membuka
 	// /admin/kyc, beda dari laporan/penarikan yang sudah tampil di sini.
 	PendingKyc int64 `json:"pending_kyc"`
+	// PendingSupportChats -- fitur Live Chat (permintaan langsung pengguna,
+	// 7 September 2026), pola SAMA PERSIS PendingKyc di atas: tanpa ini
+	// antrian chat baru tidak akan terlihat sama sekali kecuali admin
+	// sengaja buka /admin/support-chat.
+	PendingSupportChats int64 `json:"pending_support_chats"`
 }
 
 // GetSummary — REQ-F-703.
@@ -777,6 +782,18 @@ func (h *AdminHandler) GetSummary(c *gin.Context) {
 
 	if err := h.DB.QueryRow(ctx, `SELECT COUNT(*) FROM kyc_verifications WHERE status = 'pending'`).Scan(&resp.PendingKyc); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung KYC tertunda"})
+		return
+	}
+
+	// Thread "perlu dibalas" -- pesan TERBARU tiap kreator berasal dari
+	// kreator (bukan status kolom, murni urutan waktu -- lihat catatan
+	// panjang di migrasi 000095 & SupportChatHandler.AdminList).
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(*) FROM (
+			SELECT DISTINCT ON (user_id) sender_role FROM support_messages ORDER BY user_id, created_at DESC
+		) latest WHERE sender_role = 'creator'
+	`).Scan(&resp.PendingSupportChats); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung live chat tertunda"})
 		return
 	}
 

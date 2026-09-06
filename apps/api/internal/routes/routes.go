@@ -88,6 +88,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	admin := handlers.NewAdminHandler(db, rdb)
 	admin.Queue = queueClient
 	kyc := handlers.NewKycHandler(db, s3)
+	supportChat := handlers.NewSupportChatHandler(db)
 	collaborator := handlers.NewCollaboratorHandler(db, queueClient)
 	settingsProfile := handlers.NewSettingsProfileHandler(db, rdb)
 	onboarding := handlers.NewOnboardingHandler(db)
@@ -145,6 +146,15 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// pembeli sah di tengah menunggu, bukan cuma mencegah
 		// penyalahgunaan.
 		checkoutStatusRateLimit := middleware.RateLimit(rdb, "checkout-status", 60, time.Minute)
+		// supportChatSendRateLimit -- Live Chat dukungan (permintaan langsung
+		// pengguna, 7 September 2026), sekelas leads/contact-form (kirim
+		// teks pengguna). supportChatPollRateLimit -- SupportChatWidget.tsx
+		// memanggil GET /support-chat/messages berulang: ~4.5 detik saat
+		// panel terbuka, ~25 detik saat tertutup -- limit sekelas
+		// leads/kyc (20/menit) akan memblokir pemakaian wajar satu kreator
+		// yang sedang aktif chatting, jadi disamakan dgn checkoutStatusRateLimit.
+		supportChatSendRateLimit := middleware.RateLimit(rdb, "support-chat-send", 20, time.Minute)
+		supportChatPollRateLimit := middleware.RateLimit(rdb, "support-chat-poll", 60, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -622,6 +632,18 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			dashboard.POST("/notifications/:id/read", notification.MarkRead)
 			dashboard.POST("/notifications/read-all", notification.MarkAllRead)
 
+			// Live chat dukungan (permintaan langsung pengguna, 7 September
+			// 2026) -- balasan dari staf Jeon.id sungguhan (BUKAN bot). FAQ
+			// instan ada di frontend (lib/help-faq.ts, konten SAMA dengan
+			// halaman Bantuan), TIDAK lewat backend sama sekali (murni
+			// lokal, tanpa round-trip). Lihat migrasi 000095 &
+			// handlers.SupportChatHandler. TIDAK dipasangi ActAsOwner --
+			// kolaborator tidak boleh chat dengan staf Jeon.id atas nama
+			// pemilik, sama alasan balance/KYC/settings di atas.
+			dashboard.GET("/support-chat/messages", supportChatPollRateLimit, supportChat.ListMine)
+			dashboard.POST("/support-chat/messages", supportChatSendRateLimit, supportChat.SendMine)
+			dashboard.POST("/support-chat/read", supportChat.MarkMineRead)
+
 			// Modul Settings §5 (Security) -- sama seperti profile di atas,
 			// TIDAK dipasangi ActAsOwner (kolaborator tidak boleh mengganti
 			// password/2FA/sesi pemilik).
@@ -677,6 +699,14 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.GET("/kyc/:userId", kyc.AdminGetDetail)
 			adminGroup.PATCH("/kyc/:userId", kyc.AdminReview)
 			adminGroup.PATCH("/kyc/:userId/revoke", kyc.AdminRevoke)
+
+			// Live chat dukungan (permintaan langsung pengguna, 7 September
+			// 2026): satu kotak masuk lintas kreator, filter default
+			// "needs_reply" (thread yg pesan terakhirnya dari kreator) --
+			// lihat SupportChatHandler & migrasi 000095.
+			adminGroup.GET("/support-chat", supportChat.AdminList)
+			adminGroup.GET("/support-chat/:userId", supportChat.AdminGetThread)
+			adminGroup.POST("/support-chat/:userId/reply", supportChat.AdminReply)
 
 			// Moderasi tautan sensitif -- permintaan langsung pengguna, 22
 			// Agustus 2026, lihat catatan lengkap di handlers.LinkModerationChecker.
