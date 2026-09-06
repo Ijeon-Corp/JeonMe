@@ -1593,13 +1593,23 @@ export default function DashboardLinksPage() {
       blockUrl = editShowcaseUrl.trim();
       blockDescription = editShowcaseDescription.trim();
       blockData = { badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
-    } else {
+    } else if (link.block_type === "faq") {
+      // Cabang ini cuma tercapai kalau builderV2 OFF -- flag ON menyalurkan
+      // FAQ tingkat atas lewat BlockDrilldownEditor/handleSaveFaqItems
+      // (tombol "Edit Konten"-nya diarahkan ke drilldown, bukan panel ini
+      // lagi). Tetap dijaga di sini untuk jalur rollback flag.
       const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
       if (items.length === 0) {
         setError(t("dashboard.pages.links.errors.faqRequired"));
         return;
       }
       blockData = { items };
+    } else {
+      // Dulu `else` polos menampung FAQ tanpa cek block_type eksplisit --
+      // diperbaiki 6 September 2026 (audit BlockDrilldownEditor) supaya
+      // tipe blok yang TIDAK dikenal fungsi ini tidak diam-diam tersimpan
+      // sebagai data FAQ.
+      return;
     }
     setError(null);
     setSavingContent(true);
@@ -2409,15 +2419,19 @@ export default function DashboardLinksPage() {
                   {link.click_count.toLocaleString("id-ID")}
                 </span>
                 {(link.block_type === "video" ||
-                  link.block_type === "faq" ||
                   link.block_type === "maps" ||
                   link.block_type === "text" ||
                   link.block_type === "accordion" ||
                   link.block_type === "project_showcase" ||
-                  (link.block_type === "catalog" && builderV2)) && (
+                  (link.block_type === "faq" && !builderV2) ||
+                  ((link.block_type === "catalog" || link.block_type === "faq") && builderV2)) && (
                   <button
                     type="button"
-                    onClick={() => (link.block_type === "catalog" ? setDrilldownBlockId(link.id) : openContentEdit(link))}
+                    onClick={() =>
+                      (link.block_type === "catalog" || link.block_type === "faq") && builderV2
+                        ? setDrilldownBlockId(link.id)
+                        : openContentEdit(link)
+                    }
                     className="flex-shrink-0 rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
                   >
                     {t("dashboard.pages.links.linkCard.editContent")}
@@ -3158,7 +3172,7 @@ export default function DashboardLinksPage() {
                 ))}
 
               {(link.block_type === "video" ||
-                link.block_type === "faq" ||
+                (link.block_type === "faq" && !builderV2) ||
                 link.block_type === "maps" ||
                 link.block_type === "text" ||
                 link.block_type === "accordion" ||
@@ -3281,7 +3295,13 @@ export default function DashboardLinksPage() {
                         />
                       </FormField>
                     </div>
-                  ) : (
+                  ) : link.block_type === "faq" ? (
+                    // Cabang ini cuma tercapai kalau builderV2 OFF (lihat
+                    // guard render di atas) -- flag ON menyalurkan FAQ
+                    // tingkat atas lewat BlockDrilldownEditor. Dulu `else`
+                    // polos tanpa cek block_type eksplisit -- diperbaiki 6
+                    // September 2026 (audit BlockDrilldownEditor) supaya
+                    // tipe blok lain tidak diam-diam dirender sebagai FAQ.
                     <div className="flex flex-col gap-2">
                       {editFaqItems.map((item, i) => (
                         <div key={i} className="flex flex-col gap-2 rounded-md border border-app-border p-2">
@@ -3320,7 +3340,7 @@ export default function DashboardLinksPage() {
                         {t("dashboard.pages.links.blockForm.faq.addQuestion")}
                       </button>
                     </div>
-                  )}
+                  ) : null}
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
                       {t("dashboard.pages.links.common.cancel")}
