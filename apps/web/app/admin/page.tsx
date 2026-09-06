@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminSummary, ApiError, getAdminSummary } from "@/lib/api-client";
 import { IconChart, IconFlag, IconShield, IconUsers, IconWallet } from "@/components/icons";
+import { MessageCircle } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { useErrorToast } from "@/lib/use-error-toast";
 
@@ -88,11 +89,28 @@ export default function AdminSummaryPage() {
                 <span className="block font-serifDisplay text-2xl font-semibold text-jeon-purple">{summary.pending_kyc}</span>
               </span>
             </Link>
+
+            {/* Live Chat Tertunda -- fitur Live Chat (7 September 2026),
+                pola sama KYC Tertunda di atas: tanpa ini backlog chat baru
+                tidak tampil sama sekali kecuali admin sengaja buka
+                /admin/support-chat. */}
+            <Link
+              href="/admin/support-chat"
+              className="flex items-center gap-3 rounded-jmd border border-jeon-purple/10 bg-app-surface p-5 shadow-refined transition-all hover:-translate-y-0.5 hover:border-jeon-purple/40"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-lavender/40 text-jeon-purple">
+                <MessageCircle className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="block text-xs font-semibold text-app-muted">Live Chat Tertunda</span>
+                <span className="block font-serifDisplay text-2xl font-semibold text-jeon-purple">{summary.pending_support_chats}</span>
+              </span>
+            </Link>
           </section>
 
-          {(summary.pending_reports > 0 || summary.pending_payouts > 0 || summary.pending_kyc > 0) && (
+          {(summary.pending_reports > 0 || summary.pending_payouts > 0 || summary.pending_kyc > 0 || summary.pending_support_chats > 0) && (
             <p className="mt-4 text-xs text-app-muted">
-              Ada hal yang perlu ditinjau -- klik kartu &quot;Laporan Tertunda&quot;, &quot;Penarikan Tertunda&quot;, atau &quot;KYC Tertunda&quot; di atas.
+              Ada hal yang perlu ditinjau -- klik kartu &quot;Laporan Tertunda&quot;, &quot;Penarikan Tertunda&quot;, &quot;KYC Tertunda&quot;, atau &quot;Live Chat Tertunda&quot; di atas.
             </p>
           )}
         </>

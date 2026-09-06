@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import { Me, clearToken, getMe, logout as apiLogout } from "@/lib/api-client";
-import { ShieldAlert } from "lucide-react";
+import { MessageCircle, ShieldAlert } from "lucide-react";
 import {
   IconChart,
   IconClose,
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/reports", label: "Laporan", icon: IconFlag },
   { href: "/admin/payouts", label: "Penarikan", icon: IconWallet },
   { href: "/admin/kyc", label: "Review KYC", icon: IconShield },
+  { href: "/admin/support-chat", label: "Live Chat", icon: MessageCircle },
   { href: "/admin/moderasi", label: "Moderasi Tautan", icon: ShieldAlert },
 ];
 
