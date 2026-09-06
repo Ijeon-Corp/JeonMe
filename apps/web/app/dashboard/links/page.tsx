@@ -2393,6 +2393,7 @@ export default function DashboardLinksPage() {
                   link.block_type === "faq" ||
                   link.block_type === "maps" ||
                   link.block_type === "text" ||
+                  link.block_type === "accordion" ||
                   link.block_type === "project_showcase") && (
                   <button
                     type="button"
