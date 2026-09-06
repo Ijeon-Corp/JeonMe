@@ -87,6 +87,7 @@ import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { dashRedesignEnabled } from "@/lib/dashboard-flags";
+import { maxCatalogImagesPerItem, maxCatalogItems } from "@/lib/catalog-blocks";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -110,10 +111,9 @@ const CatalogBlocksEditor = dynamic(() => import("@/components/CatalogBlocksEdit
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
 // sumber kebenaran validasinya.
 const maxGalleryImages = 9;
-// maxCatalogItems/maxCatalogImagesPerItem -- SAMA PERSIS batas backend
-// (maxCatalogItems/maxCatalogImagesPerItem, links.go), murni utk UI.
-const maxCatalogItems = 20;
-const maxCatalogImagesPerItem = 6;
+// maxCatalogItems/maxCatalogImagesPerItem -- dipindah ke lib/catalog-blocks.ts
+// (6 September 2026, redesain editor katalog jadi drill-down) supaya satu
+// sumber kebenaran dengan BlockDrilldownEditor.tsx, diimpor di atas.
 // PREMIUM_EXTRA_PAGE_LIMIT -- SAMA PERSIS batas backend (premiumExtraPageLimit,
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
