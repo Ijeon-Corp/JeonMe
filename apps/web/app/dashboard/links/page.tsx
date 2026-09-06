@@ -107,6 +107,7 @@ const LocationPickerModal = dynamic(() => import("@/components/LocationPickerMod
 const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 const AddLinkModal = dynamic(() => import("@/components/AddLinkModal"));
 const CatalogBlocksEditor = dynamic(() => import("@/components/CatalogBlocksEditor").then((mod) => mod.CatalogBlocksEditor));
+const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEditor"));
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
@@ -467,6 +468,14 @@ export default function DashboardLinksPage() {
   const [catalogItemImageUploadingKey, setCatalogItemImageUploadingKey] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
+  // drilldownBlockId -- id blok "catalog"/"faq" yang sedang dibuka lewat
+  // BlockDrilldownEditor (redesain 6 September 2026, gaya Linktree: klik
+  // blok -> masuk ke dalamnya). `drilldownBlock` LIVE (bukan snapshot) --
+  // di-lookup ulang dari `links` tiap render, jadi update optimis dari
+  // saveCatalogItems otomatis mengalir ke frame yang sedang terbuka tanpa
+  // perlu sinkronisasi manual.
+  const [drilldownBlockId, setDrilldownBlockId] = useState<string | null>(null);
+  const drilldownBlock = links.find((l) => l.id === drilldownBlockId) ?? null;
   const [editVideoUrl, setEditVideoUrl] = useState("");
   const [editFaqItems, setEditFaqItems] = useState<{ question: string; answer: string }[]>([]);
   const [editMapsUrl, setEditMapsUrl] = useState("");
@@ -1067,11 +1076,34 @@ export default function DashboardLinksPage() {
     await saveCatalogItems(link, catalogItemsOf(link).filter((it) => it.id !== itemId));
   }
 
-  async function handleCatalogImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, itemId: string) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  // handleSaveFaqItems -- blok FAQ TINGKAT ATAS (bukan tertanam di dalam
+  // katalog), dipakai tombol Simpan eksplisit BlockDrilldownEditor. BEDA
+  // sengaja dari handleSaveContent (panel FAQ inline lama): update optimis
+  // lokal seperti saveCatalogItems, BUKAN refreshLinks() reload penuh --
+  // supaya frame yang sedang terbuka tidak "berkedip" balik ke data lama
+  // sebelum server selesai merespons. Tombol Simpan eksplisit (bukan
+  // autosave onBlur) WAJIB di sini -- lihat komentar panjang di
+  // BlockDrilldownEditor.tsx soal validateBlockDataAtDepth di backend yang
+  // mewajibkan question+answer lengkap persis di depth==1.
+  async function handleSaveFaqItems(link: LinkItem, items: { question: string; answer: string }[]): Promise<boolean> {
+    setError(null);
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, items } } : l)));
+    try {
+      await updateLink(link.id, { block_data: { items } });
+      return true;
+    } catch (err) {
+      setLinks(previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
+      return false;
+    }
+  }
 
+  // uploadCatalogItemImageFile -- inti handleCatalogImageUpload, dipisah dari
+  // event <input type=file> (6 September 2026, BlockDrilldownEditor.tsx
+  // memanggil File langsung dari onChange-nya sendiri, bukan lewat event
+  // React di sini).
+  async function uploadCatalogItemImageFile(link: LinkItem, itemId: string, file: File) {
     const key = `${link.id}:${itemId}`;
     setCatalogItemImageUploadingKey(key);
     setError(null);
@@ -1089,6 +1121,13 @@ export default function DashboardLinksPage() {
     } finally {
       setCatalogItemImageUploadingKey(null);
     }
+  }
+
+  async function handleCatalogImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, itemId: string) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadCatalogItemImageFile(link, itemId, file);
   }
 
   async function handleCatalogImageDelete(link: LinkItem, itemId: string, index: number) {
@@ -1471,6 +1510,11 @@ export default function DashboardLinksPage() {
         description: blockType === "project_showcase" ? blockShowcaseDescription.trim() : undefined,
       });
       setLinks((prev) => [...prev, created]);
+      // Auto-buka BlockDrilldownEditor setelah blok "catalog" baru dibuat --
+      // tanpa ini kreator mendarat di baris kosong tanpa cara masuk (blok
+      // "faq" tidak butuh ini, form buat FAQ sudah mengumpulkan pertanyaan
+      // pertama di awal).
+      if (blockType === "catalog" && builderV2) setDrilldownBlockId(created.id);
       setAddingBlock(false);
       setBlockTitle("");
       setBlockVideoUrl("");
@@ -1630,7 +1674,13 @@ export default function DashboardLinksPage() {
           begitu ruang yang tersedia untuk kolom ini turun di bawah lebar
           intrinsik itu, grid dipaksa melebar melebihi kontainer, mendorong
           kolom pratinjau (360px) & seluruh halaman ikut rusak/overflow. */}
-      <div className="min-w-0">
+      {/* min-w-0 disembunyikan (BUKAN unmount) lewat "hidden" saat
+          BlockDrilldownEditor terbuka (6 September 2026, redesain gaya
+          Linktree) -- display:none menjaga posisi scroll & state DOM daftar
+          supaya kembali dari drill-down mendarat persis di tempat semula,
+          dan otomatis mencegah pill halaman-tambahan (switchToPage) diklik
+          selagi sedang di dalam editor blok. */}
+      <div className={`min-w-0 ${drilldownBlock ? "hidden" : ""}`}>
         {/* Pill navigasi halaman -- Modul Halaman Tambahan Fase 2 (permintaan
             langsung pengguna, 28 Agustus 2026, referensi UI kompetitor "+
             Page" + navigation pill): "Home" = halaman utama, satu pill per
@@ -2363,10 +2413,11 @@ export default function DashboardLinksPage() {
                   link.block_type === "maps" ||
                   link.block_type === "text" ||
                   link.block_type === "accordion" ||
-                  link.block_type === "project_showcase") && (
+                  link.block_type === "project_showcase" ||
+                  (link.block_type === "catalog" && builderV2)) && (
                   <button
                     type="button"
-                    onClick={() => openContentEdit(link)}
+                    onClick={() => (link.block_type === "catalog" ? setDrilldownBlockId(link.id) : openContentEdit(link))}
                     className="flex-shrink-0 rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
                   >
                     {t("dashboard.pages.links.linkCard.editContent")}
@@ -2767,8 +2818,14 @@ export default function DashboardLinksPage() {
                   bisa multiple). SATU panel utk SEMUA (tambah item, edit
                   judul/deskripsi, kelola foto per item) -- SENGAJA tidak
                   dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
-                  supaya tidak terasa terpecah 2 tempat berbeda. */}
-              {link.block_type === "catalog" && (
+                  supaya tidak terasa terpecah 2 tempat berbeda.
+
+                  Digantikan BlockDrilldownEditor (6 September 2026, gaya
+                  Linktree) di balik flag builderV2 -- panel ini TETAP hidup
+                  utk NEXT_PUBLIC_DASH_REDESIGN_OFF=page_builder (rollback
+                  tanpa revert kode), dihapus di pembersihan terpisah setelah
+                  2 rilis stabil. */}
+              {link.block_type === "catalog" && !builderV2 && (
                 <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.catalogPanel.noItems")}</p>}
                   {catalogItemsOf(link).map((item) => {
@@ -3289,6 +3346,23 @@ export default function DashboardLinksPage() {
         </ul>
 
       </div>
+
+      {drilldownBlock && (
+        <BlockDrilldownEditor
+          link={drilldownBlock}
+          isPremium={page?.is_premium ?? false}
+          uploadingItemId={
+            catalogItemImageUploadingKey?.startsWith(`${drilldownBlock.id}:`)
+              ? catalogItemImageUploadingKey.slice(drilldownBlock.id.length + 1)
+              : null
+          }
+          onCommitCatalogRoot={(items) => saveCatalogItems(drilldownBlock, items)}
+          onSaveFaqItems={(items) => handleSaveFaqItems(drilldownBlock, items)}
+          onUploadImage={(itemId, file) => uploadCatalogItemImageFile(drilldownBlock, itemId, file)}
+          onDeleteImage={(itemId, index) => handleCatalogImageDelete(drilldownBlock, itemId, index)}
+          onExit={() => setDrilldownBlockId(null)}
+        />
+      )}
 
       {addModalOpen && (
         <AddLinkModal

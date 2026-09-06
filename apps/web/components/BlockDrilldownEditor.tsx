@@ -64,7 +64,7 @@ function blockSegCount(path: CatalogSeg[]): number {
 export default function BlockDrilldownEditor({
   link,
   isPremium,
-  uploadingKey,
+  uploadingItemId,
   onCommitCatalogRoot,
   onSaveFaqItems,
   onUploadImage,
@@ -73,7 +73,10 @@ export default function BlockDrilldownEditor({
 }: {
   link: LinkItem;
   isPremium: boolean;
-  uploadingKey: string | null;
+  // uploadingItemId -- id item katalog yang FOTONYA sedang diunggah (scoped
+  // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
+  // milik parent), null kalau tidak ada unggahan berjalan.
+  uploadingItemId: string | null;
   onCommitCatalogRoot: (items: CatalogItem[]) => void;
   onSaveFaqItems: (items: FaqQA[]) => Promise<boolean>;
   onUploadImage: (itemId: string, file: File) => void;
@@ -252,7 +255,7 @@ export default function BlockDrilldownEditor({
               <CatalogItemFrame
                 item={item}
                 canUploadImages={canUploadImages}
-                uploadingKey={uploadingKey}
+                uploadingItemId={uploadingItemId}
                 onUploadImage={(file) => onUploadImage(item.id, file)}
                 onDeleteImage={(index) => onDeleteImage(item.id, index)}
                 onUpdateField={(field, value) => updateItemField(frame.path, field, value)}
@@ -443,7 +446,7 @@ function CatalogItemsFrame({
 function CatalogItemFrame({
   item,
   canUploadImages,
-  uploadingKey,
+  uploadingItemId,
   onUploadImage,
   onDeleteImage,
   onUpdateField,
@@ -456,7 +459,10 @@ function CatalogItemFrame({
 }: {
   item: CatalogItem;
   canUploadImages: boolean;
-  uploadingKey: string | null;
+  // uploadingItemId -- id item katalog yang FOTONYA sedang diunggah (scoped
+  // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
+  // milik parent), null kalau tidak ada unggahan berjalan.
+  uploadingItemId: string | null;
   onUploadImage: (file: File) => void;
   onDeleteImage: (index: number) => void;
   onUpdateField: (field: "title" | "description", value: string) => void;
@@ -470,7 +476,7 @@ function CatalogItemFrame({
   const { t } = useLocale();
   const blocks = item.blocks ?? [];
   const atLimit = blocks.length >= maxCatalogItemBlocks || depth >= maxCatalogDepth;
-  const isUploading = uploadingKey !== null;
+  const isUploading = uploadingItemId === item.id;
 
   return (
     <div className="flex flex-col gap-3">
