@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { THEME_PRESETS } from "@/lib/api-client";
-import { DOODLE_THEME_NAMES, PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
+import { DOODLE_THEME_NAMES, JOYFUL_THEME_NAMES, PAGE_THEMES, THREE_D_THEME_NAMES, VIDEO_THEME_NAMES, WALLPAPER_THEME_NAMES } from "@/lib/page-themes";
 import { IconCheck, IconLock, IconPaintbrush } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 
@@ -34,12 +34,14 @@ const GRADIENT_PRESETS = THEME_PRESETS.filter(
     !WALLPAPER_THEME_NAMES.includes(t) &&
     !THREE_D_THEME_NAMES.includes(t) &&
     !VIDEO_THEME_NAMES.includes(t) &&
-    !DOODLE_THEME_NAMES.includes(t)
+    !DOODLE_THEME_NAMES.includes(t) &&
+    !JOYFUL_THEME_NAMES.includes(t)
 );
 const WALLPAPER_PRESETS = THEME_PRESETS.filter((t) => WALLPAPER_THEME_NAMES.includes(t));
 const THREE_D_PRESETS = THEME_PRESETS.filter((t) => THREE_D_THEME_NAMES.includes(t));
 const VIDEO_PRESETS = THEME_PRESETS.filter((t) => VIDEO_THEME_NAMES.includes(t));
 const DOODLE_PRESETS = THEME_PRESETS.filter((t) => DOODLE_THEME_NAMES.includes(t));
+const JOYFUL_PRESETS = THEME_PRESETS.filter((t) => JOYFUL_THEME_NAMES.includes(t));
 
 function ThemeTile({
   active,
@@ -89,7 +91,7 @@ function ThemeTile({
 
 export default function ThemeGallery({ value, onChange, customTile }: ThemeGalleryProps) {
   const { t } = useLocale();
-  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video" | "doodle">("gradien");
+  const [tab, setTab] = useState<"gradien" | "wallpaper" | "3d" | "video" | "doodle" | "joyful">("gradien");
 
   return (
     <div>
@@ -139,6 +141,15 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
         >
           {t("dashboard.components.themeGallery.tabDoodle")}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("joyful")}
+          className={`flex-shrink-0 border-b-[3px] px-3 py-2 text-sm font-semibold ${
+            tab === "joyful" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
+          }`}
+        >
+          {t("dashboard.components.themeGallery.tabJoyful")}
+        </button>
       </div>
 
       {/* Kartu galeri portrait ala Linktree: sampel huruf "Aa" di kiri atas
@@ -164,7 +175,9 @@ export default function ThemeGallery({ value, onChange, customTile }: ThemeGalle
           ? THREE_D_PRESETS
           : tab === "video"
           ? VIDEO_PRESETS
-          : DOODLE_PRESETS
+          : tab === "doodle"
+          ? DOODLE_PRESETS
+          : JOYFUL_PRESETS
         ).map((theme) => {
           const meta = PAGE_THEMES[theme];
           // "Live Wallpaper" -- 3 preset flow/pulse/drift pakai kelas CSS

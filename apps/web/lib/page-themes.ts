@@ -177,16 +177,33 @@ export type PageThemeName =
   | "code"
   // "joyful" -- permintaan langsung pengguna, 6 September 2026: "buatkan
   // template quick setup sesuai tema website ... template tema joyfull".
-  // SATU-SATUNYA preset yang sengaja meniru identitas visual jeon.id
-  // SENDIRI (marketing site + dashboard redesign "Modern Playful Creator
+  // Awalnya SATU preset, sengaja meniru identitas visual jeon.id SENDIRI
+  // (marketing site + dashboard redesign "Modern Playful Creator
   // Platform") -- kartu bertepi tebal #111111 + shadow-brutal, tombol
-  // lime cerah, aksen ungu/pink brand (#7657ff/#ffafd0/#d7ff60, SAMA
-  // persis nilai --jeon-purple/--jeon-pink/--jeon-lime di globals.css),
-  // BEDA dari candy/blush/lavender/peach yang pastel tapi generik (warna
-  // Tailwind biasa, bukan brand jeon.id). Lihat catatan lengkap di entri
-  // PAGE_THEMES.joyful kenapa border/shadow brutal (bukan border tipis
-  // seperti 100+ preset lain) sengaja dipertahankan di sini.
+  // cerah, aksen ungu/pink/lime brand (#7657ff/#ffafd0/#d7ff60/#ff6448,
+  // SAMA persis nilai --jeon-purple/--jeon-pink/--jeon-lime/--jeon-coral
+  // di globals.css), BEDA dari candy/blush/lavender/peach yang pastel
+  // tapi generik (warna Tailwind biasa, bukan brand jeon.id).
+  //
+  // Diperluas jadi KATEGORI/TAB GALERI TERSENDIRI 9 preset lagi
+  // (permintaan susulan langsung, hari yang sama: "tambahan kategori
+  // tema baru joyfull dan isi 10 tema") -- lihat JOYFUL_THEME_NAMES di
+  // bawah utk daftar tab, tiap entri komentar sendiri-sendiri di
+  // PAGE_THEMES soal kombinasi warna spesifiknya. Semua 10 preset BERBAGI
+  // bahasa visual yang SAMA (border-2 #111111 + shadow-brutal + font
+  // Poppins) supaya terasa satu keluarga tema yang koheren, cuma beda
+  // kombinasi/urutan warna dari 5 warna brand yang sama -- BUKAN teknik
+  // render berbeda seperti kategori Wallpaper/3D/Video/Doodle lainnya.
   | "joyful"
+  | "bliss"
+  | "cheer"
+  | "spark"
+  | "sunny"
+  | "breezy"
+  | "festive"
+  | "zesty"
+  | "dreamy"
+  | "radiant"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -298,6 +315,32 @@ export const DOODLE_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
   "lens",
   "kind",
   "code",
+];
+
+// JOYFUL_THEME_NAMES -- tab GALERI keenam (dashboard/design/theme/page.tsx
+// lewat ThemeGallery.tsx, persis di sebelah "Doodle"), permintaan langsung
+// pengguna, 6 September 2026: "tambahan kategori tema baru joyfull dan isi
+// 10 tema". BEDA dari 4 kategori lain (Wallpaper=foto asli, 3D/Live=ilusi
+// kedalaman CSS, Video=file video sungguhan, Doodle=pola SVG garis tangan
+// di-tile) -- kategori ini bukan soal TEKNIK render, semuanya gradien CSS
+// polos sama seperti tab "Warna & Gradien" default. Yang menyatukan
+// kesepuluh preset ini jadi satu kategori tersendiri: SEMUA sengaja
+// meniru identitas visual jeon.id sendiri (border-2 #111111 + shadow-
+// brutal + font Poppins + palet 5 warna brand yang sama), bukan sekadar
+// gradien pastel generik seperti preset lain -- lihat catatan lengkap di
+// PageThemeName di atas & tiap entri PAGE_THEMES untuk kombinasi warna
+// spesifik masing-masing.
+export const JOYFUL_THEME_NAMES: Exclude<PageThemeName, "custom">[] = [
+  "joyful",
+  "bliss",
+  "cheer",
+  "spark",
+  "sunny",
+  "breezy",
+  "festive",
+  "zesty",
+  "dreamy",
+  "radiant",
 ];
 
 export type PageTheme = {
@@ -3261,9 +3304,9 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     // jeon.id sendiri -- lihat catatan lengkap di PageThemeName di atas.
     // border/shadow SENGAJA brutal (2px #111111 + shadow-brutal, sama
     // seperti kartu di landing/ProductShowcase.tsx & Hero.tsx), BUKAN
-    // border tipis seperti semua preset lain di file ini -- ini theme
-    // SATU-SATUNYA yang memang dirancang mereplikasi identitas brand
-    // sendiri, bukan sekadar palet pastel baru.
+    // border tipis seperti semua preset lain di file ini -- flagship
+    // kategori "Joyful" (JOYFUL_THEME_NAMES), 9 varian lain di bawah
+    // berbagi bahasa visual yang sama, cuma beda kombinasi warna brand.
     label: "Joyful",
     page: "bg-gradient-to-b from-[#d9ceff] via-[#fdf1f5] to-[#fff8ef]",
     glow: "bg-gradient-to-br from-[#7657ff]/30 via-[#ffafd0]/25 to-[#d7ff60]/20",
@@ -3281,6 +3324,210 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     swatch: "#7657ff",
     previewBg: "linear-gradient(160deg, #d9ceff 0%, #fdf1f5 55%, #fff8ef 100%)",
     previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  bliss: {
+    // Segar & lapang -- lime pucat ke lavender pucat lewat putih, tombol
+    // coral (kebalikan komposisi "joyful" yang ungu->krem dgn tombol
+    // lime) supaya tetap terasa beda meski satu keluarga warna brand.
+    label: "Bliss",
+    page: "bg-gradient-to-b from-[#f7ffe0] via-white to-[#ede7ff]",
+    glow: "bg-gradient-to-br from-[#d7ff60]/30 via-white/40 to-[#7657ff]/20",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-[#ff6448] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ff6448",
+    previewBg: "linear-gradient(160deg, #f7ffe0 0%, #ffffff 55%, #ede7ff 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  cheer: {
+    // Hangat & bertenaga -- coral pucat ke lime pucat lewat krem, tombol
+    // ungu solid sebagai aksen paling gelap/kontras di grup ini.
+    label: "Cheer",
+    page: "bg-gradient-to-b from-[#ffe4de] via-[#fff8ef] to-[#f7ffe0]",
+    glow: "bg-gradient-to-br from-[#ff6448]/25 via-[#fff8ef]/40 to-[#d7ff60]/20",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#d94a2f]",
+    buyButton: "bg-[#7657ff] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#7657ff",
+    previewBg: "linear-gradient(160deg, #ffe4de 0%, #fff8ef 55%, #f7ffe0 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  spark: {
+    // Playful & manis -- pink ke lavender lewat putih, tombol lime cerah
+    // sebagai titik fokus (kombinasi paling "girly-pop" di grup ini).
+    label: "Spark",
+    page: "bg-gradient-to-b from-[#ffe9f2] via-[#ede7ff] to-white",
+    glow: "bg-gradient-to-br from-[#ffafd0]/30 via-[#7657ff]/15 to-transparent",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-[#d7ff60] text-ink font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ffafd0",
+    previewBg: "linear-gradient(160deg, #ffe9f2 0%, #ede7ff 55%, #ffffff 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  sunny: {
+    // Cerah & hangat -- lime ke coral pucat lewat krem, tombol pink
+    // sebagai penyeimbang warna dingin di tengah palet hangat.
+    label: "Sunny",
+    page: "bg-gradient-to-b from-[#f7ffe0] via-[#fff8ef] to-[#ffe4de]",
+    glow: "bg-gradient-to-br from-[#d7ff60]/30 via-[#fff8ef]/30 to-[#ff6448]/15",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#d94a2f]",
+    buyButton: "bg-[#ffafd0] text-ink font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ffafd0",
+    previewBg: "linear-gradient(160deg, #f7ffe0 0%, #fff8ef 55%, #ffe4de 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  breezy: {
+    // Tenang & lapang -- lavender ke lime pucat lewat putih, tombol coral
+    // sebagai satu-satunya aksen hangat di komposisi yang dominan dingin.
+    label: "Breezy",
+    page: "bg-gradient-to-b from-[#ede7ff] via-white to-[#f7ffe0]",
+    glow: "bg-gradient-to-br from-[#7657ff]/20 via-white/40 to-[#d7ff60]/20",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-[#ff6448] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ff6448",
+    previewBg: "linear-gradient(160deg, #ede7ff 0%, #ffffff 55%, #f7ffe0 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  festive: {
+    // Ramai & warna-warni -- pink ke lavender lewat lime pucat, 3 warna
+    // dingin/manis bertemu sekaligus (paling "party" di grup ini), tombol
+    // ungu solid supaya CTA tetap menonjol di tengah gradien ramai.
+    label: "Festive",
+    page: "bg-gradient-to-b from-[#ffe9f2] via-[#f7ffe0] to-[#ede7ff]",
+    glow: "bg-gradient-to-br from-[#ffafd0]/25 via-[#d7ff60]/20 to-[#7657ff]/20",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#d94a2f]",
+    buyButton: "bg-[#7657ff] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#7657ff",
+    previewBg: "linear-gradient(160deg, #ffe9f2 0%, #f7ffe0 55%, #ede7ff 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  zesty: {
+    // Segar & citrusy -- coral ke lime lewat krem, tombol ungu solid --
+    // swatch SENGAJA coral (bukan ungu tombolnya) supaya tetap beda dari
+    // "cheer" yang komposisinya mirip tapi swatch-nya ungu.
+    label: "Zesty",
+    page: "bg-gradient-to-b from-[#ffe4de] via-[#f7ffe0] to-[#fff8ef]",
+    glow: "bg-gradient-to-br from-[#ff6448]/25 via-[#d7ff60]/20 to-transparent",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#d94a2f]",
+    buyButton: "bg-[#7657ff] text-white font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ff6448",
+    previewBg: "linear-gradient(160deg, #ffe4de 0%, #f7ffe0 55%, #fff8ef 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  dreamy: {
+    // Lembut & lamun -- lavender ke pink lewat putih, tombol lime cerah
+    // sebagai satu-satunya titik saturasi tinggi di komposisi paling pastel.
+    label: "Dreamy",
+    page: "bg-gradient-to-b from-[#ede7ff] via-[#ffe9f2] to-white",
+    glow: "bg-gradient-to-br from-[#7657ff]/20 via-[#ffafd0]/25 to-transparent",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-[#d7ff60] text-ink font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#ffafd0",
+    previewBg: "linear-gradient(160deg, #ede7ff 0%, #ffe9f2 55%, #ffffff 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
+  },
+  radiant: {
+    // Satu-satunya varian JENUH/vivid di grup ini (9 lainnya pastel) --
+    // gradien ungu->coral->lime brand langsung tanpa dilarutkan ke putih,
+    // sengaja jadi opsi "paling berani" -- text nama/bio putih (bukan
+    // text-ink seperti 9 lainnya) karena latarnya jauh lebih gelap/jenuh,
+    // kartu tetap putih solid supaya isinya tetap terbaca jelas.
+    label: "Radiant",
+    page: "bg-gradient-to-br from-[#7657ff] via-[#ff6448] to-[#d7ff60]",
+    glow: "bg-gradient-to-br from-white/20 via-white/10 to-transparent",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-white",
+    bio: "text-white/80",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-white text-ink font-bold border-2 border-[#111111] hover:brightness-95",
+    footer: "text-white/60 hover:text-white",
+    swatch: "#7657ff",
+    previewBg: "linear-gradient(135deg, #7657ff 0%, #ff6448 55%, #d7ff60 100%)",
+    previewIsDark: true,
     pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
 };

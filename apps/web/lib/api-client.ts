@@ -947,8 +947,19 @@ export const THEME_PRESETS = [
   "kind",
   "code",
   // "joyful" -- permintaan langsung pengguna, 6 September 2026, lihat
-  // catatan lengkap di PageThemeName (page-themes.ts).
+  // catatan lengkap di PageThemeName (page-themes.ts). Diperluas jadi
+  // kategori tersendiri (9 preset lagi) permintaan susulan hari yang
+  // sama -- lihat JOYFUL_THEME_NAMES (page-themes.ts).
   "joyful",
+  "bliss",
+  "cheer",
+  "spark",
+  "sunny",
+  "breezy",
+  "festive",
+  "zesty",
+  "dreamy",
+  "radiant",
 ] as const;
 
 export function getMyPage() {

@@ -1166,6 +1166,12 @@ var availableThemes = map[string]bool{
 	// (THEME_PRESETS, api-client.ts) -- lihat catatan panjang di atas soal
 	// bug ini sudah terjadi 2x sebelumnya kalau lupa.
 	"joyful": true,
+	// 9 preset "Joyful" TAMBAHAN, permintaan susulan langsung pengguna hari
+	// yang sama: "tambahan kategori tema baru joyfull dan isi 10 tema" --
+	// lihat JOYFUL_THEME_NAMES (apps/web/lib/page-themes.ts). LANGSUNG di
+	// sini bersamaan dengan frontend, pola sama seperti catatan di atas.
+	"bliss": true, "cheer": true, "spark": true, "sunny": true, "breezy": true,
+	"festive": true, "zesty": true, "dreamy": true, "radiant": true,
 	"custom": true,
 }
 
