@@ -248,6 +248,18 @@ export const dictionaries = {
           themePink: "Pink",
           themeBlue: "Biru",
           themeInk: "Hitam",
+          // background_image_url -- permintaan langsung pengguna, 7
+          // September 2026: "di business card / contact card bisa atur
+          // background nya". Gambar menggantikan tema warna (di atas)
+          // sebagai background seluruh kartu.
+          backgroundLabel: "Background Kustom (opsional)",
+          backgroundHint: "Gambar menggantikan tema warna di atas sebagai background kartu.",
+          backgroundUpload: "Unggah Gambar",
+          backgroundChange: "Ganti Gambar",
+          backgroundUploading: "Mengunggah...",
+          backgroundRemove: "Hapus background",
+          backgroundUploadError: "Gagal mengunggah background.",
+          backgroundRemoveError: "Gagal menghapus background.",
           taglineLabel: "Tagline",
           taglinePlaceholder: "Satu kalimat tentang kamu / bisnismu",
           addressLabel: "Alamat",
@@ -2979,6 +2991,14 @@ export const dictionaries = {
           themePink: "Pink",
           themeBlue: "Blue",
           themeInk: "Black",
+          backgroundLabel: "Custom Background (optional)",
+          backgroundHint: "An image replaces the color theme above as the card's background.",
+          backgroundUpload: "Upload Image",
+          backgroundChange: "Change Image",
+          backgroundUploading: "Uploading...",
+          backgroundRemove: "Remove background",
+          backgroundUploadError: "Failed to upload background.",
+          backgroundRemoveError: "Failed to remove background.",
           taglineLabel: "Tagline",
           taglinePlaceholder: "One line about you / your business",
           addressLabel: "Address",

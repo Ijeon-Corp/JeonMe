@@ -39,6 +39,13 @@ export interface BusinessCardData {
   tiktok: string;
   linkedin: string;
   card_theme: BusinessCardTheme | string;
+  // background_image_url -- permintaan langsung pengguna, 7 September
+  // 2026: "di business card / contact card bisa atur background nya".
+  // Kosong berarti tetap pakai card_theme (5 preset warna pita atas),
+  // TIDAK ada perubahan visual dari sebelumnya. Kalau diisi, gambar
+  // menjadi background SELURUH kartu (pita atas + badan), badan kartu
+  // dapat panel putih tembus pandang supaya teks tetap terbaca.
+  background_image_url?: string;
 }
 
 export function themeOf(raw: string | undefined): BusinessCardTheme {
@@ -79,11 +86,19 @@ export default function DigitalBusinessCard({
   if (card.tiktok) socials.push({ key: "tiktok", href: `https://www.tiktok.com/@${card.tiktok}`, label: `@${card.tiktok}`, icon: <IconTiktok className="h-3.5 w-3.5" /> });
   if (card.linkedin) socials.push({ key: "linkedin", href: linkedinLink(card.linkedin), label: card.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, ""), icon: <IconLinkedin className="h-3.5 w-3.5" /> });
 
+  const hasBackground = Boolean(card.background_image_url);
+
   return (
-    <div className={`w-full max-w-sm overflow-hidden rounded-jxl border-2 border-[#111111] bg-white text-[#111111] shadow-brutal ${className}`}>
+    <div
+      className={`w-full max-w-sm overflow-hidden rounded-jxl border-2 border-[#111111] bg-white bg-cover bg-center text-[#111111] shadow-brutal ${className}`}
+      style={hasBackground ? { backgroundImage: `url(${card.background_image_url})` } : undefined}
+    >
       {/* Pita aksen + avatar yang "menggantung" di tepi pita -- pola kartu
-          Hero landing (avatar berlingkar hitam di atas kartu bergaris tebal). */}
-      <div className={`relative h-24 ${theme.band}`}>
+          Hero landing (avatar berlingkar hitam di atas kartu bergaris tebal).
+          Background kustom (kalau ada) menggantikan warna pita polos --
+          dibiarkan transparan di sini supaya gambar wrapper di atas
+          tampil utuh sampai ke tepi atas kartu. */}
+      <div className={`relative h-24 ${hasBackground ? "" : theme.band}`}>
         <span className="absolute right-4 top-3 rounded-full border-2 border-[#111111] bg-white px-2 py-0.5 font-display text-[10px] font-extrabold tracking-wide text-[#111111]">
           jeon.id
         </span>
@@ -97,7 +112,7 @@ export default function DigitalBusinessCard({
         </div>
       </div>
 
-      <div className="px-6 pb-6 pt-12">
+      <div className={`px-6 pb-6 pt-12 ${hasBackground ? "bg-white/85 backdrop-blur-[2px]" : ""}`}>
         <h2 className="font-display text-2xl font-extrabold leading-tight" style={{ textWrap: "balance" }}>
           {card.full_name || username}
         </h2>

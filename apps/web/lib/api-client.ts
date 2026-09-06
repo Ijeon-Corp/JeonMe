@@ -2285,6 +2285,11 @@ export interface BusinessCard {
   instagram: string;
   tiktok: string;
   linkedin: string;
+  // background_image_url -- migrasi 000094 (permintaan langsung pengguna:
+  // "di business card / contact card bisa atur background nya"). Kosong
+  // berarti tetap pakai card_theme (5 preset warna pita atas) seperti
+  // sebelumnya.
+  background_image_url: string;
 }
 
 export function getBusinessCard() {
@@ -2297,6 +2302,32 @@ export function upsertBusinessCard(input: BusinessCard) {
     { method: "PUT", body: JSON.stringify(input) },
     { auth: true }
   );
+}
+
+// uploadBusinessCardBackground/deleteBusinessCardBackground -- pola SAMA
+// PERSIS uploadShowcaseImage/deleteLinkThumbnail di atas (satu gambar,
+// unggah ulang menimpa). Lihat UploadBackgroundImage/DeleteBackgroundImage,
+// business_card.go.
+export async function uploadBusinessCardBackground(file: File): Promise<{ background_image_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/business-card/background`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteBusinessCardBackground() {
+  return apiFetch<{ message: string }>("/dashboard/business-card/background", { method: "DELETE" }, { auth: true });
 }
 
 export interface PublicBusinessCard {
@@ -2317,6 +2348,8 @@ export interface PublicBusinessCard {
   instagram: string;
   tiktok: string;
   linkedin: string;
+  // background_image_url -- lihat catatan di BusinessCard.
+  background_image_url: string;
 }
 
 // URL foto profil lewat proxy API (same-origin + header CORS) -- dipakai
@@ -2324,6 +2357,12 @@ export interface PublicBusinessCard {
 // 3 September 2026: foto hilang di PNG). Lihat AvatarProxy di backend.
 export function cardAvatarProxyURL(username: string) {
   return `${API_BASE_URL}/cards/${encodeURIComponent(username)}/avatar`;
+}
+
+// URL background kustom kartu lewat proxy API -- sama alasan cardAvatarProxyURL
+// di atas. Lihat BackgroundImageProxy di backend.
+export function cardBackgroundProxyURL(username: string) {
+  return `${API_BASE_URL}/cards/${encodeURIComponent(username)}/background`;
 }
 
 export async function getPublicBusinessCard(username: string): Promise<PublicBusinessCard | null> {

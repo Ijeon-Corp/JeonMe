@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"github.com/jeonme/api/internal/imageconv"
 	"github.com/jeonme/api/internal/netguard"
 	"github.com/jeonme/api/internal/storage"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,6 +60,11 @@ type businessCardResponse struct {
 	Instagram string `json:"instagram"`
 	Tiktok    string `json:"tiktok"`
 	Linkedin  string `json:"linkedin"`
+	// BackgroundImageURL -- migrasi 000094: background kustom kartu (kosong
+	// berarti tetap pakai card_theme). Diserahkan lewat proxy same-origin
+	// (BackgroundImageProxy) supaya bisa digambar ke <canvas> komposer PNG,
+	// sama seperti avatar (lihat AvatarProxy).
+	BackgroundImageURL string `json:"background_image_url"`
 }
 
 // GetCard — dipakai halaman pengaturan dashboard. Belum pernah disimpan
@@ -69,11 +78,12 @@ func (h *BusinessCardHandler) GetCard(c *gin.Context) {
 	var resp businessCardResponse
 	err := h.DB.QueryRow(ctx, `
 		SELECT is_active, full_name, job_title, company, phone, whatsapp_number, email, website, collect_contact_back,
-		       card_theme, tagline, address, instagram, tiktok, linkedin
+		       card_theme, tagline, address, instagram, tiktok, linkedin, background_image_url
 		FROM business_cards WHERE user_id = $1
 	`, userID).Scan(&resp.IsActive, &resp.FullName, &resp.JobTitle, &resp.Company, &resp.Phone,
 		&resp.WhatsappNumber, &resp.Email, &resp.Website, &resp.CollectContactBack,
-		&resp.CardTheme, &resp.Tagline, &resp.Address, &resp.Instagram, &resp.Tiktok, &resp.Linkedin)
+		&resp.CardTheme, &resp.Tagline, &resp.Address, &resp.Instagram, &resp.Tiktok, &resp.Linkedin,
+		&resp.BackgroundImageURL)
 	if err == pgx.ErrNoRows {
 		resp.CardTheme = "lavender"
 	}
@@ -142,6 +152,108 @@ func (h *BusinessCardHandler) UpsertCard(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "kartu kontak disimpan"})
 }
 
+// maxBusinessCardBackgroundSize -- sama seperti maxShowcaseImageSize (5MB),
+// background ditampilkan besar (seluruh kartu), bukan ikon kecil.
+const maxBusinessCardBackgroundSize = maxShowcaseImageSize
+
+// UploadBackgroundImage -- background kustom kartu (migrasi 000094,
+// permintaan langsung pengguna: "di business card / contact card bisa
+// atur background nya"). Pola SAMA PERSIS dengan UploadShowcaseImage
+// (links.go): konversi WebP, unggah ke storage, simpan URL. ON CONFLICT
+// upsert (bukan UPDATE polos) -- kreator bisa saja mengunggah background
+// SEBELUM pernah menyimpan kartu sama sekali (baris business_cards belum
+// ada), kolom lain jatuh ke DEFAULT (lihat migrasi 000028) kalau begitu.
+func (h *BusinessCardHandler) UploadBackgroundImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxBusinessCardBackgroundSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	key := fmt.Sprintf("business-card-bg/%s.webp", userID)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah gambar"})
+		return
+	}
+
+	imageURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	if _, err := h.DB.Exec(ctx, `
+		INSERT INTO business_cards (user_id, background_image_url, updated_at)
+		VALUES ($1, $2, now())
+		ON CONFLICT (user_id) DO UPDATE SET background_image_url = EXCLUDED.background_image_url, updated_at = now()
+	`, userID, imageURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"background_image_url": imageURL, "message": "background kartu berhasil diunggah"})
+}
+
+// DeleteBackgroundImage -- kembali ke card_theme polos (kosongkan kolom).
+// Best-effort hapus objek storage lama -- gagal hapus objek tidak boleh
+// menggagalkan aksi utama (pola soft-fail yang sama dengan operasi
+// sampingan lain di codebase ini, lihat CLAUDE.md).
+func (h *BusinessCardHandler) DeleteBackgroundImage(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var oldURL string
+	if err := h.DB.QueryRow(ctx, `SELECT background_image_url FROM business_cards WHERE user_id = $1`, userID).Scan(&oldURL); err != nil && err != pgx.ErrNoRows {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kartu kontak"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE business_cards SET background_image_url = '', updated_at = now() WHERE user_id = $1`, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus background"})
+		return
+	}
+
+	if h.Storage != nil {
+		if key, ok := storageKeyFromURL(h.Storage, oldURL); ok {
+			if err := h.Storage.Delete(ctx, key); err != nil {
+				log.Printf("business-card: gagal menghapus objek background lama %q milik user %s: %v", key, userID, err)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "background kartu dihapus"})
+}
+
 type publicBusinessCard struct {
 	Username           string `json:"username"`
 	AvatarURL          string `json:"avatar_url"`
@@ -160,6 +272,8 @@ type publicBusinessCard struct {
 	Instagram string `json:"instagram"`
 	Tiktok    string `json:"tiktok"`
 	Linkedin  string `json:"linkedin"`
+	// BackgroundImageURL -- lihat catatan di businessCardResponse.
+	BackgroundImageURL string `json:"background_image_url"`
 }
 
 // GetPublicCard — endpoint publik yang dituju QR code kartu kontak. 404
@@ -175,14 +289,15 @@ func (h *BusinessCardHandler) GetPublicCard(c *gin.Context) {
 	resp.Username = username
 	err := h.DB.QueryRow(ctx, `
 		SELECT COALESCE(p.avatar_url, ''), bc.full_name, bc.job_title, bc.company, bc.phone, bc.whatsapp_number, bc.email, bc.website, bc.collect_contact_back,
-		       bc.card_theme, bc.tagline, bc.address, bc.instagram, bc.tiktok, bc.linkedin
+		       bc.card_theme, bc.tagline, bc.address, bc.instagram, bc.tiktok, bc.linkedin, bc.background_image_url
 		FROM business_cards bc
 		JOIN users u ON u.id = bc.user_id
 		LEFT JOIN pages p ON p.user_id = u.id AND p.is_primary = true
 		WHERE u.username = $1 AND bc.is_active = true
 	`, username).Scan(&resp.AvatarURL, &resp.FullName, &resp.JobTitle, &resp.Company, &resp.Phone,
 		&resp.WhatsappNumber, &resp.Email, &resp.Website, &resp.CollectContactBack,
-		&resp.CardTheme, &resp.Tagline, &resp.Address, &resp.Instagram, &resp.Tiktok, &resp.Linkedin)
+		&resp.CardTheme, &resp.Tagline, &resp.Address, &resp.Instagram, &resp.Tiktok, &resp.Linkedin,
+		&resp.BackgroundImageURL)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "kartu kontak tidak ditemukan"})
@@ -325,31 +440,61 @@ func (h *BusinessCardHandler) AvatarProxy(c *gin.Context) {
 		return
 	}
 
+	streamImageProxy(ctx, c, h.Storage, avatarURL, "avatar", username)
+}
+
+// BackgroundImageProxy -- GET /cards/:username/background. Sama persis
+// alasannya dengan AvatarProxy (komposer PNG butuh CORS same-origin untuk
+// menggambar ke <canvas>), background kustom kartu (migrasi 000094) butuh
+// jalur proxy sendiri karena disimpan di kolom terpisah dari avatar_url.
+func (h *BusinessCardHandler) BackgroundImageProxy(c *gin.Context) {
+	username := c.Param("username")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 8*time.Second)
+	defer cancel()
+
+	var bgURL string
+	if err := h.DB.QueryRow(ctx, `
+		SELECT background_image_url FROM business_cards bc
+		JOIN users u ON u.id = bc.user_id
+		WHERE u.username = $1 AND bc.is_active = true
+	`, username).Scan(&bgURL); err != nil || bgURL == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	streamImageProxy(ctx, c, h.Storage, bgURL, "background", username)
+}
+
+// streamImageProxy -- inti AvatarProxy/BackgroundImageProxy, dipisah 6
+// September 2026 supaya logikanya (kunci storage sendiri vs URL eksternal
+// lewat netguard, deteksi content-type, header CORS) tidak diduplikasi
+// utuh untuk background kustom kartu.
+func streamImageProxy(ctx context.Context, c *gin.Context, store *storage.Client, imageURL, kind, username string) {
 	const maxBytes = 5 << 20
 	var data []byte
 	var contentType string
-	if key, ok := storageKeyFromURL(h.Storage, avatarURL); ok {
-		b, err := h.Storage.Download(ctx, key)
+	if key, ok := storageKeyFromURL(store, imageURL); ok {
+		b, err := store.Download(ctx, key)
 		if err != nil || len(b) == 0 || len(b) > maxBytes {
-			log.Printf("business-card: avatar proxy gagal membaca kunci %q untuk %s: %v (len=%d)", key, username, err, len(b))
+			log.Printf("business-card: %s proxy gagal membaca kunci %q untuk %s: %v (len=%d)", kind, key, username, err, len(b))
 			c.Status(http.StatusNotFound)
 			return
 		}
 		data = b
 	} else {
-		if err := netguard.ValidateOutboundURL(avatarURL); err != nil || !strings.HasPrefix(avatarURL, "https://") {
-			log.Printf("business-card: avatar proxy menolak URL eksternal %q untuk %s: %v", avatarURL, username, err)
+		if err := netguard.ValidateOutboundURL(imageURL); err != nil || !strings.HasPrefix(imageURL, "https://") {
+			log.Printf("business-card: %s proxy menolak URL eksternal %q untuk %s: %v", kind, imageURL, username, err)
 			c.Status(http.StatusNotFound)
 			return
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, avatarURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 		if err != nil {
 			c.Status(http.StatusNotFound)
 			return
 		}
 		resp, err := netguard.NewOutboundClient(6 * time.Second).Do(req)
 		if err != nil {
-			log.Printf("business-card: avatar proxy gagal mengambil %q untuk %s: %v", avatarURL, username, err)
+			log.Printf("business-card: %s proxy gagal mengambil %q untuk %s: %v", kind, imageURL, username, err)
 			c.Status(http.StatusNotFound)
 			return
 		}

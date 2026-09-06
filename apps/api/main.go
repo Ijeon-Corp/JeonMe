@@ -121,8 +121,13 @@ func main() {
 		// Catatan di atas sudah eksplisit memperingatkan ini, tapi tetap
 		// terlewat lagi -- kalau nanti masih ada blok baru berikutnya, CEK
 		// DAFTAR INI DULU sebelum melaporkan fitur upload "selesai".
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images"); err != nil {
-			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file/showcase/katalog tautan: %v", err)
+		//
+		// "business-card-bg" ditambahkan di sini SEJAK AWAL (7 September
+		// 2026, background kustom Kartu Nama Digital) -- checklist di atas
+		// dicek DULU persis supaya bug 403 yang sama tidak terulang lagi
+		// keempat kalinya.
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images", "business-card-bg"); err != nil {
+			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file/showcase/katalog tautan/background kartu nama: %v", err)
 		}
 		cancel()
 	}

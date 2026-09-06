@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { cardAvatarProxyURL } from "@/lib/api-client";
+import { cardAvatarProxyURL, cardBackgroundProxyURL } from "@/lib/api-client";
 import { QRCodeCanvas } from "qrcode.react";
 import DigitalBusinessCard, { type BusinessCardData } from "@/components/DigitalBusinessCard";
 import { renderBusinessCardPNG } from "@/lib/business-card-png";
@@ -75,8 +75,16 @@ export default function BusinessCardModal({
     setDownloading(true);
     setError(null);
     try {
-      // Foto lewat proxy API (same-origin + CORS) supaya bisa digambar ke canvas.
-      const blob = await renderBusinessCardPNG({ card, username, avatarUrl: avatarUrl ? cardAvatarProxyURL(username) : undefined, url, qrDataUrl: qr, icons: iconDataUrls() });
+      // Foto & background lewat proxy API (same-origin + CORS) supaya bisa digambar ke canvas.
+      const blob = await renderBusinessCardPNG({
+        card,
+        username,
+        avatarUrl: avatarUrl ? cardAvatarProxyURL(username) : undefined,
+        backgroundImageUrl: card.background_image_url ? cardBackgroundProxyURL(username) : undefined,
+        url,
+        qrDataUrl: qr,
+        icons: iconDataUrls(),
+      });
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;

@@ -21,6 +21,12 @@ export interface RenderCardInput {
   card: BusinessCardData;
   username: string;
   avatarUrl?: string;
+  // backgroundImageUrl -- SAMA seperti avatarUrl di atas: pemanggil yang
+  // bertanggung jawab meresolusi ke URL proxy API (cardBackgroundProxyURL)
+  // supaya CORS same-origin, bukan card.background_image_url mentah --
+  // dibaca terpisah dari `card` (bukan card.background_image_url) persis
+  // karena alasan itu (permintaan langsung pengguna, 7 September 2026).
+  backgroundImageUrl?: string;
   url: string;
   qrDataUrl: string;
   // icons: kunci data-icon di kartu (phone/whatsapp/email/website/address)
@@ -68,6 +74,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number,
 
 interface Assets {
   avatar: HTMLImageElement | null;
+  background: HTMLImageElement | null;
   qr: HTMLImageElement;
   icons: Record<string, HTMLImageElement>;
 }
@@ -100,8 +107,23 @@ function paint(canvas: HTMLCanvasElement, H: number, input: RenderCardInput, a: 
   ctx.save();
   roundRect(ctx, PAD, PAD, cw, ch, 44);
   ctx.clip();
-  ctx.fillStyle = theme.hex;
-  ctx.fillRect(PAD, PAD, cw, 250);
+  if (a.background) {
+    // Background kustom (permintaan langsung pengguna, 7 September 2026):
+    // gambar menutupi SELURUH kartu (bukan cuma pita 250px seperti
+    // theme.hex), sama seperti DOM (DigitalBusinessCard.tsx) -- cover-fit
+    // sama seperti avatar di bawah. Panel putih tembus pandang menutupi
+    // badan kartu (di bawah pita) supaya teks tetap terbaca, pita atas
+    // dibiarkan menampilkan gambar apa adanya.
+    const s = Math.max(cw / a.background.width, ch / a.background.height);
+    const dw = a.background.width * s;
+    const dh = a.background.height * s;
+    ctx.drawImage(a.background, PAD + cw / 2 - dw / 2, PAD + ch / 2 - dh / 2, dw, dh);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillRect(PAD, PAD + 250, cw, ch - 250);
+  } else {
+    ctx.fillStyle = theme.hex;
+    ctx.fillRect(PAD, PAD, cw, 250);
+  }
   ctx.restore();
   ctx.lineWidth = 6;
   ctx.strokeStyle = INK;
@@ -286,6 +308,14 @@ export async function renderBusinessCardPNG(input: RenderCardInput): Promise<Blo
       avatar = null;
     }
   }
+  let background: HTMLImageElement | null = null;
+  if (input.backgroundImageUrl) {
+    try {
+      background = await loadImage(input.backgroundImageUrl, true);
+    } catch {
+      background = null;
+    }
+  }
   const qr = await loadImage(input.qrDataUrl, false);
   const icons: Record<string, HTMLImageElement> = {};
   await Promise.all(
@@ -297,7 +327,7 @@ export async function renderBusinessCardPNG(input: RenderCardInput): Promise<Blo
       }
     }),
   );
-  const assets: Assets = { avatar, qr, icons };
+  const assets: Assets = { avatar, background, qr, icons };
 
   const canvas = document.createElement("canvas");
   // lintasan 1: ukur di kanvas tinggi, lintasan 2: gambar pas
@@ -311,8 +341,9 @@ export async function renderBusinessCardPNG(input: RenderCardInput): Promise<Blo
   try {
     return await toBlob();
   } catch {
-    // canvas ternoda gambar lintas-origin -> ulangi tanpa foto
+    // canvas ternoda gambar lintas-origin -> ulangi tanpa foto/background
     assets.avatar = null;
+    assets.background = null;
     const h = paint(canvas, 4000, input, assets);
     paint(canvas, Math.ceil(h), input, assets);
     return toBlob();

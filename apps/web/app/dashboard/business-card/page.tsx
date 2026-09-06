@@ -2,11 +2,19 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
-import { ApiError, BusinessCard, getBusinessCard, getMyPage, upsertBusinessCard } from "@/lib/api-client";
+import {
+  ApiError,
+  BusinessCard,
+  deleteBusinessCardBackground,
+  getBusinessCard,
+  getMyPage,
+  upsertBusinessCard,
+  uploadBusinessCardBackground,
+} from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
 import BusinessCardModal from "@/components/BusinessCardModal";
 import DigitalBusinessCard, { CARD_THEMES, type BusinessCardTheme } from "@/components/DigitalBusinessCard";
-import { IconQrCode } from "@/components/icons";
+import { IconQrCode, IconX } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -27,6 +35,7 @@ const EMPTY: BusinessCard = {
   instagram: "",
   tiktok: "",
   linkedin: "",
+  background_image_url: "",
 };
 
 export default function DashboardBusinessCardPage() {
@@ -40,6 +49,7 @@ export default function DashboardBusinessCardPage() {
   useErrorToast(error);
   const [saved, setSaved] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
 
   useEffect(() => {
     Promise.all([getBusinessCard(), getMyPage()])
@@ -71,6 +81,37 @@ export default function DashboardBusinessCardPage() {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.businessCard.saveError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // handleUploadBackground/handleRemoveBackground -- permintaan langsung
+  // pengguna, 7 September 2026: "di business card / contact card bisa
+  // atur background nya". Update lokal langsung dari respons unggah (bukan
+  // getBusinessCard() ulang) -- pola sama seperti upload gambar lain di
+  // dashboard ini.
+  async function handleUploadBackground(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingBg(true);
+    setError(null);
+    try {
+      const { background_image_url } = await uploadBusinessCardBackground(file);
+      setCard((prev) => ({ ...prev, background_image_url }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.businessCard.backgroundUploadError"));
+    } finally {
+      setUploadingBg(false);
+    }
+  }
+
+  async function handleRemoveBackground() {
+    setError(null);
+    try {
+      await deleteBusinessCardBackground();
+      setCard((prev) => ({ ...prev, background_image_url: "" }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.businessCard.backgroundRemoveError"));
     }
   }
 
@@ -248,6 +289,43 @@ export default function DashboardBusinessCardPage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-app-ink">{t("dashboard.pages.businessCard.backgroundLabel")}</p>
+          <p className="mb-2 text-[11px] text-app-muted">{t("dashboard.pages.businessCard.backgroundHint")}</p>
+          <div className="flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+            {card.background_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={card.background_image_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+            ) : (
+              <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
+                {t("dashboard.pages.links.common.noneYet")}
+              </div>
+            )}
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <label className="w-fit cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                {uploadingBg ? t("dashboard.pages.businessCard.backgroundUploading") : card.background_image_url ? t("dashboard.pages.businessCard.backgroundChange") : t("dashboard.pages.businessCard.backgroundUpload")}
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  onChange={handleUploadBackground}
+                  disabled={uploadingBg}
+                  className="hidden"
+                />
+              </label>
+              {card.background_image_url && (
+                <button
+                  type="button"
+                  onClick={handleRemoveBackground}
+                  title={t("dashboard.pages.businessCard.backgroundRemove")}
+                  className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
+                >
+                  <IconX className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -217,6 +217,9 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		api.GET("/cards/:username", businessCard.GetPublicCard)
 		// Proxy foto profil untuk komposer PNG kartu nama (lihat AvatarProxy).
 		api.GET("/cards/:username/avatar", avatarProxyRateLimit, businessCard.AvatarProxy)
+		// Proxy background kustom kartu (migrasi 000094) -- sama alasan &
+		// batas rate limit dengan proxy avatar di atas.
+		api.GET("/cards/:username/background", avatarProxyRateLimit, businessCard.BackgroundImageProxy)
 		api.POST("/cards/:username/contact", leadsRateLimit, businessCard.SubmitCardContact)
 
 		// Modul Settings §2: dipanggil app/[username]/page.tsx SETELAH
@@ -489,6 +492,8 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// di BusinessCardHandler (vCard .vcf, TANPA Apple/Google Wallet).
 			dashboard.GET("/business-card", businessCard.GetCard)
 			dashboard.PUT("/business-card", businessCard.UpsertCard)
+			dashboard.POST("/business-card/background", businessCard.UploadBackgroundImage)
+			dashboard.DELETE("/business-card/background", businessCard.DeleteBackgroundImage)
 
 			// No.76 (Sprint 8): notifikasi social proof "X baru saja membeli".
 			dashboard.GET("/social-proof", socialProof.Get)
