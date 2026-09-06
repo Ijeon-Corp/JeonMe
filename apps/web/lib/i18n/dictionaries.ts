@@ -2531,6 +2531,29 @@ export const dictionaries = {
           markAllRead: "Tandai semua dibaca",
           emptyState: "Belum ada notifikasi.",
         },
+        // supportChatWidget -- Live Chat dukungan (permintaan langsung
+        // pengguna, 7 September 2026: "saya itu ingin ada fitur live chat
+        // tetapi yang membalas nanti dari pihak jeon id nya langsung bukan
+        // bot tapi tetep ada pertanyaan faq yang langsung bisa diberikan
+        // jawaban nya ke creator"). Konten FAQ tab TIDAK ada key di sini --
+        // dipakai ulang APA ADANYA dari dashboard.pages.help.* lewat
+        // lib/help-faq.ts.
+        supportChatWidget: {
+          bubbleLabel: "Live Chat",
+          panelTitle: "Live Chat Jeon.id",
+          panelSubtitle: "Dibalas langsung oleh tim kami, bukan bot.",
+          tabFaq: "FAQ",
+          tabChat: "Chat",
+          faqHint: "Jawaban instan, tanpa menunggu.",
+          faqSeeAll: "Lihat semua FAQ",
+          chatEmptyState: "Belum ada percakapan. Tulis pesan pertamamu di bawah.",
+          chatComposerPlaceholder: "Tulis pesan...",
+          chatSendButton: "Kirim",
+          chatSendError: "Gagal mengirim pesan, coba lagi.",
+          chatYouLabel: "Kamu",
+          chatTeamLabel: "Tim Jeon.id",
+          closeAriaLabel: "Tutup",
+        },
         globalSearch: {
           triggerTitle: "Cari menu (Ctrl+K)",
           triggerLabel: "Cari menu",
@@ -5255,6 +5278,22 @@ export const dictionaries = {
           title: "Notifications",
           markAllRead: "Mark all as read",
           emptyState: "No notifications yet.",
+        },
+        supportChatWidget: {
+          bubbleLabel: "Live Chat",
+          panelTitle: "Jeon.id Live Chat",
+          panelSubtitle: "Replied to directly by our team, not a bot.",
+          tabFaq: "FAQ",
+          tabChat: "Chat",
+          faqHint: "Instant answers, no waiting.",
+          faqSeeAll: "See all FAQs",
+          chatEmptyState: "No conversation yet. Write your first message below.",
+          chatComposerPlaceholder: "Write a message...",
+          chatSendButton: "Send",
+          chatSendError: "Failed to send message, try again.",
+          chatYouLabel: "You",
+          chatTeamLabel: "Jeon.id Team",
+          closeAriaLabel: "Close",
         },
         globalSearch: {
           triggerTitle: "Search menu (Ctrl+K)",

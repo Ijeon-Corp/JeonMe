@@ -3647,6 +3647,9 @@ export interface AdminSummary {
   // pending_kyc -- audit fitur admin (5 September 2026): SEBELUMNYA
   // backlog KYC tidak tampil sama sekali di Ringkasan.
   pending_kyc: number;
+  // pending_support_chats -- fitur Live Chat (7 September 2026), pola sama
+  // pending_kyc di atas.
+  pending_support_chats: number;
 }
 
 export function getAdminSummary() {
@@ -3881,6 +3884,48 @@ export function revokeKyc(userId: string, reason: string) {
   );
 }
 
+// ---------- Admin: Live Chat dukungan (permintaan langsung pengguna, 7
+// September 2026) ----------
+
+export interface AdminSupportThreadItem {
+  user_id: string;
+  username: string;
+  email: string;
+  last_sender_role: "creator" | "admin";
+  last_message: string;
+  last_message_at: string;
+}
+
+// filter default "needs_reply" (thread yg pesan terakhirnya dari kreator --
+// giliran staf membalas), "all" utk seluruh thread.
+export function listAdminSupportChats(params?: { filter?: "needs_reply" | "all"; search?: string; limit?: number; offset?: number }) {
+  const q = new URLSearchParams();
+  q.set("filter", params?.filter ?? "needs_reply");
+  if (params?.search) q.set("search", params.search);
+  q.set("limit", String(params?.limit ?? 50));
+  q.set("offset", String(params?.offset ?? 0));
+  return apiFetch<Paginated<AdminSupportThreadItem>>(`/admin/support-chat?${q.toString()}`, { method: "GET" }, { auth: true });
+}
+
+export interface AdminSupportThreadDetail {
+  user_id: string;
+  username: string;
+  email: string;
+  messages: SupportChatMessage[];
+}
+
+export function getAdminSupportThread(userId: string) {
+  return apiFetch<AdminSupportThreadDetail>(`/admin/support-chat/${userId}`, { method: "GET" }, { auth: true });
+}
+
+export function replyAdminSupportChat(userId: string, body: string) {
+  return apiFetch<SupportChatMessage>(
+    `/admin/support-chat/${userId}/reply`,
+    { method: "POST", body: JSON.stringify({ body }) },
+    { auth: true }
+  );
+}
+
 // ---------- Dashboard: kolaborator / multi-admin (Sprint 10, No.87) ----------
 // Lihat catatan lingkup di CollaboratorHandler backend -- kolaborator HANYA
 // bisa diberi akses ke tautan/produk/desain, tidak pernah saldo/KYC/domain.
@@ -4004,6 +4049,42 @@ export function markNotificationRead(id: string) {
 
 export function markAllNotificationsRead() {
   return apiFetch<{ message: string }>("/dashboard/notifications/read-all", { method: "POST" }, { auth: true });
+}
+
+// ---------- Dashboard: Live Chat dukungan (permintaan langsung pengguna,
+// 7 September 2026: "saya itu ingin ada fitur live chat tetapi yang
+// membalas nanti dari pihak jeon id nya langsung bukan bot"). Balasan
+// selalu dari staf Jeon.id sungguhan (lihat SupportChatHandler.AdminReply,
+// backend) -- FAQ instan di widget TIDAK lewat sini sama sekali, murni
+// lokal lewat lib/help-faq.ts. ----------
+export interface SupportChatMessage {
+  id: string;
+  sender_role: "creator" | "admin";
+  body: string;
+  created_at: string;
+}
+
+// listSupportChatMessages -- unread_count dibundel di respons yang sama
+// (pola sama listNotifications di atas), dipoll SupportChatWidget.tsx:
+// cepat saat panel terbuka, lambat saat tertutup.
+export function listSupportChatMessages() {
+  return apiFetch<{ messages: SupportChatMessage[]; unread_count: number }>(
+    "/dashboard/support-chat/messages",
+    { method: "GET" },
+    { auth: true }
+  );
+}
+
+export function sendSupportChatMessage(body: string) {
+  return apiFetch<SupportChatMessage>(
+    "/dashboard/support-chat/messages",
+    { method: "POST", body: JSON.stringify({ body }) },
+    { auth: true }
+  );
+}
+
+export function markSupportChatRead() {
+  return apiFetch<{ message: string }>("/dashboard/support-chat/read", { method: "POST" }, { auth: true });
 }
 
 // Fitur Import (permintaan langsung pengguna, 31 Agustus 2026): generate

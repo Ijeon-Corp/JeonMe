@@ -9,6 +9,7 @@ import TwoFactorPrompt from "@/components/TwoFactorPrompt";
 import AccountDeletionBanner from "@/components/AccountDeletionBanner";
 import OnboardingBanner from "@/components/OnboardingBanner";
 import NotificationBell from "@/components/NotificationBell";
+import SupportChatWidget from "@/components/SupportChatWidget";
 import GlobalSearch from "@/components/GlobalSearch";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -1097,6 +1098,8 @@ export default function DashboardLayout({
               );
             })}
           </nav>
+
+          <SupportChatWidget />
         </div>
       </ToastProvider>
     </AuthGuard>
