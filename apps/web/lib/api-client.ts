@@ -946,6 +946,9 @@ export const THEME_PRESETS = [
   "lens",
   "kind",
   "code",
+  // "joyful" -- permintaan langsung pengguna, 6 September 2026, lihat
+  // catatan lengkap di PageThemeName (page-themes.ts).
+  "joyful",
 ] as const;
 
 export function getMyPage() {

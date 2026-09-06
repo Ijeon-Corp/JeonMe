@@ -793,6 +793,61 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Apakah menerima undangan bedah buku?", answer: "Menerima, kirim detail acara lewat DM Instagram untuk diskusi jadwal." }]),
     ],
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche UGC & voice over
+  // belum terwakili di kategori ini, bertema "joyful" (lihat catatan
+  // lengkap di PageThemeName, page-themes.ts, kenapa tema ini dibuat).
+  {
+    key: "ugc-creator",
+    category: "creator",
+    layoutVariant: "hero",
+    label: "UGC Creator",
+    description: "Portofolio konten, rate card, kontak brand",
+    theme: "joyful",
+    bio: "UGC Creator | Bikin konten autentik untuk brand kamu",
+    social: { instagram: "username", tiktok: "username", email: "halo@domainmu.com" },
+    links: [
+      link("tiktok", "Contoh Konten UGC", "Video produk & testimoni gaya organik"),
+      link("email", "Kerja Sama Brand", "Kirim brief produk & budget kampanye"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Paket Konten UGC",
+        description: "Tuliskan jumlah video, revisi, dan hak pakai konten yang termasuk dalam satu paket.",
+        badgeText: "RATE CARD",
+        ctaText: "Lihat Paket",
+        url: PLATFORM_URL.tiktok,
+      }),
+      faqBlock([
+        { question: "Berapa lama pengerjaan satu video?", answer: "Tulis estimasi waktu dari brief sampai video jadi." },
+        { question: "Apakah termasuk hak pakai iklan?", answer: "Jelaskan apakah brand boleh pakai kontennya untuk iklan berbayar (whitelisting) dan biaya tambahannya." },
+      ]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP sebelum syuting konten dimulai.",
+  },
+  {
+    key: "voice-over-artist",
+    category: "creator",
+    layoutVariant: "spotlight",
+    label: "Voice Over Talent",
+    description: "Demo reel, rate, kontak booking",
+    theme: "joyful",
+    bio: "Voice over talent | Suara untuk iklan, e-learning, dan animasi",
+    social: { instagram: "username", youtube: "@namachannel", email: "halo@domainmu.com" },
+    links: [
+      link("youtube", "Dengar Demo Reel", "Contoh suara untuk berbagai gaya & karakter"),
+      link("email", "Booking Job", "Kirim naskah & tenggat rekaman"),
+    ],
+    blocks: [
+      { type: "text", title: "Jenis Job yang Diterima", text: "Tuliskan jenis voice over yang kamu kerjakan (iklan, e-learning, dubbing, IVR) beserta tarif per menit/proyek." },
+      faqBlock([
+        { question: "Bisa rekam remote?", answer: "Jelaskan setup home studio dan format file yang bisa dikirim." },
+        { question: "Berapa lama revisi?", answer: "Tulis jumlah revisi yang termasuk dalam satu tarif." },
+      ]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP sebelum sesi rekaman dimulai.",
+  },
 
   // ---------- Business & Professional ----------
   {
@@ -1001,6 +1056,54 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       { type: "text", title: "Paket & Harga", text: "Tuliskan paket membership (harian/bulanan) & fasilitas yang didapat di sini." },
       faqBlock([{ question: "Apakah ada meeting room?", answer: "Ada, bisa disewa terpisah per jam -- booking dulu via WhatsApp supaya tidak bentrok jadwal." }]),
     ],
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche virtual assistant
+  // & data analyst freelance belum terwakili di kategori ini.
+  {
+    key: "virtual-assistant",
+    category: "business",
+    layoutVariant: "banner",
+    label: "Virtual Assistant",
+    description: "Layanan admin, harga paket, kontak",
+    theme: "joyful",
+    bio: "Virtual assistant | Bantu urus admin bisnismu dari jarak jauh",
+    social: { instagram: "username", linkedin: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Diskusi Kebutuhan", "Ceritakan tugas admin yang mau didelegasikan"),
+      link("linkedin", "Pengalaman Kerja", "Klien & jenis pekerjaan sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan yang Ditawarkan", text: "Tuliskan jenis tugas yang kamu bantu (email, jadwal, data entry, media sosial) beserta paket jam kerja & harganya." },
+      faqBlock([
+        { question: "Kerja jam berapa saja?", answer: "Tulis zona waktu dan jam kerja yang kamu sediakan." },
+        { question: "Pakai tools apa untuk komunikasi?", answer: "Jelaskan tools yang biasa dipakai (WhatsApp, Slack, Notion, dst)." },
+      ]),
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket jam kerja bulanan dalam satu harga tetap.",
+  },
+  {
+    key: "data-analyst",
+    category: "business",
+    layoutVariant: "split",
+    label: "Data Analyst Freelance",
+    description: "Layanan analisis data, dashboard, laporan",
+    theme: "joyful",
+    bio: "Data analyst | Ubah data mentah jadi keputusan bisnis",
+    social: { linkedin: "username", github: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Konsultasi Proyek", "Ceritakan data & masalah yang mau dianalisis"),
+      link("website", "Contoh Dashboard", "Portofolio dashboard & laporan sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Analisis", text: "Tuliskan jenis layanan (dashboard, laporan rutin, analisis ad-hoc) beserta tools yang kamu pakai (Excel/SQL/Python/Looker) dan tarifnya." },
+      faqBlock([
+        { question: "Datanya harus format apa?", answer: "Tulis format data yang bisa kamu proses (spreadsheet, database, API, dst)." },
+        { question: "Apakah data dijamin rahasia?", answer: "Jelaskan kebijakan kerahasiaan data klien." },
+      ]),
+    ],
+    monetizationHint: "Payment Link cocok untuk menagih fee per proyek atau langganan laporan bulanan.",
   },
 
   // ---------- Online Shop ----------
@@ -1261,6 +1364,54 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Apakah ada layanan grooming?", answer: "Ada, booking dulu via WhatsApp supaya tidak perlu antre lama." }]),
     ],
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche toko bayi/anak &
+  // toko buku belum terwakili di kategori ini.
+  {
+    key: "baby-kids-store",
+    category: "shop",
+    layoutVariant: "ribbon",
+    label: "Toko Perlengkapan Bayi & Anak",
+    description: "Produk, katalog, promo",
+    theme: "joyful",
+    bio: "Toko bayi & anak | Perlengkapan aman dan nyaman untuk si kecil",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Katalog Terbaru", "Produk baru & rekomendasi sesuai usia anak"),
+      link("whatsapp", "Tanya Stok", "Cek ketersediaan ukuran & warna"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Paket Perlengkapan Newborn",
+        description: "Tuliskan isi paket, merek, dan keunggulan produk andalan tokomu.",
+        badgeText: "PALING LAKU",
+        ctaText: "Lihat Produk",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([{ question: "Apakah bisa tukar ukuran?", answer: "Jelaskan kebijakan tukar/retur kalau ukuran tidak sesuai." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Voucher untuk promo member baru.",
+  },
+  {
+    key: "bookstore",
+    category: "shop",
+    layoutVariant: "card",
+    label: "Toko Buku",
+    description: "Katalog buku, pre-order, komunitas baca",
+    theme: "joyful",
+    bio: "Toko buku independen | Kurasi bacaan pilihan tiap minggu",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Rekomendasi Minggu Ini", "Buku pilihan & ulasan singkat"),
+      link("whatsapp", "Pre-Order Buku", "Tanya ketersediaan judul & estimasi kirim"),
+    ],
+    blocks: [
+      { type: "text", title: "Kategori Buku", text: "Tuliskan genre yang kamu jual (fiksi, non-fiksi, anak, impor) dan cara pemesanannya di sini." },
+      faqBlock([{ question: "Apakah menerima titip jual dari penulis lokal?", answer: "Jelaskan syarat konsinyasi untuk penulis/penerbit independen." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Komunitas untuk klub baca bulanan.",
+  },
 
   // ---------- Education ----------
   // TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat catatan
@@ -1367,6 +1518,53 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Kelas online atau tatap muka?", answer: "Tersedia keduanya -- pilih sesuai kenyamananmu saat mendaftar." }]),
     ],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche bimbingan belajar
+  // (lembaga, beda dari "tutor" individu) & persiapan ujian/sertifikasi
+  // belum terwakili di kategori ini.
+  {
+    key: "tutoring-center",
+    category: "education",
+    layoutVariant: "headline",
+    label: "Bimbingan Belajar",
+    description: "Program les, jadwal, pendaftaran",
+    theme: "joyful",
+    bio: "Bimbingan belajar | Pendampingan belajar dari SD sampai SMA",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Daftar Program", "Tanya jadwal & biaya sesuai jenjang"),
+      link("instagram", "Kegiatan Belajar", "Suasana kelas & momen belajar bersama"),
+    ],
+    blocks: [
+      { type: "text", title: "Program Tersedia", text: "Tuliskan jenjang (SD/SMP/SMA), mata pelajaran, dan format kelas (privat/kelompok) di sini." },
+      mapsBlock("Lokasi Bimbel"),
+      faqBlock([{ question: "Ada kelas online?", answer: "Jelaskan apakah tersedia opsi belajar online selain tatap muka." }]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk promo pendaftaran gelombang baru.",
+  },
+  {
+    key: "exam-prep",
+    category: "education",
+    layoutVariant: "minimal",
+    label: "Persiapan Ujian & Sertifikasi",
+    description: "Kelas TOEFL/IELTS/CPNS, jadwal, konsultasi",
+    theme: "joyful",
+    bio: "Persiapan ujian | TOEFL, IELTS, CPNS, dan tes lainnya",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Kelas", "Tanya program sesuai target skor/ujian"),
+      link("instagram", "Tips & Latihan Soal", "Materi gratis tiap minggu"),
+    ],
+    blocks: [
+      { type: "text", title: "Program Persiapan", text: "Tuliskan jenis ujian yang kamu bantu persiapkan, target skor, dan durasi program di sini." },
+      faqBlock([
+        { question: "Ada simulasi ujian?", answer: "Jelaskan apakah program termasuk try out/simulasi ujian sungguhan." },
+        { question: "Berapa lama sampai siap ujian?", answer: "Tulis estimasi durasi belajar sampai target skor tercapai." },
+      ]),
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket soal latihan/e-book strategi ujian.",
   },
 
   // ---------- Entertainment ----------
@@ -1546,6 +1744,48 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Bagaimana cara booking untuk event?", answer: "Kirim detail acara (tanggal, tema, jumlah peserta) lewat WhatsApp, tim akan konfirmasi ketersediaan." }]),
     ],
     monetizationHint: "Cocok dipasangkan dengan Event -- aktifkan di menu Produk & Monetisasi.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche komika & MC/host
+  // acara belum terwakili di kategori ini.
+  {
+    key: "standup-comedian",
+    category: "entertainment",
+    layoutVariant: "spotlight",
+    label: "Komika",
+    description: "Jadwal manggung, booking, cuplikan set",
+    theme: "joyful",
+    bio: "Komika | Bikin ketawa lewat cerita sehari-hari",
+    social: { instagram: "username", tiktok: "username", youtube: "@namachannel" },
+    links: [
+      link("youtube", "Cuplikan Open Mic", "Highlight set komedi terbaru"),
+      link("whatsapp", "Booking Manggung", "Untuk acara privat/korporat"),
+    ],
+    blocks: [
+      { type: "text", title: "Jadwal Manggung", text: "Tuliskan jadwal open mic/gigs terdekat beserta lokasinya di sini." },
+      faqBlock([{ question: "Bisa untuk acara kantor?", answer: "Jelaskan format set untuk acara korporat/privat & durasinya." }]),
+    ],
+    monetizationHint: "Event & Tiket cocok kalau kamu mengadakan show tiket sendiri.",
+  },
+  {
+    key: "mc-host",
+    category: "entertainment",
+    layoutVariant: "portrait",
+    label: "MC & Host Acara",
+    description: "Portofolio, jenis acara, booking",
+    theme: "joyful",
+    bio: "MC & host acara | Bikin acaramu hidup dari awal sampai akhir",
+    social: { instagram: "username", tiktok: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Tanggal", "Cek ketersediaan & tarif sesuai jenis acara"),
+      link("instagram", "Cuplikan Acara", "Dokumentasi jadi MC di berbagai acara"),
+    ],
+    blocks: [
+      { type: "text", title: "Jenis Acara", text: "Tuliskan jenis acara yang kamu tangani (pernikahan, korporat, ulang tahun) beserta bahasa yang dikuasai di sini." },
+      faqBlock([{ question: "Apakah bisa request rundown khusus?", answer: "Jelaskan proses koordinasi rundown sebelum hari-H." }]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP booking sebelum hari acara.",
   },
 
   // ---------- Local Business ----------
@@ -1859,6 +2099,49 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Cocok dipasangkan dengan Kelas & Kursus -- aktifkan di menu Produk & Monetisasi.",
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche bengkel & jasa
+  // percetakan/sablon belum terwakili di kategori ini.
+  {
+    key: "auto-repair-shop",
+    category: "local",
+    layoutVariant: "masthead",
+    label: "Bengkel Motor & Mobil",
+    description: "Layanan servis, harga, booking",
+    theme: "joyful",
+    bio: "Bengkel | Servis motor & mobil cepat dan terpercaya",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Servis", "Pilih jenis servis & jadwal yang kosong"),
+      link("instagram", "Hasil Kerja Kami", "Sebelum-sesudah servis & perbaikan"),
+    ],
+    blocks: [
+      mapsBlock("Lokasi Bengkel"),
+      { type: "text", title: "Layanan & Harga", text: "Tuliskan jenis servis (ganti oli, tune up, body repair) beserta estimasi harganya di sini." },
+      faqBlock([{ question: "Apakah ada layanan panggil ke lokasi?", answer: "Jelaskan apakah tersedia servis panggil dan area jangkauannya." }]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk promo servis rutin/member.",
+  },
+  {
+    key: "print-shop",
+    category: "local",
+    layoutVariant: "cover",
+    label: "Percetakan & Sablon",
+    description: "Layanan cetak, katalog, pemesanan",
+    theme: "joyful",
+    bio: "Percetakan & sablon | Cetak cepat, hasil rapi",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Pesan Cetak", "Kirim desain & jumlah yang dibutuhkan"),
+      link("instagram", "Portofolio Hasil Cetak", "Contoh hasil sablon & cetak sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Cetak", text: "Tuliskan jenis produk (kaos, banner, kartu nama, stiker) beserta minimum order dan estimasi harga di sini." },
+      faqBlock([{ question: "Berapa lama proses cetak?", answer: "Tulis estimasi waktu pengerjaan tergantung jumlah & jenis produk." }]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP sebelum produksi dimulai.",
+  },
 
   // ---------- Tourism & Travel ----------
   // Hasil analisa galeri tema kompetitor, 17 Agustus 2026 (permintaan
@@ -2049,6 +2332,51 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Tur jalan kaki atau naik kendaraan?", answer: "Tergantung paket -- ada opsi jalan kaki santai atau naik kendaraan untuk jarak lebih jauh." }]),
     ],
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche rental kendaraan
+  // wisata & island hopping belum terwakili di kategori ini.
+  {
+    key: "car-rental",
+    category: "tourism",
+    layoutVariant: "hero",
+    label: "Rental Mobil & Motor Wisata",
+    description: "Armada, harga sewa, booking",
+    theme: "joyful",
+    bio: "Rental mobil & motor | Jelajah destinasi dengan nyaman",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Sewa", "Pilih tanggal & jenis kendaraan"),
+      link("instagram", "Daftar Armada", "Foto & spesifikasi kendaraan yang tersedia"),
+    ],
+    blocks: [
+      { type: "text", title: "Armada & Harga", text: "Tuliskan daftar kendaraan, harga sewa harian, dan syarat sewa (KTP/SIM/deposit) di sini." },
+      faqBlock([
+        { question: "Sewa lepas kunci atau dengan sopir?", answer: "Jelaskan opsi yang tersedia dan perbedaan harganya." },
+        { question: "Apakah antar-jemput bandara?", answer: "Tulis apakah tersedia layanan antar-jemput dan biayanya." },
+      ]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk promo sewa jangka panjang.",
+  },
+  {
+    key: "island-hopping",
+    category: "tourism",
+    layoutVariant: "polaroid",
+    label: "Island Hopping & Wisata Bahari",
+    description: "Paket trip, spot, booking",
+    theme: "joyful",
+    bio: "Island hopping | Jelajah pulau & spot snorkeling tersembunyi",
+    social: { instagram: "username", tiktok: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Trip", "Pilih paket & tanggal keberangkatan"),
+      link("instagram", "Spot Favorit", "Foto & cerita pulau yang pernah dikunjungi"),
+    ],
+    blocks: [
+      { type: "text", title: "Paket Trip", text: "Tuliskan pulau/spot yang dikunjungi, durasi, dan apa saja yang termasuk (kapal, alat snorkeling, makan siang) di sini." },
+      faqBlock([{ question: "Apakah aman untuk yang tidak bisa berenang?", answer: "Jelaskan ketersediaan life jacket dan pendampingan di air." }]),
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket trip open trip dalam satu harga tetap.",
+  },
 
   // ---------- Lifestyle ----------
   // TIDAK dapat kartu showcase (revisi 26 Agustus 2026, lihat catatan
@@ -2195,6 +2523,48 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     blocks: [
       { type: "text", title: "Tentang Aku & Keluarga", text: "Tuliskan cerita singkat tentang kamu, usia anak, dan topik parenting yang sering kamu bahas di sini." },
       faqBlock([{ question: "Produk yang direkomendasikan beli di mana?", answer: "Cek deskripsi tautan produk di atas -- link belanja selalu aku cantumkan di sana." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche bookstagrammer &
+  // konten dekorasi rumah belum terwakili di kategori ini.
+  {
+    key: "book-content-creator",
+    category: "lifestyle",
+    layoutVariant: "polaroid",
+    label: "Bookstagrammer",
+    description: "Ulasan buku, rekomendasi, media sosial",
+    theme: "joyful",
+    bio: "Bookstagrammer | Ulasan jujur buku yang layak dibaca",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Ulasan Buku Terbaru", "Rating & rekomendasi mingguan"),
+      link("tiktok", "BookTok Favorit", "Rekomendasi singkat dalam video"),
+    ],
+    blocks: [
+      { type: "text", title: "Genre Favorit", text: "Tuliskan genre buku yang sering kamu ulas dan gaya ulasanmu di sini." },
+      faqBlock([{ question: "Bisa titip endorse buku?", answer: "Jelaskan cara & syarat kerja sama endorse dengan penerbit/penulis." }]),
+    ],
+    monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
+  },
+  {
+    key: "home-decor-creator",
+    category: "lifestyle",
+    layoutVariant: "duo",
+    label: "Konten Dekorasi Rumah",
+    description: "Inspirasi dekor, rekomendasi produk",
+    theme: "joyful",
+    bio: "Home decor creator | Inspirasi rumah nyaman dengan budget masuk akal",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Inspirasi Dekor", "Ide dekorasi ruang per ruang"),
+      link("tiktok", "Before-After Rumah", "Transformasi ruang dalam video singkat"),
+    ],
+    blocks: [
+      { type: "text", title: "Tentang Konten Ini", text: "Tuliskan gaya dekor yang kamu bagikan (minimalis, Jepang, industrial) dan budget range yang kamu rekomendasikan." },
+      faqBlock([{ question: "Barang di video beli di mana?", answer: "Cek deskripsi tautan produk di atas -- link belanja selalu aku cantumkan di sana." }]),
     ],
     monetizationHint: "Cocok dipasangkan dengan Afiliasi -- aktifkan di menu Produk & Monetisasi.",
   },
@@ -2443,6 +2813,54 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Bagaimana cara ikut kegiatan?", answer: "Gabung grup WhatsApp untuk info jadwal terbaru, semua kegiatan terbuka untuk umum." }]),
     ],
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche giveaway/kontes &
+  // waiting list pre-launch belum terwakili di kategori ini.
+  {
+    key: "giveaway",
+    category: "special",
+    layoutVariant: "ticket",
+    label: "Giveaway & Kontes",
+    description: "Info hadiah, syarat, cara ikut",
+    theme: "joyful",
+    bio: "Giveaway | Ikutan, siapa tahu kamu yang beruntung",
+    social: { instagram: "username", tiktok: "username" },
+    links: [
+      link("instagram", "Cara Ikut Giveaway", "Syarat & langkah pendaftaran"),
+      link("whatsapp", "Tanya-Tanya", "Kalau ada pertanyaan soal giveaway ini"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Hadiah Giveaway",
+        description: "Tuliskan hadiah yang dibagikan, jumlah pemenang, dan periode pendaftaran.",
+        badgeText: "GIVEAWAY",
+        ctaText: "Ikut Sekarang",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([
+        { question: "Kapan pemenang diumumkan?", answer: "Tulis tanggal pengumuman dan cara menghubungi pemenang." },
+        { question: "Siapa saja yang boleh ikut?", answer: "Jelaskan syarat peserta (usia, wilayah, follow akun, dst)." },
+      ]),
+    ],
+    monetizationHint: "Voucher paling pas untuk giveaway dengan kode promo eksklusif.",
+  },
+  {
+    key: "waitlist",
+    category: "special",
+    layoutVariant: "centered",
+    label: "Waiting List Pre-Launch",
+    description: "Kumpulkan email/WhatsApp sebelum rilis",
+    theme: "joyful",
+    bio: "Segera hadir | Daftar sekarang, jadi yang pertama tahu",
+    social: { instagram: "username" },
+    links: [link("instagram", "Update Progress", "Cerita di balik layar sebelum rilis")],
+    blocks: [
+      { type: "text", title: "Apa yang Akan Datang", text: "Tuliskan produk/layanan yang akan diluncurkan dan kenapa orang harus menunggu ini." },
+      { type: "contact_form", title: "Daftar Waiting List" },
+    ],
+    monetizationHint: "Setelah rilis, ganti ke Produk Digital atau Payment Link sesuai kebutuhan.",
+  },
   // 3 template baru, 24 Agustus 2026 (permintaan langsung pengguna, contoh
   // tangkapan layar template link-in-bio developer bertema navy gelap
   // "Dimas Dev": kartu tautan ikon+judul+deskripsi+panah, kartu "Project
@@ -2680,6 +3098,52 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Voucher bisa dipakai untuk paket beberapa sesi terapi -- aktifkan di menu Produk & Monetisasi.",
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche bidan & apotek
+  // online belum terwakili di kategori ini.
+  {
+    key: "midwife",
+    category: "health",
+    layoutVariant: "card",
+    label: "Bidan & Layanan Kehamilan",
+    description: "Jadwal praktik, konsultasi, janji temu",
+    theme: "joyful",
+    bio: "Bidan | Pendampingan kehamilan hingga persalinan",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Buat Janji", "Konsultasi kehamilan & jadwal periksa"),
+      link("instagram", "Edukasi Kehamilan", "Tips kehamilan sehat & persiapan persalinan"),
+    ],
+    blocks: [
+      mapsBlock("Lokasi Praktik"),
+      { type: "text", title: "Layanan Praktik", text: "Tuliskan layanan yang tersedia (periksa kehamilan, USG, konsultasi menyusui) beserta jadwal praktiknya di sini." },
+      faqBlock([{ question: "Melayani persalinan di rumah?", answer: "Jelaskan apakah tersedia layanan persalinan di rumah atau hanya rujukan ke fasilitas kesehatan." }]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk paket kelas edukasi kehamilan.",
+  },
+  {
+    key: "online-pharmacy",
+    category: "health",
+    layoutVariant: "banner",
+    label: "Apotek Online",
+    description: "Katalog obat, konsultasi, pemesanan",
+    theme: "joyful",
+    bio: "Apotek online | Pesan obat & konsultasi tanpa antre",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Pesan Obat", "Kirim resep atau nama obat yang dibutuhkan"),
+      link("instagram", "Info Kesehatan", "Tips & info obat yang aman dikonsumsi"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Apotek", text: "Tuliskan cara pemesanan, area pengantaran, dan apakah menerima resep dokter di sini." },
+      faqBlock([
+        { question: "Bisa konsultasi dulu sebelum beli?", answer: "Jelaskan apakah tersedia konsultasi dengan apoteker sebelum pembelian." },
+        { question: "Berapa lama pengantaran?", answer: "Tulis estimasi waktu pengantaran sesuai area." },
+      ]),
+    ],
+    monetizationHint: "Voucher bisa dipakai untuk promo ongkir gratis pesanan pertama.",
+  },
 
   // ---------- Sports & Athletics (benchmark Linktree "Sports") ----------
   {
@@ -2824,6 +3288,49 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       faqBlock([{ question: "Bagaimana cara jadi sponsor?", answer: "Jelaskan paket sponsorship & benefit yang didapat sponsor." }]),
     ],
     monetizationHint: "Toko Online cocok untuk jual jersey & merchandise tim.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche pelatih cabang
+  // olahraga spesifik (beda dari personal-trainer generik di kategori
+  // health) & fotografer olahraga belum terwakili di kategori ini.
+  {
+    key: "sports-coach",
+    category: "sports",
+    layoutVariant: "duo",
+    label: "Pelatih Cabang Olahraga",
+    description: "Program latihan, jadwal, booking",
+    theme: "joyful",
+    bio: "Pelatih olahraga | Latihan terarah sesuai levelmu",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Sesi Latihan", "Pilih cabang olahraga & jadwal latihan"),
+      link("instagram", "Dokumentasi Latihan", "Progress murid & tips teknik dasar"),
+    ],
+    blocks: [
+      { type: "text", title: "Cabang & Program", text: "Tuliskan cabang olahraga yang kamu latih (badminton, basket, sepak bola, dst), level murid, dan harga per sesi di sini." },
+      faqBlock([{ question: "Latihan privat atau grup?", answer: "Jelaskan format latihan yang tersedia dan perbedaan harganya." }]),
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket latihan beberapa sesi sekaligus.",
+  },
+  {
+    key: "sports-photography",
+    category: "sports",
+    layoutVariant: "portrait",
+    label: "Fotografer Olahraga",
+    description: "Portofolio, jasa dokumentasi event",
+    theme: "joyful",
+    bio: "Fotografer olahraga | Abadikan momen terbaik di lapangan",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Booking Dokumentasi", "Untuk pertandingan/event olahraga"),
+      link("instagram", "Portofolio Foto", "Hasil jepretan dari berbagai event"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Dokumentasi", text: "Tuliskan jenis event yang kamu tangani (pertandingan, turnamen, marathon) beserta paket harganya di sini." },
+      faqBlock([{ question: "Berapa lama hasil foto diterima?", answer: "Tulis estimasi waktu edit & pengiriman hasil foto." }]),
+    ],
+    monetizationHint: "Payment Link memudahkan menagih DP sebelum hari pemotretan.",
   },
 
   // ---------- Coaching & Consulting (benchmark Lynk.id: konsultasi 1-on-1,
@@ -2993,6 +3500,51 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
     ],
     monetizationHint: "Kelas & Kursus cocok untuk workshop rekaman yang bisa dijual berulang.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche coach hubungan &
+  // coach belajar/akademik belum terwakili di kategori ini.
+  {
+    key: "relationship-coach",
+    category: "coaching",
+    layoutVariant: "portrait",
+    label: "Coach Hubungan & Pernikahan",
+    description: "Sesi konseling, program, testimoni",
+    theme: "joyful",
+    bio: "Relationship coach | Bantu komunikasi lebih sehat dengan pasangan",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Jadwalkan Sesi", "Konseling individu atau pasangan"),
+      link("instagram", "Tips Hubungan", "Insight komunikasi & resolusi konflik"),
+    ],
+    blocks: [
+      { type: "text", title: "Cara Kerja Sesi", text: "Jelaskan format sesi (individu/pasangan), durasi, dan media (online/tatap muka) di sini." },
+      faqBlock([
+        { question: "Apakah rahasia terjamin?", answer: "Jelaskan kebijakan kerahasiaan sesi konseling." },
+        { question: "Berapa sesi yang disarankan?", answer: "Tulis perkiraan jumlah sesi tergantung kompleksitas masalah." },
+      ]),
+    ],
+    monetizationHint: "Produk Digital cocok untuk jual paket beberapa sesi dalam satu harga tetap.",
+  },
+  {
+    key: "study-coach",
+    category: "coaching",
+    layoutVariant: "headline",
+    label: "Coach Belajar & Akademik",
+    description: "Bimbingan metode belajar, konsultasi",
+    theme: "joyful",
+    bio: "Study coach | Bantu kamu belajar lebih efektif, bukan lebih lama",
+    social: { instagram: "username", whatsapp: "62812xxxxxxxx" },
+    links: [
+      link("whatsapp", "Konsultasi Belajar", "Ceritakan kendala belajarmu sekarang"),
+      link("instagram", "Tips Metode Belajar", "Teknik belajar efektif tiap minggu"),
+    ],
+    blocks: [
+      { type: "text", title: "Program Pendampingan", text: "Tuliskan siapa target muridmu (pelajar/mahasiswa), metode yang kamu ajarkan, dan format sesinya di sini." },
+      faqBlock([{ question: "Cocok untuk semua mata pelajaran?", answer: "Jelaskan apakah fokus ke metode belajar umum atau mata pelajaran tertentu." }]),
+    ],
+    monetizationHint: "Kelas & Kursus cocok untuk workshop metode belajar yang bisa dijual berulang.",
   },
 
   // ---------- Digital Product (benchmark Lynk.id: ebook, template Canva,
@@ -3187,6 +3739,63 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
     ],
     monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
   },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche stock media & font
+  // seller belum terwakili di kategori ini.
+  {
+    key: "stock-media-seller",
+    category: "digital",
+    layoutVariant: "spotlight",
+    label: "Stock Foto & Video",
+    description: "Jual foto/video stok, lisensi",
+    theme: "joyful",
+    bio: "Kreator stock media | Foto & video siap pakai untuk proyekmu",
+    social: { instagram: "username", email: "halo@domainmu.com" },
+    links: [
+      link("instagram", "Preview Koleksi", "Cuplikan foto & video terbaru"),
+      link("email", "Lisensi Khusus", "Untuk kebutuhan komersial skala besar"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Koleksi Terbaru",
+        description: "Tuliskan tema koleksi, jumlah aset, dan resolusi yang tersedia.",
+        badgeText: "STOCK MEDIA",
+        ctaText: "Lihat Koleksi",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([
+        { question: "Lisensinya untuk apa saja?", answer: "Jelaskan cakupan lisensi (personal/komersial) dan batasannya." },
+        { question: "Format filenya apa?", answer: "Tulis format & resolusi file yang didapat pembeli." },
+      ]),
+    ],
+    monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
+  },
+  {
+    key: "font-seller",
+    category: "digital",
+    layoutVariant: "masthead",
+    label: "Font & Typeface",
+    description: "Jual font custom, lisensi, preview",
+    theme: "joyful",
+    bio: "Type designer | Font custom untuk brand & desainmu",
+    social: { instagram: "username", email: "halo@domainmu.com" },
+    links: [
+      link("instagram", "Preview Font", "Contoh penggunaan font di berbagai desain"),
+      link("email", "Lisensi Komersial", "Untuk penggunaan brand/produk berbayar"),
+    ],
+    blocks: [
+      showcaseBlock({
+        title: "Font Terbaru",
+        description: "Tuliskan nama font, gaya (serif/sans/display), dan format file yang didapat pembeli.",
+        badgeText: "FONT BARU",
+        ctaText: "Lihat Detail",
+        url: PLATFORM_URL.instagram,
+      }),
+      faqBlock([{ question: "Bisa dipakai untuk logo brand?", answer: "Jelaskan cakupan lisensi untuk penggunaan komersial seperti logo." }]),
+    ],
+    monetizationHint: "Produk digital dengan pengiriman file otomatis -- pembeli langsung dapat tautan unduhannya.",
+  },
 
   // ---------- Marketing & Social (benchmark Linktree "Marketing" +
   // "Social Media", s.id "Marketing Teams"/"Agencies"). Template "Agency"
@@ -3314,6 +3923,52 @@ export const QUICK_SETUP_TEMPLATES: QuickSetupTemplate[] = [
       ]),
     ],
     monetizationHint: "Voucher paling pas untuk kampanye promo dengan kode khusus.",
+  },
+  // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
+  // pengguna: "buatkan template quick setup sesuai tema website minimal 2
+  // di tiap category, template tema joyfull") -- niche email marketing
+  // specialist & influencer marketing manager belum terwakili di
+  // kategori ini.
+  {
+    key: "email-marketing-specialist",
+    category: "marketing",
+    layoutVariant: "headline",
+    label: "Email Marketing Specialist",
+    description: "Jasa email campaign, funnel, laporan",
+    theme: "joyful",
+    bio: "Email marketing specialist | Email yang benar-benar dibuka & diklik",
+    social: { linkedin: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Audit Email Gratis", "Kirim campaign emailmu untuk dicek dulu"),
+      link("linkedin", "Studi Kasus", "Hasil open rate & konversi klien sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan Email Marketing", text: "Tuliskan platform yang kamu kuasai (Mailchimp/Klaviyo/dll), jenis campaign (newsletter, funnel, promo), dan tarifnya di sini." },
+      faqBlock([
+        { question: "Perlu list email sendiri?", answer: "Jelaskan apakah klien harus punya list email dulu atau kamu bantu membangunnya." },
+        { question: "Laporannya seperti apa?", answer: "Tulis metrik yang dilaporkan (open rate, klik, konversi) dan frekuensinya." },
+      ]),
+    ],
+    monetizationHint: "Payment Link cocok untuk menagih fee bulanan pengelolaan email marketing.",
+  },
+  {
+    key: "influencer-marketing-manager",
+    category: "marketing",
+    layoutVariant: "duo",
+    label: "Influencer Marketing Manager",
+    description: "Kelola kolaborasi brand-kreator, laporan",
+    theme: "joyful",
+    bio: "Influencer marketing manager | Jembatan brand & kreator yang tepat",
+    social: { instagram: "username", linkedin: "username", email: "halo@domainmu.com" },
+    links: [
+      link("email", "Ajukan Campaign", "Untuk brand yang mau kolaborasi kreator"),
+      link("linkedin", "Portofolio Campaign", "Hasil kolaborasi brand-kreator sebelumnya"),
+    ],
+    blocks: [
+      { type: "text", title: "Layanan yang Ditawarkan", text: "Tuliskan cakupan layanan (cari kreator, negosiasi, kelola campaign, laporan performa) beserta model kerja sama di sini." },
+      faqBlock([{ question: "Ada database kreator sendiri?", answer: "Jelaskan jaringan kreator yang kamu kelola dan nichenya." }]),
+    ],
+    monetizationHint: "Payment Link cocok untuk menagih fee manajemen per campaign.",
   },
   // 2 template berikut ditambahkan 6 September 2026 (permintaan langsung
   // pengguna: "saya mau buatkan 10 template yang sesuai dengan tema web

@@ -175,6 +175,18 @@ export type PageThemeName =
   | "lens"
   | "kind"
   | "code"
+  // "joyful" -- permintaan langsung pengguna, 6 September 2026: "buatkan
+  // template quick setup sesuai tema website ... template tema joyfull".
+  // SATU-SATUNYA preset yang sengaja meniru identitas visual jeon.id
+  // SENDIRI (marketing site + dashboard redesign "Modern Playful Creator
+  // Platform") -- kartu bertepi tebal #111111 + shadow-brutal, tombol
+  // lime cerah, aksen ungu/pink brand (#7657ff/#ffafd0/#d7ff60, SAMA
+  // persis nilai --jeon-purple/--jeon-pink/--jeon-lime di globals.css),
+  // BEDA dari candy/blush/lavender/peach yang pastel tapi generik (warna
+  // Tailwind biasa, bukan brand jeon.id). Lihat catatan lengkap di entri
+  // PAGE_THEMES.joyful kenapa border/shadow brutal (bukan border tipis
+  // seperti 100+ preset lain) sengaja dipertahankan di sini.
+  | "joyful"
   | "custom";
 
 // WALLPAPER_THEME_NAMES -- permintaan langsung pengguna: pisahkan galeri
@@ -3242,6 +3254,34 @@ export const PAGE_THEMES: Record<Exclude<PageThemeName, "custom">, PageTheme> = 
     previewBg: "url('/doodles/code.svg') left top/110px 110px repeat",
     previewIsDark: false,
     pageStyle: { fontFamily: "var(--font-custom-roboto-mono)" },
+  },
+  joyful: {
+    // Meniru langsung gaya kartu mockup public/homepage/hero.png (gradien
+    // ungu-pastel ke krem, tombol lime/pink cerah) & identitas visual
+    // jeon.id sendiri -- lihat catatan lengkap di PageThemeName di atas.
+    // border/shadow SENGAJA brutal (2px #111111 + shadow-brutal, sama
+    // seperti kartu di landing/ProductShowcase.tsx & Hero.tsx), BUKAN
+    // border tipis seperti semua preset lain di file ini -- ini theme
+    // SATU-SATUNYA yang memang dirancang mereplikasi identitas brand
+    // sendiri, bukan sekadar palet pastel baru.
+    label: "Joyful",
+    page: "bg-gradient-to-b from-[#d9ceff] via-[#fdf1f5] to-[#fff8ef]",
+    glow: "bg-gradient-to-br from-[#7657ff]/30 via-[#ffafd0]/25 to-[#d7ff60]/20",
+    avatarRing: "ring-4 ring-white shadow-hero",
+    name: "text-ink",
+    bio: "text-ink/70",
+    card: "border-2 border-[#111111] bg-white shadow-brutal hover:-translate-y-0.5",
+    cardTitle: "text-ink",
+    chevron: "text-ink/40",
+    productCard: "border-2 border-[#111111] bg-white shadow-brutal",
+    productTitle: "text-ink",
+    productPrice: "text-[#7657ff]",
+    buyButton: "bg-[#d7ff60] text-ink font-bold border-2 border-[#111111] hover:brightness-105",
+    footer: "text-ink/35 hover:text-ink",
+    swatch: "#7657ff",
+    previewBg: "linear-gradient(160deg, #d9ceff 0%, #fdf1f5 55%, #fff8ef 100%)",
+    previewIsDark: false,
+    pageStyle: { fontFamily: "var(--font-custom-poppins)" },
   },
 };
 

@@ -1160,6 +1160,12 @@ var availableThemes = map[string]bool{
 	// sama seperti catatan di atas (batch 6 preset doodle 26 Agustus).
 	"pixel": true, "sweat": true, "snip": true, "paws": true, "mic": true,
 	"herb": true, "thread": true, "lens": true, "kind": true, "code": true,
+	// "joyful" -- permintaan langsung pengguna, 6 September 2026: "buatkan
+	// template quick setup sesuai tema website ... template tema
+	// joyfull". Ditambahkan LANGSUNG di sini bersamaan dengan frontend
+	// (THEME_PRESETS, api-client.ts) -- lihat catatan panjang di atas soal
+	// bug ini sudah terjadi 2x sebelumnya kalau lupa.
+	"joyful": true,
 	"custom": true,
 }
 
