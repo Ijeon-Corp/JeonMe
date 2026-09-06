@@ -8,6 +8,7 @@ import { IconBook, IconBox, IconChevronRight, IconMail, IconSearch, IconSparkle,
 import { useLocale } from "@/lib/locale-context";
 import { getMyPage } from "@/lib/api-client";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "@/lib/site";
+import { buildHelpFaqGroups } from "@/lib/help-faq";
 
 // Pusat Bantuan -- benchmark Linktree "More > Support" (permintaan pengguna,
 // 3 September 2026). SEBELUMNYA "Bantuan" di sidebar hanya membuka halaman
@@ -36,16 +37,7 @@ export default function DashboardHelpPage() {
     { href: "/dashboard/balance", title: k("quickPayout"), desc: k("quickPayoutDesc"), icon: IconWallet },
   ];
 
-  const groups = useMemo(
-    () => [
-      { label: k("groupPage"), items: [1, 2, 3] },
-      { label: k("groupSelling"), items: [4, 5, 6] },
-      { label: k("groupPremium"), items: [7, 8] },
-      { label: k("groupAccount"), items: [9, 10, 11] },
-    ].map((g) => ({ label: g.label, items: g.items.map((n) => ({ q: k(`q${n}`), a: k(`a${n}`) })) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- k() stabil per locale
-    [t],
-  );
+  const groups = useMemo(() => buildHelpFaqGroups(t), [t]);
 
   const q = query.trim().toLowerCase();
   const filtered = groups
