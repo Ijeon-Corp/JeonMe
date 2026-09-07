@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getToken, getAdminSummary } from "@/lib/api-client";
+import { getToken, getMe } from "@/lib/api-client";
 
-// Tidak ada klaim "role" di JWT (lihat middleware.AdminRequired -- sengaja
-// selalu cek DB langsung, bukan percaya token, supaya demosi admin langsung
-// berlaku). Jadi cara termudah frontend tahu "apakah aku admin" adalah
-// memanggil salah satu endpoint admin dan lihat hasilnya: 200 = admin,
-// 403/401 = bukan, redirect keluar.
+// SEBELUMNYA (sebelum GetMe ada klaim role, lihat auth.go) memanggil
+// getAdminSummary() dan melihat 200/403 sbg proxy "apakah aku admin".
+// Diganti ke getMe() + cek role langsung (7 September 2026, permintaan
+// langsung pengguna: "butuh role khusus untuk menangani live chat dsb
+// jangan hak akses admin yang full") -- role='support' JUGA boleh masuk
+// shell /admin (supaya bisa ke /admin/support-chat), TAPI endpoint
+// /admin/summary yang dipakai proxy lama tetap murni admin-only, jadi
+// proxy lama akan salah menolak akun 'support'. admin/layout.tsx yang
+// membatasi menu & me-redirect 'support' menjauh dari halaman admin-only
+// lain -- guard ini HANYA soal "boleh masuk shell /admin atau tidak".
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [status, setStatus] = useState<"checking" | "authorized" | "denied">("checking");
@@ -18,8 +23,8 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
       router.replace("/login");
       return;
     }
-    getAdminSummary()
-      .then(() => setStatus("authorized"))
+    getMe()
+      .then((me) => setStatus(me.role === "admin" || me.role === "support" ? "authorized" : "denied"))
       .catch(() => setStatus("denied"));
   }, [router]);
 

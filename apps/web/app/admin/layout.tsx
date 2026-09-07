@@ -50,6 +50,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
   }, []);
 
+  // isSupportOnly -- permintaan langsung pengguna, 7 September 2026:
+  // "butuh role khusus untuk menangani live chat dsb jangan hak akses
+  // admin yang full". role='support' cuma boleh melihat menu Live Chat --
+  // sisi backend SUDAH menolak (middleware.SupportRequired vs
+  // AdminRequired, lihat routes.go), redirect di sini murni supaya
+  // pengalamannya tidak "diam-diam 403" kalau nyasar ke rute lain (mis.
+  // bookmark lama, atau klik logo yang dulu selalu ke /admin).
+  const isSupportOnly = me?.role === "support";
+  useEffect(() => {
+    if (isSupportOnly && pathname !== "/admin/support-chat") {
+      router.replace("/admin/support-chat");
+    }
+  }, [isSupportOnly, pathname, router]);
+
+  const visibleNavItems = isSupportOnly ? NAV_ITEMS.filter((item) => item.href === "/admin/support-chat") : NAV_ITEMS;
+
   useEffect(() => {
     if (!profileMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -82,14 +98,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             + chip Admin, menggantikan logo-baru.png lama; pola sidebar
             sama persis dashboard/layout.tsx (ungu-hitam jeon-sidebar,
             item aktif garis ungu kiri). */}
-        <Link href="/admin" className="flex items-center gap-2">
+        <Link href={isSupportOnly ? "/admin/support-chat" : "/admin"} className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="h-7 w-auto" />
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">Admin</span>
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">
+            {isSupportOnly ? "Support" : "Admin"}
+          </span>
         </Link>
 
         <nav className="mt-8 flex flex-col gap-0.5 text-sm">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (
@@ -160,12 +178,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             breakpoint. */}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
-            <Link href="/admin" className="flex items-center gap-1.5">
+            <Link href={isSupportOnly ? "/admin/support-chat" : "/admin"} className="flex items-center gap-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-7 w-auto" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-7 w-auto" />
-              <span className="text-sm font-bold text-app-muted">Admin</span>
+              <span className="text-sm font-bold text-app-muted">{isSupportOnly ? "Support" : "Admin"}</span>
             </Link>
             <button
               type="button"
@@ -202,7 +220,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <span className="hidden items-center gap-1 text-[11px] font-semibold text-app-ink lg:flex">
                     {identityLabel}
                     <span className="rounded-full bg-jeon-lavender px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111]">
-                      Admin
+                      {isSupportOnly ? "Support" : "Admin"}
                     </span>
                   </span>
                 </button>

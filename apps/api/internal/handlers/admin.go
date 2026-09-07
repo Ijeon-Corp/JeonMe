@@ -28,6 +28,13 @@ import (
 // lewat SQL langsung oleh operator (UPDATE users SET role='admin' WHERE
 // id=...), sengaja tidak diekspos lewat API sama sekali supaya tidak ada
 // jalur eskalasi privilese lewat aplikasi.
+//
+// role='support' (7 September 2026, permintaan langsung pengguna: "butuh
+// role khusus untuk menangani live chat dsb jangan hak akses admin yang
+// full") -- SAMA caranya (SQL manual), TAPI cuma boleh mengakses rute yang
+// digerbang middleware.SupportRequired (Live Chat, lihat routes.go grup
+// supportGroup), BUKAN endpoint apa pun di AdminHandler ini (semuanya
+// masih murni middleware.AdminRequired, role='admin' saja).
 type AdminHandler struct {
 	DB  *pgxpool.Pool
 	RDB *redis.Client

@@ -407,10 +407,13 @@ export default function DashboardLayout({
     // pun yang login (admin ataupun kreator biasa) melewati langsung ke
     // dashboard kreator penuh. router.replace (bukan push) supaya tombol
     // "kembali" browser tidak balik ke dashboard yang memang tidak boleh
-    // diakses admin.
+    // diakses admin. role='support' (7 September 2026) ikut sama -- akun
+    // staf dukungan, bukan kreator sungguhan, jadi tidak boleh punya
+    // halaman kreator sama sekali (admin/layout.tsx yang mengarahkannya
+    // lebih lanjut ke /admin/support-chat spesifik, bukan /admin penuh).
     getMe()
       .then((me) => {
-        if (me.role === "admin") {
+        if (me.role === "admin" || me.role === "support") {
           router.replace("/admin");
         }
       })

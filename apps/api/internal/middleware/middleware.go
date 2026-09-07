@@ -134,6 +134,43 @@ func AdminRequired(db *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
+// SupportRequired -- permintaan langsung pengguna, 7 September 2026:
+// "berarti butuh role khusus untuk menangani live chat dsb jangan hak
+// akses admin yang full". Role BARU 'support' (kolom users.role, sama
+// VARCHAR(20) TANPA CHECK constraint dgn 'admin'/'creator' -- tidak perlu
+// migrasi skema, cuma konvensi nilai baru) -- staf yang HANYA boleh
+// menangani Live Chat (dan fitur dukungan sejenis nanti, "dsb"), TIDAK
+// boleh menyentuh Pengguna/Laporan/Penarikan/KYC/Moderasi sama sekali.
+// 'admin' TETAP boleh mengakses rute yang digerbang ini (superset,
+// admin bisa melakukan apa pun yang bisa dilakukan support), makanya
+// dicek `role != "admin" && role != "support"` (bukan cuma != "support").
+//
+// SENGAJA middleware terpisah (bukan menambah "support" ke pengecekan
+// AdminRequired di atas) -- rute admin-only (Pengguna/Laporan/Penarikan/
+// KYC/Moderasi/Ringkasan) TETAP harus menolak role 'support' mentah-
+// mentah, cuma rute yang benar-benar didaftarkan pakai middleware ini
+// (lihat routes.go -- grup terpisah dari adminGroup) yang keduanya boleh
+// akses. Belum ada cara self-service jadi 'support' -- SAMA seperti
+// 'admin', operator mengubah lewat SQL manual (UPDATE users SET
+// role='support' WHERE id=...).
+func SupportRequired(db *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetString("userID")
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		var role string
+		err := db.QueryRow(ctx, `SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).Scan(&role)
+		if err != nil || (role != "admin" && role != "support") {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "akses ditolak, hanya untuk staf dukungan"})
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // ActAsOwner — No.87 (Sprint 10): dipasang SETELAH AuthRequired HANYA pada
 // grup rute yang boleh diakses kolaborator (tautan/produk/desain -- lihat
 // routes.go), TIDAK PERNAH pada saldo/penarikan/KYC/hapus akun/domain

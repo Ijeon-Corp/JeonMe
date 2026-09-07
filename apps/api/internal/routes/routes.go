@@ -700,14 +700,6 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.PATCH("/kyc/:userId", kyc.AdminReview)
 			adminGroup.PATCH("/kyc/:userId/revoke", kyc.AdminRevoke)
 
-			// Live chat dukungan (permintaan langsung pengguna, 7 September
-			// 2026): satu kotak masuk lintas kreator, filter default
-			// "needs_reply" (thread yg pesan terakhirnya dari kreator) --
-			// lihat SupportChatHandler & migrasi 000095.
-			adminGroup.GET("/support-chat", supportChat.AdminList)
-			adminGroup.GET("/support-chat/:userId", supportChat.AdminGetThread)
-			adminGroup.POST("/support-chat/:userId/reply", supportChat.AdminReply)
-
 			// Moderasi tautan sensitif -- permintaan langsung pengguna, 22
 			// Agustus 2026, lihat catatan lengkap di handlers.LinkModerationChecker.
 			adminGroup.GET("/moderation/keywords", admin.ListBlockedKeywords)
@@ -716,6 +708,25 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.GET("/moderation/domains", admin.ListDomainVerdicts)
 			adminGroup.POST("/moderation/domains", admin.UpsertDomainVerdict)
 			adminGroup.DELETE("/moderation/domains/:id", admin.DeleteDomainVerdict)
+		}
+
+		// Live chat dukungan (permintaan langsung pengguna, 7 September
+		// 2026: "berarti butuh role khusus untuk menangani live chat dsb
+		// jangan hak akses admin yang full") -- grup TERPISAH dari
+		// adminGroup di atas (BUKAN cuma menambah rute ke situ) supaya
+		// middleware-nya beda: SupportRequired (role 'admin' ATAU
+		// 'support'), bukan AdminRequired (role 'admin' saja). Gin
+		// mengizinkan beberapa Group() berbagi prefix path yang sama
+		// selama rute yang didaftarkan di masing-masing tidak bentrok.
+		// Filter default "needs_reply" (thread yg pesan terakhirnya dari
+		// kreator) -- lihat SupportChatHandler & migrasi 000095.
+		supportRequired := middleware.SupportRequired(db)
+		supportGroup := api.Group("/admin")
+		supportGroup.Use(authRequired, supportRequired)
+		{
+			supportGroup.GET("/support-chat", supportChat.AdminList)
+			supportGroup.GET("/support-chat/:userId", supportChat.AdminGetThread)
+			supportGroup.POST("/support-chat/:userId/reply", supportChat.AdminReply)
 		}
 
 		// Checkout publik -- REQ-F-401, tanpa perlu akun/login.
