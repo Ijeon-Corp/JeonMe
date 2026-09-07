@@ -967,6 +967,12 @@ export const dictionaries = {
           faqAnswerPlaceholder: "Jawaban",
           faqAddQuestion: "Tambah Pertanyaan",
           faqRemoveQuestion: "Hapus pertanyaan",
+          // Fase 2 langkah 7 (permintaan langsung pengguna 8 September
+          // 2026): panel upload foto image/gallery/video_image/embed_link.
+          uploadPhoto: "Unggah Foto",
+          replacePhoto: "Ganti Foto",
+          removePhoto: "Hapus foto",
+          uploading: "Mengunggah...",
           columnCount: "Jumlah kolom",
           containerHint: "Blok ini murni wadah -- pilih salah satu isinya untuk mengedit, atau tambah komponen baru ke dalamnya.",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
@@ -976,6 +982,8 @@ export const dictionaries = {
           errors: {
             loadFailed: "Gagal memuat halaman.",
             saveFailed: "Gagal menyimpan perubahan.",
+            uploadImageFailed: "Gagal mengunggah foto.",
+            deleteImageFailed: "Gagal menghapus foto.",
           },
         },
         products: {
@@ -3809,6 +3817,10 @@ export const dictionaries = {
           faqAnswerPlaceholder: "Answer",
           faqAddQuestion: "Add Question",
           faqRemoveQuestion: "Remove question",
+          uploadPhoto: "Upload Photo",
+          replacePhoto: "Replace Photo",
+          removePhoto: "Remove photo",
+          uploading: "Uploading...",
           columnCount: "Number of columns",
           containerHint: "This block is just a container -- select one of its children to edit, or add a new component inside it.",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
@@ -3818,6 +3830,8 @@ export const dictionaries = {
           errors: {
             loadFailed: "Failed to load the page.",
             saveFailed: "Failed to save changes.",
+            uploadImageFailed: "Failed to upload photo.",
+            deleteImageFailed: "Failed to delete photo.",
           },
         },
         products: {

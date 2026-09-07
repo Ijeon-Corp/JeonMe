@@ -30,11 +30,25 @@ import {
   IconTextLines,
   IconTrash,
   IconVideoImage,
+  IconX,
 } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
-import type { EmbeddedBuilderBlock, LinkItem } from "@/lib/api-client";
+import {
+  ApiError,
+  deleteBuilderMediaImage,
+  deleteGalleryImage,
+  uploadBuilderMediaImage,
+  uploadGalleryImage,
+  type EmbeddedBuilderBlock,
+  type LinkItem,
+} from "@/lib/api-client";
 import type { BuilderSeg } from "@/lib/builder-blocks";
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
+
+// maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), lihat
+// juga const yang sama di dashboard/links/page.tsx (galeri lama, jalur
+// kode terpisah dari builder tapi endpoint & limit-nya dibagi bersama).
+const maxGalleryImages = 9;
 
 // BuilderLeftPanel -- Canvas Page Builder (migrasi 000096, permintaan
 // langsung pengguna 7 September 2026, dua screenshot Lynk.id): shell tab
@@ -324,6 +338,196 @@ function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (
   );
 }
 
+// MediaImageEditor -- Canvas Page Builder Fase 2 langkah 7 (permintaan
+// langsung pengguna 8 September 2026): upload foto TUNGGAL (unggah ulang
+// menimpa), dipakai bersama utk "image", separuh foto "video_image", DAN
+// thumbnail "embed_link" -- ketiganya sama-sama lewat endpoint
+// uploadBuilderMediaImage/deleteBuilderMediaImage (mediaImageBlockTypes,
+// links.go). `key={selectedNode.id}` di titik pemanggilan memaksa remount
+// tiap ganti node terpilih supaya state `uploading` lokal tidak
+// terbawa-bawa ke node lain (pola sama FaqItemsEditor di atas).
+function MediaImageEditor({
+  rootId,
+  path,
+  imageUrl,
+  onChanged,
+}: {
+  rootId: string;
+  path: BuilderSeg[];
+  imageUrl: string | undefined;
+  onChanged: () => void;
+}) {
+  const { t } = useLocale();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      await uploadBuilderMediaImage(rootId, file, path);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setUploading(true);
+    setError(null);
+    try {
+      await deleteBuilderMediaImage(rootId, path);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {imageUrl && (
+        <div className="group relative h-28 w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="" className="h-full w-full rounded-lg object-cover ring-1 ring-black/5" />
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={uploading}
+            title={t("dashboard.pages.linksBuilder.removePhoto")}
+            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+          >
+            <IconX className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      <label
+        className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+          uploading ? "opacity-60" : ""
+        }`}
+      >
+        {uploading ? (
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+        ) : (
+          <IconPlus className="h-3.5 w-3.5" />
+        )}
+        {uploading
+          ? t("dashboard.pages.linksBuilder.uploading")
+          : imageUrl
+            ? t("dashboard.pages.linksBuilder.replacePhoto")
+            : t("dashboard.pages.linksBuilder.uploadPhoto")}
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          onChange={handleUpload}
+          disabled={uploading}
+          className="hidden"
+        />
+      </label>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// GalleryGridEditor -- Canvas Page Builder Fase 2 langkah 7: grid
+// multi-foto blok "gallery" (tile "Image Grid"), pola visual disalin dari
+// panel "Kelola foto" dashboard/links/page.tsx TAPI UI baru berdiri
+// sendiri (bukan reuse komponen -- tidak ada komponen gallery panel yang
+// reusable, lihat catatan lengkap di plan) memakai fungsi upload yang
+// SAMA (uploadGalleryImage/deleteGalleryImage) dengan tambahan `path`.
+function GalleryGridEditor({
+  rootId,
+  path,
+  images,
+  onChanged,
+}: {
+  rootId: string;
+  path: BuilderSeg[];
+  images: string[];
+  onChanged: () => void;
+}) {
+  const { t } = useLocale();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      await uploadGalleryImage(rootId, file, path);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete(index: number) {
+    setError(null);
+    try {
+      await deleteGalleryImage(rootId, index, path);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[11px] font-semibold text-app-muted">
+        {images.length}/{maxGalleryImages}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {images.map((src, i) => (
+          <div key={i} className="group relative h-16 w-16 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+            <button
+              type="button"
+              onClick={() => handleDelete(i)}
+              title={t("dashboard.pages.linksBuilder.removePhoto")}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+            >
+              <IconX className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        {images.length < maxGalleryImages && (
+          <label
+            className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+              uploading ? "opacity-60" : ""
+            }`}
+          >
+            {uploading ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+            ) : (
+              <IconPlus className="h-4 w-4" />
+            )}
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              onChange={handleUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 export default function BuilderLeftPanel({
   links,
   onAdd,
@@ -331,6 +535,7 @@ export default function BuilderLeftPanel({
   onReorderRoot,
   onReorderChildren,
   onUpdateNode,
+  onRefresh,
   designHref,
   settingsHref,
 }: {
@@ -340,6 +545,11 @@ export default function BuilderLeftPanel({
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  // onRefresh -- Fase 2 langkah 7: upload/hapus foto (image/gallery/
+  // video_image/embed_link) memutasi baris `links` LANGSUNG di backend
+  // (bukan lewat PATCH onUpdateNode) -- panel ini perlu memicu refetch
+  // supaya `links` prop (dan tree turunannya) ikut termutakhir.
+  onRefresh: () => void;
   designHref: string;
   settingsHref: string;
 }) {
@@ -521,6 +731,44 @@ export default function BuilderLeftPanel({
                 />
               )}
 
+              {selectedNode.blockType === "image" && (
+                <MediaImageEditor
+                  key={selectedNode.id}
+                  rootId={selectedNode.rootId}
+                  path={selectedNode.path}
+                  imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
+                  onChanged={onRefresh}
+                />
+              )}
+
+              {selectedNode.blockType === "gallery" && (
+                <GalleryGridEditor
+                  key={selectedNode.id}
+                  rootId={selectedNode.rootId}
+                  path={selectedNode.path}
+                  images={(selectedNode.blockData?.images as string[] | undefined) ?? []}
+                  onChanged={onRefresh}
+                />
+              )}
+
+              {selectedNode.blockType === "video_image" && (
+                <div className="flex flex-col gap-3">
+                  <input
+                    defaultValue={(selectedNode.blockData?.video_url as string) ?? ""}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { video_url: e.target.value } })}
+                    placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <MediaImageEditor
+                    key={selectedNode.id}
+                    rootId={selectedNode.rootId}
+                    path={selectedNode.path}
+                    imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
+                    onChanged={onRefresh}
+                  />
+                </div>
+              )}
+
               {selectedNode.blockType === "embed_link" && (
                 <div className="flex flex-col gap-2">
                   <input
@@ -541,6 +789,13 @@ export default function BuilderLeftPanel({
                     rows={2}
                     placeholder={t("dashboard.pages.linksBuilder.embedLinkDescriptionPlaceholder")}
                     className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <MediaImageEditor
+                    key={selectedNode.id}
+                    rootId={selectedNode.rootId}
+                    path={selectedNode.path}
+                    imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
+                    onChanged={onRefresh}
                   />
                 </div>
               )}

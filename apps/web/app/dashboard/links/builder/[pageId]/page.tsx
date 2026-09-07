@@ -294,6 +294,7 @@ export default function BuilderPage() {
           onReorderRoot={handleReorderRoot}
           onReorderChildren={handleReorderChildren}
           onUpdateNode={handleUpdateNode}
+          onRefresh={refresh}
           designHref="/dashboard/design"
           settingsHref="/dashboard/settings"
         />
