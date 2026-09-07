@@ -2340,7 +2340,7 @@ export default function PagePreview({
   // di bawah, sama sekali tidak berubah.
   if (data.builderMode === "builder") {
     return (
-      <BuilderPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} hideFooterChrome={hideFooterChrome} />
+      <BuilderPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} canBuy={canBuy} hideFooterChrome={hideFooterChrome} />
     );
   }
 
@@ -2956,44 +2956,68 @@ function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
 // "divider" + kontainer "section"/"column" (5 tipe kategori GENERAL) --
 // tipe MEDIA/INFORMATION/CONVERSION/OTHERS menyusul Fase 2/3.
 function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean): React.ReactNode {
+  // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
+  // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
+  // (assert isi Section/Column tertanam tampil benar di halaman publik).
   switch (node.blockType) {
     case "divider":
-      return <div key={node.id} role="separator" aria-hidden className={`h-px w-full opacity-20 bg-current ${theme.bio}`} />;
+      return (
+        <div
+          key={node.id}
+          data-builder-node-id={node.id}
+          data-builder-block-type="divider"
+          role="separator"
+          aria-hidden
+          className={`h-px w-full opacity-20 bg-current ${theme.bio}`}
+        />
+      );
     case "text":
       return (
-        <p key={node.id} className={`w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}`}>
+        <p
+          key={node.id}
+          data-builder-node-id={node.id}
+          data-builder-block-type="text"
+          className={`w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}`}
+        >
           {(node.blockData.text as string) ?? ""}
         </p>
       );
     case "button":
-      return interactive ? (
-        <TrackedLink
-          key={node.id}
-          username={data.username}
-          pageSlug={data.pageSlug}
-          linkId={node.id}
-          href={buildUtmHref(node.url ?? "", node.title, data.utmEnabled)}
-          className={`flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
-        >
-          {node.title}
-        </TrackedLink>
-      ) : (
-        <button
-          key={node.id}
-          type="button"
-          disabled
-          title="Pratinjau -- tombol ini tidak aktif"
-          className={`w-full cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
-        >
-          {node.title}
-        </button>
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="button" className="w-full">
+          {interactive ? (
+            <TrackedLink
+              username={data.username}
+              pageSlug={data.pageSlug}
+              linkId={node.id}
+              href={buildUtmHref(node.url ?? "", node.title, data.utmEnabled)}
+              className={`flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
+            >
+              {node.title}
+            </TrackedLink>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Pratinjau -- tombol ini tidak aktif"
+              className={`w-full cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
+            >
+              {node.title}
+            </button>
+          )}
+        </div>
       );
     case "section": {
       const children = ((node.blockData.children as unknown[] | undefined) ?? [])
         .map(normalizeEmbeddedBuilderNode)
         .filter((c): c is BuilderRenderNode => c !== null);
       return (
-        <section key={node.id} className="flex w-full flex-col items-center gap-4">
+        <section
+          key={node.id}
+          data-builder-node-id={node.id}
+          data-builder-block-type="section"
+          className="flex w-full flex-col items-center gap-4"
+        >
           {children.map((child) => renderBuilderNode(child, theme, data, interactive))}
         </section>
       );
@@ -3001,12 +3025,13 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
     case "column": {
       const columns = (node.blockData.columns as { widthPercent?: number; children?: unknown[] }[] | undefined) ?? [];
       return (
-        <div key={node.id} className="flex w-full flex-col gap-4 sm:flex-row">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="column" className="flex w-full flex-col gap-4 sm:flex-row">
           {columns.map((col, i) => {
             const children = (col.children ?? []).map(normalizeEmbeddedBuilderNode).filter((c): c is BuilderRenderNode => c !== null);
             return (
               <div
                 key={i}
+                data-builder-column-index={i}
                 className="flex min-w-0 flex-1 flex-col items-center gap-4"
                 style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
               >
@@ -3033,18 +3058,35 @@ function BuilderPagePreview({
   interactive,
   rootClassName,
   theme,
+  canBuy,
   hideFooterChrome = false,
 }: {
   data: PagePreviewData;
   interactive: boolean;
   rootClassName: string;
   theme: PageTheme;
+  canBuy: boolean;
   hideFooterChrome?: boolean;
 }) {
+  // isBio -- pageType "landing" (No.99) SENGAJA "TANPA avatar/produk/
+  // monetisasi" (lihat catatan lengkap di PagePreviewData.pageType), jadi
+  // shopPaused/leadCapture/events/donation/socialProof di bawah SAMA
+  // PERSIS digerbang `isBio` seperti layout bio biasa vs LandingPagePreview
+  // di atas -- builderMode HANYA mengganti cara blok Tautan dirender
+  // (renderBuilderNode, bukan renderLinkOrBlock), bukan menghapus fitur
+  // monetisasi account-wide lain yang independen dari mode edit.
   const isBio = data.pageType !== "landing";
+  const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
+      {isBio && interactive && data.socialProof && (
+        <SocialProofToast
+          recent={data.socialProof.recent}
+          displaySeconds={data.socialProof.displaySeconds}
+          intervalSeconds={data.socialProof.intervalSeconds}
+        />
+      )}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
@@ -3057,6 +3099,13 @@ function BuilderPagePreview({
             <div className="relative flex flex-col items-center">{renderBioHeader(data, theme)}</div>
           </div>
         )}
+
+        {isBio && data.shopPaused && (
+          <div className={`w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
+            {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
+          </div>
+        )}
+
         {data.links.map((link) => {
           const node: BuilderRenderNode = {
             id: link.id,
@@ -3067,6 +3116,159 @@ function BuilderPagePreview({
           };
           return renderBuilderNode(node, theme, data, interactive);
         })}
+
+        {isBio && data.leadCapture && (
+          <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
+            <IconMail className={`h-5 w-5 ${theme.chevron}`} />
+            <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.leadCapture.title}</p>
+            {interactive ? (
+              <LeadCaptureForm
+                username={data.username}
+                collectEmail={data.leadCapture.collectEmail}
+                collectWhatsapp={data.leadCapture.collectWhatsapp}
+                collectTelegram={data.leadCapture.collectTelegram}
+                magnetTitle={data.leadCapture.magnetTitle}
+                hasVoucher={data.leadCapture.hasVoucher}
+                inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                buttonClassName={theme.buyButton}
+              />
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Pratinjau -- tombol ini tidak aktif"
+                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+              >
+                Daftar
+              </button>
+            )}
+          </div>
+        )}
+
+        {isBio && data.events && data.events.length > 0 && (
+          <div className="w-full">
+            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Event</p>
+            <div className="flex w-full flex-col gap-3">
+              {data.events.map((event) => {
+                const startsLabel = new Intl.DateTimeFormat("id-ID", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone: event.timezone,
+                }).format(new Date(event.startsAt));
+                const soldOut = event.spotsLeft !== null && event.spotsLeft <= 0;
+                return (
+                  <div key={event.productId} className={`flex flex-col gap-1.5 rounded-xl p-2.5 ${theme.productCard}`}>
+                    <div className="flex items-center gap-2">
+                      <IconCalendar className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
+                      <p className={`text-xs font-semibold ${theme.productTitle}`}>{event.name}</p>
+                    </div>
+                    <p className={`text-[11px] ${theme.bio}`}>
+                      {startsLabel} ({event.timezone}) &middot; {event.isOnline ? "Online" : event.location || "Offline"}
+                    </p>
+                    {event.description && <p className={`text-[11px] ${theme.bio}`}>{event.description}</p>}
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs font-bold ${theme.productTitle}`}>
+                        Rp {event.effectivePriceIdr.toLocaleString("id-ID")}
+                      </p>
+                      {event.spotsLeft !== null && (
+                        <p className={`text-[11px] ${theme.bio}`}>{soldOut ? "Kuota penuh" : `${event.spotsLeft} slot tersisa`}</p>
+                      )}
+                    </div>
+                    {canBuy ? (
+                      <BuyProductButton
+                        productId={event.productId}
+                        buttonClassName={theme.buyButton}
+                        openLabel={soldOut ? "Kuota Penuh" : "Daftar"}
+                        submitLabel="Bayar & Daftar"
+                        referralCode={data.referralCode}
+                        username={data.username}
+                        pageSlug={data.pageSlug}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+                        className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+                      >
+                        Daftar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {isBio && data.donation && (
+          <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
+            <IconHeart className={`h-5 w-5 ${theme.chevron}`} />
+            <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.donation.title}</p>
+            <p className={`text-xs ${theme.bio}`}>Mulai dari Rp {data.donation.minAmountIdr.toLocaleString("id-ID")}</p>
+
+            {!!data.donation.goalAmountIdr && (
+              <div className="w-full text-left">
+                <p className={`text-[11px] font-semibold ${theme.productTitle}`}>{data.donation.goalTitle}</p>
+                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-black/10">
+                  <div
+                    className={`h-full rounded-full bg-current opacity-80 ${theme.productTitle}`}
+                    style={{ width: `${Math.min(100, ((data.donation.goalRaisedIdr ?? 0) / data.donation.goalAmountIdr) * 100)}%` }}
+                  />
+                </div>
+                <p className={`mt-1 text-[10px] ${theme.bio}`}>
+                  Rp {(data.donation.goalRaisedIdr ?? 0).toLocaleString("id-ID")} / Rp {data.donation.goalAmountIdr.toLocaleString("id-ID")}
+                </p>
+              </div>
+            )}
+
+            {!!data.donation.wishlist?.length && (
+              <div className="flex w-full flex-col gap-1 text-left">
+                <label htmlFor="donation-wishlist-select" className={`text-[10px] font-semibold ${theme.productTitle}`}>
+                  Wujudkan wishlist (opsional)
+                </label>
+                <select
+                  id="donation-wishlist-select"
+                  value={selectedWishlistId ?? ""}
+                  onChange={(e) => setSelectedWishlistId(e.target.value || undefined)}
+                  className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="">Dukungan umum</option>
+                  {data.donation.wishlist.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} (Rp{w.raisedIdr.toLocaleString("id-ID")}/Rp{w.priceIdr.toLocaleString("id-ID")})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {canBuy ? (
+              <div className="w-full">
+                <BuyProductButton
+                  productId={data.donation.productId}
+                  buttonClassName={theme.buyButton}
+                  pwywMinPriceIdr={data.donation.minAmountIdr}
+                  hideVoucher
+                  openLabel="Dukung"
+                  submitLabel="Kirim Dukungan"
+                  username={data.username}
+                  pageSlug={data.pageSlug}
+                  wishlistItemId={selectedWishlistId}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+              >
+                Dukung
+              </button>
+            )}
+          </div>
+        )}
 
         {!hideFooterChrome && (
           <div className="mt-auto flex flex-col items-center gap-3 pt-6">

@@ -122,6 +122,7 @@ export default function BuilderAddComponentModal({
                   key={tile.type}
                   type="button"
                   onClick={() => onSelect(tile.type)}
+                  aria-label={tile.label}
                   className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
                 >
                   <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">

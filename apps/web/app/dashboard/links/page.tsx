@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -58,6 +59,7 @@ import {
   IconSettings,
   IconClock,
   IconClose,
+  IconColumns,
   IconCopy,
   IconFileText,
   IconGrid,
@@ -1984,6 +1986,23 @@ export default function DashboardLinksPage() {
           <IconPlus className="h-4 w-4" />
           {t("dashboard.pages.links.quickAdd.addButton")}
         </button>
+
+        {/* Canvas Page Builder (migrasi 000096, permintaan langsung
+            pengguna 7 September 2026, dua screenshot Lynk.id): cara KEDUA
+            mengedit konten, di samping editor daftar vertikal di atas --
+            navigasi ke route builder terpisah (bukan modal/toggle inline)
+            supaya kanvas besarnya dapat layar penuh. Route tujuan sendiri
+            yang PATCH builder_mode='builder' begitu dibuka (idempoten),
+            jadi tautan ini cukup navigasi apa adanya. pageId "main" utk
+            halaman utama, id halaman tambahan selain itu -- konvensi BARU
+            route ini (lihat catatan lengkap di page.tsx-nya). */}
+        <Link
+          href={`/dashboard/links/builder/${activePage ? activePage.id : "main"}`}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-bold text-app-ink transition-transform hover:scale-[1.01]"
+        >
+          <IconColumns className="h-4 w-4" />
+          {t("dashboard.pages.links.openBuilderMode")}
+        </Link>
 
         {addingLink && (
           <form onSubmit={handleCreateLink} className="glass mt-4 flex flex-col gap-2 rounded-jlg p-4 shadow-card">

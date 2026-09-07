@@ -552,6 +552,11 @@ export const dictionaries = {
             viewAllOptions: "Lihat semua pilihan",
             addButton: "Tambah",
           },
+          // openBuilderMode -- Canvas Page Builder (migrasi 000096,
+          // permintaan langsung pengguna 7 September 2026, dua screenshot
+          // Lynk.id): cara KEDUA mengedit konten, di samping editor daftar
+          // vertikal ini -- navigasi ke /dashboard/links/builder/[pageId].
+          openBuilderMode: "Buka Mode Builder (Kanvas)",
           addLinkForm: {
             titleLabel: "Judul",
             titleHint: "Teks yang tampil di halamanmu.",
@@ -920,6 +925,47 @@ export const dictionaries = {
             title: "judul",
             url: "URL",
             description: "deskripsi",
+          },
+        },
+        // linksBuilder -- Canvas Page Builder (migrasi 000096, permintaan
+        // langsung pengguna 7 September 2026, dua screenshot Lynk.id):
+        // route penuh /dashboard/links/builder/[pageId] (BuilderCanvas.tsx
+        // + BuilderLeftPanel.tsx), CARA KEDUA mengedit konten di samping
+        // editor daftar vertikal "links" di atas.
+        linksBuilder: {
+          title: "Mode Builder",
+          back: "Kembali",
+          loading: "Memuat...",
+          device: {
+            desktop: "Desktop",
+            tablet: "Tablet",
+            mobile: "Mobile",
+          },
+          tab: {
+            content: "Konten",
+            design: "Desain",
+            settings: "Pengaturan",
+          },
+          emptyRoot: "Belum ada blok -- tambahkan lewat tombol di atas.",
+          emptyContainer: "Kosong -- tambahkan blok di dalamnya.",
+          columnLabel: "Kolom",
+          moveUp: "Naikkan",
+          moveDown: "Turunkan",
+          addingInto: "Komponen baru akan ditambahkan ke dalam blok yang dipilih.",
+          editSelected: "Edit Blok Terpilih",
+          deleteSelected: "Hapus blok ini",
+          textPlaceholder: "Tulis teks di sini...",
+          buttonTitlePlaceholder: "Label tombol",
+          buttonUrlPlaceholder: "https://...",
+          columnCount: "Jumlah kolom",
+          containerHint: "Blok ini murni wadah -- pilih salah satu isinya untuk mengedit, atau tambah komponen baru ke dalamnya.",
+          designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
+          openDesignPage: "Buka Halaman Desain",
+          settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
+          openSettingsPage: "Buka Halaman Pengaturan",
+          errors: {
+            loadFailed: "Gagal memuat halaman.",
+            saveFailed: "Gagal menyimpan perubahan.",
           },
         },
         products: {
@@ -3339,6 +3385,7 @@ export const dictionaries = {
             viewAllOptions: "View all options",
             addButton: "Add",
           },
+          openBuilderMode: "Open Builder Mode (Canvas)",
           addLinkForm: {
             titleLabel: "Title",
             titleHint: "The text shown on your page.",
@@ -3703,6 +3750,42 @@ export const dictionaries = {
             title: "title",
             url: "URL",
             description: "description",
+          },
+        },
+        linksBuilder: {
+          title: "Builder Mode",
+          back: "Back",
+          loading: "Loading...",
+          device: {
+            desktop: "Desktop",
+            tablet: "Tablet",
+            mobile: "Mobile",
+          },
+          tab: {
+            content: "Content",
+            design: "Design",
+            settings: "Settings",
+          },
+          emptyRoot: "No blocks yet -- add one with the button above.",
+          emptyContainer: "Empty -- add a block inside it.",
+          columnLabel: "Column",
+          moveUp: "Move up",
+          moveDown: "Move down",
+          addingInto: "The new component will be added inside the selected block.",
+          editSelected: "Edit Selected Block",
+          deleteSelected: "Delete this block",
+          textPlaceholder: "Write your text here...",
+          buttonTitlePlaceholder: "Button label",
+          buttonUrlPlaceholder: "https://...",
+          columnCount: "Number of columns",
+          containerHint: "This block is just a container -- select one of its children to edit, or add a new component inside it.",
+          designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
+          openDesignPage: "Open Design Page",
+          settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",
+          openSettingsPage: "Open Settings Page",
+          errors: {
+            loadFailed: "Failed to load the page.",
+            saveFailed: "Failed to save changes.",
           },
         },
         products: {
