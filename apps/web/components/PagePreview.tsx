@@ -2331,6 +2331,19 @@ export default function PagePreview({
   // halaman PALING ATAS.
   const [catalogView, setCatalogView] = useState<PagePreviewLink | null>(null);
 
+  // Canvas Page Builder (migrasi 000096, permintaan langsung pengguna 7
+  // September 2026, dua screenshot Lynk.id): builderMode DICEK PALING
+  // AWAL, SEBELUM cabang pageType di bawah -- berlaku LINTAS pageType
+  // (bio MAUPUN landing, dikonfirmasi via AskUserQuestion), beda dari
+  // ProdukPagePreview/LandingPagePreview yang masing-masing terikat SATU
+  // pageType. undefined/"simple" (bawaan) jatuh tembus ke perilaku lama
+  // di bawah, sama sekali tidak berubah.
+  if (data.builderMode === "builder") {
+    return (
+      <BuilderPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} hideFooterChrome={hideFooterChrome} />
+    );
+  }
+
   // No.99 (Sprint 14): halaman landing dirender TERPISAH -- blok penuh-lebar
   // saja (heading/text/image/button/dst), TANPA avatar/bio-header/produk/
   // monetisasi, beda dari layout bio biasa di bawah. Landing TIDAK punya
@@ -2889,6 +2902,175 @@ function LandingPagePreview({
                 pesan "tidak tersedia", lihat PageFooterLinks). hideFooterChrome
                 di atas adalah pengecualian TERPISAH & sengaja, lihat catatan
                 lengkap di prop-nya (PagePreview). */}
+            <PageFooterLinks
+              pageId={data.id}
+              username={data.username}
+              bio={data.bio}
+              isVerified={data.isVerified}
+              footerClassName={theme.footer}
+            />
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+// BuilderRenderNode -- bentuk seragam yang dipakai renderBuilderNode,
+// dinormalisasi dari DUA sumber berbeda: blok ROOT (PagePreviewLink,
+// camelCase blockType/blockData, dari data.links) & blok TERTANAM di
+// dalam block_data Section/Column (raw JSON snake_case block_type/
+// block_data, bentuk EmbeddedBuilderBlock -- lihat api-client.ts &
+// builder-blocks.ts). normalizeEmbeddedBuilderNode menjembatani yang
+// kedua supaya renderBuilderNode cukup satu implementasi rekursif,
+// tidak perlu tahu bedanya root vs tertanam.
+type BuilderRenderNode = {
+  id: string;
+  title: string;
+  url?: string;
+  blockType: string;
+  blockData: Record<string, unknown>;
+};
+
+function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id = typeof r.id === "string" ? r.id : "";
+  const blockType = typeof r.block_type === "string" ? r.block_type : "";
+  if (!id || !blockType) return null;
+  return {
+    id,
+    title: typeof r.title === "string" ? r.title : "",
+    url: typeof r.url === "string" ? r.url : undefined,
+    blockType,
+    blockData: (r.block_data && typeof r.block_data === "object" ? (r.block_data as Record<string, unknown>) : {}),
+  };
+}
+
+// renderBuilderNode -- Canvas Page Builder (migrasi 000096, permintaan
+// langsung pengguna 7 September 2026, dua screenshot Lynk.id): dispatcher
+// rekursif blok Section/Column, TERPISAH SENGAJA dari renderLinkOrBlock
+// (bio/produk) & switch inline LandingPagePreview di atas -- keduanya
+// SUDAH divergen satu sama lain, menambah cabang lagi ke salah satunya
+// cuma menambah duplikasi konflik. Cakupan Fase 1: leaf "text"/"button"/
+// "divider" + kontainer "section"/"column" (5 tipe kategori GENERAL) --
+// tipe MEDIA/INFORMATION/CONVERSION/OTHERS menyusul Fase 2/3.
+function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean): React.ReactNode {
+  switch (node.blockType) {
+    case "divider":
+      return <div key={node.id} role="separator" aria-hidden className={`h-px w-full opacity-20 bg-current ${theme.bio}`} />;
+    case "text":
+      return (
+        <p key={node.id} className={`w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}`}>
+          {(node.blockData.text as string) ?? ""}
+        </p>
+      );
+    case "button":
+      return interactive ? (
+        <TrackedLink
+          key={node.id}
+          username={data.username}
+          pageSlug={data.pageSlug}
+          linkId={node.id}
+          href={buildUtmHref(node.url ?? "", node.title, data.utmEnabled)}
+          className={`flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
+        >
+          {node.title}
+        </TrackedLink>
+      ) : (
+        <button
+          key={node.id}
+          type="button"
+          disabled
+          title="Pratinjau -- tombol ini tidak aktif"
+          className={`w-full cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
+        >
+          {node.title}
+        </button>
+      );
+    case "section": {
+      const children = ((node.blockData.children as unknown[] | undefined) ?? [])
+        .map(normalizeEmbeddedBuilderNode)
+        .filter((c): c is BuilderRenderNode => c !== null);
+      return (
+        <section key={node.id} className="flex w-full flex-col items-center gap-4">
+          {children.map((child) => renderBuilderNode(child, theme, data, interactive))}
+        </section>
+      );
+    }
+    case "column": {
+      const columns = (node.blockData.columns as { widthPercent?: number; children?: unknown[] }[] | undefined) ?? [];
+      return (
+        <div key={node.id} className="flex w-full flex-col gap-4 sm:flex-row">
+          {columns.map((col, i) => {
+            const children = (col.children ?? []).map(normalizeEmbeddedBuilderNode).filter((c): c is BuilderRenderNode => c !== null);
+            return (
+              <div
+                key={i}
+                className="flex min-w-0 flex-1 flex-col items-center gap-4"
+                style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
+              >
+                {children.map((child) => renderBuilderNode(child, theme, data, interactive))}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+// BuilderPagePreview -- lihat catatan lengkap di renderBuilderNode.
+// builderMode berlaku LINTAS pageType (bio MAUPUN landing, dikonfirmasi
+// via AskUserQuestion), makanya header bio (renderBioHeader) dirender
+// KONDISIONAL di sini berdasar pageType, BUKAN dua komponen terpisah
+// seperti ProdukPagePreview vs LandingPagePreview. Chrome luar (video
+// background/tombol share/watermark/footer) SAMA PERSIS LandingPagePreview.
+function BuilderPagePreview({
+  data,
+  interactive,
+  rootClassName,
+  theme,
+  hideFooterChrome = false,
+}: {
+  data: PagePreviewData;
+  interactive: boolean;
+  rootClassName: string;
+  theme: PageTheme;
+  hideFooterChrome?: boolean;
+}) {
+  const isBio = data.pageType !== "landing";
+  return (
+    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
+      {renderVideoBackground(theme)}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
+        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+      </div>
+      <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
+        {isBio && data.showProfileHeader !== false && (
+          <div className="relative w-full">
+            {theme.glow !== "hidden" && (
+              <div aria-hidden className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`} />
+            )}
+            <div className="relative flex flex-col items-center">{renderBioHeader(data, theme)}</div>
+          </div>
+        )}
+        {data.links.map((link) => {
+          const node: BuilderRenderNode = {
+            id: link.id,
+            title: link.title,
+            url: link.url,
+            blockType: link.blockType ?? "link",
+            blockData: link.blockData ?? {},
+          };
+          return renderBuilderNode(node, theme, data, interactive);
+        })}
+
+        {!hideFooterChrome && (
+          <div className="mt-auto flex flex-col items-center gap-3 pt-6">
+            <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             <PageFooterLinks
               pageId={data.id}
               username={data.username}
