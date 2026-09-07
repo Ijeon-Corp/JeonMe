@@ -2928,6 +2928,11 @@ type BuilderRenderNode = {
   id: string;
   title: string;
   url?: string;
+  // description -- Fase 2 (permintaan langsung pengguna 8 September 2026):
+  // dibutuhkan "embed_link" (subjudul kartu), field ini SUDAH ada di
+  // bentuk EmbeddedBuilderBlock (api-client.ts) sejak awal, cuma belum
+  // pernah dipakai node manapun sampai sekarang.
+  description?: string;
   blockType: string;
   blockData: Record<string, unknown>;
 };
@@ -2942,6 +2947,7 @@ function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
     id,
     title: typeof r.title === "string" ? r.title : "",
     url: typeof r.url === "string" ? r.url : undefined,
+    description: typeof r.description === "string" ? r.description : undefined,
     blockType,
     blockData: (r.block_data && typeof r.block_data === "object" ? (r.block_data as Record<string, unknown>) : {}),
   };
@@ -3042,6 +3048,124 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
         </div>
       );
     }
+    // Fase 2 (permintaan langsung pengguna 8 September 2026): 6 tipe
+    // MEDIA/INFORMATION/OTHERS baru, SEMUA reuse komponen presentasional
+    // yang sudah ada (VideoEmbedBlock/FaqBlock/GalleryBlock, dipakai ulang
+    // APA ADANYA dari renderLinkOrBlock -- className theme SAMA PERSIS
+    // supaya blok terlihat identik dipakai lewat editor daftar sederhana
+    // ATAU kanvas builder).
+    case "video":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video" className="w-full">
+          <VideoEmbedBlock
+            title={node.title}
+            videoUrl={(node.blockData.video_url as string) ?? ""}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
+    case "faq":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="faq" className="w-full">
+          <FaqBlock
+            title={node.title}
+            items={(node.blockData.items as FaqItem[]) ?? []}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+            itemTitleClassName={theme.cardTitle}
+            itemBodyClassName={theme.bio}
+          />
+        </div>
+      );
+    case "gallery":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="gallery" className="w-full">
+          <GalleryBlock
+            title={node.title}
+            images={(node.blockData.images as string[]) ?? []}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
+    case "image":
+      return (node.blockData.image_url as string) ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={node.id}
+          data-builder-node-id={node.id}
+          data-builder-block-type="image"
+          src={node.blockData.image_url as string}
+          alt={node.title || ""}
+          loading="lazy"
+          className="w-full rounded-xl object-cover"
+        />
+      ) : (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
+          {node.title || "Foto"}
+        </div>
+      );
+    case "video_image": {
+      const videoUrl = (node.blockData.video_url as string) ?? "";
+      const imageUrl = (node.blockData.image_url as string) ?? "";
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video_image" className="flex w-full flex-col gap-2">
+          {videoUrl && (
+            <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />
+          )}
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+          )}
+          {!videoUrl && !imageUrl && (
+            <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>{node.title || "Video + Foto"}</div>
+          )}
+        </div>
+      );
+    }
+    case "embed_link": {
+      // "embed_link" -- kartu link MANUAL (judul/deskripsi/URL dari kolom
+      // links yang sudah ada, PERSIS pola project_showcase, TANPA fetch
+      // metadata server sama sekali), thumbnail dari block_data.image_url.
+      const imageUrl = (node.blockData.image_url as string) ?? "";
+      const cardClassName = `flex w-full flex-col gap-2 overflow-hidden rounded-xl p-2.5 ${theme.card}`;
+      const inner = (
+        <>
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="" loading="lazy" className="-m-2.5 mb-0 aspect-video w-[calc(100%+20px)] object-cover" />
+          )}
+          <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
+          {node.description && <p className={`text-[11px] ${theme.bio}`}>{node.description}</p>}
+        </>
+      );
+      if (!node.url) {
+        return (
+          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={cardClassName}>
+            {inner}
+          </div>
+        );
+      }
+      return interactive ? (
+        <TrackedLink
+          key={node.id}
+          username={data.username}
+          pageSlug={data.pageSlug}
+          linkId={node.id}
+          href={buildUtmHref(node.url, node.title, data.utmEnabled)}
+          className={cardClassName}
+        >
+          <span data-builder-node-id={node.id} data-builder-block-type="embed_link" className="contents">
+            {inner}
+          </span>
+        </TrackedLink>
+      ) : (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName} opacity-80`}>
+          {inner}
+        </div>
+      );
+    }
     default:
       return null;
   }
@@ -3111,6 +3235,7 @@ function BuilderPagePreview({
             id: link.id,
             title: link.title,
             url: link.url,
+            description: link.description,
             blockType: link.blockType ?? "link",
             blockData: link.blockData ?? {},
           };
