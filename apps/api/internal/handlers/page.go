@@ -238,6 +238,10 @@ type publicPageResponse struct {
 	// PageType -- No.99 (Sprint 14): "bio" (halaman utama SELALU "bio") atau
 	// "landing" (builder blok manual, halaman tambahan No.98 saja).
 	PageType string `json:"page_type"`
+	// BuilderMode -- lihat catatan lengkap di myPageResponse (migrasi
+	// 000096). Dipakai PagePreview.tsx sisi publik utk memilih dispatcher
+	// render (BuilderPagePreview vs layout lama).
+	BuilderMode string `json:"builder_mode"`
 	// IsPremium -- Modul Langganan Premium: status PEMILIK halaman (bukan
 	// pengunjung), dipakai frontend menyembunyikan pil "Buat halaman gratis
 	// di Jeonme" untuk kreator berbayar. Lihat isPremiumUser (subscription.go).
@@ -467,7 +471,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant, p.product_layout,
+			p.layout_variant, p.product_layout, p.builder_mode,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -482,7 +486,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.ProductLayout,
+		&resp.LayoutVariant, &resp.ProductLayout, &resp.BuilderMode,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -995,7 +999,12 @@ type myPageResponse struct {
 	SocialGithub          string             `json:"social_github"`
 	SocialWebsite         string             `json:"social_website"`
 	LayoutVariant         string             `json:"layout_variant"`
-	Verification          verificationStatus `json:"verification"`
+	// BuilderMode -- mode editor kedua bergaya Lynk.id (migrasi 000096,
+	// permintaan langsung pengguna, 7 September 2026), pola sama persis
+	// LayoutVariant di atas: "simple" (bawaan, editor daftar vertikal yang
+	// sudah ada) atau "builder" (kanvas Section/Column freeform).
+	BuilderMode  string             `json:"builder_mode"`
+	Verification verificationStatus `json:"verification"`
 	// IsPremium -- Modul Langganan Premium (permintaan langsung pengguna):
 	// dipakai dashboard untuk gating tema "custom" (lihat UpdateMyPage) &
 	// menampilkan status langganan. Sumber kebenaran TUNGGAL: isPremiumUser
@@ -1034,7 +1043,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant,
+			p.layout_variant, p.builder_mode,
 			u.email_verified_at IS NOT NULL
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = $1 AND p.is_primary = true
@@ -1046,7 +1055,7 @@ func (h *PageHandler) GetMyPage(c *gin.Context) {
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant,
+		&resp.LayoutVariant, &resp.BuilderMode,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -1249,6 +1258,11 @@ type updatePageRequest struct {
 	SocialWebsite *string `json:"social_website" binding:"omitempty,max=255"`
 	// LayoutVariant -- lihat catatan lengkap di publicPageResponse.
 	LayoutVariant *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
+	// BuilderMode -- lihat catatan lengkap di myPageResponse. Halaman utama
+	// SELALU page_type='bio' (tidak pernah 'produk'), jadi TIDAK perlu guard
+	// page_type di sini -- guard itu cuma relevan di UpdateExtraPage (Toko
+	// bisa punya page_type='produk').
+	BuilderMode *string `json:"builder_mode" binding:"omitempty,oneof=simple builder"`
 }
 
 // UpdateMyPage — REQ-F-204 (ganti tema/bio) & penerbitan halaman (is_published).
@@ -1358,8 +1372,9 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 			social_email = COALESCE($29, social_email),
 			social_github = COALESCE($30, social_github),
 			social_website = COALESCE($31, social_website),
-			layout_variant = COALESCE($32, layout_variant)
-		WHERE user_id = $33 AND is_primary = true
+			layout_variant = COALESCE($32, layout_variant),
+			builder_mode = COALESCE($33, builder_mode)
+		WHERE user_id = $34 AND is_primary = true
 	`, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor,
 		req.CustomButtonStyle, req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
@@ -1367,7 +1382,7 @@ func (h *PageHandler) UpdateMyPage(c *gin.Context) {
 		req.HideWatermark,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
 		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
-		req.SocialGithub, req.SocialWebsite, req.LayoutVariant,
+		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.BuilderMode,
 		userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui halaman"})
@@ -2219,7 +2234,12 @@ type extraPageDetailResponse struct {
 	LayoutVariant     string `json:"layout_variant"`
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse.
 	ProductLayout string `json:"product_layout"`
-	IsPremium     bool   `json:"is_premium"`
+	// BuilderMode -- lihat catatan lengkap di myPageResponse (migrasi
+	// 000096). Halaman tambahan bertipe "produk" (Toko) TIDAK boleh
+	// "builder" -- ditegakkan di UpdatePage, bukan di sini (endpoint ini
+	// cuma baca).
+	BuilderMode string `json:"builder_mode"`
+	IsPremium   bool   `json:"is_premium"`
 }
 
 // GetPage — Modul Halaman Toko (permintaan langsung pengguna, 7 Agustus
@@ -2249,7 +2269,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			hide_watermark, show_profile_header,
 			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 			social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
-			layout_variant, product_layout
+			layout_variant, product_layout, builder_mode
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
@@ -2259,7 +2279,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.ProductLayout)
+		&resp.LayoutVariant, &resp.ProductLayout, &resp.BuilderMode)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	}
@@ -2323,6 +2343,11 @@ type updateExtraPageRequest struct {
 	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
 	// kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
 	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category"`
+	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
+	// (migrasi 000096). Beda dari UpdateMyPage: halaman tambahan BISA
+	// page_type='produk' (Toko), yang DIKECUALIKAN dari mode builder --
+	// guard ada di UpdatePage, bukan lewat oneof di sini.
+	BuilderMode *string `json:"builder_mode" binding:"omitempty,oneof=simple builder"`
 }
 
 // UpdatePage — mengubah halaman TAMBAHAN (bukan halaman utama -- itu tetap
@@ -2388,6 +2413,17 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 		return
 	}
 
+	// BuilderMode -- Toko (page_type='produk') dikecualikan dari mode
+	// builder (migrasi 000096) -- lihat catatan lengkap di
+	// updateExtraPageRequest.
+	if req.BuilderMode != nil && *req.BuilderMode == "builder" {
+		var currentPageType string
+		if scanErr := h.DB.QueryRow(ctx, `SELECT page_type FROM pages WHERE id = $1 AND user_id = $2`, pageID, userID).Scan(&currentPageType); scanErr == nil && currentPageType == "produk" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "mode builder belum tersedia untuk Halaman Toko"})
+			return
+		}
+	}
+
 	tag, err := h.DB.Exec(ctx, `
 		UPDATE pages SET
 			name = COALESCE($1, name),
@@ -2425,8 +2461,9 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			social_github = COALESCE($33, social_github),
 			social_website = COALESCE($34, social_website),
 			layout_variant = COALESCE($35, layout_variant),
-			product_layout = COALESCE($36, product_layout)
-		WHERE id = $37 AND user_id = $38 AND is_primary = false
+			product_layout = COALESCE($36, product_layout),
+			builder_mode = COALESCE($37, builder_mode)
+		WHERE id = $38 AND user_id = $39 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
@@ -2434,7 +2471,7 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 		req.HideWatermark, req.ShowProfileHeader,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
 		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
-		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.ProductLayout,
+		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.ProductLayout, req.BuilderMode,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {
