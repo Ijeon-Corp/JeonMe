@@ -864,3 +864,25 @@ export function IconRefresh({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconDivider/IconColumns -- Canvas Page Builder (migrasi 000096, BuilderAddComponentModal.tsx):
+// dua tipe komponen GENERAL Fase 1 (Divider/Column) belum punya padanan
+// ikon yang pas di set yang sudah ada.
+export function IconDivider({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M4 12h16" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <circle cx="6" cy="12" r="1.1" fill="currentColor" />
+      <circle cx="18" cy="12" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconColumns({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="4.5" width="7" height="15" rx="1.4" stroke="currentColor" strokeWidth={base} />
+      <rect x="13.5" y="4.5" width="7" height="15" rx="1.4" stroke="currentColor" strokeWidth={base} />
+    </svg>
+  );
+}
