@@ -558,3 +558,116 @@ func TestLinksCreate_DomainExactMatchType(t *testing.T) {
 		t.Fatalf("kata kunci domain_exact sbg substring label lain seharusnya TETAP lolos: status %d, body %s", safeRec.Code, safeRec.Body.String())
 	}
 }
+
+// TestValidateBlockData_BuilderSectionColumn -- Canvas Page Builder (migrasi
+// 000096): validateBlockDataAtDepth adalah fungsi murni (tanpa DB), jadi
+// diuji langsung di sini tanpa perlu router/DB, mengikuti pola yang sudah
+// ada utk validasi struktur blok (lihat catatan lengkap di
+// allowedBuilderEmbeddedBlockTypes, links.go).
+func TestValidateBlockData_BuilderSectionColumn(t *testing.T) {
+	child := func(id, blockType string) map[string]any {
+		return map[string]any{"id": id, "block_type": blockType, "title": "", "block_data": map[string]any{}}
+	}
+
+	t.Run("section kosong (shell) lolos", func(t *testing.T) {
+		if _, ok := validateBlockData("section", map[string]any{}); !ok {
+			t.Fatal("section tanpa children[] seharusnya lolos (shell dibuat dulu)")
+		}
+	})
+
+	t.Run("section dengan children valid lolos", func(t *testing.T) {
+		data := map[string]any{"children": []any{child("c1", "text"), child("c2", "divider")}}
+		if msg, ok := validateBlockData("section", data); !ok {
+			t.Fatalf("section dengan children valid seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("section children melebihi batas ditolak", func(t *testing.T) {
+		children := make([]any, maxBuilderContainerChildren+1)
+		for i := range children {
+			children[i] = child(uuid.NewString(), "text")
+		}
+		if _, ok := validateBlockData("section", map[string]any{"children": children}); ok {
+			t.Fatal("section dengan children melebihi batas seharusnya ditolak")
+		}
+	})
+
+	t.Run("section child id duplikat ditolak", func(t *testing.T) {
+		data := map[string]any{"children": []any{child("dup", "text"), child("dup", "divider")}}
+		if _, ok := validateBlockData("section", data); ok {
+			t.Fatal("id anak duplikat di dalam section seharusnya ditolak")
+		}
+	})
+
+	t.Run("section child block_type tak dikenal ditolak", func(t *testing.T) {
+		data := map[string]any{"children": []any{child("c1", "catalog")}}
+		if _, ok := validateBlockData("section", data); ok {
+			t.Fatal("block_type yang tidak ada di allowedBuilderEmbeddedBlockTypes seharusnya ditolak sbg anak section")
+		}
+	})
+
+	t.Run("column jumlah di luar rentang ditolak", func(t *testing.T) {
+		tooFew := map[string]any{"columns": []any{map[string]any{}}}
+		if _, ok := validateBlockData("column", tooFew); ok {
+			t.Fatal("column dengan 1 entri (< minBuilderColumns) seharusnya ditolak")
+		}
+		tooMany := map[string]any{"columns": []any{map[string]any{}, map[string]any{}, map[string]any{}, map[string]any{}, map[string]any{}}}
+		if _, ok := validateBlockData("column", tooMany); ok {
+			t.Fatal("column dengan 5 entri (> maxBuilderColumns) seharusnya ditolak")
+		}
+	})
+
+	t.Run("column dalam rentang dengan children valid per kolom lolos", func(t *testing.T) {
+		data := map[string]any{"columns": []any{
+			map[string]any{"children": []any{child("c1", "text")}},
+			map[string]any{"children": []any{child("c2", "button")}},
+		}}
+		if msg, ok := validateBlockData("column", data); !ok {
+			t.Fatalf("column 2 kolom dengan anak block_type yang diizinkan seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("column dengan anak block_type belum diizinkan (image, Fase 2) ditolak", func(t *testing.T) {
+		data := map[string]any{"columns": []any{
+			map[string]any{"children": []any{child("c1", "image")}},
+			map[string]any{},
+		}}
+		if _, ok := validateBlockData("column", data); ok {
+			t.Fatal("image belum ada di allowedBuilderEmbeddedBlockTypes Fase 1, seharusnya ditolak sbg anak column")
+		}
+	})
+
+	t.Run("section berisi column berisi section (nested) lolos sampai batas kedalaman", func(t *testing.T) {
+		innerSection := map[string]any{"id": "s2", "block_type": "section", "title": "", "block_data": map[string]any{"children": []any{child("t1", "text")}}}
+		columnData := map[string]any{"columns": []any{map[string]any{"children": []any{innerSection}}, map[string]any{}}}
+		column := map[string]any{"id": "col1", "block_type": "column", "title": "", "block_data": columnData}
+		rootSection := map[string]any{"children": []any{column}}
+		if msg, ok := validateBlockData("section", rootSection); !ok {
+			t.Fatalf("section->column->section bersarang dalam batas kedalaman seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("nesting melebihi maxBuilderDepth ditolak", func(t *testing.T) {
+		// depth mulai dari 1 di root -- panggil langsung di depth
+		// maxBuilderDepth+1 utk mensimulasikan section yang sudah tertanam
+		// terlalu dalam, tanpa perlu membangun literal bersarang panjang.
+		if _, ok := validateBlockDataAtDepth("section", map[string]any{}, maxBuilderDepth+1); ok {
+			t.Fatal("section pada depth melebihi maxBuilderDepth seharusnya ditolak")
+		}
+		if _, ok := validateBlockDataAtDepth("column", map[string]any{}, maxBuilderDepth+1); ok {
+			t.Fatal("column pada depth melebihi maxBuilderDepth seharusnya ditolak")
+		}
+	})
+
+	t.Run("text kosong di depth 1 sekarang lolos (shell-first canvas)", func(t *testing.T) {
+		if msg, ok := validateBlockData("text", map[string]any{}); !ok {
+			t.Fatalf("text kosong di root seharusnya lolos sejak Canvas Page Builder, dapat: %s", msg)
+		}
+	})
+
+	t.Run("accordion kosong di depth 1 tetap ditolak (tidak terpengaruh relaksasi text)", func(t *testing.T) {
+		if _, ok := validateBlockData("accordion", map[string]any{}); ok {
+			t.Fatal("accordion kosong di root seharusnya TETAP ditolak seperti sebelumnya")
+		}
+	})
+}

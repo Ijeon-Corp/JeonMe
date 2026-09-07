@@ -451,6 +451,32 @@ var allowedCatalogEmbeddedBlockTypes = map[string]bool{
 	"catalog": true,
 }
 
+// maxBuilderDepth/maxBuilderContainerChildren/minBuilderColumns/
+// maxBuilderColumns/allowedBuilderEmbeddedBlockTypes -- Canvas Page
+// Builder (migrasi 000096, mode edit kedua bergaya Lynk.id, permintaan
+// langsung pengguna 7 September 2026, dua screenshot Lynk.id). Blok root
+// Section/Column/dst TETAP baris `links` biasa (position/is_active/
+// block_type/block_data apa adanya, lihat komentar 000096), isi DI DALAM
+// Section/Column disimpan sbg `children[]` tertanam di block_data-nya
+// sendiri -- bentuk PERSIS EmbeddedCatalogBlock, generalisasi pola
+// "catalog" (blocks[] di atas) ke dua tipe kontainer baru. SENGAJA dua
+// allowlist & dua depth-cap TERPISAH dari catalog (bukan digabung ke
+// allowedCatalogEmbeddedBlockTypes/maxCatalogDepth) -- Section/Column
+// SALING rekursif tapi TIDAK cross-nest dengan "catalog" di v1, supaya
+// tidak menambah matriks validasi/premium-gate gabungan sejak awal.
+const maxBuilderDepth = 4
+const maxBuilderContainerChildren = 30
+const minBuilderColumns = 2
+const maxBuilderColumns = 4
+
+var allowedBuilderEmbeddedBlockTypes = map[string]bool{
+	"text":    true,
+	"button":  true,
+	"divider": true,
+	"section": true,
+	"column":  true,
+}
+
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
 	return validateBlockDataAtDepth(blockType, data, 1)
 }
@@ -568,14 +594,26 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				}
 			}
 		}
-	case "heading", "text", "accordion":
-		// depth>1 -- blok teks/accordion tertanam boleh kosong dulu (pola
-		// sama seperti video/faq di atas), diisi belakangan lewat textarea
+	case "accordion":
+		// depth>1 -- blok accordion tertanam boleh kosong dulu (pola sama
+		// seperti video/faq di atas), diisi belakangan lewat textarea
 		// inline di CatalogBlocksEditor.
 		text, _ := data["text"].(string)
 		if depth == 1 && strings.TrimSpace(text) == "" {
 			return "isi teks blok ini", false
 		}
+	case "heading", "text":
+		// Canvas Page Builder (migrasi 000096, permintaan langsung pengguna
+		// 7 Sept 2026) menambah jalur pembuatan BARU utk "text": shell
+		// kosong dulu (pola SAMA seperti divider/button/section/column di
+		// bawah), diisi belakangan lewat klik-utk-edit langsung di kanvas --
+		// BUKAN form wajib-isi-dulu ala dashboard/links/page.tsx (form itu
+		// MASIH menegakkan wajib isi di sisi KLIEN sendiri sebelum submit,
+		// lihat `blockText.trim()` di sana, jadi pengguna form lama tidak
+		// terpengaruh perubahan ini). Requirement "wajib diisi di depth==1"
+		// yang tadinya berlaku bertiga dengan "accordion" SENGAJA dihapus
+		// khusus di sini -- "accordion" tetap pakai case terpisah di atas
+		// dengan requirement lama utuh.
 	case "image":
 		imageURL, _ := data["image_url"].(string)
 		u, err := url.Parse(imageURL)
@@ -776,12 +814,100 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				}
 			}
 		}
+	case "section":
+		// "section" -- wadah full-width, generalisasi pola "catalog" di
+		// atas (lihat catatan lengkap di allowedBuilderEmbeddedBlockTypes).
+		// children[] BOLEH kosong/tidak ada -- shell dibuat dulu lewat
+		// "Add Component", diisi belakangan lewat kanvas.
+		if depth > maxBuilderDepth {
+			return fmt.Sprintf("section maksimal %d tingkat kedalaman", maxBuilderDepth), false
+		}
+		if msg, ok := validateBuilderChildren(data, depth); !ok {
+			return msg, false
+		}
+	case "column":
+		// "column" -- wadah N-kolom sejajar (2-4 kolom, lihat
+		// minBuilderColumns/maxBuilderColumns), tiap kolom py children[]
+		// sendiri (bentuk sama seperti children Section). columns[] BOLEH
+		// kosong/tidak ada -- shell dibuat dulu, jumlah kolom dipilih
+		// belakangan lewat kanvas.
+		if depth > maxBuilderDepth {
+			return fmt.Sprintf("column maksimal %d tingkat kedalaman", maxBuilderDepth), false
+		}
+		if raw, ok := data["columns"]; ok {
+			columns, isSlice := raw.([]any)
+			if !isSlice {
+				return "columns wajib berupa daftar", false
+			}
+			if len(columns) > 0 && (len(columns) < minBuilderColumns || len(columns) > maxBuilderColumns) {
+				return fmt.Sprintf("column wajib %d-%d kolom", minBuilderColumns, maxBuilderColumns), false
+			}
+			for _, rawCol := range columns {
+				col, ok := rawCol.(map[string]any)
+				if !ok {
+					return "setiap kolom wajib berupa objek", false
+				}
+				if msg, ok := validateBuilderChildren(col, depth); !ok {
+					return msg, false
+				}
+			}
+		}
+	}
+	return "", true
+}
+
+// validateBuilderChildren -- helper bersama dipanggil dari case "section"
+// (langsung pada data) dan case "column" (per entri columns[]) di
+// validateBlockDataAtDepth, memvalidasi container["children"] (bentuk
+// PERSIS EmbeddedCatalogBlock, TANPA mewajibkan title -- beda dari
+// blocks[] item katalog yang title-nya memang dipakai sebagai label item
+// yang tampak; blok Section/Column murni wadah konten, tidak butuh label
+// per anak). children[] BOLEH kosong/tidak ada -- pola sama seperti
+// items[]/blocks[] katalog di atas, shell kontainer dibuat dulu, diisi
+// belakangan lewat kanvas.
+func validateBuilderChildren(container map[string]any, depth int) (string, bool) {
+	raw, ok := container["children"]
+	if !ok {
+		return "", true
+	}
+	children, isSlice := raw.([]any)
+	if !isSlice {
+		return "children wajib berupa daftar", false
+	}
+	if len(children) > maxBuilderContainerChildren {
+		return fmt.Sprintf("maksimal %d blok per kontainer", maxBuilderContainerChildren), false
+	}
+	seenIDs := map[string]bool{}
+	for _, rawChild := range children {
+		child, ok := rawChild.(map[string]any)
+		if !ok {
+			return "setiap blok anak wajib berupa objek", false
+		}
+		childID, _ := child["id"].(string)
+		childType, _ := child["block_type"].(string)
+		if strings.TrimSpace(childID) == "" {
+			return "setiap blok anak wajib punya id", false
+		}
+		if seenIDs[childID] {
+			return "id blok anak tidak boleh duplikat", false
+		}
+		seenIDs[childID] = true
+		if !allowedBuilderEmbeddedBlockTypes[childType] {
+			return fmt.Sprintf("tipe blok %q belum bisa ditambahkan di sini", childType), false
+		}
+		childData, _ := child["block_data"].(map[string]any)
+		if childData == nil {
+			childData = map[string]any{}
+		}
+		if msg, ok := validateBlockDataAtDepth(childType, childData, depth+1); !ok {
+			return msg, false
+		}
 	}
 	return "", true
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
