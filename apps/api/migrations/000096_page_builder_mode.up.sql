@@ -1,0 +1,27 @@
+-- Mode editor kedua bergaya Lynk.id (kanvas besar, blok Section/Column
+-- freeform) yang HIDUP BERDAMPINGAN dengan editor daftar vertikal
+-- sederhana yang sudah ada -- kreator memilih PER HALAMAN, bukan migrasi
+-- paksa. Permintaan langsung pengguna, 7 September 2026 (dua screenshot
+-- Lynk.id): "di bagian links saya mau ada dua cara edit link creator yang
+-- sudah ada sekarang lalu 1 lagi seperti ini" + "jadi akan ada canvas di
+-- sebelah kanan nya untuk melihat semua blok".
+--
+-- DEFAULT 'builder' TIDAK dipakai -- 'simple' SENGAJA supaya SEMUA
+-- halaman yang sudah ada (bio maupun landing) tetap berperilaku identik
+-- sebelum migrasi ini, pola sama persis layout_variant (000062) &
+-- page_type (000030) di atas.
+--
+-- Konten TIDAK pindah tabel/kolom baru -- blok root (Section/Column/dst)
+-- TETAP baris `links` biasa (position/is_active/block_type/block_data apa
+-- adanya), sama seperti page_type='landing' dulu tidak butuh tabel baru
+-- (lihat komentar 000030). Isi DI DALAM Section/Column disimpan sbg array
+-- tertanam di block_data-nya sendiri, menggeneralisasi pola "catalog"
+-- (embedded blocks[] rekursif, lihat validateBlockDataAtDepth di
+-- links.go) yang sudah ada ke dua tipe kontainer baru ("section",
+-- "column") alih-alih skema penyimpanan baru sama sekali.
+--
+-- page_type='produk' (Toko) DIKECUALIKAN dari fitur ini -- ditegakkan di
+-- handler (page.go, tolak PATCH builder_mode='builder' kalau
+-- page_type='produk'), BUKAN lewat CHECK constraint lintas-kolom di sini.
+ALTER TABLE pages ADD COLUMN builder_mode VARCHAR(20) NOT NULL DEFAULT 'simple';
+ALTER TABLE pages ADD CONSTRAINT pages_builder_mode_check CHECK (builder_mode IN ('simple', 'builder'));
