@@ -235,13 +235,14 @@ export default function BuilderPage() {
     }
   }
 
-  async function handleUpdateNode(target: BuilderSelection, patch: { title?: string; url?: string; blockData?: Record<string, unknown> }) {
+  async function handleUpdateNode(target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) {
     setError(null);
     try {
       if (target.path.length === 0) {
         await updateLink(target.rootId, {
           ...(patch.title !== undefined ? { title: patch.title } : {}),
           ...(patch.url !== undefined ? { url: patch.url } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
           ...(patch.blockData !== undefined ? { block_data: patch.blockData } : {}),
         });
       } else {
@@ -254,6 +255,7 @@ export default function BuilderPage() {
             ...node,
             ...(patch.title !== undefined ? { title: patch.title } : {}),
             ...(patch.url !== undefined ? { url: patch.url } : {}),
+            ...(patch.description !== undefined ? { description: patch.description } : {}),
             ...(patch.blockData !== undefined ? { block_data: { ...node.block_data, ...patch.blockData } } : {}),
           };
         });
@@ -307,4 +309,10 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   divider: "typeDivider",
   column: "typeColumn",
   section: "typeSection",
+  video: "typeVideo",
+  faq: "typeFaq",
+  gallery: "typeImageGrid",
+  image: "typeImage",
+  video_image: "typeVideoImage",
+  embed_link: "typeEmbedLink",
 };

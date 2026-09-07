@@ -14,16 +14,22 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  IconBook,
   IconBox,
+  IconCamera,
   IconChevronRight,
   IconColumns,
   IconDivider,
   IconExternal,
   IconGripVertical,
+  IconLink,
+  IconPhotoLibrary,
+  IconPlayCircle,
   IconPlus,
   IconSettings,
   IconTextLines,
   IconTrash,
+  IconVideoImage,
 } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import type { EmbeddedBuilderBlock, LinkItem } from "@/lib/api-client";
@@ -65,12 +71,18 @@ interface BuilderTreeNode {
   title: string;
   blockType?: string;
   url?: string;
+  // description -- Fase 2 (permintaan langsung pengguna 8 September 2026):
+  // dibutuhkan "embed_link" (subjudul kartu, kolom `links`/EmbeddedBuilderBlock
+  // yang sudah ada, BUKAN field block_data -- persis pola project_showcase).
+  description?: string;
   blockData?: Record<string, unknown>;
   children: BuilderTreeNode[];
 }
 
 function buildChildNodes(rootId: string, parentPath: BuilderSeg[], children: EmbeddedBuilderBlock[]): BuilderTreeNode[] {
-  return children.map((child) => buildBlockNode(rootId, [...parentPath, { kind: "child", id: child.id }], child.id, child.block_type, child.title, child.url, child.block_data));
+  return children.map((child) =>
+    buildBlockNode(rootId, [...parentPath, { kind: "child", id: child.id }], child.id, child.block_type, child.title, child.url, child.description, child.block_data)
+  );
 }
 
 function buildBlockNode(
@@ -80,6 +92,7 @@ function buildBlockNode(
   blockType: string,
   title: string,
   url: string | undefined,
+  description: string | undefined,
   blockData: Record<string, unknown> | undefined
 ): BuilderTreeNode {
   const data = blockData ?? {};
@@ -100,11 +113,11 @@ function buildBlockNode(
       };
     });
   }
-  return { id, rootId, path, kind: "block", title, blockType, url, blockData: data, children };
+  return { id, rootId, path, kind: "block", title, blockType, url, description, blockData: data, children };
 }
 
 function buildTree(links: LinkItem[]): BuilderTreeNode[] {
-  return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.block_data));
+  return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data));
 }
 
 // findNodeByPath -- pencarian rekursif SATU node persis (rootId+path),
@@ -139,6 +152,15 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   divider: IconDivider,
   column: IconColumns,
   section: IconBox,
+  // Fase 2 (permintaan langsung pengguna 8 September 2026) -- ikon SAMA
+  // persis dgn tile BuilderAddComponentModal.tsx, "gallery" (block_type
+  // asli) tampil sbg "Image Grid" di sini juga.
+  video: IconPlayCircle,
+  faq: IconBook,
+  gallery: IconPhotoLibrary,
+  image: IconCamera,
+  video_image: IconVideoImage,
+  embed_link: IconLink,
 };
 
 // TYPE_LABEL_KEY -- pemetaan STATIS block_type -> suffix key
@@ -152,6 +174,12 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   divider: "typeDivider",
   column: "typeColumn",
   section: "typeSection",
+  video: "typeVideo",
+  faq: "typeFaq",
+  gallery: "typeImageGrid",
+  image: "typeImage",
+  video_image: "typeVideoImage",
+  embed_link: "typeEmbedLink",
 };
 
 function TreeNodeView({
@@ -237,6 +265,65 @@ function TreeNodeView({
   );
 }
 
+// FaqItemsEditor -- Canvas Page Builder Fase 2 (permintaan langsung
+// pengguna 8 September 2026): daftar Q&A FLAT di satu layar (BEDA dari
+// FaqListFrame/EmbeddedFaqItemFrame drill-down BlockDrilldownEditor.tsx --
+// builder tidak perlu navigasi terpisah per pertanyaan, cukup satu panel).
+// Item FAQ TIDAK punya id sendiri dari backend (cuma {question, answer}),
+// jadi key React dibuat dari INDEX + panjang array (bukan index saja) --
+// memaksa seluruh baris REMOUNT (reset defaultValue ke data terbaru)
+// setiap kali panjang array berubah (tambah/hapus), menghindari baris yang
+// digeser index-nya menampilkan teks BASI dari baris lain (uncontrolled
+// input, defaultValue cuma berlaku saat mount pertama).
+function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (items: { question: string; answer: string }[]) => void }) {
+  const { t } = useLocale();
+  const items = (node.blockData?.items as { question: string; answer: string }[] | undefined) ?? [];
+
+  function updateItem(index: number, patch: Partial<{ question: string; answer: string }>) {
+    onUpdate(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {items.map((item, i) => (
+        <div key={`${i}-${items.length}`} className="flex flex-col gap-1 rounded-lg border border-app-border p-2">
+          <div className="flex items-center gap-1">
+            <input
+              defaultValue={item.question}
+              onBlur={(e) => updateItem(i, { question: e.target.value })}
+              placeholder={t("dashboard.pages.linksBuilder.faqQuestionPlaceholder")}
+              className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+            />
+            <button
+              type="button"
+              onClick={() => onUpdate(items.filter((_, idx) => idx !== i))}
+              aria-label={t("dashboard.pages.linksBuilder.faqRemoveQuestion")}
+              className="flex-shrink-0 text-app-muted hover:text-red-600"
+            >
+              <IconTrash className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <textarea
+            defaultValue={item.answer}
+            onBlur={(e) => updateItem(i, { answer: e.target.value })}
+            rows={2}
+            placeholder={t("dashboard.pages.linksBuilder.faqAnswerPlaceholder")}
+            className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onUpdate([...items, { question: "", answer: "" }])}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+      >
+        <IconPlus className="h-3.5 w-3.5" />
+        {t("dashboard.pages.linksBuilder.faqAddQuestion")}
+      </button>
+    </div>
+  );
+}
+
 export default function BuilderLeftPanel({
   links,
   onAdd,
@@ -252,7 +339,7 @@ export default function BuilderLeftPanel({
   onDelete: (target: BuilderSelection) => void;
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
-  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; blockData?: Record<string, unknown> }) => void;
+  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
   designHref: string;
   settingsHref: string;
 }) {
@@ -405,6 +492,54 @@ export default function BuilderLeftPanel({
                     defaultValue={selectedNode.url ?? ""}
                     onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { url: e.target.value })}
                     placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                </div>
+              )}
+
+              {selectedNode.blockType === "video" && (
+                <div className="flex flex-col gap-2">
+                  <input
+                    defaultValue={selectedNode.title}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
+                    placeholder={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <input
+                    defaultValue={(selectedNode.blockData?.video_url as string) ?? ""}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { video_url: e.target.value } })}
+                    placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                </div>
+              )}
+
+              {selectedNode.blockType === "faq" && (
+                <FaqItemsEditor
+                  node={selectedNode}
+                  onUpdate={(items) => onUpdateNode(selectionOf(selectedNode), { blockData: { items } })}
+                />
+              )}
+
+              {selectedNode.blockType === "embed_link" && (
+                <div className="flex flex-col gap-2">
+                  <input
+                    defaultValue={selectedNode.title}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
+                    placeholder={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <input
+                    defaultValue={selectedNode.url ?? ""}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { url: e.target.value })}
+                    placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <textarea
+                    defaultValue={selectedNode.description ?? ""}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { description: e.target.value })}
+                    rows={2}
+                    placeholder={t("dashboard.pages.linksBuilder.embedLinkDescriptionPlaceholder")}
                     className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
                   />
                 </div>
