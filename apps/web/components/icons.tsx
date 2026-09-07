@@ -886,3 +886,17 @@ export function IconColumns({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconVideoImage -- Canvas Page Builder Fase 2 (BuilderAddComponentModal.tsx,
+// kategori MEDIA "Video+Image"): bingkai foto + lencana lingkaran-putar
+// bertumpuk, kombinasi visual video+foto belum punya padanan di set yang
+// sudah ada.
+export function IconVideoImage({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3" y="5" width="14" height="11" rx="1.6" stroke="currentColor" strokeWidth={base} />
+      <circle cx="17.5" cy="17.5" r="4.5" stroke="currentColor" strokeWidth={base} />
+      <path d="M16.3 15.8v3.4l3-1.7-3-1.7Z" fill="currentColor" />
+    </svg>
+  );
+}

@@ -1,7 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { IconBox, IconClose, IconColumns, IconDivider, IconExternal, IconSearch, IconTextLines } from "@/components/icons";
+import {
+  IconBook,
+  IconBox,
+  IconCamera,
+  IconClose,
+  IconColumns,
+  IconDivider,
+  IconExternal,
+  IconLink,
+  IconPhotoLibrary,
+  IconPlayCircle,
+  IconSearch,
+  IconTextLines,
+  IconVideoImage,
+} from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import type { EmbeddedBuilderBlock } from "@/lib/api-client";
 
@@ -44,10 +58,41 @@ function buildBuilderComponentCategories(
         { type: "section", label: t("dashboard.components.builderAddComponentModal.typeSection"), description: t("dashboard.components.builderAddComponentModal.typeSectionDesc"), Icon: IconBox },
       ],
     },
-    { key: "media", label: t("dashboard.components.builderAddComponentModal.categoryMedia"), tiles: [] },
-    { key: "information", label: t("dashboard.components.builderAddComponentModal.categoryInformation"), tiles: [] },
+    {
+      // Fase 2 (permintaan langsung pengguna 8 September 2026): 4 dari 5
+      // tipe MEDIA terisi -- "Image Slider" TETAP menyusul Fase 3 (butuh
+      // subsistem carousel/scroll-snap baru), SENGAJA tidak ditampilkan sbg
+      // tile "segera hadir" terpisah di sini (kategori ini sekarang py
+      // tile sungguhan, bukan kosong total spt Fase 1 -- lihat
+      // comingSoon, cuma tampil kalau SELURUH kategori kosong).
+      key: "media",
+      label: t("dashboard.components.builderAddComponentModal.categoryMedia"),
+      tiles: [
+        { type: "image", label: t("dashboard.components.builderAddComponentModal.typeImage"), description: t("dashboard.components.builderAddComponentModal.typeImageDesc"), Icon: IconCamera },
+        { type: "gallery", label: t("dashboard.components.builderAddComponentModal.typeImageGrid"), description: t("dashboard.components.builderAddComponentModal.typeImageGridDesc"), Icon: IconPhotoLibrary },
+        { type: "video", label: t("dashboard.components.builderAddComponentModal.typeVideo"), description: t("dashboard.components.builderAddComponentModal.typeVideoDesc"), Icon: IconPlayCircle },
+        { type: "video_image", label: t("dashboard.components.builderAddComponentModal.typeVideoImage"), description: t("dashboard.components.builderAddComponentModal.typeVideoImageDesc"), Icon: IconVideoImage },
+      ],
+    },
+    {
+      // Card/List/Testimony TETAP Fase 3 (skema block_data baru
+      // masing-masing).
+      key: "information",
+      label: t("dashboard.components.builderAddComponentModal.categoryInformation"),
+      tiles: [
+        { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconBook },
+      ],
+    },
     { key: "conversion", label: t("dashboard.components.builderAddComponentModal.categoryConversion"), tiles: [] },
-    { key: "others", label: t("dashboard.components.builderAddComponentModal.categoryOthers"), tiles: [] },
+    {
+      // Embed (iframe+allowlist domain) TETAP Fase 3 (kerja keamanan
+      // tersendiri).
+      key: "others",
+      label: t("dashboard.components.builderAddComponentModal.categoryOthers"),
+      tiles: [
+        { type: "embed_link", label: t("dashboard.components.builderAddComponentModal.typeEmbedLink"), description: t("dashboard.components.builderAddComponentModal.typeEmbedLinkDesc"), Icon: IconLink },
+      ],
+    },
   ];
 }
 
