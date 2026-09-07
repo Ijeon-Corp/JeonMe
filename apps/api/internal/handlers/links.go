@@ -475,6 +475,17 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	"divider": true,
 	"section": true,
 	"column":  true,
+	// Fase 2 (permintaan langsung pengguna 8 September 2026, "kerjakan
+	// penuh sekalian root + bersarang"): keenam tipe MEDIA/INFORMATION/
+	// OTHERS baru, semuanya boleh ditanam di dalam Section/Column, TIDAK
+	// dibatasi root-only -- lihat resolveBuilderBlockData (path-walking
+	// upload gambar sudah mendukung kedalaman berapa pun).
+	"video":       true,
+	"faq":         true,
+	"gallery":     true,
+	"image":       true,
+	"video_image": true,
+	"embed_link":  true,
 }
 
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
@@ -536,62 +547,39 @@ func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, bloc
 func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) (string, bool) {
 	switch blockType {
 	case "video":
-		// depth==1 -- blok video TINGKAT ATAS (dibuat lewat form "Buat Blok"
-		// yang sudah mewajibkan URL diisi SEBELUM submit, lihat dashboard/
-		// links/page.tsx) tetap wajib video_url valid seperti sebelumnya.
-		// depth>1 -- blok video TERTANAM (CatalogBlocksEditor, komponen
-		// baru) SENGAJA dibuat KOSONG dulu lalu diisi belakangan (pola SAMA
-		// dgn gallery/audio/file: "buat shell dulu, isi menyusul") --
-		// video_url kosong DIBOLEHKAN, tapi kalau TERISI tetap wajib valid.
+		// Canvas Page Builder Fase 2 (permintaan langsung pengguna 8
+		// September 2026): requirement "wajib diisi di depth==1" DIHAPUS --
+		// pola PERSIS relaksasi "heading"/"text" Fase 1, dgn alasan yang
+		// SAMA: form dashboard yang sudah ada (`blockVideoUrl.trim()` check,
+		// dashboard/links/page.tsx) MASIH menegakkan wajib isi di sisi
+		// KLIEN sebelum submit, jadi pengguna form lama TIDAK terpengaruh.
+		// Ini membuka jalur shell-first (buat kosong dulu, isi belakangan
+		// lewat klik-utk-edit di kanvas builder) baik di ROOT maupun
+		// tertanam di dalam Section/Column -- sebelumnya cuma tertanam
+		// (lewat CatalogBlocksEditor/BlockDrilldownEditor) yang boleh
+		// kosong. video_url yang TERISI tetap wajib valid YouTube/TikTok,
+		// di semua depth, tidak berubah.
 		videoURL, _ := data["video_url"].(string)
-		if videoURL == "" {
-			if depth == 1 {
-				return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
-			}
-		} else if !isValidVideoEmbedURL(videoURL) {
+		if videoURL != "" && !isValidVideoEmbedURL(videoURL) {
 			return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
 		}
 	case "faq":
-		// Sama semangatnya dengan "video" di atas -- depth>1 (blok FAQ
-		// tertanam) boleh dibuat dengan items kosong. TAPI beda dari
-		// percobaan pertama (yang cuma melonggarkan baris yang BENAR-BENAR
-		// kosong keduanya): CatalogBlocksEditor.tsx menyimpan question dan
-		// answer LEWAT onBlur TERPISAH per field (menghindari race kondisi
-		// lain -- lihat komentar di file itu), jadi urutan wajar "isi
-		// Pertanyaan, pindah ke Jawaban" MEMANG mengirim SATU PATCH
-		// perantara dengan question terisi tapi answer MASIH kosong sebelum
-		// PATCH kedua melengkapinya. Kalau depth>1 tetap mewajibkan
-		// "lengkap keduanya begitu salah satu diisi", PATCH perantara yang
-		// sah itu malah ditolak 400 -- ujungnya pertanyaan yang sudah
-		// diketik hilang lagi. Jadi depth>1 SENGAJA tidak menegakkan
-		// kelengkapan field FAQ sama sekali (baris kosong, separuh terisi,
-		// atau penuh -- semua diterima); depth==1 (form buat blok di
-		// dashboard, yang sudah menyaring baris kosong sebelum submit)
-		// tetap menegakkan wajib lengkap seperti semula.
+		// Fase 2 -- requirement kelengkapan di depth==1 DIHAPUS, alasan SAMA
+		// seperti "video" di atas: form dashboard (`items.length === 0`
+		// check, dashboard/links/page.tsx) sudah menyaring baris
+		// kosong/tidak lengkap sebelum submit, jadi melonggarkan di sini
+		// aman utk form lama. Sebelumnya depth>1 (blok FAQ tertanam) SUDAH
+		// longgar (autosave onBlur per field, PATCH perantara question
+		// terisi/answer kosong harus tetap lolos) -- sekarang depth==1
+		// (termasuk shell-first ROOT builder) ikut longgar dengan alasan
+		// yang sama persis, cukup satu aturan utk semua depth.
 		items, ok := data["items"].([]any)
 		if !ok {
 			items = []any{}
 		}
-		if depth == 1 && len(items) == 0 {
-			return "isi minimal 1 pertanyaan FAQ", false
-		}
-		if depth == 1 {
-			for _, raw := range items {
-				item, ok := raw.(map[string]any)
-				if !ok {
-					return "setiap item FAQ wajib berupa objek", false
-				}
-				q, _ := item["question"].(string)
-				a, _ := item["answer"].(string)
-				if strings.TrimSpace(q) == "" || strings.TrimSpace(a) == "" {
-					return "setiap item FAQ wajib punya pertanyaan dan jawaban", false
-				}
-			}
-		} else {
-			for _, raw := range items {
-				if _, ok := raw.(map[string]any); !ok {
-					return "setiap item FAQ wajib berupa objek", false
-				}
+		for _, raw := range items {
+			if _, ok := raw.(map[string]any); !ok {
+				return "setiap item FAQ wajib berupa objek", false
 			}
 		}
 	case "accordion":
@@ -615,10 +603,21 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// khusus di sini -- "accordion" tetap pakai case terpisah di atas
 		// dengan requirement lama utuh.
 	case "image":
-		imageURL, _ := data["image_url"].(string)
-		u, err := url.Parse(imageURL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-			return "image_url wajib diisi dengan URL gambar yang valid", false
+		// Fase 2 (permintaan langsung pengguna 8 September 2026, "sertakan
+		// foto tunggal juga"): SEBELUMNYA satu-satunya case yang TIDAK punya
+		// relaksasi depth sama sekali -- image_url wajib valid di SEMUA
+		// depth, termasuk shell kosong. Diubah permisif SEPERTI "gallery" di
+		// bawah (opsional, divalidasi HANYA kalau diisi) -- blok dibuat
+		// kosong dulu lewat CreateBlock/Add Component, foto diunggah
+		// belakangan lewat UploadMediaImage (bukan dikirim mentah). Tidak
+		// ada pemanggil backend lain yang bergantung pada image_url SELALU
+		// terisi utk block_type ini (dicek: tidak pernah punya endpoint
+		// upload atau tile dashboard sebelum Fase 2).
+		if imageURL, ok := data["image_url"].(string); ok && imageURL != "" {
+			u, err := url.Parse(imageURL)
+			if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+				return "image_url wajib berupa URL gambar yang valid", false
+			}
 		}
 	case "maps":
 		if embed, ok := data["embed"]; ok {
@@ -647,6 +646,41 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				if !isStr || err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 					return "setiap foto galeri wajib URL yang valid", false
 				}
+			}
+		}
+	case "video_image":
+		// "video_image" -- Canvas Page Builder Fase 2 (permintaan langsung
+		// pengguna 8 September 2026, kategori MEDIA "Video+Image"): dua
+		// field independen, KEDUANYA opsional di semua depth (shell-first,
+		// sama filosofi "gallery"/"image" di atas) -- video_url diisi lewat
+		// PATCH block_data biasa (pola sama field lain di builder),
+		// image_url diisi lewat UploadMediaImage (pola sama "image"). Tidak
+		// ada requirement salah satu HARUS terisi -- kreator bisa mengisi
+		// video dulu, foto belakangan, atau sebaliknya.
+		if videoURL, ok := data["video_url"].(string); ok && videoURL != "" && !isValidVideoEmbedURL(videoURL) {
+			return "video_url wajib diisi dengan tautan YouTube atau TikTok yang valid", false
+		}
+		if imageURL, ok := data["image_url"].(string); ok && imageURL != "" {
+			u, err := url.Parse(imageURL)
+			if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+				return "image_url wajib berupa URL gambar yang valid", false
+			}
+		}
+	case "embed_link":
+		// "embed_link" -- Canvas Page Builder Fase 2 (kategori OTHERS "Embed
+		// Link"): kartu link MANUAL (judul/deskripsi/URL pakai kolom `links`
+		// yang sudah ada -- title/description/url, PERSIS pola
+		// "project_showcase" -- TIDAK ada fetch metadata server sama
+		// sekali, kreator isi sendiri). Cuma thumbnail (block_data.image_url,
+		// diisi lewat UploadMediaImage) yang perlu divalidasi di sini,
+		// opsional & permisif sama seperti "image"/"video_image" di atas.
+		// BEDA dari "project_showcase" yang mewajibkan `url` (CTA) terisi
+		// di handler CreateBlock -- embed_link SENGAJA tidak mewajibkan url
+		// sama sekali (kartu link generik, lebih longgar).
+		if imageURL, ok := data["image_url"].(string); ok && imageURL != "" {
+			u, err := url.Parse(imageURL)
+			if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+				return "image_url wajib berupa URL gambar yang valid", false
 			}
 		}
 	case "audio":
@@ -1032,7 +1066,7 @@ func parseBuilderPath(c *gin.Context) ([]builderPathSeg, error) {
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`

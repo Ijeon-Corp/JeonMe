@@ -628,13 +628,19 @@ func TestValidateBlockData_BuilderSectionColumn(t *testing.T) {
 		}
 	})
 
-	t.Run("column dengan anak block_type belum diizinkan (image, Fase 2) ditolak", func(t *testing.T) {
+	// "image" SEBELUMNYA dipakai sbg contoh tipe-belum-diizinkan (Fase 1) --
+	// sekarang SUDAH diizinkan sejak Fase 2 (lihat
+	// TestValidateBlockData_BuilderMediaTypes), jadi diganti "catalog"
+	// (TETAP sengaja dikecualikan dari builder di v1, lihat catatan lengkap
+	// di allowedBuilderEmbeddedBlockTypes soal cross-nesting) supaya test
+	// ini tetap membuktikan penolakan tipe yang genuinely belum diizinkan.
+	t.Run("column dengan anak block_type belum diizinkan (catalog, tidak cross-nest dgn builder) ditolak", func(t *testing.T) {
 		data := map[string]any{"columns": []any{
-			map[string]any{"children": []any{child("c1", "image")}},
+			map[string]any{"children": []any{child("c1", "catalog")}},
 			map[string]any{},
 		}}
 		if _, ok := validateBlockData("column", data); ok {
-			t.Fatal("image belum ada di allowedBuilderEmbeddedBlockTypes Fase 1, seharusnya ditolak sbg anak column")
+			t.Fatal("catalog SENGAJA tidak ada di allowedBuilderEmbeddedBlockTypes (tidak cross-nest dgn builder), seharusnya ditolak sbg anak column")
 		}
 	})
 
@@ -782,6 +788,103 @@ func TestResolveBuilderBlockData(t *testing.T) {
 		_, _, ok := resolveBuilderBlockData(root, "section", []builderPathSeg{{Kind: "child", ID: "col-1"}, {Kind: "column", Index: 5}, {Kind: "child", ID: "x"}})
 		if ok {
 			t.Fatal("index kolom di luar jangkauan seharusnya gagal resolve")
+		}
+	})
+}
+
+// TestValidateBlockData_BuilderMediaTypes -- Canvas Page Builder Fase 2
+// (permintaan langsung pengguna 8 September 2026): video/faq/image
+// dilonggarkan supaya shell-first di ROOT juga (sebelumnya cuma tertanam),
+// video_image/embed_link tipe baru sepenuhnya opsional di semua depth.
+func TestValidateBlockData_BuilderMediaTypes(t *testing.T) {
+	t.Run("video kosong di depth 1 sekarang lolos (shell-first)", func(t *testing.T) {
+		if msg, ok := validateBlockData("video", map[string]any{}); !ok {
+			t.Fatalf("video kosong di root seharusnya lolos sejak Fase 2, dapat: %s", msg)
+		}
+	})
+
+	t.Run("video terisi tapi bukan YouTube/TikTok tetap ditolak", func(t *testing.T) {
+		if _, ok := validateBlockData("video", map[string]any{"video_url": "https://example.com/not-a-video"}); ok {
+			t.Fatal("video_url yang bukan YouTube/TikTok seharusnya tetap ditolak")
+		}
+	})
+
+	t.Run("video URL YouTube valid lolos", func(t *testing.T) {
+		if msg, ok := validateBlockData("video", map[string]any{"video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}); !ok {
+			t.Fatalf("URL YouTube valid seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("faq items kosong di depth 1 sekarang lolos (shell-first)", func(t *testing.T) {
+		if msg, ok := validateBlockData("faq", map[string]any{}); !ok {
+			t.Fatalf("faq kosong di root seharusnya lolos sejak Fase 2, dapat: %s", msg)
+		}
+	})
+
+	t.Run("faq item bukan objek tetap ditolak", func(t *testing.T) {
+		if _, ok := validateBlockData("faq", map[string]any{"items": []any{"bukan objek"}}); ok {
+			t.Fatal("item FAQ yang bukan objek seharusnya tetap ditolak")
+		}
+	})
+
+	t.Run("faq item separuh terisi (autosave onBlur per field) tetap lolos", func(t *testing.T) {
+		data := map[string]any{"items": []any{map[string]any{"question": "Sudah diisi?", "answer": ""}}}
+		if msg, ok := validateBlockData("faq", data); !ok {
+			t.Fatalf("item FAQ separuh terisi seharusnya lolos di semua depth, dapat: %s", msg)
+		}
+	})
+
+	t.Run("image kosong lolos (shell-first), URL tidak valid ditolak, URL valid lolos", func(t *testing.T) {
+		if msg, ok := validateBlockData("image", map[string]any{}); !ok {
+			t.Fatalf("image kosong seharusnya lolos sejak Fase 2, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("image", map[string]any{"image_url": "bukan-url"}); ok {
+			t.Fatal("image_url tidak valid seharusnya ditolak")
+		}
+		if msg, ok := validateBlockData("image", map[string]any{"image_url": "https://example.com/foto.webp"}); !ok {
+			t.Fatalf("image_url valid seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("video_image -- keduanya opsional independen", func(t *testing.T) {
+		if msg, ok := validateBlockData("video_image", map[string]any{}); !ok {
+			t.Fatalf("video_image kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if msg, ok := validateBlockData("video_image", map[string]any{"video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}); !ok {
+			t.Fatalf("video_image dgn video_url saja seharusnya lolos, dapat: %s", msg)
+		}
+		if msg, ok := validateBlockData("video_image", map[string]any{"image_url": "https://example.com/foto.webp"}); !ok {
+			t.Fatalf("video_image dgn image_url saja seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("video_image", map[string]any{"video_url": "https://example.com/not-a-video"}); ok {
+			t.Fatal("video_image dgn video_url tidak valid seharusnya ditolak")
+		}
+		if _, ok := validateBlockData("video_image", map[string]any{"image_url": "bukan-url"}); ok {
+			t.Fatal("video_image dgn image_url tidak valid seharusnya ditolak")
+		}
+	})
+
+	t.Run("embed_link -- image_url opsional, divalidasi kalau ada", func(t *testing.T) {
+		if msg, ok := validateBlockData("embed_link", map[string]any{}); !ok {
+			t.Fatalf("embed_link kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("embed_link", map[string]any{"image_url": "bukan-url"}); ok {
+			t.Fatal("embed_link dgn image_url tidak valid seharusnya ditolak")
+		}
+		if msg, ok := validateBlockData("embed_link", map[string]any{"image_url": "https://example.com/thumb.webp"}); !ok {
+			t.Fatalf("embed_link dgn image_url valid seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("keenam tipe baru sekarang boleh ditanam di dalam Section", func(t *testing.T) {
+		child := func(id, blockType string) map[string]any {
+			return map[string]any{"id": id, "block_type": blockType, "title": "", "block_data": map[string]any{}}
+		}
+		for _, bt := range []string{"video", "faq", "gallery", "image", "video_image", "embed_link"} {
+			data := map[string]any{"children": []any{child("c1", bt)}}
+			if msg, ok := validateBlockData("section", data); !ok {
+				t.Fatalf("block_type %q seharusnya sudah boleh ditanam di Section sejak Fase 2, dapat: %s", bt, msg)
+			}
 		}
 	})
 }
