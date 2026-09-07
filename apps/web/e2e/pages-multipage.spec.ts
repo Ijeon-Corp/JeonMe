@@ -22,8 +22,11 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     await page.goto("/dashboard/links");
     await expect(page.getByRole("button", { name: "Home", exact: true })).toBeVisible();
     // Label di atas pill nav (susulan permintaan langsung pengguna: "tambah
-    // label di atas pill nav").
-    await expect(page.getByText("Halaman", { exact: true })).toBeVisible();
+    // label di atas pill nav") -- hasText STRING cocok SUBSTRING (bentrok
+    // dgn "Multi-halaman..." di kartu Upgrade Premium & breadcrumb "Halaman
+    // Saya / Link & Block"), jadi regex exact /^Halaman$/ supaya cuma cocok
+    // paragraf label pill nav persis.
+    await expect(page.locator("p", { hasText: /^Halaman$/ })).toBeVisible();
 
     // Akun gratis: tombol "+ Page" mengarahkan ke halaman Langganan Premium,
     // BUKAN membuka modal buat halaman (gating 100% server-enforced juga,
@@ -48,7 +51,9 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
 
     // Pratinjau ("Buka") harus mengarah ke {username}/{slug}, BUKAN ke
     // halaman utama -- membuktikan editor benar-benar pindah konteks.
-    await expect(page.getByRole("link", { name: "Buka" })).toHaveAttribute(
+    // exact:true -- tautan "Buka Mode Builder (Kanvas)" (Canvas Page
+    // Builder) juga cocok substring "Buka" tanpa ini.
+    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute(
       "href",
       new RegExp(`/${username}/promo-agustus-e2e`)
     );
@@ -68,7 +73,7 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     // per-halaman, klaim inti fitur ini: "pratinjau blok dll mengikuti isi
     // dari tiap page").
     await page.getByRole("button", { name: "Home", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Buka" })).toHaveAttribute("href", new RegExp(`/${username}$`));
+    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}$`));
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toHaveCount(0);
 
     // Pindah lagi ke halaman tambahan -- tautannya masih ada (bukan hilang,
@@ -109,6 +114,22 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     }
     await publishActivePage();
     await newPagePill.click();
+    // Tunggu pindah halaman BENAR-BENAR selesai sebelum publishActivePage
+    // baca toggle "Terbitkan" -- toBeDisabled() saja TIDAK cukup (pill jadi
+    // disabled SEKETIKA saat diklik, sebelum switchToPage async selesai
+    // fetch data halaman baru) -- race nyata ditemukan 8 September 2026:
+    // publishActivePage baca aria-checked BASI milik "Duplikat Promo E2E"
+    // (baru saja dimatikan togglenya) sebelum data "Promo Agustus E2E" yang
+    // asli (toggle "Tampilkan foto..." TIDAK PERNAH disentuh, harus tetap
+    // "true") selesai dimuat -- akibatnya publish "Promo Agustus E2E"
+    // dilewati (dikira sudah published). Tunggu toggle itu balik "true"
+    // dulu sbg bukti data halaman baru benar-benar sudah termuat.
+    await expect(newPagePill).toBeDisabled();
+    await expect(page.locator("label", { hasText: "Tampilkan foto, nama, bio & ikon sosial" }).getByRole("switch")).toHaveAttribute(
+      "aria-checked",
+      "true",
+      { timeout: 10000 }
+    );
     await publishActivePage();
 
     // Halaman publik: dengan Home + 2 halaman tambahan terbit (3 total),
@@ -141,11 +162,16 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     const { username } = await registerAndLogin(page, "pagestoko");
 
     await page.goto("/dashboard/products");
-    await page.getByRole("button", { name: "Manage Items" }).click();
+    // Tab "Manage Items" diganti "Produk" di shell v2 (dashboard-flags.ts
+    // area "sales", spec §"Primary: Ringkasan · Produk · Pesanan · Halaman
+    // Toko") -- exact:true supaya tidak bentrok dgn tombol "Tambah Produk".
+    await page.getByRole("button", { name: "Produk", exact: true }).click();
 
     // Produk "Link Eksternal" -- jenis paling ringan (tidak butuh unggah
     // file), cukup untuk memicu ensureProdukPage (Toko canonical otomatis).
-    await page.getByRole("button", { name: "Tambah Produk" }).click();
+    // .first() -- ada 2 tombol "Tambah Produk" berbarengan (CTA header +
+    // CTA empty-state, keduanya buka alur yang sama).
+    await page.getByRole("button", { name: "Tambah Produk" }).first().click();
     await page.getByRole("button", { name: "Link Eksternal" }).click();
     const form = page.locator("form", { has: page.getByPlaceholder("Nama produk") });
     await form.getByPlaceholder("Nama produk").fill("Produk Pemicu Toko");
@@ -183,10 +209,10 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     // Pratinjau harus ikut pindah ke Toko kedua (slug bebas, bukan
     // username), membuktikan ProdukPageEditor benar-benar menampilkan
     // konteks Toko yang sedang aktif, bukan selalu canonical.
-    await expect(page.getByRole("link", { name: "Buka" })).toHaveAttribute("href", new RegExp(`/${username}/toko-kedua-e2e`));
+    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}/toko-kedua-e2e`));
 
     // Pindah balik ke Toko canonical.
     await page.getByRole("button", { name: new RegExp(`^Toko ${username}`) }).click();
-    await expect(page.getByRole("link", { name: "Buka" })).toHaveAttribute("href", new RegExp(`/${username}/${username}$`));
+    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}/${username}$`));
   });
 });

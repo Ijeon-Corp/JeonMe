@@ -107,6 +107,10 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: linkTitle }).first();
+    // Strip alat kelola (jadwal/kunci/sensitif/ikon/duplikat/hapus) dilipat
+    // di balik tombol "Kelola" sejak restrukturisasi UX 31 Agustus 2026 --
+    // harus dibuka dulu sebelum ikon aksi per-baris kelihatan.
+    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
     await row.getByTitle("Pilih dari galeri ikon").click();
 
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toBeVisible();
@@ -114,17 +118,19 @@ test.describe("Tautan", () => {
     await page.getByRole("button", { name: "Instagram", exact: true }).click();
 
     // Modal tertutup begitu ikon dipilih, tombol galeri di baris tautan ini
-    // ikut berubah warna (text-primary) menandakan ada icon_key tersimpan.
+    // ikut berubah warna (text-jeon-purple) menandakan ada icon_key tersimpan.
     await expect(page.getByRole("heading", { name: "Pilih Ikon" })).toHaveCount(0);
-    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-primary/);
+    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
 
     // Reload penuh -- membuktikan pilihannya benar-benar tersimpan ke
-    // backend (icon_key), bukan cuma state lokal sesi ini. Buka lagi
-    // galerinya, opsi "Instagram" harus tampil TERPILIH (border-primary).
+    // backend (icon_key), bukan cuma state lokal sesi ini. Strip "Kelola"
+    // kembali terlipat sesudah reload (toolsOpenId ikut ter-reset), buka
+    // lagi galerinya, opsi "Instagram" harus tampil TERPILIH (border-jeon-purple).
     await page.reload();
-    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-primary/);
+    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
+    await expect(row.getByTitle("Pilih dari galeri ikon")).toHaveClass(/text-jeon-purple/);
     await row.getByTitle("Pilih dari galeri ikon").click();
-    await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-primary/);
+    await expect(page.getByRole("button", { name: "Instagram", exact: true })).toHaveClass(/border-jeon-purple/);
   });
 
   // Duplikat -- permintaan langsung pengguna, 20 Agustus 2026: "di bagian
@@ -147,6 +153,9 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: linkTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: linkTitle }).first();
+    // Strip alat kelola dilipat di balik tombol "Kelola" -- lihat catatan
+    // lengkap di test "ikon brand" di atas.
+    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
     await row.getByTitle("Duplikat").click();
 
     // Baris baru muncul dengan judul berakhiran " (Salinan)", URL sama persis.
@@ -170,6 +179,10 @@ test.describe("Tautan", () => {
 
     await page.goto("/dashboard/links");
     await page.getByRole("button", { name: "Tambah" }).first().click();
+    // Modal v2 (redesain dashboard, dashboard-flags.ts area "page_builder"):
+    // tile berkategori, bukan lagi daftar datar -- "Teks" ada di tab
+    // "Konten" ("Populer" adalah tab default, tidak berisi "Teks").
+    await page.getByRole("button", { name: "Konten", exact: true }).click();
     await page.getByRole("button", { name: "Teks", exact: true }).click();
 
     const blockTitle = "Info Internal";
@@ -180,6 +193,9 @@ test.describe("Tautan", () => {
     await expect(page.getByRole("listitem").filter({ hasText: blockTitle })).toBeVisible({ timeout: 10000 });
 
     const row = page.locator("li", { hasText: blockTitle }).first();
+    // Strip alat kelola dilipat di balik tombol "Kelola" -- lihat catatan
+    // lengkap di test "ikon brand" di atas.
+    await row.getByTitle("Kelola blok (jadwal, kunci, ikon, dll)").click();
     await row.getByTitle("Tandai konten sensitif").click();
     await expect(row.getByTitle("Batalkan peringatan konten sensitif")).toBeVisible({ timeout: 5000 });
 

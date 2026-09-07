@@ -7,6 +7,9 @@ test.describe("Catalog nested blocks", () => {
     await page.goto("/dashboard/links");
 
     await page.getByRole("button", { name: "Tambah" }).first().click();
+    // Modal v2: "Katalog" ada di tab "Lanjutan" ("Populer" adalah tab
+    // default, tidak berisi "Katalog").
+    await page.getByRole("button", { name: "Lanjutan", exact: true }).click();
     await page.getByRole("button", { name: "Katalog", exact: true }).click();
     await page.getByPlaceholder("Judul blok").fill("Perumahan");
     await page.getByRole("button", { name: "Buat Blok" }).click();
@@ -22,38 +25,82 @@ test.describe("Catalog nested blocks", () => {
     await expect(catalogTile).toBeVisible();
     await expect(catalogTile.getByText("Premium")).toBeVisible();
 
+    // BlockDrilldownEditor (redesain drill-down gaya Linktree, page_builder
+    // flag): menambah blok tertanam BUKAN lagi form-semua-terlihat -- klik
+    // tile ("Teks"/"Video"/dst) LANGSUNG membuat blok itu DAN pindah masuk
+    // ("drill down") ke layar edit blok itu sendiri, menggantikan tile
+    // picker. Harus klik "Kembali" dulu tiap kali sebelum tile picker
+    // (dan blok yang sudah ada) tampil lagi utk menambah blok berikutnya.
+
     // Tambah blok Teks
     await page.getByRole("button", { name: "Teks", exact: true }).click();
     await expect(page.getByPlaceholder("Isi teks")).toBeVisible();
     await page.getByPlaceholder("Isi teks").fill("Deskripsi lengkap tipe rumah ini.");
     await page.getByPlaceholder("Isi teks").blur();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
     // Tambah blok Video
     await page.getByRole("button", { name: "Video", exact: true }).click();
     await expect(page.getByPlaceholder("URL video YouTube/TikTok")).toBeVisible();
     await page.getByPlaceholder("URL video YouTube/TikTok").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
     await page.getByPlaceholder("URL video YouTube/TikTok").blur();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
     // Tambah blok Maps
     await page.getByRole("button", { name: "Lokasi", exact: true }).click();
     await expect(page.getByPlaceholder("Tautan Google Maps")).toBeVisible();
     await page.getByPlaceholder("Tautan Google Maps").fill("https://maps.google.com/");
     await page.getByPlaceholder("Tautan Google Maps").blur();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // Tambah blok FAQ
+    // Tambah blok FAQ -- beda dari Teks/Video/Lokasi: "FAQ" pindah dulu ke
+    // daftar pertanyaan KOSONG (faqList), harus klik "+ Tambah Pertanyaan"
+    // baru field Pertanyaan/Jawaban muncul (faqItem) -- makanya butuh DUA
+    // "Kembali" utk sampai balik ke frame item (faqItem -> faqList ->
+    // catalogItem).
     await page.getByRole("button", { name: "FAQ", exact: true }).click();
+    await page.getByRole("button", { name: "+ Tambah Pertanyaan", exact: true }).click();
     await expect(page.getByPlaceholder("Pertanyaan")).toBeVisible();
     await page.getByPlaceholder("Pertanyaan").fill("Apakah bisa nego harga?");
     await page.getByPlaceholder("Jawaban").fill("Bisa, hubungi kami langsung.");
     await page.getByPlaceholder("Jawaban").blur();
     await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // Reload -- pastikan semua blok tersimpan (bukan cuma UI lokal)
+    // Reload -- pastikan semua blok tersimpan (bukan cuma UI lokal).
+    // BlockDrilldownEditor tertutup TOTAL sesudah reload (drilldownBlockId
+    // itu state klien murni) -- navigasi ulang dari awal: baris "Perumahan"
+    // -> item -> tiap blok tertanam SATU PER SATU (drill-down tidak
+    // menampilkan seluruh isi sekaligus seperti form lama). getByText
+    // dipakai (bukan getByRole+name) utk masuk ke blok yang SUDAH ADA --
+    // baris blok yang sudah ada py tombol hapus BERSARANG di dalamnya
+    // (beda dari tile "tambah baru" yang bersih), .first() mengandalkan
+    // urutan DOM (daftar blok yang sudah ada dirender SEBELUM grid tile
+    // tambah baru, lihat CatalogItemFrame).
     await page.reload();
+    const perumahanRow = page.locator("li", { hasText: "Perumahan" }).first();
+    await perumahanRow.getByRole("button", { name: "Edit Konten", exact: true }).click();
+    await page.getByRole("button", { name: /Perumahan Tipe A/ }).click();
+
+    await page.getByText("Teks", { exact: true }).first().click();
     await expect(page.getByPlaceholder("Isi teks")).toHaveValue("Deskripsi lengkap tipe rumah ini.", { timeout: 10000 });
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    await page.getByText("Video", { exact: true }).first().click();
     await expect(page.getByPlaceholder("URL video YouTube/TikTok")).toHaveValue("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    await page.getByText("Lokasi", { exact: true }).first().click();
     await expect(page.getByPlaceholder("Tautan Google Maps")).toHaveValue("https://maps.google.com/");
-    await expect(page.getByPlaceholder("Pertanyaan")).toHaveValue("Apakah bisa nego harga?");
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    await page.getByText("FAQ", { exact: true }).first().click();
+    await page.getByText("Apakah bisa nego harga?", { exact: true }).click();
+    await expect(page.getByPlaceholder("Pertanyaan")).toHaveValue("Apakah bisa nego harga?", { timeout: 10000 });
+    await expect(page.getByPlaceholder("Jawaban")).toHaveValue("Bisa, hubungi kami langsung.");
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
     // Klik tile "Katalog (bersarang)" -> redirect ke halaman langganan (gerbang UI)
     await page.getByRole("button", { name: /Katalog \(bersarang\)/ }).click();
@@ -98,6 +145,9 @@ test.describe("Catalog nested blocks", () => {
     await page.reload();
 
     await page.getByRole("button", { name: "Tambah" }).first().click();
+    // Modal v2: "Katalog" ada di tab "Lanjutan" ("Populer" adalah tab
+    // default, tidak berisi "Katalog").
+    await page.getByRole("button", { name: "Lanjutan", exact: true }).click();
     await page.getByRole("button", { name: "Katalog", exact: true }).click();
     await page.getByPlaceholder("Judul blok").fill("Perumahan");
     await page.getByRole("button", { name: "Buat Blok" }).click();
@@ -107,32 +157,41 @@ test.describe("Catalog nested blocks", () => {
     await page.getByRole("button", { name: "+ Tambah Item" }).click();
     await expect(page.getByPlaceholder("Judul item", { exact: true })).toBeVisible({ timeout: 5000 });
 
+    // Klik tile "Katalog (bersarang)" LANGSUNG pindah ("drill down") ke
+    // catalogItems KOSONG milik katalog tertanam ini sendiri (sama persis
+    // komponen CatalogItemsFrame yang dipakai katalog tingkat atas) --
+    // TIDAK ada lagi field ganti judul blok tertanam terpisah di alur baru
+    // ini (beda dari form lama CatalogBlocksEditor), jadi judulnya tetap
+    // default "Katalog (bersarang)".
     const catalogTile = page.getByRole("button", { name: /Katalog \(bersarang\)/ });
     await expect(catalogTile.getByText("Premium")).toHaveCount(0);
     await catalogTile.click();
 
-    // Blok tertanam baru berjudul default "Katalog (bersarang)" -- ganti
-    // supaya lebih bermakna & gampang dicek di halaman publik nanti.
-    await page.getByLabel("Judul blok tertanam").fill("Sub Katalog");
-    await page.getByLabel("Judul blok tertanam").blur();
-
-    await page.getByRole("button", { name: "Tambah Item", exact: true }).click();
-    await expect(page.getByLabel("Judul item katalog bersarang")).toBeVisible({ timeout: 5000 });
-    await page.getByLabel("Judul item katalog bersarang").fill("Unit 1");
-    await page.getByLabel("Judul item katalog bersarang").blur();
+    await expect(page.getByPlaceholder("Judul item baru (mis. Tipe 36)")).toBeVisible({ timeout: 5000 });
+    await page.getByPlaceholder("Judul item baru (mis. Tipe 36)").fill("Unit 1");
+    await page.getByRole("button", { name: "+ Tambah Item" }).click();
+    await expect(page.getByPlaceholder("Judul item", { exact: true })).toHaveValue("Unit 1", { timeout: 5000 });
     await page.waitForTimeout(1500);
 
+    // Reload -- editor tertutup total, navigasi ulang dari awal: Perumahan
+    // -> Perumahan Tipe A -> blok "Katalog (bersarang)" yang sudah ada ->
+    // item "Unit 1" di dalamnya.
     await page.reload();
-    await expect(page.getByLabel("Judul item katalog bersarang")).toHaveValue("Unit 1", { timeout: 10000 });
+    const perumahanRow = page.locator("li", { hasText: "Perumahan" }).first();
+    await perumahanRow.getByRole("button", { name: "Edit Konten", exact: true }).click();
+    await page.getByRole("button", { name: /Perumahan Tipe A/ }).click();
+    await page.getByText("Katalog (bersarang)", { exact: true }).first().click();
+    await page.getByRole("button", { name: /Unit 1/ }).click();
+    await expect(page.getByPlaceholder("Judul item", { exact: true })).toHaveValue("Unit 1", { timeout: 10000 });
 
     await page.goto(`/${username}`);
     await page.getByText("Perumahan", { exact: true }).click();
     await page.getByText("Perumahan Tipe A", { exact: true }).click();
-    await page.getByText("Sub Katalog", { exact: true }).click();
+    await page.getByText("Katalog (bersarang)", { exact: true }).click();
     await expect(page.getByText("Unit 1", { exact: true })).toBeVisible();
 
     await page.getByLabel("Kembali").click();
-    await expect(page.getByText("Sub Katalog", { exact: true })).toBeVisible();
+    await expect(page.getByText("Katalog (bersarang)", { exact: true })).toBeVisible();
     await page.getByLabel("Kembali").click();
     await expect(page.getByText("Perumahan Tipe A", { exact: true })).toBeVisible();
   });

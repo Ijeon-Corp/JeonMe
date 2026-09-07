@@ -156,7 +156,15 @@ function buildAddCategoriesV2(t: (key: string) => string): { key: AddCategory; l
 // (§0.4: tidak mengarang blok Commerce baru; produk/donasi dirender
 // otomatis di halaman publik, bukan blok manual).
 const V2_TILE_KEYS: Record<string, string[]> = {
-  populer: ["video", "contact_form", "faq"],
+  // "link" -- bug ditemukan 8 September 2026 (sweep regresi e2e): spec
+  // redesain (JEONID-DASHBOARD-REDESIGN-SPEC.md, "Popular: Link, Produk,
+  // Video, Form, Appointment" -- Produk/Appointment memang sengaja tidak
+  // ada, bukan blok manual) menaruh Link di kategori Populer, tapi tidak
+  // pernah benar-benar ditambahkan ke sini -- tautan biasa (blank link
+  // manual, bukan tempel URL) jadi TIDAK BISA dibuat sama sekali lewat
+  // grid tile di v2, cuma lewat kotak "Tempel atau cari tautan" (perlu
+  // URL sudah ada duluan).
+  populer: ["link", "video", "contact_form", "faq"],
   konten: ["text", "accordion", "maps", "gallery", "audio", "file", "faq", "video"],
   lanjutan: ["project_showcase", "catalog"],
   sosial: [],
