@@ -330,6 +330,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 				// block_data-nya beda (array multi-foto vs satu file audio).
 				linksGroup.POST("/links/:id/gallery-images", links.UploadGalleryImage)
 				linksGroup.DELETE("/links/:id/gallery-images/:index", links.DeleteGalleryImage)
+				// Canvas Page Builder Fase 2 (permintaan langsung pengguna, 8
+				// September 2026): blok foto-tunggal "image"/"video_image"/
+				// "embed_link" berbagi SATU endpoint (lihat mediaImageBlockTypes,
+				// links.go) -- "path" (field form/query, opsional) menjangkau blok
+				// tertanam di dalam Section/Column, bukan cuma baris root.
+				linksGroup.POST("/links/:id/media-image", links.UploadMediaImage)
+				linksGroup.DELETE("/links/:id/media-image", links.DeleteMediaImage)
 				linksGroup.POST("/links/:id/audio", links.UploadAudio)
 				linksGroup.DELETE("/links/:id/audio", links.DeleteAudio)
 				// Blok "file" (permintaan langsung pengguna, 20 Agustus 2026:

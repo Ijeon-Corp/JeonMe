@@ -906,6 +906,131 @@ func validateBuilderChildren(container map[string]any, depth int) (string, bool)
 	return "", true
 }
 
+// builderPathSeg -- cermin PERSIS BuilderSeg (apps/web/lib/builder-blocks.ts):
+// satu "hop" turun dari block_data baris `links` root ke node bersarang di
+// dalam Section/Column. Dikirim FE sbg field form JSON-encoded ("path")
+// berdampingan dgn file gambar di endpoint upload builder (Fase 2,
+// permintaan langsung pengguna 8 September 2026: "kerjakan penuh sekalian
+// root + bersarang", bukan root-only) -- array kosong/absen berarti baris
+// ROOT itu sendiri (perilaku lama endpoint upload yang sudah ada, sebelum
+// Fase 2, tetap identik).
+type builderPathSeg struct {
+	Kind  string `json:"kind"`
+	ID    string `json:"id,omitempty"`
+	Index int    `json:"index,omitempty"`
+}
+
+// resolveBuilderBlockData -- generalisasi Go dari resolveAt
+// (builder-blocks.ts) KHUSUS utk menjangkau block_data SATU blok gambar
+// (image/gallery/video_image/embed_link) di mana pun posisinya, root
+// MAUPUN bersarang berapa tingkat pun di dalam Section/Column -- dipakai
+// SEMUA endpoint upload/hapus gambar builder (UploadGalleryImage/
+// DeleteGalleryImage yang sudah ada + UploadMediaImage/DeleteMediaImage
+// baru), satu implementasi dipakai bersama, bukan disalin per endpoint.
+//
+// `rootData`/`rootBlockType` SUDAH di-decode dari block_data+block_type
+// baris `links` ROOT (pemanggil query sekali di awal). path=[] berarti
+// rootData ITU SENDIRI target-nya (baris root langsung py block_type
+// gallery/image/dst, TANPA Section/Column pembungkus -- inilah kasus yang
+// SUDAH berjalan sebelum Fase 2, harus tetap identik).
+//
+// Map yang dikembalikan adalah REFERENSI LANGSUNG (Go map = reference
+// type) ke dalam struktur `rootData` yang sama -- memutasi field di
+// dalamnya (mis. `data["image_url"] = url`) otomatis tercermin balik ke
+// `rootData`, cukup di-marshal ULANG SEKALI oleh pemanggil setelah
+// memanggil fungsi ini, tidak perlu jalan-jalan tulis-balik manual seperti
+// findCatalogItem (yang bentuk datanya beda: array item vs pohon
+// children/columns).
+//
+// path HARUS berakhir di segmen {kind:"child"} (menunjuk satu BLOK
+// ber-block_type, satu-satunya tempat field gambar sungguhan bisa
+// tersimpan) -- segmen {kind:"column"} valid di TENGAH path (melangkah ke
+// SATU kolom lalu lanjut ke children-nya) tapi TIDAK valid sbg segmen
+// TERAKHIR (kolom murni wadah widthPercent+children, bukan blok, tidak
+// punya block_data/block_type sendiri -- lihat BuilderColumn di
+// builder-blocks.ts).
+func resolveBuilderBlockData(rootData map[string]any, rootBlockType string, path []builderPathSeg) (data map[string]any, blockType string, ok bool) {
+	if len(path) == 0 {
+		return rootData, rootBlockType, true
+	}
+
+	children, _ := rootData["children"].([]any)
+	columns, _ := rootData["columns"].([]any)
+
+	for i, seg := range path {
+		switch seg.Kind {
+		case "child":
+			var found map[string]any
+			for _, raw := range children {
+				block, isMap := raw.(map[string]any)
+				if !isMap {
+					continue
+				}
+				if id, _ := block["id"].(string); id == seg.ID {
+					found = block
+					break
+				}
+			}
+			if found == nil {
+				return nil, "", false
+			}
+			bt, _ := found["block_type"].(string)
+			if i == len(path)-1 {
+				data, _ := found["block_data"].(map[string]any)
+				if data == nil {
+					data = map[string]any{}
+					found["block_data"] = data
+				}
+				return data, bt, true
+			}
+			nested, _ := found["block_data"].(map[string]any)
+			if nested == nil {
+				return nil, "", false
+			}
+			children, _ = nested["children"].([]any)
+			columns, _ = nested["columns"].([]any)
+		case "column":
+			if i == len(path)-1 {
+				return nil, "", false
+			}
+			if seg.Index < 0 || seg.Index >= len(columns) {
+				return nil, "", false
+			}
+			col, isMap := columns[seg.Index].(map[string]any)
+			if !isMap {
+				return nil, "", false
+			}
+			children, _ = col["children"].([]any)
+			columns = nil
+		default:
+			return nil, "", false
+		}
+	}
+	return nil, "", false
+}
+
+// parseBuilderPath -- baca "path" (JSON-encoded array builderPathSeg),
+// opsional -- absen/kosong berarti path=[] alias baris ROOT langsung. Dicek
+// dari DUA sumber: field form (endpoint upload, multipart, py file
+// sekalian) ATAU query string (endpoint hapus, DELETE tanpa body). Dipisah
+// jadi fungsi kecil supaya keempat endpoint upload/hapus gambar builder
+// memanggil pola yang SAMA persis, bukan menyalin json.Unmarshal+
+// error-handling empat kali.
+func parseBuilderPath(c *gin.Context) ([]builderPathSeg, error) {
+	raw := c.PostForm("path")
+	if strings.TrimSpace(raw) == "" {
+		raw = c.Query("path")
+	}
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var path []builderPathSeg
+	if err := json.Unmarshal([]byte(raw), &path); err != nil {
+		return nil, err
+	}
+	return path, nil
+}
+
 type createBlockRequest struct {
 	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider"`
 	Title     string         `json:"title" binding:"required,max=100"`
@@ -1642,24 +1767,40 @@ func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
 		return
 	}
 
-	var blockType string
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&blockType, &blockDataRaw); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
-		return
-	}
-	if blockType != "gallery" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "tautan ini bukan blok galeri foto"})
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
 		return
 	}
 
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
 	}
-	if blockData == nil {
-		blockData = map[string]any{}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
 	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	// Fase 2 (permintaan langsung pengguna, 8 September 2026): `path`
+	// menjangkau blok "gallery" di ROOT (path kosong, perilaku SAMA PERSIS
+	// sebelum Fase 2) MAUPUN bersarang di dalam Section/Column -- lihat
+	// catatan lengkap di resolveBuilderBlockData.
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if blockType != "gallery" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
+		return
+	}
+
 	images, _ := blockData["images"].([]any)
 	if len(images) >= maxGalleryImages {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("maksimal %d foto per galeri", maxGalleryImages)})
@@ -1704,7 +1845,7 @@ func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
 	imageURL := h.Storage.PublicURL(key)
 	images = append(images, imageURL)
 	blockData["images"] = images
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
@@ -1740,15 +1881,37 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 		return
 	}
 
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
 		return
 	}
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
 	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	// Fase 2 -- lihat catatan lengkap di UploadGalleryImage.
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if blockType != "gallery" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
+		return
+	}
+
 	images, _ := blockData["images"].([]any)
 	if index >= len(images) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "foto tidak ditemukan"})
@@ -1758,7 +1921,7 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 	removedURL, _ := images[index].(string)
 	images = append(images[:index], images[index+1:]...)
 	blockData["images"] = images
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
@@ -1776,6 +1939,202 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari galeri"})
+}
+
+// mediaImageBlockTypes -- tiga tipe blok foto-tunggal Fase 2 (Canvas Page
+// Builder, permintaan langsung pengguna 8 September 2026) yang berbagi SATU
+// endpoint upload/hapus (bukan tiga endpoint terpisah gaya
+// UploadShowcaseImage) karena ketiganya identik persis: SATU field
+// `block_data.image_url`, ditimpa (bukan ditambah ke array seperti
+// gallery). "image" foto tunggal, "video_image" (video+foto, video_url-nya
+// field terpisah diedit lewat PATCH block_data biasa), "embed_link" (kartu
+// link manual, thumbnail-nya field ini).
+var mediaImageBlockTypes = map[string]bool{
+	"image":       true,
+	"video_image": true,
+	"embed_link":  true,
+}
+
+// UploadMediaImage -- lihat catatan lengkap di mediaImageBlockTypes &
+// resolveBuilderBlockData. Pola SAMA PERSIS UploadShowcaseImage (satu foto,
+// menimpa bukan menambah) TAPI menjangkau root MAUPUN bersarang di dalam
+// Section/Column lewat `path`, dan berlaku utk KETIGA tipe sekaligus (blok
+// mana yang dituju ditentukan hasil resolveBuilderBlockData, bukan
+// endpoint terpisah per tipe).
+func (h *LinksHandler) UploadMediaImage(c *gin.Context) {
+	if h.Storage == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
+		return
+	}
+
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if !mediaImageBlockTypes[blockType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok gambar (image/video+image/embed link)"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan di form (field \"image\")"})
+		return
+	}
+	if fileHeader.Size > maxShowcaseImageSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "ukuran file melebihi 5MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if _, ok := allowedAvatarExt[ext]; !ok {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": fmt.Sprintf("tipe file %q tidak diizinkan, gunakan jpg/png/webp", ext)})
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+	defer file.Close()
+
+	webpBytes, err := imageconv.ToWebP(file)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "gagal memproses gambar -- pastikan file benar-benar gambar jpg/png/webp yang valid"})
+		return
+	}
+
+	// Key storage per NODE (bukan cuma per linkID seperti UploadShowcaseImage
+	// -- satu baris root bisa punya BANYAK blok media tertanam sekaligus di
+	// dalam Section/Column, tiap blok butuh key sendiri). nodeKey = id blok
+	// itu sendiri (segmen {kind:"child"} TERAKHIR di path) kalau bersarang,
+	// atau linkID kalau root -- keduanya sama-sama unik.
+	nodeKey := linkID
+	if len(path) > 0 {
+		if last := path[len(path)-1]; last.Kind == "child" && last.ID != "" {
+			nodeKey = last.ID
+		}
+	}
+	key := fmt.Sprintf("link-media/%s/%s.webp", linkID, nodeKey)
+	if err := h.Storage.Upload(ctx, key, bytes.NewReader(webpBytes), int64(len(webpBytes)), imageconv.ContentType); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah gambar"})
+		return
+	}
+
+	imageURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
+	blockData["image_url"] = imageURL
+	encoded, err := json.Marshal(rootData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gambar terunggah tapi gagal menyimpan referensinya"})
+		return
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"image_url": imageURL, "message": "gambar berhasil diunggah"})
+}
+
+// DeleteMediaImage -- kebalikan UploadMediaImage: kosongkan
+// block_data.image_url (bukan hapus baris/blok-nya) + soft-fail hapus objek
+// storage, pola sama DeleteGalleryImage/DeleteIcon/DeleteThumbnail.
+func (h *LinksHandler) DeleteMediaImage(c *gin.Context) {
+	linkID := c.Param("id")
+	userID := c.GetString("userID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if !h.ownsLink(ctx, linkID, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tautan tidak ditemukan"})
+		return
+	}
+
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
+	}
+	if !mediaImageBlockTypes[blockType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok gambar (image/video+image/embed link)"})
+		return
+	}
+
+	removedURL, _ := blockData["image_url"].(string)
+	blockData["image_url"] = ""
+	encoded, err := json.Marshal(rootData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghapus gambar"})
+		return
+	}
+
+	if h.Storage != nil && removedURL != "" {
+		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
+			_ = h.Storage.Delete(ctx, key)
+		}
+	}
+
+	h.invalidateLinkCache(ctx, linkID)
+	c.JSON(http.StatusOK, gin.H{"message": "gambar dihapus"})
 }
 
 // maxAudioFileSize -- 15MB, cukup untuk beberapa menit MP3 kualitas standar

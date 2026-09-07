@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -668,6 +669,119 @@ func TestValidateBlockData_BuilderSectionColumn(t *testing.T) {
 	t.Run("accordion kosong di depth 1 tetap ditolak (tidak terpengaruh relaksasi text)", func(t *testing.T) {
 		if _, ok := validateBlockData("accordion", map[string]any{}); ok {
 			t.Fatal("accordion kosong di root seharusnya TETAP ditolak seperti sebelumnya")
+		}
+	})
+}
+
+// TestResolveBuilderBlockData -- Canvas Page Builder Fase 2 (permintaan
+// langsung pengguna 8 September 2026: "kerjakan penuh sekalian root +
+// bersarang"): resolveBuilderBlockData adalah fungsi murni (tanpa DB),
+// diuji langsung sama seperti validateBlockDataAtDepth di atas.
+func TestResolveBuilderBlockData(t *testing.T) {
+	t.Run("path kosong mengembalikan rootData itu sendiri", func(t *testing.T) {
+		root := map[string]any{"image_url": "https://old.example/a.webp"}
+		data, blockType, ok := resolveBuilderBlockData(root, "image", nil)
+		if !ok {
+			t.Fatal("path kosong seharusnya selalu resolve")
+		}
+		if blockType != "image" {
+			t.Fatalf("blockType seharusnya \"image\", dapat %q", blockType)
+		}
+		data["image_url"] = "https://new.example/a.webp"
+		if root["image_url"] != "https://new.example/a.webp" {
+			t.Fatal("memutasi data hasil path kosong seharusnya langsung memutasi rootData (referensi yang sama)")
+		}
+	})
+
+	t.Run("satu tingkat -- child langsung di children Section", func(t *testing.T) {
+		root := map[string]any{
+			"children": []any{
+				map[string]any{"id": "img-1", "block_type": "image", "block_data": map[string]any{}},
+			},
+		}
+		data, blockType, ok := resolveBuilderBlockData(root, "section", []builderPathSeg{{Kind: "child", ID: "img-1"}})
+		if !ok || blockType != "image" {
+			t.Fatalf("seharusnya resolve ke blok image, dapat ok=%v blockType=%q", ok, blockType)
+		}
+		data["image_url"] = "https://example.com/nested.webp"
+
+		// Verifikasi mutasi tercermin balik ke root lewat marshal ulang --
+		// ini kontrak yang dipakai SEMUA endpoint upload/hapus (marshal
+		// rootData SEKALI di akhir, bukan tulis-balik manual per level).
+		encoded, err := json.Marshal(root)
+		if err != nil {
+			t.Fatalf("marshal gagal: %v", err)
+		}
+		if !strings.Contains(string(encoded), "https://example.com/nested.webp") {
+			t.Fatalf("mutasi child block_data seharusnya tercermin di root yang di-marshal ulang, dapat: %s", encoded)
+		}
+	})
+
+	t.Run("bersarang: section -> column -> child", func(t *testing.T) {
+		root := map[string]any{
+			"children": []any{
+				map[string]any{
+					"id":         "col-1",
+					"block_type": "column",
+					"block_data": map[string]any{
+						"columns": []any{
+							map[string]any{"children": []any{
+								map[string]any{"id": "img-2", "block_type": "image", "block_data": map[string]any{}},
+							}},
+							map[string]any{"children": []any{}},
+						},
+					},
+				},
+			},
+		}
+		path := []builderPathSeg{{Kind: "child", ID: "col-1"}, {Kind: "column", Index: 0}, {Kind: "child", ID: "img-2"}}
+		data, blockType, ok := resolveBuilderBlockData(root, "section", path)
+		if !ok || blockType != "image" {
+			t.Fatalf("seharusnya resolve ke blok image bersarang 2 tingkat, dapat ok=%v blockType=%q", ok, blockType)
+		}
+		data["image_url"] = "https://example.com/deep.webp"
+		encoded, _ := json.Marshal(root)
+		if !strings.Contains(string(encoded), "https://example.com/deep.webp") {
+			t.Fatalf("mutasi blok bersarang 2 tingkat seharusnya tercermin di root, dapat: %s", encoded)
+		}
+
+		// Kolom KEDUA (index 1, children kosong) TIDAK boleh ikut kena --
+		// pastikan path-walking tidak salah taruh ke sibling column.
+		col1Children := ((root["children"].([]any))[0].(map[string]any)["block_data"].(map[string]any)["columns"].([]any))[1].(map[string]any)["children"].([]any)
+		if len(col1Children) != 0 {
+			t.Fatal("kolom kedua seharusnya tidak tersentuh sama sekali")
+		}
+	})
+
+	t.Run("path merujuk id yang tidak ada -> not ok", func(t *testing.T) {
+		root := map[string]any{"children": []any{map[string]any{"id": "img-1", "block_type": "image", "block_data": map[string]any{}}}}
+		_, _, ok := resolveBuilderBlockData(root, "section", []builderPathSeg{{Kind: "child", ID: "tidak-ada"}})
+		if ok {
+			t.Fatal("id yang tidak ada di children seharusnya gagal resolve")
+		}
+	})
+
+	t.Run("path berakhir di segmen column -> not ok (kolom bukan blok)", func(t *testing.T) {
+		root := map[string]any{
+			"children": []any{
+				map[string]any{"id": "col-1", "block_type": "column", "block_data": map[string]any{"columns": []any{map[string]any{}}}},
+			},
+		}
+		_, _, ok := resolveBuilderBlockData(root, "section", []builderPathSeg{{Kind: "child", ID: "col-1"}, {Kind: "column", Index: 0}})
+		if ok {
+			t.Fatal("path yang berakhir di segmen column seharusnya ditolak (kolom tidak punya block_data/block_type sendiri)")
+		}
+	})
+
+	t.Run("index kolom di luar jangkauan -> not ok", func(t *testing.T) {
+		root := map[string]any{
+			"children": []any{
+				map[string]any{"id": "col-1", "block_type": "column", "block_data": map[string]any{"columns": []any{map[string]any{}}}},
+			},
+		}
+		_, _, ok := resolveBuilderBlockData(root, "section", []builderPathSeg{{Kind: "child", ID: "col-1"}, {Kind: "column", Index: 5}, {Kind: "child", ID: "x"}})
+		if ok {
+			t.Fatal("index kolom di luar jangkauan seharusnya gagal resolve")
 		}
 	})
 }
