@@ -216,7 +216,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -1092,7 +1092,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -1121,7 +1121,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -1263,10 +1263,24 @@ export async function uploadShowcaseImage(id: string, file: File): Promise<{ ima
 // mengisi galeri. Respons mengembalikan array `images` TERBARU (bukan cuma
 // URL foto yang baru diunggah) supaya UI tinggal render ulang, tidak perlu
 // menggabungkan state lama+baru sendiri.
-export async function uploadGalleryImage(id: string, file: File): Promise<{ images: string[]; message: string }> {
+//
+// `path` -- Canvas Page Builder Fase 2 (permintaan langsung pengguna 8
+// September 2026): opsional, bentuk sama persis BuilderSeg[]
+// (lib/builder-blocks.ts) -- absen/undefined berarti baris ROOT langsung
+// (perilaku lama, 3 pemanggil yang sudah ada TIDAK berubah), diisi utk
+// menjangkau blok "gallery" tertanam di dalam Section/Column (lihat
+// resolveBuilderBlockData, links.go).
+export async function uploadGalleryImage(
+  id: string,
+  file: File,
+  path?: BuilderSeg[]
+): Promise<{ images: string[]; message: string }> {
   const token = getToken();
   const form = new FormData();
   form.append("image", file);
+  if (path && path.length > 0) {
+    form.append("path", JSON.stringify(path));
+  }
 
   const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/gallery-images`, {
     method: "POST",
@@ -1281,12 +1295,49 @@ export async function uploadGalleryImage(id: string, file: File): Promise<{ imag
   return body;
 }
 
-export function deleteGalleryImage(id: string, index: number) {
+export function deleteGalleryImage(id: string, index: number, path?: BuilderSeg[]) {
+  const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
   return apiFetch<{ images: string[]; message: string }>(
-    `/dashboard/links/${id}/gallery-images/${index}`,
+    `/dashboard/links/${id}/gallery-images/${index}${query}`,
     { method: "DELETE" },
     { auth: true }
   );
+}
+
+// uploadBuilderMediaImage/deleteBuilderMediaImage -- Canvas Page Builder
+// Fase 2: SATU endpoint dipakai bersama utk 3 tipe blok foto-tunggal
+// (image/video_image/embed_link, lihat mediaImageBlockTypes di links.go),
+// pola sama persis uploadShowcaseImage (satu foto, unggah ulang menimpa)
+// TAPI mendukung `path` (lihat catatan lengkap di uploadGalleryImage) utk
+// menjangkau root MAUPUN bersarang di dalam Section/Column.
+export async function uploadBuilderMediaImage(
+  id: string,
+  file: File,
+  path?: BuilderSeg[]
+): Promise<{ image_url: string; message: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("image", file);
+  if (path && path.length > 0) {
+    form.append("path", JSON.stringify(path));
+  }
+
+  const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/media-image`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}`, ...activeWorkspaceHeaders() } : undefined,
+    body: form,
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body?.error ?? `Unggah gagal (${res.status})`);
+  }
+  return body;
+}
+
+export function deleteBuilderMediaImage(id: string, path?: BuilderSeg[]) {
+  const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/media-image${query}`, { method: "DELETE" }, { auth: true });
 }
 
 // EmbeddedCatalogBlock -- permintaan langsung pengguna, 27 Agustus 2026:
@@ -1321,14 +1372,45 @@ export interface EmbeddedCatalogBlock {
 // TIDAK cross-nest dengan "catalog" di v1, sama seperti backend. Dipakai
 // sbg bentuk children[] (block_data Section) & children[] per kolom
 // (block_data Column) -- lihat lib/builder-blocks.ts.
+//
+// Fase 2 (permintaan langsung pengguna 8 September 2026): 6 tipe MEDIA/
+// INFORMATION/OTHERS baru ditambah ke union -- video/faq/gallery/image/
+// video_image/embed_link, SEMUA boleh root MAUPUN bersarang (lihat
+// allowedBuilderEmbeddedBlockTypes, links.go).
 export interface EmbeddedBuilderBlock {
   id: string;
-  block_type: "text" | "button" | "divider" | "section" | "column";
+  block_type:
+    | "text"
+    | "button"
+    | "divider"
+    | "section"
+    | "column"
+    | "video"
+    | "faq"
+    | "gallery"
+    | "image"
+    | "video_image"
+    | "embed_link";
   title: string;
   url?: string;
   description?: string;
   block_data: Record<string, unknown>;
 }
+
+// BuilderSeg -- cermin PERSIS builderPathSeg (Go, links.go): satu "hop"
+// turun dari block_data baris root ke node bersarang di dalam Section/
+// Column. {kind:"child"} melangkah ke satu entri children[] (dipakai
+// children Section MAUPUN children milik SATU kolom). {kind:"column"}
+// melangkah ke satu entri columns[] (dipakai root Column atau Column yang
+// tertanam) -- kalau path belum berakhir di situ, HARUS diikuti
+// {kind:"child"} lagi (kolom sendiri bukan node ber-id, cuma wadah
+// widthPercent+children). Didefinisikan DI SINI (bukan lib/builder-blocks.ts)
+// supaya fungsi upload gambar builder di modul INI (uploadGalleryImage/
+// uploadBuilderMediaImage, Fase 2) bisa memakainya TANPA import melingkar
+// -- api-client.ts tidak pernah mengimpor dari file lib/ lain, arah
+// dependency di repo ini selalu sebaliknya (lib/builder-blocks.ts
+// re-export tipe ini, lihat di sana).
+export type BuilderSeg = { kind: "child"; id: string } | { kind: "column"; index: number };
 
 // CatalogItem -- block_type "catalog" (permintaan langsung pengguna, 25
 // Agustus 2026: blok drill-down "Jenis Rumah" -> daftar jenis -> detail per
@@ -1650,7 +1732,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;

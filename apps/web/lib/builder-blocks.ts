@@ -1,4 +1,4 @@
-import type { EmbeddedBuilderBlock } from "@/lib/api-client";
+import type { BuilderSeg, EmbeddedBuilderBlock } from "@/lib/api-client";
 
 // builder-blocks.ts -- Canvas Page Builder (migrasi 000096, permintaan
 // langsung pengguna 7 September 2026, dua screenshot Lynk.id): mode edit
@@ -48,13 +48,22 @@ export interface BuilderColumn {
 // supaya satu tipe dipakai untuk keduanya.
 export type BuilderRoot = { children?: EmbeddedBuilderBlock[]; columns?: BuilderColumn[] };
 
-// BuilderSeg -- satu "hop" turun dari root ke node bersarang.
-// {kind:"child"} melangkah ke satu entri children[] (dipakai children
-// Section MAUPUN children milik SATU kolom). {kind:"column"} melangkah
-// ke satu entri columns[] (dipakai root Column atau Column yang tertanam)
-// -- kalau path belum berakhir di situ, HARUS diikuti {kind:"child"} lagi
-// (kolom sendiri bukan node ber-id, cuma wadah widthPercent+children).
-export type BuilderSeg = { kind: "child"; id: string } | { kind: "column"; index: number };
+// BuilderSeg -- didefinisikan di api-client.ts (BUKAN di sini) supaya
+// bisa dipakai fungsi upload gambar builder (uploadGalleryImage/
+// uploadBuilderMediaImage, Fase 2) TANPA import melingkar -- api-client.ts
+// tidak pernah mengimpor dari file lib/ lain (arah dependency di repo ini
+// selalu sebaliknya), jadi tipe bersama ini harus tinggal di sana.
+// Diekspor ulang di sini (re-export) supaya kode yang SUDAH mengimpor
+// BuilderSeg dari modul ini tidak perlu berubah.
+//
+// Cermin PERSIS builderPathSeg (Go, links.go): satu "hop" turun dari root
+// ke node bersarang. {kind:"child"} melangkah ke satu entri children[]
+// (dipakai children Section MAUPUN children milik SATU kolom).
+// {kind:"column"} melangkah ke satu entri columns[] (dipakai root Column
+// atau Column yang tertanam) -- kalau path belum berakhir di situ, HARUS
+// diikuti {kind:"child"} lagi (kolom sendiri bukan node ber-id, cuma
+// wadah widthPercent+children).
+export type { BuilderSeg };
 
 function childrenOf(block: EmbeddedBuilderBlock): EmbeddedBuilderBlock[] {
   return (block.block_data?.children as EmbeddedBuilderBlock[] | undefined) ?? [];
