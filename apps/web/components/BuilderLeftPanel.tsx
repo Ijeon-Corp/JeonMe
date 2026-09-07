@@ -3,11 +3,23 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   IconBox,
   IconChevronRight,
   IconColumns,
   IconDivider,
   IconExternal,
+  IconGripVertical,
   IconPlus,
   IconSettings,
   IconTextLines,
@@ -28,11 +40,16 @@ import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
 // blok berindentasi (root + isi Section/Column) + tombol "Tambah
 // Komponen" yang menambah di ROOT atau DI DALAM kontainer terpilih.
 //
-// Reorder Fase 1 SENGAJA cuma tombol naik/turun di level ROOT (lewat
-// reorderLinks/reorderExtraPageLinks yang sudah ada) -- drag-and-drop
-// (termasuk pindah blok masuk/keluar Section/Column) menyusul di commit
-// @dnd-kit berikutnya, per urutan fase yang disetujui pengguna.
-
+// Drag-and-drop (@dnd-kit, dependency baru disetujui eksplisit): SATU
+// DndContext membungkus seluruh pohon, TIAP level kontainer (root, isi
+// SATU Section, isi SATU kolom) punya SortableContext independen sendiri
+// -- reorder DI DALAM satu kontainer yang sama didukung penuh. Memindah
+// blok LINTAS kontainer (root -> dalam Section, kolom 1 -> kolom 2, dst)
+// SENGAJA belum didukung di Fase 1 (containerKeyOf di bawah menolak drop
+// kalau kontainer asal & tujuan beda) -- itu jauh lebih rumit (perlu
+// PATCH ke DUA baris root berbeda sekaligus utk kasus lintas-root), utk
+// sekarang tambah komponen baru langsung ke kontainer tujuan lewat
+// "Tambah Komponen", pindahkan lewat hapus+tambah ulang.
 export interface BuilderSelection {
   rootId: string;
   path: BuilderSeg[];
@@ -90,6 +107,32 @@ function buildTree(links: LinkItem[]): BuilderTreeNode[] {
   return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.block_data));
 }
 
+// findNodeByPath -- pencarian rekursif SATU node persis (rootId+path),
+// dipakai baik utk resolve node terpilih MAUPUN resolve node induk saat
+// drag-end (lihat siblingsOf).
+function findNodeByPath(nodes: BuilderTreeNode[], rootId: string, path: BuilderSeg[]): BuilderTreeNode | null {
+  for (const n of nodes) {
+    if (n.rootId === rootId && JSON.stringify(n.path) === JSON.stringify(path)) return n;
+    const found = findNodeByPath(n.children, rootId, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+// containerKeyOf -- kunci identitas kontainer (root, ATAU SATU Section/
+// kolom tertentu) yang menaungi `node`. Dipakai handleDragEnd utk menolak
+// drop LINTAS kontainer (lihat catatan lengkap di atas komponen ini).
+function containerKeyOf(node: BuilderTreeNode): string {
+  if (node.path.length === 0) return "root";
+  return `${node.rootId}:${JSON.stringify(node.path.slice(0, -1))}`;
+}
+
+function siblingsOf(tree: BuilderTreeNode[], node: BuilderTreeNode): BuilderTreeNode[] {
+  if (node.path.length === 0) return tree;
+  const parent = findNodeByPath(tree, node.rootId, node.path.slice(0, -1));
+  return parent ? parent.children : [];
+}
+
 const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElement> = {
   text: IconTextLines,
   button: IconExternal,
@@ -111,11 +154,95 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   section: "typeSection",
 };
 
+function TreeNodeView({
+  node,
+  depth,
+  isSelected,
+  onSelect,
+  collapsed,
+  onToggleCollapsed,
+}: {
+  node: BuilderTreeNode;
+  depth: number;
+  isSelected: (node: BuilderTreeNode) => boolean;
+  onSelect: (node: BuilderTreeNode) => void;
+  collapsed: Set<string>;
+  onToggleCollapsed: (id: string) => void;
+}) {
+  const { t } = useLocale();
+  // useSortable -- HANYA node "block" yang bisa diseret (column-slot murni
+  // wadah tampilan "Kolom N", tidak punya urutan sendiri untuk diubah).
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: node.kind !== "block",
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
+  const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
+  const lastSeg = node.path[node.path.length - 1];
+  const label =
+    node.kind === "column-slot"
+      ? `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`
+      : node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
+  const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        style={{ paddingLeft: `${depth * 16}px` }}
+        className={`flex items-center gap-1 rounded-lg py-1.5 pr-1.5 text-xs ${isSelected(node) ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
+      >
+        {node.kind === "block" ? (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={t("dashboard.pages.linksBuilder.dragHandle")}
+            className="flex-shrink-0 cursor-grab touch-none text-app-muted active:cursor-grabbing"
+          >
+            <IconGripVertical className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <span className="w-3.5 flex-shrink-0" />
+        )}
+        {canExpand ? (
+          <button type="button" onClick={() => onToggleCollapsed(node.id)} className="flex-shrink-0 text-app-muted">
+            <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${collapsed.has(node.id) ? "" : "rotate-90"}`} />
+          </button>
+        ) : (
+          <span className="w-3.5 flex-shrink-0" />
+        )}
+        <button type="button" onClick={() => onSelect(node)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
+          <span className="truncate font-semibold text-app-ink">{label}</span>
+        </button>
+      </div>
+      {canExpand && !collapsed.has(node.id) && (
+        <div>
+          {node.children.length === 0 ? (
+            <p style={{ paddingLeft: `${(depth + 1) * 16 + 20}px` }} className="py-1 text-[11px] text-app-muted">
+              {t("dashboard.pages.linksBuilder.emptyContainer")}
+            </p>
+          ) : (
+            <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
+              {node.children.map((child) => (
+                <TreeNodeView key={child.id} node={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
+              ))}
+            </SortableContext>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BuilderLeftPanel({
   links,
   onAdd,
   onDelete,
-  onMoveRoot,
+  onReorderRoot,
+  onReorderChildren,
   onUpdateNode,
   designHref,
   settingsHref,
@@ -123,7 +250,8 @@ export default function BuilderLeftPanel({
   links: LinkItem[];
   onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"]) => void;
   onDelete: (target: BuilderSelection) => void;
-  onMoveRoot: (id: string, direction: "up" | "down") => void;
+  onReorderRoot: (orderedIds: string[]) => void;
+  onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; blockData?: Record<string, unknown> }) => void;
   designHref: string;
   settingsHref: string;
@@ -133,8 +261,10 @@ export default function BuilderLeftPanel({
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   const tree = useMemo(() => buildTree(links), [links]);
+  const rootIds = useMemo(() => tree.map((n) => n.id), [tree]);
 
   function toggleCollapsed(id: string) {
     setCollapsed((prev) => {
@@ -153,69 +283,39 @@ export default function BuilderLeftPanel({
     return !!selection && selection.rootId === node.rootId && JSON.stringify(selection.path) === JSON.stringify(node.path);
   }
 
-  function renderTreeNode(node: BuilderTreeNode, depth: number): React.ReactNode {
-    const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
-    const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
-    const lastSeg = node.path[node.path.length - 1];
-    const label =
-      node.kind === "column-slot"
-        ? `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`
-        : node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
-
-    return (
-      <div key={`${node.rootId}:${JSON.stringify(node.path)}`}>
-        <div
-          style={{ paddingLeft: `${depth * 16}px` }}
-          className={`flex items-center gap-1.5 rounded-lg py-1.5 pr-1.5 text-xs ${isSelected(node) ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
-        >
-          {canExpand ? (
-            <button type="button" onClick={() => toggleCollapsed(node.id)} className="flex-shrink-0 text-app-muted">
-              <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${collapsed.has(node.id) ? "" : "rotate-90"}`} />
-            </button>
-          ) : (
-            <span className="w-3.5 flex-shrink-0" />
-          )}
-          <button type="button" onClick={() => setSelection(selectionOf(node))} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-            {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
-            <span className="truncate font-semibold text-app-ink">{label}</span>
-          </button>
-          {node.kind === "block" && node.path.length === 0 && (
-            <div className="flex flex-shrink-0 items-center gap-0.5">
-              <button type="button" onClick={() => onMoveRoot(node.id, "up")} title={t("dashboard.pages.linksBuilder.moveUp")} className="text-app-muted hover:text-app-ink">
-                <IconChevronRight className="h-3 w-3 -rotate-90" />
-              </button>
-              <button type="button" onClick={() => onMoveRoot(node.id, "down")} title={t("dashboard.pages.linksBuilder.moveDown")} className="text-app-muted hover:text-app-ink">
-                <IconChevronRight className="h-3 w-3 rotate-90" />
-              </button>
-            </div>
-          )}
-        </div>
-        {canExpand && !collapsed.has(node.id) && (
-          <div>
-            {node.children.length === 0 ? (
-              <p style={{ paddingLeft: `${(depth + 1) * 16 + 20}px` }} className="py-1 text-[11px] text-app-muted">
-                {t("dashboard.pages.linksBuilder.emptyContainer")}
-              </p>
-            ) : (
-              node.children.map((child) => renderTreeNode(child, depth + 1))
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const selectedNode = useMemo(() => {
-    if (!selection) return null;
-    const findIn = (nodes: BuilderTreeNode[]): BuilderTreeNode | null => {
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const findById = (nodes: BuilderTreeNode[], id: string): BuilderTreeNode | null => {
       for (const n of nodes) {
-        if (n.rootId === selection.rootId && JSON.stringify(n.path) === JSON.stringify(selection.path)) return n;
-        const found = findIn(n.children);
+        if (n.id === id) return n;
+        const found = findById(n.children, id);
         if (found) return found;
       }
       return null;
     };
-    return findIn(tree);
+    const dragged = findById(tree, String(active.id));
+    const target = findById(tree, String(over.id));
+    if (!dragged || !target || dragged.kind !== "block") return;
+    if (containerKeyOf(dragged) !== containerKeyOf(target)) return; // lintas kontainer belum didukung Fase 1
+
+    const siblings = siblingsOf(tree, dragged).filter((n) => n.kind === "block");
+    const ids = siblings.map((n) => n.id);
+    const oldIndex = ids.indexOf(dragged.id);
+    const newIndex = ids.indexOf(target.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(ids, oldIndex, newIndex);
+
+    if (dragged.path.length === 0) {
+      onReorderRoot(reordered);
+    } else {
+      onReorderChildren(dragged.rootId, dragged.path.slice(0, -1), reordered);
+    }
+  }
+
+  const selectedNode = useMemo(() => {
+    if (!selection) return null;
+    return findNodeByPath(tree, selection.rootId, selection.path);
   }, [selection, tree]);
 
   const addTarget: BuilderSelection | null =
@@ -257,7 +357,13 @@ export default function BuilderLeftPanel({
             {tree.length === 0 ? (
               <p className="p-3 text-center text-xs text-app-muted">{t("dashboard.pages.linksBuilder.emptyRoot")}</p>
             ) : (
-              tree.map((node) => renderTreeNode(node, 0))
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
+                  {tree.map((node) => (
+                    <TreeNodeView key={node.id} node={node} depth={0} isSelected={isSelected} onSelect={(n) => setSelection(selectionOf(n))} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
 

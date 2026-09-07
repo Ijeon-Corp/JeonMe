@@ -23,7 +23,7 @@ import {
   updateLink,
   updateMyPage,
 } from "@/lib/api-client";
-import { BuilderColumn, BuilderRoot, getChildrenAt, newBuilderBlock, setChildrenAt, updateAt } from "@/lib/builder-blocks";
+import { BuilderColumn, BuilderRoot, BuilderSeg, getChildrenAt, newBuilderBlock, setChildrenAt, updateAt } from "@/lib/builder-blocks";
 import { useLocale } from "@/lib/locale-context";
 import { IconChevronRight } from "@/components/icons";
 import BuilderLeftPanel, { BuilderSelection } from "@/components/BuilderLeftPanel";
@@ -199,19 +199,39 @@ export default function BuilderPage() {
     }
   }
 
-  async function handleMoveRoot(id: string, direction: "up" | "down") {
-    const index = links.findIndex((l) => l.id === id);
-    if (index === -1) return;
-    const swapWith = direction === "up" ? index - 1 : index + 1;
-    if (swapWith < 0 || swapWith >= links.length) return;
-    const reordered = [...links];
-    [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
+  // handleReorderRoot -- dipanggil BuilderLeftPanel setelah drag-and-drop
+  // (@dnd-kit) SELESAI di level root, `orderedIds` sudah urutan baru
+  // lengkap (bukan cuma pasangan naik/turun) -- lihat arrayMove di
+  // BuilderLeftPanel.tsx.
+  async function handleReorderRoot(orderedIds: string[]) {
+    const byId = new Map(links.map((l) => [l.id, l] as const));
+    const reordered = orderedIds.map((id) => byId.get(id)).filter((l): l is LinkItem => !!l);
     setLinks(reordered);
     try {
       await currentReorderLinks(reordered.map((l, i) => ({ id: l.id, position: i })));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
       await refresh();
+    }
+  }
+
+  // handleReorderChildren -- reorder DI DALAM SATU Section/kolom (bukan
+  // root) -- SATU PATCH block_data ke baris root itu sendiri, pola sama
+  // persis handleUpdateNode/handleAdd/handleDelete di bawah.
+  async function handleReorderChildren(rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) {
+    setError(null);
+    try {
+      const root = findRoot(rootId);
+      if (!root) return;
+      const builderRoot = rootToBuilderRoot(root);
+      const existing = getChildrenAt(builderRoot, containerPath);
+      const byId = new Map(existing.map((c) => [c.id, c] as const));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((c): c is EmbeddedBuilderBlock => !!c);
+      const updated = setChildrenAt(builderRoot, containerPath, reordered);
+      await updateLink(root.id, { block_data: { ...root.block_data, ...updated } });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
     }
   }
 
@@ -269,7 +289,8 @@ export default function BuilderPage() {
           links={links}
           onAdd={handleAdd}
           onDelete={handleDelete}
-          onMoveRoot={handleMoveRoot}
+          onReorderRoot={handleReorderRoot}
+          onReorderChildren={handleReorderChildren}
           onUpdateNode={handleUpdateNode}
           designHref="/dashboard/design"
           settingsHref="/dashboard/settings"
