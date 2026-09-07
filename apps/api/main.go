@@ -126,7 +126,19 @@ func main() {
 		// 2026, background kustom Kartu Nama Digital) -- checklist di atas
 		// dicek DULU persis supaya bug 403 yang sama tidak terulang lagi
 		// keempat kalinya.
-		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images", "business-card-bg"); err != nil {
+		//
+		// TERULANG KEEMPAT KALINYA, 8 September 2026 (Canvas Page Builder
+		// Fase 2, ketahuan lewat verifikasi live upload+public-page
+		// sungguhan, BUKAN laporan pengguna) -- "link-media" (endpoint
+		// UploadMediaImage BARU, dipakai bersama blok "image"/"video_image"/
+		// "embed_link") KETINGGALAN lagi dari daftar ini persis seperti 3
+		// kejadian sebelumnya: upload sukses (200, tersimpan ke storage),
+		// TAPI GetObject publik ditolak 403 -- gambar "Foto Root"/"Foto
+		// Nested" tampil sebagai ikon gambar rusak di halaman publik. Kalau
+		// ada blok baru berikutnya yang punya endpoint upload sendiri, WAJIB
+		// ditambahkan ke daftar ini juga -- catatan ini sudah 4x
+		// memperingatkan hal yang sama.
+		if err := s3Client.EnsurePublicRead(ensureCtx, "avatars", "covers", "backgrounds", "link-icons", "link-thumbnails", "gallery-images", "audio-blocks", "file-blocks", "link-showcase", "catalog-images", "business-card-bg", "link-media"); err != nil {
 			log.Printf("peringatan: gagal mengatur akses publik untuk avatar/sampul/latar/ikon/thumbnail/galeri/audio/file/showcase/katalog tautan/background kartu nama: %v", err)
 		}
 		cancel()
