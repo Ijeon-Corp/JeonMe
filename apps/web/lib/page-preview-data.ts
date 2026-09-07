@@ -40,6 +40,7 @@ export function toPreviewData(
     },
     layoutVariant: page.layout_variant,
     productLayout: page.product_layout,
+    builderMode: page.builder_mode,
     customTheme:
       page.custom_background_type && page.custom_background_value && page.custom_font && page.custom_button_color
         ? {

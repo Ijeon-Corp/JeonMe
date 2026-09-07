@@ -65,7 +65,9 @@ export interface PagePreviewLink {
   // No.77 (Sprint 9): blok konten baru -- 'link' (default) tetap tautan
   // biasa, tipe lain punya rendering & interaksi sendiri sepenuhnya.
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  // section/column/divider -- Canvas Page Builder (migrasi 000096), lihat
+  // BuilderPagePreview.tsx.
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -216,6 +218,13 @@ export interface PagePreviewData {
   // tautan/donasi/lead-capture/event/loyalty. Default "bio" kalau
   // tidak diisi.
   pageType?: "bio" | "landing" | "produk";
+  // builderMode -- Canvas Page Builder (migrasi 000096, permintaan langsung
+  // pengguna 7 September 2026, dua screenshot Lynk.id): "builder" merender
+  // lewat BuilderPagePreview (kanvas Section/Column freeform) alih-alih
+  // dispatcher pageType di bawah -- dicek PALING AWAL di dispatcher utama,
+  // SEBELUM pageType, karena berlaku lintas pageType (bio MAUPUN landing).
+  // undefined/"simple" (bawaan) = perilaku lama sepenuhnya tidak berubah.
+  builderMode?: "simple" | "builder";
   bio: string;
   avatarUrl: string;
   theme: string;
@@ -407,6 +416,8 @@ export interface PreviewSourcePage {
     | "masthead"
     | "portrait";
   product_layout?: "grid" | "stacked" | "category";
+  // builder_mode -- lihat catatan lengkap di PagePreviewData.builderMode.
+  builder_mode?: "simple" | "builder";
 }
 
 export interface PreviewSourceLink {
@@ -416,7 +427,7 @@ export interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;

@@ -216,7 +216,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -514,6 +514,13 @@ export interface PublicPage {
   layout_variant: PageLayoutVariant;
   // product_layout -- lihat catatan lengkap di ExtraPageDetail.
   product_layout: "grid" | "stacked" | "category";
+  // builder_mode -- Canvas Page Builder (migrasi 000096, permintaan
+  // langsung pengguna 7 September 2026, dua screenshot Lynk.id): mode
+  // edit KEDUA bergaya kanvas Section/Column freeform, hidup berdampingan
+  // dengan editor daftar vertikal sederhana yang sudah ada ("simple",
+  // bawaan). Lihat BuilderPagePreview.tsx (dipakai PagePreview.tsx untuk
+  // memilih dispatcher render sisi publik).
+  builder_mode: "simple" | "builder";
 }
 
 // No.73 (Sprint 8): submit form pengumpulan lead -- endpoint publik, tanpa
@@ -813,6 +820,10 @@ export interface MyPage {
   social_github: string;
   social_website: string;
   layout_variant: PageLayoutVariant;
+  // builder_mode -- lihat catatan lengkap di PublicPage. Halaman utama
+  // SELALU page_type "bio", jadi tidak pernah dikecualikan Toko seperti
+  // ExtraPageDetail.
+  builder_mode: "simple" | "builder";
 }
 
 // "Desain 2.0": diperluas dari 5 jadi 10 preset (rose/ocean/lavender/noir/
@@ -1002,6 +1013,7 @@ export function updateMyPage(
       | "social_github"
       | "social_website"
       | "layout_variant"
+      | "builder_mode"
     >
   >
 ) {
@@ -1080,7 +1092,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -1109,7 +1121,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -1293,6 +1305,25 @@ export function deleteGalleryImage(id: string, index: number) {
 export interface EmbeddedCatalogBlock {
   id: string;
   block_type: "text" | "faq" | "video" | "maps" | "catalog";
+  title: string;
+  url?: string;
+  description?: string;
+  block_data: Record<string, unknown>;
+}
+
+// EmbeddedBuilderBlock -- Canvas Page Builder (migrasi 000096, permintaan
+// langsung pengguna 7 September 2026): bentuk PERSIS EmbeddedCatalogBlock
+// di atas (generalisasi pola blocks[] tertanam katalog ke kontainer
+// freeform Section/Column, lihat validateBuilderChildren di links.go),
+// TAPI block_type yang diizinkan BEDA (allowedBuilderEmbeddedBlockTypes,
+// bukan allowedCatalogEmbeddedBlockTypes) -- SENGAJA type terpisah
+// (bukan union digabung ke EmbeddedCatalogBlock) supaya Section/Column
+// TIDAK cross-nest dengan "catalog" di v1, sama seperti backend. Dipakai
+// sbg bentuk children[] (block_data Section) & children[] per kolom
+// (block_data Column) -- lihat lib/builder-blocks.ts.
+export interface EmbeddedBuilderBlock {
+  id: string;
+  block_type: "text" | "button" | "divider" | "section" | "column";
   title: string;
   url?: string;
   description?: string;
@@ -1569,6 +1600,7 @@ export function updateExtraPage(
       | "social_github"
       | "social_website"
       | "layout_variant"
+      | "builder_mode"
     >
   >
 ) {
@@ -1618,7 +1650,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;
