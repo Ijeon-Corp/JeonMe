@@ -46,10 +46,14 @@ import { SITE_URL } from "@/lib/site";
 // diambil browser kalau link.blockType-nya benar-benar cocok.
 const AudioPlayerBlock = dynamic(() => import("@/components/AudioPlayerBlock"));
 const ContactFormBlock = dynamic(() => import("@/components/ContactFormBlock"));
+const CountdownBlock = dynamic(() => import("@/components/CountdownBlock"));
+const EmbedBlock = dynamic(() => import("@/components/EmbedBlock"));
 const FaqBlock = dynamic(() => import("@/components/FaqBlock"));
 const FileDownloadBlock = dynamic(() => import("@/components/FileDownloadBlock"));
 const GalleryBlock = dynamic(() => import("@/components/GalleryBlock"));
+const ImageSliderBlock = dynamic(() => import("@/components/ImageSliderBlock"));
 const LeadCaptureForm = dynamic(() => import("@/components/LeadCaptureForm"));
+const ListBlock = dynamic(() => import("@/components/ListBlock"));
 const MapsEmbedBlock = dynamic(() => import("@/components/MapsEmbedBlock"));
 const SocialProofToast = dynamic(() => import("@/components/SocialProofToast"));
 const VideoEmbedBlock = dynamic(() => import("@/components/VideoEmbedBlock"));
@@ -3166,6 +3170,71 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
         </div>
       );
     }
+    // Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru
+    // + promosi "maps" (block_type lama, ROOT-ONLY -- lihat catatan
+    // lengkap di allowedBuilderEmbeddedBlockTypes, links.go).
+    case "maps":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="maps" className="w-full">
+          <MapsEmbedBlock
+            title={node.title}
+            url={node.url ?? ""}
+            embed={Boolean(node.blockData.embed)}
+            embedLat={node.blockData.embed_lat as number | undefined}
+            embedLng={node.blockData.embed_lng as number | undefined}
+            linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
+          />
+        </div>
+      );
+    case "image_slider":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image_slider" className="w-full">
+          <ImageSliderBlock
+            title={node.title}
+            images={(node.blockData.images as string[]) ?? []}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
+    case "countdown":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="countdown" className="w-full">
+          <CountdownBlock
+            title={node.title}
+            targetAt={node.blockData.target_at as string | undefined}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card} ${theme.cardTitle}`}
+            titleClassName={theme.cardTitle}
+            expiredLabel="Sudah berakhir"
+            unitLabels={{ days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" }}
+          />
+        </div>
+      );
+    case "list":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="list" className="w-full">
+          <ListBlock
+            title={node.title}
+            style={(node.blockData.style as "list" | "card" | "testimony" | undefined) ?? "list"}
+            items={(node.blockData.items as { title: string; description?: string; author?: string }[]) ?? []}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+            itemTitleClassName={theme.cardTitle}
+            itemBodyClassName={theme.bio}
+          />
+        </div>
+      );
+    case "embed":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed" className="w-full">
+          <EmbedBlock
+            title={node.title}
+            embedUrl={(node.blockData.embed_url as string) ?? ""}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
     default:
       return null;
   }

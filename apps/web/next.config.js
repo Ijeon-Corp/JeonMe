@@ -71,6 +71,16 @@ const CONNECT_SRC = API_ORIGIN ? `'self' ${API_ORIGIN}` : "'self'";
 // tapi akar masalahnya identik, diperbaiki sekalian).
 const MEDIA_SRC = "media-src 'self' https:";
 const VIDEO_EMBED_FRAME_SRC = "https://www.youtube.com https://www.tiktok.com";
+// EMBED_BLOCK_FRAME_SRC -- Canvas Page Builder Fase 3, block_type "embed"
+// (iframe generik dgn whitelist provider, permintaan langsung pengguna 8
+// September 2026, provider dikonfirmasi via AskUserQuestion: Google
+// Forms/Calendly/Spotify -- Google Maps TIDAK di sini, www.google.com
+// SUDAH ada di frame-src sejak lama). WAJIB satu commit dengan
+// EmbedBlock.tsx/isAllowedEmbedHost (links.go) -- frame-src SUDAH 2x lupa
+// diperbarui saat blok iframe baru ditambah (lihat catatan VIDEO_EMBED_
+// FRAME_SRC & STRICT_CSP di bawah), pola bug yang sama PERSIS dgn
+// EnsurePublicRead di backend (main.go) yang sudah 4x terulang.
+const EMBED_BLOCK_FRAME_SRC = "https://docs.google.com https://calendly.com https://open.spotify.com";
 
 const PUBLIC_PAGE_CSP = [
   "default-src 'self'",
@@ -80,7 +90,7 @@ const PUBLIC_PAGE_CSP = [
   MEDIA_SRC,
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC} https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.facebook.com https://connect.facebook.net`,
-  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC}`,
+  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC} ${EMBED_BLOCK_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -113,7 +123,7 @@ const STRICT_CSP = [
   MEDIA_SRC,
   "font-src 'self' data:",
   `connect-src ${CONNECT_SRC} ${NOMINATIM_ORIGIN}`,
-  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC}`,
+  `frame-src https://www.google.com ${VIDEO_EMBED_FRAME_SRC} ${EMBED_BLOCK_FRAME_SRC}`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
