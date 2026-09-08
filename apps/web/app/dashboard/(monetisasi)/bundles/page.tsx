@@ -3,7 +3,6 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
@@ -24,9 +23,10 @@ import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function DashboardBundlesPage() {
   const { t } = useLocale();
-  // v2 (SPEC §15.5, Phase 6, flag "marketing"): manager header + baris
-  // HEMAT (harga normal vs bundel vs penghematan pembeli).
-  const marketingV2 = dashRedesignEnabled("marketing");
+  // Manager header + baris HEMAT (harga normal vs bundel vs penghematan
+  // pembeli) -- SPEC §15.5, Phase 6. LENGKAP & stabil di production sejak
+  // v0.37.0/v0.38.0, flag "marketing" dihapus dari file ini 8 September
+  // 2026.
   const [bundles, setBundles] = useState<DashboardBundle[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,31 +114,14 @@ export default function DashboardBundlesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {marketingV2 ? (
-        <PageHeader
-          title={t("dashboard.extraPages.bundles")}
-          description={t("dashboard.pages.bundles.subtitle")}
-          primaryAction={{ label: t("dashboard.pages.bundles.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
-        />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">
-          {t("dashboard.pages.bundles.subtitle")}
-        </p>
-      )}
+      <PageHeader
+        title={t("dashboard.extraPages.bundles")}
+        description={t("dashboard.pages.bundles.subtitle")}
+        primaryAction={{ label: t("dashboard.pages.bundles.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+      />
 
-
-      {(!marketingV2 || adding) && (
+      {adding && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            {t("dashboard.pages.bundles.createButton")}
-          </button>
-        ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.bundles.nameLabel")}</label>
@@ -208,7 +191,6 @@ export default function DashboardBundlesPage() {
               </button>
             </div>
           </form>
-        )}
       </div>
       )}
 
@@ -223,7 +205,7 @@ export default function DashboardBundlesPage() {
               </div>
             </div>
             <p className="mt-1 text-xs text-app-muted">{b.item_names.join(", ")}</p>
-            {marketingV2 && b.original_total_idr > b.price_idr && (
+            {b.original_total_idr > b.price_idr && (
               <p className="mt-1.5 inline-flex rounded-full border-2 border-[#111111] bg-jeon-lavender px-2.5 py-1 text-[11px] font-bold text-[#111111]">
                 {t("dashboard.pages.bundles.savingLabel")
                   .replace("{amount}", (b.original_total_idr - b.price_idr).toLocaleString("id-ID"))

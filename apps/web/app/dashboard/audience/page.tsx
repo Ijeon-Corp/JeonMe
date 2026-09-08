@@ -24,7 +24,6 @@ import StatCard from "@/components/StatCard";
 import { IconMail, IconUsers, IconSparkle, IconWhatsapp } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import { useToast } from "@/components/Toast";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -59,11 +58,12 @@ function toCSV(contacts: AudienceContact[]): string {
 }
 
 // Split Audiens <-> Broadcast <-> Form Capture (JEONID-DASHBOARD-REDESIGN-
-// SPEC.md §15.2-15.3, Phase 6, flag "marketing"): SATU komponen, section
-// digerbang per-view lewat ?view= (contacts|broadcast|forms) -- nol
-// perpindahan logika/state; sidebar Marketing menautkan Audiens & Broadcast
-// sebagai entri terpisah. Legacy (flag off) = semua section bertumpuk
-// seperti semula. useSearchParams butuh Suspense (dok Next).
+// SPEC.md §15.2-15.3, Phase 6): SATU komponen, section digerbang per-view
+// lewat ?view= (contacts|broadcast|forms) -- nol perpindahan logika/state;
+// sidebar Marketing menautkan Audiens & Broadcast sebagai entri terpisah.
+// useSearchParams butuh Suspense (dok Next). LENGKAP & stabil di
+// production sejak v0.37.0/v0.38.0, flag "marketing" dihapus dari file
+// ini 8 September 2026.
 type AudienceView = "contacts" | "broadcast" | "forms";
 const AUDIENCE_VIEW_FROM_URL: Record<string, AudienceView> = {
   contacts: "contacts",
@@ -83,7 +83,6 @@ function DashboardAudiencePageInner() {
   const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const marketingV2 = dashRedesignEnabled("marketing");
   const view: AudienceView = AUDIENCE_VIEW_FROM_URL[searchParams.get("view") ?? "contacts"] ?? "contacts";
   function setView(next: AudienceView) {
     router.replace(`/dashboard/audience?view=${next}`, { scroll: false });
@@ -286,50 +285,44 @@ function DashboardAudiencePageInner() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {marketingV2 ? (
-        <>
-          <PageHeader
-            title={
-              view === "broadcast"
-                ? t("dashboard.nav.marketingBroadcast")
-                : view === "forms"
-                  ? t("dashboard.pages.audience.tabForms")
-                  : t("dashboard.nav.marketingAudience")
-            }
-            description={t("dashboard.pages.audience.intro")}
-          />
-          <div className="mb-5 flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {(
-              [
-                { key: "contacts" as AudienceView, label: t("dashboard.nav.contacts") },
-                { key: "broadcast" as AudienceView, label: t("dashboard.nav.marketingBroadcast") },
-                { key: "forms" as AudienceView, label: t("dashboard.pages.audience.tabForms") },
-              ]
-            ).map((tb) => (
-              <button
-                key={tb.key}
-                type="button"
-                role="tab"
-                aria-selected={view === tb.key}
-                onClick={() => setView(tb.key)}
-                className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
-                  view === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
-                }`}
-              >
-                {tb.label}
-                {view === tb.key && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-jeon-purple" aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.audience.intro")}</p>
-      )}
+      <PageHeader
+        title={
+          view === "broadcast"
+            ? t("dashboard.nav.marketingBroadcast")
+            : view === "forms"
+              ? t("dashboard.pages.audience.tabForms")
+              : t("dashboard.nav.marketingAudience")
+        }
+        description={t("dashboard.pages.audience.intro")}
+      />
+      <div className="mb-5 flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {(
+          [
+            { key: "contacts" as AudienceView, label: t("dashboard.nav.contacts") },
+            { key: "broadcast" as AudienceView, label: t("dashboard.nav.marketingBroadcast") },
+            { key: "forms" as AudienceView, label: t("dashboard.pages.audience.tabForms") },
+          ]
+        ).map((tb) => (
+          <button
+            key={tb.key}
+            type="button"
+            role="tab"
+            aria-selected={view === tb.key}
+            onClick={() => setView(tb.key)}
+            className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+              view === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+            }`}
+          >
+            {tb.label}
+            {view === tb.key && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-jeon-purple" aria-hidden="true" />}
+          </button>
+        ))}
+      </div>
 
       {/* Ringkasan Audiens (§11.1) -- kartu ringkas dari data kontak yang
           sudah dimuat, tampil sebelum form supaya angka kunci terbaca
           lebih dulu (pola sama /balance & Ringkasan). */}
-      {(!marketingV2 || view === "contacts") && (
+      {view === "contacts" && (
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           tone="brand"
@@ -363,9 +356,9 @@ function DashboardAudiencePageInner() {
       </section>
       )}
 
-      {(!marketingV2 || view === "forms") && saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
+      {view === "forms" && saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.audience.saved")}</p>}
 
-      {(!marketingV2 || view === "forms") && (
+      {view === "forms" && (
       <form onSubmit={handleSave} className="glass mt-6 flex flex-col gap-4 rounded-jlg p-5 shadow-card">
         <div className="flex items-center justify-between">
           <div>
@@ -460,7 +453,7 @@ function DashboardAudiencePageInner() {
           worker (lihat CreateBroadcast/HandleAudienceBroadcast di
           backend), form ini cuma menunggu konfirmasi "diantre", bukan
           menunggu semua email benar-benar terkirim satu-satu. */}
-      {(!marketingV2 || view === "broadcast") && (
+      {view === "broadcast" && (
       <section className="glass mt-8 rounded-jlg p-5 shadow-card">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-blue text-[#111111]">
@@ -525,7 +518,7 @@ function DashboardAudiencePageInner() {
       </section>
       )}
 
-      {(!marketingV2 || view === "contacts") && (
+      {view === "contacts" && (
       <>
       <div className="mt-8 flex items-center justify-between">
         <h2 className="font-display text-lg font-bold text-app-ink">

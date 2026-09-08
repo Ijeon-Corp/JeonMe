@@ -3,7 +3,6 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
@@ -26,11 +25,12 @@ type Mode = "single" | "bulk";
 
 export default function DashboardVouchersPage() {
   const { t } = useLocale();
-  // v2 (SPEC §15.4, Phase 6, flag "marketing"): manager header + chips
-  // filter kedaluwarsa -- voucher expired tidak lagi memenuhi list utama.
-  // nowTs diambil SAAT FETCH (bukan render; aturan react-hooks impure).
-  const marketingV2 = dashRedesignEnabled("marketing");
-  const [expFilter, setExpFilter] = useState<"all" | "active" | "expired">(marketingV2 ? "active" : "all");
+  // Manager header + chips filter kedaluwarsa (SPEC §15.4, Phase 6) --
+  // LENGKAP & stabil di production sejak v0.37.0/v0.38.0, flag "marketing"
+  // dihapus dari file ini 8 September 2026. voucher expired tidak lagi
+  // memenuhi list utama. nowTs diambil SAAT FETCH (bukan render; aturan
+  // react-hooks impure).
+  const [expFilter, setExpFilter] = useState<"all" | "active" | "expired">("active");
   const [nowTs, setNowTs] = useState(0);
   const [vouchers, setVouchers] = useState<DashboardVoucher[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -176,31 +176,14 @@ export default function DashboardVouchersPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {marketingV2 ? (
-        <PageHeader
-          title={t("dashboard.extraPages.vouchers")}
-          description={t("dashboard.pages.vouchers.subtitle")}
-          primaryAction={{ label: t("dashboard.pages.vouchers.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
-        />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">
-          {t("dashboard.pages.vouchers.subtitle")}
-        </p>
-      )}
+      <PageHeader
+        title={t("dashboard.extraPages.vouchers")}
+        description={t("dashboard.pages.vouchers.subtitle")}
+        primaryAction={{ label: t("dashboard.pages.vouchers.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+      />
 
-
-      {(!marketingV2 || adding) && (
+      {adding && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            {t("dashboard.pages.vouchers.createButton")}
-          </button>
-        ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div className="flex gap-2">
               <button
@@ -381,35 +364,32 @@ export default function DashboardVouchersPage() {
               </button>
             </div>
           </form>
-        )}
       </div>
       )}
 
-      {marketingV2 && (
-        <div className="mt-6 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("dashboard.pages.vouchers.expiryFilterLabel")}>
-          {([
-            { key: "active" as const, label: t("dashboard.pages.vouchers.filterActive") },
-            { key: "expired" as const, label: t("dashboard.pages.vouchers.filterExpired") },
-            { key: "all" as const, label: t("dashboard.pages.vouchers.filterAll") },
-          ]).map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setExpFilter(f.key)}
-              aria-pressed={expFilter === f.key}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                expFilter === f.key
-                  ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
-                  : "border-app-border text-app-muted hover:border-jeon-purple/50"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="mt-6 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("dashboard.pages.vouchers.expiryFilterLabel")}>
+        {([
+          { key: "active" as const, label: t("dashboard.pages.vouchers.filterActive") },
+          { key: "expired" as const, label: t("dashboard.pages.vouchers.filterExpired") },
+          { key: "all" as const, label: t("dashboard.pages.vouchers.filterAll") },
+        ]).map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setExpFilter(f.key)}
+            aria-pressed={expFilter === f.key}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              expFilter === f.key
+                ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
+                : "border-app-border text-app-muted hover:border-jeon-purple/50"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-      <div className={`${marketingV2 ? "mt-3" : "mt-6"} flex flex-col gap-3`}>
+      <div className="mt-3 flex flex-col gap-3">
         {grouped.singles.map((v) => (
           <VoucherRow
             key={v.id}
