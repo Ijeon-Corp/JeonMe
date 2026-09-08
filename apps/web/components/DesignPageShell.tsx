@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LivePreviewPanel from "@/components/LivePreviewPanel";
+import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import { IconChevronRight } from "@/components/icons";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
@@ -13,7 +14,10 @@ import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 // sub-halaman mana pun, tanpa balik ke landing dulu (audit §2.2 "memaksa
 // user membuka lima sub-route untuk perubahan kecil"). Route subpage tetap
 // berfungsi & tab aktif mengikuti URL (aturan §11.1). Label reuse key
-// judul masing-masing halaman.
+// judul masing-masing halaman. Markup tab bar sendiri diekstrak ke
+// DesignCategoryTabs.tsx (§13.7, permintaan langsung pengguna 8 September
+// 2026) supaya ProdukPageEditor.tsx (Halaman Toko) bisa memakai gaya visual
+// yang SAMA PERSIS -- daftar di sini TETAP khusus Bio (route-based).
 const DESIGN_CATEGORY_TABS = [
   { href: "/dashboard/design/theme", titleKey: "dashboard.pages.designTheme.title" },
   { href: "/dashboard/design/header", titleKey: "dashboard.pages.designHeader.title" },
@@ -87,24 +91,10 @@ export default function DesignPageShell({
           </Link>
         )}
         {designTabsV2 && (
-          <div className="mb-4 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {DESIGN_CATEGORY_TABS.map((tab) => {
-              const active = pathname === tab.href;
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
-                    active ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
-                  }`}
-                >
-                  {t(tab.titleKey)}
-                  {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
-                </Link>
-              );
-            })}
-          </div>
+          <DesignCategoryTabs
+            tabs={DESIGN_CATEGORY_TABS.map((tab) => ({ key: tab.href, label: t(tab.titleKey), href: tab.href }))}
+            activeKey={pathname}
+          />
         )}
         <h1 className="font-display text-2xl font-bold text-app-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-app-muted">{description}</p>}

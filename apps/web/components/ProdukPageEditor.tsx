@@ -54,10 +54,13 @@ import {
 } from "@/components/icons";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
+import SectionCard from "@/components/dashboard/page/SectionCard";
+import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
 
@@ -249,22 +252,35 @@ export default function ProdukPageEditor({
     );
   }
 
-  return (
-    <div className="min-w-0">
-      <section className="glass rounded-jmd p-5 shadow-card">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.pageTitle")}</h2>
-          <a
-            href={`${SITE_URL}/${username}/${page.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs font-semibold text-jeon-purple hover:underline"
-          >
-            <IconExternal className="h-3.5 w-3.5" />
-            jeon.id/{username}/{page.slug}
-          </a>
-        </div>
-        <div className="mt-1.5 flex items-center gap-1.5">
+  // §13.7 (JEONID-DASHBOARD-REDESIGN-SPEC.md, permintaan langsung
+  // pengguna 8 September 2026): "editor template yang sama secara visual
+  // dengan Halaman Saya" -- kartu pengaturan atas dibungkus SectionCard
+  // (komponen resmi hasil Fase 1 Foundation, dipakai halaman Settings/
+  // Editor lain) & tab kategori pakai DesignCategoryTabs (gaya SAMA PERSIS
+  // dgn 5 halaman /dashboard/design/* Bio) -- HANYA wrapper visual yang
+  // diganti, isi (BlockSection/TemaSection/dst di bawah) TETAP
+  // "implementation existing" apa adanya sesuai teks spec, tidak di-reskin.
+  // Gerbang flag "sales" (SAMA dgn dashboard/products/page.tsx sendiri,
+  // bukan "page_builder" -- konsisten dgn flag yang sudah mengatur seluruh
+  // halaman Products) -- OFF berarti markup lama utuh, pola rollback yang
+  // sama dipakai di seluruh redesign ini.
+  const settingsCardV2 = dashRedesignEnabled("sales");
+
+  const settingsCardTitle = t("dashboard.components.produkPageEditor.pageTitle");
+  const settingsCardAction = (
+    <a
+      href={`${SITE_URL}/${username}/${page.slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-xs font-semibold text-jeon-purple hover:underline"
+    >
+      <IconExternal className="h-3.5 w-3.5" />
+      jeon.id/{username}/{page.slug}
+    </a>
+  );
+  const settingsCardBody = (
+    <>
+      <div className="mt-1.5 flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-jeon-purple" : "bg-muted"}`} />
           <span className={`text-xs font-semibold ${page.is_published ? "text-jeon-purple" : "text-app-muted"}`}>
             {page.is_published ? t("dashboard.components.produkPageEditor.published") : t("dashboard.components.produkPageEditor.notPublished")}
@@ -351,32 +367,57 @@ export default function ProdukPageEditor({
             <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.productLayout.categoryHint")}</p>
           )}
         </div>
-      </section>
+    </>
+  );
 
+  const designTabEntries: [DesignSection, string][] = [
+    ["blok", t("dashboard.components.produkPageEditor.designTabs.blok")],
+    ["tema", t("dashboard.components.produkPageEditor.designTabs.tema")],
+    ["header", t("dashboard.components.produkPageEditor.designTabs.header")],
+    ["tombol", t("dashboard.components.produkPageEditor.designTabs.tombol")],
+    ["font", t("dashboard.components.produkPageEditor.designTabs.font")],
+    ["stiker", t("dashboard.components.produkPageEditor.designTabs.stiker")],
+  ];
 
-      <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-jmd p-1.5 shadow-card">
-        {(
-          [
-            ["blok", t("dashboard.components.produkPageEditor.designTabs.blok")],
-            ["tema", t("dashboard.components.produkPageEditor.designTabs.tema")],
-            ["header", t("dashboard.components.produkPageEditor.designTabs.header")],
-            ["tombol", t("dashboard.components.produkPageEditor.designTabs.tombol")],
-            ["font", t("dashboard.components.produkPageEditor.designTabs.font")],
-            ["stiker", t("dashboard.components.produkPageEditor.designTabs.stiker")],
-          ] as [DesignSection, string][]
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSection(key)}
-            className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
-              section === key ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+  return (
+    <div className="min-w-0">
+      {settingsCardV2 ? (
+        <SectionCard title={settingsCardTitle} action={settingsCardAction}>
+          {settingsCardBody}
+        </SectionCard>
+      ) : (
+        <section className="glass rounded-jmd p-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-bold text-app-ink">{settingsCardTitle}</h2>
+            {settingsCardAction}
+          </div>
+          {settingsCardBody}
+        </section>
+      )}
+
+      {settingsCardV2 ? (
+        <div className="mt-4">
+          <DesignCategoryTabs
+            tabs={designTabEntries.map(([key, label]) => ({ key, label, onClick: () => setSection(key) }))}
+            activeKey={section}
+          />
+        </div>
+      ) : (
+        <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-jmd p-1.5 shadow-card">
+          {designTabEntries.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSection(key)}
+              className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
+                section === key ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-app-ink"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4">
         {section === "blok" && (
