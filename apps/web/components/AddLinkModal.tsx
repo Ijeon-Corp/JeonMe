@@ -137,14 +137,6 @@ function buildSuggestedPlatforms(t: (key: string) => string): PlatformQuickAdd[]
 
 function buildAddCategories(t: (key: string) => string): { key: AddCategory; label: string }[] {
   return [
-    { key: "disarankan", label: t("dashboard.pages.links.addModal.categories.suggested") },
-    { key: "sosial", label: t("dashboard.pages.links.addModal.categories.social") },
-    { key: "konten", label: t("dashboard.pages.links.addModal.categories.content") },
-  ];
-}
-
-function buildAddCategoriesV2(t: (key: string) => string): { key: AddCategory; label: string }[] {
-  return [
     { key: "populer", label: t("dashboard.pages.links.addModal.categories.popular") },
     { key: "sosial", label: t("dashboard.pages.links.addModal.categories.social") },
     { key: "konten", label: t("dashboard.pages.links.addModal.categories.content") },
@@ -184,7 +176,6 @@ export default function AddLinkModal({
   onSelectContentTile,
   onQuickPasteLink,
   contentTiles,
-  v2 = false,
 }: {
   category: AddCategory;
   onCategoryChange: (c: AddCategory) => void;
@@ -195,29 +186,24 @@ export default function AddLinkModal({
   onSelectContentTile: (t: ContentTile) => void;
   onQuickPasteLink: (url: string) => void;
   contentTiles: ContentTile[];
-  // v2 (SPEC §10.5): kategori Populer/Sosial/Konten/Lanjutan + grid tile
-  // per kategori (bukan semua tile sekaligus). Legacy saat false.
-  v2?: boolean;
 }) {
   const { t } = useLocale();
-  const addCategories = v2 ? buildAddCategoriesV2(t) : buildAddCategories(t);
+  // Kategori Populer/Sosial/Konten/Lanjutan + grid tile per kategori
+  // (SPEC §10.5).
+  const addCategories = buildAddCategories(t);
   const suggestedPlatforms = buildSuggestedPlatforms(t);
   const searchLower = search.trim().toLowerCase();
   const pastedUrl = isUrlLike(search);
 
-  const gridTiles = v2 ? contentTiles.filter((tile) => (V2_TILE_KEYS[category] ?? []).includes(tile.key)) : contentTiles;
+  const gridTiles = contentTiles.filter((tile) => (V2_TILE_KEYS[category] ?? []).includes(tile.key));
 
-  const contentRows = searchLower
-    ? contentTiles.filter((tile) => tile.label.toLowerCase().includes(searchLower))
-    : !v2 && category === "konten"
-      ? contentTiles
-      : [];
+  const contentRows = searchLower ? contentTiles.filter((tile) => tile.label.toLowerCase().includes(searchLower)) : [];
 
   const platformRows = searchLower
     ? suggestedPlatforms.filter((p) => p.label.toLowerCase().includes(searchLower))
     : category === "sosial"
       ? suggestedPlatforms
-      : category === "disarankan" || category === "populer"
+      : category === "populer"
         ? suggestedPlatforms.filter((p) => DISARANKAN_KEYS.includes(p.key))
         : [];
 

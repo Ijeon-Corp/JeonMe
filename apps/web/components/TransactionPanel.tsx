@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { ApiError, OrderDetail, OrderListItem, getOrderDetail, listOrders, refundOrder } from "@/lib/api-client";
 import { IconClose, IconInbox } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { formatIDR, formatDateTime } from "@/lib/format";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -34,9 +33,8 @@ function buildStatusLabels(t: (key: string) => string): Record<string, string> {
 export default function TransactionPanel() {
   const { t } = useLocale();
   const STATUS_LABEL = buildStatusLabels(t);
-  // v2 (SPEC §13.6, Phase 5, flag "sales"): chips status + detail right
-  // sheet. Data/mutasi (listOrders/getOrderDetail/refundOrder) tak berubah.
-  const salesV2 = dashRedesignEnabled("sales");
+  // Chips status + detail right sheet (SPEC §13.6, Phase 5). Data/mutasi
+  // (listOrders/getOrderDetail/refundOrder) tak berubah.
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
@@ -78,40 +76,25 @@ export default function TransactionPanel() {
             {t("dashboard.components.transactionPanel.searchButton")}
           </button>
         </form>
-        {salesV2 ? (
-          /* Chips ringkasan status (SPEC §13.6) menggantikan dropdown --
-             filter satu-klik yang terlihat, bukan tersembunyi di select. */
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("dashboard.components.transactionPanel.columnStatus")}>
-            {["", "paid", "pending", "refunded", "expired", "failed"].map((st) => (
-              <button
-                key={st || "all"}
-                type="button"
-                onClick={() => setStatusFilter(st)}
-                aria-pressed={statusFilter === st}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  statusFilter === st
-                    ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
-                    : "border-app-border text-app-muted hover:border-jeon-purple/50"
-                }`}
-              >
-                {st === "" ? t("dashboard.components.transactionPanel.allStatusOption") : STATUS_LABEL[st]}
-              </button>
-            ))}
-          </div>
-        ) : (
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-app-border px-3 py-1.5 text-xs text-app-ink"
-        >
-          <option value="">{t("dashboard.components.transactionPanel.allStatusOption")}</option>
-          <option value="paid">{STATUS_LABEL.paid}</option>
-          <option value="pending">{STATUS_LABEL.pending}</option>
-          <option value="refunded">{STATUS_LABEL.refunded}</option>
-          <option value="expired">{STATUS_LABEL.expired}</option>
-          <option value="failed">{STATUS_LABEL.failed}</option>
-        </select>
-        )}
+        {/* Chips ringkasan status (SPEC §13.6) menggantikan dropdown --
+            filter satu-klik yang terlihat, bukan tersembunyi di select. */}
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("dashboard.components.transactionPanel.columnStatus")}>
+          {["", "paid", "pending", "refunded", "expired", "failed"].map((st) => (
+            <button
+              key={st || "all"}
+              type="button"
+              onClick={() => setStatusFilter(st)}
+              aria-pressed={statusFilter === st}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                statusFilter === st
+                  ? "border-jeon-purple border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
+                  : "border-app-border text-app-muted hover:border-jeon-purple/50"
+              }`}
+            >
+              {st === "" ? t("dashboard.components.transactionPanel.allStatusOption") : STATUS_LABEL[st]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {orders === null ? (
@@ -180,10 +163,8 @@ function Row({ label, value }: { label: string; value: string }) {
 function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; onClose: () => void; onRefunded: () => void }) {
   const { t } = useLocale();
   const STATUS_LABEL = buildStatusLabels(t);
-  // v2 (SPEC §13.6): detail order = RIGHT SHEET selebar max-md menempel
-  // kanan (ruang vertikal penuh utk timeline/ledger), bukan modal sempit di
-  // tengah. Isi & aksi identik.
-  const salesV2 = dashRedesignEnabled("sales");
+  // Detail order = RIGHT SHEET selebar max-md menempel kanan (ruang
+  // vertikal penuh utk timeline/ledger) -- SPEC §13.6.
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
@@ -210,24 +191,13 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
   }
 
   return (
-    <div
-      className={
-        salesV2
-          ? "fixed inset-0 z-50 bg-black/40"
-          : "fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      }
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t("dashboard.components.transactionPanel.detailTitle")}
         onClick={(e) => e.stopPropagation()}
-        className={
-          salesV2
-            ? "absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal"
-            : "relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jmd bg-app-surface p-6 shadow-brutal"
-        }
+        className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-2 border-jeon-ink bg-app-surface p-6 shadow-brutal"
       >
         <button
           type="button"

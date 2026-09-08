@@ -57,7 +57,6 @@ import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import { useErrorToast } from "@/lib/use-error-toast";
 
 // Panel tab Toko (Overview/Reviews/Listing/Storage/Webhook/Settings/Transaction)
@@ -196,8 +195,7 @@ function DashboardProductsPageInner() {
   const urlTab = TAB_FROM_URL[searchParams.get("tab") ?? "overview"] ?? "overview";
   const [tab, setTab] = useState<ProductsTab>(urlTab);
 
-  // Tab bar dua tingkat v2 (SPEC §13.1, flag "sales").
-  const salesV2 = dashRedesignEnabled("sales");
+  // Tab bar dua tingkat (SPEC §13.1).
   const [moreTabsOpen, setMoreTabsOpen] = useState(false);
   const moreTabsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1074,13 +1072,12 @@ function DashboardProductsPageInner() {
             x-auto membuat scroll-nya lokal ke baris tab saja, flex-shrink-0
             + whitespace-nowrap di tiap tombol mencegah teksnya sendiri
             terpotong/melipat sebelum scroll sempat aktif. */}
-        {/* Tab bar v2 (SPEC §13.1, Phase 5, flag "sales"): dua tingkat --
-            primer Ringkasan|Produk|Pesanan|Halaman Toko + menu "Lainnya"
-            (Ulasan/Listing/Storage/Webhook/Settings) menggantikan 9 tab
-            sejajar yang overload (audit §2.2). Semua view tetap
-            deep-linkable via ?tab= (§13.8). Legacy di cabang else. */}
-        {salesV2 ? (
-          <div className="flex items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Tab bar dua tingkat (SPEC §13.1, Phase 5): primer Ringkasan|
+            Produk|Pesanan|Halaman Toko + menu "Lainnya" (Ulasan/Listing/
+            Storage/Webhook/Settings) menggantikan 9 tab sejajar yang
+            overload (audit §2.2). Semua view tetap deep-linkable via
+            ?tab= (§13.8). */}
+        <div className="flex items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 { key: "overview" as ProductsTab, label: t("dashboard.nav.salesOverview") },
@@ -1145,92 +1142,6 @@ function DashboardProductsPageInner() {
               )}
             </div>
           </div>
-        ) : (
-        <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("halaman_toko")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "halaman_toko" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.halamanToko")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("overview")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "overview" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.overview")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("manage")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "manage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.manageItems")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("reviews")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "reviews" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.reviews")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("listing")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "listing" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.listing")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("storage")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "storage" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.storage")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("webhook_events")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "webhook_events" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.webhookEvents")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("shop_settings")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "shop_settings" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.shopSettings")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabAndUrl("transaction")}
-            className={`flex-shrink-0 whitespace-nowrap border-b-[3px] px-3 py-2 text-sm font-semibold ${
-              tab === "transaction" ? "border-jeon-purple text-jeon-purple" : "border-transparent text-app-muted hover:text-app-ink"
-            }`}
-          >
-            {t("dashboard.pages.products.tabs.transaction")}
-          </button>
-        </div>
-        )}
-
         {tab === "halaman_toko" ? (
           <div className="mt-4">
             {/* Pill switcher multi-Toko -- Modul Halaman Tambahan Fase 2
@@ -1464,11 +1375,9 @@ function DashboardProductsPageInner() {
                 jenis item dulu sebelum masuk ke form spesifiknya. */}
             {addMode === "choose" && (
               <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-jlg p-4 shadow-card sm:grid-cols-3">
-                {salesV2 && (
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
-                    {t("dashboard.pages.products.createStep1")}
-                  </p>
-                )}
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
+                  {t("dashboard.pages.products.createStep1")}
+                </p>
                 <button
                   type="button"
                   onClick={() => setAddMode("digital")}
@@ -1507,11 +1416,9 @@ function DashboardProductsPageInner() {
 
             {addMode === "digital" && (
               <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                {salesV2 && (
-                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                    {t("dashboard.pages.products.createStep2")}
-                  </p>
-                )}
+                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                  {t("dashboard.pages.products.createStep2")}
+                </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1563,11 +1470,9 @@ function DashboardProductsPageInner() {
 
             {addMode === "payment_link" && (
               <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                {salesV2 && (
-                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                    {t("dashboard.pages.products.createStep2")}
-                  </p>
-                )}
+                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                  {t("dashboard.pages.products.createStep2")}
+                </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1638,11 +1543,9 @@ function DashboardProductsPageInner() {
 
             {addMode === "external_link" && (
               <form onSubmit={handleCreateExternalLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                {salesV2 && (
-                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                    {t("dashboard.pages.products.createStep2")}
-                  </p>
-                )}
+                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
+                  {t("dashboard.pages.products.createStep2")}
+                </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1934,7 +1837,6 @@ function DashboardProductsPageInner() {
         <ManageProductModal
           product={manageProduct}
           onClose={closeManageModal}
-          salesV2={salesV2}
           categoryEditId={categoryEditId}
           categoryDraft={categoryDraft}
           savingCategory={savingCategory}

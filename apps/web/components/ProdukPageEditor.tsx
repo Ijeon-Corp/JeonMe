@@ -60,7 +60,6 @@ import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
 
@@ -260,12 +259,8 @@ export default function ProdukPageEditor({
   // dgn 5 halaman /dashboard/design/* Bio) -- HANYA wrapper visual yang
   // diganti, isi (BlockSection/TemaSection/dst di bawah) TETAP
   // "implementation existing" apa adanya sesuai teks spec, tidak di-reskin.
-  // Gerbang flag "sales" (SAMA dgn dashboard/products/page.tsx sendiri,
-  // bukan "page_builder" -- konsisten dgn flag yang sudah mengatur seluruh
-  // halaman Products) -- OFF berarti markup lama utuh, pola rollback yang
-  // sama dipakai di seluruh redesign ini.
-  const settingsCardV2 = dashRedesignEnabled("sales");
-
+  // LENGKAP & stabil di production sejak v0.37.0/v0.38.0, flag "sales"
+  // dihapus dari file ini 8 September 2026.
   const settingsCardTitle = t("dashboard.components.produkPageEditor.pageTitle");
   const settingsCardAction = (
     <a
@@ -381,43 +376,16 @@ export default function ProdukPageEditor({
 
   return (
     <div className="min-w-0">
-      {settingsCardV2 ? (
-        <SectionCard title={settingsCardTitle} action={settingsCardAction}>
-          {settingsCardBody}
-        </SectionCard>
-      ) : (
-        <section className="glass rounded-jmd p-5 shadow-card">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-bold text-app-ink">{settingsCardTitle}</h2>
-            {settingsCardAction}
-          </div>
-          {settingsCardBody}
-        </section>
-      )}
+      <SectionCard title={settingsCardTitle} action={settingsCardAction}>
+        {settingsCardBody}
+      </SectionCard>
 
-      {settingsCardV2 ? (
-        <div className="mt-4">
-          <DesignCategoryTabs
-            tabs={designTabEntries.map(([key, label]) => ({ key, label, onClick: () => setSection(key) }))}
-            activeKey={section}
-          />
-        </div>
-      ) : (
-        <div className="glass mt-4 flex flex-wrap gap-1.5 rounded-jmd p-1.5 shadow-card">
-          {designTabEntries.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSection(key)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-bold ${
-                section === key ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:text-app-ink"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="mt-4">
+        <DesignCategoryTabs
+          tabs={designTabEntries.map(([key, label]) => ({ key, label, onClick: () => setSection(key) }))}
+          activeKey={section}
+        />
+      </div>
 
       <div className="mt-4">
         {section === "blok" && (

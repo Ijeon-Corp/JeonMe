@@ -588,7 +588,7 @@ export const dictionaries = {
               gallery: "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok.",
               audio: "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok.",
               file: "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok.",
-              catalog: "Buat blok dulu, item (jenis/paket/menu) ditambahkan setelahnya lewat panel \"Kelola Katalog\" di kartu blok.",
+              catalog: "Buat blok dulu, item (jenis/paket/menu) ditambahkan setelahnya lewat editor drill-down yang terbuka otomatis.",
               projectShowcase: "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok.",
             },
             titleLabel: {
@@ -3479,7 +3479,7 @@ export const dictionaries = {
               gallery: "Create the block first -- photos are added afterward via the \"Manage photos\" panel on the block card.",
               audio: "Create the block first -- the audio file is uploaded afterward via the \"Manage audio\" panel on the block card.",
               file: "Create the block first -- the PDF/ZIP/EPUB file is uploaded afterward via the \"Manage file\" panel on the block card.",
-              catalog: "Create the block first -- items (types/packages/menu) are added afterward via the \"Manage Catalog\" panel on the block card.",
+              catalog: "Create the block first -- items (types/packages/menu) are added afterward via the drill-down editor that opens automatically.",
               projectShowcase: "Create the block first -- the card image is uploaded afterward via the \"Manage image\" panel on the block card.",
             },
             titleLabel: {

@@ -44,7 +44,6 @@ import { useLocale } from "@/lib/locale-context";
 export default function ManageProductModal({
   product,
   onClose,
-  salesV2,
   categoryEditId,
   categoryDraft,
   savingCategory,
@@ -127,7 +126,6 @@ export default function ManageProductModal({
 }: {
   product: DashboardProduct;
   onClose: () => void;
-  salesV2: boolean;
   categoryEditId: string | null;
   categoryDraft: string;
   savingCategory: boolean;
@@ -279,11 +277,9 @@ export default function ManageProductModal({
             Eksternal yang tidak punya File Produk sama sekali) --
             gerbang aktivasi backend (product.go) menolak keduanya kalau
             salah satu kosong. */}
-        {salesV2 && (
-          <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-            {t("dashboard.pages.products.manageModal.sectionMedia")}
-          </p>
-        )}
+        <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+          {t("dashboard.pages.products.manageModal.sectionMedia")}
+        </p>
         <p className="mt-4 text-[11px] leading-relaxed text-app-muted">
           <strong className="text-app-ink">{t("dashboard.pages.products.manageModal.fileHintProductFile")}</strong>{" "}
           {t("dashboard.pages.products.manageModal.fileHintMiddle")}{" "}
@@ -381,11 +377,9 @@ export default function ManageProductModal({
         </div>
 
         <div className="mt-4 flex flex-col gap-2.5">
-          {salesV2 && (
           <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-              {t("dashboard.pages.products.manageModal.sectionPricing")}
+            {t("dashboard.pages.products.manageModal.sectionPricing")}
           </p>
-          )}
           {flashSaleEditId === product.id ? (
             <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
               <p className="flex items-center gap-1.5 text-[11px] font-bold text-app-ink">
@@ -496,7 +490,7 @@ export default function ManageProductModal({
             </button>
           )}
 
-          {salesV2 && activeCollaborators.length > 0 && (
+          {activeCollaborators.length > 0 && (
           <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
               {t("dashboard.pages.products.manageModal.sectionCollab")}
           </p>
@@ -580,7 +574,7 @@ export default function ManageProductModal({
         {/* Tautan produk -- Modul Toko (migrasi 000068): satu-satunya
             field khusus external_link yang bisa diubah setelah dibuat
             (ProductKind sendiri immutable, lihat catatan di product.go). */}
-        {salesV2 && product.product_kind !== "payment_link" && (
+        {product.product_kind !== "payment_link" && (
           <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
             {t("dashboard.pages.products.manageModal.sectionDelivery")}
           </p>
@@ -640,11 +634,9 @@ export default function ManageProductModal({
             2026: 5 toggle pengaturan lanjutan perilaku produk (Release
             Time, Fee, notifikasi WhatsApp, Custom Message, Show Unit
             Sold). */}
-        {salesV2 && (
-          <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-            {t("dashboard.pages.products.manageModal.sectionAdvanced")}
-          </p>
-        )}
+        <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+          {t("dashboard.pages.products.manageModal.sectionAdvanced")}
+        </p>
         <div className="mt-4 flex flex-col gap-2.5">
           {releaseAtEditId === product.id ? (
             <div className="flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
@@ -835,11 +827,9 @@ export default function ManageProductModal({
           </div>
         </div>
 
-        {salesV2 && (
-          <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
-            {t("dashboard.pages.products.manageModal.sectionDanger")}
-          </p>
-        )}
+        <p className="mt-5 border-t border-app-border pt-3 text-[10px] font-extrabold uppercase tracking-wider text-app-muted">
+          {t("dashboard.pages.products.manageModal.sectionDanger")}
+        </p>
         <button
           type="button"
           onClick={() => onDelete(product)}

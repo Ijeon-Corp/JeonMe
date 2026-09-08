@@ -89,8 +89,6 @@ import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
-import { maxCatalogImagesPerItem, maxCatalogItems } from "@/lib/catalog-blocks";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -108,16 +106,12 @@ const LocationPickerModal = dynamic(() => import("@/components/LocationPickerMod
 // perbaikan di dashboard/products/page.tsx.
 const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 const AddLinkModal = dynamic(() => import("@/components/AddLinkModal"));
-const CatalogBlocksEditor = dynamic(() => import("@/components/CatalogBlocksEditor").then((mod) => mod.CatalogBlocksEditor));
 const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEditor"));
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
 // utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
 // sumber kebenaran validasinya.
 const maxGalleryImages = 9;
-// maxCatalogItems/maxCatalogImagesPerItem -- dipindah ke lib/catalog-blocks.ts
-// (6 September 2026, redesain editor katalog jadi drill-down) supaya satu
-// sumber kebenaran dengan BlockDrilldownEditor.tsx, diimpor di atas.
 // PREMIUM_EXTRA_PAGE_LIMIT -- SAMA PERSIS batas backend (premiumExtraPageLimit,
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
@@ -376,14 +370,12 @@ export default function DashboardLinksPage() {
   // null berarti dialog tertutup.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Modal "Tambah" ala Linktree.
+  // Modal "Tambah" ala Linktree. SATU entry point "Tambah block" (SPEC
+  // §10.5, Phase 4) -- kategori modal Populer/Sosial/Konten/Lanjutan.
+  // LENGKAP & stabil di production sejak v0.37.0/v0.38.0, flag
+  // "page_builder" dihapus dari file ini 8 September 2026.
   const [addModalOpen, setAddModalOpen] = useState(false);
-  // builderV2 (SPEC §10.5, Phase 4): SATU entry point "Tambah block" --
-  // trio quick-add disembunyikan & kategori modal jadi Populer/Sosial/
-  // Konten/Lanjutan. Murni presentasi; mutasi & wrapper current* TIDAK
-  // berubah (§10.10). Legacy utuh saat flag off.
-  const builderV2 = dashRedesignEnabled("page_builder");
-  const [addCategory, setAddCategory] = useState<AddCategory>(builderV2 ? "populer" : "disarankan");
+  const [addCategory, setAddCategory] = useState<AddCategory>("populer");
   const [addSearch, setAddSearch] = useState("");
 
   // Edit inline judul/URL langsung di kartu (ikon pensil) -- sebelumnya
@@ -454,17 +446,10 @@ export default function DashboardLinksPage() {
 
   // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: blok
   // drill-down "Jenis Rumah" -> daftar jenis -> detail per jenis, gambar
-  // bisa multiple. Item (judul/deskripsi/foto) dikelola SELURUHNYA lewat
-  // panel "Kelola Katalog" (SELALU tampil, pola sama gallery) -- BUKAN
-  // lewat mekanisme "Edit Konten" (yang dipakai faq/text/dst) supaya
-  // tambah-item, edit teks, & unggah foto ada di SATU tempat yang sama,
-  // bukan terpecah 2 panel.
-  //
-  // catalogNewItemDraft -- di-key per linkId (BUKAN satu state polos)
-  // supaya draft "tambah item" 2 blok katalog berbeda di halaman yang
-  // sama tidak saling tercampur.
-  const [catalogNewItemDraft, setCatalogNewItemDraft] = useState<Record<string, { title: string; description: string }>>({});
-  const [catalogSavingId, setCatalogSavingId] = useState<string | null>(null);
+  // bisa multiple. Item (judul/deskripsi/foto) dikelola lewat
+  // BlockDrilldownEditor (§10.5); saveCatalogItems tetap dipakai sebagai
+  // titik commit tunggal ke backend.
+  const [, setCatalogSavingId] = useState<string | null>(null);
   // catalogItemImageUploadingKey -- `${linkId}:${itemId}`, satu item bisa
   // upload sementara item LAIN di blok yang sama tidak ikut disabled.
   const [catalogItemImageUploadingKey, setCatalogItemImageUploadingKey] = useState<string | null>(null);
@@ -479,7 +464,6 @@ export default function DashboardLinksPage() {
   const [drilldownBlockId, setDrilldownBlockId] = useState<string | null>(null);
   const drilldownBlock = links.find((l) => l.id === drilldownBlockId) ?? null;
   const [editVideoUrl, setEditVideoUrl] = useState("");
-  const [editFaqItems, setEditFaqItems] = useState<{ question: string; answer: string }[]>([]);
   const [editMapsUrl, setEditMapsUrl] = useState("");
   const [editMapsEmbed, setEditMapsEmbed] = useState(true);
   const [editText, setEditText] = useState("");
@@ -1035,49 +1019,6 @@ export default function DashboardLinksPage() {
     }
   }
 
-  async function handleAddCatalogItem(link: LinkItem) {
-    const draft = catalogNewItemDraft[link.id] ?? { title: "", description: "" };
-    if (!draft.title.trim()) return;
-    const newItem: CatalogItem = { id: crypto.randomUUID(), title: draft.title.trim(), description: draft.description.trim(), images: [] };
-    await saveCatalogItems(link, [...catalogItemsOf(link), newItem]);
-    setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: "", description: "" } }));
-  }
-
-  async function handleUpdateCatalogItemText(link: LinkItem, itemId: string, field: "title" | "description", value: string) {
-    const items = catalogItemsOf(link);
-    const current = items.find((it) => it.id === itemId);
-    if (!current || current[field] === value) return;
-    await saveCatalogItems(
-      link,
-      items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it))
-    );
-  }
-
-  // handleUpdateCatalogItemBlocks -- permintaan langsung pengguna, 27
-  // Agustus 2026: "saya mau di blok katalog bisa menambahkan semua blok
-  // yang sudah ada di web ini di dalam katalog" -- lihat CatalogBlocksEditor
-  // (components/CatalogBlocksEditor.tsx), dipasang di JSX bawah untuk tiap
-  // item. Pola sama PERSIS dengan handleUpdateCatalogItemText -- PATCH
-  // block_data.items UTUH lewat saveCatalogItems, cuma field `blocks` yang
-  // diganti (bukan title/description).
-  async function handleUpdateCatalogItemBlocks(link: LinkItem, itemId: string, blocks: CatalogItem["blocks"]) {
-    const items = catalogItemsOf(link);
-    await saveCatalogItems(
-      link,
-      items.map((it) => (it.id === itemId ? { ...it, blocks } : it))
-    );
-  }
-
-  async function handleDeleteCatalogItem(link: LinkItem, itemId: string) {
-    const item = catalogItemsOf(link).find((it) => it.id === itemId);
-    const ok = await confirmDelete(
-      t("dashboard.pages.links.deleteCatalogItemConfirm.text").replace("{title}", item?.title ?? ""),
-      { title: t("dashboard.pages.links.deleteCatalogItemConfirm.title") }
-    );
-    if (!ok) return;
-    await saveCatalogItems(link, catalogItemsOf(link).filter((it) => it.id !== itemId));
-  }
-
   // handleSaveFaqItems -- blok FAQ TINGKAT ATAS (bukan tertanam di dalam
   // katalog), dipakai tombol Simpan eksplisit BlockDrilldownEditor. BEDA
   // sengaja dari handleSaveContent (panel FAQ inline lama): update optimis
@@ -1125,12 +1066,6 @@ export default function DashboardLinksPage() {
     }
   }
 
-  async function handleCatalogImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem, itemId: string) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    await uploadCatalogItemImageFile(link, itemId, file);
-  }
 
   async function handleCatalogImageDelete(link: LinkItem, itemId: string, index: number) {
     setError(null);
@@ -1516,7 +1451,7 @@ export default function DashboardLinksPage() {
       // tanpa ini kreator mendarat di baris kosong tanpa cara masuk (blok
       // "faq" tidak butuh ini, form buat FAQ sudah mengumpulkan pertanyaan
       // pertama di awal).
-      if (blockType === "catalog" && builderV2) setDrilldownBlockId(created.id);
+      if (blockType === "catalog") setDrilldownBlockId(created.id);
       setAddingBlock(false);
       setBlockTitle("");
       setBlockVideoUrl("");
@@ -1540,9 +1475,6 @@ export default function DashboardLinksPage() {
     setContentEditId(link.id);
     if (link.block_type === "video") {
       setEditVideoUrl((link.block_data?.video_url as string) ?? "");
-    } else if (link.block_type === "faq") {
-      const items = (link.block_data?.items as { question: string; answer: string }[]) ?? [];
-      setEditFaqItems(items.length > 0 ? items : [{ question: "", answer: "" }]);
     } else if (link.block_type === "maps") {
       setEditMapsUrl(link.url ?? "");
       setEditMapsEmbed(Boolean(link.block_data?.embed));
@@ -1595,17 +1527,6 @@ export default function DashboardLinksPage() {
       blockUrl = editShowcaseUrl.trim();
       blockDescription = editShowcaseDescription.trim();
       blockData = { badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
-    } else if (link.block_type === "faq") {
-      // Cabang ini cuma tercapai kalau builderV2 OFF -- flag ON menyalurkan
-      // FAQ tingkat atas lewat BlockDrilldownEditor/handleSaveFaqItems
-      // (tombol "Edit Konten"-nya diarahkan ke drilldown, bukan panel ini
-      // lagi). Tetap dijaga di sini untuk jalur rollback flag.
-      const items = editFaqItems.filter((it) => it.question.trim() && it.answer.trim());
-      if (items.length === 0) {
-        setError(t("dashboard.pages.links.errors.faqRequired"));
-        return;
-      }
-      blockData = { items };
     } else {
       // Dulu `else` polos menampung FAQ tanpa cek block_type eksplisit --
       // diperbaiki 6 September 2026 (audit BlockDrilldownEditor) supaya
@@ -1932,52 +1853,10 @@ export default function DashboardLinksPage() {
           </div>
         )}
 
-        {/* Baris quick-add -- jalan pintas ke 3 tipe blok nyata yang kami
-            punya (Video/FAQ/Formulir Kontak), plus tombol "+" generik yang
-            membuka modal lengkap yang sama seperti tombol besar di bawah.
-            Ikon media/gambar/koleksi ala referensi SENGAJA tidak ditiru --
-            Jeonme belum punya blok galeri gambar/koleksi di halaman utama.
-            v2 (§10.5): DISEMBUNYIKAN -- satu entry point "Tambah block"
-            (audit §2.4: add flow terpecah 4 jalur membingungkan). */}
-        {!builderV2 && (
-        <div className="mt-3 flex items-center gap-2">
-          {[
-            { tile: contentTiles.find((tile) => tile.key === "video")!, key: "video" },
-            { tile: contentTiles.find((tile) => tile.key === "faq")!, key: "faq" },
-            { tile: contentTiles.find((tile) => tile.key === "contact_form")!, key: "contact_form" },
-          ].map(({ tile, key }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handleSelectContentTile(tile)}
-              title={tile.label}
-              className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-            >
-              <tile.Icon className="h-4 w-4" />
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app-surface text-[9px] font-bold text-app-ink ring-1 ring-border">
-                +
-              </span>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              setAddCategory("disarankan");
-              setAddSearch("");
-              setAddModalOpen(true);
-            }}
-            title={t("dashboard.pages.links.quickAdd.viewAllOptions")}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-app-surface-2 text-app-ink hover:bg-app-border"
-          >
-            <IconPlus className="h-4 w-4" />
-          </button>
-        </div>
-        )}
-
         <button
           type="button"
           onClick={() => {
-            setAddCategory(builderV2 ? "populer" : "disarankan");
+            setAddCategory("populer");
             setAddSearch("");
             setAddModalOpen(true);
           }}
@@ -2442,12 +2321,12 @@ export default function DashboardLinksPage() {
                   link.block_type === "text" ||
                   link.block_type === "accordion" ||
                   link.block_type === "project_showcase" ||
-                  (link.block_type === "faq" && !builderV2) ||
-                  ((link.block_type === "catalog" || link.block_type === "faq") && builderV2)) && (
+                  link.block_type === "catalog" ||
+                  link.block_type === "faq") && (
                   <button
                     type="button"
                     onClick={() =>
-                      (link.block_type === "catalog" || link.block_type === "faq") && builderV2
+                      link.block_type === "catalog" || link.block_type === "faq"
                         ? setDrilldownBlockId(link.id)
                         : openContentEdit(link)
                     }
@@ -2845,148 +2724,6 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {/* Panel "Kelola Katalog" -- blok "catalog" (permintaan
-                  langsung pengguna, 25 Agustus 2026: blok drill-down
-                  "Jenis Rumah" -> daftar jenis -> detail per jenis, gambar
-                  bisa multiple). SATU panel utk SEMUA (tambah item, edit
-                  judul/deskripsi, kelola foto per item) -- SENGAJA tidak
-                  dipecah ke mekanisme "Edit Konten" (dipakai faq/text/dst)
-                  supaya tidak terasa terpecah 2 tempat berbeda.
-
-                  Digantikan BlockDrilldownEditor (6 September 2026, gaya
-                  Linktree) di balik flag builderV2 -- panel ini TETAP hidup
-                  utk NEXT_PUBLIC_DASH_REDESIGN_OFF=page_builder (rollback
-                  tanpa revert kode), dihapus di pembersihan terpisah setelah
-                  2 rilis stabil. */}
-              {link.block_type === "catalog" && !builderV2 && (
-                <div className="ml-11 flex flex-col gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                  {catalogItemsOf(link).length === 0 && <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.catalogPanel.noItems")}</p>}
-                  {catalogItemsOf(link).map((item) => {
-                    const uploadKey = `${link.id}:${item.id}`;
-                    return (
-                      <div key={item.id} className="flex flex-col gap-2 rounded-lg border-2 border-jeon-ink bg-app-surface p-2.5">
-                        <div className="flex items-start gap-2">
-                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
-                              <input
-                                type="text"
-                                defaultValue={item.title}
-                                placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
-                                onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "title", e.target.value.trim())}
-                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs font-semibold focus:border-jeon-purple focus:outline-none"
-                              />
-                            </FormField>
-                            <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
-                              <textarea
-                                defaultValue={item.description}
-                                placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
-                                rows={2}
-                                onBlur={(e) => handleUpdateCatalogItemText(link, item.id, "description", e.target.value.trim())}
-                                className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                              />
-                            </FormField>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCatalogItem(link, item.id)}
-                            title={t("dashboard.pages.links.catalogPanel.deleteItem")}
-                            className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
-                          >
-                            <IconTrash className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {item.images.map((src, i) => (
-                            <div key={i} className="group relative h-14 w-14 flex-shrink-0">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
-                              <button
-                                type="button"
-                                onClick={() => handleCatalogImageDelete(link, item.id, i)}
-                                title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
-                                className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
-                              >
-                                <IconX className="h-2.5 w-2.5" />
-                              </button>
-                            </div>
-                          ))}
-                          {item.images.length < maxCatalogImagesPerItem && (
-                            <label
-                              className={`flex h-14 w-14 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
-                                catalogItemImageUploadingKey === uploadKey ? "opacity-60" : ""
-                              }`}
-                            >
-                              {catalogItemImageUploadingKey === uploadKey ? (
-                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                              ) : (
-                                <IconPlus className="h-4 w-4" />
-                              )}
-                              <input
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                onChange={(e) => handleCatalogImageUpload(e, link, item.id)}
-                                disabled={catalogItemImageUploadingKey === uploadKey}
-                                className="hidden"
-                              />
-                            </label>
-                          )}
-                        </div>
-                        {/* Blok tertanam -- permintaan langsung pengguna,
-                            27 Agustus 2026: "saya mau di blok katalog bisa
-                            menambahkan semua blok yang sudah ada di web
-                            ini di dalam katalog, dan juga sub blok ini
-                            bisa lebih dari 2, 3 untuk user premium" --
-                            lihat CatalogBlocksEditor (components/
-                            CatalogBlocksEditor.tsx). depth=2 -- tingkat 1
-                            adalah blok katalog ITU SENDIRI, item di sini
-                            sudah tingkat 2, blok tertanam bertipe
-                            "katalog" (kalau ada) membuka tingkat 3, dst. */}
-                        <CatalogBlocksEditor
-                          blocks={item.blocks ?? []}
-                          isPremium={page?.is_premium ?? false}
-                          depth={2}
-                          onChange={(blocks) => handleUpdateCatalogItemBlocks(link, item.id, blocks)}
-                        />
-                      </div>
-                    );
-                  })}
-                  {catalogItemsOf(link).length < maxCatalogItems && (
-                    <div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-app-border p-2.5">
-                      <FormField label={t("dashboard.pages.links.catalogPanel.newItemTitleLabel")}>
-                        <input
-                          type="text"
-                          placeholder={t("dashboard.pages.links.catalogPanel.newItemTitlePlaceholder")}
-                          value={catalogNewItemDraft[link.id]?.title ?? ""}
-                          onChange={(e) =>
-                            setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: e.target.value, description: prev[link.id]?.description ?? "" } }))
-                          }
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        />
-                      </FormField>
-                      <FormField label={t("dashboard.pages.links.catalogPanel.newItemDescriptionLabel")}>
-                        <textarea
-                          placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
-                          rows={2}
-                          value={catalogNewItemDraft[link.id]?.description ?? ""}
-                          onChange={(e) =>
-                            setCatalogNewItemDraft((prev) => ({ ...prev, [link.id]: { title: prev[link.id]?.title ?? "", description: e.target.value } }))
-                          }
-                          className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        />
-                      </FormField>
-                      <button
-                        type="button"
-                        disabled={!catalogNewItemDraft[link.id]?.title.trim() || catalogSavingId === link.id}
-                        onClick={() => handleAddCatalogItem(link)}
-                        className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-                      >
-                        {catalogSavingId === link.id ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.catalogPanel.addItem")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Panel "Kelola audio" -- blok "audio", pola sama seperti
                   panel Kelola foto di atas. Cover art dikelola lewat tombol
                   ikon kustom yang sudah generik (baris kontrol ikon di
@@ -3191,7 +2928,6 @@ export default function DashboardLinksPage() {
                 ))}
 
               {(link.block_type === "video" ||
-                (link.block_type === "faq" && !builderV2) ||
                 link.block_type === "maps" ||
                 link.block_type === "text" ||
                 link.block_type === "accordion" ||
@@ -3314,51 +3050,6 @@ export default function DashboardLinksPage() {
                         />
                       </FormField>
                     </div>
-                  ) : link.block_type === "faq" ? (
-                    // Cabang ini cuma tercapai kalau builderV2 OFF (lihat
-                    // guard render di atas) -- flag ON menyalurkan FAQ
-                    // tingkat atas lewat BlockDrilldownEditor. Dulu `else`
-                    // polos tanpa cek block_type eksplisit -- diperbaiki 6
-                    // September 2026 (audit BlockDrilldownEditor) supaya
-                    // tipe blok lain tidak diam-diam dirender sebagai FAQ.
-                    <div className="flex flex-col gap-2">
-                      {editFaqItems.map((item, i) => (
-                        <div key={i} className="flex flex-col gap-2 rounded-md border border-app-border p-2">
-                          <FormField label={t("dashboard.pages.links.blockForm.faq.questionLabel").replace("{n}", String(i + 1))}>
-                            <input
-                              type="text"
-                              placeholder={t("dashboard.pages.links.blockForm.faq.questionPlaceholder")}
-                              value={item.question}
-                              onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, question: e.target.value } : it)))}
-                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-jeon-purple focus:outline-none"
-                            />
-                          </FormField>
-                          <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
-                            <textarea
-                              placeholder={t("dashboard.pages.links.blockForm.faq.answerPlaceholder")}
-                              value={item.answer}
-                              onChange={(e) => setEditFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
-                              rows={2}
-                              className="w-full rounded-md border border-app-border px-2 py-1 text-xs focus:border-jeon-purple focus:outline-none"
-                            />
-                          </FormField>
-                          <button
-                            type="button"
-                            onClick={() => setEditFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
-                            className="self-end text-[10px] font-bold text-red-600 hover:underline"
-                          >
-                            {t("dashboard.pages.links.contentEdit.deleteItem")}
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setEditFaqItems((prev) => [...prev, { question: "", answer: "" }])}
-                        className="self-start text-[11px] font-bold text-jeon-purple hover:underline"
-                      >
-                        {t("dashboard.pages.links.blockForm.faq.addQuestion")}
-                      </button>
-                    </div>
                   ) : null}
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => setContentEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
@@ -3414,7 +3105,6 @@ export default function DashboardLinksPage() {
           onSelectContentTile={handleSelectContentTile}
           onQuickPasteLink={(url) => openLinkFormPrefilled("", url)}
           contentTiles={contentTiles}
-          v2={builderV2}
         />
       )}
 
@@ -3574,12 +3264,7 @@ export default function DashboardLinksPage() {
   );
 }
 
-// buildAddCategories -- FUNGSI (bukan konstanta modul) supaya labelnya ikut
-// berganti bahasa, pola sama seperti buildBlockTypeLabel di atas. "key" tetap
-// dalam bahasa Indonesia ("disarankan"/"sosial"/"konten") -- itu ID INTERNAL
-// state (addCategory), BUKAN teks yang tampil ke pengguna, jadi TIDAK perlu
-// ikut diterjemahkan.
-// AddCategory -- union gabungan legacy ("disarankan") + v2 (SPEC §10.5:
-// Populer/Sosial/Konten/Lanjutan). State satu, daftar chip yang tampil
-// tergantung flag builderV2.
-export type AddCategory = "disarankan" | "populer" | "sosial" | "konten" | "lanjutan";
+// AddCategory -- Populer/Sosial/Konten/Lanjutan (SPEC §10.5). "key" tetap
+// dalam bahasa Indonesia -- itu ID INTERNAL state (addCategory), BUKAN teks
+// yang tampil ke pengguna, jadi TIDAK perlu ikut diterjemahkan.
+export type AddCategory = "populer" | "sosial" | "konten" | "lanjutan";

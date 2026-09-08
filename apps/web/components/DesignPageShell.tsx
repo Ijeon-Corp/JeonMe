@@ -7,7 +7,6 @@ import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import { IconChevronRight } from "@/components/icons";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 
 // Tab kategori Desain (JEONID-DASHBOARD-REDESIGN-SPEC.md §11.1, Phase 4):
 // pindah antar kategori (Tema/Header/Tombol/Font/Stiker) SATU klik dari
@@ -77,7 +76,7 @@ export default function DesignPageShell({
 }) {
   const { t } = useLocale();
   const pathname = usePathname();
-  const designTabsV2 = dashRedesignEnabled("page_builder") && Boolean(backHref);
+  const designTabsV2 = Boolean(backHref);
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
       <div className={contentMaxWidth}>

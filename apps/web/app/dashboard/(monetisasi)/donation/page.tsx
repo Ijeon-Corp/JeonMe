@@ -3,7 +3,6 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
@@ -26,9 +25,6 @@ function formatRupiah(n: number): string {
 
 export default function DashboardDonationPage() {
   const { t } = useLocale();
-  // v2 (SPEC §14.4, Phase 5): PageHeader; section status/goal/wishlist
-  // existing sudah sesuai struktur spec.
-  const salesV2 = dashRedesignEnabled("sales");
   const [settings, setSettings] = useState<DonationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,11 +134,7 @@ export default function DashboardDonationPage() {
 
   return (
     <div className="mx-auto max-w-lg">
-      {salesV2 ? (
-        <PageHeader title={t("dashboard.extraPages.donation")} description={t("dashboard.pages.donation.subtitle")} />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.donation.subtitle")}</p>
-      )}
+      <PageHeader title={t("dashboard.extraPages.donation")} description={t("dashboard.pages.donation.subtitle")} />
 
       {saved && <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dashboard.pages.donation.saved")}</p>}
 

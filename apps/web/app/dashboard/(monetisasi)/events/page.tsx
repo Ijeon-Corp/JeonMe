@@ -8,7 +8,6 @@ import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import { useErrorToast } from "@/lib/use-error-toast";
 
@@ -31,10 +30,8 @@ function toRFC3339(localDateTime: string, timezone: string): string {
 
 export default function DashboardEventsPage() {
   const { t } = useLocale();
-  // Manager template v2 (SPEC §7.2/§14, Phase 5, flag "sales"):
-  // PageHeader + primary create action di kanan; kartu form create hanya
-  // tampil saat `adding`. Legacy (subtitle + tombol toggle) saat flag off.
-  const salesV2 = dashRedesignEnabled("sales");
+  // Manager template (SPEC §7.2/§14, Phase 5): PageHeader + primary
+  // create action di kanan; kartu form create hanya tampil saat `adding`.
   const timezoneLabels: Record<string, string> = {
     "Asia/Jakarta": t("dashboard.pages.events.timezones.wib"),
     "Asia/Makassar": t("dashboard.pages.events.timezones.wita"),
@@ -146,29 +143,14 @@ export default function DashboardEventsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {salesV2 ? (
-        <PageHeader
-          title={t("dashboard.extraPages.events")}
-          description={t("dashboard.pages.events.subtitle")}
-          primaryAction={{ label: t("dashboard.pages.events.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
-        />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.events.subtitle")}</p>
-      )}
+      <PageHeader
+        title={t("dashboard.extraPages.events")}
+        description={t("dashboard.pages.events.subtitle")}
+        primaryAction={{ label: t("dashboard.pages.events.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+      />
 
-
-      {(!salesV2 || adding) && (
+      {adding && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            {t("dashboard.pages.events.createButton")}
-          </button>
-        ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.events.nameLabel")}</label>
@@ -283,7 +265,6 @@ export default function DashboardEventsPage() {
               </button>
             </div>
           </form>
-        )}
       </div>
       )}
 

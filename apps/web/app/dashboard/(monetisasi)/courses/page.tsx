@@ -3,7 +3,6 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
@@ -28,10 +27,8 @@ const EMPTY_CHAPTER: CourseChapterInput = { title: "", description: "", video_ur
 
 export default function DashboardCoursesPage() {
   const { t } = useLocale();
-  // Manager template v2 (SPEC §7.2/§14, Phase 5, flag "sales"):
-  // PageHeader + primary create action di kanan; kartu form create hanya
-  // tampil saat `adding`. Legacy (subtitle + tombol toggle) saat flag off.
-  const salesV2 = dashRedesignEnabled("sales");
+  // Manager template (SPEC §7.2/§14, Phase 5): PageHeader + primary
+  // create action di kanan; kartu form create hanya tampil saat `adding`.
   const [courses, setCourses] = useState<DashboardCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,29 +150,14 @@ export default function DashboardCoursesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {salesV2 ? (
-        <PageHeader
-          title={t("dashboard.extraPages.courses")}
-          description={t("dashboard.pages.courses.subtitle")}
-          primaryAction={{ label: t("dashboard.pages.courses.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
-        />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.courses.subtitle")}</p>
-      )}
+      <PageHeader
+        title={t("dashboard.extraPages.courses")}
+        description={t("dashboard.pages.courses.subtitle")}
+        primaryAction={{ label: t("dashboard.pages.courses.createButton"), onClick: () => setAdding(true), icon: <IconPlus className="h-4 w-4" /> }}
+      />
 
-
-      {(!salesV2 || adding) && (
+      {adding && (
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm font-bold text-jeon-purple hover:underline"
-          >
-            <IconPlus className="h-4 w-4" />
-            {t("dashboard.pages.courses.createButton")}
-          </button>
-        ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.pages.courses.nameLabel")}</label>
@@ -296,7 +278,6 @@ export default function DashboardCoursesPage() {
               </button>
             </div>
           </form>
-        )}
       </div>
       )}
 
