@@ -133,6 +133,30 @@ jobs:
             cd /opt/jeonme-production
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+            # pull_with_retry -- insiden nyata, 8 September 2026 (deploy
+            # staging): "docker compose pull" gagal total ("dial tcp
+            # ...:443: i/o timeout") menarik SATU image dari GHCR walau
+            # login & image lain dari registry yang SAMA sukses ditarik --
+            # gangguan jaringan sesaat VPS->GHCR, BUKAN masalah auth/
+            # kredensial. docker compose pull TIDAK retry sendiri, jadi satu
+            # hiccup jaringan menggagalkan seluruh job deploy. Coba ulang
+            # berjeda (pola sama seperti retry Health check di bawah)
+            # sebelum benar-benar menyerah -- diterapkan juga di
+            # deploy-production.yml supaya production tidak kena insiden
+            # yang sama di masa depan.
+            pull_with_retry() {
+              local file="$1"; shift
+              local attempt
+              for attempt in 1 2 3 4 5; do
+                if docker compose -f "$file" pull "$@"; then
+                  return 0
+                fi
+                echo "::warning::docker compose pull gagal (percobaan ${attempt}/5, kemungkinan gangguan jaringan sementara ke registry) -- coba lagi dalam 10 detik..."
+                sleep 10
+              done
+              echo "::error::docker compose pull tetap gagal setelah 5 percobaan berturut-turut."
+              return 1
+            }
             # Sama seperti deploy-staging.yml: Modul Settings §3 (commit
             # 4baaad3) memperkenalkan ENCRYPTION_KEY (wajib PERSIS 32 byte,
             # fail-fast di production lewat mustGetEnvInProd) -- var ini belum
@@ -146,7 +170,7 @@ jobs:
               echo "ENCRYPTION_KEY=${GENERATED_KEY}" >> .env
               echo "::warning::ENCRYPTION_KEY tidak ditemukan di .env production -- sudah digenerate otomatis (32 byte acak) dan disimpan permanen."
             fi
-            docker compose -f docker-compose.prod.yml pull api
+            pull_with_retry docker-compose.prod.yml api
             docker compose -f docker-compose.prod.yml run --rm api migrate up
 
       - name: Deploy via SSH
@@ -161,7 +185,24 @@ jobs:
             cd /opt/jeonme-production
             export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-            docker compose -f docker-compose.prod.yml pull
+            # pull_with_retry -- lihat catatan lengkap di step "Jalankan
+            # migrasi database" di atas (insiden nyata 8 September 2026,
+            # i/o timeout sesaat ke GHCR) -- script SSH ini proses shell
+            # TERPISAH dari step sebelumnya, jadi fungsi didefinisikan ulang.
+            pull_with_retry() {
+              local file="$1"; shift
+              local attempt
+              for attempt in 1 2 3 4 5; do
+                if docker compose -f "$file" pull "$@"; then
+                  return 0
+                fi
+                echo "::warning::docker compose pull gagal (percobaan ${attempt}/5, kemungkinan gangguan jaringan sementara ke registry) -- coba lagi dalam 10 detik..."
+                sleep 10
+              done
+              echo "::error::docker compose pull tetap gagal setelah 5 percobaan berturut-turut."
+              return 1
+            }
+            pull_with_retry docker-compose.prod.yml
             # --force-recreate -- lihat komentar sama di deploy-staging.yml
             # (insiden nyata, 15 Agustus 2026: env var baru di .env tidak
             # cukup membuat `up -d` polos merecreate container kalau
