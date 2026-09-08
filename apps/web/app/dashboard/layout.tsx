@@ -15,7 +15,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLocale } from "@/lib/locale-context";
 import { SITE_URL } from "@/lib/site";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import DashboardSidebarNav, { SidebarFooterV2, buildRailItemsV2 } from "@/components/dashboard/shell/DashboardSidebarNav";
 import { getDashboardPageMeta } from "@/components/dashboard/shell/page-registry";
 import {
@@ -34,7 +33,6 @@ import {
   IconBox,
   IconCalendar,
   IconChart,
-  IconChevronRight,
   IconClock,
   IconClose,
   IconCopy,
@@ -228,13 +226,15 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLocale();
-  // Shell v2 (JEONID-DASHBOARD-REDESIGN-SPEC §5-6, Phase 2) di balik flag --
-  // OFF (env NEXT_PUBLIC_DASH_REDESIGN_OFF="shell") mengembalikan IA lama
-  // utuh. Konstanta build-time, aman dipakai untuk cabang render.
-  const shellV2 = dashRedesignEnabled("shell");
+  // Shell v2 (JEONID-DASHBOARD-REDESIGN-SPEC §5-6, Phase 2). LENGKAP &
+  // stabil di production sejak v0.37.0/v0.38.0, flag "shell" dihapus dari
+  // file ini 8 September 2026. buildNavItems/currentPageLabel TETAP
+  // dipakai -- BUKAN sisa legacy, tapi fallback judul topbar untuk rute
+  // yang belum masuk DASHBOARD_PAGE_REGISTRY (mis. /dashboard/links/
+  // builder/[pageId]), lihat pemakaian di bawah.
   const navItems = buildNavItems(t);
   const extraPageLabels = buildExtraPageLabels(t);
-  const pageMeta = shellV2 ? getDashboardPageMeta(pathname) : undefined;
+  const pageMeta = getDashboardPageMeta(pathname);
   // Bottom nav mobile (DASHBOARD-DESIGN-JEONID.md §21 "Mobile priority
   // navigation"): 5 tujuan penting + "Menu" yang membuka drawer berisi
   // SEMUA sisanya (Pesanan ada di dalam Produk, Audiens/Keuangan/Integrasi
@@ -245,40 +245,26 @@ export default function DashboardLayout({
   // menyalakan tab aktif termasuk untuk sub-rute (mis. /design & /settings/
   // seo ikut menyalakan "Halaman", sesuai HalamanSayaTabs).
   // Bottom nav v2 (spec §6.3): Beranda | Halaman | Jualan | Analitik | Menu.
-  // Legacy (Produk/Statistik) di cabang else.
-  const bottomNav: { key: string; href: string; icon: typeof IconChart; match: (p: string) => boolean; isMenu?: boolean }[] = shellV2
-    ? [
-        { key: "bottomHome", href: "/dashboard", icon: IconGrid, match: (p) => p === "/dashboard" },
-        {
-          key: "bottomPage",
-          href: "/dashboard/links",
-          icon: IconLink,
-          match: (p) => p === "/dashboard/links" || p.startsWith("/dashboard/design") || p === "/dashboard/settings/seo",
-        },
-        {
-          key: "bottomSales",
-          href: "/dashboard/products",
-          icon: IconShoppingBag,
-          match: (p) =>
-            ["/dashboard/products", "/dashboard/courses", "/dashboard/events", "/dashboard/donation"].some(
-              (b) => p === b || p.startsWith(`${b}/`)
-            ),
-        },
-        { key: "bottomAnalytics", href: "/dashboard/statistik", icon: IconChart, match: (p) => p === "/dashboard/statistik" },
-        { key: "bottomMore", href: "#", icon: IconMenu, match: () => false, isMenu: true },
-      ]
-    : [
-        { key: "bottomHome", href: "/dashboard", icon: IconGrid, match: (p) => p === "/dashboard" },
-        {
-          key: "bottomPage",
-          href: "/dashboard/links",
-          icon: IconLink,
-          match: (p) => p === "/dashboard/links" || p.startsWith("/dashboard/design") || p === "/dashboard/settings/seo",
-        },
-        { key: "bottomProducts", href: "/dashboard/products", icon: IconShoppingBag, match: (p) => p.startsWith("/dashboard/products") },
-        { key: "bottomStats", href: "/dashboard/statistik", icon: IconChart, match: (p) => p === "/dashboard/statistik" },
-        { key: "bottomMore", href: "#", icon: IconMenu, match: () => false, isMenu: true },
-      ];
+  const bottomNav: { key: string; href: string; icon: typeof IconChart; match: (p: string) => boolean; isMenu?: boolean }[] = [
+    { key: "bottomHome", href: "/dashboard", icon: IconGrid, match: (p) => p === "/dashboard" },
+    {
+      key: "bottomPage",
+      href: "/dashboard/links",
+      icon: IconLink,
+      match: (p) => p === "/dashboard/links" || p.startsWith("/dashboard/design") || p === "/dashboard/settings/seo",
+    },
+    {
+      key: "bottomSales",
+      href: "/dashboard/products",
+      icon: IconShoppingBag,
+      match: (p) =>
+        ["/dashboard/products", "/dashboard/courses", "/dashboard/events", "/dashboard/donation"].some(
+          (b) => p === b || p.startsWith(`${b}/`)
+        ),
+    },
+    { key: "bottomAnalytics", href: "/dashboard/statistik", icon: IconChart, match: (p) => p === "/dashboard/statistik" },
+    { key: "bottomMore", href: "#", icon: IconMenu, match: () => false, isMenu: true },
+  ];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -317,21 +303,13 @@ export default function DashboardLayout({
   // pengguna.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    if (shellV2) {
-      // v2: cocokkan pathname ke leaf grup IA baru (label grup beda dari
-      // legacy, jadi tidak bisa pakai navItems lama). Satu grup saja (§6.4).
-      const railGroups = buildRailItemsV2(t).filter((r) => r.matchPrefixes.length > 1);
-      for (const g of railGroups) {
-        if (g.matchPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-          initial.add(g.label);
-          break;
-        }
-      }
-      return initial;
-    }
-    for (const item of navItems) {
-      if (item.type === "group" && item.items.some((sub) => sub.href === pathname)) {
-        initial.add(item.label);
+    // Cocokkan pathname ke leaf grup IA baru (label grup beda dari nav
+    // legacy, jadi tidak bisa pakai navItems lama). Satu grup saja (§6.4).
+    const railGroups = buildRailItemsV2(t).filter((r) => r.matchPrefixes.length > 1);
+    for (const g of railGroups) {
+      if (g.matchPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+        initial.add(g.label);
+        break;
       }
     }
     return initial;
@@ -544,112 +522,19 @@ export default function DashboardLayout({
             ungu. Pemisah membagi 7 menu bisnis dari 3 menu sekunder
             (Integrasi/Tim/Pengaturan). Badge "Segera" = fitur roadmap yang
             backend-nya belum ada (non-tautan). */}
-        {shellV2 ? (
-          /* Nav v2: IA Jualan/Marketing (spec §5), satu-accordion, tanpa
-             badge Segera; komponen terpisah + Suspense utk useSearchParams
-             (leaf ?tab=/?view=). Legacy di cabang else, utuh. */
-          <DashboardSidebarNav
-            pathname={pathname}
-            expandedGroups={expandedGroups}
-            onToggleGroup={toggleGroup}
-            onNavigate={() => setMobileOpen(false)}
-          />
-        ) : (
-        <nav className="mt-6 flex flex-col gap-0.5 text-xs">
-          {navItems.map((item, idx) => {
-            if (item.type === "divider") {
-              return <div key={`div-${idx}`} className="my-2.5 h-px bg-white/10" aria-hidden="true" />;
-            }
-            if (item.type === "link") {
-              const active = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 font-semibold transition-all ${
-                    active
-                      ? "border-jeon-purple bg-jeon-purple/25 text-white"
-                      : "border-transparent text-white/55 hover:bg-white/5 hover:text-white/85"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  {item.label}
-                </Link>
-              );
-            }
-
-            const groupHasActive = item.items.some((sub) => sub.href !== "#" && sub.href === pathname);
-            const expanded = expandedGroups.has(item.label);
-            const GroupIcon = item.icon;
-            return (
-              <div key={item.label}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(item.label)}
-                  aria-expanded={expanded}
-                  className={`flex w-full items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-left font-semibold transition-all ${
-                    groupHasActive && !expanded
-                      ? "border-jeon-purple bg-jeon-purple/15 text-white"
-                      : "border-transparent text-white/60 hover:bg-white/5 hover:text-white/90"
-                  }`}
-                >
-                  <GroupIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                  <IconChevronRight
-                    className={`h-3.5 w-3.5 flex-shrink-0 text-white/40 transition-transform ${expanded ? "rotate-90" : ""}`}
-                  />
-                </button>
-                {expanded && (
-                  <div className="mb-1 ml-3.5 mt-0.5 flex flex-col gap-0.5 border-l border-white/10 pl-2">
-                    {item.items.map((sub) => {
-                      const Icon = sub.icon;
-                      if (sub.badge === "segera") {
-                        return (
-                          <div
-                            key={sub.label}
-                            className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-1.5 font-semibold text-white/30"
-                            title={t("dashboard.nav.comingSoonTitle")}
-                          >
-                            <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="flex-1">{sub.label}</span>
-                            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/45">
-                              {t("dashboard.nav.comingSoonBadge")}
-                            </span>
-                          </div>
-                        );
-                      }
-                      const active = pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.href + sub.label}
-                          href={sub.href}
-                          onClick={() => setMobileOpen(false)}
-                          aria-current={active ? "page" : undefined}
-                          className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-1.5 font-semibold transition-all ${
-                            active
-                              ? "border-jeon-purple bg-jeon-purple/25 text-white"
-                              : "border-transparent text-white/50 hover:bg-white/5 hover:text-white/85"
-                          }`}
-                        >
-                          <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-                          {sub.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-        )}
+        {/* Nav v2: IA Jualan/Marketing (spec §5), satu-accordion, tanpa
+            badge Segera; komponen terpisah + Suspense utk useSearchParams
+            (leaf ?tab=/?view=). */}
+        <DashboardSidebarNav
+          pathname={pathname}
+          expandedGroups={expandedGroups}
+          onToggleGroup={toggleGroup}
+          onNavigate={() => setMobileOpen(false)}
+        />
       </div>
 
       <div className="flex flex-col gap-3">
-        {shellV2 && <SidebarFooterV2 isPremium={isPremium} onNavigate={() => setMobileOpen(false)} />}
+        <SidebarFooterV2 isPremium={isPremium} onNavigate={() => setMobileOpen(false)} />
         {/* Dark/light + bahasa (mobile SAJA) -- permintaan langsung pengguna,
             29 Agustus 2026. Gaya di sini SENGAJA beda dari topbar desktop
             (border/teks putih transparan, bukan border-app-border/bg-app-
@@ -701,61 +586,35 @@ export default function DashboardLayout({
         aria-label={t("dashboard.nav.overview")}
         className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {shellV2
-          ? (() => {
-              // Rail v2 (§6.2): grup -> landing default domain; item aktif =
-              // FIRST-match prefix (mis. /settings/seo milik Halaman Saya,
-              // bukan Pengaturan).
-              const rail = buildRailItemsV2(t);
-              const activeIdx = rail.findIndex((r) =>
-                r.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : r.matchPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-              );
-              return rail.map((item, idx) => {
-                const Icon = item.icon;
-                const active = idx === activeIdx;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={item.label}
-                    aria-label={item.label}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
-                      active ? "bg-brand-500 text-white" : "text-white/55 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <Icon className="h-[18px] w-[18px]" />
-                  </Link>
-                );
-              });
-            })()
-          : navItems.map((item, idx) => {
-          if (item.type === "divider") {
-            return <div key={`rdiv-${idx}`} className="my-1.5 h-px w-7 flex-shrink-0 bg-white/10" aria-hidden="true" />;
-          }
-          const Icon = item.icon;
-          const href = item.type === "link" ? item.href : item.items.find((s) => s.href !== "#")?.href ?? "/dashboard";
-          const active =
-            item.type === "link"
-              ? pathname === item.href
-              : item.items.some((s) => s.href !== "#" && s.href === pathname);
-          return (
-            <Link
-              key={item.type === "link" ? item.href : item.label}
-              href={href}
-              title={item.label}
-              aria-label={item.label}
-              aria-current={active ? "page" : undefined}
-              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
-                active ? "bg-jeon-purple text-white" : "text-white/55 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-            </Link>
+        {(() => {
+          // Rail v2 (§6.2): grup -> landing default domain; item aktif =
+          // FIRST-match prefix (mis. /settings/seo milik Halaman Saya,
+          // bukan Pengaturan).
+          const rail = buildRailItemsV2(t);
+          const activeIdx = rail.findIndex((r) =>
+            r.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : r.matchPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
           );
-        })}
+          return rail.map((item, idx) => {
+            const Icon = item.icon;
+            const active = idx === activeIdx;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
+                  active ? "bg-brand-500 text-white" : "text-white/55 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </Link>
+            );
+          });
+        })()}
       </nav>
     </>
   );
@@ -872,10 +731,11 @@ export default function DashboardLayout({
                   min-w-0+truncate di judul membiarkan JUDUL yang mengalah
                   duluan (konten paling tidak krusial di baris ini) supaya
                   grup ikon (fungsional) tetap utuh. */}
-              {/* v2: judul dari page-registry (§6.6) + breadcrumb induk pada
-                  kedalaman >1 (§6.5); fallback ke resolusi label legacy. */}
+              {/* Judul dari page-registry (§6.6) + breadcrumb induk pada
+                  kedalaman >1 (§6.5); fallback ke resolusi label legacy
+                  untuk rute yang belum masuk registry. */}
               <p className="min-w-0 flex-1 truncate font-display text-base font-bold text-app-ink">
-                {shellV2 && pageMeta ? (
+                {pageMeta ? (
                   <>
                     {pageMeta.parentKey && (
                       <span className="font-semibold text-app-muted">{t(pageMeta.parentKey)} / </span>
@@ -895,10 +755,10 @@ export default function DashboardLayout({
                     tombol ikon bulat topbar dashboard (border+bg-app-surface),
                     bukan gaya bawaannya sendiri. */}
                 <LanguageSwitcher className="hidden items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold lg:flex" />
-                {/* v2 (§6.5): di bawah lg tema pindah ke dropdown akun
-                    (mengurangi kepadatan topbar); legacy tetap selalu tampil. */}
+                {/* §6.5: di bawah lg tema pindah ke dropdown akun
+                    (mengurangi kepadatan topbar). */}
                 <ThemeToggle
-                  className={`${shellV2 ? "hidden lg:flex" : "flex"} h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple`}
+                  className="hidden h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple lg:flex"
                 />
                 {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
                     di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
@@ -939,7 +799,7 @@ export default function DashboardLayout({
                     sebelum datanya termuat (bukan menebak status). */}
                 {/* v2 (§6.5): pil Live/Draf & chip URL publik KONTEKSTUAL --
                     hanya di domain Halaman Saya, bukan semua halaman. */}
-                {isPublished !== null && (!shellV2 || pageMeta?.domain === "page") && (
+                {isPublished !== null && pageMeta?.domain === "page" && (
                   <span
                     className={`hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider lg:flex ${
                       isPublished ? "border-jeon-success/40 text-jeon-success" : "border-app-border text-app-muted"
@@ -949,7 +809,7 @@ export default function DashboardLayout({
                     {isPublished ? t("dashboard.statusLive") : t("dashboard.statusDraft")}
                   </span>
                 )}
-                {username && (!shellV2 || pageMeta?.domain === "page") && (
+                {username && pageMeta?.domain === "page" && (
                   <button
                     type="button"
                     onClick={handleCopyLink}
@@ -1034,14 +894,12 @@ export default function DashboardLayout({
                           <IconSettings className="h-4 w-4" />
                           {t("dashboard.extraPages.profileAccount")}
                         </Link>
-                        {/* v2 (§6.5): bahasa & tema masuk dropdown akun di
-                            bawah lg (inline-nya disembunyikan di lebar itu). */}
-                        {shellV2 && (
-                          <div className="flex items-center justify-between gap-2 border-t border-app-border px-4 py-2 lg:hidden">
-                            <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
-                            <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
-                          </div>
-                        )}
+                        {/* §6.5: bahasa & tema masuk dropdown akun di bawah
+                            lg (inline-nya disembunyikan di lebar itu). */}
+                        <div className="flex items-center justify-between gap-2 border-t border-app-border px-4 py-2 lg:hidden">
+                          <LanguageSwitcher className="flex items-center gap-0.5 rounded-full border border-app-border p-0.5 text-[11px] font-bold" />
+                          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple" />
+                        </div>
                         <button
                           type="button"
                           role="menuitem"
