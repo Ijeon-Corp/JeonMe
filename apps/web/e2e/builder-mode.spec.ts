@@ -6,7 +6,7 @@ import { registerAndLogin, TEST_IMAGE_PNG_BASE64 } from "./fixtures";
 // Button/Divider. Pola sama seperti catalog-nested-blocks.spec.ts: alur
 // dashboard penuh lewat UI SUNGGUHAN, lalu verifikasi reload (bukti
 // tersimpan di server, bukan cuma state React lokal) & halaman publik.
-test.describe("Canvas Page Builder Fase 1", () => {
+test.describe("Canvas Page Builder", () => {
   test("kreator: Section > Column > Text tersimpan & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "builder1");
     await page.goto("/dashboard/links");
@@ -310,5 +310,142 @@ test.describe("Canvas Page Builder Fase 1", () => {
     // Gallery (Image Grid) & Video+Foto sama-sama tampil dengan foto.
     await expect(page.locator('[data-builder-block-type="gallery"] img')).toHaveCount(1);
     await expect(page.locator('[data-builder-block-type="video_image"] img')).toHaveCount(1);
+  });
+
+  // Fase 3 (permintaan langsung pengguna 8 September 2026): Countdown,
+  // "Card/List/Testimony" (satu block_type fleksibel "list", dikonfirmasi
+  // via AskUserQuestion), Image Slider (alias validasi/upload "gallery"),
+  // Embed generik (iframe+whitelist provider), promosi "maps" (ROOT-ONLY).
+  // Skenario kunci BEDA dari Fase 1/2: CSP frame-src (next.config.js)
+  // WAJIB diuji nyata (bukan cuma baca kode) -- provider baru (Calendly/
+  // Google Forms/Spotify) yang lupa ditambah ke allowlist akan gagal
+  // SENYAP di browser (iframe kosong, tanpa error JS), cuma kelihatan
+  // lewat console CSP violation -- lihat catatan lengkap di plan soal pola
+  // bug ini sudah 2x terjadi sebelumnya (video, lalu maps).
+  test("kreator: Countdown/List-Testimoni/Image Slider/Embed/Maps root tersimpan & tampil di halaman publik", async ({ page }) => {
+    const { username } = await registerAndLogin(page, "builder3");
+    await page.goto("/dashboard/links");
+    await page.getByRole("link", { name: "Buka Mode Builder (Kanvas)" }).click();
+    await expect(page.getByText("Mode Builder")).toBeVisible();
+
+    async function addComponent(label: string) {
+      await page.getByRole("button", { name: "Tambah Komponen" }).click();
+      await page.getByPlaceholder("Cari komponen").fill(label);
+      await page.getByLabel(label, { exact: true }).click();
+    }
+    function treeRow(label: string) {
+      return page
+        .locator("div.flex.items-center.gap-1.rounded-lg")
+        .filter({ has: page.getByLabel("Seret untuk mengurutkan") })
+        .filter({ hasText: new RegExp(`^${label}$`) });
+    }
+
+    // ---- Countdown ----
+    await addComponent("Countdown");
+    await expect(treeRow("Countdown")).toBeVisible({ timeout: 10000 });
+    await treeRow("Countdown").click();
+    const future = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localValue = `${future.getFullYear()}-${pad(future.getMonth() + 1)}-${pad(future.getDate())}T12:00`;
+    const dtInput = page.locator('input[type="datetime-local"]');
+    await dtInput.fill(localValue);
+    await dtInput.blur();
+    await page.waitForTimeout(700);
+
+    // ---- List (gaya Testimoni) ----
+    await addComponent("Card/List/Testimoni");
+    await expect(treeRow("Card/List/Testimoni")).toBeVisible({ timeout: 10000 });
+    await treeRow("Card/List/Testimoni").click();
+    await page.getByRole("button", { name: "Testimoni", exact: true }).click();
+    await page.waitForTimeout(700); // PATCH ganti style -- tunggu selesai sebelum Tambah Item (butuh style testimony utk placeholder "Nama").
+    await page.getByRole("button", { name: "Tambah Item" }).click();
+    await page.waitForTimeout(700);
+    await page.getByPlaceholder("Nama").fill("Budi Santoso");
+    await page.getByPlaceholder("Kutipan/testimoni").fill("Produk ini sangat membantu bisnis saya!");
+    await page.getByPlaceholder("Peran/perusahaan (opsional)").fill("CEO, Budi Corp");
+    await page.getByPlaceholder("Peran/perusahaan (opsional)").blur();
+    await page.waitForTimeout(700);
+
+    // ---- Image Slider (alias upload "gallery") ----
+    await addComponent("Image Slider");
+    await expect(treeRow("Image Slider")).toBeVisible({ timeout: 10000 });
+    await treeRow("Image Slider").click();
+    await expect(page.getByText("0/9")).toBeVisible({ timeout: 10000 });
+    await page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({ name: "slide1.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
+    await expect(page.getByText("1/9")).toBeVisible({ timeout: 15000 });
+
+    // ---- Embed generik (Calendly) ----
+    await addComponent("Embed");
+    await expect(treeRow("Embed")).toBeVisible({ timeout: 10000 });
+    await treeRow("Embed").click();
+    await page.getByPlaceholder("Tautan Google Forms, Calendly, atau Spotify").fill("https://calendly.com/some-user/30min");
+    await page.getByPlaceholder("Tautan Google Forms, Calendly, atau Spotify").blur();
+    await page.waitForTimeout(700);
+
+    // ---- Maps (promosi block_type lama, ROOT-ONLY) ----
+    await addComponent("Lokasi/Maps");
+    await expect(treeRow("Lokasi/Maps")).toBeVisible({ timeout: 10000 });
+    await treeRow("Lokasi/Maps").click();
+    await page.getByPlaceholder("Tautan berbagi Google Maps").fill("https://www.google.com/maps/place/Monas/@-6.1753871,106.8249641,17z");
+    await page.getByPlaceholder("Tautan berbagi Google Maps").blur();
+    await page.waitForTimeout(500);
+    // resolveMapsEmbedCoords (backend) benar-benar memanggil Google Maps
+    // sungguhan begitu toggle embed dinyalakan -- beri waktu lebih.
+    const [mapsPatchResp] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/dashboard/links/") && r.request().method() === "PATCH"),
+      page.getByText("Tampilkan peta interaktif (embed)").click(),
+    ]);
+    expect(mapsPatchResp.status()).toBe(200);
+    await page.waitForTimeout(500);
+
+    // ---- Reload -- pastikan semuanya tersimpan di server ----
+    await page.reload();
+    await expect(treeRow("Countdown")).toBeVisible({ timeout: 10000 });
+    await expect(treeRow("Card/List/Testimoni")).toBeVisible();
+    await expect(treeRow("Image Slider")).toBeVisible();
+    await expect(treeRow("Embed")).toBeVisible();
+    await expect(treeRow("Lokasi/Maps")).toBeVisible();
+
+    await treeRow("Card/List/Testimoni").click();
+    // style "testimony" bertahan setelah reload -- bukti langsung bug
+    // merge block_data (handleUpdateNode cabang root) sudah diperbaiki,
+    // bukan cuma "items tersimpan" tanpa "style" ikut hilang diam-diam.
+    await expect(page.getByRole("button", { name: "Testimoni", exact: true })).toHaveClass(/border-jeon-purple/);
+    await expect(page.getByPlaceholder("Nama")).toHaveValue("Budi Santoso", { timeout: 10000 });
+
+    // ---- Halaman publik: verifikasi render + CSP frame-src nyata ----
+    const cspViolations: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error" && /Content Security Policy|Refused to frame/i.test(msg.text())) {
+        cspViolations.push(msg.text());
+      }
+    });
+    await page.goto(`/${username}`);
+    await page.waitForTimeout(1500);
+
+    await expect(page.locator('[data-builder-block-type="countdown"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-builder-block-type="list"]')).toContainText("Budi Santoso");
+    await expect(page.locator('[data-builder-block-type="list"]')).toContainText("CEO, Budi Corp");
+    await expect(page.locator('[data-builder-block-type="image_slider"] img')).toHaveCount(1);
+    await expect(page.locator('[data-builder-block-type="maps"]')).toContainText("Lokasi/Maps");
+
+    // Embed: iframe Calendly SUNGGUHAN merender (bukti CSP frame-src
+    // mengizinkan calendly.com di halaman publik SUNGGUHAN, TANPA
+    // bypassCSP -- default Playwright sudah menegakkan CSP apa adanya).
+    const embedIframe = page.locator('[data-builder-block-type="embed"] iframe[src*="calendly.com"]');
+    await expect(embedIframe).toBeVisible({ timeout: 10000 });
+
+    // Countdown benar-benar TICKING (bukan render-sekali-lalu-diam) --
+    // ambil angka detik dua kali berjarak >=1.2 detik, harus beda.
+    const secondsCell = page.locator('[data-builder-block-type="countdown"] p.tabular-nums').last();
+    const secondsBefore = await secondsCell.textContent();
+    await page.waitForTimeout(1200);
+    const secondsAfter = await secondsCell.textContent();
+    expect(secondsAfter).not.toBe(secondsBefore);
+
+    expect(cspViolations.filter((v) => /frame-src/i.test(v))).toEqual([]);
   });
 });
