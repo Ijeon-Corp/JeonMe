@@ -7,7 +7,6 @@ import { IconCheck, IconInstagram, IconTiktok, IconTrash } from "@/components/ic
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 import PageSkeleton from "@/components/Skeleton";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import { useErrorToast } from "@/lib/use-error-toast";
 
@@ -139,22 +138,17 @@ export default function SocialConnectPage() {
     }
   }
 
-  if (loading) {
-    // v2 (§18.3): skeleton konsisten dgn pola global, bukan teks polos.
-    return dashRedesignEnabled("settings") ? <PageSkeleton /> : <p className="text-sm text-app-muted">{t("dashboard.pages.socialConnect.loading")}</p>;
-  }
+  // Skeleton konsisten dgn pola global (§18.3), stabil di production
+  // sejak v0.37.0/v0.38.0, flag "settings" dihapus dari file ini 8
+  // September 2026.
+  if (loading) return <PageSkeleton />;
 
   const instagramConnection = connections.find((c) => c.platform === "instagram");
   const tiktokConnection = connections.find((c) => c.platform === "tiktok");
 
   return (
     <div className="mx-auto max-w-2xl">
-      {dashRedesignEnabled("settings") ? (
-        <PageHeader title={t("dashboard.nav.socialConnect")} description={t("dashboard.pages.socialConnect.intro")} />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.socialConnect.intro")}</p>
-      )}
-
+      <PageHeader title={t("dashboard.nav.socialConnect")} description={t("dashboard.pages.socialConnect.intro")} />
 
       <div className="mt-5 flex flex-col gap-3">
         <ConnectCard

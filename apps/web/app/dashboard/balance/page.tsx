@@ -19,12 +19,11 @@ import {
   listPayoutMethods,
   listPayouts,
 } from "@/lib/api-client";
-import { IconBadgeCheck, IconCheck, IconClose, IconShield, IconWallet } from "@/components/icons";
+import { IconBadgeCheck, IconCheck, IconClose, IconWallet } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import StatCard from "@/components/StatCard";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -56,11 +55,11 @@ export default function DashboardBalancePage() {
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
 
-  // v2 (SPEC §17.1, Phase 7, flag "settings"): form payout pindah ke
-  // DIALOG terfokus + quick amounts (min/50%/maks) + checklist kesiapan
-  // (KYC/metode terverifikasi/saldo min) + rincian biaya collapsible.
-  // createPayout & validasi backend TIDAK berubah.
-  const settingsV2 = dashRedesignEnabled("settings");
+  // Form payout via DIALOG terfokus + quick amounts (min/50%/maks) +
+  // checklist kesiapan (KYC/metode terverifikasi/saldo min) + rincian
+  // biaya collapsible (SPEC §17.1, Phase 7). LENGKAP & stabil di
+  // production sejak v0.37.0/v0.38.0, flag "settings" dihapus dari file
+  // ini 8 September 2026.
   const [payoutOpen, setPayoutOpen] = useState(false);
   const [kyc, setKyc] = useState<KycStatus | null>(null);
   const [amount, setAmount] = useState("");
@@ -141,18 +140,15 @@ export default function DashboardBalancePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {settingsV2 && (
-        <PageHeader
-          title={t("dashboard.nav.balance")}
-          primaryAction={{
-            label: t("dashboard.pages.balance.withdrawCta"),
-            onClick: () => setPayoutOpen(true),
-            disabled: verifiedMethods.length === 0 || (balance?.available_idr ?? 0) < 50000,
-            icon: <IconWallet className="h-4 w-4" />,
-          }}
-        />
-      )}
-
+      <PageHeader
+        title={t("dashboard.nav.balance")}
+        primaryAction={{
+          label: t("dashboard.pages.balance.withdrawCta"),
+          onClick: () => setPayoutOpen(true),
+          disabled: verifiedMethods.length === 0 || (balance?.available_idr ?? 0) < 50000,
+          icon: <IconWallet className="h-4 w-4" />,
+        }}
+      />
 
       {balance && (
         <section className="mt-6 grid grid-cols-2 gap-3">
@@ -250,123 +246,52 @@ export default function DashboardBalancePage() {
             </div>
           </div>
 
-          {settingsV2 ? (
-            <details className="mt-4 group">
-              <summary className="cursor-pointer list-none">
-                <span className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</span>
-                <span className="ml-2 text-xs text-app-muted">{t("dashboard.pages.balance.feeToggleHint")}</span>
-              </summary>
-              <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
-              <div className="mt-3 flex flex-col gap-1.5">
-                {feeBreakdown.reference.map((r) => (
-                  <div key={r.method} className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-xs">
-                    <span className="font-semibold text-app-ink">{r.label}</span>
-                    <span className="text-app-muted">{r.fee_description}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ) : (
-            <>
-          <h2 className="mt-5 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</h2>
-          <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
-
-          <div className="mt-3 flex flex-col gap-1.5">
-            {feeBreakdown.reference.map((r) => (
-              <div key={r.method} className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-xs">
-                <span className="font-semibold text-app-ink">{r.label}</span>
-                <span className="text-app-muted">{r.fee_description}</span>
-              </div>
-            ))}
-          </div>
-            </>
-          )}
-        </section>
-      )}
-
-      {settingsV2 && (
-        <section className="glass mt-6 rounded-jlg p-5 shadow-card">
-          <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.readinessHeading")}</h2>
-          <ul className="mt-3 flex flex-col gap-2 text-xs">
-            {[
-              { ok: kyc?.status === "verified", label: t("dashboard.pages.balance.readinessKyc"), href: "/dashboard/kyc" },
-              { ok: verifiedMethods.length > 0, label: t("dashboard.pages.balance.readinessMethod"), href: "/dashboard/settings/payment" },
-              { ok: (balance?.available_idr ?? 0) >= 50000, label: t("dashboard.pages.balance.readinessMinBalance") },
-            ].map((item) => (
-              <li key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2">
-                <span className="flex items-center gap-2 font-semibold text-app-ink">
-                  <span
-                    className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
-                      item.ok ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
-                    }`}
-                  >
-                    {item.ok ? <IconCheck className="h-3 w-3" /> : <IconClose className="h-3 w-3" />}
-                  </span>
-                  {item.label}
-                </span>
-                {!item.ok && item.href && (
-                  <Link href={item.href} className="flex-shrink-0 font-bold text-jeon-purple hover:underline">
-                    {t("dashboard.pages.balance.readinessFixLink")}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {!settingsV2 && (
-      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
-        <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.requestPayoutHeading")}</h2>
-        <p className="mt-1 text-xs text-app-muted">
-          {t("dashboard.pages.balance.minimumPrefix")}{" "}
-          <Link href="/dashboard/kyc" className="inline-flex items-center gap-1 font-semibold text-jeon-purple hover:underline">
-            <IconShield className="h-3 w-3" />
-            {t("dashboard.pages.balance.kycLinkText")}
-          </Link>{" "}
-          {t("dashboard.pages.balance.prioritizedSuffix")}
-        </p>
-
-        {verifiedMethods.length === 0 ? (
-          <p className="mt-3 rounded-lg bg-jeon-purple/5 px-3 py-2 text-xs text-app-ink">
-            {t("dashboard.pages.balance.noMethodPrefix")}{" "}
-            <Link href="/dashboard/settings/payment" className="font-semibold text-jeon-purple hover:underline">
-              {t("dashboard.pages.balance.noMethodLinkText")}
-            </Link>{" "}
-            {t("dashboard.pages.balance.noMethodSuffix")}
-          </p>
-        ) : (
-          <form onSubmit={handleRequestPayout} className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="number"
-              min={50000}
-              placeholder={t("dashboard.pages.balance.amountPlaceholder")}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-40 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-            />
-            <select
-              value={selectedMethodId}
-              onChange={(e) => setPayoutMethodId(e.target.value)}
-              className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-            >
-              {verifiedMethods.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.provider} {m.account_number_masked} {m.is_primary ? t("dashboard.pages.balance.primaryLabel") : ""}
-                </option>
+          <details className="mt-4 group">
+            <summary className="cursor-pointer list-none">
+              <span className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.balance.processorFeeHeading")}</span>
+              <span className="ml-2 text-xs text-app-muted">{t("dashboard.pages.balance.feeToggleHint")}</span>
+            </summary>
+            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.balance.processorFeeNote")}</p>
+            <div className="mt-3 flex flex-col gap-1.5">
+              {feeBreakdown.reference.map((r) => (
+                <div key={r.method} className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-xs">
+                  <span className="font-semibold text-app-ink">{r.label}</span>
+                  <span className="text-app-muted">{r.fee_description}</span>
+                </div>
               ))}
-            </select>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-            >
-              {submitting ? t("dashboard.pages.balance.processingButton") : t("dashboard.pages.balance.submitButton")}
-            </button>
-          </form>
-        )}
-      </section>
+            </div>
+          </details>
+        </section>
       )}
+
+      <section className="glass mt-6 rounded-jlg p-5 shadow-card">
+        <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.readinessHeading")}</h2>
+        <ul className="mt-3 flex flex-col gap-2 text-xs">
+          {[
+            { ok: kyc?.status === "verified", label: t("dashboard.pages.balance.readinessKyc"), href: "/dashboard/kyc" },
+            { ok: verifiedMethods.length > 0, label: t("dashboard.pages.balance.readinessMethod"), href: "/dashboard/settings/payment" },
+            { ok: (balance?.available_idr ?? 0) >= 50000, label: t("dashboard.pages.balance.readinessMinBalance") },
+          ].map((item) => (
+            <li key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-app-border px-3 py-2">
+              <span className="flex items-center gap-2 font-semibold text-app-ink">
+                <span
+                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
+                    item.ok ? "bg-jeon-purple/10 text-jeon-purple" : "bg-gray-100 text-app-muted"
+                  }`}
+                >
+                  {item.ok ? <IconCheck className="h-3 w-3" /> : <IconClose className="h-3 w-3" />}
+                </span>
+                {item.label}
+              </span>
+              {!item.ok && item.href && (
+                <Link href={item.href} className="flex-shrink-0 font-bold text-jeon-purple hover:underline">
+                  {t("dashboard.pages.balance.readinessFixLink")}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="glass mt-6 rounded-jlg p-5 shadow-card">
         <h2 className="font-display text-lg font-bold text-app-ink">{t("dashboard.pages.balance.historyHeading")}</h2>
@@ -386,7 +311,7 @@ export default function DashboardBalancePage() {
 
       {/* Dialog Tarik Dana (§17.1) -- form payout terfokus + quick amounts.
           Validasi (min 50k, metode terverifikasi) & createPayout identik. */}
-      {settingsV2 && payoutOpen && balance && (
+      {payoutOpen && balance && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setPayoutOpen(false)}>
           <div
             role="dialog"

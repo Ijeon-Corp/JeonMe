@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, KycStatus, getKycStatus, submitKyc } from "@/lib/api-client";
 import { IconCheck, IconShield, IconUpload } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge from "@/components/dashboard/data/StatusBadge";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -29,11 +28,12 @@ export default function DashboardKycPage() {
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
   const [submitting, setSubmitting] = useState(false);
-  // v2 (SPEC §17.3, Phase 7, flag "settings"): form jadi STEPPER 4 langkah
-  // (Identitas -> Bisnis -> Dokumen -> Review) dengan SATU submitKyc di
-  // akhir. Ketiga input file TETAP ter-mount di semua langkah (di-hide via
-  // CSS, bukan unmount) supaya ref file tidak hilang saat pindah langkah.
-  const settingsV2 = dashRedesignEnabled("settings");
+  // Form STEPPER 4 langkah (Identitas -> Bisnis -> Dokumen -> Review)
+  // dengan SATU submitKyc di akhir (SPEC §17.3, Phase 7). Ketiga input
+  // file TETAP ter-mount di semua langkah (di-hide via CSS, bukan
+  // unmount) supaya ref file tidak hilang saat pindah langkah. LENGKAP &
+  // stabil di production sejak v0.37.0/v0.38.0, flag "settings" dihapus
+  // dari file ini 8 September 2026.
   const [kycStep, setKycStep] = useState(1);
   const [fileNames, setFileNames] = useState({ ktp: "", selfie: "", bank: "" });
 
@@ -83,7 +83,7 @@ export default function DashboardKycPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (settingsV2 && kycStep < 4) {
+    if (kycStep < 4) {
       // Enter di langkah awal = lanjut, bukan submit.
       handleNext();
       return;
@@ -129,11 +129,7 @@ export default function DashboardKycPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {settingsV2 ? (
-        <PageHeader title={t("dashboard.extraPages.kycVerification")} description={t("dashboard.pages.kyc.intro")} />
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.kyc.intro")}</p>
-      )}
+      <PageHeader title={t("dashboard.extraPages.kycVerification")} description={t("dashboard.pages.kyc.intro")} />
 
 
       {status && (
@@ -168,27 +164,25 @@ export default function DashboardKycPage() {
             {t("dashboard.pages.kyc.requirementNote")}
           </p>
 
-          {settingsV2 && (
-            <ol className="flex items-center gap-1.5" aria-label={t("dashboard.pages.kyc.stepperLabel")}>
-              {[1, 2, 3, 4].map((n) => (
-                <li key={n} className="flex flex-1 items-center gap-1.5">
-                  <span
-                    aria-current={kycStep === n ? "step" : undefined}
-                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                      kycStep >= n ? "bg-jeon-purple text-white" : "bg-app-surface-2 text-app-muted"
-                    }`}
-                  >
-                    {n}
-                  </span>
-                  <span className={`hidden truncate text-[10px] font-semibold sm:block ${kycStep === n ? "text-app-ink" : "text-app-muted"}`}>
-                    {t(`dashboard.pages.kyc.step${n}Label`)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <ol className="flex items-center gap-1.5" aria-label={t("dashboard.pages.kyc.stepperLabel")}>
+            {[1, 2, 3, 4].map((n) => (
+              <li key={n} className="flex flex-1 items-center gap-1.5">
+                <span
+                  aria-current={kycStep === n ? "step" : undefined}
+                  className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                    kycStep >= n ? "bg-jeon-purple text-white" : "bg-app-surface-2 text-app-muted"
+                  }`}
+                >
+                  {n}
+                </span>
+                <span className={`hidden truncate text-[10px] font-semibold sm:block ${kycStep === n ? "text-app-ink" : "text-app-muted"}`}>
+                  {t(`dashboard.pages.kyc.step${n}Label`)}
+                </span>
+              </li>
+            ))}
+          </ol>
 
-          <div className={settingsV2 && kycStep !== 1 ? "hidden" : "contents"}>
+          <div className={kycStep !== 1 ? "hidden" : "contents"}>
 
           <label className="text-xs font-semibold text-app-ink">
             {t("dashboard.pages.kyc.fullNameLabel")}
@@ -212,7 +206,7 @@ export default function DashboardKycPage() {
 
           </div>
 
-          <div className={settingsV2 && kycStep !== 2 ? "hidden" : "contents"}>
+          <div className={kycStep !== 2 ? "hidden" : "contents"}>
           <label className="text-xs font-semibold text-app-ink">
             {t("dashboard.pages.kyc.domicileAddressLabel")}
             <textarea
@@ -245,7 +239,7 @@ export default function DashboardKycPage() {
 
           </div>
 
-          <div className={settingsV2 && kycStep !== 3 ? "hidden" : "contents"}>
+          <div className={kycStep !== 3 ? "hidden" : "contents"}>
           <label className="text-xs font-semibold text-app-ink">
             {t("dashboard.pages.kyc.ktpPhotoLabel")}
             <input ref={ktpInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setFileNames((f) => ({ ...f, ktp: e.target.files?.[0]?.name ?? "" }))} className="mt-1 w-full text-xs" />
@@ -263,7 +257,7 @@ export default function DashboardKycPage() {
 
           </div>
 
-          {settingsV2 && kycStep === 4 && (
+          {kycStep === 4 && (
             <div className="flex flex-col gap-1.5 rounded-xl border border-app-border p-3.5 text-xs">
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-app-muted">{t("dashboard.pages.kyc.step4Label")}</p>
               {[
@@ -285,7 +279,7 @@ export default function DashboardKycPage() {
           )}
 
           <div className="mt-2 flex gap-2">
-            {settingsV2 && kycStep > 1 && (
+            {kycStep > 1 && (
               <button
                 type="button"
                 onClick={() => { setError(null); setKycStep((v) => v - 1); }}
@@ -294,7 +288,7 @@ export default function DashboardKycPage() {
                 {t("dashboard.pages.kyc.backButton")}
               </button>
             )}
-            {settingsV2 && kycStep < 4 ? (
+            {kycStep < 4 ? (
               <button type="button" onClick={handleNext} className="btn-primary flex-1 rounded-lg py-2.5 text-sm font-bold text-white">
                 {t("dashboard.pages.kyc.continueButton")}
               </button>

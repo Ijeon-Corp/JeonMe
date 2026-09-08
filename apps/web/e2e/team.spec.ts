@@ -1,14 +1,14 @@
 import { test, expect, Page } from "@playwright/test";
 import { registerAndLogin } from "./fixtures";
 
-// Dashboard Redesign v2 (settingsV2, flag "settings", default ON): halaman
-// Tim jadi bertab (Anggota/Undangan/Aktivitas, dashboard/team/page.tsx) --
-// tiap section HANYA dirender di tabnya sendiri (`teamTab === "invites"`
-// dkk), BUKAN semua tampil sekaligus di satu halaman datar seperti versi
-// lama yang test ini awalnya ditulis untuk itu. Form undang ada di
-// "Undangan", daftar anggota+role di "Anggota", riwayat aktivitas
-// (formatAuditEntry -- "Mengundang X sebagai Y", "Mengubah role...",
-// "Mencabut akses...", "X menerima undangan") HANYA muncul di "Aktivitas".
+// Dashboard Redesign v2: halaman Tim jadi bertab (Anggota/Undangan/
+// Aktivitas, dashboard/team/page.tsx) -- tiap section HANYA dirender di
+// tabnya sendiri (`teamTab === "invites"` dkk), BUKAN semua tampil
+// sekaligus di satu halaman datar seperti versi lama yang test ini
+// awalnya ditulis untuk itu. Form undang ada di "Undangan", daftar
+// anggota+role di "Anggota", riwayat aktivitas (formatAuditEntry --
+// "Mengundang X sebagai Y", "Mengubah role...", "Mencabut akses...",
+// "X menerima undangan") HANYA muncul di "Aktivitas".
 async function goToTab(p: Page, tabName: "Anggota" | "Undangan" | "Aktivitas") {
   await p.getByRole("tab", { name: tabName }).click();
 }
