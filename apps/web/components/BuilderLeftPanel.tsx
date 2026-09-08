@@ -18,15 +18,20 @@ import {
   IconBox,
   IconCamera,
   IconChevronRight,
+  IconClock,
   IconColumns,
   IconDivider,
   IconExternal,
   IconGripVertical,
+  IconIframe,
   IconLink,
+  IconListCard,
+  IconMapPin,
   IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
   IconSettings,
+  IconSlideshow,
   IconTextLines,
   IconTrash,
   IconVideoImage,
@@ -175,6 +180,12 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   image: IconCamera,
   video_image: IconVideoImage,
   embed_link: IconLink,
+  // Fase 3 (permintaan langsung pengguna 8 September 2026).
+  countdown: IconClock,
+  list: IconListCard,
+  image_slider: IconSlideshow,
+  embed: IconIframe,
+  maps: IconMapPin,
 };
 
 // TYPE_LABEL_KEY -- pemetaan STATIS block_type -> suffix key
@@ -194,6 +205,11 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   image: "typeImage",
   video_image: "typeVideoImage",
   embed_link: "typeEmbedLink",
+  countdown: "typeCountdown",
+  list: "typeList",
+  image_slider: "typeImageSlider",
+  embed: "typeEmbed",
+  maps: "typeMaps",
 };
 
 function TreeNodeView({
@@ -528,6 +544,166 @@ function GalleryGridEditor({
   );
 }
 
+// toDatetimeLocalValue -- Canvas Page Builder Fase 3 (block "countdown"):
+// `<input type="datetime-local">` butuh format LOKAL tanpa offset zona
+// waktu ("YYYY-MM-DDTHH:mm"), beda dari `target_at` yang disimpan sbg
+// ISO 8601 UTC (`toISOString()`, lihat onBlur di bawah) -- konversi manual
+// pakai getFullYear/dst (BUKAN slice string ISO) supaya representasi yang
+// ditampilkan konsisten di ZONA WAKTU BROWSER kreator, bukan UTC mentah.
+function toDatetimeLocalValue(targetAt: string | undefined): string {
+  if (!targetAt) return "";
+  const d = new Date(targetAt);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ListItemsEditor -- Canvas Page Builder Fase 3 (permintaan langsung
+// pengguna 8 September 2026): editor block_type "list" (gabungan "Card/
+// List/Testimony" jadi satu block_type fleksibel, dikonfirmasi via
+// AskUserQuestion) -- selector gaya (List/Card/Testimoni) + daftar item
+// tambah/hapus, pola SAMA PERSIS FaqItemsEditor (termasuk key-remount fix
+// `${i}-${items.length}` supaya baris yang digeser index-nya tidak
+// menampilkan teks basi dari baris lain, uncontrolled input).
+interface ListEditorItem {
+  title: string;
+  description?: string;
+  author?: string;
+}
+
+function ListItemsEditor({
+  node,
+  onUpdateStyle,
+  onUpdateItems,
+}: {
+  node: BuilderTreeNode;
+  onUpdateStyle: (style: "list" | "card" | "testimony") => void;
+  onUpdateItems: (items: ListEditorItem[]) => void;
+}) {
+  const { t } = useLocale();
+  const style = (node.blockData?.style as "list" | "card" | "testimony" | undefined) ?? "list";
+  const items = (node.blockData?.items as ListEditorItem[] | undefined) ?? [];
+  const isTestimony = style === "testimony";
+
+  function updateItem(index: number, patch: Partial<ListEditorItem>) {
+    onUpdateItems(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-1.5">
+        {(
+          [
+            ["list", t("dashboard.pages.linksBuilder.listStyleList")],
+            ["card", t("dashboard.pages.linksBuilder.listStyleCard")],
+            ["testimony", t("dashboard.pages.linksBuilder.listStyleTestimony")],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onUpdateStyle(key)}
+            className={`flex-1 rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
+              style === key ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        {items.map((item, i) => (
+          <div key={`${i}-${items.length}`} className="flex flex-col gap-1 rounded-lg border border-app-border p-2">
+            <div className="flex items-center gap-1">
+              <input
+                defaultValue={item.title}
+                onBlur={(e) => updateItem(i, { title: e.target.value })}
+                placeholder={
+                  isTestimony ? t("dashboard.pages.linksBuilder.listItemNamePlaceholder") : t("dashboard.pages.linksBuilder.listItemTitlePlaceholder")
+                }
+                className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+              />
+              <button
+                type="button"
+                onClick={() => onUpdateItems(items.filter((_, idx) => idx !== i))}
+                aria-label={t("dashboard.pages.linksBuilder.listRemoveItem")}
+                className="flex-shrink-0 text-app-muted hover:text-red-600"
+              >
+                <IconTrash className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              defaultValue={item.description ?? ""}
+              onBlur={(e) => updateItem(i, { description: e.target.value })}
+              rows={2}
+              placeholder={
+                isTestimony ? t("dashboard.pages.linksBuilder.listItemQuotePlaceholder") : t("dashboard.pages.linksBuilder.listItemDescriptionPlaceholder")
+              }
+              className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+            />
+            {isTestimony && (
+              <input
+                defaultValue={item.author ?? ""}
+                onBlur={(e) => updateItem(i, { author: e.target.value })}
+                placeholder={t("dashboard.pages.linksBuilder.listItemAuthorPlaceholder")}
+                className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onUpdateItems([...items, { title: "", description: "" }])}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+      >
+        <IconPlus className="h-3.5 w-3.5" />
+        {t("dashboard.pages.linksBuilder.listAddItem")}
+      </button>
+    </div>
+  );
+}
+
+// MapsEditor -- Canvas Page Builder Fase 3, block "maps" (ROOT-ONLY, lihat
+// catatan lengkap di plan): url+embed WAJIB dikirim BERSAMAAN dalam SATU
+// PATCH tiap kali salah satunya berubah (BUKAN per-field onBlur independen
+// spt panel lain) -- backend (UpdateLink, links.go) cuma menjalankan
+// resolveMapsEmbedCoords ulang ketika `block_data.embed` ADA di payload
+// PATCH yang sama, jadi kalau url & embed dikirim terpisah, mengedit URL
+// SETELAH toggle embed sudah aktif akan meninggalkan koordinat lama/basi.
+// State lokal (url/embed) dipakai supaya nilai TERBARU dari KEDUA field
+// selalu ikut terbawa, apa pun yang baru saja diubah pengguna -- pola
+// SAMA PERSIS `handleSaveContent` (dashboard/links/page.tsx) yang
+// mengirim url+block_data.embed sekaligus lewat satu tombol Simpan.
+function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url: string, embed: boolean) => void }) {
+  const { t } = useLocale();
+  const [url, setUrl] = useState(node.url ?? "");
+  const [embed, setEmbed] = useState(Boolean(node.blockData?.embed));
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onBlur={() => onUpdate(url, embed)}
+        placeholder={t("dashboard.pages.linksBuilder.mapsUrlPlaceholder")}
+        className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+      />
+      <label className="flex items-center gap-2 text-xs text-app-ink">
+        <input
+          type="checkbox"
+          checked={embed}
+          onChange={(e) => {
+            setEmbed(e.target.checked);
+            onUpdate(url, e.target.checked);
+          }}
+        />
+        {t("dashboard.pages.linksBuilder.mapsEmbedToggle")}
+      </label>
+    </div>
+  );
+}
+
 export default function BuilderLeftPanel({
   links,
   onAdd,
@@ -741,7 +917,7 @@ export default function BuilderLeftPanel({
                 />
               )}
 
-              {selectedNode.blockType === "gallery" && (
+              {(selectedNode.blockType === "gallery" || selectedNode.blockType === "image_slider") && (
                 <GalleryGridEditor
                   key={selectedNode.id}
                   rootId={selectedNode.rootId}
@@ -798,6 +974,60 @@ export default function BuilderLeftPanel({
                     onChanged={onRefresh}
                   />
                 </div>
+              )}
+
+              {selectedNode.blockType === "countdown" && (
+                <div className="flex flex-col gap-2">
+                  <input
+                    defaultValue={selectedNode.title}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
+                    placeholder={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <input
+                    type="datetime-local"
+                    defaultValue={toDatetimeLocalValue(selectedNode.blockData?.target_at as string | undefined)}
+                    onBlur={(e) =>
+                      onUpdateNode(selectionOf(selectedNode), {
+                        blockData: { target_at: e.target.value ? new Date(e.target.value).toISOString() : "" },
+                      })
+                    }
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                </div>
+              )}
+
+              {selectedNode.blockType === "list" && (
+                <ListItemsEditor
+                  node={selectedNode}
+                  onUpdateStyle={(style) => onUpdateNode(selectionOf(selectedNode), { blockData: { style } })}
+                  onUpdateItems={(items) => onUpdateNode(selectionOf(selectedNode), { blockData: { items } })}
+                />
+              )}
+
+              {selectedNode.blockType === "embed" && (
+                <div className="flex flex-col gap-2">
+                  <input
+                    defaultValue={selectedNode.title}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
+                    placeholder={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <input
+                    defaultValue={(selectedNode.blockData?.embed_url as string) ?? ""}
+                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { embed_url: e.target.value } })}
+                    placeholder={t("dashboard.pages.linksBuilder.embedUrlPlaceholder")}
+                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+                  />
+                  <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.embedHint")}</p>
+                </div>
+              )}
+
+              {selectedNode.blockType === "maps" && (
+                <MapsEditor
+                  node={selectedNode}
+                  onUpdate={(url, embed) => onUpdateNode(selectionOf(selectedNode), { url, blockData: { embed } })}
+                />
               )}
 
               {selectedNode.blockType === "column" && (

@@ -747,9 +747,19 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// block_type fleksibel, dikonfirmasi via AskUserQuestion 8 September
 		// 2026): `style` menentukan tampilan (list/card/testimony di
 		// renderBuilderNode), `items[]` opsional (shell-first, pola sama
-		// "faq") -- tiap item kalau ADA wajib title tidak kosong (description/
-		// author bebas, termasuk kosong). TIDAK ada upload foto per-item di
-		// Fase 3 (author cuma teks nama, lihat catatan lingkup di plan).
+		// "faq") -- tiap item kalau ADA cukup wajib berupa objek, TIDAK ada
+		// requirement title/description/author terisi.
+		//
+		// Requirement "title wajib tidak kosong" SEMPAT ada di sini tapi
+		// dibuang lewat verifikasi live (bukan cuma baca kode): tombol
+		// "Tambah Item" (ListItemsEditor, BuilderLeftPanel.tsx) menambah
+		// baris KOSONG dulu ({title:"", description:""}) baru diisi
+		// belakangan lewat onBlur per field -- pola shell-first yang SAMA
+		// PERSIS FaqItemsEditor -- requirement title di sini menolak PATCH
+		// pertama itu dgn 400 SEBELUM sempat diisi sama sekali, membuat
+        // baris baru tidak pernah benar-benar muncul di UI. TIDAK ada
+		// upload foto per-item di Fase 3 (author cuma teks nama, lihat
+		// catatan lingkup di plan).
 		if raw, ok := data["style"]; ok {
 			style, _ := raw.(string)
 			if style != "list" && style != "card" && style != "testimony" {
@@ -761,13 +771,8 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 			items = []any{}
 		}
 		for _, raw := range items {
-			item, isMap := raw.(map[string]any)
-			if !isMap {
+			if _, isMap := raw.(map[string]any); !isMap {
 				return "setiap item wajib berupa objek", false
-			}
-			title, _ := item["title"].(string)
-			if strings.TrimSpace(title) == "" {
-				return "setiap item wajib punya judul", false
 			}
 		}
 	case "embed":

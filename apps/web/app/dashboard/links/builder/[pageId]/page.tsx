@@ -160,8 +160,11 @@ export default function BuilderPage() {
           // -- root "button" WAJIB url non-kosong (beda dari anak tertanam
           // di Section/Column, lihat catatan lengkap di links.go), jadi
           // placeholder ini SENGAJA sebuah URL valid, diedit belakangan
-          // lewat panel kiri.
-          url: type === "button" ? "https://example.com" : undefined,
+          // lewat panel kiri. "maps" ROOT punya requirement yang SAMA
+          // (CreateBlock, links.go: "tautan Google Maps wajib diisi"),
+          // ketahuan lewat verifikasi live -- placeholder di sini,
+          // ditimpa tautan Maps sungguhan lewat MapsEditor.
+          url: type === "button" || type === "maps" ? "https://example.com" : undefined,
         });
       } else {
         if (type === "maps") return; // modal sudah menyaring ini, jaga-jaga saja.
@@ -244,11 +247,20 @@ export default function BuilderPage() {
     setError(null);
     try {
       if (target.path.length === 0) {
+        const root = findRoot(target.rootId);
         await updateLink(target.rootId, {
           ...(patch.title !== undefined ? { title: patch.title } : {}),
           ...(patch.url !== undefined ? { url: patch.url } : {}),
           ...(patch.description !== undefined ? { description: patch.description } : {}),
-          ...(patch.blockData !== undefined ? { block_data: patch.blockData } : {}),
+          // Fase 3 (bug ditemukan lewat verifikasi live -- block "list"
+          // punya DUA field block_data terpisah, style & items, masing-
+          // masing dikirim lewat onUpdateNode sendiri-sendiri): MERGE
+          // dengan block_data root yang SUDAH ADA, bukan timpa total --
+          // pola SAMA PERSIS cabang bersarang di bawah (`{ ...node.block_data,
+          // ...patch.blockData }`), yang SUDAH benar sejak awal. Tanpa ini,
+          // field lain di block_data yang sama (mis. "style" saat "items"
+          // diperbarui) diam-diam hilang tiap PATCH parsial.
+          ...(patch.blockData !== undefined ? { block_data: { ...root?.block_data, ...patch.blockData } } : {}),
         });
       } else {
         const root = findRoot(target.rootId);

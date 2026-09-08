@@ -906,7 +906,7 @@ func TestValidateBlockData_BuilderFase3Types(t *testing.T) {
 		}
 	})
 
-	t.Run("list kosong lolos, style tidak dikenal ditolak, item tanpa judul ditolak", func(t *testing.T) {
+	t.Run("list kosong lolos, style tidak dikenal ditolak, item tanpa judul (shell-first) tetap lolos", func(t *testing.T) {
 		if msg, ok := validateBlockData("list", map[string]any{}); !ok {
 			t.Fatalf("list kosong seharusnya lolos, dapat: %s", msg)
 		}
@@ -916,8 +916,15 @@ func TestValidateBlockData_BuilderFase3Types(t *testing.T) {
 		if _, ok := validateBlockData("list", map[string]any{"style": "grid"}); ok {
 			t.Fatal("style yang tidak dikenal seharusnya ditolak")
 		}
-		if _, ok := validateBlockData("list", map[string]any{"items": []any{map[string]any{"description": "tanpa judul"}}}); ok {
-			t.Fatal("item tanpa judul seharusnya ditolak")
+		// Shell-first (pola sama FAQ, lihat catatan lengkap di
+		// validateBlockDataAtDepth case "list"): item BOLEH tanpa judul --
+		// ListItemsEditor menambah baris kosong dulu ("Tambah Item"), diisi
+		// belakangan lewat onBlur per field, satu field per PATCH.
+		if msg, ok := validateBlockData("list", map[string]any{"items": []any{map[string]any{"description": "tanpa judul"}}}); !ok {
+			t.Fatalf("item tanpa judul seharusnya tetap lolos (shell-first), dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("list", map[string]any{"items": []any{"bukan objek"}}); ok {
+			t.Fatal("item yang bukan objek seharusnya ditolak")
 		}
 		data := map[string]any{"items": []any{map[string]any{"title": "Budi", "description": "Mantap!", "author": "Budi S."}}}
 		if msg, ok := validateBlockData("list", data); !ok {
