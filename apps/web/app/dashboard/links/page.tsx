@@ -232,6 +232,26 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
   file: IconFileText,
   project_showcase: IconCamera,
   catalog: IconGrid,
+  // Tipe blok landing (No.99) & Canvas Page Builder (migrasi 000096) --
+  // bug dilaporkan pengguna 9 September 2026: blok "button" yang dibuat di
+  // Canvas ikut tampil di daftar klasik ini (satu tabel `links` yang sama),
+  // tapi tidak ada ikonnya di peta -> `<DefaultIcon/>` dirender dengan
+  // komponen undefined -> React error #130, SELURUH halaman /dashboard/
+  // links crash (bukan cuma satu baris). Semua tipe yang bisa ada di tabel
+  // didaftarkan di sini; pemakaiannya di bawah TETAP punya fallback supaya
+  // tipe baru di masa depan tidak pernah bisa menjatuhkan halaman lagi.
+  heading: IconTextLines,
+  button: IconLink,
+  image: IconPhotoLibrary,
+  section: IconGrid,
+  column: IconColumns,
+  divider: IconGripVertical,
+  video_image: IconPlayCircle,
+  embed_link: IconLink,
+  countdown: IconClock,
+  list: IconGrid,
+  image_slider: IconPhotoLibrary,
+  embed: IconLink,
 };
 
 // FormField -- dipindahkan ke components/FormField.tsx (6 September 2026,
@@ -2264,10 +2284,12 @@ export default function DashboardLinksPage() {
                   })()
                 ) : (
                   (() => {
-                    const DefaultIcon = BLOCK_TYPE_ICON[link.block_type];
+                    // Fallback WAJIB (lihat catatan di BLOCK_TYPE_ICON): tipe
+                    // yang tidak ada di peta tidak boleh menjatuhkan halaman.
+                    const DefaultIcon = BLOCK_TYPE_ICON[link.block_type] ?? IconGrid;
                     return (
                       <span
-                        title={blockTypeLabel[link.block_type]}
+                        title={blockTypeLabel[link.block_type] ?? link.block_type}
                         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
                       >
                         <DefaultIcon className="h-4 w-4" />
@@ -2305,7 +2327,7 @@ export default function DashboardLinksPage() {
                   )}
                   {link.block_type !== "link" && (
                     <span className="mt-1 inline-block rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
-                      {blockTypeLabel[link.block_type]}
+                      {blockTypeLabel[link.block_type] ?? link.block_type}
                     </span>
                   )}
                 </div>
