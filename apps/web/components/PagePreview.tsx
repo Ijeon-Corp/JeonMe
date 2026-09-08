@@ -2965,6 +2965,31 @@ function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
 // cuma menambah duplikasi konflik. Cakupan Fase 1: leaf "text"/"button"/
 // "divider" + kontainer "section"/"column" (5 tipe kategori GENERAL) --
 // tipe MEDIA/INFORMATION/CONVERSION/OTHERS menyusul Fase 2/3.
+// BUILDER_NODE_BLOCK_TYPES -- daftar PERSIS case yang ditangani switch
+// renderBuilderNode di bawah. Dipakai BuilderPagePreview untuk memutuskan
+// blok akar mana yang dirender lewat jalur builder vs jalur klasik
+// (renderLinkOrBlock) -- lihat catatan bug 9 September 2026 di sana. Kalau
+// menambah case baru di switch, WAJIB tambahkan ke sini juga; kalau tidak,
+// tipe baru itu akan jatuh ke renderLinkOrBlock (yang tidak mengenalnya).
+const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
+  "divider",
+  "text",
+  "button",
+  "section",
+  "column",
+  "video",
+  "faq",
+  "gallery",
+  "image",
+  "video_image",
+  "embed_link",
+  "maps",
+  "image_slider",
+  "countdown",
+  "list",
+  "embed",
+]);
+
 function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean): React.ReactNode {
   // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
   // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
@@ -3300,12 +3325,29 @@ function BuilderPagePreview({
         )}
 
         {data.links.map((link) => {
+          // Bug dilaporkan pengguna 9 September 2026 (akun Premium, halaman
+          // utama builder_mode="builder", lalu menerapkan template Quick
+          // Setup): tautan biasa/Formulir Kontak/Project Unggulan "hilang"
+          // dari pratinjau & halaman publik, cuma Teks/FAQ yang tampil.
+          // Akar masalah: renderBuilderNode HANYA tahu tipe blok era
+          // Canvas Builder dan jatuh ke `default: return null` untuk tipe
+          // klasik (link/contact_form/project_showcase/accordion/audio/file/
+          // catalog/heading) -- padahal catatan BuilderPagePreview sendiri
+          // bilang builderMode "HANYA mengganti cara blok Tautan dirender",
+          // bukan menghapusnya. Tipe klasik di level akar dialihkan ke
+          // renderLinkOrBlock dengan objek PagePreviewLink ASLI (bukan
+          // BuilderRenderNode yang lossy: iconKey/customIconUrl/lockType/
+          // thumbnailUrl ikut terbawa), persis seperti mode "simple".
+          const blockType = link.blockType ?? "link";
+          if (!BUILDER_NODE_BLOCK_TYPES.has(blockType)) {
+            return renderLinkOrBlock(link, theme, data, interactive);
+          }
           const node: BuilderRenderNode = {
             id: link.id,
             title: link.title,
             url: link.url,
             description: link.description,
-            blockType: link.blockType ?? "link",
+            blockType,
             blockData: link.blockData ?? {},
           };
           return renderBuilderNode(node, theme, data, interactive);
