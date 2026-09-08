@@ -87,6 +87,8 @@ func fieldValidationMessage(ve validator.FieldError) string {
 		return field + " harus berupa true atau false"
 	case "url":
 		return field + " harus berupa URL yang valid"
+	case "http_url":
+		return field + " harus berupa URL http/https yang valid"
 	case "datetime":
 		return field + " format tanggal/waktu tidak valid"
 	default:

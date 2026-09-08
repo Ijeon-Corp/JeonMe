@@ -240,7 +240,22 @@ export default function QuickSetupPage() {
       // sama persis dengan yang ditampilkan pratinjau.
       for (const item of orderedTemplateItems(tmpl)) {
         if (item.blockType === "link") {
-          await createLink({ title: item.title, url: item.url, description: item.description });
+          // "email" (PLATFORM_URL.email = "mailto:") TIDAK PERNAH bisa lolos
+          // binding:"http_url" backend (audit keamanan 22 Agustus 2026,
+          // links.go createLinkRequest -- http_url MEMAKSA skema http/https
+          // saja, mailto: ditolak). Bug ditemukan 9 September 2026: gagal di
+          // sini melempar ApiError yang menghentikan SELURUH loop for di
+          // atas (tidak ada try/catch per-item) -- item template SETELAH
+          // link email ini tidak pernah ikut dibuat, hasil akhirnya
+          // separuh/tidak lengkap. mailto: tanpa alamat juga tidak berguna
+          // bagi pengunjung (kotak compose kosong tanpa penerima) --
+          // dialihkan ke blok "contact_form" (form kontak) yang memang
+          // dibuat untuk kasus ini, bukan cuma diperbaiki jadi http/https.
+          if (item.url.startsWith("mailto:")) {
+            await createBlock({ block_type: "contact_form", title: item.title, block_data: {} });
+          } else {
+            await createLink({ title: item.title, url: item.url, description: item.description });
+          }
         } else if (item.blockType === "maps") {
           await createBlock({ block_type: "maps", title: item.title, url: item.url, block_data: { embed: false } });
         } else if (item.blockType === "faq") {
