@@ -216,7 +216,7 @@ export interface PublicLink {
   // juga sensitive content supaya nanti tampil ke user ketika mau akses".
   lock_type: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age: number | null;
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
   block_data: Record<string, unknown>;
   custom_icon_url: string;
   // icon_key -- permintaan langsung pengguna, 13 Agustus 2026: ikon dipilih
@@ -1092,7 +1092,7 @@ export interface LinkItem {
   lock_min_age: number | null;
   // No.99 (Sprint 14): heading/text/image/button -- builder landing page
   // blok manual, lihat catatan lingkup di BlockData backend (migrasi 000030).
-  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
+  block_type: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
   block_data: Record<string, unknown>;
   // click_count -- redesain dashboard Tautan ala Linktree: jumlah klik
   // NYATA dari analytics_events, dihitung backend.
@@ -1121,7 +1121,7 @@ export interface LinkItem {
 // dari tautan biasa); edit/hapus/reorder pakai updateLink/deleteLink/
 // reorderLinks yang sudah ada.
 export function createBlock(input: {
-  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
+  block_type: "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
   title: string;
   url?: string;
   block_data: Record<string, unknown>;
@@ -1390,7 +1390,15 @@ export interface EmbeddedBuilderBlock {
     | "gallery"
     | "image"
     | "video_image"
-    | "embed_link";
+    | "embed_link"
+    // Fase 3 (permintaan langsung pengguna 8 September 2026): "maps"
+    // SENGAJA TIDAK di sini -- block_type itu ROOT-ONLY di Fase 3
+    // (resolveMapsEmbedCoords, backend, belum path-walk ke block_data
+    // bersarang), jadi tidak valid sbg anak Section/Column tertanam.
+    | "countdown"
+    | "list"
+    | "image_slider"
+    | "embed";
   title: string;
   url?: string;
   description?: string;
@@ -1732,7 +1740,7 @@ export function reorderExtraPageLinks(pageId: string, items: { id: string; posit
 export function createExtraPageBlock(
   pageId: string,
   input: {
-    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link";
+    block_type: "heading" | "text" | "image" | "button" | "video" | "faq" | "contact_form" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
     title: string;
     url?: string;
     block_data: Record<string, unknown>;
