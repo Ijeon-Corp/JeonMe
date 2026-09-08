@@ -3,7 +3,6 @@
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { dashRedesignEnabled } from "@/lib/dashboard-flags";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import {
   ApiError,
@@ -31,10 +30,13 @@ import { useErrorToast } from "@/lib/use-error-toast";
 
 export default function DashboardAffiliatesPage() {
   const { t } = useLocale();
-  // v2 (SPEC §15.6, Phase 6, flag "marketing"): dua perspektif dipisah TAB
-  // (Program Saya | Afiliasi yang Saya Ikuti) menggantikan dua daftar
-  // panjang bertumpuk tanpa hierarchy. Data/mutasi tak berubah.
-  const marketingV2 = dashRedesignEnabled("marketing");
+  // Redesign dashboard v2 (SPEC §15.6, Phase 6) -- LENGKAP & stabil di
+  // production sejak v0.37.0/v0.38.0 (2 rilis, syarat rollback §25
+  // terpenuhi), flag "marketing" dihapus dari file ini 8 September 2026:
+  // dua perspektif dipisah TAB (Program Saya | Afiliasi yang Saya Ikuti)
+  // menggantikan dua daftar panjang bertumpuk tanpa hierarchy. Data/mutasi
+  // tak berubah.
+  //
   // "marketplace" & "public" -- marketplace afiliasi publik (benchmark
   // Linktree Earn > Affiliate Products, 3 September 2026).
   const [affTab, setAffTab] = useState<"program" | "joined" | "marketplace" | "public">("program");
@@ -167,44 +169,35 @@ export default function DashboardAffiliatesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {marketingV2 ? (
-        <>
-          <PageHeader
-            title={t("dashboard.extraPages.affiliates")}
-            description={t("dashboard.pages.affiliates.subtitle")}
-            primaryAction={{ label: t("dashboard.pages.affiliates.inviteButton"), onClick: () => { setAffTab("program"); setAdding(true); }, icon: <IconPlus className="h-4 w-4" /> }}
-          />
-          <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {([
-              { key: "program" as const, label: t("dashboard.pages.affiliates.tabProgram") },
-              { key: "joined" as const, label: t("dashboard.pages.affiliates.myAffiliationsHeading") },
-              { key: "marketplace" as const, label: t("dashboard.pages.affiliates.tabMarketplace") },
-              { key: "public" as const, label: t("dashboard.pages.affiliates.tabPublic") },
-            ]).map((tb) => (
-              <button
-                key={tb.key}
-                type="button"
-                role="tab"
-                aria-selected={affTab === tb.key}
-                onClick={() => setAffTab(tb.key)}
-                className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
-                  affTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
-                }`}
-              >
-                {tb.label}
-                {affTab === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className="mt-1 text-sm text-app-muted">
-          {t("dashboard.pages.affiliates.subtitle")}
-        </p>
-      )}
+      <PageHeader
+        title={t("dashboard.extraPages.affiliates")}
+        description={t("dashboard.pages.affiliates.subtitle")}
+        primaryAction={{ label: t("dashboard.pages.affiliates.inviteButton"), onClick: () => { setAffTab("program"); setAdding(true); }, icon: <IconPlus className="h-4 w-4" /> }}
+      />
+      <div className="mb-5 flex items-center gap-1 overflow-x-auto border-b border-app-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {([
+          { key: "program" as const, label: t("dashboard.pages.affiliates.tabProgram") },
+          { key: "joined" as const, label: t("dashboard.pages.affiliates.myAffiliationsHeading") },
+          { key: "marketplace" as const, label: t("dashboard.pages.affiliates.tabMarketplace") },
+          { key: "public" as const, label: t("dashboard.pages.affiliates.tabPublic") },
+        ]).map((tb) => (
+          <button
+            key={tb.key}
+            type="button"
+            role="tab"
+            aria-selected={affTab === tb.key}
+            onClick={() => setAffTab(tb.key)}
+            className={`relative flex-shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-bold transition-colors ${
+              affTab === tb.key ? "text-jeon-purple" : "text-app-muted hover:text-app-ink"
+            }`}
+          >
+            {tb.label}
+            {affTab === tb.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-jeon-purple" aria-hidden="true" />}
+          </button>
+        ))}
+      </div>
 
-
-      {(!marketingV2 || affTab === "program") && (
+      {affTab === "program" && (
       <>
       <div className="glass mt-6 rounded-jlg p-5 shadow-card">
         {!adding ? (
@@ -342,15 +335,8 @@ export default function DashboardAffiliatesPage() {
       </>
       )}
 
-      {(!marketingV2 || affTab === "joined") && (
+      {affTab === "joined" && (
       <>
-      {!marketingV2 && (
-        <>
-          <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.myAffiliationsHeading")}</h2>
-          <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.myAffiliationsSubtitle")}</p>
-        </>
-      )}
-
       <div className="mt-4 flex flex-col gap-3">
         {programs.map((p) => (
           <div key={p.id} className="glass rounded-jmd p-4 shadow-card">
@@ -382,9 +368,8 @@ export default function DashboardAffiliatesPage() {
       </>
       )}
 
-      {(!marketingV2 || affTab === "marketplace") && (
+      {affTab === "marketplace" && (
       <>
-      {!marketingV2 && <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.tabMarketplace")}</h2>}
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.marketplaceIntro")}</p>
       <div className="mt-4 flex flex-col gap-3">
         {marketplace.map((m) => (
@@ -436,9 +421,8 @@ export default function DashboardAffiliatesPage() {
       </>
       )}
 
-      {(!marketingV2 || affTab === "public") && (
+      {affTab === "public" && (
       <>
-      {!marketingV2 && <h2 className="mt-10 font-display text-lg font-bold text-app-ink">{t("dashboard.pages.affiliates.tabPublic")}</h2>}
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.affiliates.publicIntro")}</p>
       {notice && <p className="mt-2 rounded-lg bg-jeon-lime/40 px-3 py-2 text-xs font-semibold text-app-ink">{notice}</p>}
       <div className="mt-4 flex flex-col gap-3">
