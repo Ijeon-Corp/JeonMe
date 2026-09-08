@@ -900,3 +900,47 @@ export function IconVideoImage({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconSlideshow -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
+// kategori MEDIA "Image Slider"): bingkai foto tengah lebih besar diapit
+// dua bingkai tepi terpotong + panah kiri/kanan, membedakannya secara
+// visual dari IconPhotoLibrary (grid statis Image Grid).
+export function IconSlideshow({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="7" y="4" width="10" height="16" rx="1.6" stroke="currentColor" strokeWidth={base} />
+      <path d="M4 7v10M20 7v10" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path d="M2.5 12h1.5M20 12h1.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// IconListCard -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
+// kategori INFORMATION "Card/List/Testimoni", satu block_type "list"
+// fleksibel): tiga baris ikon+garis, representasi netral yang cocok utk
+// ketiga varian tampilan (list/card/testimony).
+export function IconListCard({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="5" cy="6.5" r="1.6" fill="currentColor" />
+      <circle cx="5" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="5" cy="17.5" r="1.6" fill="currentColor" />
+      <path d="M9.5 6.5h9M9.5 12h9M9.5 17.5h9" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// IconIframe -- Canvas Page Builder Fase 3 (BuilderAddComponentModal.tsx,
+// kategori OTHERS "Embed" generik): bingkai jendela browser (bar atas +
+// titik) membedakannya dari IconLink (Embed Link Fase 2, kartu tautan
+// biasa tanpa iframe sungguhan).
+export function IconIframe({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3" y="4.5" width="18" height="15" rx="1.8" stroke="currentColor" strokeWidth={base} />
+      <path d="M3 8.5h18" stroke="currentColor" strokeWidth={base} />
+      <circle cx="5.6" cy="6.5" r="0.7" fill="currentColor" />
+      <circle cx="7.6" cy="6.5" r="0.7" fill="currentColor" />
+    </svg>
+  );
+}

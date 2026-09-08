@@ -143,7 +143,7 @@ export default function BuilderPage() {
     };
   }
 
-  async function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"]) {
+  async function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") {
     setError(null);
     try {
       if (!target) {
@@ -151,7 +151,11 @@ export default function BuilderPage() {
         await currentCreateBlock({
           block_type: type,
           title,
-          block_data: newBuilderBlock(type).block_data,
+          // "maps" ROOT-ONLY di Fase 3 (lihat catatan lengkap di plan) --
+          // TIDAK ada di EmbeddedBuilderBlock/newBuilderBlock (itu khusus
+          // anak tertanam Section/Column), shell block_data kosong sudah
+          // cukup (pola sama tipe lain, lihat emptyBuilderBlockData).
+          block_data: type === "maps" ? {} : newBuilderBlock(type).block_data,
           // "https://" saja gagal validasi http_url backend (tidak ada host)
           // -- root "button" WAJIB url non-kosong (beda dari anak tertanam
           // di Section/Column, lihat catatan lengkap di links.go), jadi
@@ -160,6 +164,7 @@ export default function BuilderPage() {
           url: type === "button" ? "https://example.com" : undefined,
         });
       } else {
+        if (type === "maps") return; // modal sudah menyaring ini, jaga-jaga saja.
         const root = findRoot(target.rootId);
         if (!root) return;
         const builderRoot = rootToBuilderRoot(root);
@@ -316,4 +321,9 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   image: "typeImage",
   video_image: "typeVideoImage",
   embed_link: "typeEmbedLink",
+  countdown: "typeCountdown",
+  list: "typeList",
+  image_slider: "typeImageSlider",
+  embed: "typeEmbed",
+  maps: "typeMaps",
 };

@@ -540,7 +540,7 @@ export default function BuilderLeftPanel({
   settingsHref,
 }: {
   links: LinkItem[];
-  onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"]) => void;
+  onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") => void;
   onDelete: (target: BuilderSelection) => void;
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
@@ -855,6 +855,7 @@ export default function BuilderLeftPanel({
       {addModalOpen && (
         <BuilderAddComponentModal
           onClose={() => setAddModalOpen(false)}
+          nested={!!addTarget}
           onSelect={(type) => {
             setAddModalOpen(false);
             onAdd(addTarget, type);

@@ -5,14 +5,19 @@ import {
   IconBook,
   IconBox,
   IconCamera,
+  IconClock,
   IconClose,
   IconColumns,
   IconDivider,
   IconExternal,
+  IconIframe,
   IconLink,
+  IconListCard,
+  IconMapPin,
   IconPhotoLibrary,
   IconPlayCircle,
   IconSearch,
+  IconSlideshow,
   IconTextLines,
   IconVideoImage,
 } from "@/components/icons";
@@ -36,8 +41,15 @@ import type { EmbeddedBuilderBlock } from "@/lib/api-client";
 
 export type BuilderComponentCategory = "general" | "media" | "information" | "conversion" | "others";
 
+// AddableBlockType -- union block_type yang bisa dipilih lewat modal ini,
+// LEBIH LUAS dari EmbeddedBuilderBlock["block_type"] (anak tertanam
+// Section/Column) -- "maps" ROOT-ONLY di Fase 3 (lihat catatan lengkap di
+// plan), jadi tile-nya perlu tipe ini, disaring dari daftar via prop
+// `nested` kalau target tambahnya bukan root.
+export type AddableBlockType = EmbeddedBuilderBlock["block_type"] | "maps";
+
 export interface BuilderComponentTile {
-  type: EmbeddedBuilderBlock["block_type"];
+  type: AddableBlockType;
   label: string;
   description: string;
   Icon: (p: { className?: string }) => React.ReactElement;
@@ -59,12 +71,9 @@ function buildBuilderComponentCategories(
       ],
     },
     {
-      // Fase 2 (permintaan langsung pengguna 8 September 2026): 4 dari 5
-      // tipe MEDIA terisi -- "Image Slider" TETAP menyusul Fase 3 (butuh
-      // subsistem carousel/scroll-snap baru), SENGAJA tidak ditampilkan sbg
-      // tile "segera hadir" terpisah di sini (kategori ini sekarang py
-      // tile sungguhan, bukan kosong total spt Fase 1 -- lihat
-      // comingSoon, cuma tampil kalau SELURUH kategori kosong).
+      // Fase 2: 4 tipe MEDIA. Fase 3 (permintaan langsung pengguna 8
+      // September 2026): +Image Slider (alias validasi/upload "gallery",
+      // render carousel geser -- lihat ImageSliderBlock.tsx).
       key: "media",
       label: t("dashboard.components.builderAddComponentModal.categoryMedia"),
       tiles: [
@@ -72,25 +81,39 @@ function buildBuilderComponentCategories(
         { type: "gallery", label: t("dashboard.components.builderAddComponentModal.typeImageGrid"), description: t("dashboard.components.builderAddComponentModal.typeImageGridDesc"), Icon: IconPhotoLibrary },
         { type: "video", label: t("dashboard.components.builderAddComponentModal.typeVideo"), description: t("dashboard.components.builderAddComponentModal.typeVideoDesc"), Icon: IconPlayCircle },
         { type: "video_image", label: t("dashboard.components.builderAddComponentModal.typeVideoImage"), description: t("dashboard.components.builderAddComponentModal.typeVideoImageDesc"), Icon: IconVideoImage },
+        { type: "image_slider", label: t("dashboard.components.builderAddComponentModal.typeImageSlider"), description: t("dashboard.components.builderAddComponentModal.typeImageSliderDesc"), Icon: IconSlideshow },
       ],
     },
     {
-      // Card/List/Testimony TETAP Fase 3 (skema block_data baru
-      // masing-masing).
+      // Fase 3: "Card/List/Testimony" dari peta jalan awal jadi SATU
+      // block_type fleksibel "list" (dikonfirmasi via AskUserQuestion),
+      // di samping FAQ yang sudah ada sejak Fase 2.
       key: "information",
       label: t("dashboard.components.builderAddComponentModal.categoryInformation"),
       tiles: [
         { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconBook },
+        { type: "list", label: t("dashboard.components.builderAddComponentModal.typeList"), description: t("dashboard.components.builderAddComponentModal.typeListDesc"), Icon: IconListCard },
       ],
     },
-    { key: "conversion", label: t("dashboard.components.builderAddComponentModal.categoryConversion"), tiles: [] },
     {
-      // Embed (iframe+allowlist domain) TETAP Fase 3 (kerja keamanan
-      // tersendiri).
+      // Fase 3: Countdown -- satu-satunya tipe CONVERSION, kategori ini
+      // kosong total sejak Fase 1.
+      key: "conversion",
+      label: t("dashboard.components.builderAddComponentModal.categoryConversion"),
+      tiles: [
+        { type: "countdown", label: t("dashboard.components.builderAddComponentModal.typeCountdown"), description: t("dashboard.components.builderAddComponentModal.typeCountdownDesc"), Icon: IconClock },
+      ],
+    },
+    {
+      // Fase 3: +Embed generik (iframe+whitelist provider) & Maps
+      // (promosi block_type lama, ROOT-ONLY -- lihat catatan lengkap di
+      // plan & allowedBuilderEmbeddedBlockTypes, links.go).
       key: "others",
       label: t("dashboard.components.builderAddComponentModal.categoryOthers"),
       tiles: [
         { type: "embed_link", label: t("dashboard.components.builderAddComponentModal.typeEmbedLink"), description: t("dashboard.components.builderAddComponentModal.typeEmbedLinkDesc"), Icon: IconLink },
+        { type: "embed", label: t("dashboard.components.builderAddComponentModal.typeEmbed"), description: t("dashboard.components.builderAddComponentModal.typeEmbedDesc"), Icon: IconIframe },
+        { type: "maps", label: t("dashboard.components.builderAddComponentModal.typeMaps"), description: t("dashboard.components.builderAddComponentModal.typeMapsDesc"), Icon: IconMapPin },
       ],
     },
   ];
@@ -99,14 +122,24 @@ function buildBuilderComponentCategories(
 export default function BuilderAddComponentModal({
   onClose,
   onSelect,
+  nested,
 }: {
   onClose: () => void;
-  onSelect: (type: EmbeddedBuilderBlock["block_type"]) => void;
+  onSelect: (type: AddableBlockType) => void;
+  // nested -- Fase 3 (permintaan langsung pengguna 8 September 2026):
+  // true kalau target tambah adalah DI DALAM Section/Column (bukan root).
+  // "maps" ROOT-ONLY di Fase 3 (lihat catatan lengkap di plan &
+  // allowedBuilderEmbeddedBlockTypes, links.go) -- disaring dari daftar
+  // tile supaya kreator tidak memilih tipe yang backend akan tolak.
+  nested?: boolean;
 }) {
   const { t } = useLocale();
   const [category, setCategory] = useState<BuilderComponentCategory>("general");
   const [search, setSearch] = useState("");
-  const categories = buildBuilderComponentCategories(t);
+  const categories = buildBuilderComponentCategories(t).map((c) => ({
+    ...c,
+    tiles: nested ? c.tiles.filter((tile) => tile.type !== "maps") : c.tiles,
+  }));
   const searchLower = search.trim().toLowerCase();
 
   const visibleTiles = searchLower
