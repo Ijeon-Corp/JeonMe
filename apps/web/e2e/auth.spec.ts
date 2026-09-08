@@ -18,11 +18,13 @@ test.describe("Autentikasi", () => {
 
   test("logout menghapus sesi dan kembali ke /login", async ({ page }) => {
     await registerAndLogin(page, "logout");
-    // Tombol Keluar dipindah dari sidebar ke halaman Profil & Akun (susulan
-    // permintaan pengguna, 30 Agustus 2026: "fitur logout pindah ke profile
-    // hilangkan dari sidebar").
-    await page.goto("/dashboard/settings/profile");
-    await page.getByRole("button", { name: "Keluar" }).click();
+    // Tombol Keluar dipindah lagi (permintaan pengguna, 3 September 2026)
+    // dari halaman Profil & Akun ke dropdown avatar akun di top bar
+    // (app/dashboard/layout.tsx, profileMenuOpen) -- test ini sebelumnya
+    // stale, masih mengira Keluar tampil langsung di /settings/profile.
+    await page.goto("/dashboard");
+    await page.getByTitle(/Profil & Akun/).click();
+    await page.getByRole("menuitem", { name: "Keluar" }).click();
     await page.waitForURL("**/login", { timeout: 10000 });
     // Sesi harus benar-benar hilang -- navigasi balik ke /dashboard harus
     // redirect ke /login lagi, bukan diam-diam tetap bisa masuk.
