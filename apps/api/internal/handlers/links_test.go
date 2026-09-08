@@ -888,3 +888,95 @@ func TestValidateBlockData_BuilderMediaTypes(t *testing.T) {
 		}
 	})
 }
+
+// TestValidateBlockData_BuilderFase3Types -- Canvas Page Builder Fase 3
+// (permintaan langsung pengguna 8 September 2026): countdown/list/
+// image_slider/embed + promosi "maps" ke allowlist builder (ROOT-ONLY,
+// lihat catatan lengkap di plan & allowedBuilderEmbeddedBlockTypes).
+func TestValidateBlockData_BuilderFase3Types(t *testing.T) {
+	t.Run("countdown kosong lolos, target_at valid lolos, tidak valid ditolak", func(t *testing.T) {
+		if msg, ok := validateBlockData("countdown", map[string]any{}); !ok {
+			t.Fatalf("countdown kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if msg, ok := validateBlockData("countdown", map[string]any{"target_at": "2026-12-31T23:59:59Z"}); !ok {
+			t.Fatalf("target_at RFC3339 valid seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("countdown", map[string]any{"target_at": "31 Desember 2026"}); ok {
+			t.Fatal("target_at bukan RFC3339 seharusnya ditolak")
+		}
+	})
+
+	t.Run("list kosong lolos, style tidak dikenal ditolak, item tanpa judul ditolak", func(t *testing.T) {
+		if msg, ok := validateBlockData("list", map[string]any{}); !ok {
+			t.Fatalf("list kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if msg, ok := validateBlockData("list", map[string]any{"style": "testimony"}); !ok {
+			t.Fatalf("style \"testimony\" seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("list", map[string]any{"style": "grid"}); ok {
+			t.Fatal("style yang tidak dikenal seharusnya ditolak")
+		}
+		if _, ok := validateBlockData("list", map[string]any{"items": []any{map[string]any{"description": "tanpa judul"}}}); ok {
+			t.Fatal("item tanpa judul seharusnya ditolak")
+		}
+		data := map[string]any{"items": []any{map[string]any{"title": "Budi", "description": "Mantap!", "author": "Budi S."}}}
+		if msg, ok := validateBlockData("list", data); !ok {
+			t.Fatalf("item lengkap seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("image_slider pakai validasi & upload yang sama dgn gallery", func(t *testing.T) {
+		if msg, ok := validateBlockData("image_slider", map[string]any{}); !ok {
+			t.Fatalf("image_slider kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("image_slider", map[string]any{"images": []any{"bukan-url"}}); ok {
+			t.Fatal("image_slider dgn URL tidak valid seharusnya ditolak")
+		}
+		if msg, ok := validateBlockData("image_slider", map[string]any{"images": []any{"https://example.com/1.webp"}}); !ok {
+			t.Fatalf("image_slider dgn URL valid seharusnya lolos, dapat: %s", msg)
+		}
+	})
+
+	t.Run("embed kosong lolos, provider tidak diizinkan ditolak, provider diizinkan lolos", func(t *testing.T) {
+		if msg, ok := validateBlockData("embed", map[string]any{}); !ok {
+			t.Fatalf("embed kosong seharusnya lolos, dapat: %s", msg)
+		}
+		if _, ok := validateBlockData("embed", map[string]any{"embed_url": "https://evil-calendly.com.attacker.net/x"}); ok {
+			t.Fatal("host tipuan seharusnya ditolak (exact match, bukan substring)")
+		}
+		for _, u := range []string{
+			"https://docs.google.com/forms/d/e/abc/viewform",
+			"https://calendly.com/someone",
+			"https://open.spotify.com/track/abc123",
+		} {
+			if msg, ok := validateBlockData("embed", map[string]any{"embed_url": u}); !ok {
+				t.Fatalf("embed_url %q seharusnya lolos, dapat: %s", u, msg)
+			}
+		}
+	})
+
+	t.Run("isAllowedEmbedHost menolak scheme selain http/https & host tidak dikenal", func(t *testing.T) {
+		if isAllowedEmbedHost("javascript:alert(1)") {
+			t.Fatal("scheme javascript: seharusnya ditolak")
+		}
+		if isAllowedEmbedHost("https://example.com") {
+			t.Fatal("host yang tidak ada di allowedEmbedHosts seharusnya ditolak")
+		}
+	})
+
+	t.Run("countdown/list/image_slider/embed boleh ditanam di dalam Section, maps TIDAK (root-only)", func(t *testing.T) {
+		child := func(id, blockType string) map[string]any {
+			return map[string]any{"id": id, "block_type": blockType, "title": "", "block_data": map[string]any{}}
+		}
+		for _, bt := range []string{"countdown", "list", "image_slider", "embed"} {
+			data := map[string]any{"children": []any{child("c1", bt)}}
+			if msg, ok := validateBlockData("section", data); !ok {
+				t.Fatalf("block_type %q seharusnya boleh ditanam di Section sejak Fase 3, dapat: %s", bt, msg)
+			}
+		}
+		data := map[string]any{"children": []any{child("c1", "maps")}}
+		if _, ok := validateBlockData("section", data); ok {
+			t.Fatal(`"maps" ROOT-ONLY di Fase 3 -- seharusnya TETAP ditolak sbg anak Section`)
+		}
+	})
+}

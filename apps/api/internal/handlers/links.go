@@ -379,6 +379,29 @@ func resolveMapsEmbedCoords(ctx context.Context, rawURL string) (lat, lng float6
 	return lat, lng, nil
 }
 
+// allowedEmbedHosts -- Canvas Page Builder Fase 3, block_type "embed"
+// (iframe generik dgn whitelist domain, permintaan langsung pengguna 8
+// September 2026, provider dikonfirmasi via AskUserQuestion: Google Forms/
+// Calendly/Spotify -- Google Maps SENGAJA TIDAK di sini, itu promosi
+// block_type "maps" lama yang sudah py allowedMapsHosts sendiri, lihat
+// catatan lengkap di plan). Pola PERSIS allowedMapsHosts di atas (exact-
+// match map, BUKAN strings.Contains seperti isValidVideoEmbedURL lama --
+// itu SENGAJA tidak ditiru di sini, exact match jauh lebih ketat terhadap
+// host tipuan spt "evil-calendly.com.attacker.net").
+var allowedEmbedHosts = map[string]bool{
+	"docs.google.com":  true, // Google Forms
+	"calendly.com":     true,
+	"open.spotify.com": true,
+}
+
+func isAllowedEmbedHost(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	return allowedEmbedHosts[strings.ToLower(u.Hostname())]
+}
+
 // validateBlockData -- No.77: aturan tiap block_type. contact_form sengaja
 // tidak butuh field apa pun (form kontak selalu sama: nama/email/pesan,
 // tidak ada kustomisasi field untuk versi awal).
@@ -486,6 +509,18 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	"image":       true,
 	"video_image": true,
 	"embed_link":  true,
+	// Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru,
+	// SEMUA boleh root maupun bersarang -- TIDAK ada requirement upload/
+	// fetch server-side per-node spt Maps (lihat CATATAN "maps" TIDAK ada
+	// di sini: block_type itu ROOT-ONLY di Fase 3 karena
+	// resolveMapsEmbedCoords cuma dipanggil utk request block ROOT,
+	// SENGAJA belum ikut di-path-walk ke block_data bersarang -- lihat
+	// plan Fase 3 utk detail lengkap. Root tidak butuh entry di allowlist
+	// ini sama sekali, allowlist ini KHUSUS anak tertanam Section/Column).
+	"countdown":    true,
+	"list":         true,
+	"image_slider": true,
+	"embed":        true,
 }
 
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
@@ -625,7 +660,7 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				return "embed wajib berupa true/false", false
 			}
 		}
-	case "gallery":
+	case "gallery", "image_slider":
 		// "gallery" -- hasil analisa galeri tema kompetitor (17 Agustus
 		// 2026, folder theme/: template portofolio/wisata s.id memakai grid
 		// multi-foto yang belum ada padanannya di Jeonme, blok "image" lama
@@ -635,6 +670,14 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// custom_icon_url yang upload-only terpisah dari create), tapi kalau
 		// TERISI setiap entri wajib URL http(s) valid (jaga-jaga endpoint ini
 		// juga dipakai utk PATCH block_data manual).
+		//
+		// "image_slider" -- Canvas Page Builder Fase 3 (permintaan langsung
+		// pengguna 8 September 2026): block_data BENAR-BENAR IDENTIK dengan
+		// "gallery" (array `images`) -- satu-satunya beda adalah RENDER
+		// publiknya (carousel geser, bukan grid statis, lihat renderBuilderNode
+		// PagePreview.tsx), jadi validasi & endpoint upload (UploadGalleryImage/
+		// DeleteGalleryImage) sengaja DIPAKAI ULANG APA ADANYA lewat case
+		// gabungan ini, bukan diduplikasi.
 		if raw, ok := data["images"]; ok {
 			images, isSlice := raw.([]any)
 			if !isSlice {
@@ -681,6 +724,65 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 			u, err := url.Parse(imageURL)
 			if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 				return "image_url wajib berupa URL gambar yang valid", false
+			}
+		}
+	case "countdown":
+		// "countdown" -- Canvas Page Builder Fase 3 (kategori CONVERSION,
+		// permintaan langsung pengguna 8 September 2026): shell-first sama
+		// seperti video/faq/image di atas -- target_at OPSIONAL (blok bisa
+		// dibuat kosong dulu, diisi belakangan lewat klik-utk-edit), tapi
+		// kalau TERISI wajib timestamp RFC3339 yang valid (dihitung mundur
+		// murni di klien, CountdownBlock.tsx, tidak ada job/cron server).
+		if raw, ok := data["target_at"]; ok {
+			targetAt, _ := raw.(string)
+			if targetAt != "" {
+				if _, err := time.Parse(time.RFC3339, targetAt); err != nil {
+					return "target_at wajib berupa tanggal/waktu yang valid", false
+				}
+			}
+		}
+	case "list":
+		// "list" -- Canvas Page Builder Fase 3 (kategori INFORMATION,
+		// gabungan "Card/List/Testimony" dari peta jalan awal jadi SATU
+		// block_type fleksibel, dikonfirmasi via AskUserQuestion 8 September
+		// 2026): `style` menentukan tampilan (list/card/testimony di
+		// renderBuilderNode), `items[]` opsional (shell-first, pola sama
+		// "faq") -- tiap item kalau ADA wajib title tidak kosong (description/
+		// author bebas, termasuk kosong). TIDAK ada upload foto per-item di
+		// Fase 3 (author cuma teks nama, lihat catatan lingkup di plan).
+		if raw, ok := data["style"]; ok {
+			style, _ := raw.(string)
+			if style != "list" && style != "card" && style != "testimony" {
+				return `style wajib salah satu dari "list", "card", atau "testimony"`, false
+			}
+		}
+		items, ok := data["items"].([]any)
+		if !ok {
+			items = []any{}
+		}
+		for _, raw := range items {
+			item, isMap := raw.(map[string]any)
+			if !isMap {
+				return "setiap item wajib berupa objek", false
+			}
+			title, _ := item["title"].(string)
+			if strings.TrimSpace(title) == "" {
+				return "setiap item wajib punya judul", false
+			}
+		}
+	case "embed":
+		// "embed" -- Canvas Page Builder Fase 3 (kategori OTHERS, embed
+		// iframe GENERIK dgn whitelist domain -- BEDA dari "embed_link"
+		// Fase 2 yang cuma kartu link manual TANPA iframe sama sekali).
+		// embed_url OPSIONAL (shell-first), tapi kalau TERISI wajib lolos
+		// isAllowedEmbedHost (exact-match hostname, BUKAN strings.Contains
+		// spt isValidVideoEmbedURL lama -- lihat catatan lengkap di fungsi
+		// itu) supaya CSP frame-src (next.config.js) tidak pernah dilewati
+		// provider yang tidak diizinkan.
+		if raw, ok := data["embed_url"]; ok {
+			embedURL, _ := raw.(string)
+			if embedURL != "" && !isAllowedEmbedHost(embedURL) {
+				return "embed_url wajib tautan dari provider yang didukung (Google Forms, Calendly, atau Spotify)", false
 			}
 		}
 	case "audio":
@@ -1066,7 +1168,7 @@ func parseBuilderPath(c *gin.Context) ([]builderPathSeg, error) {
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -1830,7 +1932,11 @@ func (h *LinksHandler) UploadGalleryImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
 		return
 	}
-	if blockType != "gallery" {
+	// Fase 3: "image_slider" (Image Slider) pakai block_data & endpoint ini
+	// APA ADANYA (lihat catatan lengkap di validateBlockDataAtDepth case
+	// "gallery", "image_slider") -- satu-satunya beda tipe ini dari
+	// "gallery" adalah render publiknya (carousel, bukan grid).
+	if blockType != "gallery" && blockType != "image_slider" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
 		return
 	}
@@ -1941,7 +2047,11 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
 		return
 	}
-	if blockType != "gallery" {
+	// Fase 3: "image_slider" (Image Slider) pakai block_data & endpoint ini
+	// APA ADANYA (lihat catatan lengkap di validateBlockDataAtDepth case
+	// "gallery", "image_slider") -- satu-satunya beda tipe ini dari
+	// "gallery" adalah render publiknya (carousel, bukan grid).
+	if blockType != "gallery" && blockType != "image_slider" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "blok ini bukan blok galeri foto"})
 		return
 	}
