@@ -10,7 +10,9 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/jeonme/api/internal/database"
+	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/mailer"
+	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/whatsapp"
 )
@@ -47,7 +49,12 @@ func newTestHandler(t *testing.T) *Handler {
 	// bukan pengiriman SMTP/WhatsApp sungguhan.
 	mailerClient := mailer.NewClient("", 587, "", "", "no-reply@jeonme.test")
 	whatsappClient := whatsapp.NewClient("", "", "order_confirmation", "id")
-	return NewHandler(db, rdb, mailerClient, whatsappClient, "http://localhost:8080/api/v1", 3, []byte("jeonme-dev-encryption-key-32-ok!"))
+	// checkoutHandler -- HANYA dipakai HandleOrderReconcile (lihat catatan
+	// lengkap di Handler.Checkout, worker.go); MidtransServerKey/Queue
+	// kosong sengaja -- test worker ini tidak menguji reconcile sungguhan
+	// ke Midtrans (butuh kredensial asli), cukup membuktikan wiring.
+	checkoutHandler := handlers.NewCheckoutHandler(db, midtrans.NewClient("", false), "", "", 0, nil, nil)
+	return NewHandler(db, rdb, mailerClient, whatsappClient, "http://localhost:8080/api/v1", 3, []byte("jeonme-dev-encryption-key-32-ok!"), checkoutHandler)
 }
 
 func newTestTask(t *testing.T, orderID string) *asynq.Task {

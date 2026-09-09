@@ -25,6 +25,7 @@ import (
 
 	"github.com/jeonme/api/internal/audit"
 	"github.com/jeonme/api/internal/crypto"
+	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/netguard"
 	"github.com/jeonme/api/internal/payout"
@@ -40,12 +41,19 @@ type Handler struct {
 	PublicAPIURL      string
 	HoldingPeriodDays int
 	EncryptionKey     []byte
+	// Checkout -- permintaan langsung pengguna, 10 September 2026 (order
+	// nyangkut "pending" gara-gara webhook Midtrans hilang): HANYA dipakai
+	// HandleOrderReconcile, delegasi penuh ke CheckoutHandler.ReconcilePendingOrders
+	// supaya logika ledger/notifikasi finansial yang sensitif itu SATU
+	// sumber kebenaran dengan CheckoutHandler.Webhook (jalur HTTP), bukan
+	// diduplikasi di sini. Boleh nil di test yang tidak menguji reconcile.
+	Checkout *handlers.CheckoutHandler
 }
 
-func NewHandler(db *pgxpool.Pool, rdb *redis.Client, mailerClient *mailer.Client, whatsappClient *whatsapp.Client, publicAPIURL string, holdingPeriodDays int, encryptionKey []byte) *Handler {
+func NewHandler(db *pgxpool.Pool, rdb *redis.Client, mailerClient *mailer.Client, whatsappClient *whatsapp.Client, publicAPIURL string, holdingPeriodDays int, encryptionKey []byte, checkout *handlers.CheckoutHandler) *Handler {
 	return &Handler{
 		DB: db, RDB: rdb, Mailer: mailerClient, WhatsApp: whatsappClient, PublicAPIURL: publicAPIURL,
-		HoldingPeriodDays: holdingPeriodDays, EncryptionKey: encryptionKey,
+		HoldingPeriodDays: holdingPeriodDays, EncryptionKey: encryptionKey, Checkout: checkout,
 	}
 }
 
@@ -64,7 +72,19 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeLoyaltyVerificationEmail, h.HandleLoyaltyVerificationEmail)
 	mux.HandleFunc(queue.TypeAccountSuspendedEmail, h.HandleAccountSuspendedEmail)
 	mux.HandleFunc(queue.TypeAccountActivatedEmail, h.HandleAccountActivatedEmail)
+	mux.HandleFunc(queue.TypeOrderReconcile, h.HandleOrderReconcile)
 	return mux
+}
+
+// HandleOrderReconcile -- lihat catatan lengkap di
+// CheckoutHandler.ReconcilePendingOrders (checkout.go); handler ini murni
+// pembungkus tipis asynq.HandlerFunc di atasnya.
+func (h *Handler) HandleOrderReconcile(ctx context.Context, t *asynq.Task) error {
+	if h.Checkout == nil {
+		return nil
+	}
+	h.Checkout.ReconcilePendingOrders(ctx)
+	return nil
 }
 
 // HandleSignupVerificationEmail -- kode aktivasi akun baru (lihat catatan

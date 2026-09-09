@@ -333,6 +333,114 @@ func TestCheckoutWebhook_RejectsWrongSignature(t *testing.T) {
 // Webhook yang diterima dua kali (retry PSP) TIDAK BOLEH memproses pembayaran
 // dua kali -- REQ-F-404. Dibuktikan lewat: order tetap "paid" (bukan error),
 // dan tepat satu baris payments tercatat walau Webhook dipanggil dua kali.
+// ReconcilePendingOrders (permintaan langsung pengguna, 10 September 2026
+// -- order "nyangkut" pending gara-gara URL Notification Midtrans salah
+// dikonfigurasi, jadi TIDAK ADA webhook yang pernah tiba sama sekali)
+// harus tetap bisa melunasi order itu dengan mengecek ULANG status
+// LANGSUNG ke Midtrans (bukan menunggu webhook lagi). httptest.Server
+// mensimulasikan endpoint GET /v2/{order_id}/status Midtrans yang
+// SUNGGUHAN dipanggil GetTransactionStatus -- test ini TIDAK memanggil
+// Webhook sama sekali, membuktikan jalur pemulihan berdiri sendiri.
+func TestCheckoutReconcilePendingOrders_MarksPaidFromMidtransStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	transactionID := uuid.NewString()
+
+	// created_at dipaksa 10 menit lalu -- kueri ReconcilePendingOrders
+	// SENGAJA melewati order yang lebih baru dari 5 menit (kasih waktu
+	// webhook normal tiba dulu), order sungguhan yang "nyangkut" pasti
+	// sudah lebih tua dari itu.
+	_, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference, created_at)
+		VALUES ($1, $2, 'buyer@example.com', 25000, 'pending', $3, now() - interval '10 minutes')
+	`, orderID, productID, externalID)
+	if err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v2/"+externalID+"/status" {
+			t.Errorf("path tidak diharapkan: %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(midtrans.TransactionStatusResponse{
+			OrderID:           externalID,
+			TransactionID:     transactionID,
+			TransactionStatus: "settlement",
+			GrossAmount:       "25000.00",
+			PaymentType:       "bank_transfer",
+		})
+	}))
+	defer statusServer.Close()
+	checkout.Midtrans.CoreAPIBaseURL = statusServer.URL
+
+	checkout.ReconcilePendingOrders(t.Context())
+
+	var status string
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+		t.Fatalf("gagal query order: %v", err)
+	}
+	if status != "paid" {
+		t.Fatalf("status order = %q, ekspektasi \"paid\" -- reconciliation seharusnya melunasi order ini lewat GetTransactionStatus", status)
+	}
+
+	var ledgerCount int
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT COUNT(*) FROM ledger_entries WHERE order_id = $1 AND user_id = $2`, orderID, userID).Scan(&ledgerCount); err != nil {
+		t.Fatalf("gagal query ledger: %v", err)
+	}
+	if ledgerCount != 1 {
+		t.Fatalf("ledgerCount = %d, ekspektasi 1 -- kreator harus dikredit sama seperti webhook normal", ledgerCount)
+	}
+}
+
+// Order pending yang masih BARU (< 5 menit) sengaja DILEWATI --
+// reconciliation baru mengecek ulang order yang cukup lama, supaya tidak
+// balapan dengan webhook normal yang mungkin masih dalam perjalanan.
+func TestCheckoutReconcilePendingOrders_SkipsRecentOrder(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const serverKey = "the-real-server-key"
+	checkout, auth := newTestCheckoutHandler(t, serverKey)
+	userID := registerTestUser(t, auth)
+	productID := createActiveTestProduct(t, checkout, userID, 25000)
+
+	orderID := uuid.NewString()
+	externalID := "jeonme-order-" + orderID
+	_, err := checkout.DB.Exec(t.Context(), `
+		INSERT INTO orders (id, product_id, buyer_email, amount_idr, status, psp_reference, created_at)
+		VALUES ($1, $2, 'buyer@example.com', 25000, 'pending', $3, now())
+	`, orderID, productID, externalID)
+	if err != nil {
+		t.Fatalf("gagal setup order test: %v", err)
+	}
+
+	called := false
+	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		_ = json.NewEncoder(w).Encode(midtrans.TransactionStatusResponse{OrderID: externalID, TransactionStatus: "settlement"})
+	}))
+	defer statusServer.Close()
+	checkout.Midtrans.CoreAPIBaseURL = statusServer.URL
+
+	checkout.ReconcilePendingOrders(t.Context())
+
+	if called {
+		t.Fatalf("GetTransactionStatus terpanggil utk order yang masih baru (< 5 menit) -- seharusnya dilewati dulu")
+	}
+
+	var status string
+	if err := checkout.DB.QueryRow(t.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+		t.Fatalf("gagal query order: %v", err)
+	}
+	if status != "pending" {
+		t.Fatalf("status order = %q, ekspektasi tetap \"pending\"", status)
+	}
+}
+
 func TestCheckoutWebhook_IdempotentOnDuplicateDelivery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	const serverKey = "the-real-server-key"

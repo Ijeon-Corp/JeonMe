@@ -15,8 +15,10 @@ import (
 
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/database"
+	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/middleware"
+	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/migrate"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/routes"
@@ -246,7 +248,20 @@ func runWorker() {
 	whatsappClient := whatsapp.NewClient(cfg.WhatsAppAPIToken, cfg.WhatsAppPhoneNumberID, cfg.WhatsAppTemplateName, cfg.WhatsAppTemplateLang)
 	whatsappClient.SaleNotificationTemplateName = cfg.WhatsAppSaleNotificationTemplateName
 	whatsappClient.SaleNotificationTemplateLang = cfg.WhatsAppSaleNotificationTemplateLang
-	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey))
+
+	// queueClient -- producer, BEDA dari srv/scheduler di bawah (consumer)
+	// -- dibutuhkan CheckoutHandler.ApplyOrderStatus (dipanggil dari
+	// HandleOrderReconcile) utk enqueue notifikasi order.paid/webhook
+	// produk, PERSIS pola yang sama dgn queueClient di HTTP server (main()
+	// di atas). Storage sengaja nil -- reconciliation TIDAK PERNAH
+	// menyentuh S3 (cuma ledger/status order), duplikat EnsureBucket/
+	// EnsurePublicRead di proses worker ini cuma tugas HTTP server.
+	queueClient := asynq.NewClient(redisOpt)
+	defer queueClient.Close()
+	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
+	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, nil, queueClient)
+
+	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey), checkoutHandler)
 
 	// Modul Settings §3: asynq.Scheduler ENQUEUE task ke Redis sesuai jadwal
 	// cron -- task-nya sendiri tetap DIPROSES oleh srv.Run(handler.Mux())
@@ -261,6 +276,14 @@ func runWorker() {
 	// Modul Settings §6: purge akun yang masa tunggu 14 harinya sudah habis.
 	if _, err := scheduler.Register("@daily", queue.NewAccountPurgeScanTask()); err != nil {
 		log.Fatalf("worker: gagal mendaftarkan jadwal purge akun: %v", err)
+	}
+	// Permintaan langsung pengguna, 10 September 2026 (order nyangkut
+	// "pending" gara-gara URL Notification Midtrans salah dikonfigurasi,
+	// notifikasi webhook hilang tanpa jalan pulih) -- SETIAP 5 MENIT
+	// (bukan harian seperti dua scan di atas), lihat catatan lengkap di
+	// queue.TypeOrderReconcile & CheckoutHandler.ReconcilePendingOrders.
+	if _, err := scheduler.Register("*/5 * * * *", queue.NewOrderReconcileTask()); err != nil {
+		log.Fatalf("worker: gagal mendaftarkan jadwal reconcile order: %v", err)
 	}
 	go func() {
 		if err := scheduler.Run(); err != nil {

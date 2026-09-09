@@ -77,6 +77,22 @@ func NewAccountPurgeScanTask() *asynq.Task {
 	return asynq.NewTask(TypeAccountPurgeScan, nil)
 }
 
+// TypeOrderReconcile -- permintaan langsung pengguna, 10 September 2026
+// ("order nyangkut 'Menunggu Pembayaran' gara-gara URL Notification
+// Midtrans salah dikonfigurasi"): notifikasi webhook yang HILANG
+// sebelumnya tidak punya jalan pulih sama sekali -- order tetap "pending"
+// selamanya. Dijadwalkan SERING (tiap 5 menit, BUKAN harian seperti dua
+// task scan di atas -- order yang "nyangkut" perlu segera ketahuan, bukan
+// nunggu sampai besok) lewat asynq.Scheduler (main.go runWorker). Pola
+// sama persis TypeAutoWithdrawScan/TypeAccountPurgeScan: tidak ada
+// payload, task ini scan SEMUA order pending yang cukup lama tiap kali
+// jalan (lihat CheckoutHandler.ReconcilePendingOrders).
+const TypeOrderReconcile = "checkout:order_reconcile"
+
+func NewOrderReconcileTask() *asynq.Task {
+	return asynq.NewTask(TypeOrderReconcile, nil)
+}
+
 // TypeTeamInviteNotification -- Modul Settings §4: kirim email undangan
 // tim. Sengaja ASINKRON (pola sama dengan order.paid/contact_form) supaya
 // lambatnya SMTP tidak pernah membuat CollaboratorHandler.Invite menunggu.

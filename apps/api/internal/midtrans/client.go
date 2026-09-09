@@ -379,6 +379,11 @@ type TransactionStatusResponse struct {
 	TransactionStatus string `json:"transaction_status"`
 	FraudStatus       string `json:"fraud_status"`
 	GrossAmount       string `json:"gross_amount"`
+	// PaymentType -- permintaan langsung pengguna, 10 September 2026
+	// (reconciliation order pending, lihat CheckoutHandler.ReconcilePendingOrders):
+	// diteruskan ke ApplyOrderStatus utk kolom payments.method, SAMA
+	// seperti payload.PaymentType dari webhook biasa.
+	PaymentType string `json:"payment_type"`
 }
 
 // GetTransactionStatus — audit OWASP A08 (4 September 2026): dipakai

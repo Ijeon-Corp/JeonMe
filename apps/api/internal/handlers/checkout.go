@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,6 +22,13 @@ import (
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/storage"
 )
+
+// ErrOrderNotFoundForPSPReference -- psp_reference (order_id versi
+// Midtrans) tidak cocok baris `orders` mana pun. BUKAN kegagalan --
+// Webhook membalas 200 "diabaikan" & ReconcilePendingOrders lanjut ke
+// order berikutnya, supaya notifikasi utk order test/lama/akun lain
+// tidak dianggap error.
+var ErrOrderNotFoundForPSPReference = errors.New("checkout: order tidak ditemukan untuk psp_reference ini")
 
 // CheckoutHandler mengimplementasikan REQ-F-401 (checkout tanpa akun),
 // REQ-F-402 (integrasi Midtrans), REQ-F-403/404 (webhook + idempotensi).
@@ -1014,55 +1022,82 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
+	if err := h.ApplyOrderStatus(ctx, payload.OrderID, orderStatus, payload.PaymentType, payload.TransactionID, body); err != nil {
+		if errors.Is(err, ErrOrderNotFoundForPSPReference) {
+			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "webhook diproses"})
+}
+
+// ApplyOrderStatus -- inti logika REQ-F-403/404/501 (idempotensi + kredit
+// ledger + enqueue notifikasi) diekstrak dari Webhook 10 September 2026
+// supaya bisa dipakai ULANG oleh ReconcilePendingOrders TANPA duplikasi
+// logika finansial yang sensitif ini -- SATU sumber kebenaran dipakai baik
+// saat notifikasi webhook Midtrans benar-benar tiba MAUPUN saat
+// reconciliation job mengecek ulang status langsung ke Midtrans (kasus
+// notifikasi webhook hilang -- lihat catatan lengkap di
+// ReconcilePendingOrders).
+//
+// pspOrderID -- order_id versi Midtrans (kolom orders.psp_reference),
+// BUKAN orders.id internal. rawPayload -- disimpan APA ADANYA ke
+// payments.raw_webhook_payload utk audit (body webhook mentah kalau
+// dipanggil dari Webhook, atau JSON respons GetTransactionStatus kalau
+// dipanggil dari ReconcilePendingOrders).
+//
+// Mengembalikan ErrOrderNotFoundForPSPReference (BUKAN error sungguhan,
+// lihat catatan di variabelnya) kalau pspOrderID tidak cocok order mana
+// pun.
+func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, pspOrderID, orderStatus, paymentType, pspTransactionID string, rawPayload []byte) error {
 	var orderID, productID, productUserID, buyerEmail, deliveryMethod string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
 	var wishlistItemID *string
 	var collaboratorSplitsSnapshotRaw []byte
-	err = h.DB.QueryRow(ctx, `
+	err := h.DB.QueryRow(ctx, `
 		SELECT o.id, p.id, p.user_id, o.amount_idr, o.platform_fee_idr, o.affiliate_id, o.affiliate_commission_idr, o.buyer_email, o.collaborator_splits_snapshot, p.delivery_method, o.donation_wishlist_item_id
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.psp_reference = $1
-	`, payload.OrderID).Scan(&orderID, &productID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw, &deliveryMethod, &wishlistItemID)
+	`, pspOrderID).Scan(&orderID, &productID, &productUserID, &amountIDR, &platformFeeIDR, &affiliateID, &affiliateCommissionIDR, &buyerEmail, &collaboratorSplitsSnapshotRaw, &deliveryMethod, &wishlistItemID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
-			return
+			return ErrOrderNotFoundForPSPReference
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencari order"})
-		return
+		return fmt.Errorf("gagal mencari order")
 	}
 
 	tx, err := h.DB.Begin(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memulai transaksi"})
-		return
+		return fmt.Errorf("gagal memulai transaksi")
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Idempotensi (REQ-F-404): kalau psp_transaction_id ini sudah pernah
 	// tercatat, INSERT tidak melakukan apa-apa (RowsAffected=0) -- webhook
-	// duplikat aman diabaikan tanpa mengubah status order/ledger lagi.
+	// duplikat (ATAU reconciliation yang menemukan order yang SUDAH sempat
+	// diproses webhook aslinya) aman diabaikan tanpa mengubah status
+	// order/ledger lagi.
 	res, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, order_id, psp, method, psp_transaction_id, status, raw_webhook_payload, verified_at)
 		VALUES ($1, $2, 'midtrans', $3, $4, $5, $6, now())
 		ON CONFLICT (psp_transaction_id) WHERE psp_transaction_id != '' DO NOTHING
-	`, uuid.NewString(), orderID, payload.PaymentType, payload.TransactionID, orderStatus, body)
+	`, uuid.NewString(), orderID, paymentType, pspTransactionID, orderStatus, rawPayload)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan pembayaran"})
-		return
+		return fmt.Errorf("gagal menyimpan pembayaran")
 	}
 
 	shouldNotifyBuyer := false
 
 	if res.RowsAffected() > 0 {
 		if _, err := tx.Exec(ctx, `UPDATE orders SET status = $1 WHERE id = $2`, orderStatus, orderID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui status order"})
-			return
+			return fmt.Errorf("gagal memperbarui status order")
 		}
 		if err := audit.Log(ctx, tx, productUserID, "order."+orderStatus, "order", orderID, nil); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
-			return
+			return fmt.Errorf("gagal mencatat audit log")
 		}
 
 		// REQ-F-501: kredit ledger kreator saat pembayaran benar-benar
@@ -1072,16 +1107,14 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 		// kreator yang sama.
 		if orderStatus == "paid" {
 			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, productUserID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger"})
-				return
+				return fmt.Errorf("gagal mengunci ledger")
 			}
 
 			var currentBalance int64
 			if err := tx.QueryRow(ctx, `
 				SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
 			`, productUserID).Scan(&currentBalance); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo"})
-				return
+				return fmt.Errorf("gagal menghitung saldo")
 			}
 
 			// Modul Settings §3: snapshot sudah berisi rupiah ABSOLUT per
@@ -1107,13 +1140,11 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 				INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
 				VALUES ($1, $2, $3, 'credit', $4, $5, ledger_source_for_product($6), now())
 			`, ledgerID, productUserID, orderID, netAmount, newBalance, productID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger"})
-				return
+				return fmt.Errorf("gagal mencatat ledger")
 			}
 			metadata, _ := json.Marshal(gin.H{"amount_idr": netAmount, "balance_after": newBalance, "order_id": orderID})
 			if err := audit.Log(ctx, tx, productUserID, "ledger.credit", "ledger_entry", ledgerID, metadata); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log"})
-				return
+				return fmt.Errorf("gagal mencatat audit log")
 			}
 
 			// No.72: kredit ledger afiliator, pola sama persis seperti ledger
@@ -1122,19 +1153,16 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			if affiliateID != nil && affiliateCommissionIDR > 0 {
 				var affiliateUserID string
 				if err := tx.QueryRow(ctx, `SELECT affiliate_user_id FROM affiliates WHERE id = $1`, *affiliateID).Scan(&affiliateUserID); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat afiliator"})
-					return
+					return fmt.Errorf("gagal memuat afiliator")
 				}
 				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, affiliateUserID); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger afiliator"})
-					return
+					return fmt.Errorf("gagal mengunci ledger afiliator")
 				}
 				var affiliateCurrentBalance int64
 				if err := tx.QueryRow(ctx, `
 					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
 				`, affiliateUserID).Scan(&affiliateCurrentBalance); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo afiliator"})
-					return
+					return fmt.Errorf("gagal menghitung saldo afiliator")
 				}
 				affiliateNewBalance := affiliateCurrentBalance + affiliateCommissionIDR
 				affiliateLedgerID := uuid.NewString()
@@ -1142,13 +1170,11 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
 					VALUES ($1, $2, $3, 'credit', $4, $5, 'affiliate_commission', now())
 				`, affiliateLedgerID, affiliateUserID, orderID, affiliateCommissionIDR, affiliateNewBalance); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger afiliator"})
-					return
+					return fmt.Errorf("gagal mencatat ledger afiliator")
 				}
 				affiliateMetadata, _ := json.Marshal(gin.H{"amount_idr": affiliateCommissionIDR, "balance_after": affiliateNewBalance, "order_id": orderID})
 				if err := audit.Log(ctx, tx, affiliateUserID, "ledger.credit", "ledger_entry", affiliateLedgerID, affiliateMetadata); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log afiliator"})
-					return
+					return fmt.Errorf("gagal mencatat audit log afiliator")
 				}
 			}
 
@@ -1162,15 +1188,13 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 					continue
 				}
 				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, split.UserID); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunci ledger kolaborator"})
-					return
+					return fmt.Errorf("gagal mengunci ledger kolaborator")
 				}
 				var collabCurrentBalance int64
 				if err := tx.QueryRow(ctx, `
 					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
 				`, split.UserID).Scan(&collabCurrentBalance); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo kolaborator"})
-					return
+					return fmt.Errorf("gagal menghitung saldo kolaborator")
 				}
 				collabNewBalance := collabCurrentBalance + split.AmountIDR
 				collabLedgerID := uuid.NewString()
@@ -1178,13 +1202,11 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 					INSERT INTO ledger_entries (id, user_id, order_id, type, amount_idr, balance_after, source, created_at)
 					VALUES ($1, $2, $3, 'credit', $4, $5, 'collaborator_split', now())
 				`, collabLedgerID, split.UserID, orderID, split.AmountIDR, collabNewBalance); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat ledger kolaborator"})
-					return
+					return fmt.Errorf("gagal mencatat ledger kolaborator")
 				}
 				collabMetadata, _ := json.Marshal(gin.H{"amount_idr": split.AmountIDR, "balance_after": collabNewBalance, "order_id": orderID})
 				if err := audit.Log(ctx, tx, split.UserID, "ledger.credit", "ledger_entry", collabLedgerID, collabMetadata); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat audit log kolaborator"})
-					return
+					return fmt.Errorf("gagal mencatat audit log kolaborator")
 				}
 			}
 
@@ -1192,8 +1214,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			// (nilai order SEBELUM potongan platform, sama seperti dasar
 			// perhitungan komisi afiliasi) -- lihat awardLoyaltyPoints.
 			if err := awardLoyaltyPoints(ctx, tx, productUserID, buyerEmail, orderID, amountIDR); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat poin loyalitas"})
-				return
+				return fmt.Errorf("gagal mencatat poin loyalitas")
 			}
 
 			// Gap #4 benchmark kompetitif (9 Agustus 2026): kredit progress
@@ -1201,8 +1222,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 			// SEBELUM potongan apa pun, sama seperti dasar poin loyalitas di
 			// atas), no-op kalau donasi ini tidak menargetkan item tertentu.
 			if err := creditDonationWishlistItem(ctx, tx, wishlistItemID, amountIDR); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mencatat progres wishlist"})
-				return
+				return fmt.Errorf("gagal mencatat progres wishlist")
 			}
 
 			// Modul Toko (Fase C2): metode penyerahan "random_code" -- klaim
@@ -1223,8 +1243,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 						ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED
 					)
 				`, orderID, productID); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengklaim kode produk"})
-					return
+					return fmt.Errorf("gagal mengklaim kode produk")
 				}
 			}
 
@@ -1234,8 +1253,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan perubahan"})
-		return
+		return fmt.Errorf("gagal menyimpan perubahan")
 	}
 
 	// REQ-F-405: enqueue notifikasi SETELAH commit berhasil (bukan di dalam
@@ -1245,11 +1263,13 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	// hanya di-log, TIDAK mengubah respons -- pembayaran sudah sah tercatat
 	// terlepas dari nasib notifikasinya.
 	//
-	// shouldNotifyBuyer HANYA true kalau webhook ini yang PERTAMA KALI
+	// shouldNotifyBuyer HANYA true kalau pemanggilan ini yang PERTAMA KALI
 	// mengubah status (res.RowsAffected() > 0 di atas) -- webhook duplikat
-	// (retry PSP yang sangat umum terjadi) TIDAK BOLEH mengenqueue notifikasi
-	// lagi, kalau tidak pembeli bisa menerima email "pesanan siap diunduh"
-	// berkali-kali untuk satu pembayaran yang sama.
+	// (retry PSP yang sangat umum terjadi) ATAU reconciliation yang
+	// menemukan order yang ternyata SUDAH diproses webhook aslinya TIDAK
+	// BOLEH mengenqueue notifikasi lagi, kalau tidak pembeli bisa menerima
+	// email "pesanan siap diunduh" berkali-kali untuk satu pembayaran yang
+	// sama.
 	if shouldNotifyBuyer {
 		if h.Queue == nil {
 			log.Printf("checkout: job queue tidak tersedia, lewati notifikasi order %s", orderID)
@@ -1274,7 +1294,67 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "webhook diproses"})
+	return nil
+}
+
+// ReconcilePendingOrders -- permintaan langsung pengguna, 10 September
+// 2026 ("order nyangkut 'Menunggu Pembayaran' gara-gara URL Notification
+// Midtrans salah dikonfigurasi"): notifikasi webhook yang HILANG (URL
+// salah, server down sesaat, dst) SEBELUM ini tidak punya jalan pulih sama
+// sekali -- order tetap "pending" SELAMANYA sampai seseorang menyadari &
+// memperbaiki manual (lihat [[project_midtrans-webhook-reconciliation-2026-09]]
+// utk investigasi lengkapnya). Dipanggil berkala oleh worker (asynq
+// scheduler, lihat queue.TypeOrderReconcile & main.go runWorker) -- scan
+// order yang SUDAH cukup lama (>5 menit, kasih waktu webhook normal tiba
+// dulu SEBELUM dianggap "mungkin hilang") TAPI belum terlalu lama (<2
+// hari -- setelah itu transaksi Midtrans sendiri sudah expire, tidak ada
+// gunanya dicek berulang selamanya), cek ulang statusnya LANGSUNG ke
+// Midtrans (GetTransactionStatus, SUMBER KEBENARAN, bukan menunggu
+// notifikasi lagi), lalu proses lewat ApplyOrderStatus -- fungsi yang SAMA
+// PERSIS dipakai Webhook, supaya ledger/notifikasi TIDAK PERNAH diproses
+// beda antara jalur webhook normal vs jalur pemulihan ini. Kegagalan APA
+// PUN di sini (satu order gagal dicek, Midtrans API down) di-log & lanjut
+// ke order berikutnya -- TIDAK BOLEH menghentikan seluruh scan.
+func (h *CheckoutHandler) ReconcilePendingOrders(ctx context.Context) {
+	if h.Midtrans == nil {
+		return
+	}
+	rows, err := h.DB.Query(ctx, `
+		SELECT psp_reference FROM orders
+		WHERE status = 'pending' AND psp_reference != ''
+		  AND created_at < now() - interval '5 minutes'
+		  AND created_at > now() - interval '2 days'
+	`)
+	if err != nil {
+		log.Printf("checkout: reconcile gagal memuat order pending: %v", err)
+		return
+	}
+	var pspOrderIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			pspOrderIDs = append(pspOrderIDs, id)
+		}
+	}
+	rows.Close()
+
+	for _, pspOrderID := range pspOrderIDs {
+		status, err := h.Midtrans.GetTransactionStatus(ctx, pspOrderID)
+		if err != nil {
+			// Wajar utk transaksi yang benar-benar belum pernah dibayar
+			// sama sekali (Midtrans balas 404) -- bukan kegagalan yang
+			// perlu dicatat, cukup lewati ke order berikutnya.
+			continue
+		}
+		orderStatus, recognized := midtrans.StatusToOrderStatus(status.TransactionStatus, status.FraudStatus)
+		if !recognized {
+			continue
+		}
+		rawStatus, _ := json.Marshal(status)
+		if err := h.ApplyOrderStatus(ctx, pspOrderID, orderStatus, status.PaymentType, status.TransactionID, rawStatus); err != nil && !errors.Is(err, ErrOrderNotFoundForPSPReference) {
+			log.Printf("checkout: reconcile gagal memproses order %s: %v", pspOrderID, err)
+		}
+	}
 }
 
 // DownloadFile — REQ-F-405 (link unduhan pembeli). Endpoint PUBLIK (pembeli
