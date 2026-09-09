@@ -25,6 +25,18 @@ import { useLocale } from "@/lib/locale-context";
 const PagePreview = dynamic(() => import("@/components/PagePreview"));
 
 export const BUILDER_DEVICE_WIDTHS = { desktop: 1280, tablet: 768, mobile: 390 } as const;
+// BUILDER_DEVICE_HEIGHTS -- permintaan langsung pengguna 9 September 2026
+// ("batasi ukuran tampilan di builder supaya kalau banyak link tidak
+// semakin panjang ke bawah"): SEBELUMNYA bingkai "perangkat" ini tidak
+// pernah dibatasi tingginya sama sekali (cuma rootClassName="min-h-[640px]"
+// di PagePreview, itu MINIMUM bukan MAKSIMUM) -- makin banyak blok, bingkai
+// makin tinggi tanpa batas, bikin panel kanvas ikut membesar terus ke
+// bawah. Nilai per perangkat MENIRU resolusi layar sungguhan (tablet
+// 768x1024 = iPad potret, mobile 390x844 = iPhone 12/13/14, desktop
+// 1280x800 = viewport laptop umum) -- begitu konten lebih panjang dari
+// ini, scroll terjadi DI DALAM bingkai (lihat overflow-y-auto di bawah),
+// persis seperti membuka halaman sungguhan di perangkat sungguhan.
+const BUILDER_DEVICE_HEIGHTS = { desktop: 800, tablet: 1024, mobile: 844 } as const;
 export type BuilderDeviceWidth = keyof typeof BUILDER_DEVICE_WIDTHS;
 
 export default function BuilderCanvas({
@@ -113,10 +125,14 @@ export default function BuilderCanvas({
       <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
         {page && (
           <div className="mx-auto [-ms-overflow-style:none] [scrollbar-width:none]" style={{ width: BUILDER_DEVICE_WIDTHS[device], zoom }}>
-            <div className="overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card" onClick={handleCanvasClick}>
+            <div
+              className="overflow-y-auto overflow-x-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ height: BUILDER_DEVICE_HEIGHTS[device] }}
+              onClick={handleCanvasClick}
+            >
               <PagePreview
                 interactive={false}
-                rootClassName="min-h-[640px]"
+                rootClassName="min-h-full"
                 selectedNodeId={selectedNodeId}
                 editableStickers={editableStickers}
                 onStickersChange={onStickersChange}
