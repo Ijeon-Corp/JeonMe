@@ -82,12 +82,26 @@ export default function BuilderCanvas({
     const el = containerRef.current;
     if (!el) return;
     const deviceWidthPx = BUILDER_DEVICE_WIDTHS[device];
+    const deviceHeightPx = BUILDER_DEVICE_HEIGHTS[device];
     const observer = new ResizeObserver((entries) => {
-      const available = entries[0]?.contentRect.width ?? deviceWidthPx;
-      // Sisakan sedikit ruang (32px) supaya bingkai kanvas tidak mepet ke
-      // tepi kontainer scroll saat zoom=1 (perangkat "mobile" pas persis
-      // dengan panel sempit).
-      setZoom(Math.min(1, Math.max(0.2, (available - 32) / deviceWidthPx)));
+      const availableWidth = entries[0]?.contentRect.width ?? deviceWidthPx;
+      const availableHeight = entries[0]?.contentRect.height ?? deviceHeightPx;
+      // fit BOTH lebar & tinggi (pola sama object-fit:"contain"), BUKAN
+      // cuma lebar seperti sebelumnya -- bug ditemukan lewat feedback
+      // pengguna atas screenshot referensi Lynk.id (9 September 2026,
+      // "preview tampilan nya masih terlalu panjang kebawah"): zoom
+      // berbasis LEBAR saja bisa balik jadi 1 (Tablet/Mobile pas persis
+      // lebar panel) padahal TINGGI perangkat (1024/844px) tetap jauh
+      // melebihi tinggi panel yang benar-benar tersedia, memaksa panel
+      // abu-abu di luar ikut scroll vertikal cuma utk melihat seluruh
+      // bingkai -- dua scrollbar bertumpuk (luar + dalam bingkai) terasa
+      // berantakan. Dengan `contain`, seluruh bingkai SELALU pas terlihat
+      // penuh di dalam panel tanpa perlu scroll luar sama sekali; scroll
+      // DI DALAM bingkai (lihat overflow-y-auto) tetap jalan begitu
+      // konten lebih panjang dari tinggi logis perangkat.
+      const zoomByWidth = (availableWidth - 32) / deviceWidthPx;
+      const zoomByHeight = (availableHeight - 32) / deviceHeightPx;
+      setZoom(Math.min(1, Math.max(0.2, Math.min(zoomByWidth, zoomByHeight))));
     });
     observer.observe(el);
     return () => observer.disconnect();
