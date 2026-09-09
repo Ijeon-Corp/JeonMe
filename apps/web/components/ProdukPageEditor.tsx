@@ -2,6 +2,7 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
@@ -25,6 +26,7 @@ import {
 import {
   IconBook,
   IconChevronRight,
+  IconColumns,
   IconExternal,
   IconFileText,
   IconGripVertical,
@@ -213,6 +215,27 @@ export default function ProdukPageEditor({
     await uploadExtraPageBackground(page.id, file);
   }
 
+  // handleSlugChange/handleSlugBlur -- permintaan langsung pengguna 9
+  // September 2026 ("kenapa url store page nya masih staging.jeon.id/
+  // akbarokta/akbarokta"): Toko PERTAMA yang dibuat SEBELUM
+  // autoProdukPageSlug diubah dari username jadi "produk" (page.go) masih
+  // membawa slug lama SELAMANYA (perubahan itu sengaja TIDAK retroaktif,
+  // supaya link yang sudah dibagikan tidak putus) -- endpoint backend
+  // (updateExtraPage) SUDAH menerima field `slug` sejak lama, cuma belum
+  // pernah ada UI utk menggantinya di sini. Pola onChange (optimistic
+  // lokal) + onBlur (persist) SAMA PERSIS display_name/bio di
+  // HeaderSection (design-sections.tsx).
+  function handleSlugChange(value: string) {
+    if (!page) return;
+    setPage({ ...page, slug: value });
+  }
+  function handleSlugBlur() {
+    if (!page) return;
+    const next = page.slug.trim().toLowerCase();
+    if (next !== page.slug) setPage({ ...page, slug: next });
+    handlePatch({ slug: next });
+  }
+
   if (loading) return <PageSkeleton />;
 
   if (!page) {
@@ -264,6 +287,21 @@ export default function ProdukPageEditor({
   );
   const settingsCardBody = (
     <>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.slugLabel")}</label>
+        <div className="flex min-w-0 items-center gap-0 rounded-lg border border-app-border focus-within:border-jeon-purple">
+          <span className="flex-shrink-0 whitespace-nowrap py-2 pl-3 text-sm text-app-muted">jeon.id/{username}/</span>
+          <input
+            type="text"
+            maxLength={50}
+            value={page.slug}
+            onChange={(e) => handleSlugChange(e.target.value)}
+            onBlur={handleSlugBlur}
+            className="w-full min-w-0 rounded-r-lg py-2 pr-3 text-sm outline-none"
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.slugHint")}</p>
+      </div>
       <div className="mt-1.5 flex items-center gap-1.5">
           <span className={`h-1.5 w-1.5 rounded-full ${page.is_published ? "bg-jeon-purple" : "bg-muted"}`} />
           <span className={`text-xs font-semibold ${page.is_published ? "text-jeon-purple" : "text-app-muted"}`}>
@@ -351,6 +389,23 @@ export default function ProdukPageEditor({
             <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.productLayout.categoryHint")}</p>
           )}
         </div>
+
+        {/* Canvas Page Builder utk Halaman Toko -- permintaan langsung
+            pengguna 9 September 2026 ("buat store page bisa mode builder
+            juga"): SEBELUMNYA SENGAJA tidak ada entry point ke sini sama
+            sekali (Toko dikecualikan dari mode builder, migrasi 000096) --
+            sekarang grid produk sudah ikut dirender BuilderPagePreview
+            (PagePreview.tsx), jadi tautan yang SAMA PERSIS polanya dgn
+            entry point Bio (dashboard/links/page.tsx) ditambahkan di sini
+            juga. Route tujuan sendiri yang PATCH builder_mode='builder'
+            begitu dibuka (idempoten). */}
+        <Link
+          href={`/dashboard/links/builder/${page.id}`}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-bold text-app-ink transition-transform hover:scale-[1.01]"
+        >
+          <IconColumns className="h-4 w-4" />
+          {t("dashboard.components.produkPageEditor.openBuilderMode")}
+        </Link>
     </>
   );
 

@@ -3333,15 +3333,26 @@ function BuilderPagePreview({
   onStickersChange?: (stickers: PageStickerData[]) => void;
   selectedNodeId?: string;
 }) {
-  // isBio -- pageType "landing" (No.99) SENGAJA "TANPA avatar/produk/
-  // monetisasi" (lihat catatan lengkap di PagePreviewData.pageType), jadi
-  // shopPaused/leadCapture/events/donation/socialProof di bawah SAMA
-  // PERSIS digerbang `isBio` seperti layout bio biasa vs LandingPagePreview
-  // di atas -- builderMode HANYA mengganti cara blok Tautan dirender
-  // (renderBuilderNode, bukan renderLinkOrBlock), bukan menghapus fitur
-  // monetisasi account-wide lain yang independen dari mode edit.
-  const isBio = data.pageType !== "landing";
+  // isBio/isProduk -- pageType "landing" (No.99) SENGAJA "TANPA avatar/
+  // produk/monetisasi" (lihat catatan lengkap di PagePreviewData.pageType).
+  // pageType "produk" (Toko) diaktifkan di sini 9 September 2026
+  // (permintaan langsung pengguna: "buat store page bisa mode builder
+  // juga") -- SEBELUM ini `isBio` (dulu cuma `!== "landing"`) juga
+  // bernilai true utk produk, membuat leadCapture/events/donation/
+  // socialProof (fitur account-wide yang TIDAK PERNAH dirender
+  // ProdukPagePreview) ikut tampil keliru begitu Toko dipindah ke mode
+  // builder. `isBio` sekarang KETAT (bio sungguhan saja, meniru gerbang
+  // yang sama persis di ProdukPagePreview yang TIDAK memanggil fitur-fitur
+  // itu sama sekali) -- header avatar/nama/bio & banner shopPaused (dua-
+  // duanya ADA di Toko juga) dipisah ke `showHeaderChrome`.
+  const isBio = data.pageType === "bio" || data.pageType === undefined;
+  const isProduk = data.pageType === "produk";
+  const showHeaderChrome = data.pageType !== "landing";
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
+  // selectedProductCategory -- HANYA relevan pageType "produk", lihat
+  // catatan lengkap di getProductCategories/renderCategoryTabs (dekat
+  // toPreviewData, atas file ini) & ProdukPagePreview (pola SAMA PERSIS).
+  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
@@ -3378,7 +3389,7 @@ function BuilderPagePreview({
             langsung di builder" (9 September 2026) BuilderPagePreview tidak
             pernah menerima editableStickers/onStickersChange sama sekali. */}
         <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
-        {isBio && data.showProfileHeader !== false && (
+        {showHeaderChrome && data.showProfileHeader !== false && (
           <div className="relative w-full">
             {theme.glow !== "hidden" && (
               <div aria-hidden className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`} />
@@ -3387,7 +3398,7 @@ function BuilderPagePreview({
           </div>
         )}
 
-        {isBio && data.shopPaused && (
+        {showHeaderChrome && data.shopPaused && (
           <div className={`w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
             {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
           </div>
@@ -3436,6 +3447,22 @@ function BuilderPagePreview({
           };
           return renderBuilderNode(node, theme, data, interactive, selectedNodeId);
         })}
+
+        {/* Grid produk -- permintaan langsung pengguna 9 September 2026
+            ("buat store page bisa mode builder juga"): pola SAMA PERSIS
+            ProdukPagePreview di bawah (renderProductGrid + state kategori
+            terpilih lokal), cuma pindah lokasi supaya Toko juga bisa masuk
+            mode builder. Katalog produk TETAP dikelola lewat tab Produk
+            terpisah di dashboard (bukan lewat blok di sini) -- ini murni
+            menampilkan produk yang sudah ada, sama seperti mode non-builder. */}
+        {isProduk &&
+          (data.products.length > 0 ? (
+            <div className="mt-8 w-full">
+              {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
+            </div>
+          ) : (
+            <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
+          ))}
 
         {isBio && data.leadCapture && (
           <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>

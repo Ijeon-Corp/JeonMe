@@ -41,18 +41,22 @@ const PagePreview = dynamic(() => import("@/components/PagePreview"));
 // tampil di mockup itu bukan username tapi display name".
 const buildPreviewData = buildQuickSetupPreviewData;
 
-// pickAutoTokoPage -- Toko PERTAMA/auto tiap akun slug-nya TETAP (bukan
-// bebas seperti Toko ke-2..5 khusus Premium multi-brand) -- HANYA Toko auto
-// yang ikut disinkronkan tema Quick Setup di bawah, supaya brand kedua/
-// ketiga dst Premium tidak dipaksa ikut tema Bio. Slug tetap itu SEKARANG
-// "produk" (autoProdukPageSlug, page.go, permintaan langsung pengguna 9
-// September 2026 -- URL lama jeon.id/{username}/{username} kelihatan
-// berulang), TAPI akun yang Toko auto-nya dibuat SEBELUM perubahan ini
-// masih bernilai `username` (TIDAK di-migrasi, lihat catatan lengkap di
-// autoProdukPageSlug) -- cek KEDUA kemungkinan supaya akun lama & baru
-// sama-sama terdeteksi benar.
+// pickAutoTokoPage -- Toko PERTAMA/auto tiap akun -- HANYA Toko auto yang
+// ikut disinkronkan tema Quick Setup di bawah, supaya brand kedua/ketiga
+// dst Premium tidak dipaksa ikut tema Bio. Slug-nya DULU selalu salah satu
+// dari 2 nilai tetap ("produk"/autoProdukPageSlug, atau `username` untuk
+// akun lama -- lihat catatan lengkap di page.go), tapi sejak field "URL
+// Toko" (ProdukPageEditor.tsx, 9 September 2026) mengizinkan slug diganti
+// BEBAS, cocok-pola itu bisa gagal total begitu pemiliknya sendiri
+// mengganti slug canonical-nya -- bug regresi ditemukan lewat verifikasi
+// browser live (lihat catatan sama di dashboard/products/page.tsx,
+// loadTokoData). Kalau CUMA ADA SATU Toko (kasus gratis, mayoritas akun),
+// itu PASTI si auto, apa pun slug-nya sekarang -- tidak perlu cocok-pola
+// sama sekali. Premium multi-brand (>1 Toko) tetap coba pola lama dulu.
 function pickAutoTokoPage(pages: ExtraPage[], username: string): ExtraPage | null {
-  return pages.find((p) => p.page_type === "produk" && (p.slug === "produk" || p.slug === username)) ?? null;
+  const tokoPages = pages.filter((p) => p.page_type === "produk");
+  if (tokoPages.length <= 1) return tokoPages[0] ?? null;
+  return tokoPages.find((p) => p.slug === "produk" || p.slug === username) ?? null;
 }
 
 // fetchMyPage -- pengambil-data MURNI (tanpa setState), dipisah dari efek

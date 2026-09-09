@@ -373,22 +373,33 @@ function DashboardProductsPageInner() {
   // ditampilkan; kosong/tidak ketemu jatuh balik ke canonical (Toko pertama
   // yang otomatis dibuat begitu produk pertama ada).
   //
-  // Bug regresi ditemukan lewat verifikasi browser live, 9 September 2026
-  // (susulan langsung perubahan autoProdukPageSlug di page.go, permintaan
-  // pengguna: URL jeon.id/{username}/{username} kelihatan berulang): slug
-  // Toko auto SEKARANG "produk" (bukan lagi == username), tapi baris ini
-  // MASIH cuma cek `p.slug === profile.username` -- akun BARU (Toko
-  // auto-nya baru dibuat setelah perubahan itu) jadi canonical=null di
-  // sini walau Toko-nya SUDAH ada & published, tab "Halaman Toko" salah
-  // menampilkan "Halaman Toko belum aktif". pickAutoTokoPage
-  // (quick-setup/page.tsx) SUDAH lebih dulu diperbaiki cek KEDUA
-  // kemungkinan (akun lama & baru) saat perubahan slug itu dibuat, tapi
-  // call site di sini terlewat -- disamakan sekarang.
+  // Bug regresi KEDUA ditemukan lewat verifikasi browser live, 9 September
+  // 2026 (susulan langsung field "URL Toko" baru yang bisa diisi bebas,
+  // PagePreview.tsx/ProdukPageEditor.tsx): begitu slug Toko canonical
+  // diganti manual jadi APA PUN (bukan lagi "produk" atau username), cek
+  // slug di sini SELALU gagal cocok -- canonical jadi null WALAU Toko-nya
+  // published & aktif, tab "Halaman Toko" salah menampilkan "Halaman Toko
+  // belum aktif" tanpa jalan keluar (tombol "Buat sekarang" ditolak 403
+  // karena akun sudah py 1 Toko). Akar masalahnya: TIDAK ADA field apa pun
+  // di respons API ini (id/name/slug/bio/theme/is_published/page_type,
+  // lihat ListMyPages di page.go) yang menandai "ini Toko pertama/auto"
+  // secara independen dari slug -- begitu slug boleh diganti bebas,
+  // pencocokan pola slug jadi rapuh selamanya. Diganti jadi: kalau CUMA
+  // ADA SATU Toko (kasus gratis, mayoritas akun -- freeProdukPageLimit=1
+  // memastikan ini), itu PASTI canonical, apa pun slug-nya sekarang.
+  // Premium multi-brand (>1 Toko) tetap coba cocokkan pola lama dulu
+  // (kompatibel akun yang belum pernah mengganti slug canonical-nya),
+  // fallback ke entri pertama (ORDER BY name ASC, ListMyPages) kalau
+  // semua entri ternyata sudah diganti -- lebih baik menampilkan Toko yang
+  // salah daripada tidak menampilkan sama sekali.
   async function loadTokoData(targetId?: string | null) {
     const profile = await getSettingsProfile();
     const pages = await listMyExtraPages();
     const tokoPages = pages.filter((p) => p.page_type === "produk");
-    const canonical = tokoPages.find((p) => p.slug === "produk" || p.slug === profile.username) ?? null;
+    const canonical =
+      tokoPages.length <= 1
+        ? (tokoPages[0] ?? null)
+        : (tokoPages.find((p) => p.slug === "produk" || p.slug === profile.username) ?? tokoPages[0] ?? null);
     const target = (targetId && tokoPages.find((p) => p.id === targetId)) || canonical;
     if (!target) {
       return { username: profile.username, page: null as ExtraPageDetail | null, links: [] as LinkItem[], tokoPages, activeId: null as string | null };

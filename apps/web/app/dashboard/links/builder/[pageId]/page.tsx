@@ -77,8 +77,12 @@ export default function BuilderPage() {
   // extraPageType -- MyPage (halaman utama) TIDAK punya field page_type sama
   // sekali (SELALU "bio" secara implisit) -- dilacak terpisah dari `page`,
   // pola SAMA PERSIS `activePage.pageType` di dashboard/links/page.tsx,
-  // bukan field di objek `page` yang di-shim dari ExtraPageDetail.
-  const [extraPageType, setExtraPageType] = useState<"bio" | "landing" | undefined>(undefined);
+  // bukan field di objek `page` yang di-shim dari ExtraPageDetail. "produk"
+  // (Toko) SEMPAT dikonversi jadi undefined di sini (Fase 1-3, builder
+  // belum tahu cara merender katalog produk) -- diteruskan APA ADANYA
+  // sejak 9 September 2026 ("buat store page bisa mode builder juga"),
+  // lihat BuilderPagePreview (PagePreview.tsx) utk cabang render produk.
+  const [extraPageType, setExtraPageType] = useState<"bio" | "landing" | "produk" | undefined>(undefined);
   const [extraPageSlug, setExtraPageSlug] = useState<string | undefined>(undefined);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -105,7 +109,7 @@ export default function BuilderPage() {
   const fetchPageData = useCallback(async () => {
     if (isMain) {
       const [p, l, prod] = await Promise.all([getMyPage(), listLinks(), listProducts()]);
-      return { page: p, extraPageType: undefined as "bio" | "landing" | undefined, extraPageSlug: undefined as string | undefined, links: l, products: prod };
+      return { page: p, extraPageType: undefined as "bio" | "landing" | "produk" | undefined, extraPageSlug: undefined as string | undefined, links: l, products: prod };
     }
     const [detail, l, prod] = await Promise.all([getExtraPage(pageId), listExtraPageLinks(pageId), listProducts()]);
     const shimmed: MyPage = {
@@ -115,7 +119,7 @@ export default function BuilderPage() {
     };
     return {
       page: shimmed,
-      extraPageType: (detail.page_type === "produk" ? undefined : detail.page_type) as "bio" | "landing" | undefined,
+      extraPageType: detail.page_type,
       extraPageSlug: detail.slug as string | undefined,
       links: l,
       products: prod,
@@ -392,7 +396,16 @@ export default function BuilderPage() {
   return (
     <div className="flex h-screen flex-col bg-app-bg">
       <div className="flex flex-shrink-0 items-center gap-3 border-b border-app-border bg-app-surface px-4 py-3">
-        <button type="button" onClick={() => router.push("/dashboard/links")} className="flex items-center gap-1 text-xs font-bold text-app-muted hover:text-app-ink">
+        {/* backHref -- "produk" (Toko) dikelola lewat menu Toko (dashboard/
+            products), bukan Link Bio -- ditambahkan 9 September 2026 saat
+            Toko ikut bisa masuk mode builder ("buat store page bisa mode
+            builder juga"), sebelumnya SELALU "/dashboard/links" karena
+            cuma bio/landing yang pernah sampai ke sini. */}
+        <button
+          type="button"
+          onClick={() => router.push(extraPageType === "produk" ? "/dashboard/products" : "/dashboard/links")}
+          className="flex items-center gap-1 text-xs font-bold text-app-muted hover:text-app-ink"
+        >
           <IconChevronRight className="h-4 w-4 rotate-180" />
           {t("dashboard.pages.linksBuilder.back")}
         </button>

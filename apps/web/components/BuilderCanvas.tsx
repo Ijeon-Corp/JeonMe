@@ -53,7 +53,7 @@ export default function BuilderCanvas({
   page: MyPage | null;
   links: LinkItem[];
   products: DashboardProduct[];
-  pageType?: "bio" | "landing";
+  pageType?: "bio" | "landing" | "produk";
   pageSlug?: string;
   // selectedNodeId/onSelectNode -- permintaan langsung pengguna 9
   // September 2026 ("klik blok di kanvas juga, bukan cuma di tree kiri"):

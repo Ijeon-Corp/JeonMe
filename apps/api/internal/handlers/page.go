@@ -2248,9 +2248,9 @@ type extraPageDetailResponse struct {
 	// ProductLayout -- lihat catatan lengkap di publicPageResponse.
 	ProductLayout string `json:"product_layout"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse (migrasi
-	// 000096). Halaman tambahan bertipe "produk" (Toko) TIDAK boleh
-	// "builder" -- ditegakkan di UpdatePage, bukan di sini (endpoint ini
-	// cuma baca).
+	// 000096). Berlaku utk SEMUA page_type termasuk "produk" (Toko) sejak
+	// 9 September 2026 -- lihat catatan lengkap di BuilderPagePreview,
+	// PagePreview.tsx.
 	BuilderMode string `json:"builder_mode"`
 	IsPremium   bool   `json:"is_premium"`
 }
@@ -2357,9 +2357,12 @@ type updateExtraPageRequest struct {
 	// kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
 	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
-	// (migrasi 000096). Beda dari UpdateMyPage: halaman tambahan BISA
-	// page_type='produk' (Toko), yang DIKECUALIKAN dari mode builder --
-	// guard ada di UpdatePage, bukan lewat oneof di sini.
+	// (migrasi 000096). Halaman tambahan BISA page_type='produk' (Toko) --
+	// SEMPAT dikecualikan dari mode builder saat Fase 1-3 (produk/katalog
+	// belum dirender di BuilderPagePreview), diaktifkan kembali 9 September
+	// 2026 (permintaan langsung pengguna: "buat store page bisa mode
+	// builder juga") begitu grid produk ikut dirender di sana -- lihat
+	// catatan lengkap di BuilderPagePreview, PagePreview.tsx.
 	BuilderMode *string `json:"builder_mode" binding:"omitempty,oneof=simple builder"`
 }
 
@@ -2424,17 +2427,6 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 	if req.IsPublished != nil && *req.IsPublished && isPageModerationLocked(ctx, h.DB, "id = $1 AND user_id = $2", pageID, userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "halaman ini dinonaktifkan admin karena laporan, tidak bisa dipublikasikan ulang sendiri -- hubungi support kalau menurutmu ini keliru"})
 		return
-	}
-
-	// BuilderMode -- Toko (page_type='produk') dikecualikan dari mode
-	// builder (migrasi 000096) -- lihat catatan lengkap di
-	// updateExtraPageRequest.
-	if req.BuilderMode != nil && *req.BuilderMode == "builder" {
-		var currentPageType string
-		if scanErr := h.DB.QueryRow(ctx, `SELECT page_type FROM pages WHERE id = $1 AND user_id = $2`, pageID, userID).Scan(&currentPageType); scanErr == nil && currentPageType == "produk" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "mode builder belum tersedia untuk Halaman Toko"})
-			return
-		}
 	}
 
 	tag, err := h.DB.Exec(ctx, `
