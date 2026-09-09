@@ -63,6 +63,20 @@ type trackEventRequest struct {
 	LinkID    string `json:"link_id"`
 	ProductID string `json:"product_id"`
 	Referrer  string `json:"referrer"`
+	// UtmSource..UtmTerm -- permintaan langsung pengguna, 9 September 2026
+	// ("utm yang ada korelasi nya dengan pixel"): dibaca dari query string
+	// URL pengunjung SAAT halaman dimuat/tautan diklik (getUtmParamsFromWindow,
+	// api-client.ts) -- UTM MASUK (dari iklan/kampanye ke halaman kreator),
+	// BUKAN buildUtmHref (PagePreview.tsx, UTM KELUAR ke tautan tujuan).
+	// Diteruskan ke Meta Conversions API (maybeSendConversionsEvent) sbg
+	// custom_data supaya event server-side ini bisa dikaitkan ke campaign
+	// asalnya di Events Manager. TIDAK divalidasi format (nilai bebas dari
+	// pengunjung, bukan dari kreator) -- cuma dibatasi panjang wajar.
+	UtmSource   string `json:"utm_source" binding:"omitempty,max=255"`
+	UtmMedium   string `json:"utm_medium" binding:"omitempty,max=255"`
+	UtmCampaign string `json:"utm_campaign" binding:"omitempty,max=255"`
+	UtmContent  string `json:"utm_content" binding:"omitempty,max=255"`
+	UtmTerm     string `json:"utm_term" binding:"omitempty,max=255"`
 }
 
 // classifyDevice -- heuristik sederhana dari User-Agent (BUKAN pustaka
@@ -161,7 +175,31 @@ func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, 
 		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 	`, uuid.NewString(), pageID, req.EventType, linkID, productID, req.Referrer, deviceType)
 
-	go h.maybeSendConversionsEvent(pageID, req.EventType, sourceURL, clientIP, userAgent)
+	go h.maybeSendConversionsEvent(pageID, req.EventType, sourceURL, clientIP, userAgent, utmCustomData(req))
+}
+
+// utmCustomData -- rangkai field utm_* trackEventRequest jadi map utk
+// metaconversions.Client.SendEvent, HANYA memasukkan yang benar-benar
+// terisi (kunjungan organik tanpa UTM -- mayoritas -- hasilnya map
+// kosong, custom_data ikut dilewati sepenuhnya di request Meta CAPI).
+func utmCustomData(req trackEventRequest) map[string]string {
+	data := map[string]string{}
+	if req.UtmSource != "" {
+		data["utm_source"] = req.UtmSource
+	}
+	if req.UtmMedium != "" {
+		data["utm_medium"] = req.UtmMedium
+	}
+	if req.UtmCampaign != "" {
+		data["utm_campaign"] = req.UtmCampaign
+	}
+	if req.UtmContent != "" {
+		data["utm_content"] = req.UtmContent
+	}
+	if req.UtmTerm != "" {
+		data["utm_term"] = req.UtmTerm
+	}
+	return data
 }
 
 // maybeSendConversionsEvent -- Modul Analitik Pihak Ketiga (permintaan
@@ -175,7 +213,7 @@ func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, 
 // dikonfigurasi, token salah, Meta API down) diam-diam diabaikan, sama
 // seperti insertTrackEvent di atas: analytics tidak boleh pernah
 // mengganggu pengalaman pengunjung halaman publik.
-func (h *AnalyticsHandler) maybeSendConversionsEvent(pageID, eventType, sourceURL, clientIP, userAgent string) {
+func (h *AnalyticsHandler) maybeSendConversionsEvent(pageID, eventType, sourceURL, clientIP, userAgent string, utm map[string]string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
@@ -207,7 +245,7 @@ func (h *AnalyticsHandler) maybeSendConversionsEvent(pageID, eventType, sourceUR
 	_ = client.SendEvent(ctx, metaEventName, sourceURL, metaconversions.UserData{
 		ClientIPAddress: clientIP,
 		ClientUserAgent: userAgent,
-	})
+	}, utm)
 }
 
 // resolveDateRange — No.86: mendukung DUA cara memilih rentang: preset

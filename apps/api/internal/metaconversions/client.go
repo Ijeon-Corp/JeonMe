@@ -63,24 +63,40 @@ type UserData struct {
 // untuk klik tautan keluar -- Meta menerima nama event custom apa pun,
 // cukup konsisten dipakai supaya laporan Events Manager kreator bisa
 // dibaca.
-func (c *Client) SendEvent(ctx context.Context, eventName, sourceURL string, user UserData) error {
+//
+// customData -- permintaan langsung pengguna, 9 September 2026 ("utm yang
+// ada korelasi nya dengan pixel"): field bebas Meta CAPI utk data
+// tambahan di luar skema standar -- dipakai pemanggil (maybeSendConversionsEvent,
+// analytics.go) utk menyisipkan utm_source/medium/campaign/content/term
+// (kalau pengunjung datang lewat tautan berkampanye) supaya event server-
+// side ini bisa dikaitkan ke campaign asalnya di Events Manager, sama
+// seperti event client-side (fbq trackCustom, AnalyticsScripts.tsx). nil/
+// map kosong aman -- Meta cukup mengabaikan custom_data yang kosong.
+func (c *Client) SendEvent(ctx context.Context, eventName, sourceURL string, user UserData, customData map[string]string) error {
 	if c.PixelID == "" || c.AccessToken == "" {
 		return ErrNotConfigured
 	}
 
-	payload := map[string]any{
-		"data": []map[string]any{
-			{
-				"event_name":       eventName,
-				"event_time":       time.Now().Unix(),
-				"action_source":    "website",
-				"event_source_url": sourceURL,
-				"user_data": map[string]any{
-					"client_ip_address": user.ClientIPAddress,
-					"client_user_agent": user.ClientUserAgent,
-				},
-			},
+	event := map[string]any{
+		"event_name":       eventName,
+		"event_time":       time.Now().Unix(),
+		"action_source":    "website",
+		"event_source_url": sourceURL,
+		"user_data": map[string]any{
+			"client_ip_address": user.ClientIPAddress,
+			"client_user_agent": user.ClientUserAgent,
 		},
+	}
+	if len(customData) > 0 {
+		cd := make(map[string]any, len(customData))
+		for k, v := range customData {
+			cd[k] = v
+		}
+		event["custom_data"] = cd
+	}
+
+	payload := map[string]any{
+		"data": []map[string]any{event},
 	}
 
 	body, err := json.Marshal(payload)

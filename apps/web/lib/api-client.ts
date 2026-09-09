@@ -3378,6 +3378,41 @@ export async function submitKyc(input: {
 
 // ---------- Analytics (Sprint 5) ----------
 
+// UtmParams/getUtmParamsFromWindow -- permintaan langsung pengguna, 9
+// September 2026 ("utm yang ada korelasi nya dengan pixel"): SEBELUM ini
+// UTM di Jeonme cuma menempel di TAUTAN KELUAR (buildUtmHref,
+// PagePreview.tsx) -- Pixel/GA/Conversions API tidak pernah tahu UTM
+// MASUK (dari iklan/kampanye yang mengarah KE halaman kreator), jadi
+// laporan Meta Events Manager/GA4 tidak bisa mengaitkan kunjungan/klik ke
+// campaign asalnya. Dibaca dari query string URL SAAT INI (browser saja,
+// query string ini bertahan sepanjang hidup halaman -- tidak ada
+// client-side history.replaceState yang menghapusnya di rute publik) --
+// SATU sumber logika dipakai trackEvent/trackEventBySlug (korelasi
+// server-side ke Facebook Conversions API, lihat maybeSendConversionsEvent)
+// DAN AnalyticsScripts.tsx (korelasi client-side ke fbq/gtag), supaya
+// kedua jalur selalu konsisten.
+export interface UtmParams {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+}
+
+export function getUtmParamsFromWindow(): UtmParams {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  const pick = (key: string) => params.get(key)?.slice(0, 255) || undefined;
+  const utm: UtmParams = {
+    utm_source: pick("utm_source"),
+    utm_medium: pick("utm_medium"),
+    utm_campaign: pick("utm_campaign"),
+    utm_content: pick("utm_content"),
+    utm_term: pick("utm_term"),
+  };
+  return Object.fromEntries(Object.entries(utm).filter(([, v]) => v !== undefined)) as UtmParams;
+}
+
 // Fire-and-forget: kegagalan tracking TIDAK BOLEH mengganggu pengunjung
 // halaman publik, jadi error diabaikan diam-diam (bukan throw).
 export function trackEvent(
@@ -3387,7 +3422,7 @@ export function trackEvent(
   fetch(`${API_BASE_URL}/pages/${username}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...getUtmParamsFromWindow(), ...input }),
   }).catch(() => {
     // Sengaja diabaikan -- lihat komentar di atas.
   });
@@ -3406,7 +3441,7 @@ export function trackEventBySlug(
   fetch(`${API_BASE_URL}/p/${username}/${slug}/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...getUtmParamsFromWindow(), ...input }),
     keepalive: true,
   }).catch(() => {});
 }
