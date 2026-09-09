@@ -400,7 +400,11 @@ export default function BuilderPage() {
         <div className="w-16" />
       </div>
       {error && <p className="flex-shrink-0 bg-red-50 px-4 py-2 text-center text-xs text-red-600">{error}</p>}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[320px_1fr]">
+      {/* lg:grid-cols-[420px_1fr] -- lebar panel kiri dinaikkan dari 320px
+          (permintaan langsung pengguna 9 September 2026, "buat lebih besar
+          lagi kolom edit blok nya") -- field editor per blok (mis. baris 4
+          tombol Corner Radius/Button Shadow di tab Design) mepet di 320px. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[420px_1fr]">
         <BuilderLeftPanel
           links={links}
           selection={selection}

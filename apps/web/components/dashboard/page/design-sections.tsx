@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, MyPage, PageLayoutVariant, THEME_PRESETS } from "@/lib/api-client";
+import { ApiError, MyPage, PageLayoutVariant } from "@/lib/api-client";
 import {
   CUSTOM_BUTTON_ROUNDED_OPTIONS,
   CUSTOM_BUTTON_SHADOW_OPTIONS,
   CUSTOM_BUTTON_STYLE_OPTIONS,
   CUSTOM_FONT_OPTIONS,
-  PAGE_THEMES,
 } from "@/lib/page-themes";
-import { IconCheck, IconChevronRight, IconLock, IconPaintbrush } from "@/components/icons";
+import { IconChevronRight } from "@/components/icons";
 import Toggle from "@/components/Toggle";
+import ThemeGallery from "@/components/ThemeGallery";
 import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { useLocale } from "@/lib/locale-context";
 
@@ -132,53 +132,25 @@ export function TemaSection({
 
   return (
     <section className="glass rounded-jmd p-5 shadow-card">
-      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-        <button
-          type="button"
-          onClick={() =>
-            isPremium
-              ? onPatch({ theme: "custom", custom_style_override: false })
-              : onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly"))
-          }
-          className="group flex flex-col items-center gap-1.5"
-        >
-          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
-            <div className="flex h-full w-full items-center justify-center bg-gray-100">
-              <IconPaintbrush className="h-7 w-7 text-app-muted" />
-            </div>
-            {!isPremium && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <IconLock className="h-5 w-5 text-white" />
-              </div>
-            )}
-          </div>
-          <span className="text-[11px] font-semibold text-app-ink">
-            {t("dashboard.components.produkPageEditor.tema.customLabel")}
-            {!isPremium && ` (${t("dashboard.components.produkPageEditor.tema.premiumSuffix")})`}
-          </span>
-        </button>
-        {THEME_PRESETS.map((themeName) => {
-          const meta = PAGE_THEMES[themeName as keyof typeof PAGE_THEMES];
-          if (!meta) return null;
-          return (
-            <button key={themeName} type="button" onClick={() => onPatch({ theme: themeName, custom_style_override: false })} className="group flex flex-col items-center gap-1.5">
-              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
-                <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
-                <span className={`absolute left-2.5 top-2 font-display text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
-                  Aa
-                </span>
-                <span className={`absolute inset-x-2.5 bottom-2.5 h-5 rounded-full ring-1 ring-black/10 ${meta.buyButton}`} aria-hidden />
-                {page.theme === themeName && (
-                  <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-white">
-                    <IconCheck className="h-3 w-3" />
-                  </span>
-                )}
-              </div>
-              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-jeon-purple" : "text-app-ink"}`}>{meta.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ThemeGallery -- permintaan langsung pengguna 9 September 2026
+          ("supaya tema tidak tampil langsung banyak banget", "tampilkan
+          tema berdasarkan kategori"): SEBELUMNYA grid datar 123 tema
+          sekaligus (disalin apa adanya dari kode lama, tanpa preview
+          video/live-wallpaper yang benar utk tipe tema itu) -- diganti
+          pakai galeri BERTAB yang SAMA PERSIS dipakai Bio
+          (dashboard/design/theme/page.tsx) & Quick Setup, bukan reimplementasi
+          ketiga. Otomatis mewarisi preview video/live-wallpaper yang benar,
+          bukan cuma perbaikan kategori.
+      */}
+      <ThemeGallery
+        value={page.theme}
+        onChange={(theme) => onPatch({ theme, custom_style_override: false })}
+        customTile={{
+          isPremium,
+          onSelect: () => onPatch({ theme: "custom", custom_style_override: false }),
+          onLocked: () => onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly")),
+        }}
+      />
 
       {page.theme === "custom" && isPremium && (
         <div className="mt-5 flex flex-col gap-3 border-t border-app-border pt-4">
