@@ -1883,6 +1883,19 @@ const premiumExtraPageLimit = 5
 const freeProdukPageLimit = 1
 const premiumProdukPageLimit = 5
 
+// autoProdukPageSlug -- slug default Toko PERTAMA (gratis, dibuat otomatis
+// via ensureProdukPage ATAU tombol "Buat sekarang" di CreatePage). SEBELUMNYA
+// literal = username akun (permintaan 7 Agustus 2026, "konsisten dgn URL
+// Bio") -- keluhan langsung pengguna 9 September 2026: hasilnya
+// jeon.id/{username}/{username}, kelihatan berulang & membingungkan. Diganti
+// jadi konstanta tetap "produk" (jeon.id/{username}/produk) -- HANYA berlaku
+// utk Toko yang BARU dibuat setelah perubahan ini; Toko yang sudah ada
+// TIDAK ikut di-migrasi (link publik yang sudah dibagikan tetap jalan),
+// lihat idx_pages_user_slug (000079_page_slug_per_user.up.sql) -- slug
+// dinamespace PER AKUN, jadi "produk" aman dipakai semua akun sekaligus
+// tanpa risiko tabrakan lintas-akun.
+const autoProdukPageSlug = "produk"
+
 // ensureProdukPage — Modul Halaman Produk (permintaan langsung pengguna, 7
 // Agustus 2026): setiap kreator gratis berhak atas 1 Halaman Toko gratis,
 // tapi sekarang dibuat OTOMATIS begitu produk pertamanya ada -- bukan lagi
@@ -1892,10 +1905,11 @@ const premiumProdukPageLimit = 5
 // menggagalkan pembuatan produk itu sendiri -- kreator masih bisa buat
 // manual lewat dashboard/pages kalau ini gagal diam-diam.
 //
-// Slug SELALU = username akun (bukan slug bebas) supaya URL-nya konsisten
-// dengan Halaman Bio (jeon.id/{username}), bukan slug acak yang harus
-// diketik manual -- lihat aturan sama di CreatePage untuk Toko ke-2..5
-// (Premium, mis. multi-brand) yang tetap pakai slug bebas seperti sebelumnya.
+// Slug SELALU = autoProdukPageSlug ("produk", bukan slug bebas) supaya
+// URL-nya konsisten & jelas (jeon.id/{username}/produk) -- lihat catatan
+// lengkap di konstanta itu soal kenapa BUKAN username lagi. Aturan sama di
+// CreatePage untuk Toko PERTAMA lewat tombol manual; Toko ke-2..5 (Premium,
+// mis. multi-brand) tetap pakai slug bebas seperti sebelumnya.
 func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, userID string) {
 	var exists bool
 	if err := db.QueryRow(ctx, `
@@ -1931,15 +1945,14 @@ func ensureProdukPage(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, 
 	if _, err := db.Exec(ctx, `
 		INSERT INTO pages (user_id, is_primary, name, slug, page_type, is_published, bio, avatar_url, theme, stickers, hide_watermark)
 		VALUES ($1, false, $2, $3, 'produk', true, $4, $5, $6, $7, $8)
-	`, userID, name, username, bio, avatarURL, theme, stickersRaw, hideWatermark); err != nil {
+	`, userID, name, autoProdukPageSlug, bio, avatarURL, theme, stickersRaw, hideWatermark); err != nil {
 		// Soft-fail -- kemungkinan besar cuma slug bentrok (kasus langka:
-		// halaman lain, bukan milik kreator ini, kebetulan pakai slug
-		// identik dengan username-nya).
+		// akun ini sudah punya halaman tambahan lain ber-slug "produk").
 		return
 	}
 
 	if rdb != nil {
-		rdb.Del(ctx, "page-slug:"+username+":"+username)
+		rdb.Del(ctx, "page-slug:"+username+":"+autoProdukPageSlug)
 		// Cache halaman UTAMA ikut dihapus -- Toko baru saja LANGSUNG
 		// published (is_published=true di atas), mengubah daftar SitePages
 		// pada respons halaman utama (lihat catatan lengkap soal bug ini di
@@ -2046,9 +2059,9 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			return
 		}
 		// Toko PERTAMA (gratis, produkPageCount==0) selalu dikunci ke
-		// username akun -- permintaan langsung pengguna 7 Agustus 2026,
-		// sama seperti ensureProdukPage di atas. Toko ke-2..5 (Premium,
-		// mis. multi-brand) TETAP pakai slug bebas dari req.Slug.
+		// autoProdukPageSlug -- lihat catatan lengkap di konstanta itu &
+		// ensureProdukPage. Toko ke-2..5 (Premium, mis. multi-brand) TETAP
+		// pakai slug bebas dari req.Slug.
 		if produkPageCount == 0 {
 			isAutoProdukSlug = true
 		}
@@ -2074,11 +2087,11 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 	var pageID string
 
 	if isAutoProdukSlug {
-		// Toko pertama (gratis): slug=username, langsung published, DAN
-		// bio/avatar/tema disalin dari halaman Bio utama (bukan dibiarkan
-		// kosong/default) -- sama persis dengan ensureProdukPage, supaya
-		// dibuat manual lewat sini atau otomatis lewat produk pertama
-		// hasilnya konsisten.
+		// Toko pertama (gratis): slug=autoProdukPageSlug ("produk"), langsung
+		// published, DAN bio/avatar/tema disalin dari halaman Bio utama
+		// (bukan dibiarkan kosong/default) -- sama persis dengan
+		// ensureProdukPage, supaya dibuat manual lewat sini atau otomatis
+		// lewat produk pertama hasilnya konsisten.
 		var username, bio, avatarURL, theme string
 		var stickersRaw []byte
 		var hideWatermark bool
@@ -2090,7 +2103,7 @@ func (h *PageHandler) CreatePage(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 			return
 		}
-		slug = username
+		slug = autoProdukPageSlug
 		if name == "" {
 			name = "Toko " + username
 		}

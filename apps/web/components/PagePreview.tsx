@@ -3352,8 +3352,23 @@ function BuilderPagePreview({
           intervalSeconds={data.socialProof.intervalSeconds}
         />
       )}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
-        <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+      {/* PageSwitcher (hamburger ganti halaman) -- bug dilaporkan pengguna 9
+          September 2026 ("sudah aktifkan store page tapi kenapa menu
+          hamburger nya tidak muncul"): akun pelapor is_published Toko-nya
+          SUDAH benar & site_pages sudah berisi >=2 halaman (dikonfirmasi
+          lewat GET /api/v1/pages/<username> langsung ke staging) -- akar
+          masalah SEBENARNYA adalah BuilderPagePreview (builder_mode=
+          "builder", akun pelapor persis dalam kondisi ini) SATU-SATUNYA
+          varian preview yang TIDAK PERNAH merender <PageSwitcher> sama
+          sekali, beda dari layout bio biasa (baris ~2441) & ProdukPagePreview
+          (baris ~3640) yang keduanya sudah benar. Ditambal di sini,
+          menyamakan struktur topbar (PageSwitcher + ShareButton via
+          ml-auto) dengan kedua varian lain itu persis. */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
+        <PageSwitcher username={data.username} pages={data.sitePages} currentSlug={data.pageSlug ?? null} theme={theme} />
+        <div className="ml-auto">
+          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
+        </div>
       </div>
       <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
         {/* StickerOverlay -- pola SAMA PERSIS layout bio biasa di atas (lihat

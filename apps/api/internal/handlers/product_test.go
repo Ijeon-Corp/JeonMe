@@ -66,18 +66,15 @@ func TestProductUpdate_RejectsActivationWithoutFile(t *testing.T) {
 
 // Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
 // produk PERTAMA kreator otomatis memicu pembuatan Halaman Toko gratis
-// (page_type='produk'), langsung dipublikasikan, slug = username akun --
-// BUKAN lagi harus dibuat manual lewat dashboard/pages. Produk KEDUA tidak
-// boleh membuat halaman toko duplikat.
+// (page_type='produk'), langsung dipublikasikan, slug = autoProdukPageSlug
+// ("produk", diubah dari username akun 9 September 2026 -- lihat catatan
+// lengkap di konstanta itu, page.go) -- BUKAN lagi harus dibuat manual
+// lewat dashboard/pages. Produk KEDUA tidak boleh membuat halaman toko
+// duplikat.
 func TestProductCreate_AutoCreatesProdukPageOnFirstProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	product, auth := newTestProductHandler(t)
 	userID := registerTestUser(t, auth)
-
-	var username string
-	if err := product.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
-		t.Fatalf("gagal ambil username test user: %v", err)
-	}
 
 	router := gin.New()
 	g := router.Group("/", fakeAuth())
@@ -95,8 +92,8 @@ func TestProductCreate_AutoCreatesProdukPageOnFirstProduct(t *testing.T) {
 	`, userID).Scan(&slug, &isPublished); err != nil {
 		t.Fatalf("Halaman Toko tidak otomatis terbuat setelah produk pertama: %v", err)
 	}
-	if slug != username {
-		t.Errorf("slug Halaman Toko = %q, ekspektasi = username akun %q", slug, username)
+	if slug != "produk" {
+		t.Errorf("slug Halaman Toko = %q, ekspektasi = %q", slug, "produk")
 	}
 	if !isPublished {
 		t.Errorf("Halaman Toko auto seharusnya langsung published")

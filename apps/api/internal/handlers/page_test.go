@@ -494,19 +494,16 @@ func TestCreatePage_ProdukType_AllowsPremiumUserUpToLimitThenRejects(t *testing.
 	}
 }
 
-// Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026):
-// Toko PERTAMA selalu dikunci ke username akun, walau klien kirim slug
-// custom -- beda dari Toko ke-2..5 (Premium) yang tetap pakai slug bebas.
-func TestCreatePage_ProdukType_FirstPageForcesUsernameSlug(t *testing.T) {
+// Modul Halaman Produk (permintaan langsung pengguna, 7 Agustus 2026, slug
+// diubah dari username jadi autoProdukPageSlug "produk" 9 September 2026 --
+// lihat catatan lengkap di konstanta itu, page.go): Toko PERTAMA selalu
+// dikunci ke slug tetap, walau klien kirim slug custom -- beda dari Toko
+// ke-2..5 (Premium) yang tetap pakai slug bebas.
+func TestCreatePage_ProdukType_FirstPageForcesAutoSlug(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	page, auth := newTestPageHandler(t)
 	userID := registerTestUser(t, auth)
 	makeTestUserPremium(t, page, userID)
-
-	var username string
-	if err := page.DB.QueryRow(t.Context(), `SELECT username FROM users WHERE id = $1`, userID).Scan(&username); err != nil {
-		t.Fatalf("gagal ambil username test user: %v", err)
-	}
 
 	router := gin.New()
 	g := router.Group("/", fakeAuth())
@@ -523,8 +520,8 @@ func TestCreatePage_ProdukType_FirstPageForcesUsernameSlug(t *testing.T) {
 	`, userID).Scan(&firstSlug); err != nil {
 		t.Fatalf("gagal ambil slug halaman produk pertama: %v", err)
 	}
-	if firstSlug != username {
-		t.Errorf("slug halaman produk pertama = %q, ekspektasi dipaksa jadi username %q (bukan slug custom yang dikirim)", firstSlug, username)
+	if firstSlug != "produk" {
+		t.Errorf("slug halaman produk pertama = %q, ekspektasi dipaksa jadi %q (bukan slug custom yang dikirim)", firstSlug, "produk")
 	}
 
 	// Toko KEDUA (Premium) tetap pakai slug custom yang dikirim klien.
@@ -536,7 +533,7 @@ func TestCreatePage_ProdukType_FirstPageForcesUsernameSlug(t *testing.T) {
 	var secondSlug string
 	if err := page.DB.QueryRow(t.Context(), `
 		SELECT slug FROM pages WHERE user_id = $1 AND page_type = 'produk' AND slug != $2
-	`, userID, username).Scan(&secondSlug); err != nil {
+	`, userID, "produk").Scan(&secondSlug); err != nil {
 		t.Fatalf("gagal ambil slug halaman produk kedua: %v", err)
 	}
 	if secondSlug != customSlug {

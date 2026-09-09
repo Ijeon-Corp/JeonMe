@@ -370,13 +370,25 @@ function DashboardProductsPageInner() {
   // loadTokoData -- murni ambil & kembalikan data, TANPA setState di
   // dalamnya (aturan lint react-hooks/set-state-in-effect, lihat catatan
   // yang sama di commit sebelumnya). targetId -- Toko mana yang mau
-  // ditampilkan; kosong/tidak ketemu jatuh balik ke canonical (slug ===
-  // username, Toko pertama yang otomatis dibuat begitu produk pertama ada).
+  // ditampilkan; kosong/tidak ketemu jatuh balik ke canonical (Toko pertama
+  // yang otomatis dibuat begitu produk pertama ada).
+  //
+  // Bug regresi ditemukan lewat verifikasi browser live, 9 September 2026
+  // (susulan langsung perubahan autoProdukPageSlug di page.go, permintaan
+  // pengguna: URL jeon.id/{username}/{username} kelihatan berulang): slug
+  // Toko auto SEKARANG "produk" (bukan lagi == username), tapi baris ini
+  // MASIH cuma cek `p.slug === profile.username` -- akun BARU (Toko
+  // auto-nya baru dibuat setelah perubahan itu) jadi canonical=null di
+  // sini walau Toko-nya SUDAH ada & published, tab "Halaman Toko" salah
+  // menampilkan "Halaman Toko belum aktif". pickAutoTokoPage
+  // (quick-setup/page.tsx) SUDAH lebih dulu diperbaiki cek KEDUA
+  // kemungkinan (akun lama & baru) saat perubahan slug itu dibuat, tapi
+  // call site di sini terlewat -- disamakan sekarang.
   async function loadTokoData(targetId?: string | null) {
     const profile = await getSettingsProfile();
     const pages = await listMyExtraPages();
     const tokoPages = pages.filter((p) => p.page_type === "produk");
-    const canonical = tokoPages.find((p) => p.slug === profile.username) ?? null;
+    const canonical = tokoPages.find((p) => p.slug === "produk" || p.slug === profile.username) ?? null;
     const target = (targetId && tokoPages.find((p) => p.id === targetId)) || canonical;
     if (!target) {
       return { username: profile.username, page: null as ExtraPageDetail | null, links: [] as LinkItem[], tokoPages, activeId: null as string | null };

@@ -41,13 +41,18 @@ const PagePreview = dynamic(() => import("@/components/PagePreview"));
 // tampil di mockup itu bukan username tapi display name".
 const buildPreviewData = buildQuickSetupPreviewData;
 
-// pickAutoTokoPage -- Toko PERTAMA/auto tiap akun slug-nya SELALU =
-// username (ensureProdukPage, backend), beda dari Toko ke-2..5 (khusus
-// Premium, multi-brand, slug bebas sengaja dikustomisasi terpisah) --
-// HANYA Toko auto yang ikut disinkronkan tema Quick Setup di bawah,
-// supaya brand kedua/ketiga dst Premium tidak dipaksa ikut tema Bio.
+// pickAutoTokoPage -- Toko PERTAMA/auto tiap akun slug-nya TETAP (bukan
+// bebas seperti Toko ke-2..5 khusus Premium multi-brand) -- HANYA Toko auto
+// yang ikut disinkronkan tema Quick Setup di bawah, supaya brand kedua/
+// ketiga dst Premium tidak dipaksa ikut tema Bio. Slug tetap itu SEKARANG
+// "produk" (autoProdukPageSlug, page.go, permintaan langsung pengguna 9
+// September 2026 -- URL lama jeon.id/{username}/{username} kelihatan
+// berulang), TAPI akun yang Toko auto-nya dibuat SEBELUM perubahan ini
+// masih bernilai `username` (TIDAK di-migrasi, lihat catatan lengkap di
+// autoProdukPageSlug) -- cek KEDUA kemungkinan supaya akun lama & baru
+// sama-sama terdeteksi benar.
 function pickAutoTokoPage(pages: ExtraPage[], username: string): ExtraPage | null {
-  return pages.find((p) => p.page_type === "produk" && p.slug === username) ?? null;
+  return pages.find((p) => p.page_type === "produk" && (p.slug === "produk" || p.slug === username)) ?? null;
 }
 
 // fetchMyPage -- pengambil-data MURNI (tanpa setState), dipisah dari efek

@@ -222,7 +222,11 @@ export default function ProdukPageEditor({
         <h2 className="mt-3 font-display text-lg font-bold text-app-ink">{t("dashboard.components.produkPageEditor.notActive.title")}</h2>
         <p className="mt-2 text-sm text-app-muted">
           {t("dashboard.components.produkPageEditor.notActive.description")}{" "}
-          <span className="font-semibold text-app-ink">jeon.id/{username}/{username}</span>.
+          {/* "produk" -- lihat autoProdukPageSlug (page.go): slug Toko
+              pertama diubah dari username jadi konstanta tetap "produk"
+              (permintaan langsung pengguna 9 September 2026, URL
+              jeon.id/{username}/{username} kelihatan berulang). */}
+          <span className="font-semibold text-app-ink">jeon.id/{username}/produk</span>.
         </p>
         <button
           type="button"

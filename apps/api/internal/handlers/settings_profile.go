@@ -264,15 +264,22 @@ func (h *SettingsProfileHandler) Update(c *gin.Context) {
 		h.RDB.Del(ctx, "page:"+newUsername)
 	}
 
-	// Modul Halaman Produk: Toko pertama (auto) pakai slug = username --
-	// kalau username-nya baru saja diganti, ikutkan slug Toko supaya
-	// tetap konsisten (jeon.id/{username baru}/{username baru}). Cek
-	// "slug = username LAMA" sebagai penanda "ini memang Toko auto", bukan
-	// Toko ke-2..5 Premium yang sengaja dikustomisasi slugnya sendiri --
-	// best-effort, gagal diam-diam kalau slug baru kebetulan sudah dipakai
-	// halaman lain milik akun yang SAMA (unik PER-USER sejak migrasi
-	// 000079, jadi username baru = username lama tidak akan pernah bentrok
-	// dengan akun lain).
+	// Modul Halaman Produk -- LEGACY sejak autoProdukPageSlug (page.go)
+	// diubah dari username jadi konstanta tetap "produk" (permintaan
+	// langsung pengguna 9 September 2026): Toko yang dibuat SEBELUM
+	// perubahan itu masih pakai slug = username LAMA (tidak ikut
+	// dimigrasi), jadi kalau username-nya diganti sekarang, slug Toko lama
+	// itu ikut disamakan supaya tetap konsisten (jeon.id/{username baru}/
+	// {username baru}). Toko yang dibuat SETELAH perubahan (slug="produk")
+	// TIDAK PERNAH cocok dgn WHERE di bawah (slug = username LAMA) --
+	// otomatis no-op, memang sudah benar (slug "produk" tidak perlu ikut
+	// berubah kalau username berganti). "slug = username LAMA" tetap
+	// dipakai sbg penanda "ini Toko auto (gaya lama)", bukan Toko ke-2..5
+	// Premium yang sengaja dikustomisasi slugnya sendiri -- best-effort,
+	// gagal diam-diam kalau slug baru kebetulan sudah dipakai halaman lain
+	// milik akun yang SAMA (unik PER-USER sejak migrasi 000079, jadi
+	// username baru = username lama tidak akan pernah bentrok dengan akun
+	// lain).
 	if usernameChanged {
 		var newSlug string
 		if err := h.DB.QueryRow(ctx, `
