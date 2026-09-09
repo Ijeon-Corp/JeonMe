@@ -7,9 +7,7 @@ import {
   ApiError,
   ExtraPageDetail,
   LinkItem,
-  MyPage,
   PageStickerData,
-  THEME_PRESETS,
   createExtraPageBlock,
   createExtraPageLink,
   deleteAudioBlock,
@@ -25,15 +23,7 @@ import {
   uploadGalleryImage,
 } from "@/lib/api-client";
 import {
-  CUSTOM_BUTTON_ROUNDED_OPTIONS,
-  CUSTOM_BUTTON_SHADOW_OPTIONS,
-  CUSTOM_BUTTON_STYLE_OPTIONS,
-  CUSTOM_FONT_OPTIONS,
-  PAGE_THEMES,
-} from "@/lib/page-themes";
-import {
   IconBook,
-  IconCheck,
   IconChevronRight,
   IconExternal,
   IconFileText,
@@ -43,7 +33,6 @@ import {
   IconMail,
   IconMapPin,
   IconMusicNote,
-  IconPaintbrush,
   IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
@@ -56,7 +45,7 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import SectionCard from "@/components/dashboard/page/SectionCard";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
-import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
+import { DesignSectionPatch, FontSection, HeaderSection, TemaSection, TombolSection } from "@/components/dashboard/page/design-sections";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -66,42 +55,15 @@ type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go).
 const maxGalleryImages = 9;
 
-// LAYOUT_OPTIONS -- paritas penuh dengan dashboard/design/header/page.tsx
-// (lihat catatan lengkap di sana) -- daftarnya SENGAJA disalin apa adanya
-// di sini (bukan diimpor dari satu sumber), konsisten dengan pola "dua
-// jalur kode berbeda" yang sudah dipakai proyek ini untuk paritas
-// halaman utama/Toko (CONTENT_TILES/BLOCK_LABEL di atas juga begitu).
-// 7 opsi baru (split/ticket/headline/ribbon/duo/masthead/portrait) --
-// lihat catatan lengkap di dashboard/design/header/page.tsx & renderBioHeader
-// (PagePreview.tsx).
-// getLayoutOptions/getContentTiles/getBlockLabel -- FUNGSI (bukan konstanta
-// modul lagi), pola sama seperti buildNavItems/buildExtraPageLabels di
-// dashboard/layout.tsx (Modul Pilihan Bahasa EN/ID, 29 Agustus 2026): label
-// lewat t()/dict supaya ikut berganti begitu locale berubah, dipanggil ULANG
-// tiap render di dalam komponen yang memakainya. Nilai label short-name
-// (Centered/Banner/dst, Video/FAQ/Accordion) SENGAJA dibiarkan sama di
-// id/en (nama gaya/tipe blok, bukan kalimat) -- cuma deskripsinya yang
-// benar-benar diterjemahkan.
-function getLayoutOptions(t: (key: string) => string): { value: MyPage["layout_variant"]; label: string; description: string }[] {
-  return [
-    { value: "centered", label: "Centered", description: t("dashboard.components.produkPageEditor.layoutOptions.centered") },
-    { value: "banner", label: "Banner", description: t("dashboard.components.produkPageEditor.layoutOptions.banner") },
-    { value: "card", label: "Card", description: t("dashboard.components.produkPageEditor.layoutOptions.card") },
-    { value: "spotlight", label: "Spotlight", description: t("dashboard.components.produkPageEditor.layoutOptions.spotlight") },
-    { value: "cover", label: "Cover", description: t("dashboard.components.produkPageEditor.layoutOptions.cover") },
-    { value: "minimal", label: "Minimal", description: t("dashboard.components.produkPageEditor.layoutOptions.minimal") },
-    { value: "hero", label: "Hero", description: t("dashboard.components.produkPageEditor.layoutOptions.hero") },
-    { value: "polaroid", label: "Polaroid", description: t("dashboard.components.produkPageEditor.layoutOptions.polaroid") },
-    { value: "split", label: "Split", description: t("dashboard.components.produkPageEditor.layoutOptions.split") },
-    { value: "ticket", label: "Ticket", description: t("dashboard.components.produkPageEditor.layoutOptions.ticket") },
-    { value: "headline", label: "Headline", description: t("dashboard.components.produkPageEditor.layoutOptions.headline") },
-    { value: "ribbon", label: "Ribbon", description: t("dashboard.components.produkPageEditor.layoutOptions.ribbon") },
-    { value: "duo", label: "Duo", description: t("dashboard.components.produkPageEditor.layoutOptions.duo") },
-    { value: "masthead", label: "Masthead", description: t("dashboard.components.produkPageEditor.layoutOptions.masthead") },
-    { value: "portrait", label: "Portrait", description: t("dashboard.components.produkPageEditor.layoutOptions.portrait") },
-  ];
-}
-
+// getContentTiles/getBlockLabel -- FUNGSI (bukan konstanta modul lagi),
+// pola sama seperti buildNavItems/buildExtraPageLabels di dashboard/
+// layout.tsx (Modul Pilihan Bahasa EN/ID, 29 Agustus 2026): label lewat
+// t()/dict supaya ikut berganti begitu locale berubah, dipanggil ULANG
+// tiap render di dalam komponen yang memakainya.
+// (getLayoutOptions -- dipakai HeaderSection -- pindah ke
+// components/dashboard/page/design-sections.tsx bersama HeaderSection
+// sendiri, permintaan langsung pengguna 9 September 2026 "design langsung
+// di builder juga".)
 function getContentTiles(
   t: (key: string) => string
 ): { key: BlockType; label: string; description: string; Icon: (p: { className?: string }) => React.ReactElement }[] {
@@ -226,6 +188,29 @@ export default function ProdukPageEditor({
   // atas tema apa pun (lihat catatan panjang di halaman utama).
   function handleStyleOverride(patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) {
     return handlePatch({ ...patch, custom_style_override: true });
+  }
+
+  // handleDesignLocalChange/handleUploadAvatar/handleUploadBackground --
+  // adapter Tema/Header/Tombol/Font (components/dashboard/page/design-
+  // sections.tsx, diekstrak dari sini 9 September 2026, "design langsung di
+  // builder juga"): komponen bersama itu generik atas DesignSectionPage
+  // (BUKAN ExtraPageDetail langsung), jadi optimistic local-update di sini
+  // TIDAK bisa langsung `setPage({...page, ...patch})` di dalam komponen
+  // bersama (patch:Partial<DesignSectionPage> tidak dijamin lengkapi semua
+  // field ExtraPageDetail secara statis) -- SATU cast di titik jembatan ini
+  // aman karena `page` di sisi kanan SELALU objek ExtraPageDetail asli,
+  // cuma field yang disebut di `patch` yang berubah.
+  function handleDesignLocalChange(patch: DesignSectionPatch) {
+    if (!page) return;
+    setPage({ ...page, ...patch } as ExtraPageDetail);
+  }
+  async function handleUploadAvatar(file: File) {
+    if (!page) throw new Error("no page");
+    return uploadExtraPageAvatar(page.id, file);
+  }
+  async function handleUploadBackground(file: File) {
+    if (!page) return;
+    await uploadExtraPageBackground(page.id, file);
   }
 
   if (loading) return <PageSkeleton />;
@@ -391,10 +376,14 @@ export default function ProdukPageEditor({
         {section === "blok" && (
           <BlockSection pageId={page.id} links={links} setLinks={setLinks} setError={setError} />
         )}
-        {section === "tema" && <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} />}
-        {section === "header" && <HeaderSection page={page} setPage={setPage} onPatch={handlePatch} onError={setError} />}
-        {section === "tombol" && <TombolSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
-        {section === "font" && <FontSection page={page} setPage={setPage} onStyleOverride={handleStyleOverride} />}
+        {section === "tema" && (
+          <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} onUploadBackground={handleUploadBackground} />
+        )}
+        {section === "header" && (
+          <HeaderSection page={page} onLocalChange={handleDesignLocalChange} onPatch={handlePatch} onError={setError} onUploadAvatar={handleUploadAvatar} />
+        )}
+        {section === "tombol" && <TombolSection page={page} onLocalChange={handleDesignLocalChange} onStyleOverride={handleStyleOverride} />}
+        {section === "font" && <FontSection page={page} onLocalChange={handleDesignLocalChange} onStyleOverride={handleStyleOverride} />}
         {section === "stiker" && (
           <section className="glass rounded-jmd p-5 shadow-card">
             <StickerCanvasEditor stickers={page.stickers} onChange={onStickersChange} />
@@ -996,473 +985,3 @@ function BlockSection({
     </div>
   );
 }
-
-// ---------- Tema ----------
-
-function TemaSection({
-  page,
-  isPremium,
-  onPatch,
-  onError,
-}: {
-  page: ExtraPageDetail;
-  isPremium: boolean;
-  onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
-  onError: (msg: string | null) => void;
-}) {
-  const { t } = useLocale();
-  const [bgUploading, setBgUploading] = useState(false);
-
-  async function handleBackgroundUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setBgUploading(true);
-    try {
-      await uploadExtraPageBackground(page.id, file);
-      onPatch({});
-    } catch (err) {
-      onError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadBackground"));
-    } finally {
-      setBgUploading(false);
-    }
-  }
-
-  return (
-    <section className="glass rounded-jmd p-5 shadow-card">
-      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-        <button
-          type="button"
-          onClick={() =>
-            isPremium
-              ? onPatch({ theme: "custom", custom_style_override: false })
-              : onError(t("dashboard.components.produkPageEditor.tema.customPremiumOnly"))
-          }
-          className="group flex flex-col items-center gap-1.5"
-        >
-          <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === "custom" ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
-            <div className="flex h-full w-full items-center justify-center bg-gray-100">
-              <IconPaintbrush className="h-7 w-7 text-app-muted" />
-            </div>
-            {!isPremium && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <IconLock className="h-5 w-5 text-white" />
-              </div>
-            )}
-          </div>
-          <span className="text-[11px] font-semibold text-app-ink">
-            {t("dashboard.components.produkPageEditor.tema.customLabel")}
-            {!isPremium && ` (${t("dashboard.components.produkPageEditor.tema.premiumSuffix")})`}
-          </span>
-        </button>
-        {THEME_PRESETS.map((themeName) => {
-          const meta = PAGE_THEMES[themeName as keyof typeof PAGE_THEMES];
-          if (!meta) return null;
-          return (
-            <button key={themeName} type="button" onClick={() => onPatch({ theme: themeName, custom_style_override: false })} className="group flex flex-col items-center gap-1.5">
-              <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-jmd ring-1 ring-black/5 ${page.theme === themeName ? "ring-2 ring-jeon-purple ring-offset-2" : ""}`}>
-                <div className="absolute inset-0" style={{ background: meta.previewBg }} aria-hidden />
-                <span className={`absolute left-2.5 top-2 font-display text-lg font-bold ${meta.previewIsDark ? "text-white" : "text-app-ink"}`} aria-hidden>
-                  Aa
-                </span>
-                <span className={`absolute inset-x-2.5 bottom-2.5 h-5 rounded-full ring-1 ring-black/10 ${meta.buyButton}`} aria-hidden />
-                {page.theme === themeName && (
-                  <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-white">
-                    <IconCheck className="h-3 w-3" />
-                  </span>
-                )}
-              </div>
-              <span className={`text-[11px] font-semibold ${page.theme === themeName ? "text-jeon-purple" : "text-app-ink"}`}>{meta.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {page.theme === "custom" && isPremium && (
-        <div className="mt-5 flex flex-col gap-3 border-t border-app-border pt-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.components.produkPageEditor.tema.customBackground")}</p>
-          <div className="flex gap-2">
-            {(["solid", "gradient", "image"] as const).map((bgType) => (
-              <button
-                key={bgType}
-                type="button"
-                onClick={() => onPatch({ custom_background_type: bgType })}
-                className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold capitalize ${
-                  page.custom_background_type === bgType ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
-                }`}
-              >
-                {bgType === "solid"
-                  ? t("dashboard.components.produkPageEditor.tema.backgroundColor")
-                  : bgType === "gradient"
-                  ? t("dashboard.components.produkPageEditor.tema.backgroundGradient")
-                  : t("dashboard.components.produkPageEditor.tema.backgroundImage")}
-              </button>
-            ))}
-          </div>
-          {page.custom_background_type === "image" ? (
-            <label className="cursor-pointer self-start rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
-              {bgUploading ? t("dashboard.components.produkPageEditor.tema.uploading") : t("dashboard.components.produkPageEditor.tema.uploadBackground")}
-              <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleBackgroundUpload} disabled={bgUploading} className="hidden" />
-            </label>
-          ) : (
-            <input
-              type={page.custom_background_type === "solid" ? "color" : "text"}
-              value={page.custom_background_value || (page.custom_background_type === "solid" ? "#1B4D3E" : "")}
-              onChange={(e) => onPatch({ custom_background_value: e.target.value })}
-              placeholder={page.custom_background_type === "gradient" ? "linear-gradient(...)" : undefined}
-              className="h-9 w-full rounded-lg border border-app-border px-3 text-sm"
-            />
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ---------- Header ----------
-
-function HeaderSection({
-  page,
-  setPage,
-  onPatch,
-  onError,
-}: {
-  page: ExtraPageDetail;
-  setPage: (p: ExtraPageDetail) => void;
-  onPatch: (patch: Parameters<typeof updateExtraPage>[1]) => void;
-  onError: (msg: string | null) => void;
-}) {
-  const { t } = useLocale();
-  const LAYOUT_OPTIONS = getLayoutOptions(t);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
-  // Kontak sosial -- permintaan langsung pengguna, 11 Agustus 2026, paritas
-  // penuh dengan halaman utama (dashboard/links/page.tsx): platform yang
-  // sama, panel kolaps yang sama, disimpan lewat onPatch (updateExtraPage)
-  // yang SAMA dengan field lain di section ini.
-  const [socialOpen, setSocialOpen] = useState(false);
-  const [socialDraft, setSocialDraft] = useState<Partial<Record<SocialPlatformKey, string>>>({});
-
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setAvatarUploading(true);
-    try {
-      const { avatar_url } = await uploadExtraPageAvatar(page.id, file);
-      setPage({ ...page, avatar_url });
-    } catch (err) {
-      onError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadAvatar"));
-    } finally {
-      setAvatarUploading(false);
-    }
-  }
-
-  function openSocialPanel() {
-    setSocialDraft({
-      instagram: page.social_instagram,
-      tiktok: page.social_tiktok,
-      facebook: page.social_facebook,
-      whatsapp: page.social_whatsapp,
-      youtube: page.social_youtube,
-      x: page.social_x,
-      linkedin: page.social_linkedin,
-      telegram: page.social_telegram,
-      email: page.social_email,
-    });
-    setSocialOpen(true);
-  }
-
-  function saveSocial() {
-    // onPatch (handlePatch di induk) sudah melakukan optimistic setPage +
-    // try/catch + setError sendiri (pola sama seperti onBlur Nama/Bio di
-    // atas) -- tidak diulang di sini supaya tidak ada dua sumber update
-    // yang saling tabrakan.
-    onPatch({
-      social_instagram: (socialDraft.instagram ?? "").trim(),
-      social_tiktok: (socialDraft.tiktok ?? "").trim(),
-      social_facebook: (socialDraft.facebook ?? "").trim(),
-      social_whatsapp: (socialDraft.whatsapp ?? "").trim(),
-      social_youtube: (socialDraft.youtube ?? "").trim(),
-      social_x: (socialDraft.x ?? "").trim(),
-      social_linkedin: (socialDraft.linkedin ?? "").trim(),
-      social_telegram: (socialDraft.telegram ?? "").trim(),
-      social_email: (socialDraft.email ?? "").trim(),
-    });
-    setSocialOpen(false);
-  }
-
-  return (
-    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.avatarLabel")}</label>
-        <div className="flex items-center gap-3">
-          {page.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={page.avatar_url} alt={page.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-display text-base font-bold text-jeon-purple">
-              {page.slug.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <label className="cursor-pointer rounded-lg border-2 border-jeon-ink bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
-            {avatarUploading ? t("dashboard.components.produkPageEditor.header.uploading") : t("dashboard.components.produkPageEditor.header.changePhoto")}
-            <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={avatarUploading} className="hidden" />
-          </label>
-        </div>
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.displayNameLabel")}</label>
-        <input
-          type="text"
-          maxLength={100}
-          value={page.display_name}
-          onChange={(e) => setPage({ ...page, display_name: e.target.value })}
-          onBlur={(e) => onPatch({ display_name: e.target.value })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-        />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.bioLabel")}</label>
-        <textarea
-          maxLength={160}
-          rows={3}
-          value={page.bio}
-          onChange={(e) => setPage({ ...page, bio: e.target.value })}
-          onBlur={(e) => onPatch({ bio: e.target.value })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-        />
-      </div>
-
-      {/* Layout -- paritas penuh dengan halaman utama (dashboard/design/
-          header/page.tsx), lihat catatan lengkap di sana soal kenapa
-          pemilih manual ini perlu ada. */}
-      <div>
-        <label className="mb-1 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.layoutLabel")}</label>
-        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {LAYOUT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                setPage({ ...page, layout_variant: opt.value });
-                onPatch({ layout_variant: opt.value });
-              }}
-              className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-colors ${
-                page.layout_variant === opt.value ? "border-jeon-purple bg-jeon-purple/10" : "border-app-border bg-app-surface hover:border-jeon-purple/50"
-              }`}
-            >
-              <span className="text-[11px] font-bold text-app-ink">{opt.label}</span>
-              <span className="text-[9px] leading-snug text-app-muted">{opt.description}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Kontak Sosial -- permintaan langsung pengguna, 11 Agustus 2026,
-          paritas penuh dengan halaman utama (lihat catatan lengkap di
-          dashboard/links/page.tsx). */}
-      <div className="rounded-xl border border-app-border">
-        <button
-          type="button"
-          onClick={() => (socialOpen ? setSocialOpen(false) : openSocialPanel())}
-          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-app-ink"
-        >
-          {t("dashboard.components.produkPageEditor.header.socialContact")}
-          <IconChevronRight className={`h-3.5 w-3.5 text-app-muted transition-transform ${socialOpen ? "rotate-90" : ""}`} />
-        </button>
-        {socialOpen && (
-          <div className="border-t border-app-border p-3">
-            <div className="grid grid-cols-1 gap-2">
-              {SOCIAL_PLATFORMS.map((p) => (
-                <div key={p.key} className="flex items-center gap-2">
-                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${p.badgeClass}`}>
-                    <p.Icon className="h-3.5 w-3.5" />
-                  </span>
-                  <input
-                    type="text"
-                    value={socialDraft[p.key] ?? ""}
-                    onChange={(e) => setSocialDraft((prev) => ({ ...prev, [p.key]: e.target.value }))}
-                    placeholder={`${p.label} · ${p.placeholder}`}
-                    aria-label={p.label}
-                    className="w-full min-w-0 rounded-lg border border-app-border px-2.5 py-2 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.header.socialHint")}</p>
-            <div className="mt-3 flex items-center gap-2">
-              <button type="button" onClick={saveSocial} className="rounded-lg btn-primary px-4 py-2 text-xs font-bold text-white">
-                {t("dashboard.components.produkPageEditor.header.save")}
-              </button>
-              <button type="button" onClick={() => setSocialOpen(false)} className="text-xs font-semibold text-app-muted hover:text-app-ink">
-                {t("dashboard.components.produkPageEditor.header.cancel")}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ---------- Tombol ----------
-
-function TombolSection({
-  page,
-  setPage,
-  onStyleOverride,
-}: {
-  page: ExtraPageDetail;
-  setPage: (p: ExtraPageDetail) => void;
-  onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
-}) {
-  const { t } = useLocale();
-  return (
-    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonColor")}</label>
-        <input
-          type="color"
-          value={page.custom_button_color}
-          onChange={(e) => setPage({ ...page, custom_button_color: e.target.value })}
-          onBlur={(e) => onStyleOverride({ custom_button_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-app-border"
-        />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonStyle")}</label>
-        <div className="flex gap-2">
-          {CUSTOM_BUTTON_STYLE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStyleOverride({ custom_button_style: opt.value })}
-              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_style === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.cornerRadius")}</label>
-        <div className="flex gap-2">
-          {CUSTOM_BUTTON_ROUNDED_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStyleOverride({ custom_button_rounded: opt.value })}
-              title={opt.label}
-              className={`flex h-9 flex-1 items-center justify-center border py-1.5 ${opt.className} ${
-                page.custom_button_rounded === opt.value ? "border-jeon-purple bg-app-surface" : "border-app-border"
-              }`}
-            >
-              <span className={`block h-3 w-6 border-2 border-ink/60 ${opt.className}`} aria-hidden />
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.tombol.buttonShadow")}</label>
-        <div className="flex gap-2">
-          {CUSTOM_BUTTON_SHADOW_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStyleOverride({ custom_button_shadow: opt.value })}
-              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold ${
-                page.custom_button_shadow === opt.value ? "border-jeon-purple bg-app-surface text-jeon-purple" : "border-app-border text-app-muted"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ---------- Font ----------
-
-function FontSection({
-  page,
-  setPage,
-  onStyleOverride,
-}: {
-  page: ExtraPageDetail;
-  setPage: (p: ExtraPageDetail) => void;
-  onStyleOverride: (patch: Omit<Parameters<typeof updateExtraPage>[1], "theme" | "custom_style_override">) => void;
-}) {
-  const { t } = useLocale();
-  return (
-    <section className="glass flex flex-col gap-4 rounded-jmd p-5 shadow-card">
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.pageFont")}</label>
-        <select
-          value={page.custom_font}
-          onChange={(e) => onStyleOverride({ custom_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-        >
-          {CUSTOM_FONT_OPTIONS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.pageTextColor")}</label>
-        <input
-          type="color"
-          value={page.custom_page_text_color || "#FFFFFF"}
-          onChange={(e) => setPage({ ...page, custom_page_text_color: e.target.value })}
-          onBlur={(e) => onStyleOverride({ custom_page_text_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-app-border"
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.separateTitleFont")}</p>
-          <p className="text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.font.separateTitleFontHint")}</p>
-        </div>
-        <Toggle
-          checked={!!page.custom_title_font}
-          onChange={() => onStyleOverride({ custom_title_font: page.custom_title_font ? "" : page.custom_font })}
-          label={t("dashboard.components.produkPageEditor.font.separateTitleFont")}
-        />
-      </div>
-
-      {page.custom_title_font && (
-        <select
-          value={page.custom_title_font}
-          onChange={(e) => onStyleOverride({ custom_title_font: e.target.value as MyPage["custom_font"] })}
-          className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-        >
-          {CUSTOM_FONT_OPTIONS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.font.titleColor")}</label>
-        <input
-          type="color"
-          value={page.custom_title_color || "#FFFFFF"}
-          onChange={(e) => setPage({ ...page, custom_title_color: e.target.value })}
-          onBlur={(e) => onStyleOverride({ custom_title_color: e.target.value })}
-          className="h-9 w-full rounded-lg border border-app-border"
-        />
-      </div>
-    </section>
-  );
-}
-

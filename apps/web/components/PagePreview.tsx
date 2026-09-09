@@ -2295,6 +2295,7 @@ export default function PagePreview({
   editableStickers = false,
   onStickersChange,
   hideFooterChrome = false,
+  selectedNodeId,
 }: {
   data: PagePreviewData;
   interactive?: boolean;
@@ -2318,6 +2319,12 @@ export default function PagePreview({
   // Default false supaya TIDAK mengubah perilaku dashboard/halaman publik
   // yang sudah ada sama sekali, HANYA true di pemanggilan homepage itu.
   hideFooterChrome?: boolean;
+  // selectedNodeId -- Canvas Page Builder (permintaan langsung pengguna 9
+  // September 2026, "klik blok di kanvas juga"): id blok yang sedang
+  // dipilih di BuilderLeftPanel, dipakai HANYA di jalur builderMode
+  // "builder" (lihat BuilderPagePreview) untuk highlight ring blok
+  // terpilih langsung di kanvas -- tidak relevan sama sekali di mode lain.
+  selectedNodeId?: string;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
   // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar
@@ -2344,7 +2351,17 @@ export default function PagePreview({
   // di bawah, sama sekali tidak berubah.
   if (data.builderMode === "builder") {
     return (
-      <BuilderPagePreview data={data} interactive={interactive} rootClassName={rootClassName} theme={theme} canBuy={canBuy} hideFooterChrome={hideFooterChrome} />
+      <BuilderPagePreview
+        data={data}
+        interactive={interactive}
+        rootClassName={rootClassName}
+        theme={theme}
+        canBuy={canBuy}
+        hideFooterChrome={hideFooterChrome}
+        editableStickers={editableStickers}
+        onStickersChange={onStickersChange}
+        selectedNodeId={selectedNodeId}
+      />
     );
   }
 
@@ -2990,10 +3007,21 @@ const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "embed",
 ]);
 
-function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean): React.ReactNode {
+// builderSelectionRing -- lihat catatan lengkap Bagian 1c di plan (9
+// September 2026, "klik blok di kanvas juga"): satu potongan class Tailwind
+// dipusatkan di sini, dipakai tiap elemen berdata data-builder-node-id di
+// bawah supaya blok yang sedang dipilih di BuilderLeftPanel bisa terlihat
+// jelas langsung di kanvas. Cuma ring, TANPA rounded eksplisit -- tiap
+// elemen di bawah sudah pakai rounded-xl/theme.cardRounded sendiri.
+function builderSelectionRing(id: string, selectedNodeId: string | undefined): string {
+  return id === selectedNodeId ? " ring-2 ring-jeon-purple ring-offset-2" : "";
+}
+
+function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean, selectedNodeId?: string): React.ReactNode {
   // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
   // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
   // (assert isi Section/Column tertanam tampil benar di halaman publik).
+  const ring = builderSelectionRing(node.id, selectedNodeId);
   switch (node.blockType) {
     case "divider":
       return (
@@ -3003,7 +3031,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           data-builder-block-type="divider"
           role="separator"
           aria-hidden
-          className={`h-px w-full opacity-20 bg-current ${theme.bio}`}
+          className={`h-px w-full opacity-20 bg-current ${theme.bio}${ring}`}
         />
       );
     case "text":
@@ -3012,14 +3040,14 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           key={node.id}
           data-builder-node-id={node.id}
           data-builder-block-type="text"
-          className={`w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}`}
+          className={`w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}${ring}`}
         >
           {(node.blockData.text as string) ?? ""}
         </p>
       );
     case "button":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="button" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="button" className={`w-full${ring}`}>
           {interactive ? (
             <TrackedLink
               username={data.username}
@@ -3031,14 +3059,24 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
               {node.title}
             </TrackedLink>
           ) : (
-            <button
-              type="button"
-              disabled
+            // div, BUKAN <button disabled> -- bug ditemukan lewat verifikasi
+            // live 9 September 2026 (fitur klik-blok-di-kanvas): browser
+            // TIDAK PERNAH mendispatch/mem-bubble-kan mouse event dari form
+            // control ber-atribut `disabled`, jadi delegasi klik BuilderCanvas.
+            // tsx (`closest("[data-builder-node-id]")` di wrapper `div` luar)
+            // tidak pernah menyala saat pengunjung klik tombol ini -- SATU-
+            // SATUNYA blok yang tidak bisa diklik-pilih di kanvas (blok lain
+            // pakai `div`/`a`, bukan `<button disabled>`, jadi aman). `role`+
+            // `aria-disabled` menjaga semantik aksesibilitas yang sama tanpa
+            // memakai atribut `disabled` yang menekan event.
+            <div
+              role="button"
+              aria-disabled="true"
               title="Pratinjau -- tombol ini tidak aktif"
               className={`w-full cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
             >
               {node.title}
-            </button>
+            </div>
           )}
         </div>
       );
@@ -3051,16 +3089,16 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           key={node.id}
           data-builder-node-id={node.id}
           data-builder-block-type="section"
-          className="flex w-full flex-col items-center gap-4"
+          className={`flex w-full flex-col items-center gap-4 rounded-xl${ring}`}
         >
-          {children.map((child) => renderBuilderNode(child, theme, data, interactive))}
+          {children.map((child) => renderBuilderNode(child, theme, data, interactive, selectedNodeId))}
         </section>
       );
     }
     case "column": {
       const columns = (node.blockData.columns as { widthPercent?: number; children?: unknown[] }[] | undefined) ?? [];
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="column" className="flex w-full flex-col gap-4 sm:flex-row">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="column" className={`flex w-full flex-col gap-4 rounded-xl sm:flex-row${ring}`}>
           {columns.map((col, i) => {
             const children = (col.children ?? []).map(normalizeEmbeddedBuilderNode).filter((c): c is BuilderRenderNode => c !== null);
             return (
@@ -3070,7 +3108,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
                 className="flex min-w-0 flex-1 flex-col items-center gap-4"
                 style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
               >
-                {children.map((child) => renderBuilderNode(child, theme, data, interactive))}
+                {children.map((child) => renderBuilderNode(child, theme, data, interactive, selectedNodeId))}
               </div>
             );
           })}
@@ -3085,7 +3123,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
     // ATAU kanvas builder).
     case "video":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video" className={`w-full rounded-xl${ring}`}>
           <VideoEmbedBlock
             title={node.title}
             videoUrl={(node.blockData.video_url as string) ?? ""}
@@ -3096,7 +3134,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "faq":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="faq" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="faq" className={`w-full rounded-xl${ring}`}>
           <FaqBlock
             title={node.title}
             items={(node.blockData.items as FaqItem[]) ?? []}
@@ -3109,7 +3147,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "gallery":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="gallery" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="gallery" className={`w-full rounded-xl${ring}`}>
           <GalleryBlock
             title={node.title}
             images={(node.blockData.images as string[]) ?? []}
@@ -3128,10 +3166,10 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           src={node.blockData.image_url as string}
           alt={node.title || ""}
           loading="lazy"
-          className="w-full rounded-xl object-cover"
+          className={`w-full rounded-xl object-cover${ring}`}
         />
       ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}${ring}`}>
           {node.title || "Foto"}
         </div>
       );
@@ -3139,7 +3177,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       const videoUrl = (node.blockData.video_url as string) ?? "";
       const imageUrl = (node.blockData.image_url as string) ?? "";
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video_image" className="flex w-full flex-col gap-2">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video_image" className={`flex w-full flex-col gap-2 rounded-xl${ring}`}>
           {videoUrl && (
             <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />
           )}
@@ -3171,26 +3209,29 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
       if (!node.url) {
         return (
-          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={cardClassName}>
+          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName}${ring}`}>
             {inner}
           </div>
         );
       }
       return interactive ? (
+        // ring di sini (BUKAN di <span> "contents" di bawah, yang tidak
+        // punya box model sendiri jadi ring tidak akan pernah terlihat) --
+        // TrackedLink itulah kartu yang benar-benar tampak.
         <TrackedLink
           key={node.id}
           username={data.username}
           pageSlug={data.pageSlug}
           linkId={node.id}
           href={buildUtmHref(node.url, node.title, data.utmEnabled)}
-          className={cardClassName}
+          className={`${cardClassName}${ring}`}
         >
           <span data-builder-node-id={node.id} data-builder-block-type="embed_link" className="contents">
             {inner}
           </span>
         </TrackedLink>
       ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName} opacity-80`}>
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName} opacity-80${ring}`}>
           {inner}
         </div>
       );
@@ -3200,7 +3241,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
     // lengkap di allowedBuilderEmbeddedBlockTypes, links.go).
     case "maps":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="maps" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="maps" className={`w-full rounded-xl${ring}`}>
           <MapsEmbedBlock
             title={node.title}
             url={node.url ?? ""}
@@ -3213,7 +3254,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "image_slider":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image_slider" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image_slider" className={`w-full rounded-xl${ring}`}>
           <ImageSliderBlock
             title={node.title}
             images={(node.blockData.images as string[]) ?? []}
@@ -3224,7 +3265,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "countdown":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="countdown" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="countdown" className={`w-full rounded-xl${ring}`}>
           <CountdownBlock
             title={node.title}
             targetAt={node.blockData.target_at as string | undefined}
@@ -3237,7 +3278,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "list":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="list" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="list" className={`w-full rounded-xl${ring}`}>
           <ListBlock
             title={node.title}
             style={(node.blockData.style as "list" | "card" | "testimony" | undefined) ?? "list"}
@@ -3251,7 +3292,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
       );
     case "embed":
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed" className="w-full">
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed" className={`w-full rounded-xl${ring}`}>
           <EmbedBlock
             title={node.title}
             embedUrl={(node.blockData.embed_url as string) ?? ""}
@@ -3278,6 +3319,9 @@ function BuilderPagePreview({
   theme,
   canBuy,
   hideFooterChrome = false,
+  editableStickers = false,
+  onStickersChange,
+  selectedNodeId,
 }: {
   data: PagePreviewData;
   interactive: boolean;
@@ -3285,6 +3329,9 @@ function BuilderPagePreview({
   theme: PageTheme;
   canBuy: boolean;
   hideFooterChrome?: boolean;
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
+  selectedNodeId?: string;
 }) {
   // isBio -- pageType "landing" (No.99) SENGAJA "TANPA avatar/produk/
   // monetisasi" (lihat catatan lengkap di PagePreviewData.pageType), jadi
@@ -3308,7 +3355,14 @@ function BuilderPagePreview({
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-end p-4">
         <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
       </div>
-      <div className="mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
+      <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
+        {/* StickerOverlay -- pola SAMA PERSIS layout bio biasa di atas (lihat
+            catatan lengkap di sana): anak kolom konten max-w-xl ini, BUKAN
+            anak <main>, supaya basis persentase posisi x/y selalu sama
+            dengan lebar kolom yang terlihat. Sebelum permintaan "design
+            langsung di builder" (9 September 2026) BuilderPagePreview tidak
+            pernah menerima editableStickers/onStickersChange sama sekali. */}
+        <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
         {isBio && data.showProfileHeader !== false && (
           <div className="relative w-full">
             {theme.glow !== "hidden" && (
@@ -3340,7 +3394,22 @@ function BuilderPagePreview({
           // thumbnailUrl ikut terbawa), persis seperti mode "simple".
           const blockType = link.blockType ?? "link";
           if (!BUILDER_NODE_BLOCK_TYPES.has(blockType)) {
-            return renderLinkOrBlock(link, theme, data, interactive);
+            // data-builder-node-id di sini (BUKAN di dalam renderLinkOrBlock
+            // sendiri, yang dibagi dengan mode "simple" & tidak tahu apa-apa
+            // soal builder) -- permintaan langsung pengguna 9 September
+            // 2026 "klik blok di kanvas juga": tanpa ini blok tipe klasik
+            // tidak bisa diklik-pilih di kanvas sama sekali, cuma lewat tree
+            // kiri.
+            return (
+              <div
+                key={link.id}
+                data-builder-node-id={link.id}
+                data-builder-block-type={blockType}
+                className={`w-full rounded-xl${builderSelectionRing(link.id, selectedNodeId)}`}
+              >
+                {renderLinkOrBlock(link, theme, data, interactive)}
+              </div>
+            );
           }
           const node: BuilderRenderNode = {
             id: link.id,
@@ -3350,7 +3419,7 @@ function BuilderPagePreview({
             blockType,
             blockData: link.blockData ?? {},
           };
-          return renderBuilderNode(node, theme, data, interactive);
+          return renderBuilderNode(node, theme, data, interactive, selectedNodeId);
         })}
 
         {isBio && data.leadCapture && (

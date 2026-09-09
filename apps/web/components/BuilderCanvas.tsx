@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { DashboardProduct, LinkItem, MyPage } from "@/lib/api-client";
+import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { toPreviewData } from "@/lib/page-preview-data";
 import { useLocale } from "@/lib/locale-context";
 
@@ -33,12 +33,33 @@ export default function BuilderCanvas({
   products,
   pageType,
   pageSlug,
+  selectedNodeId,
+  onSelectNode,
+  editableStickers,
+  onStickersChange,
 }: {
   page: MyPage | null;
   links: LinkItem[];
   products: DashboardProduct[];
   pageType?: "bio" | "landing";
   pageSlug?: string;
+  // selectedNodeId/onSelectNode -- permintaan langsung pengguna 9
+  // September 2026 ("klik blok di kanvas juga, bukan cuma di tree kiri"):
+  // sebelumnya kanvas ini 100% non-interactive, nol prop terkait seleksi --
+  // renderBuilderNode/PagePreview.tsx SUDAH menandai tiap blok dengan
+  // data-builder-node-id sejak Fase 1 tapi tidak pernah ada yang membaca
+  // klik terhadapnya sampai sekarang. SATU listener delegasi di wrapper
+  // kanvas (bukan listener per-blok) supaya tidak perlu menembus banyak
+  // lapis komponen presentasional (VideoEmbedBlock/FaqBlock/dst) dengan
+  // onClick masing-masing.
+  selectedNodeId?: string;
+  onSelectNode?: (nodeId: string) => void;
+  // editableStickers/onStickersChange -- Bagian 2 (design langsung di
+  // builder): diteruskan APA ADANYA ke PagePreview, yang sudah punya
+  // seluruh logic drag/resize (StickerOverlay) -- aktif hanya saat
+  // sub-tab desain "Stiker" dipilih di induk.
+  editableStickers?: boolean;
+  onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
   const { t } = useLocale();
   const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
@@ -60,6 +81,19 @@ export default function BuilderCanvas({
     return () => observer.disconnect();
   }, [device]);
 
+  // handleCanvasClick -- SATU listener delegasi di wrapper kanvas (bukan
+  // per-blok, lihat catatan lengkap di prop onSelectNode di atas): cari
+  // elemen berdata data-builder-node-id TERDEKAT dari target klik (naik
+  // lewat DOM ancestor, `closest`) -- ini otomatis benar untuk blok
+  // bersarang di dalam Section/Column (klik anak di dalamnya TIDAK
+  // ketemu data-builder-node-id milik anak itu sendiri dulu sebelum milik
+  // Section pembungkusnya, karena anak lebih dekat ke target klik).
+  function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!onSelectNode) return;
+    const el = (e.target as HTMLElement).closest("[data-builder-node-id]");
+    if (el) onSelectNode(el.getAttribute("data-builder-node-id")!);
+  }
+
   return (
     <div className="flex h-full min-w-0 flex-col">
       <div className="mb-3 flex flex-shrink-0 items-center justify-center gap-1.5">
@@ -79,10 +113,13 @@ export default function BuilderCanvas({
       <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
         {page && (
           <div className="mx-auto [-ms-overflow-style:none] [scrollbar-width:none]" style={{ width: BUILDER_DEVICE_WIDTHS[device], zoom }}>
-            <div className="overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card">
+            <div className="overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface shadow-card" onClick={handleCanvasClick}>
               <PagePreview
                 interactive={false}
                 rootClassName="min-h-[640px]"
+                selectedNodeId={selectedNodeId}
+                editableStickers={editableStickers}
+                onStickersChange={onStickersChange}
                 data={{
                   ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products),
                   pageType,

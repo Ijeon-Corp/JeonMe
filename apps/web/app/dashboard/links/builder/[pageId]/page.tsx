@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ApiError,
@@ -9,6 +9,7 @@ import {
   ExtraPageDetail,
   LinkItem,
   MyPage,
+  PageStickerData,
   createBlock,
   createExtraPageBlock,
   deleteLink,
@@ -20,14 +21,33 @@ import {
   reorderExtraPageLinks,
   reorderLinks,
   updateExtraPage,
+  updateExtraPageStickers,
   updateLink,
   updateMyPage,
+  updateMyPageStickers,
+  uploadAvatar,
+  uploadCustomBackground,
+  uploadExtraPageAvatar,
+  uploadExtraPageBackground,
 } from "@/lib/api-client";
-import { BuilderColumn, BuilderRoot, BuilderSeg, getChildrenAt, newBuilderBlock, setChildrenAt, updateAt } from "@/lib/builder-blocks";
+import {
+  BuilderColumn,
+  BuilderRoot,
+  BuilderSeg,
+  BuilderSelection,
+  buildTree,
+  findNodeByPath,
+  findSelectionByNodeId,
+  getChildrenAt,
+  newBuilderBlock,
+  setChildrenAt,
+  updateAt,
+} from "@/lib/builder-blocks";
 import { useLocale } from "@/lib/locale-context";
 import { IconChevronRight } from "@/components/icons";
-import BuilderLeftPanel, { BuilderSelection } from "@/components/BuilderLeftPanel";
+import BuilderLeftPanel, { type BuilderDesignSection } from "@/components/BuilderLeftPanel";
 import BuilderCanvas from "@/components/BuilderCanvas";
+import type { DesignSectionPage, DesignSectionPatch } from "@/components/dashboard/page/design-sections";
 
 // Canvas Page Builder (migrasi 000096, permintaan langsung pengguna 7
 // September 2026, dua screenshot Lynk.id) -- route BARU, layar penuh
@@ -64,6 +84,18 @@ export default function BuilderPage() {
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // selection -- dinaikkan ke sini (permintaan langsung pengguna 9
+  // September 2026, "klik blok di kanvas juga, bukan cuma di tree kiri"):
+  // BuilderLeftPanel (klik tree) & BuilderCanvas (klik DOM lewat
+  // data-builder-node-id) sekarang menulis ke SATU state yang sama --
+  // sebelumnya `selection` cuma hidup lokal di BuilderLeftPanel, kanvas
+  // sama sekali tidak bisa memengaruhinya.
+  const [selection, setSelection] = useState<BuilderSelection | null>(null);
+  const tree = useMemo(() => buildTree(links), [links]);
+  // designSection -- sub-tab Design aktif (Bagian 2, permintaan langsung
+  // pengguna 9 September 2026, "design langsung di builder juga"), pola
+  // SAMA PERSIS `tokoSection` (dashboard/products/page.tsx) utk ProdukPageEditor.
+  const [designSection, setDesignSection] = useState<BuilderDesignSection>("tema");
 
   // fetchPageData -- PURE (return data, TANPA setState) -- lihat pola resmi
   // di CLAUDE.md (react-hooks/set-state-in-effect): dipisah dari
@@ -284,6 +316,64 @@ export default function BuilderPage() {
     }
   }
 
+  // handlePatch/handleStyleOverride -- Bagian 2 (permintaan langsung
+  // pengguna 9 September 2026, "design langsung di builder juga"): pola
+  // SAMA PERSIS ProdukPageEditor.tsx (handlePatch/handleStyleOverride di
+  // sana) -- optimistic setPage + PATCH + rollback kalau gagal, endpoint
+  // dipilih lewat `isMain` (SAMA seperti currentCreateBlock/dst di atas).
+  async function handlePatch(patch: DesignSectionPatch) {
+    if (!page) return;
+    const previous = page;
+    setPage({ ...page, ...patch } as MyPage);
+    try {
+      await (isMain ? updateMyPage(patch) : updateExtraPage(pageId, patch));
+    } catch (err) {
+      setPage(previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
+    }
+  }
+  function handleStyleOverride(patch: Omit<DesignSectionPatch, "theme" | "custom_style_override">) {
+    return handlePatch({ ...patch, custom_style_override: true });
+  }
+  // handleDesignLocalChange -- optimistic-only (TANPA PATCH, dipakai
+  // onChange/upload-avatar di design-sections.tsx) -- lihat catatan cast
+  // yang sama di ProdukPageEditor.tsx (handleDesignLocalChange): `page` di
+  // sisi kanan SELALU objek MyPage asli, cuma field di `patch` yang
+  // berubah.
+  function handleDesignLocalChange(patch: DesignSectionPatch) {
+    setPage((prev) => (prev ? ({ ...prev, ...patch } as MyPage) : prev));
+  }
+  async function handleUploadAvatar(file: File) {
+    return isMain ? uploadAvatar(file) : uploadExtraPageAvatar(pageId, file);
+  }
+  async function handleUploadBackground(file: File) {
+    await (isMain ? uploadCustomBackground(file) : uploadExtraPageBackground(pageId, file));
+  }
+  async function handleStickersChange(stickers: PageStickerData[]) {
+    setPage((prev) => (prev ? { ...prev, stickers } : prev));
+    try {
+      await (isMain ? updateMyPageStickers(stickers) : updateExtraPageStickers(pageId, stickers));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
+    }
+  }
+  // selectedNodeId -- id blok yang benar-benar dirender di kanvas
+  // (data-builder-node-id, PagePreview.tsx) untuk `selection` yang aktif --
+  // BEDA dari `selection.rootId` begitu path tidak kosong (blok tertanam di
+  // dalam Section/Column), makanya perlu di-resolve lewat tree. Seleksi
+  // "column-slot" (kolom itu sendiri, bukan satu blok) SENGAJA tidak
+  // menghasilkan id apa pun -- tidak ada elemen kanvas ber-data-builder-
+  // node-id untuk satu slot kolom kosong.
+  const selectedNodeId = useMemo(() => {
+    if (!selection || selection.kind !== "block") return undefined;
+    if (selection.path.length === 0) return selection.rootId;
+    return findNodeByPath(tree, selection.rootId, selection.path)?.id;
+  }, [selection, tree]);
+
+  function handleSelectNode(nodeId: string) {
+    setSelection(findSelectionByNodeId(tree, nodeId));
+  }
+
   if (loading) {
     return <div className="flex h-screen items-center justify-center text-sm text-app-muted">{t("dashboard.pages.linksBuilder.loading")}</div>;
   }
@@ -291,6 +381,13 @@ export default function BuilderPage() {
   if (!page) {
     return <div className="flex h-screen items-center justify-center text-sm text-app-muted">{t("dashboard.pages.linksBuilder.errors.loadFailed")}</div>;
   }
+
+  // designPage -- DesignSectionPage butuh `slug` opsional (dipakai HANYA
+  // sbg inisial avatar kosong, lihat design-sections.tsx) -- `page: MyPage`
+  // tidak punya field itu sama sekali, jadi diisi di sini dari sumber yang
+  // paling masuk akal utk tiap kasus (bukan dari `page` itu sendiri, biar
+  // tidak perlu mengubah bentuk state `page`).
+  const designPage: DesignSectionPage = { ...page, slug: isMain ? page.username : extraPageSlug };
 
   return (
     <div className="flex h-screen flex-col bg-app-bg">
@@ -306,16 +403,39 @@ export default function BuilderPage() {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[320px_1fr]">
         <BuilderLeftPanel
           links={links}
+          selection={selection}
+          onSelectionChange={setSelection}
           onAdd={handleAdd}
           onDelete={handleDelete}
           onReorderRoot={handleReorderRoot}
           onReorderChildren={handleReorderChildren}
           onUpdateNode={handleUpdateNode}
           onRefresh={refresh}
-          designHref="/dashboard/design"
           settingsHref="/dashboard/settings"
+          page={designPage}
+          isPremium={page.is_premium}
+          onPatch={handlePatch}
+          onLocalChange={handleDesignLocalChange}
+          onStyleOverride={handleStyleOverride}
+          onUploadAvatar={handleUploadAvatar}
+          onUploadBackground={handleUploadBackground}
+          onError={setError}
+          stickers={page.stickers}
+          onStickersChange={handleStickersChange}
+          designSection={designSection}
+          onDesignSectionChange={setDesignSection}
         />
-        <BuilderCanvas page={page} links={links} products={products} pageType={extraPageType} pageSlug={extraPageSlug} />
+        <BuilderCanvas
+          page={page}
+          links={links}
+          products={products}
+          pageType={extraPageType}
+          pageSlug={extraPageSlug}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={handleSelectNode}
+          editableStickers={designSection === "stiker"}
+          onStickersChange={handleStickersChange}
+        />
       </div>
     </div>
   );

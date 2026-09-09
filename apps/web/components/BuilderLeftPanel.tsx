@@ -46,9 +46,34 @@ import {
   uploadGalleryImage,
   type EmbeddedBuilderBlock,
   type LinkItem,
+  type PageStickerData,
 } from "@/lib/api-client";
-import type { BuilderSeg } from "@/lib/builder-blocks";
+import {
+  buildTree,
+  findNodeByPath,
+  selectionOf,
+  type BuilderSeg,
+  type BuilderSelection,
+  type BuilderTreeNode,
+} from "@/lib/builder-blocks";
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
+import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
+import StickerCanvasEditor from "@/components/StickerCanvasEditor";
+import {
+  FontSection,
+  HeaderSection,
+  TemaSection,
+  TombolSection,
+  type DesignSectionPage,
+  type DesignSectionPatch,
+} from "@/components/dashboard/page/design-sections";
+
+// BuilderDesignSection -- 5 sub-tab Design di dalam builder (permintaan
+// langsung pengguna 9 September 2026, "design langsung di builder juga")
+// -- SENGAJA cuma 5, TIDAK 6 seperti DesignSection (ProdukPageEditor.tsx):
+// "blok" (isi/urutan blok) di sini SUDAH jadi tab "content" tersendiri di
+// level atas panel ini, tidak perlu diduplikasi sebagai sub-tab Design.
+export type BuilderDesignSection = "tema" | "header" | "tombol" | "font" | "stiker";
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), lihat
 // juga const yang sama di dashboard/links/page.tsx (galeri lama, jalur
@@ -75,82 +100,6 @@ const maxGalleryImages = 9;
 // PATCH ke DUA baris root berbeda sekaligus utk kasus lintas-root), utk
 // sekarang tambah komponen baru langsung ke kontainer tujuan lewat
 // "Tambah Komponen", pindahkan lewat hapus+tambah ulang.
-export interface BuilderSelection {
-  rootId: string;
-  path: BuilderSeg[];
-  kind: "block" | "column-slot";
-  blockType?: string;
-}
-
-interface BuilderTreeNode {
-  id: string;
-  rootId: string;
-  path: BuilderSeg[];
-  kind: "block" | "column-slot";
-  title: string;
-  blockType?: string;
-  url?: string;
-  // description -- Fase 2 (permintaan langsung pengguna 8 September 2026):
-  // dibutuhkan "embed_link" (subjudul kartu, kolom `links`/EmbeddedBuilderBlock
-  // yang sudah ada, BUKAN field block_data -- persis pola project_showcase).
-  description?: string;
-  blockData?: Record<string, unknown>;
-  children: BuilderTreeNode[];
-}
-
-function buildChildNodes(rootId: string, parentPath: BuilderSeg[], children: EmbeddedBuilderBlock[]): BuilderTreeNode[] {
-  return children.map((child) =>
-    buildBlockNode(rootId, [...parentPath, { kind: "child", id: child.id }], child.id, child.block_type, child.title, child.url, child.description, child.block_data)
-  );
-}
-
-function buildBlockNode(
-  rootId: string,
-  path: BuilderSeg[],
-  id: string,
-  blockType: string,
-  title: string,
-  url: string | undefined,
-  description: string | undefined,
-  blockData: Record<string, unknown> | undefined
-): BuilderTreeNode {
-  const data = blockData ?? {};
-  let children: BuilderTreeNode[] = [];
-  if (blockType === "section") {
-    children = buildChildNodes(rootId, path, (data.children as EmbeddedBuilderBlock[] | undefined) ?? []);
-  } else if (blockType === "column") {
-    const columns = (data.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
-    children = columns.map((col, i) => {
-      const colPath: BuilderSeg[] = [...path, { kind: "column", index: i }];
-      return {
-        id: `${id}::col${i}`,
-        rootId,
-        path: colPath,
-        kind: "column-slot" as const,
-        title: "",
-        children: buildChildNodes(rootId, colPath, col.children ?? []),
-      };
-    });
-  }
-  return { id, rootId, path, kind: "block", title, blockType, url, description, blockData: data, children };
-}
-
-function buildTree(links: LinkItem[]): BuilderTreeNode[] {
-  return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data));
-}
-
-// findNodeByPath -- pencarian rekursif SATU node persis (rootId+path),
-// dipakai baik utk resolve node terpilih MAUPUN resolve node induk saat
-// drag-end (lihat siblingsOf).
-function findNodeByPath(nodes: BuilderTreeNode[], rootId: string, path: BuilderSeg[]): BuilderTreeNode | null {
-  for (const n of nodes) {
-    if (n.rootId === rootId && JSON.stringify(n.path) === JSON.stringify(path)) return n;
-    const found = findNodeByPath(n.children, rootId, path);
-    if (found) return found;
-  }
-  return null;
-}
-
 // containerKeyOf -- kunci identitas kontainer (root, ATAU SATU Section/
 // kolom tertentu) yang menaungi `node`. Dipakai handleDragEnd utk menolak
 // drop LINTAS kontainer (lihat catatan lengkap di atas komponen ini).
@@ -211,6 +160,19 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   embed: "typeEmbed",
   maps: "typeMaps",
 };
+
+// DESIGN_SECTION_ENTRIES -- 5 sub-tab tab "design" (Bagian 2, permintaan
+// langsung pengguna 9 September 2026), label i18n key SAMA PERSIS dipakai
+// ProdukPageEditor.tsx (dashboard.components.produkPageEditor.designTabs.*)
+// -- label "Tema/Header/Tombol/Font/Stiker" sudah diterjemahkan ID/EN di
+// sana, tidak perlu key baru.
+const DESIGN_SECTION_ENTRIES: [BuilderDesignSection, string][] = [
+  ["tema", "dashboard.components.produkPageEditor.designTabs.tema"],
+  ["header", "dashboard.components.produkPageEditor.designTabs.header"],
+  ["tombol", "dashboard.components.produkPageEditor.designTabs.tombol"],
+  ["font", "dashboard.components.produkPageEditor.designTabs.font"],
+  ["stiker", "dashboard.components.produkPageEditor.designTabs.stiker"],
+];
 
 function TreeNodeView({
   node,
@@ -706,16 +668,35 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
 
 export default function BuilderLeftPanel({
   links,
+  selection,
+  onSelectionChange,
   onAdd,
   onDelete,
   onReorderRoot,
   onReorderChildren,
   onUpdateNode,
   onRefresh,
-  designHref,
   settingsHref,
+  page,
+  isPremium,
+  onPatch,
+  onLocalChange,
+  onStyleOverride,
+  onUploadAvatar,
+  onUploadBackground,
+  onError,
+  stickers,
+  onStickersChange,
+  designSection,
+  onDesignSectionChange,
 }: {
   links: LinkItem[];
+  // selection/onSelectionChange -- dinaikkan ke rute builder (permintaan
+  // langsung pengguna 9 September 2026, "klik blok di kanvas juga"):
+  // BuilderCanvas.tsx (klik DOM lewat data-builder-node-id) & panel ini
+  // (klik tree) sekarang menulis ke SATU state yang sama di induk.
+  selection: BuilderSelection | null;
+  onSelectionChange: (selection: BuilderSelection | null) => void;
   onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") => void;
   onDelete: (target: BuilderSelection) => void;
   onReorderRoot: (orderedIds: string[]) => void;
@@ -726,18 +707,47 @@ export default function BuilderLeftPanel({
   // (bukan lewat PATCH onUpdateNode) -- panel ini perlu memicu refetch
   // supaya `links` prop (dan tree turunannya) ikut termutakhir.
   onRefresh: () => void;
-  designHref: string;
   settingsHref: string;
+  // page/isPremium/onPatch/onLocalChange/onStyleOverride/onUploadAvatar/
+  // onUploadBackground/onError/stickers/onStickersChange/designSection/
+  // onDesignSectionChange -- Bagian 2 (permintaan langsung pengguna 9
+  // September 2026, "design langsung di builder juga"): tab "design" di
+  // bawah SEBELUMNYA cuma placeholder + tautan keluar ke /dashboard/design
+  // (Fase 1 builder) -- sekarang berisi Tema/Header/Tombol/Font/Stiker
+  // SUNGGUHAN, komponen yang SAMA dipakai ProdukPageEditor.tsx (lihat
+  // components/dashboard/page/design-sections.tsx).
+  page: DesignSectionPage;
+  isPremium: boolean;
+  onPatch: (patch: DesignSectionPatch) => void;
+  onLocalChange: (patch: DesignSectionPatch) => void;
+  onStyleOverride: (patch: Omit<DesignSectionPatch, "theme" | "custom_style_override">) => void;
+  onUploadAvatar: (file: File) => Promise<{ avatar_url: string }>;
+  onUploadBackground: (file: File) => Promise<void>;
+  onError: (msg: string | null) => void;
+  stickers: PageStickerData[];
+  onStickersChange: (stickers: PageStickerData[]) => void;
+  designSection: BuilderDesignSection;
+  onDesignSectionChange: (section: BuilderDesignSection) => void;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<"content" | "design" | "settings">("content");
-  const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [addModalOpen, setAddModalOpen] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   const tree = useMemo(() => buildTree(links), [links]);
   const rootIds = useMemo(() => tree.map((n) => n.id), [tree]);
+
+  // Klik blok di KANVAS (BuilderCanvas.tsx) bisa terjadi sementara tab
+  // kiri sedang di "design"/"settings" -- pindahkan otomatis ke "content"
+  // supaya field edit-nya langsung terlihat. Pola "adjust state during
+  // render" resmi React (BUKAN useEffect+setState, lihat CLAUDE.md) --
+  // bandingkan `selection` (identitas objek) ke render sebelumnya.
+  const [prevSelection, setPrevSelection] = useState(selection);
+  if (selection !== prevSelection) {
+    setPrevSelection(selection);
+    if (selection) setTab("content");
+  }
 
   function toggleCollapsed(id: string) {
     setCollapsed((prev) => {
@@ -746,10 +756,6 @@ export default function BuilderLeftPanel({
       else next.add(id);
       return next;
     });
-  }
-
-  function selectionOf(node: BuilderTreeNode): BuilderSelection {
-    return { rootId: node.rootId, path: node.path, kind: node.kind, blockType: node.blockType };
   }
 
   function isSelected(node: BuilderTreeNode) {
@@ -833,7 +839,7 @@ export default function BuilderLeftPanel({
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
                   {tree.map((node) => (
-                    <TreeNodeView key={node.id} node={node} depth={0} isSelected={isSelected} onSelect={(n) => setSelection(selectionOf(n))} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+                    <TreeNodeView key={node.id} node={node} depth={0} isSelected={isSelected} onSelect={(n) => onSelectionChange(selectionOf(n))} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
                   ))}
                 </SortableContext>
               </DndContext>
@@ -847,7 +853,7 @@ export default function BuilderLeftPanel({
                 {selectedNode.kind === "block" && (
                   <button
                     type="button"
-                    onClick={() => { onDelete(selectionOf(selectedNode)); setSelection(null); }}
+                    onClick={() => { onDelete(selectionOf(selectedNode)); onSelectionChange(null); }}
                     aria-label={t("dashboard.pages.linksBuilder.deleteSelected")}
                     className="text-red-500 hover:text-red-600"
                   >
@@ -1061,13 +1067,22 @@ export default function BuilderLeftPanel({
       )}
 
       {tab === "design" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <IconBox className="h-6 w-6 text-app-muted" />
-          <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.designPlaceholder")}</p>
-          <Link href={designHref} className="flex items-center gap-1 text-xs font-bold text-jeon-purple hover:underline">
-            {t("dashboard.pages.linksBuilder.openDesignPage")}
-            <IconExternal className="h-3.5 w-3.5" />
-          </Link>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+          <DesignCategoryTabs
+            tabs={DESIGN_SECTION_ENTRIES.map(([key, labelKey]) => ({ key, label: t(labelKey), onClick: () => onDesignSectionChange(key) }))}
+            activeKey={designSection}
+          />
+          {designSection === "tema" && <TemaSection page={page} isPremium={isPremium} onPatch={onPatch} onError={onError} onUploadBackground={onUploadBackground} />}
+          {designSection === "header" && (
+            <HeaderSection page={page} onLocalChange={onLocalChange} onPatch={onPatch} onError={onError} onUploadAvatar={onUploadAvatar} />
+          )}
+          {designSection === "tombol" && <TombolSection page={page} onLocalChange={onLocalChange} onStyleOverride={onStyleOverride} />}
+          {designSection === "font" && <FontSection page={page} onLocalChange={onLocalChange} onStyleOverride={onStyleOverride} />}
+          {designSection === "stiker" && (
+            <section className="glass rounded-jmd p-5 shadow-card">
+              <StickerCanvasEditor stickers={stickers} onChange={onStickersChange} />
+            </section>
+          )}
         </div>
       )}
 

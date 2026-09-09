@@ -1,4 +1,4 @@
-import type { BuilderSeg, EmbeddedBuilderBlock } from "@/lib/api-client";
+import type { BuilderSeg, EmbeddedBuilderBlock, LinkItem } from "@/lib/api-client";
 
 // builder-blocks.ts -- Canvas Page Builder (migrasi 000096, permintaan
 // langsung pengguna 7 September 2026, dua screenshot Lynk.id): mode edit
@@ -211,4 +211,101 @@ export function newBuilderBlock(type: EmbeddedBuilderBlock["block_type"], title 
     title,
     block_data: emptyBuilderBlockData(type),
   };
+}
+
+// BuilderSelection/BuilderTreeNode/buildTree/findNodeByPath/selectionOf --
+// dipindah dari components/BuilderLeftPanel.tsx (permintaan langsung
+// pengguna 9 September 2026, "klik blok di kanvas juga, bukan cuma di
+// tree kiri"): supaya BuilderCanvas.tsx (klik DOM) & BuilderLeftPanel.tsx
+// (klik tree) & rute builder (state seleksi dinaikkan ke sana) semua
+// mengacu SATU bentuk pohon & SATU bentuk seleksi, badan fungsi APA
+// ADANYA cuma dipindah lokasi + diekspor.
+export interface BuilderSelection {
+  rootId: string;
+  path: BuilderSeg[];
+  kind: "block" | "column-slot";
+  blockType?: string;
+}
+
+export interface BuilderTreeNode {
+  id: string;
+  rootId: string;
+  path: BuilderSeg[];
+  kind: "block" | "column-slot";
+  title: string;
+  blockType?: string;
+  url?: string;
+  description?: string;
+  blockData?: Record<string, unknown>;
+  children: BuilderTreeNode[];
+}
+
+function buildChildNodes(rootId: string, parentPath: BuilderSeg[], children: EmbeddedBuilderBlock[]): BuilderTreeNode[] {
+  return children.map((child) =>
+    buildBlockNode(rootId, [...parentPath, { kind: "child", id: child.id }], child.id, child.block_type, child.title, child.url, child.description, child.block_data)
+  );
+}
+
+function buildBlockNode(
+  rootId: string,
+  path: BuilderSeg[],
+  id: string,
+  blockType: string,
+  title: string,
+  url: string | undefined,
+  description: string | undefined,
+  blockData: Record<string, unknown> | undefined
+): BuilderTreeNode {
+  const data = blockData ?? {};
+  let children: BuilderTreeNode[] = [];
+  if (blockType === "section") {
+    children = buildChildNodes(rootId, path, (data.children as EmbeddedBuilderBlock[] | undefined) ?? []);
+  } else if (blockType === "column") {
+    const columns = (data.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
+    children = columns.map((col, i) => {
+      const colPath: BuilderSeg[] = [...path, { kind: "column", index: i }];
+      return {
+        id: `${id}::col${i}`,
+        rootId,
+        path: colPath,
+        kind: "column-slot" as const,
+        title: "",
+        children: buildChildNodes(rootId, colPath, col.children ?? []),
+      };
+    });
+  }
+  return { id, rootId, path, kind: "block", title, blockType, url, description, blockData: data, children };
+}
+
+export function buildTree(links: LinkItem[]): BuilderTreeNode[] {
+  return links.map((link) => buildBlockNode(link.id, [], link.id, link.block_type, link.title, link.url, link.description, link.block_data));
+}
+
+// findNodeByPath -- pencarian rekursif SATU node persis (rootId+path),
+// dipakai baik utk resolve node terpilih MAUPUN resolve node induk saat
+// drag-end (lihat siblingsOf, BuilderLeftPanel.tsx).
+export function findNodeByPath(nodes: BuilderTreeNode[], rootId: string, path: BuilderSeg[]): BuilderTreeNode | null {
+  for (const n of nodes) {
+    if (n.rootId === rootId && JSON.stringify(n.path) === JSON.stringify(path)) return n;
+    const found = findNodeByPath(n.children, rootId, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function selectionOf(node: BuilderTreeNode): BuilderSelection {
+  return { rootId: node.rootId, path: node.path, kind: node.kind, blockType: node.blockType };
+}
+
+// findSelectionByNodeId -- resolve id blok DOM (data-builder-node-id, lihat
+// PagePreview.tsx) jadi BuilderSelection, dipakai BuilderCanvas.tsx saat
+// pengguna klik LANGSUNG di kanvas (bukan di tree kiri) -- telusuri pohon
+// yang sama dipakai tree kiri supaya kedua jalur seleksi selalu konsisten.
+export function findSelectionByNodeId(tree: BuilderTreeNode[], nodeId: string): BuilderSelection | null {
+  for (const n of tree) {
+    if (n.id === nodeId) return selectionOf(n);
+    const found = findSelectionByNodeId(n.children, nodeId);
+    if (found) return found;
+  }
+  return null;
 }
