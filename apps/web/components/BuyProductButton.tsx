@@ -3,6 +3,19 @@
 import { useState } from "react";
 import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 
+// EMAIL_PATTERN -- validasi format ringan di sisi klien (permintaan
+// langsung pengguna, 10 September 2026: "alur pembelian ... ui dan ux
+// nya masih sangat kurang") -- SEBELUMNYA cuma mengandalkan atribut HTML
+// `type="email" required` (baru menegur SAAT submit, bukan reaktif saat
+// mengetik/blur) -- backend TETAP validator utama (binding:"required,email",
+// createCheckoutRequest), regex ini murni UX (tegur lebih awal), bukan
+// pengganti validasi server.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function formatIDR(amount: number): string {
+  return `Rp ${Math.max(0, Math.round(amount)).toLocaleString("id-ID")}`;
+}
+
 export default function BuyProductButton({
   productId,
   buttonClassName = "bg-jeon-purple text-white hover:opacity-90",
@@ -15,6 +28,8 @@ export default function BuyProductButton({
   pageSlug,
   wishlistItemId,
   externalUrl,
+  productName,
+  basePriceIdr,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -47,10 +62,24 @@ export default function BuyProductButton({
   // Tokopedia kreator sendiri), sama seperti tautan biasa. Klik tetap
   // dilacak sebagai product_click seperti biasa.
   externalUrl?: string;
+  // productName/basePriceIdr -- permintaan langsung pengguna, 10 September
+  // 2026 ("alur pembelian ... ui dan ux nya masih sangat kurang"): baris
+  // ringkasan "Kamu akan membeli: X -- Rp Y" tepat di atas form, supaya
+  // pembeli SELALU lihat apa & berapa yang benar-benar akan dibayar SAAT
+  // form terbuka (kartu produk di atasnya bisa saja sudah tergulir keluar
+  // layar begitu form ini expand). Keduanya OPSIONAL & murni tampilan --
+  // kalau tidak diisi (pemanggil di luar PagePreview), form tetap
+  // berfungsi identik seperti sebelumnya, cuma tanpa baris ringkasan ini.
+  // `basePriceIdr` diabaikan kalau `pwywMinPriceIdr` terisi (PWYW pakai
+  // jumlah yang benar-benar diketik pembeli, bukan harga dasar).
+  productName?: string;
+  basePriceIdr?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappTouched, setWhatsappTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buyerAmount, setBuyerAmount] = useState(pwywMinPriceIdr ? String(pwywMinPriceIdr) : "");
@@ -60,6 +89,23 @@ export default function BuyProductButton({
   const [checkingVoucher, setCheckingVoucher] = useState(false);
   const [voucherResult, setVoucherResult] = useState<{ discountIDR: number; finalIDR: number } | null>(null);
   const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
+
+  const emailError = emailTouched && email.trim() && !EMAIL_PATTERN.test(email.trim()) ? "Format email tidak valid." : null;
+  // whatsappError -- format longgar (cukup angka, spasi, +/-, min 8 digit)
+  // karena field ini OPSIONAL & format nomor lokal/internasional beda-beda
+  // -- validasi ketat di sini cuma akan menolak nomor sah yang formatnya
+  // sedikit beda, backend tidak punya validasi format nomor ini sama sekali.
+  const whatsappDigits = whatsappNumber.replace(/[^0-9]/g, "");
+  const whatsappError =
+    whatsappTouched && whatsappNumber.trim() && (whatsappDigits.length < 8 || !/^[0-9+\-\s]+$/.test(whatsappNumber.trim()))
+      ? "Nomor WhatsApp sepertinya belum lengkap."
+      : null;
+
+  // displayAmountIDR -- angka yang BENAR-BENAR akan ditagihkan, dihitung
+  // ulang tiap render supaya baris ringkasan selalu ikut PWYW/voucher yang
+  // sedang berubah (bukan snapshot beku saat form pertama dibuka).
+  const rawAmount = pwywMinPriceIdr !== undefined ? Number(buyerAmount || pwywMinPriceIdr) : basePriceIdr;
+  const displayAmountIDR = voucherResult ? voucherResult.finalIDR : rawAmount;
 
   async function handleApplyVoucher() {
     if (!voucherCode.trim()) return;
@@ -87,6 +133,11 @@ export default function BuyProductButton({
   async function handleBuy(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setEmailTouched(true);
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setError("Masukkan alamat email yang valid.");
+      return;
+    }
     if (pwywMinPriceIdr !== undefined && (!buyerAmount || Number(buyerAmount) < pwywMinPriceIdr)) {
       setError(`Jumlah pembayaran minimal Rp${pwywMinPriceIdr.toLocaleString("id-ID")}.`);
       return;
@@ -129,7 +180,7 @@ export default function BuyProductButton({
       <button
         type="button"
         onClick={handleOpen}
-        className={`mt-2.5 w-full rounded-lg py-1.5 text-xs transition-all duration-200 ${buttonClassName}`}
+        className={`mt-2.5 w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 ${buttonClassName}`}
       >
         {openLabel}
       </button>
@@ -137,10 +188,26 @@ export default function BuyProductButton({
   }
 
   return (
-    <form onSubmit={handleBuy} className="mt-2.5 flex flex-col gap-1.5">
+    <form onSubmit={handleBuy} className="mt-2.5 flex flex-col gap-2">
+      {productName && (
+        <div className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5">
+          <p className="text-[11px] opacity-80">Kamu akan membeli</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="truncate text-xs font-bold">{productName}</p>
+            {displayAmountIDR !== undefined && (
+              <p className="flex-shrink-0 text-xs font-bold">
+                {voucherResult && rawAmount !== undefined && (
+                  <span className="mr-1 font-normal line-through opacity-60">{formatIDR(rawAmount)}</span>
+                )}
+                {formatIDR(displayAmountIDR)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
       {pwywMinPriceIdr !== undefined && (
         <div>
-          <label className="text-[10px] font-semibold opacity-80">
+          <label className="text-[11px] font-semibold opacity-80">
             Bayar berapa saja, min Rp{pwywMinPriceIdr.toLocaleString("id-ID")}
           </label>
           <input
@@ -149,18 +216,25 @@ export default function BuyProductButton({
             min={pwywMinPriceIdr}
             value={buyerAmount}
             onChange={(e) => setBuyerAmount(e.target.value)}
-            className="mt-0.5 w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+            className="mt-1 w-full rounded-md border border-white/30 bg-white/90 px-2.5 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
           />
         </div>
       )}
-      <input
-        type="email"
-        required
-        placeholder="Email kamu"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-      />
+      <div>
+        <input
+          type="email"
+          required
+          placeholder="Email kamu"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => setEmailTouched(true)}
+          aria-invalid={!!emailError}
+          className={`w-full rounded-md border bg-white/90 px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
+            emailError ? "border-red-400 focus:border-red-400" : "border-white/30 focus:border-jeon-purple"
+          }`}
+        />
+        {emailError && <p className="mt-0.5 text-[11px] text-red-300">{emailError}</p>}
+      </div>
 
       {/* No.74 (Sprint 8): nomor WhatsApp OPSIONAL -- kolom buyer_contact
           sudah ada di skema sejak lama tapi TIDAK PERNAH dikumpulkan lewat
@@ -172,13 +246,20 @@ export default function BuyProductButton({
           jadi menampilkannya di situ cuma akan mengumpulkan nomor yang
           tidak pernah benar-benar dipakai. */}
       {!hideVoucher && (
-        <input
-          type="tel"
-          placeholder="Nomor WhatsApp (opsional)"
-          value={whatsappNumber}
-          onChange={(e) => setWhatsappNumber(e.target.value)}
-          className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
-        />
+        <div>
+          <input
+            type="tel"
+            placeholder="Nomor WhatsApp (opsional)"
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            onBlur={() => setWhatsappTouched(true)}
+            aria-invalid={!!whatsappError}
+            className={`w-full rounded-md border bg-white/90 px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
+              whatsappError ? "border-red-400 focus:border-red-400" : "border-white/30 focus:border-jeon-purple"
+            }`}
+          />
+          {whatsappError && <p className="mt-0.5 text-[11px] text-red-300">{whatsappError}</p>}
+        </div>
       )}
 
       {!hideVoucher &&
@@ -186,13 +267,13 @@ export default function BuyProductButton({
           <button
             type="button"
             onClick={() => setShowVoucher(true)}
-            className="text-left text-[10px] font-semibold underline opacity-80"
+            className="text-left text-[11px] font-semibold underline opacity-80"
           >
             Punya kode voucher?
           </button>
         ) : (
           <div className="flex flex-col gap-1">
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <input
                 type="text"
                 placeholder="Kode voucher"
@@ -202,33 +283,34 @@ export default function BuyProductButton({
                   setVoucherResult(null);
                   setVoucherMessage(null);
                 }}
-                className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2 py-1 text-xs uppercase text-app-ink focus:border-jeon-purple focus:outline-none"
+                className="min-w-0 flex-1 rounded-md border border-white/30 bg-white/90 px-2.5 py-2 text-sm uppercase text-app-ink focus:border-jeon-purple focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleApplyVoucher}
                 disabled={checkingVoucher || !voucherCode.trim()}
-                className="flex-shrink-0 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-app-ink disabled:opacity-60"
+                className="flex-shrink-0 rounded-md bg-white/90 px-2.5 py-2 text-xs font-bold text-app-ink disabled:opacity-60"
               >
                 {checkingVoucher ? "..." : "Terapkan"}
               </button>
             </div>
             {voucherResult && (
-              <p className="text-[10px] font-semibold text-green-300">
+              <p className="text-[11px] font-semibold text-green-300">
                 Diskon Rp {voucherResult.discountIDR.toLocaleString("id-ID")} diterapkan -- total Rp{" "}
                 {voucherResult.finalIDR.toLocaleString("id-ID")}
               </p>
             )}
-            {voucherMessage && <p className="text-[10px] text-red-400">{voucherMessage}</p>}
+            {voucherMessage && <p className="text-[11px] text-red-300">{voucherMessage}</p>}
           </div>
         ))}
 
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-red-300">{error}</p>}
       <button
         type="submit"
-        disabled={loading}
-        className={`w-full rounded-lg py-1.5 text-xs transition-all duration-200 disabled:opacity-60 ${buttonClassName}`}
+        disabled={loading || !!emailError || !!whatsappError}
+        className={`flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-all duration-200 disabled:opacity-60 ${buttonClassName}`}
       >
+        {loading && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />}
         {loading ? "Memproses..." : submitLabel}
       </button>
     </form>

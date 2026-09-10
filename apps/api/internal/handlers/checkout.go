@@ -16,6 +16,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
 	"github.com/jeonme/api/internal/midtrans"
@@ -44,13 +45,23 @@ type CheckoutHandler struct {
 	PlatformFeePercent float64
 	Storage            *storage.Client
 	Queue              *asynq.Client
+	// RDB/AppEnv -- riwayat pembelian pembeli (permintaan langsung pengguna
+	// 10 September 2026, "alur pembelian ... ui dan ux nya masih sangat
+	// kurang"): RequestOrderHistoryCode/VerifyOrderHistoryCode meniru pola
+	// verifikasi Loyalitas (loyalty.go) PERSIS -- butuh Redis (lockout
+	// brute-force kode 6-digit, checkVerifyLockout/recordVerifyFailure,
+	// auth.go) & AppEnv (gate dev_verification_code di respons, SAMA
+	// seperti auth.go/loyalty.go) yang SEBELUMNYA tidak dibutuhkan sama
+	// sekali oleh CheckoutHandler.
+	RDB    *redis.Client
+	AppEnv string
 }
 
-func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, midtransServerKey, publicWebURL string, platformFeePercent float64, s3 *storage.Client, queueClient *asynq.Client) *CheckoutHandler {
+func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, midtransServerKey, publicWebURL string, platformFeePercent float64, s3 *storage.Client, queueClient *asynq.Client, rdb *redis.Client, appEnv string) *CheckoutHandler {
 	return &CheckoutHandler{
 		DB: db, Midtrans: midtransClient, MidtransServerKey: midtransServerKey,
 		PublicWebURL: publicWebURL, PlatformFeePercent: platformFeePercent,
-		Storage: s3, Queue: queueClient,
+		Storage: s3, Queue: queueClient, RDB: rdb, AppEnv: appEnv,
 	}
 }
 
@@ -468,13 +479,13 @@ func (h *CheckoutHandler) ValidateVoucher(c *gin.Context) {
 }
 
 type checkoutStatusResponse struct {
-	OrderID      string               `json:"order_id"`
-	Status       string               `json:"status"`
-	Product      string               `json:"product_name"`
-	IsBundle     bool                 `json:"is_bundle"`
-	IsDonation   bool                 `json:"is_donation"`
-	IsCourse     bool                 `json:"is_course"`
-	SocialProof  *checkoutSocialProof `json:"social_proof"`
+	OrderID     string               `json:"order_id"`
+	Status      string               `json:"status"`
+	Product     string               `json:"product_name"`
+	IsBundle    bool                 `json:"is_bundle"`
+	IsDonation  bool                 `json:"is_donation"`
+	IsCourse    bool                 `json:"is_course"`
+	SocialProof *checkoutSocialProof `json:"social_proof"`
 
 	// DeliveryMethod/FulfilledAt/ClaimedCode -- Modul Toko (Fase C): status
 	// penyerahan produk digital biasa (download_link/manual/random_code/
@@ -489,6 +500,14 @@ type checkoutStatusResponse struct {
 	// dikonfirmasi" (lihat migrasi 000048).
 	IsPaymentLink  bool   `json:"is_payment_link"`
 	SuccessMessage string `json:"success_message,omitempty"`
+
+	// CreatorUsername -- permintaan langsung pengguna, 10 September 2026
+	// ("alur pembelian ... ui dan ux nya masih sangat kurang"): halaman
+	// status SEBELUMNYA tidak punya cara membawa pembeli balik ke halaman
+	// kreator saat status expired/failed (dead-end, tanpa CTA sama
+	// sekali) -- field ini dipakai frontend utk tombol "Kembali ke Halaman
+	// Kreator" (`/{creator_username}`).
+	CreatorUsername string `json:"creator_username,omitempty"`
 }
 
 // checkoutSocialProof -- No.76 (Sprint 8): beda dari publicSocialProof di
@@ -515,12 +534,13 @@ func (h *CheckoutHandler) GetStatus(c *gin.Context) {
 	resp.OrderID = orderID
 	err := h.DB.QueryRow(ctx, `
 		SELECT o.status, p.id, p.name, p.is_bundle, p.is_donation, p.is_course, p.user_id,
-			p.is_event, p.delivery_method, o.fulfilled_at, p.product_kind, p.success_message
+			p.is_event, p.delivery_method, o.fulfilled_at, p.product_kind, p.success_message, u.username
 		FROM orders o
 		JOIN products p ON p.id = o.product_id
+		JOIN users u ON u.id = p.user_id
 		WHERE o.id = $1
 	`, orderID).Scan(&resp.Status, &productID, &resp.Product, &isBundle, &isDonation, &isCourse, &creatorUserID,
-		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt, &productKind, &resp.SuccessMessage)
+		&isEvent, &resp.DeliveryMethod, &resp.FulfilledAt, &productKind, &resp.SuccessMessage, &resp.CreatorUsername)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "order tidak ditemukan"})

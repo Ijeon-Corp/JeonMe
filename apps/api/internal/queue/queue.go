@@ -231,6 +231,26 @@ func NewLoyaltyVerificationTask(email, code string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeLoyaltyVerificationEmail, payload), nil
 }
 
+// TypeOrderHistoryVerificationEmail -- riwayat pembelian pembeli
+// (permintaan langsung pengguna, 10 September 2026), pola SAMA PERSIS
+// TypeLoyaltyVerificationEmail di atas (kode verifikasi kepemilikan email
+// MENTAH lewat email, ASINKRON) -- lihat catatan lengkap migrasi
+// 000097_buyer_order_verification.
+const TypeOrderHistoryVerificationEmail = "order_history:verification_email"
+
+type OrderHistoryVerificationPayload struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+func NewOrderHistoryVerificationTask(email, code string) (*asynq.Task, error) {
+	payload, err := json.Marshal(OrderHistoryVerificationPayload{Email: email, Code: code})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload verifikasi riwayat pembelian %s: %w", email, err)
+	}
+	return asynq.NewTask(TypeOrderHistoryVerificationEmail, payload), nil
+}
+
 // AccountStatusEmailPayload -- dipakai bersama oleh
 // TypeAccountSuspendedEmail & TypeAccountActivatedEmail (audit fitur admin,
 // 5 September 2026): SuspendUser/ActivateUser (admin.go) sebelumnya tidak

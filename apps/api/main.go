@@ -259,7 +259,7 @@ func runWorker() {
 	queueClient := asynq.NewClient(redisOpt)
 	defer queueClient.Close()
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
-	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, nil, queueClient)
+	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, nil, queueClient, rdb, cfg.AppEnv)
 
 	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey), checkoutHandler)
 

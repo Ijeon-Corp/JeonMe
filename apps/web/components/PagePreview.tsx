@@ -766,6 +766,8 @@ function renderProductGrid(
                     referralCode={data.referralCode}
                     username={data.username}
                     pageSlug={data.pageSlug}
+                    productName={product.name}
+                    basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
                   />
                 ) : (
                   <button
@@ -2561,6 +2563,8 @@ export default function PagePreview({
                         referralCode={data.referralCode}
                         username={data.username}
                         pageSlug={data.pageSlug}
+                        productName={event.name}
+                        basePriceIdr={event.effectivePriceIdr}
                       />
                     ) : (
                       <button
@@ -2640,6 +2644,7 @@ export default function PagePreview({
                   submitLabel="Kirim Dukungan"
                   username={data.username}
                   pageSlug={data.pageSlug}
+                  productName={data.donation.title}
                   wishlistItemId={selectedWishlistId}
                 />
               </div>
@@ -3555,6 +3560,8 @@ function BuilderPagePreview({
                         referralCode={data.referralCode}
                         username={data.username}
                         pageSlug={data.pageSlug}
+                        productName={event.name}
+                        basePriceIdr={event.effectivePriceIdr}
                       />
                     ) : (
                       <button
@@ -3626,6 +3633,7 @@ function BuilderPagePreview({
                   submitLabel="Kirim Dukungan"
                   username={data.username}
                   pageSlug={data.pageSlug}
+                  productName={data.donation.title}
                   wishlistItemId={selectedWishlistId}
                 />
               </div>

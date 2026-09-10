@@ -70,6 +70,7 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeSignupVerificationEmail, h.HandleSignupVerificationEmail)
 	mux.HandleFunc(queue.TypePasswordResetEmail, h.HandlePasswordResetEmail)
 	mux.HandleFunc(queue.TypeLoyaltyVerificationEmail, h.HandleLoyaltyVerificationEmail)
+	mux.HandleFunc(queue.TypeOrderHistoryVerificationEmail, h.HandleOrderHistoryVerificationEmail)
 	mux.HandleFunc(queue.TypeAccountSuspendedEmail, h.HandleAccountSuspendedEmail)
 	mux.HandleFunc(queue.TypeAccountActivatedEmail, h.HandleAccountActivatedEmail)
 	mux.HandleFunc(queue.TypeOrderReconcile, h.HandleOrderReconcile)
@@ -137,6 +138,33 @@ func (h *Handler) HandleLoyaltyVerificationEmail(_ context.Context, t *asynq.Tas
 	}
 
 	log.Printf("worker: kode verifikasi loyalitas terkirim ke %s", payload.Email)
+	return nil
+}
+
+// HandleOrderHistoryVerificationEmail -- kode verifikasi kepemilikan email
+// sebelum melihat riwayat pembelian lintas kreator (lihat catatan lengkap
+// di queue.TypeOrderHistoryVerificationEmail &
+// CheckoutHandler.RequestOrderHistoryCode). Pola sama persis dengan
+// HandleLoyaltyVerificationEmail di atas.
+func (h *Handler) HandleOrderHistoryVerificationEmail(_ context.Context, t *asynq.Task) error {
+	var payload queue.OrderHistoryVerificationPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+
+	subject := "Kode verifikasi riwayat pembelian Jeon.id"
+	body := fmt.Sprintf(
+		"Kode verifikasinya: %s\n\nMasukkan kode ini untuk melihat riwayat pembelianmu di Jeon.id. "+
+			"Kode berlaku 10 menit sejak diminta.\n\nKalau kamu tidak meminta ini, abaikan saja email ini -- "+
+			"riwayat pembelianmu tetap aman.\n\nSalam,\nTim Jeon.id",
+		payload.Code,
+	)
+
+	if err := h.Mailer.Send(payload.Email, subject, body); err != nil {
+		return fmt.Errorf("worker: gagal kirim kode verifikasi riwayat pembelian: %w", err)
+	}
+
+	log.Printf("worker: kode verifikasi riwayat pembelian terkirim ke %s", payload.Email)
 	return nil
 }
 

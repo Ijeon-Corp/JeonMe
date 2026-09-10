@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
   ApiError,
   BundleDownloadItem,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/api-client";
 import SocialProofToast from "@/components/SocialProofToast";
 import VideoEmbedBlock from "@/components/VideoEmbedBlock";
-import { IconStar } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconClock, IconStar, IconX } from "@/components/icons";
 
 // REQ-F-406: pesan gagal bayar yang jelas ke pembeli. Halaman ini adalah
 // callbacks.finish dari Midtrans Snap -- statusnya selalu dicek ulang ke
@@ -26,6 +27,13 @@ export default function CheckoutStatusPage() {
   const [status, setStatus] = useState<CheckoutStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // isAutoPolling/rechecking -- permintaan langsung pengguna, 10 September
+  // 2026 ("alur pembelian ... ui dan ux nya masih sangat kurang"):
+  // SEBELUMNYA status "pending" cuma teks minta reload MANUAL browser,
+  // tanpa indikator apa pun bahwa sistem sedang memeriksa ulang di
+  // belakang layar (auto-poll 2 detik x8 SUDAH ADA, cuma tidak terlihat).
+  const [isAutoPolling, setIsAutoPolling] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
 
   // No.70: bundel punya banyak file -- tautan unduhannya dimuat terpisah
   // begitu status sudah "paid", bukan lewat redirect satu file seperti
@@ -53,12 +61,16 @@ export default function CheckoutStatusPage() {
         // diarahkan kembali -- coba beberapa kali selama masih "pending".
         if (result.status === "pending" && attempts < 8) {
           attempts += 1;
+          setIsAutoPolling(true);
           setTimeout(poll, 2000);
+        } else {
+          setIsAutoPolling(false);
         }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof ApiError ? err.message : "Gagal memuat status pembayaran.");
         setLoading(false);
+        setIsAutoPolling(false);
       }
     }
 
@@ -84,8 +96,29 @@ export default function CheckoutStatusPage() {
     }
   }, [status, params.id]);
 
+  // handleManualRecheck -- tombol "Cek Ulang" (permintaan langsung
+  // pengguna, 10 September 2026): SEBELUMNYA pembeli yang kembali LAMA
+  // setelah 8x percobaan auto-poll habis (mis. menutup tab lalu buka lagi
+  // dari email) tidak punya aksi sama sekali selain me-refresh browser
+  // secara manual -- tombol ini murni memanggil ulang endpoint yang sama,
+  // TIDAK menghidupkan lagi auto-poll (supaya tidak dobel jalan).
+  async function handleManualRecheck() {
+    setRechecking(true);
+    setError(null);
+    try {
+      const result = await getCheckoutStatus(params.id);
+      setStatus(result);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memuat status pembayaran.");
+    } finally {
+      setRechecking(false);
+    }
+  }
+
+  const backToCreatorHref = status?.creator_username ? `/${status.creator_username}` : null;
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-jeon-purple/5 px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-jeon-purple/5 px-4">
       {status?.social_proof && (
         <SocialProofToast
           recent={status.social_proof.recent}
@@ -98,20 +131,33 @@ export default function CheckoutStatusPage() {
           status?.status === "paid" && status.is_course ? "max-w-xl" : "max-w-sm"
         }`}
       >
-        {loading && <p className="text-sm text-muted">Memeriksa status pembayaran...</p>}
+        {loading && (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <span className="h-8 w-8 animate-spin rounded-full border-4 border-jeon-purple/20 border-t-jeon-purple" aria-hidden />
+            <p className="text-sm text-muted">Memeriksa status pembayaran...</p>
+          </div>
+        )}
 
         {error && (
-          <>
+          <div className="flex flex-col items-center gap-2">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <IconX className="h-6 w-6 text-red-600" />
+            </span>
             <p className="font-heading text-lg font-bold text-red-600">Terjadi Kesalahan</p>
-            <p className="mt-2 text-sm text-muted">{error}</p>
-          </>
+            <p className="text-sm text-muted">{error}</p>
+          </div>
         )}
 
         {status && !error && (
           <>
             {status.status === "paid" && (
               <>
-                <p className="font-heading text-lg font-bold text-jeon-purple">Pembayaran Berhasil</p>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                    <IconCheck className="h-6 w-6 text-green-600" />
+                  </span>
+                  <p className="font-heading text-lg font-bold text-jeon-purple">Pembayaran Berhasil</p>
+                </div>
                 <p className="mt-2 text-sm text-muted">
                   {status.is_payment_link && status.success_message ? (
                     status.success_message
@@ -206,33 +252,74 @@ export default function CheckoutStatusPage() {
               </>
             )}
             {status.status === "pending" && (
-              <>
+              <div className="flex flex-col items-center gap-2">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                  <IconClock className="h-6 w-6 text-amber-600" />
+                </span>
                 <p className="font-heading text-lg font-bold text-app-ink">Menunggu Pembayaran</p>
-                <p className="mt-2 text-sm text-muted">
-                  Kami belum menerima konfirmasi pembayaran untuk <b>{status.product_name}</b>. Kalau kamu
-                  sudah membayar, tunggu sebentar lalu muat ulang halaman ini.
+                <p className="text-sm text-muted">
+                  Kami belum menerima konfirmasi pembayaran untuk <b>{status.product_name}</b>.
                 </p>
-              </>
+                {isAutoPolling && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted">
+                    <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-500" aria-hidden />
+                    Sedang memeriksa otomatis...
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleManualRecheck}
+                  disabled={rechecking}
+                  className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  {rechecking ? "Memeriksa..." : "Cek Ulang"}
+                </button>
+              </div>
             )}
             {status.status === "expired" && (
-              <>
+              <div className="flex flex-col items-center gap-2">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <IconX className="h-6 w-6 text-red-600" />
+                </span>
                 <p className="font-heading text-lg font-bold text-red-600">Pembayaran Kedaluwarsa</p>
-                <p className="mt-2 text-sm text-muted">
+                <p className="text-sm text-muted">
                   Waktu pembayaran untuk <b>{status.product_name}</b> sudah habis. Silakan ulangi checkout.
                 </p>
-              </>
+                {backToCreatorHref && (
+                  <Link href={backToCreatorHref} className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white">
+                    Kembali ke Halaman Kreator
+                  </Link>
+                )}
+              </div>
             )}
             {status.status === "failed" && (
-              <>
+              <div className="flex flex-col items-center gap-2">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <IconX className="h-6 w-6 text-red-600" />
+                </span>
                 <p className="font-heading text-lg font-bold text-red-600">Pembayaran Gagal</p>
-                <p className="mt-2 text-sm text-muted">
+                <p className="text-sm text-muted">
                   Pembayaran untuk <b>{status.product_name}</b> tidak berhasil. Silakan coba lagi.
                 </p>
-              </>
+                {backToCreatorHref && (
+                  <Link href={backToCreatorHref} className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs font-bold text-white">
+                    Kembali ke Halaman Kreator
+                  </Link>
+                )}
+              </div>
             )}
           </>
         )}
       </div>
+
+      {/* Riwayat pembelian pembeli -- permintaan langsung pengguna, 10
+          September 2026: entry point PALING wajar (persis setelah
+          transaksi), tanpa perlu tautan global baru di setiap halaman
+          publik kreator. */}
+      <Link href="/pembelian" className="flex items-center gap-1 text-xs font-semibold text-jeon-purple hover:underline">
+        Lihat riwayat pembelian saya
+        <IconChevronRight className="h-3.5 w-3.5" />
+      </Link>
     </main>
   );
 }

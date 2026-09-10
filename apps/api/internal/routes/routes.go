@@ -63,7 +63,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
-	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient)
+	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient, rdb, cfg.AppEnv)
 	subscription := handlers.NewSubscriptionHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PremiumMonthlyPriceIDR, cfg.PremiumYearlyPriceIDR)
 	encryptionKey := []byte(cfg.EncryptionKey)
 	socialConnect.EncryptionKey = encryptionKey
@@ -146,6 +146,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// pembeli sah di tengah menunggu, bukan cuma mencegah
 		// penyalahgunaan.
 		checkoutStatusRateLimit := middleware.RateLimit(rdb, "checkout-status", 60, time.Minute)
+		// orderHistoryRateLimit -- riwayat pembelian pembeli (permintaan
+		// langsung pengguna, 10 September 2026), sama nilainya dgn
+		// loyaltyRateLimit (pola verifikasi kode 6-digit identik).
+		orderHistoryRateLimit := middleware.RateLimit(rdb, "order-history", 20, time.Minute)
 		// supportChatSendRateLimit -- Live Chat dukungan (permintaan langsung
 		// pengguna, 7 September 2026), sekelas leads/contact-form (kirim
 		// teks pengguna). supportChatPollRateLimit -- SupportChatWidget.tsx
@@ -761,6 +765,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// publik, cuma bisa diakses kalau tahu orderID yang valid & lunas.
 		api.GET("/checkout/:id/bundle-items", checkout.GetBundleItems)
 		api.GET("/checkout/:id/course-chapters", checkout.GetCourseChapters)
+
+		// Riwayat pembelian pembeli (permintaan langsung pengguna, 10
+		// September 2026) -- publik, LINTAS kreator (bukan di bawah
+		// /pages/:username seperti loyalitas), pembeli tidak punya akun.
+		api.POST("/orders/request-code", orderHistoryRateLimit, checkout.RequestOrderHistoryCode)
+		api.POST("/orders/verify-code", orderHistoryRateLimit, checkout.VerifyOrderHistoryCode)
+		api.GET("/orders/mine", orderHistoryRateLimit, checkout.ListMyOrders)
 
 		// Webhook PSP -- REQ-F-403 (verifikasi signature_key di body DI
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi

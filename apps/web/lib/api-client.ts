@@ -2385,6 +2385,43 @@ export function redeemLoyaltyReward(rewardId: string, buyerEmail: string, verifi
   );
 }
 
+// requestOrderHistoryCode/verifyOrderHistoryCode/listMyOrders -- riwayat
+// pembelian pembeli (permintaan langsung pengguna, 10 September 2026:
+// "alur pembelian ... ui dan ux nya masih sangat kurang"). Pola verifikasi
+// SAMA PERSIS requestLoyaltyVerificationCode/verifyLoyaltyCode di atas --
+// bedanya HANYA lintas kreator (tanpa `:username`, satu pembeli bisa
+// belanja di banyak toko berbeda & tetap lihat semuanya di satu tempat).
+export function requestOrderHistoryCode(email: string) {
+  return apiFetch<{ message: string; dev_verification_code?: string }>("/orders/request-code", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function verifyOrderHistoryCode(email: string, code: string) {
+  return apiFetch<{ verification_token: string }>("/orders/verify-code", {
+    method: "POST",
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export interface MyOrderSummary {
+  order_id: string;
+  status: string;
+  created_at: string;
+  amount_idr: number;
+  product_name: string;
+  cover_image_url: string;
+  creator_username: string;
+}
+
+export function listMyOrders(email: string, verificationToken: string) {
+  return apiFetch<{ orders: MyOrderSummary[] }>(
+    `/orders/mine?email=${encodeURIComponent(email)}&verification_token=${encodeURIComponent(verificationToken)}`,
+    { method: "GET" }
+  );
+}
+
 // ---------- Dashboard: kartu kontak digital (Sprint 13, No.95) ----------
 // LINGKUP DIPERSEMPIT: tanpa Apple/Google Wallet (butuh kredensial developer
 // yang belum ada) -- pengunjung mengunduh file vCard (.vcf) standar yang
@@ -3021,6 +3058,9 @@ export interface CheckoutStatus {
   // Modul Toko (Fase D): pesan sukses kustom kreator untuk Payment Link.
   is_payment_link: boolean;
   success_message?: string;
+  // creator_username -- permintaan langsung pengguna, 10 September 2026:
+  // dipakai tombol "Kembali ke Halaman Kreator" saat status expired/failed.
+  creator_username?: string;
 }
 
 export function getCheckoutStatus(orderId: string) {
