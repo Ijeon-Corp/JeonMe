@@ -656,6 +656,35 @@ function NodeFieldEditor({
     );
   }
 
+  // "link" -- tautan biasa klasik (mis. "Follow di Instagram" dari template
+  // Quick Setup), bukan blok Canvas -- TAPI baris `links` yang sama dibagi
+  // rata antara editor klasik (dashboard/links/page.tsx) & tree builder ini
+  // (buildTree tidak menyaring block_type sama sekali), jadi tautan lama
+  // MUNCUL di sini juga. Bug ditemukan lewat laporan langsung pengguna (10
+  // September 2026, screenshot "Follow di Instagram" menampilkan pesan
+  // "blok ini murni wadah" yang SALAH -- fallback lama tidak mengenali tipe
+  // ini sama sekali) -- field MINIMAL (judul+url) yang sama seperti "button",
+  // fitur lanjutan (ikon/kunci/jadwal) tetap lewat halaman Tautan klasik.
+  if (node.blockType === "link") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={node.url ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyLinkHint")}</p>
+      </div>
+    );
+  }
+
   if (node.blockType === "button") {
     return (
       <div className="flex flex-col gap-2">
@@ -861,7 +890,19 @@ function NodeFieldEditor({
   }
 
   // section/divider/column-slot -- murni wadah, tidak ada field sendiri.
-  return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>;
+  if (node.kind === "column-slot" || node.blockType === "section" || node.blockType === "divider") {
+    return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>;
+  }
+
+  // Tipe blok klasik lain (heading/contact_form/accordion/audio/file/
+  // project_showcase/catalog) -- dibuat lewat editor Tautan klasik
+  // (dashboard/links/page.tsx) atau BlockDrilldownEditor, BUKAN tile
+  // "Tambah Komponen" builder ini, jadi belum punya editor in-place di
+  // sini. Bug ditemukan lewat laporan langsung pengguna (10 September
+  // 2026): fallback LAMA di sini SELALU bilang "blok ini murni wadah"
+  // (salah, blok-blok ini bukan wadah sama sekali) -- pesan ini jujur
+  // soal batasannya alih-alih menyesatkan.
+  return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>;
 }
 
 // TreeNodeView -- redesain total (permintaan langsung pengguna 10 September
