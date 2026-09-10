@@ -1031,6 +1031,12 @@ export const dictionaries = {
           containerHint: "Blok ini murni wadah -- pilih salah satu isinya untuk mengedit, atau tambah komponen baru ke dalamnya.",
           legacyLinkHint: "Ikon, kunci, dan jadwal tautan ini masih dikelola di halaman Tautan.",
           legacyBlockHint: "Blok ini dibuat lewat editor lama dan belum bisa diedit di sini -- kelola isinya lewat halaman Tautan.",
+          // produk* -- blok "Produk" (permintaan langsung pengguna 10
+          // September 2026, "harusnya ada blok produk").
+          produkEmptyPreview: "(Belum pilih produk)",
+          produkSelectExisting: "Pilih produk yang sudah ada",
+          produkCreateNew: "Buat Produk Baru",
+          produkNoProducts: "Belum ada produk -- buat yang pertama.",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
           openDesignPage: "Buka Halaman Desain",
           settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
@@ -2644,6 +2650,10 @@ export const dictionaries = {
           // Countdown/List/Image Slider/Embed generik + promosi Maps.
           typeCountdown: "Countdown",
           typeCountdownDesc: "Hitung mundur ke tanggal/waktu tertentu",
+          // "produk" -- permintaan langsung pengguna 10 September 2026
+          // ("harusnya ada blok produk").
+          typeProduk: "Produk",
+          typeProdukDesc: "Tampilkan satu produk toko-mu di sini",
           typeList: "Card/List/Testimoni",
           typeListDesc: "Daftar item fleksibel: list, kartu, atau testimoni",
           typeImageSlider: "Image Slider",
@@ -3931,6 +3941,10 @@ export const dictionaries = {
           containerHint: "This block is just a container -- select one of its children to edit, or add a new component inside it.",
           legacyLinkHint: "This link's icon, lock, and schedule are still managed on the Links page.",
           legacyBlockHint: "This block was created with an older editor and can't be edited here yet -- manage it from the Links page.",
+          produkEmptyPreview: "(No product selected)",
+          produkSelectExisting: "Select an existing product",
+          produkCreateNew: "Create New Product",
+          produkNoProducts: "No products yet -- create your first one.",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
           openDesignPage: "Open Design Page",
           settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",
@@ -5525,6 +5539,8 @@ export const dictionaries = {
           typeEmbedLinkDesc: "A manual link card with a thumbnail",
           typeCountdown: "Countdown",
           typeCountdownDesc: "Count down to a specific date and time",
+          typeProduk: "Product",
+          typeProdukDesc: "Show one of your store products here",
           typeList: "Card/List/Testimonial",
           typeListDesc: "A flexible item list: plain list, cards, or testimonials",
           typeImageSlider: "Image Slider",

@@ -17,7 +17,6 @@ import {
   PageStickerData,
   RecentOrder,
   createExtraPage,
-  createProduct,
   deleteExtraPage,
   deleteProduct,
   getAnalyticsSummary,
@@ -38,15 +37,12 @@ import {
 } from "@/lib/api-client";
 import {
   IconBox,
-  IconCamera,
   IconChevronRight,
   IconExternal,
   IconPlus,
   IconSearch,
   IconSparkle,
   IconTrash,
-  IconUpload,
-  IconWallet,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
@@ -68,6 +64,7 @@ import { useErrorToast } from "@/lib/use-error-toast";
 // terlihat "refresh"/collapse balik (dilaporkan pengguna 27 Agt 2026) --
 // mengecilkan bundle awal mengurangi jendela race itu, sama seperti kenapa
 // halaman ringan (business-card/balance) tidak pernah kena masalah ini.
+const CreateProductForm = dynamic(() => import("@/components/dashboard/products/CreateProductForm"));
 const ShopOverviewPanel = dynamic(() => import("@/components/ShopOverviewPanel"));
 const ReviewsPanel = dynamic(() => import("@/components/ReviewsPanel"));
 const ListingPanel = dynamic(() => import("@/components/ListingPanel"));
@@ -94,31 +91,6 @@ const ManageProductModal = dynamic(() => import("@/components/ManageProductModal
 // diunduh berkali-kali), jadi "Stok" akan selalu palsu kalau dipaksakan.
 // Kolom "Terjual" (sold_count, dihitung backend dari order status=paid)
 // dipakai sebagai pengganti yang JUJUR dari data yang benar-benar ada.
-// renderCoverPicker -- gambar sampul WAJIB (permintaan langsung pengguna,
-// 19 Agustus 2026: "gambar sampul dan juga gambar product itu disamakan
-// saja jadi sampul jangan dijadikan opsional") -- dipakai bersama ketiga
-// form create (Digital/Payment Link/Link Eksternal) di bawah, sama seperti
-// renderCategoryTabs dipakai bersama di PagePreview.tsx. `required` di
-// input asli TETAP dipasang sebagai jaring pengaman native HTML5, tapi
-// validasi UX utamanya lewat pengecekan `if (!coverFile)` eksplisit di
-// masing-masing handler (pesan error lebih jelas & konsisten dengan
-// validasi nama/harga lain di form yang sama).
-function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null) => void, t: (key: string) => string) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-app-border px-3.5 py-2.5 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple">
-      <IconCamera className="h-4 w-4 flex-shrink-0" />
-      <span className="min-w-0 truncate">{coverFile ? coverFile.name : t("dashboard.pages.products.coverPicker.placeholder")}</span>
-      <input
-        type="file"
-        required
-        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
-      />
-    </label>
-  );
-}
-
 // PREMIUM_PRODUK_PAGE_LIMIT -- SAMA PERSIS batas backend
 // (premiumProdukPageLimit, page.go): 1 Toko gratis (canonical, otomatis),
 // sampai 5 total (termasuk canonical) untuk Premium (multi-brand). Murni
@@ -240,37 +212,18 @@ function DashboardProductsPageInner() {
   useErrorToast(overviewError);
   const [overviewRangeDays, setOverviewRangeDays] = useState(30);
 
-  // addMode -- Modul Toko (Fase B3): "+ Tambah Produk" sekarang membuka
-  // panel pilihan "Add Items" ala referensi (Digital Product vs Payment
-  // Link vs Link Eksternal) alih-alih langsung membuka satu form.
-  const [addMode, setAddMode] = useState<"closed" | "choose" | "digital" | "payment_link" | "external_link">("closed");
-  const [name, setName] = useState("");
-  const [priceIDR, setPriceIDR] = useState("");
-  const [category, setCategory] = useState("");
-  // coverFile -- permintaan langsung pengguna, 19 Agustus 2026: "gambar
-  // sampul... jangan dijadikan opsional". Dipakai BERSAMA ketiga form
-  // (Digital/Payment Link/Link Eksternal) di bawah, sama seperti name/
-  // priceIDR/category -- backend menolak aktivasi produk apa pun tanpa
-  // cover_image_url (lihat gerbang di product.go Update), jadi wajib
-  // dikumpulkan di sini SEBELUM create, bukan sesudahnya lewat panel
-  // Kelola seperti sebelumnya (yang bikin produk baru "menghilang" dari
-  // Toko tanpa penjelasan jelas kenapa).
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [creating, setCreating] = useState(false);
+  // addingProduct -- Modul Toko (Fase B3): "+ Tambah Produk" membuka panel
+  // "Add Items" (Digital Product vs Payment Link vs Link Eksternal). Badan
+  // alur (pilihan 3 tipe + 3 form + handler create) diekstrak ke
+  // `CreateProductForm.tsx` (permintaan langsung pengguna 10 September
+  // 2026, "harusnya ada blok produk" -- dipakai ulang APA ADANYA oleh blok
+  // "Produk" baru di Canvas Page Builder) -- state di sini cuma boolean
+  // buka/tutup, sisanya (mode 3-pilihan/field form) jadi state INTERNAL
+  // komponen itu sendiri.
+  const [addingProduct, setAddingProduct] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
 
-  // Payment Link (Fase D) -- field TAMBAHAN, terpisah dari form Digital
-  // Product di atas (name/priceIDR/category dipakai bersama).
-  const [successMessage, setSuccessMessage] = useState("");
-  const [paymentLimitCount, setPaymentLimitCount] = useState("");
-  const [linkExpiresAt, setLinkExpiresAt] = useState("");
-
-  // Link Eksternal (migrasi 000068) -- permintaan langsung pengguna, 17
-  // Agustus 2026: "saya mau untuk produk bisa untuk affiliate juga ke
-  // shopee dll". Field TAMBAHAN, terpisah dari form Digital Product/
-  // Payment Link di atas (name/priceIDR/category dipakai bersama).
-  const [externalUrl, setExternalUrl] = useState("");
   // externalUrlEditId/externalUrlDraft -- edit tautan produk external_link
   // yang SUDAH ada dari modal Kelola (pola sama seperti categoryEditId di
   // bawah), karena ProductKind sendiri immutable tapi ExternalURL-nya
@@ -546,161 +499,23 @@ function DashboardProductsPageInner() {
       .catch((err) => setOverviewError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.loadOverview")));
   }, [overviewRangeDays]);
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    const price = Number(priceIDR);
-    if (!name.trim() || !price || price < 1000) {
-      setError(t("dashboard.pages.products.errors.nameAndPriceRequired"));
-      return;
-    }
-    if (!coverFile) {
-      setError(t("dashboard.pages.products.errors.coverRequired"));
-      return;
-    }
-    setError(null);
-    setCreating(true);
-    try {
-      const { id } = await createProduct({ name, price_idr: price, category: category.trim() || undefined });
-      // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
-      // diunggah LANGSUNG setelah produk dibuat, bukan lagi langkah
-      // opsional terpisah lewat panel Kelola. Produk digital MASIH perlu
-      // unggah File Produk & aktivasi manual terpisah seperti sebelumnya
-      // (tidak berubah) -- sampul cuma satu syarat TAMBAHAN, bukan
-      // pengganti file.
-      await uploadProductCover(id, coverFile);
-      setProducts(await listProducts());
-      // Refetch Halaman Toko HANYA kalau sebelumnya belum ada (tokoPage
-      // masih null) -- bug ditemukan lewat audit 22 Agustus 2026: Toko
-      // otomatis dibuat backend begitu produk PERTAMA ada (ensureProdukPage),
-      // tapi loadTokoData() di sini cuma jalan SEKALI saat mount (useEffect
-      // dependency [applyTokoResult] stabil), jadi tab "Halaman Toko" tetap
-      // menampilkan "belum aktif" walau Toko-nya SUDAH ada di database
-      // sampai kreator me-reload manual. Kondisional (bukan refetch tiap
-      // create) supaya tidak ada permintaan API sia-sia begitu Toko memang
-      // sudah ada dari sebelumnya.
-      if (!tokoPage) applyTokoResult(await loadTokoData());
-      setName("");
-      setPriceIDR("");
-      setCategory("");
-      setCoverFile(null);
-      setAddMode("closed");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createProduct"));
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  // handleCreatePaymentLink -- Modul Toko (Fase D). link_expires_at dikirim
-  // sebagai ISO (RFC3339) dari <input type="datetime-local">, yang TIDAK
-  // menyertakan zona waktu -- new Date(...).toISOString() mengasumsikan
-  // waktu lokal browser, konsisten dengan cara flash sale/event date
-  // dikirim di tempat lain pada file ini.
-  async function handleCreatePaymentLink(e: React.FormEvent) {
-    e.preventDefault();
-    const price = Number(priceIDR);
-    if (!name.trim() || !price || price < 1000) {
-      setError(t("dashboard.pages.products.errors.nameAndPriceRequiredShort"));
-      return;
-    }
-    if (!coverFile) {
-      setError(t("dashboard.pages.products.errors.coverRequired"));
-      return;
-    }
-    setError(null);
-    setCreating(true);
-    try {
-      const { id } = await createProduct({
-        name,
-        price_idr: price,
-        category: category.trim() || undefined,
-        product_kind: "payment_link",
-        success_message: successMessage.trim() || undefined,
-        payment_limit_count: paymentLimitCount ? Number(paymentLimitCount) : undefined,
-        link_expires_at: linkExpiresAt ? new Date(linkExpiresAt).toISOString() : undefined,
-      });
-      // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
-      // Payment Link TIDAK LAGI aktif otomatis begitu dibuat (lihat
-      // product.go Create), jadi aktivasi eksplisit di sini SETELAH
-      // sampul terunggah supaya UX "langsung jadi" yang sudah ada
-      // sebelumnya tetap terasa sama dari sisi kreator.
-      await uploadProductCover(id, coverFile);
-      await updateProduct(id, { is_active: true });
-      setProducts(await listProducts());
-      // Lihat catatan lengkap di handleCreate (produk Digital) di atas.
-      if (!tokoPage) applyTokoResult(await loadTokoData());
-      setName("");
-      setPriceIDR("");
-      setCategory("");
-      setSuccessMessage("");
-      setPaymentLimitCount("");
-      setLinkExpiresAt("");
-      setCoverFile(null);
-      setAddMode("closed");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createPaymentLink"));
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  // handleCreateExternalLink -- Modul Toko (migrasi 000068, permintaan
-  // langsung pengguna: "saya mau untuk produk bisa untuk affiliate juga
-  // ke shopee dll"). Diaktifkan otomatis setelah sampul terunggah (lihat
-  // catatan lengkap di handleCreatePaymentLink -- gerbang sampul wajib
-  // sejak 19 Agustus 2026 membuat produk ini TIDAK LAGI aktif otomatis
-  // langsung dari Create seperti sebelumnya).
-  async function handleCreateExternalLink(e: React.FormEvent) {
-    e.preventDefault();
-    // Harga OPSIONAL khusus jenis ini -- permintaan langsung pengguna, 20
-    // Agustus 2026: "untuk produk affiliate harga jadikan optional" (link
-    // afiliasi tidak pernah lewat checkout Jeonme, harga di sini murni
-    // informasi tampilan). Kalau diisi, tetap harus masuk akal (>= Rp1.000)
-    // -- validasi min TETAP jalan, cuma boleh dikosongkan sama sekali.
-    const priceTrimmed = priceIDR.trim();
-    const price = priceTrimmed ? Number(priceTrimmed) : undefined;
-    if (!name.trim()) {
-      setError(t("dashboard.pages.products.errors.nameRequired"));
-      return;
-    }
-    if (price !== undefined && price < 1000) {
-      setError(t("dashboard.pages.products.errors.priceOptionalMin"));
-      return;
-    }
-    if (!externalUrl.trim()) {
-      setError(t("dashboard.pages.products.errors.productUrlRequired"));
-      return;
-    }
-    if (!coverFile) {
-      setError(t("dashboard.pages.products.errors.coverRequired"));
-      return;
-    }
-    setError(null);
-    setCreating(true);
-    try {
-      const { id } = await createProduct({
-        name,
-        price_idr: price,
-        category: category.trim() || undefined,
-        product_kind: "external_link",
-        external_url: externalUrl.trim(),
-      });
-      await uploadProductCover(id, coverFile);
-      await updateProduct(id, { is_active: true });
-      setProducts(await listProducts());
-      // Lihat catatan lengkap di handleCreate (produk Digital) di atas.
-      if (!tokoPage) applyTokoResult(await loadTokoData());
-      setName("");
-      setPriceIDR("");
-      setCategory("");
-      setExternalUrl("");
-      setCoverFile(null);
-      setAddMode("closed");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.createExternalLink"));
-    } finally {
-      setCreating(false);
-    }
+  // handleProductCreated -- dipanggil `CreateProductForm.onCreated` (lihat
+  // catatan lengkap di komponen itu) -- badan SAMA PERSIS bagian akhir 3
+  // handler create yang lama (refetch Halaman Toko HANYA kalau sebelumnya
+  // belum ada, tutup panel), cuma tambah produk baru ke `products` cukup
+  // via append (bukan `listProducts()` ulang lagi -- `CreateProductForm`
+  // sudah melakukan itu sendiri utk dapat objek produk lengkap).
+  async function handleProductCreated(product: DashboardProduct) {
+    setProducts((prev) => [...prev, product]);
+    // Refetch Halaman Toko HANYA kalau sebelumnya belum ada (tokoPage
+    // masih null) -- bug ditemukan lewat audit 22 Agustus 2026: Toko
+    // otomatis dibuat backend begitu produk PERTAMA ada (ensureProdukPage),
+    // tapi loadTokoData() di sini cuma jalan SEKALI saat mount (useEffect
+    // dependency [applyTokoResult] stabil), jadi tab "Halaman Toko" tetap
+    // menampilkan "belum aktif" walau Toko-nya SUDAH ada di database
+    // sampai kreator me-reload manual.
+    if (!tokoPage) applyTokoResult(await loadTokoData());
+    setAddingProduct(false);
   }
 
   function startExternalUrlEdit(product: DashboardProduct) {
@@ -1382,10 +1197,10 @@ function DashboardProductsPageInner() {
                   </select>
                 )}
               </div>
-              {addMode === "closed" && (
+              {!addingProduct && (
                 <button
                   type="button"
-                  onClick={() => setAddMode("choose")}
+                  onClick={() => setAddingProduct(true)}
                   className="btn-primary flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-white shadow-card transition-transform hover:scale-[1.01]"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
@@ -1395,235 +1210,15 @@ function DashboardProductsPageInner() {
             </div>
 
             {/* Modul Toko (Fase B3): panel "Add Items" ala referensi -- pilih
-                jenis item dulu sebelum masuk ke form spesifiknya. */}
-            {addMode === "choose" && (
-              <div className="glass mt-3 grid grid-cols-1 gap-2.5 rounded-jlg p-4 shadow-card sm:grid-cols-3">
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
-                  {t("dashboard.pages.products.createStep1")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setAddMode("digital")}
-                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
-                >
-                  <IconUpload className="h-5 w-5 text-jeon-purple" />
-                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
-                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAddMode("payment_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
-                >
-                  <IconWallet className="h-5 w-5 text-jeon-purple" />
-                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
-                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
-                </button>
-                {/* Link Eksternal -- permintaan langsung pengguna, 17
-                    Agustus 2026: "saya mau untuk produk bisa untuk
-                    affiliate juga ke shopee dll". Beda dari fitur Afiliasi
-                    (menu Audiens & Pemasaran, referral Jeonme-internal) --
-                    ini murni tombol Beli yang membuka tautan marketplace
-                    lain (boleh link affiliate milik kreator sendiri). */}
-                <button
-                  type="button"
-                  onClick={() => setAddMode("external_link")}
-                  className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
-                >
-                  <IconExternal className="h-5 w-5 text-jeon-purple" />
-                  <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
-                  <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
-                </button>
-              </div>
-            )}
-
-            {addMode === "digital" && (
-              <form onSubmit={handleCreate} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                  {t("dashboard.pages.products.createStep2")}
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="text"
-                    autoFocus
-                    required
-                    placeholder={t("dashboard.pages.products.form.namePlaceholder")}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                  <input
-                    type="number"
-                    required
-                    placeholder={t("dashboard.pages.products.form.pricePlaceholder")}
-                    min={1000}
-                    value={priceIDR}
-                    onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                </div>
-                {renderCoverPicker(coverFile, setCoverFile, t)}
-                <div className="flex gap-2">
-                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.create")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddMode("closed");
-                      setName("");
-                      setPriceIDR("");
-                      setCategory("");
-                      setCoverFile(null);
-                    }}
-                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
-                  >
-                    {t("dashboard.pages.products.form.cancel")}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {addMode === "payment_link" && (
-              <form onSubmit={handleCreatePaymentLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                  {t("dashboard.pages.products.createStep2")}
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="text"
-                    autoFocus
-                    required
-                    placeholder={t("dashboard.pages.products.form.titlePlaceholder")}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                  <input
-                    type="number"
-                    required
-                    placeholder={t("dashboard.pages.products.form.pricePlaceholder")}
-                    min={1000}
-                    value={priceIDR}
-                    onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                </div>
-                <textarea
-                  placeholder={t("dashboard.pages.products.form.successMessagePlaceholder")}
-                  value={successMessage}
-                  onChange={(e) => setSuccessMessage(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                />
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder={t("dashboard.pages.products.form.paymentLimitPlaceholder")}
-                    value={paymentLimitCount}
-                    onChange={(e) => setPaymentLimitCount(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                  <input
-                    type="datetime-local"
-                    value={linkExpiresAt}
-                    onChange={(e) => setLinkExpiresAt(e.target.value)}
-                    title={t("dashboard.pages.products.form.linkExpiresTitle")}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                </div>
-                {renderCoverPicker(coverFile, setCoverFile, t)}
-                <div className="flex gap-2">
-                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.createPaymentLink")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddMode("closed");
-                      setName("");
-                      setPriceIDR("");
-                      setSuccessMessage("");
-                      setPaymentLimitCount("");
-                      setLinkExpiresAt("");
-                      setCoverFile(null);
-                    }}
-                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
-                  >
-                    {t("dashboard.pages.products.form.cancel")}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {addMode === "external_link" && (
-              <form onSubmit={handleCreateExternalLink} className="glass mt-3 flex flex-col gap-2 rounded-jlg p-4 shadow-card">
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple">
-                  {t("dashboard.pages.products.createStep2")}
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="text"
-                    autoFocus
-                    required
-                    placeholder={t("dashboard.pages.products.form.namePlaceholder")}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                  <input
-                    type="number"
-                    placeholder={t("dashboard.pages.products.form.priceOptionalPlaceholder")}
-                    min={1000}
-                    value={priceIDR}
-                    onChange={(e) => setPriceIDR(e.target.value)}
-                    className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                  />
-                </div>
-                <input
-                  type="url"
-                  required
-                  placeholder={t("dashboard.pages.products.form.externalUrlPlaceholder")}
-                  value={externalUrl}
-                  onChange={(e) => setExternalUrl(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                />
-                <input
-                  type="text"
-                  placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
-                />
-                {renderCoverPicker(coverFile, setCoverFile, t)}
-                <div className="flex gap-2">
-                  <button type="submit" disabled={creating} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-                    {creating ? t("dashboard.pages.products.form.creating") : t("dashboard.pages.products.form.createProductButton")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddMode("closed");
-                      setName("");
-                      setPriceIDR("");
-                      setCategory("");
-                      setExternalUrl("");
-                      setCoverFile(null);
-                    }}
-                    className="rounded-lg border-2 border-jeon-ink px-4 py-2.5 text-sm font-bold text-app-muted hover:border-ink/30"
-                  >
-                    {t("dashboard.pages.products.form.cancel")}
-                  </button>
-                </div>
-              </form>
+                jenis item dulu sebelum masuk ke form spesifiknya. Badan
+                alur (pilihan 3 tipe + 3 form + handler create) diekstrak
+                ke CreateProductForm.tsx, lihat catatan lengkap di sana. */}
+            {addingProduct && (
+              <CreateProductForm
+                onCreated={handleProductCreated}
+                onCancel={() => setAddingProduct(false)}
+                onError={setError}
+              />
             )}
 
             {filteredProducts.length > 0 ? (
@@ -1764,7 +1359,7 @@ function DashboardProductsPageInner() {
                 title={t("dashboard.pages.products.emptyTitle")}
                 text={t("dashboard.pages.products.emptyState")}
                 ctaLabel={t("dashboard.pages.products.addProduct")}
-                onCtaClick={() => setAddMode("choose")}
+                onCtaClick={() => setAddingProduct(true)}
               />
             )}
 

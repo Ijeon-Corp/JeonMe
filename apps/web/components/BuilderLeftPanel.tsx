@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   DndContext,
@@ -31,6 +32,7 @@ import {
   IconPlayCircle,
   IconPlus,
   IconSettings,
+  IconShoppingBag,
   IconSlideshow,
   IconTextLines,
   IconTrash,
@@ -44,6 +46,7 @@ import {
   deleteGalleryImage,
   uploadBuilderMediaImage,
   uploadGalleryImage,
+  type DashboardProduct,
   type EmbeddedBuilderBlock,
   type LinkItem,
   type PageStickerData,
@@ -68,6 +71,12 @@ import {
   type DesignSectionPage,
   type DesignSectionPatch,
 } from "@/components/dashboard/page/design-sections";
+
+// CreateProductForm -- lihat catatan lengkap di komponen itu sendiri:
+// blok "produk" (NodeFieldEditor case di bawah) memakai form BUAT PRODUK
+// BARU yang SAMA PERSIS dengan menu Produk dashboard, dibungkus modal
+// overlay baru di sini (dashboard/products/page.tsx makainya inline).
+const CreateProductForm = dynamic(() => import("@/components/dashboard/products/CreateProductForm"));
 
 // BuilderDesignSection -- 5 sub-tab Design di dalam builder (permintaan
 // langsung pengguna 9 September 2026, "design langsung di builder juga")
@@ -111,6 +120,7 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   image_slider: IconSlideshow,
   embed: IconIframe,
   maps: IconMapPin,
+  produk: IconShoppingBag,
 };
 
 // TYPE_LABEL_KEY -- pemetaan STATIS block_type -> suffix key
@@ -135,6 +145,7 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   image_slider: "typeImageSlider",
   embed: "typeEmbed",
   maps: "typeMaps",
+  produk: "typeProduk",
 };
 
 // DESIGN_SECTION_ENTRIES -- 5 sub-tab tab "design" (Bagian 2, permintaan
@@ -168,13 +179,18 @@ function truncate(s: string, n: number): string {
 // JUMLAH item -- tipe lain (button/video/embed_link/dst) SUDAH benar
 // (title terisi begitu pengguna mengisinya), fallback nama tipe generik
 // HANYA kalau benar-benar belum diisi sama sekali, sama seperti sebelumnya.
-function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): string {
+function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string, products: DashboardProduct[]): string {
   if (node.kind === "column-slot") {
     const lastSeg = node.path[node.path.length - 1];
     return `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`;
   }
   const generic = () => node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
   switch (node.blockType) {
+    case "produk": {
+      const productId = node.blockData?.product_id as string | undefined;
+      const product = productId ? products.find((p) => p.id === productId) : undefined;
+      return product ? product.name : t("dashboard.pages.linksBuilder.produkEmptyPreview");
+    }
     case "text": {
       const plain = stripHtml((node.blockData?.text as string) ?? "");
       return plain ? truncate(plain, 40) : t("dashboard.pages.linksBuilder.textEmptyPreview");
@@ -624,6 +640,104 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
   );
 }
 
+// ProdukBlockEditor -- editor blok "produk" (permintaan langsung pengguna
+// 10 September 2026, "harusnya ada blok produk isinya sama seperti mengisi
+// di menu product... ada 3 pilihan"): pilih SATU produk existing dari
+// daftar milik kreator, ATAU buat produk baru langsung dari builder lewat
+// `CreateProductForm` (SAMA PERSIS alur menu Produk dashboard) dibungkus
+// modal overlay baru (panel builder terlalu sempit utk form penuh inline,
+// pola styling sama `ManageProductModal.tsx`). Produk baru langsung
+// terpilih (onProductCreated dipanggil PLUS onSelectProduct via pemanggil
+// di NodeFieldEditor) supaya kreator tidak perlu klik pilih lagi.
+function ProdukBlockEditor({
+  node,
+  products,
+  onSelectProduct,
+  onProductCreated,
+}: {
+  node: BuilderTreeNode;
+  products: DashboardProduct[];
+  onSelectProduct: (productId: string) => void;
+  onProductCreated: (product: DashboardProduct) => void;
+}) {
+  const { t } = useLocale();
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const selectedId = node.blockData?.product_id as string | undefined;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkSelectExisting")}</p>
+      {products.length === 0 ? (
+        <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.produkNoProducts")}</p>
+      ) : (
+        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+          {products.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelectProduct(p.id)}
+              className={`flex items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
+                selectedId === p.id ? "border-jeon-purple bg-jeon-lavender/40" : "border-app-border hover:border-jeon-purple"
+              }`}
+            >
+              {p.cover_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
+              ) : (
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
+                  <IconShoppingBag className="h-4 w-4 text-jeon-purple" />
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-app-ink">{p.name}</span>
+                <span className="block text-[11px] text-app-muted">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setCreating(true)}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+      >
+        <IconPlus className="h-3.5 w-3.5" />
+        {t("dashboard.pages.linksBuilder.produkCreateNew")}
+      </button>
+
+      {creating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreating(false)}>
+          <div
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-4 shadow-brutal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.linksBuilder.produkCreateNew")}</h2>
+              <button
+                type="button"
+                onClick={() => setCreating(false)}
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
+              >
+                <IconX className="h-4 w-4" />
+              </button>
+            </div>
+            {createError && <p className="mt-1 text-[11px] text-red-600">{createError}</p>}
+            <CreateProductForm
+              onCreated={(product) => {
+                setCreating(false);
+                onProductCreated(product);
+              }}
+              onCancel={() => setCreating(false)}
+              onError={setCreateError}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // NodeFieldEditor -- redesain total (10 September 2026): badan JSX dari
 // panel "Edit Blok Terpilih" LAMA (dulu satu blok terpisah, mengambang di
 // BAWAH seluruh tree) -- APA ADANYA (per-blockType switch yang sama persis),
@@ -636,12 +750,16 @@ function NodeFieldEditor({
   onEnsureRootPersisted,
   onMediaImageChanged,
   onGalleryImagesChanged,
+  products,
+  onProductCreated,
 }: {
   node: BuilderTreeNode;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
   const sel = selectionOf(node);
@@ -865,6 +983,20 @@ function NodeFieldEditor({
     return <MapsEditor node={node} onUpdate={(url, embed) => onUpdateNode(sel, { url, blockData: { embed } })} />;
   }
 
+  if (node.blockType === "produk") {
+    return (
+      <ProdukBlockEditor
+        node={node}
+        products={products}
+        onSelectProduct={(productId) => onUpdateNode(sel, { blockData: { product_id: productId } })}
+        onProductCreated={(product) => {
+          onProductCreated(product);
+          onUpdateNode(sel, { blockData: { product_id: product.id } });
+        }}
+      />
+    );
+  }
+
   if (node.blockType === "column") {
     return (
       <div className="flex items-center gap-2">
@@ -930,6 +1062,8 @@ function TreeNodeView({
   onEnsureRootPersisted,
   onMediaImageChanged,
   onGalleryImagesChanged,
+  products,
+  onProductCreated,
 }: {
   node: BuilderTreeNode;
   depth: number;
@@ -943,6 +1077,8 @@ function TreeNodeView({
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
   // useSortable -- HANYA node "block" yang bisa diseret (column-slot murni
@@ -956,7 +1092,7 @@ function TreeNodeView({
   const isThisSelected = !!selection && selection.rootId === node.rootId && JSON.stringify(selection.path) === JSON.stringify(node.path);
   const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
   const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
-  const label = previewLabelFor(node, t);
+  const label = previewLabelFor(node, t, products);
   const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
 
   return (
@@ -1016,6 +1152,8 @@ function TreeNodeView({
             onEnsureRootPersisted={onEnsureRootPersisted}
             onMediaImageChanged={onMediaImageChanged}
             onGalleryImagesChanged={onGalleryImagesChanged}
+            products={products}
+            onProductCreated={onProductCreated}
           />
         </div>
       )}
@@ -1043,6 +1181,8 @@ function TreeNodeView({
                   onEnsureRootPersisted={onEnsureRootPersisted}
                   onMediaImageChanged={onMediaImageChanged}
                   onGalleryImagesChanged={onGalleryImagesChanged}
+                  products={products}
+                  onProductCreated={onProductCreated}
                 />
               ))}
             </SortableContext>
@@ -1078,6 +1218,8 @@ export default function BuilderLeftPanel({
   onStickersChange,
   designSection,
   onDesignSectionChange,
+  products,
+  onProductCreated,
 }: {
   links: LinkItem[];
   // selection/onSelectionChange -- dinaikkan ke rute builder (permintaan
@@ -1130,6 +1272,15 @@ export default function BuilderLeftPanel({
   onStickersChange: (stickers: PageStickerData[]) => void;
   designSection: BuilderDesignSection;
   onDesignSectionChange: (section: BuilderDesignSection) => void;
+  // products/onProductCreated -- blok "produk" (permintaan langsung
+  // pengguna 10 September 2026): daftar produk kreator SUDAH di-fetch di
+  // rute Builder (app/builder/[pageId]/page.tsx, dipakai jalur lain juga),
+  // diteruskan apa adanya ke sini alih-alih fetch ulang. onProductCreated
+  // bubble ke rute Builder supaya produk baru dari modal builder juga
+  // muncul di state `products` global-nya (dashboard Produk tetap sumber
+  // kebenaran, ini cuma menambal state lokal biar konsisten tanpa refetch).
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<"content" | "design" | "settings">("content");
@@ -1251,6 +1402,8 @@ export default function BuilderLeftPanel({
                       onEnsureRootPersisted={onEnsureRootPersisted}
                       onMediaImageChanged={onMediaImageChanged}
                       onGalleryImagesChanged={onGalleryImagesChanged}
+                      products={products}
+                      onProductCreated={onProductCreated}
                     />
                   ))}
                 </SortableContext>

@@ -72,7 +72,7 @@ export interface PagePreviewLink {
   // No.99 (Sprint 14): heading/text/image/button -- blok builder landing page.
   // section/column/divider -- Canvas Page Builder (migrasi 000096), lihat
   // BuilderPagePreview.tsx.
-  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
+  blockType?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed" | "produk";
   blockData?: Record<string, unknown>;
   // customIconUrl -- permintaan langsung pengguna: gambar kustom per
   // tautan, MENGGANTIKAN ikon platform yang terdeteksi otomatis dari URL
@@ -432,7 +432,7 @@ export interface PreviewSourceLink {
   is_active: boolean;
   lock_type?: "" | "age" | "code" | "subscribe" | "sensitive";
   lock_min_age?: number | null;
-  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed";
+  block_type?: "link" | "video" | "contact_form" | "faq" | "heading" | "text" | "image" | "button" | "maps" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog" | "section" | "column" | "divider" | "video_image" | "embed_link" | "countdown" | "list" | "image_slider" | "embed" | "produk";
   block_data?: Record<string, unknown>;
   custom_icon_url?: string;
   icon_key?: string;
@@ -585,6 +585,111 @@ function PageSwitcher({
 // pernah ada transaksi lewat Jeon.id untuk produk jenis ini) -- jadi
 // "Lihat Produk ↗", dan dirender sebagai <span> visual di dalam <a> yang
 // sama (BUKAN <button> bersarang di dalam <a>, itu HTML tidak valid).
+// renderSingleProductCard -- ekstrak badan SATU kartu produk dari
+// renderProductGrid (Canvas Page Builder, blok "produk", permintaan
+// langsung pengguna 10 September 2026), APA ADANYA (perilaku IDENTIK,
+// cuma dipindah lokasi) -- dipakai ULANG oleh blok "produk" baru
+// (renderBuilderNode di bawah) supaya kartu satu-produk di lokasi bebas
+// dalam layout PERSIS sama tampilan/perilakunya dengan kartu di grid
+// produk otomatis (Halaman Toko), tanpa duplikasi kode.
+function renderSingleProductCard(
+  product: PagePreviewProduct,
+  theme: PageTheme,
+  canBuy: boolean,
+  ctx: { referralCode?: string; username: string; pageSlug?: string; shopPaused?: boolean },
+  onTrackClick: (productId: string) => void
+): React.ReactNode {
+  const cover = (
+    <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
+      {product.cover_image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-xl object-cover" />
+      ) : (
+        <IconBox className={`h-6 w-6 ${theme.chevron}`} />
+      )}
+    </div>
+  );
+  const priceBlock = product.pwywEnabled ? (
+    <p className={`text-xs font-bold ${theme.productPrice}`}>
+      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
+    </p>
+  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
+    <div className="flex items-center gap-1.5">
+      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
+      </p>
+      <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+    </div>
+  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
+    <div className="flex items-center gap-1.5">
+      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+      <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.effectivePriceIdr.toLocaleString("id-ID")}</p>
+    </div>
+  ) : product.isExternalLink && product.price_idr === 0 ? (
+    // Harga opsional khusus Link Eksternal (permintaan langsung pengguna,
+    // 20 Agustus 2026: "untuk produk affiliate harga jadikan optional") --
+    // 0 berarti sengaja tidak diisi (jenis produk lain harga tetap wajib
+    // >= Rp1.000, jadi 0 TIDAK PERNAH berarti "gratis" untuk mereka),
+    // jangan tampilkan baris harga sama sekali daripada "Rp 0".
+    null
+  ) : (
+    <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+  );
+
+  if (product.isExternalLink && product.externalUrl) {
+    return (
+      <a
+        key={product.id}
+        href={product.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => onTrackClick(product.id)}
+        className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}
+      >
+        {cover}
+        <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+        {priceBlock}
+        <span className={`mt-2.5 block w-full rounded-lg py-1.5 text-center text-xs transition-all duration-200 ${theme.buyButton}`}>
+          Lihat Produk ↗
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
+      {cover}
+      <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
+      {product.isCourse && <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>}
+      {typeof product.soldCount === "number" && (
+        <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.soldCount} terjual</p>
+      )}
+      {priceBlock}
+      {canBuy ? (
+        <BuyProductButton
+          productId={product.id}
+          buttonClassName={theme.buyButton}
+          pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+          referralCode={ctx.referralCode}
+          username={ctx.username}
+          pageSlug={ctx.pageSlug}
+          productName={product.name}
+          basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+        />
+      ) : (
+        <button
+          type="button"
+          disabled
+          title={ctx.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+          className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+        >
+          Beli
+        </button>
+      )}
+    </div>
+  );
+}
+
 function renderProductGrid(
   data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
   theme: PageTheme,
@@ -677,111 +782,15 @@ function renderProductGrid(
               ? !p.category || !p.category.trim()
               : p.category === selectedCategory
           )
-          .map((product) => {
-            const cover = (
-              <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
-                {product.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.cover_image_url}
-                    alt={product.name}
-                    loading="lazy"
-                    className="h-full w-full rounded-xl object-cover"
-                  />
-                ) : (
-                  <IconBox className={`h-6 w-6 ${theme.chevron}`} />
-                )}
-              </div>
-            );
-            const priceBlock = product.pwywEnabled ? (
-              <p className={`text-xs font-bold ${theme.productPrice}`}>
-                Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
-              </p>
-            ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
-              <div className="flex items-center gap-1.5">
-                <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                  Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
-                </p>
-                <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
-              </div>
-            ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
-              <div className="flex items-center gap-1.5">
-                <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-                  Rp {product.price_idr.toLocaleString("id-ID")}
-                </p>
-                <p className={`text-xs font-bold ${theme.productPrice}`}>
-                  Rp {product.effectivePriceIdr.toLocaleString("id-ID")}
-                </p>
-              </div>
-            ) : product.isExternalLink && product.price_idr === 0 ? (
-              // Harga opsional khusus Link Eksternal (permintaan langsung
-              // pengguna, 20 Agustus 2026: "untuk produk affiliate harga
-              // jadikan optional") -- 0 berarti sengaja tidak diisi
-              // (jenis produk lain harga tetap wajib >= Rp1.000, jadi 0
-              // TIDAK PERNAH berarti "gratis" untuk mereka), jangan
-              // tampilkan baris harga sama sekali daripada "Rp 0".
-              null
-            ) : (
-              <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
-            );
-
-            if (product.isExternalLink && product.externalUrl) {
-              return (
-                <a
-                  key={product.id}
-                  href={product.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackProductClick(product.id)}
-                  className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}
-                >
-                  {cover}
-                  <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                  {priceBlock}
-                  <span
-                    className={`mt-2.5 block w-full rounded-lg py-1.5 text-center text-xs transition-all duration-200 ${theme.buyButton}`}
-                  >
-                    Lihat Produk ↗
-                  </span>
-                </a>
-              );
-            }
-
-            return (
-              <div key={product.id} className={`flex flex-col rounded-xl p-2.5 ${theme.productCard}`}>
-                {cover}
-                <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{product.name}</p>
-                {product.isCourse && (
-                  <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>
-                )}
-                {typeof product.soldCount === "number" && (
-                  <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.soldCount} terjual</p>
-                )}
-                {priceBlock}
-                {canBuy ? (
-                  <BuyProductButton
-                    productId={product.id}
-                    buttonClassName={theme.buyButton}
-                    pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
-                    referralCode={data.referralCode}
-                    username={data.username}
-                    pageSlug={data.pageSlug}
-                    productName={product.name}
-                    basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                    className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                  >
-                    Beli
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          .map((product) =>
+            renderSingleProductCard(
+              product,
+              theme,
+              canBuy,
+              { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused },
+              trackProductClick
+            )
+          )}
       </div>
     </>
   );
@@ -3011,6 +3020,7 @@ const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "countdown",
   "list",
   "embed",
+  "produk",
 ]);
 
 // builderSelectionRing -- lihat catatan lengkap Bagian 1c di plan (9
@@ -3040,7 +3050,14 @@ function sanitizeBuilderTextHtml(html: string): string {
   });
 }
 
-function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: PagePreviewData, interactive: boolean, selectedNodeId?: string): React.ReactNode {
+function renderBuilderNode(
+  node: BuilderRenderNode,
+  theme: PageTheme,
+  data: PagePreviewData,
+  interactive: boolean,
+  canBuy: boolean,
+  selectedNodeId?: string
+): React.ReactNode {
   // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
   // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
   // (assert isi Section/Column tertanam tampil benar di halaman publik).
@@ -3121,7 +3138,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           data-builder-block-type="section"
           className={`flex w-full flex-col items-center gap-4 rounded-xl${ring}`}
         >
-          {children.map((child) => renderBuilderNode(child, theme, data, interactive, selectedNodeId))}
+          {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
         </section>
       );
     }
@@ -3138,7 +3155,7 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
                 className="flex min-w-0 flex-1 flex-col items-center gap-4"
                 style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
               >
-                {children.map((child) => renderBuilderNode(child, theme, data, interactive, selectedNodeId))}
+                {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
               </div>
             );
           })}
@@ -3331,6 +3348,37 @@ function renderBuilderNode(node: BuilderRenderNode, theme: PageTheme, data: Page
           />
         </div>
       );
+    case "produk": {
+      // "produk" -- permintaan langsung pengguna 10 September 2026:
+      // tampilkan SATU produk kreator di lokasi bebas dalam layout (beda
+      // dari grid produk otomatis Halaman Toko). Reuse renderSingleProductCard
+      // APA ADANYA (perilaku tombol Beli/harga/dst IDENTIK dengan kartu di
+      // grid) -- fallback redup non-interaktif kalau product_id kosong/
+      // produk sudah dihapus, konsisten dengan pola blok "image"/"video_image"
+      // di atas (placeholder alih-alih merender apa pun kalau isinya kosong).
+      const productId = node.blockData.product_id as string | undefined;
+      const product = productId ? data.products.find((p) => p.id === productId) : undefined;
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full max-w-xs rounded-xl${ring}`}>
+          {product ? (
+            renderSingleProductCard(
+              product,
+              theme,
+              canBuy,
+              { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused },
+              (productClickId) =>
+                data.pageSlug
+                  ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
+                  : trackEvent(data.username, { event_type: "product_click", product_id: productClickId })
+            )
+          ) : (
+            <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
+              {node.title || "Produk"}
+            </div>
+          )}
+        </div>
+      );
+    }
     default:
       return null;
   }
@@ -3475,7 +3523,7 @@ function BuilderPagePreview({
             blockType,
             blockData: link.blockData ?? {},
           };
-          return renderBuilderNode(node, theme, data, interactive, selectedNodeId);
+          return renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId);
         })}
 
         {/* Grid produk -- permintaan langsung pengguna 9 September 2026

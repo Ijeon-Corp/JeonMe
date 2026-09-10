@@ -17,6 +17,7 @@ import {
   IconPhotoLibrary,
   IconPlayCircle,
   IconSearch,
+  IconShoppingBag,
   IconSlideshow,
   IconTextLines,
   IconVideoImage,
@@ -102,6 +103,11 @@ function buildBuilderComponentCategories(
       label: t("dashboard.components.builderAddComponentModal.categoryConversion"),
       tiles: [
         { type: "countdown", label: t("dashboard.components.builderAddComponentModal.typeCountdown"), description: t("dashboard.components.builderAddComponentModal.typeCountdownDesc"), Icon: IconClock },
+        // "produk" -- permintaan langsung pengguna 10 September 2026
+        // ("harusnya ada blok produk"): tampilkan SATU produk kreator di
+        // lokasi bebas dalam layout, beda dari grid produk otomatis
+        // Halaman Toko.
+        { type: "produk", label: t("dashboard.components.builderAddComponentModal.typeProduk"), description: t("dashboard.components.builderAddComponentModal.typeProdukDesc"), Icon: IconShoppingBag },
       ],
     },
     {

@@ -521,6 +521,10 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	"list":         true,
 	"image_slider": true,
 	"embed":        true,
+	// "produk" -- permintaan langsung pengguna 10 September 2026, boleh
+	// ditanam di Section/Column (TIDAK root-only spt "maps" -- tidak ada
+	// keterbatasan resolusi server-side serupa utk tipe ini).
+	"produk": true,
 }
 
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
@@ -571,6 +575,81 @@ func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, bloc
 	}
 	if !isPremiumUser(ctx, db, userID) {
 		return "menaruh blok Katalog di dalam item katalog (drill-down lebih dalam) khusus kreator Premium -- upgrade dulu di Pengaturan > Langganan", false
+	}
+	return "", true
+}
+
+// collectBuilderProductIDs -- PURE, rekursif menyusuri bentuk pohon
+// Section/Column PERSIS sama seperti validateBuilderChildren (children[]/
+// columns[]), tapi tujuannya MENGUMPULKAN product_id, bukan memvalidasi
+// struktur -- dipanggil SETELAH validateBlockDataAtDepth memastikan
+// bentuknya benar (lihat checkBuilderProductOwnership di bawah).
+func collectBuilderProductIDs(blockType string, data map[string]any) []string {
+	var ids []string
+	if blockType == "produk" {
+		if productID, _ := data["product_id"].(string); strings.TrimSpace(productID) != "" {
+			ids = append(ids, productID)
+		}
+	}
+	if rawChildren, ok := data["children"].([]any); ok {
+		for _, rawChild := range rawChildren {
+			child, ok := rawChild.(map[string]any)
+			if !ok {
+				continue
+			}
+			childType, _ := child["block_type"].(string)
+			childData, _ := child["block_data"].(map[string]any)
+			ids = append(ids, collectBuilderProductIDs(childType, childData)...)
+		}
+	}
+	if rawColumns, ok := data["columns"].([]any); ok {
+		for _, rawCol := range rawColumns {
+			col, ok := rawCol.(map[string]any)
+			if !ok {
+				continue
+			}
+			// Kolom sendiri bukan node ber-block_type (cuma widthPercent+
+			// children) -- blockType "" tidak akan pernah cocok "produk" di
+			// pemanggilan rekursif ini, jadi cabang children[] di atas yang
+			// benar-benar jalan di children MILIK kolom ini.
+			ids = append(ids, collectBuilderProductIDs("", col)...)
+		}
+	}
+	return ids
+}
+
+// checkBuilderProductOwnership -- permintaan langsung pengguna 10
+// September 2026 (blok "produk", Canvas Page Builder): product_id yang
+// ditaruh di blok manapun (ROOT ataupun bersarang di kedalaman berapa pun
+// dalam Section/Column) WAJIB milik kreator yang sedang login -- kalau
+// tidak, siapa pun bisa menaruh (lengkap dengan tombol Beli-nya!) produk
+// KREATOR LAIN di halamannya sendiri. checkCatalogPremiumGate (pola yang
+// sudah ada di atas) TIDAK cukup dipakai ulang di sini -- gerbang itu
+// cuma mengecek block_type ROOT, sedangkan blok "produk" pada umumnya
+// ditanam DI DALAM root bertipe "section"/"column" (root-nya BUKAN
+// "produk"), jadi perlu penyusuran rekursif sendiri
+// (collectBuilderProductIDs) lalu SATU query memverifikasi semuanya
+// sekaligus. Dipanggil dari 3 tempat yang sama dgn checkCatalogPremiumGate
+// (CreateBlock/UpdateLink/CreateExtraPageBlock).
+func checkBuilderProductOwnership(ctx context.Context, db *pgxpool.Pool, userID, blockType string, blockData map[string]any) (string, bool) {
+	ids := collectBuilderProductIDs(blockType, blockData)
+	if len(ids) == 0 {
+		return "", true
+	}
+	uniqueIDs := map[string]bool{}
+	for _, id := range ids {
+		uniqueIDs[id] = true
+	}
+	idList := make([]string, 0, len(uniqueIDs))
+	for id := range uniqueIDs {
+		idList = append(idList, id)
+	}
+	var count int
+	if err := db.QueryRow(ctx, `SELECT COUNT(*) FROM products WHERE id = ANY($1::uuid[]) AND user_id = $2`, idList, userID).Scan(&count); err != nil {
+		return "gagal memverifikasi kepemilikan produk", false
+	}
+	if count != len(idList) {
+		return "produk yang dipilih tidak ditemukan atau bukan milik kamu", false
 	}
 	return "", true
 }
@@ -658,6 +737,24 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		if embed, ok := data["embed"]; ok {
 			if _, isBool := embed.(bool); !isBool {
 				return "embed wajib berupa true/false", false
+			}
+		}
+	case "produk":
+		// "produk" -- Canvas Page Builder, permintaan langsung pengguna 10
+		// September 2026 ("harusnya ada blok produk"): menampilkan SATU
+		// produk kreator di lokasi bebas dalam layout (beda dari grid
+		// produk otomatis Halaman Toko). Shell-first sama seperti blok
+		// lain -- product_id OPSIONAL & boleh kosong (blok dibuat dulu
+		// lewat "Tambah Komponen", dipilih/dibuat belakangan lewat kanvas),
+		// cukup wajib bertipe string kalau field-nya ADA di payload.
+		// Validasi KEPEMILIKAN (product_id ini benar milik kreator yang
+		// login) SENGAJA TIDAK di sini -- fungsi ini PURE tanpa akses DB --
+		// lihat checkBuilderProductOwnership di bawah, dipanggil terpisah
+		// dari handler (CreateBlock/UpdateLink/CreateExtraPageBlock)
+		// setelah validasi struktur ini lolos.
+		if raw, ok := data["product_id"]; ok {
+			if _, isStr := raw.(string); !isStr {
+				return "product_id wajib berupa teks", false
 			}
 		}
 	case "gallery", "image_slider":
@@ -757,7 +854,7 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// belakangan lewat onBlur per field -- pola shell-first yang SAMA
 		// PERSIS FaqItemsEditor -- requirement title di sini menolak PATCH
 		// pertama itu dgn 400 SEBELUM sempat diisi sama sekali, membuat
-        // baris baru tidak pernah benar-benar muncul di UI. TIDAK ada
+		// baris baru tidak pernah benar-benar muncul di UI. TIDAK ada
 		// upload foto per-item di Fase 3 (author cuma teks nama, lihat
 		// catatan lingkup di plan).
 		if raw, ok := data["style"]; ok {
@@ -1173,7 +1270,7 @@ func parseBuilderPath(c *gin.Context) ([]builderPathSeg, error) {
 }
 
 type createBlockRequest struct {
-	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed"`
+	BlockType string         `json:"block_type" binding:"required,oneof=video contact_form faq heading text image button maps accordion gallery audio file project_showcase catalog section column divider video_image embed_link countdown list image_slider embed produk"`
 	Title     string         `json:"title" binding:"required,max=100"`
 	URL       string         `json:"url" binding:"omitempty,http_url,max=2048"`
 	BlockData map[string]any `json:"block_data"`
@@ -1224,6 +1321,10 @@ func (h *LinksHandler) CreateBlock(c *gin.Context) {
 	defer cancel()
 
 	if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": msg})
+		return
+	}
+	if msg, ok := checkBuilderProductOwnership(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusForbidden, gin.H{"error": msg})
 		return
 	}
@@ -1504,6 +1605,10 @@ func (h *LinksHandler) Update(c *gin.Context) {
 			return
 		}
 		if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, currentBlockType, req.BlockData); !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+		if msg, ok := checkBuilderProductOwnership(ctx, h.DB, userID, currentBlockType, req.BlockData); !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": msg})
 			return
 		}
@@ -3354,6 +3459,10 @@ func (h *LinksHandler) CreateBlockForPage(c *gin.Context) {
 	}
 
 	if msg, ok := checkCatalogPremiumGate(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": msg})
+		return
+	}
+	if msg, ok := checkBuilderProductOwnership(ctx, h.DB, userID, req.BlockType, req.BlockData); !ok {
 		c.JSON(http.StatusForbidden, gin.H{"error": msg})
 		return
 	}

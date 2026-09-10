@@ -786,6 +786,8 @@ export default function BuilderPage() {
           onStickersChange={handleStickersChange}
           designSection={designSection}
           onDesignSectionChange={setDesignSection}
+          products={products}
+          onProductCreated={(p) => setProducts((prev) => [...prev, p])}
         />
         <BuilderCanvas
           page={page}
