@@ -1,0 +1,805 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ApiError,
+  DashboardProduct,
+  EmbeddedBuilderBlock,
+  ExtraPageDetail,
+  LinkItem,
+  MyPage,
+  PageStickerData,
+  createBlock,
+  createExtraPageBlock,
+  deleteLink,
+  getExtraPage,
+  getMyPage,
+  listExtraPageLinks,
+  listLinks,
+  listProducts,
+  reorderExtraPageLinks,
+  reorderLinks,
+  updateExtraPage,
+  updateExtraPageStickers,
+  updateLink,
+  updateMyPage,
+  updateMyPageStickers,
+  uploadAvatar,
+  uploadCustomBackground,
+  uploadExtraPageAvatar,
+  uploadExtraPageBackground,
+} from "@/lib/api-client";
+import {
+  BuilderColumn,
+  BuilderRoot,
+  BuilderSeg,
+  BuilderSelection,
+  buildTree,
+  findNodeByPath,
+  findSelectionByNodeId,
+  getChildrenAt,
+  newBuilderBlock,
+  setChildrenAt,
+  updateAt,
+} from "@/lib/builder-blocks";
+import { useLocale } from "@/lib/locale-context";
+import { useToast } from "@/components/Toast";
+import { IconChevronRight, IconPencil } from "@/components/icons";
+import BuilderLeftPanel, { type BuilderDesignSection } from "@/components/BuilderLeftPanel";
+import BuilderCanvas, { BUILDER_DEVICE_WIDTHS, type BuilderDeviceWidth } from "@/components/BuilderCanvas";
+import type { DesignSectionPage, DesignSectionPatch } from "@/components/dashboard/page/design-sections";
+
+// TYPE_LABEL_KEY -- SATU-SATUNYA pemakaian tersisa di rute ini: label root
+// baru begitu ditambahkan lewat "Tambah Komponen" di ROOT (target null),
+// APA ADANYA dari versi sebelumnya.
+const TYPE_LABEL_KEY: Record<string, string> = {
+  text: "typeText",
+  button: "typeButton",
+  divider: "typeDivider",
+  column: "typeColumn",
+  section: "typeSection",
+  video: "typeVideo",
+  faq: "typeFaq",
+  gallery: "typeImageGrid",
+  image: "typeImage",
+  video_image: "typeVideoImage",
+  embed_link: "typeEmbedLink",
+  countdown: "typeCountdown",
+  list: "typeList",
+  image_slider: "typeImageSlider",
+  embed: "typeEmbed",
+  maps: "typeMaps",
+};
+
+// extractPageDesignPatch -- field yang benar-benar bisa disentuh Tab Design
+// panel ini (DesignSectionPage dikurangi avatar_url/name/slug -- avatar
+// diunggah lewat endpoint terpisah yang SUDAH langsung ke server, name/slug
+// dikelola field rename topbar terpisah, lihat catatan lengkap di
+// commitSave). Dipakai HANYA saat Save/Save & Publish ditekan (redesain
+// arsitektur draft, lihat catatan lengkap di komponen utama) -- SEBELUMNYA
+// tiap field ini langsung PATCH sendiri-sendiri per onBlur/onChange.
+function extractPageDesignPatch(p: MyPage): Partial<MyPage> {
+  return {
+    theme: p.theme,
+    display_name: p.display_name,
+    bio: p.bio,
+    custom_background_type: p.custom_background_type,
+    custom_background_value: p.custom_background_value,
+    custom_button_color: p.custom_button_color,
+    custom_button_style: p.custom_button_style,
+    custom_button_rounded: p.custom_button_rounded,
+    custom_button_shadow: p.custom_button_shadow,
+    custom_font: p.custom_font,
+    custom_page_text_color: p.custom_page_text_color,
+    custom_title_font: p.custom_title_font,
+    custom_title_color: p.custom_title_color,
+    custom_style_override: p.custom_style_override,
+    layout_variant: p.layout_variant,
+    social_instagram: p.social_instagram,
+    social_tiktok: p.social_tiktok,
+    social_facebook: p.social_facebook,
+    social_whatsapp: p.social_whatsapp,
+    social_youtube: p.social_youtube,
+    social_x: p.social_x,
+    social_linkedin: p.social_linkedin,
+    social_telegram: p.social_telegram,
+    social_email: p.social_email,
+  };
+}
+
+// makeTempLinkItem -- redesain total (arsitektur draft, 10 September
+// 2026): blok ROOT baru ("Tambah Komponen" di target null) SEKARANG dibuat
+// LOKAL dulu (id sementara "temp-...", BUKAN dari respons createBlock) --
+// baru benar-benar dikirim ke backend (createBlock/createExtraPageBlock,
+// mendapat id ASLI) saat Save ditekan, lihat commitSave. Field selain
+// id/title/url/block_type/block_data diisi nilai default yang masuk akal
+// (SAMA seperti nilai default kolom di backend, links.go) -- tidak pernah
+// benar-benar dikirim ke server dalam bentuk ini, cuma dipakai representasi
+// draft di memori sebelum create sungguhan.
+function makeTempLinkItem(type: LinkItem["block_type"], title: string, url: string | undefined, blockData: Record<string, unknown>, position: number): LinkItem {
+  return {
+    id: `temp-${crypto.randomUUID()}`,
+    title,
+    url: url ?? "",
+    position,
+    is_active: true,
+    starts_at: null,
+    ends_at: null,
+    lock_type: "",
+    lock_code: "",
+    lock_min_age: null,
+    block_type: type,
+    block_data: blockData,
+    click_count: 0,
+    custom_icon_url: "",
+    icon_key: "",
+    icon_color: "",
+    is_featured: false,
+    thumbnail_url: "",
+    description: "",
+  };
+}
+
+// Canvas Page Builder -- REDESAIN TOTAL (migrasi 000096 asalnya, redesain
+// permintaan langsung pengguna 10 September 2026, referensi screenshot
+// "LYNK"): rute BARU di app/builder/[pageId] (LUAR app/dashboard/, lihat
+// catatan lengkap di app/builder/layout.tsx) MENGGANTIKAN
+// app/dashboard/links/builder/[pageId] lama sepenuhnya. pageId "main" =
+// halaman utama (bio), selain itu = id halaman tambahan (Toko/Bio
+// kedua/Landing) -- konvensi TIDAK BERUBAH dari versi lama.
+//
+// PERUBAHAN ARSITEKTUR PALING BESAR (dikonfirmasi via AskUserQuestion,
+// "Draft sungguhan spt referensi"): SEBELUMNYA setiap perubahan (edit blok,
+// tambah/hapus/reorder, ganti tema/warna/font, geser stiker) langsung
+// memanggil API satu-satu (autosave onBlur/onChange). SEKARANG semuanya
+// murni mutasi LOKAL ke `links`/`page` (draft) -- TIDAK ADA panggilan API
+// SAMA SEKALI di handler-handler itu lagi. `serverLinks`/`serverPage`
+// menyimpan snapshot TERAKHIR yang BENAR-BENAR tersimpan di backend,
+// dipakai (a) menghitung `isDirty` (JSON.stringify -- pola SAMA dipakai
+// perbandingan `selection`/path di seluruh builder ini sejak awal) dan
+// (b) sumber DIFF saat tombol Save/Save & Publish ditekan (lihat
+// commitSave) -- HANYA field yang benar-benar berubah yang memicu
+// panggilan API, jadi Save tetap murah walau draft sudah lama dibuka.
+//
+// Pengecualian yang TETAP langsung ke server terlepas dari status draft
+// (disetujui eksplisit di rencana): upload avatar/background/gambar blok/
+// stiker gambar -- filenya perlu benar-benar ada di storage supaya bisa
+// dipratinjau, TAPI hasilnya (URL) ditambal ke draft & server snapshot
+// SEKALIGUS (lihat handleUploadAvatar dst & handleMediaImageChanged) --
+// field itu sendiri tidak pernah "belum tersimpan" dari sudut pandang
+// pengguna, konsisten dgn pola upload-lalu-assign yang sudah ada di
+// seluruh dashboard Jeonme.
+export default function BuilderPage() {
+  const { t } = useLocale();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const params = useParams<{ pageId: string }>();
+  const pageId = params.pageId;
+  const isMain = pageId === "main";
+
+  const [page, setPage] = useState<MyPage | null>(null);
+  const [serverPage, setServerPage] = useState<MyPage | null>(null);
+  const [extraPageType, setExtraPageType] = useState<"bio" | "landing" | "produk" | undefined>(undefined);
+  const [extraPageSlug, setExtraPageSlug] = useState<string | undefined>(undefined);
+  const [extraPageName, setExtraPageName] = useState<string | undefined>(undefined);
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [serverLinks, setServerLinks] = useState<LinkItem[]>([]);
+  const [products, setProducts] = useState<DashboardProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState<"" | "save" | "publish">("");
+  const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
+  const [renamingTitle, setRenamingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+
+  const [selection, setSelection] = useState<BuilderSelection | null>(null);
+  const tree = useMemo(() => buildTree(links), [links]);
+  const [designSection, setDesignSection] = useState<BuilderDesignSection>("tema");
+
+  // isDirty -- pola JSON.stringify SAMA PERSIS dipakai perbandingan
+  // selection/path di seluruh builder ini sejak Fase 1 (BuilderLeftPanel.tsx),
+  // dipilih lagi di sini demi konsistensi -- ukuran draft (blok + field
+  // desain per halaman) realistis kecil, biaya JSON.stringify di sini
+  // dapat diabaikan dibanding jelasnya kode.
+  const isDirty = useMemo(() => {
+    if (!page || !serverPage) return false;
+    return JSON.stringify(links) !== JSON.stringify(serverLinks) || JSON.stringify(page) !== JSON.stringify(serverPage);
+  }, [links, serverLinks, page, serverPage]);
+  // isDirtyRef -- dibaca dari listener `beforeunload` (lihat efek di bawah)
+  // yang HANYA dipasang SEKALI saat mount -- closure listener itu akan
+  // menangkap `isDirty` versi PERTAMA (selalu false) kalau tidak lewat ref,
+  // pola sama dipakai di tempat lain di dashboard utk masalah closure serupa.
+  // Ref di-update lewat efek TERPISAH (BUKAN langsung di badan komponen) --
+  // "Cannot access refs during render" (react-hooks/refs, eslint-plugin-
+  // react-hooks v7 bundel Next.js 16 proyek ini) melarang mutasi `.current`
+  // di luar effect/event handler.
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  const fetchPageData = useCallback(async () => {
+    if (isMain) {
+      const [p, l, prod] = await Promise.all([getMyPage(), listLinks(), listProducts()]);
+      return { page: p, extraPageType: undefined as "bio" | "landing" | "produk" | undefined, extraPageSlug: undefined as string | undefined, extraPageName: undefined as string | undefined, links: l, products: prod };
+    }
+    const [detail, l, prod] = await Promise.all([getExtraPage(pageId), listExtraPageLinks(pageId), listProducts()]);
+    const shimmed: MyPage = {
+      ...(detail as ExtraPageDetail),
+      username: "",
+      verification: { email_verified: false, profile_complete: false, has_paid_order: false, is_verified: false },
+    };
+    return {
+      page: shimmed,
+      extraPageType: detail.page_type,
+      extraPageSlug: detail.slug as string | undefined,
+      extraPageName: detail.name as string | undefined,
+      links: l,
+      products: prod,
+    };
+  }, [isMain, pageId]);
+
+  const applyPageData = useCallback((result: Awaited<ReturnType<typeof fetchPageData>>) => {
+    setPage(result.page);
+    setServerPage(result.page);
+    setExtraPageType(result.extraPageType);
+    setExtraPageSlug(result.extraPageSlug);
+    setExtraPageName(result.extraPageName);
+    setLinks(result.links);
+    setServerLinks(result.links);
+    setProducts(result.products);
+  }, []);
+
+  useEffect(() => {
+    fetchPageData()
+      .then(applyPageData)
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.loadFailed")))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya perlu jalan sekali per pageId, `t` tidak boleh memicu reload berulang.
+  }, [pageId]);
+
+  // Pastikan builder_mode='builder' begitu route ini dibuka -- SATU-
+  // SATUNYA panggilan API di luar commitSave (Save/Save & Publish) yang
+  // masih tersisa di rute ini: flag TEKNIS internal (bukan konten yang
+  // dilihat pengguna), idempoten & soft-fail, sengaja TIDAK ikut model
+  // draft supaya halaman publik langsung ikut pindah jalur render begitu
+  // builder dibuka, terlepas draft disimpan atau tidak. Ditandai LANGSUNG
+  // di `page` MAUPUN `serverPage` sekaligus supaya field teknis ini tidak
+  // pernah keliru dianggap "ada perubahan belum disimpan" oleh `isDirty`.
+  useEffect(() => {
+    if (!page || page.builder_mode === "builder") return;
+    const patch = { builder_mode: "builder" as const };
+    (isMain ? updateMyPage(patch) : updateExtraPage(pageId, patch))
+      .then(() => {
+        setPage((prev) => (prev ? { ...prev, builder_mode: "builder" } : prev));
+        setServerPage((prev) => (prev ? { ...prev, builder_mode: "builder" } : prev));
+      })
+      .catch(() => {
+        // Soft-fail -- kanvas tetap bisa dipakai, cuma halaman publik belum
+        // ikut pindah render sampai patch ini berhasil (dicoba ulang tiap
+        // kali rute ini dibuka lagi).
+      });
+  }, [page, isMain, pageId]);
+
+  function rootToBuilderRoot(root: LinkItem): BuilderRoot {
+    return {
+      children: root.block_data?.children as EmbeddedBuilderBlock[] | undefined,
+      columns: root.block_data?.columns as BuilderColumn[] | undefined,
+    };
+  }
+
+  // handleAdd/handleDelete/handleReorderRoot/handleReorderChildren/
+  // handleUpdateNode -- SEMUA murni `setLinks(...)` sekarang (TIDAK ADA
+  // panggilan API), lihat catatan arsitektur draft lengkap di komentar
+  // komponen ini. Badan logic path-based (getChildrenAt/setChildrenAt/
+  // updateAt) APA ADANYA dari versi lama, cuma dibungkus `setLinks`
+  // (functional update) alih-alih await+refresh().
+  function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") {
+    setError(null);
+    if (!target) {
+      const title = t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[type] ?? "typeText"}`);
+      const blockData = type === "maps" ? {} : newBuilderBlock(type as EmbeddedBuilderBlock["block_type"]).block_data;
+      // "https://" saja gagal validasi http_url backend (tidak ada host) --
+      // root "button"/"maps" WAJIB url non-kosong (beda dari anak tertanam
+      // di Section/Column) -- placeholder valid ini diedit belakangan lewat
+      // panel kiri, ditimpa tautan Maps sungguhan lewat MapsEditor.
+      const url = type === "button" || type === "maps" ? "https://example.com" : undefined;
+      setLinks((prev) => [...prev, makeTempLinkItem(type as LinkItem["block_type"], title, url, blockData, prev.length)]);
+      return;
+    }
+    if (type === "maps") return; // modal sudah menyaring ini, jaga-jaga saja.
+    setLinks((prev) => {
+      const root = prev.find((l) => l.id === target.rootId);
+      if (!root) return prev;
+      const builderRoot = rootToBuilderRoot(root);
+      const existing = getChildrenAt(builderRoot, target.path);
+      const updated = setChildrenAt(builderRoot, target.path, [...existing, newBuilderBlock(type)]);
+      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    });
+  }
+
+  function handleDelete(target: BuilderSelection) {
+    setError(null);
+    if (target.path.length === 0) {
+      setLinks((prev) => prev.filter((l) => l.id !== target.rootId));
+      return;
+    }
+    setLinks((prev) => {
+      const root = prev.find((l) => l.id === target.rootId);
+      if (!root) return prev;
+      const builderRoot = rootToBuilderRoot(root);
+      const parentPath = target.path.slice(0, -1);
+      const lastSeg = target.path[target.path.length - 1];
+      if (lastSeg.kind !== "child") return prev; // segmen "column" tidak bisa dihapus langsung -- lihat catatan BuilderLeftPanel.
+      const siblings = getChildrenAt(builderRoot, parentPath);
+      const updated = setChildrenAt(
+        builderRoot,
+        parentPath,
+        siblings.filter((c) => c.id !== lastSeg.id)
+      );
+      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    });
+  }
+
+  function handleReorderRoot(orderedIds: string[]) {
+    setLinks((prev) => {
+      const byId = new Map(prev.map((l) => [l.id, l] as const));
+      return orderedIds.map((id) => byId.get(id)).filter((l): l is LinkItem => !!l);
+    });
+  }
+
+  function handleReorderChildren(rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) {
+    setError(null);
+    setLinks((prev) => {
+      const root = prev.find((l) => l.id === rootId);
+      if (!root) return prev;
+      const builderRoot = rootToBuilderRoot(root);
+      const existing = getChildrenAt(builderRoot, containerPath);
+      const byId = new Map(existing.map((c) => [c.id, c] as const));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((c): c is EmbeddedBuilderBlock => !!c);
+      const updated = setChildrenAt(builderRoot, containerPath, reordered);
+      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    });
+  }
+
+  function handleUpdateNode(target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) {
+    setError(null);
+    setLinks((prev) => {
+      if (target.path.length === 0) {
+        return prev.map((l) =>
+          l.id === target.rootId
+            ? {
+                ...l,
+                ...(patch.title !== undefined ? { title: patch.title } : {}),
+                ...(patch.url !== undefined ? { url: patch.url } : {}),
+                ...(patch.description !== undefined ? { description: patch.description } : {}),
+                ...(patch.blockData !== undefined ? { block_data: { ...l.block_data, ...patch.blockData } } : {}),
+              }
+            : l
+        );
+      }
+      const root = prev.find((l) => l.id === target.rootId);
+      if (!root) return prev;
+      const builderRoot = rootToBuilderRoot(root);
+      const updated = updateAt(builderRoot, target.path, (node) => {
+        if (!("block_type" in node)) return node; // BuilderColumn tidak punya title/url/block_data sendiri.
+        return {
+          ...node,
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.url !== undefined ? { url: patch.url } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+          ...(patch.blockData !== undefined ? { block_data: { ...node.block_data, ...patch.blockData } } : {}),
+        };
+      });
+      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    });
+  }
+
+  // createRootOnServer -- badan create SATU root ROOT (dipakai commitSave
+  // langkah 2 MAUPUN ensureRootPersisted di bawah, diekstrak supaya cast
+  // block_type & pemilihan createBlock/createExtraPageBlock TIDAK
+  // terduplikasi di dua tempat).
+  async function createRootOnServer(root: LinkItem): Promise<LinkItem> {
+    // Cast block_type -- root "temp-..." SELALU dibuat lewat makeTempLinkItem
+    // dgn `type` dari handleAdd (EmbeddedBuilderBlock["block_type"] | "maps",
+    // TIDAK PERNAH "link"), tapi begitu masuk state `links: LinkItem[]`
+    // tipenya melebar lagi ke union PENUH LinkItem.block_type (termasuk
+    // "link", yang TIDAK diterima createBlock/createExtraPageBlock) --
+    // cast ini aman krn dijamin oleh cara root ini dibuat.
+    const blockType = root.block_type as Exclude<LinkItem["block_type"], "link">;
+    return isMain
+      ? createBlock({ block_type: blockType, title: root.title, url: root.url || undefined, block_data: root.block_data, description: root.description || undefined })
+      : createExtraPageBlock(pageId, { block_type: blockType, title: root.title, url: root.url || undefined, block_data: root.block_data, description: root.description || undefined });
+  }
+
+  // ensureRootPersisted -- upload gambar blok (image/gallery/video_image/
+  // embed_link) TETAP langsung ke server terlepas status draft (lihat
+  // catatan lengkap di handleMediaImageChanged/handleGalleryImagesChanged
+  // di bawah), TAPI endpoint upload itu (uploadBuilderMediaImage/
+  // uploadGalleryImage) BUTUH id ROOT ASLI dari backend -- kalau blok/
+  // kontainernya baru ditambah & BELUM PERNAH disimpan (id masih
+  // "temp-...", murni lokal), upload akan gagal karena baris itu belum
+  // ada di database sama sekali. Ditemukan lewat tinjauan kode sendiri
+  // (bukan cuma dari referensi/plan) -- skenario "tambah blok Foto baru,
+  // langsung unggah foto sebelum pernah klik Simpan" itu wajar & umum,
+  // BUKAN edge case langka. Dipanggil BuilderLeftPanel.tsx (MediaImageEditor/
+  // GalleryGridEditor) SEBELUM upload/hapus -- kalau id target masih
+  // sementara, root itu di-create dulu ke server (silent, transparan bagi
+  // pengguna), lalu id sementara ditambal jadi id asli di `links`/
+  // `serverLinks`/`selection` SEKALIGUS (pola sama seperti idRemap di
+  // commitSave) sebelum id asli itu dikembalikan ke pemanggil.
+  async function ensureRootPersisted(rootId: string): Promise<string> {
+    if (!rootId.startsWith("temp-")) return rootId;
+    const root = links.find((l) => l.id === rootId);
+    if (!root) return rootId;
+    const created = await createRootOnServer(root);
+    setLinks((prev) => prev.map((l) => (l.id === rootId ? created : l)));
+    setServerLinks((prev) => [...prev, created]);
+    setSelection((prev) => (prev && prev.rootId === rootId ? { ...prev, rootId: created.id } : prev));
+    return created.id;
+  }
+
+  // handleMediaImageChanged/handleGalleryImagesChanged -- lihat catatan
+  // lengkap di BuilderLeftPanel.tsx (MediaImageEditor/GalleryGridEditor):
+  // upload/hapus gambar blok TETAP langsung ke server (pengecualian
+  // disetujui di rencana), tapi hasilnya ditambal ke SATU path spesifik ini
+  // di `links` (draft) MAUPUN `serverLinks` (snapshot) SEKALIGUS -- field
+  // ini sendiri sudah "resmi tersimpan" begitu upload sukses, jadi tidak
+  // boleh ikut dianggap draft belum disimpan (isDirty) ATAUPUN tertimpa
+  // balik draft field lain kalau Save ditekan belakangan. `rootId` di sini
+  // SELALU id ASLI (dikembalikan ensureRootPersisted ke MediaImageEditor/
+  // GalleryGridEditor SEBELUM upload, lihat catatan lengkap di atas), bukan
+  // `node.rootId` mentah yang bisa saja masih "temp-..." kalau dibaca dari
+  // closure basi.
+  function applyFieldToPath(rootId: string, path: BuilderSeg[], patchBlockData: (blockData: Record<string, unknown>) => Record<string, unknown>) {
+    const apply = (list: LinkItem[]): LinkItem[] => {
+      const root = list.find((l) => l.id === rootId);
+      if (!root) return list;
+      if (path.length === 0) {
+        return list.map((l) => (l.id === rootId ? { ...l, block_data: patchBlockData(l.block_data) } : l));
+      }
+      const builderRoot = rootToBuilderRoot(root);
+      const updated = updateAt(builderRoot, path, (node) => {
+        if (!("block_type" in node)) return node;
+        return { ...node, block_data: patchBlockData(node.block_data) };
+      });
+      return list.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    };
+    setLinks(apply);
+    setServerLinks(apply);
+  }
+  function handleMediaImageChanged(rootId: string, path: BuilderSeg[], imageUrl: string) {
+    applyFieldToPath(rootId, path, (bd) => ({ ...bd, image_url: imageUrl }));
+  }
+  function handleGalleryImagesChanged(rootId: string, path: BuilderSeg[], images: string[]) {
+    applyFieldToPath(rootId, path, (bd) => ({ ...bd, images }));
+  }
+
+  // handlePatch/handleStyleOverride/handleDesignLocalChange -- redesain
+  // arsitektur draft: SEKARANG murni `setPage` (draft lokal), TIDAK ADA
+  // panggilan API lagi (dulu handlePatch langsung PATCH ke backend dengan
+  // optimistic+rollback -- rollback tidak relevan lagi karena tidak ada
+  // panggilan yang bisa gagal). Prop yang diterima BuilderLeftPanel.tsx
+  // (onPatch/onLocalChange/onStyleOverride) TIDAK BERUBAH SAMA SEKALI --
+  // komponen itu sendiri tidak tahu ataupun peduli draft vs autosave.
+  function handlePatch(patch: DesignSectionPatch) {
+    setPage((prev) => (prev ? ({ ...prev, ...patch } as MyPage) : prev));
+  }
+  function handleStyleOverride(patch: Omit<DesignSectionPatch, "theme" | "custom_style_override">) {
+    handlePatch({ ...patch, custom_style_override: true });
+  }
+  function handleDesignLocalChange(patch: DesignSectionPatch) {
+    setPage((prev) => (prev ? ({ ...prev, ...patch } as MyPage) : prev));
+  }
+  // handleUploadAvatar/handleUploadBackground -- TETAP langsung ke server
+  // (pengecualian disetujui di rencana, lihat catatan lengkap di komentar
+  // komponen ini) -- URL hasilnya diterapkan pemanggil (design-sections.tsx)
+  // lewat onLocalChange (draft lokal, SAMA seperti sebelumnya), BUKAN
+  // ditambal ke serverPage juga seperti handleMediaImageChanged (avatar_url
+  // BUKAN bagian dari extractPageDesignPatch/updateMyPage sama sekali --
+  // backend sudah menyimpannya sendiri saat upload, field ini tidak pernah
+  // dikirim ulang lewat commitSave, jadi tidak perlu disinkronkan ke
+  // serverPage utk akurasi isDirty).
+  async function handleUploadAvatar(file: File) {
+    return isMain ? uploadAvatar(file) : uploadExtraPageAvatar(pageId, file);
+  }
+  async function handleUploadBackground(file: File) {
+    await (isMain ? uploadCustomBackground(file) : uploadExtraPageBackground(pageId, file));
+  }
+  function handleStickersChange(stickers: PageStickerData[]) {
+    setPage((prev) => (prev ? { ...prev, stickers } : prev));
+  }
+
+  const selectedNodeId = useMemo(() => {
+    if (!selection || selection.kind !== "block") return undefined;
+    if (selection.path.length === 0) return selection.rootId;
+    return findNodeByPath(tree, selection.rootId, selection.path)?.id;
+  }, [selection, tree]);
+
+  function handleSelectNode(nodeId: string) {
+    setSelection(findSelectionByNodeId(tree, nodeId));
+  }
+
+  // commitSave -- SATU-SATUNYA tempat rute ini benar-benar memanggil API
+  // penulisan blok/desain (selain builder_mode & upload gambar, lihat
+  // catatan masing-masing di atas). Diff terhadap `serverLinks`/`serverPage`
+  // (snapshot terakhir yang BENAR-BENAR tersimpan) -- urutan: hapus root
+  // yang hilang dari draft, buat root baru (id "temp-..."), PATCH root yang
+  // isinya berubah, reorder (selalu, murah & idempoten), lalu PATCH
+  // halaman + stiker kalau berubah, terakhir publish kalau diminta.
+  // `serverLinks`/`serverPage` di-update SEGERA setelah TIAP langkah
+  // berhasil (bukan cuma di akhir) -- kalau satu langkah gagal di tengah,
+  // langkah-langkah SEBELUMNYA yang sudah sukses tidak diulang percuma
+  // saat pengguna menekan Save lagi (retry aman, bukan duplikat).
+  async function commitSave(publish: boolean) {
+    if (!page || !serverPage) return;
+    setSaving(publish ? "publish" : "save");
+    setError(null);
+    try {
+      let nextServerLinks = serverLinks;
+
+      // 1) Hapus root yang sudah tidak ada di draft.
+      const draftIds = new Set(links.map((l) => l.id));
+      for (const root of serverLinks) {
+        if (draftIds.has(root.id)) continue;
+        await deleteLink(root.id);
+        nextServerLinks = nextServerLinks.filter((l) => l.id !== root.id);
+        setServerLinks(nextServerLinks);
+      }
+
+      // 2) Buat root baru (id sementara "temp-...") -- urutan draft dijaga,
+      // id sementara diganti id asli hasil createBlock/createExtraPageBlock.
+      // idRemap dipakai menambal `selection` di bawah -- kalau blok yang
+      // BARU dibuat ini (atau anak DI DALAMNYA, lihat catatan idRemap di
+      // bawah) sedang terbuka/terpilih di accordion panel kiri saat Save
+      // ditekan, `selection.rootId` yang masih mengacu id sementara harus
+      // ikut diperbarui ke id asli -- kalau tidak, accordion itu akan
+      // terlihat tertutup sendiri sesaat setelah Save (rootId lama tidak
+      // ketemu lagi di tree yang baru dibangun ulang dari `nextDraftLinks`).
+      const nextDraftLinks: LinkItem[] = [];
+      const idRemap = new Map<string, string>();
+      for (const root of links) {
+        if (!root.id.startsWith("temp-")) {
+          nextDraftLinks.push(root);
+          continue;
+        }
+        const created = await createRootOnServer(root);
+        idRemap.set(root.id, created.id);
+        nextDraftLinks.push(created);
+        nextServerLinks = [...nextServerLinks, created];
+        setServerLinks(nextServerLinks);
+      }
+      setLinks(nextDraftLinks);
+      if (idRemap.size > 0) {
+        setSelection((prev) => (prev && idRemap.has(prev.rootId) ? { ...prev, rootId: idRemap.get(prev.rootId)! } : prev));
+      }
+
+      // 3) PATCH root yang sudah ada SEBELUM Save ini (bukan baru dibuat di
+      // langkah 2) tapi isinya berubah dari snapshot server terakhir.
+      const originalById = new Map(serverLinks.map((l) => [l.id, l] as const));
+      for (const root of nextDraftLinks) {
+        const before = originalById.get(root.id);
+        if (!before) continue; // baru dibuat di langkah 2, sudah pasti sinkron dgn server.
+        const changed =
+          before.title !== root.title ||
+          before.url !== root.url ||
+          before.description !== root.description ||
+          JSON.stringify(before.block_data) !== JSON.stringify(root.block_data);
+        if (!changed) continue;
+        // url: root.url || undefined -- BUKAN root.url mentah (bug ditemukan
+        // lewat verifikasi e2e live, 10 September 2026): blok kontainer
+        // (section/column/divider/dst) TIDAK PERNAH punya URL sungguhan
+        // (selalu string kosong sejak dibuat, lihat makeTempLinkItem) --
+        // mengirim `url: ""` di payload PATCH ditolak validasi backend
+        // ("URL harus berupa URL http/https yang valid", UpdateLink
+        // links.go tidak merelaksasi field ini seperti CreateBlock).
+        // createRootOnServer (langkah 2 di atas) sudah benar sejak awal,
+        // cabang UPDATE ini yang sebelumnya lupa filter yang sama.
+        await updateLink(root.id, { title: root.title, url: root.url || undefined, description: root.description, block_data: root.block_data });
+        nextServerLinks = nextServerLinks.map((l) => (l.id === root.id ? root : l));
+        setServerLinks(nextServerLinks);
+      }
+
+      // 4) Reorder -- selalu dipanggil kalau ada root sama sekali (idempoten
+      // & murah kalau urutan kebetulan sudah sama, lebih sederhana
+      // daripada diff urutan manual).
+      if (nextDraftLinks.length > 0) {
+        const items = nextDraftLinks.map((l, i) => ({ id: l.id, position: i }));
+        await (isMain ? reorderLinks(items) : reorderExtraPageLinks(pageId, items));
+      }
+
+      // 5) Halaman (tema/header/tombol/font/publish) -- satu PATCH.
+      const pageChanged = JSON.stringify(extractPageDesignPatch(page)) !== JSON.stringify(extractPageDesignPatch(serverPage));
+      const patch: Partial<MyPage> = {};
+      if (pageChanged) Object.assign(patch, extractPageDesignPatch(page));
+      if (publish) patch.is_published = true;
+      if (Object.keys(patch).length > 0) {
+        await (isMain ? updateMyPage(patch) : updateExtraPage(pageId, patch));
+      }
+
+      // 6) Stiker -- endpoint terpisah (ganti array utuh, bukan PATCH per field).
+      if (JSON.stringify(page.stickers) !== JSON.stringify(serverPage.stickers)) {
+        await (isMain ? updateMyPageStickers(page.stickers) : updateExtraPageStickers(pageId, page.stickers));
+      }
+
+      const finalPage: MyPage = publish ? { ...page, is_published: true } : page;
+      setPage(finalPage);
+      setServerPage(finalPage);
+      showToast(publish ? t("dashboard.pages.linksBuilder.publishSuccess") : t("dashboard.pages.linksBuilder.saveSuccess"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
+    } finally {
+      setSaving("");
+    }
+  }
+
+  function handleBack() {
+    if (isDirty && !window.confirm(t("dashboard.pages.linksBuilder.unsavedChangesWarning"))) return;
+    router.push(extraPageType === "produk" ? "/dashboard/products" : "/dashboard/links");
+  }
+
+  function startRenameTitle() {
+    if (isMain || !extraPageName) return;
+    setTitleDraft(extraPageName);
+    setRenamingTitle(true);
+  }
+  async function saveRenameTitle() {
+    setRenamingTitle(false);
+    const name = titleDraft.trim();
+    if (!name || name === extraPageName) return;
+    const previous = extraPageName;
+    setExtraPageName(name);
+    try {
+      await updateExtraPage(pageId, { name });
+    } catch (err) {
+      setExtraPageName(previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
+    }
+  }
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center text-sm text-app-muted">{t("dashboard.pages.linksBuilder.loading")}</div>;
+  }
+
+  if (!page) {
+    return <div className="flex h-screen items-center justify-center text-sm text-app-muted">{t("dashboard.pages.linksBuilder.errors.loadFailed")}</div>;
+  }
+
+  // designPage -- DesignSectionPage butuh `slug` opsional (dipakai HANYA
+  // sbg inisial avatar kosong, lihat design-sections.tsx) -- `page: MyPage`
+  // tidak punya field itu sama sekali, jadi diisi di sini dari sumber yang
+  // paling masuk akal utk tiap kasus (bukan dari `page` itu sendiri, biar
+  // tidak perlu mengubah bentuk state `page`).
+  const designPage: DesignSectionPage = { ...page, slug: isMain ? page.username : extraPageSlug };
+  const title = isMain ? t("dashboard.pages.linksBuilder.title") : extraPageName || t("dashboard.pages.linksBuilder.title");
+
+  return (
+    <div className="flex h-screen flex-col bg-app-bg">
+      <div className="flex flex-shrink-0 items-center gap-3 border-b border-app-border bg-app-surface px-4 py-2.5">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-1 text-xs font-bold text-app-muted hover:text-app-ink"
+        >
+          <IconChevronRight className="h-4 w-4 rotate-180" />
+          {t("dashboard.pages.linksBuilder.back")}
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-5 w-auto" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-5 w-auto" />
+
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+          {renamingTitle ? (
+            <input
+              type="text"
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveRenameTitle}
+              onKeyDown={(e) => e.key === "Enter" && saveRenameTitle()}
+              placeholder={t("dashboard.pages.linksBuilder.renameTitlePlaceholder")}
+              className="w-full max-w-xs rounded-md border border-jeon-purple px-2 py-1 text-center text-sm font-bold text-app-ink outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startRenameTitle}
+              disabled={isMain}
+              className={`flex max-w-xs items-center gap-1.5 truncate text-sm font-bold text-app-ink ${!isMain ? "hover:text-jeon-purple" : ""}`}
+            >
+              <span className="truncate">{title}</span>
+              {!isMain && <IconPencil className="h-3 w-3 flex-shrink-0 text-app-muted" />}
+            </button>
+          )}
+        </div>
+
+        <div className="hidden items-center gap-1.5 rounded-full bg-app-surface-2 p-1 sm:flex">
+          {(Object.keys(BUILDER_DEVICE_WIDTHS) as BuilderDeviceWidth[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setDevice(key)}
+              className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                device === key ? "bg-jeon-sidebar text-white" : "text-app-muted hover:text-app-ink"
+              }`}
+            >
+              {t(`dashboard.pages.linksBuilder.device.${key}`)}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => commitSave(false)}
+            disabled={!isDirty || saving !== ""}
+            className="rounded-full border-2 border-jeon-ink px-3.5 py-1.5 text-xs font-bold text-app-ink transition-opacity disabled:opacity-40"
+          >
+            {saving === "save" ? t("dashboard.pages.linksBuilder.saving") : t("dashboard.pages.linksBuilder.save")}
+          </button>
+          <button
+            type="button"
+            onClick={() => commitSave(true)}
+            disabled={saving !== ""}
+            className="rounded-full bg-jeon-sidebar px-3.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {saving === "publish" ? t("dashboard.pages.linksBuilder.saving") : t("dashboard.pages.linksBuilder.savePublish")}
+          </button>
+        </div>
+      </div>
+      {error && <p className="flex-shrink-0 bg-red-50 px-4 py-2 text-center text-xs text-red-600">{error}</p>}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[420px_1fr]">
+        <BuilderLeftPanel
+          links={links}
+          selection={selection}
+          onSelectionChange={setSelection}
+          onAdd={handleAdd}
+          onDelete={handleDelete}
+          onReorderRoot={handleReorderRoot}
+          onReorderChildren={handleReorderChildren}
+          onUpdateNode={handleUpdateNode}
+          onMediaImageChanged={handleMediaImageChanged}
+          onGalleryImagesChanged={handleGalleryImagesChanged}
+          onEnsureRootPersisted={ensureRootPersisted}
+          settingsHref="/dashboard/settings"
+          page={designPage}
+          isPremium={page.is_premium}
+          onPatch={handlePatch}
+          onLocalChange={handleDesignLocalChange}
+          onStyleOverride={handleStyleOverride}
+          onUploadAvatar={handleUploadAvatar}
+          onUploadBackground={handleUploadBackground}
+          onError={setError}
+          stickers={page.stickers}
+          onStickersChange={handleStickersChange}
+          designSection={designSection}
+          onDesignSectionChange={setDesignSection}
+        />
+        <BuilderCanvas
+          page={page}
+          links={links}
+          products={products}
+          pageType={extraPageType}
+          pageSlug={extraPageSlug}
+          device={device}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={handleSelectNode}
+          editableStickers={designSection === "stiker"}
+          onStickersChange={handleStickersChange}
+        />
+      </div>
+    </div>
+  );
+}

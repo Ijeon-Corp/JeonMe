@@ -400,7 +400,7 @@ export default function ProdukPageEditor({
             juga. Route tujuan sendiri yang PATCH builder_mode='builder'
             begitu dibuka (idempoten). */}
         <Link
-          href={`/dashboard/links/builder/${page.id}`}
+          href={`/builder/${page.id}`}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-bold text-app-ink transition-transform hover:scale-[1.01]"
         >
           <IconColumns className="h-4 w-4" />

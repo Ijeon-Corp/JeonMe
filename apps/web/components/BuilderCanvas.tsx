@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { DashboardProduct, LinkItem, MyPage, PageStickerData } from "@/lib/api-client";
 import { toPreviewData } from "@/lib/page-preview-data";
-import { useLocale } from "@/lib/locale-context";
 
 // BuilderCanvas -- Canvas Page Builder (migrasi 000096, permintaan langsung
 // pengguna 7 September 2026, dua screenshot Lynk.id): FORK dari
@@ -45,6 +44,7 @@ export default function BuilderCanvas({
   products,
   pageType,
   pageSlug,
+  device,
   selectedNodeId,
   onSelectNode,
   editableStickers,
@@ -55,6 +55,13 @@ export default function BuilderCanvas({
   products: DashboardProduct[];
   pageType?: "bio" | "landing" | "produk";
   pageSlug?: string;
+  // device -- redesain total (permintaan langsung pengguna 10 September
+  // 2026, referensi "LYNK"): toggle perangkat DIPINDAH ke topbar rute
+  // Builder (app/builder/[pageId]/page.tsx), sebelumnya baris tombol
+  // berdiri sendiri di ATAS kanvas ini dengan state lokal `useState`
+  // sendiri -- SEKARANG murni dikendalikan induk lewat prop supaya topbar
+  // (di luar komponen ini) bisa menampilkannya di TENGAH, persis referensi.
+  device: BuilderDeviceWidth;
   // selectedNodeId/onSelectNode -- permintaan langsung pengguna 9
   // September 2026 ("klik blok di kanvas juga, bukan cuma di tree kiri"):
   // sebelumnya kanvas ini 100% non-interactive, nol prop terkait seleksi --
@@ -73,8 +80,6 @@ export default function BuilderCanvas({
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
 }) {
-  const { t } = useLocale();
-  const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
 
@@ -122,20 +127,6 @@ export default function BuilderCanvas({
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="mb-3 flex flex-shrink-0 items-center justify-center gap-1.5">
-        {(Object.keys(BUILDER_DEVICE_WIDTHS) as BuilderDeviceWidth[]).map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setDevice(key)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-              device === key ? "bg-jeon-sidebar text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
-            }`}
-          >
-            {t(`dashboard.pages.linksBuilder.device.${key}`)}
-          </button>
-        ))}
-      </div>
       <div ref={containerRef} className="min-h-0 min-w-0 flex-1 overflow-auto rounded-jmd border-2 border-jeon-ink bg-gray-100 p-4">
         {page && (
           <div className="mx-auto [-ms-overflow-style:none] [scrollbar-width:none]" style={{ width: BUILDER_DEVICE_WIDTHS[device], zoom }}>

@@ -59,6 +59,7 @@ import {
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
+import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import {
   FontSection,
   HeaderSection,
@@ -80,29 +81,8 @@ export type BuilderDesignSection = "tema" | "header" | "tombol" | "font" | "stik
 // kode terpisah dari builder tapi endpoint & limit-nya dibagi bersama).
 const maxGalleryImages = 9;
 
-// BuilderLeftPanel -- Canvas Page Builder (migrasi 000096, permintaan
-// langsung pengguna 7 September 2026, dua screenshot Lynk.id): shell tab
-// Content/Design/Settings di sebelah kiri BuilderCanvas. Fase 1: Design &
-// Settings TIDAK membangun UI baru sama sekali (per rencana) -- cukup
-// tautan keluar ke halaman Desain/Pengaturan yang SUDAH ADA (mengelola
-// tema/tombol/header di sini juga akan berarti menyalin ulang komponen
-// besar dashboard/design/*, di luar cakupan Fase 1). Content tab: daftar
-// blok berindentasi (root + isi Section/Column) + tombol "Tambah
-// Komponen" yang menambah di ROOT atau DI DALAM kontainer terpilih.
-//
-// Drag-and-drop (@dnd-kit, dependency baru disetujui eksplisit): SATU
-// DndContext membungkus seluruh pohon, TIAP level kontainer (root, isi
-// SATU Section, isi SATU kolom) punya SortableContext independen sendiri
-// -- reorder DI DALAM satu kontainer yang sama didukung penuh. Memindah
-// blok LINTAS kontainer (root -> dalam Section, kolom 1 -> kolom 2, dst)
-// SENGAJA belum didukung di Fase 1 (containerKeyOf di bawah menolak drop
-// kalau kontainer asal & tujuan beda) -- itu jauh lebih rumit (perlu
-// PATCH ke DUA baris root berbeda sekaligus utk kasus lintas-root), utk
-// sekarang tambah komponen baru langsung ke kontainer tujuan lewat
-// "Tambah Komponen", pindahkan lewat hapus+tambah ulang.
-// containerKeyOf -- kunci identitas kontainer (root, ATAU SATU Section/
-// kolom tertentu) yang menaungi `node`. Dipakai handleDragEnd utk menolak
-// drop LINTAS kontainer (lihat catatan lengkap di atas komponen ini).
+// containerKeyOf/siblingsOf -- APA ADANYA dari versi sebelumnya, dipakai
+// handleDragEnd (lihat catatan lengkap di komponen utama).
 function containerKeyOf(node: BuilderTreeNode): string {
   if (node.path.length === 0) return "root";
   return `${node.rootId}:${JSON.stringify(node.path.slice(0, -1))}`;
@@ -120,16 +100,12 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   divider: IconDivider,
   column: IconColumns,
   section: IconBox,
-  // Fase 2 (permintaan langsung pengguna 8 September 2026) -- ikon SAMA
-  // persis dgn tile BuilderAddComponentModal.tsx, "gallery" (block_type
-  // asli) tampil sbg "Image Grid" di sini juga.
   video: IconPlayCircle,
   faq: IconBook,
   gallery: IconPhotoLibrary,
   image: IconCamera,
   video_image: IconVideoImage,
   embed_link: IconLink,
-  // Fase 3 (permintaan langsung pengguna 8 September 2026).
   countdown: IconClock,
   list: IconListCard,
   image_slider: IconSlideshow,
@@ -174,87 +150,51 @@ const DESIGN_SECTION_ENTRIES: [BuilderDesignSection, string][] = [
   ["stiker", "dashboard.components.produkPageEditor.designTabs.stiker"],
 ];
 
-function TreeNodeView({
-  node,
-  depth,
-  isSelected,
-  onSelect,
-  collapsed,
-  onToggleCollapsed,
-}: {
-  node: BuilderTreeNode;
-  depth: number;
-  isSelected: (node: BuilderTreeNode) => boolean;
-  onSelect: (node: BuilderTreeNode) => void;
-  collapsed: Set<string>;
-  onToggleCollapsed: (id: string) => void;
-}) {
-  const { t } = useLocale();
-  // useSortable -- HANYA node "block" yang bisa diseret (column-slot murni
-  // wadah tampilan "Kolom N", tidak punya urutan sendiri untuk diubah).
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: node.id,
-    disabled: node.kind !== "block",
-  });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+// stripHtml/truncate -- redesain total (permintaan langsung pengguna 10
+// September 2026, "tidak perlu tampilkan teks component nya tetapi hanya
+// isi dari component nya saja"): blok "text" sekarang HTML (RichTextEditor),
+// preview di tree HARUS teks polos ringkas, bukan markup mentah ataupun
+// nama tipe generik "Text".
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+function truncate(s: string, n: number): string {
+  return s.length > n ? `${s.slice(0, n).trimEnd()}…` : s;
+}
 
-  const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
-  const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
-  const lastSeg = node.path[node.path.length - 1];
-  const label =
-    node.kind === "column-slot"
-      ? `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`
-      : node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
-  const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div
-        style={{ paddingLeft: `${depth * 16}px` }}
-        className={`flex items-center gap-1 rounded-lg py-1.5 pr-1.5 text-xs ${isSelected(node) ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
-      >
-        {node.kind === "block" ? (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            aria-label={t("dashboard.pages.linksBuilder.dragHandle")}
-            className="flex-shrink-0 cursor-grab touch-none text-app-muted active:cursor-grabbing"
-          >
-            <IconGripVertical className="h-3.5 w-3.5" />
-          </button>
-        ) : (
-          <span className="w-3.5 flex-shrink-0" />
-        )}
-        {canExpand ? (
-          <button type="button" onClick={() => onToggleCollapsed(node.id)} className="flex-shrink-0 text-app-muted">
-            <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${collapsed.has(node.id) ? "" : "rotate-90"}`} />
-          </button>
-        ) : (
-          <span className="w-3.5 flex-shrink-0" />
-        )}
-        <button type="button" onClick={() => onSelect(node)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-          {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
-          <span className="truncate font-semibold text-app-ink">{label}</span>
-        </button>
-      </div>
-      {canExpand && !collapsed.has(node.id) && (
-        <div>
-          {node.children.length === 0 ? (
-            <p style={{ paddingLeft: `${(depth + 1) * 16 + 20}px` }} className="py-1 text-[11px] text-app-muted">
-              {t("dashboard.pages.linksBuilder.emptyContainer")}
-            </p>
-          ) : (
-            <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
-              {node.children.map((child) => (
-                <TreeNodeView key={child.id} node={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
-              ))}
-            </SortableContext>
-          )}
-        </div>
-      )}
-    </div>
-  );
+// previewLabelFor -- pengganti `label` lama (SELALU nama tipe generik utk
+// blok tanpa `title`, keluhan langsung pengguna): "text" tampilkan cuplikan
+// ISI, blok berbasis daftar (faq/list/gallery/image_slider) tampilkan
+// JUMLAH item -- tipe lain (button/video/embed_link/dst) SUDAH benar
+// (title terisi begitu pengguna mengisinya), fallback nama tipe generik
+// HANYA kalau benar-benar belum diisi sama sekali, sama seperti sebelumnya.
+function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): string {
+  if (node.kind === "column-slot") {
+    const lastSeg = node.path[node.path.length - 1];
+    return `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`;
+  }
+  const generic = () => node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
+  switch (node.blockType) {
+    case "text": {
+      const plain = stripHtml((node.blockData?.text as string) ?? "");
+      return plain ? truncate(plain, 40) : t("dashboard.pages.linksBuilder.textEmptyPreview");
+    }
+    case "faq": {
+      const count = ((node.blockData?.items as unknown[] | undefined) ?? []).length;
+      return count > 0 ? t("dashboard.pages.linksBuilder.faqCount").replace("{n}", String(count)) : generic();
+    }
+    case "list": {
+      const count = ((node.blockData?.items as unknown[] | undefined) ?? []).length;
+      return count > 0 ? t("dashboard.pages.linksBuilder.listCount").replace("{n}", String(count)) : generic();
+    }
+    case "gallery":
+    case "image_slider": {
+      const count = ((node.blockData?.images as unknown[] | undefined) ?? []).length;
+      return count > 0 ? t("dashboard.pages.linksBuilder.photoCount").replace("{n}", String(count)) : generic();
+    }
+    default:
+      return generic();
+  }
 }
 
 // FaqItemsEditor -- Canvas Page Builder Fase 2 (permintaan langsung
@@ -316,24 +256,37 @@ function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (
   );
 }
 
-// MediaImageEditor -- Canvas Page Builder Fase 2 langkah 7 (permintaan
-// langsung pengguna 8 September 2026): upload foto TUNGGAL (unggah ulang
-// menimpa), dipakai bersama utk "image", separuh foto "video_image", DAN
-// thumbnail "embed_link" -- ketiganya sama-sama lewat endpoint
-// uploadBuilderMediaImage/deleteBuilderMediaImage (mediaImageBlockTypes,
-// links.go). `key={selectedNode.id}` di titik pemanggilan memaksa remount
-// tiap ganti node terpilih supaya state `uploading` lokal tidak
-// terbawa-bawa ke node lain (pola sama FaqItemsEditor di atas).
+// MediaImageEditor -- redesain total (10 September 2026): `onChanged`
+// SEKARANG menerima URL baru LANGSUNG dari respons upload/delete (bukan
+// callback tanpa argumen yang memicu refetch PENUH seperti sebelumnya) --
+// rute Builder (arsitektur draft) memakai nilai ini utk menambal HANYA
+// path ini di draft & server snapshot sekaligus (lihat handleMediaImageChanged
+// di app/builder/[pageId]/page.tsx), supaya edit draft yang BELUM disimpan
+// di blok LAIN tidak ikut tertimpa oleh refetch penuh (upload gambar
+// SENGAJA tetap langsung ke server terlepas dari status draft, lihat
+// catatan lengkap di rencana Fase 2 -- tapi TIDAK BOLEH ikut menghapus
+// perubahan draft yang belum disimpan di blok lain).
+//
+// `ensureRootPersisted` -- ditemukan lewat tinjauan kode sendiri (bukan
+// dari plan): endpoint upload/hapus ini butuh id ROOT ASLI dari backend --
+// kalau blok/kontainer induknya BARU ditambah & belum pernah disimpan
+// (id masih "temp-...", murni draft lokal), upload akan gagal (baris itu
+// belum ada di database). Dipanggil DULU (sebelum upload/hapus) -- kalau
+// perlu, root itu di-create dulu ke server secara diam-diam, id ASLI hasil
+// panggilan itu dipakai utk request upload/hapus MAUPUN dikirim balik ke
+// `onChanged` (BUKAN `rootId` prop mentah, yang bisa saja masih sementara).
 function MediaImageEditor({
   rootId,
   path,
   imageUrl,
+  onEnsureRootPersisted,
   onChanged,
 }: {
   rootId: string;
   path: BuilderSeg[];
   imageUrl: string | undefined;
-  onChanged: () => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onChanged: (imageUrl: string, resolvedRootId: string) => void;
 }) {
   const { t } = useLocale();
   const [uploading, setUploading] = useState(false);
@@ -346,8 +299,9 @@ function MediaImageEditor({
     setUploading(true);
     setError(null);
     try {
-      await uploadBuilderMediaImage(rootId, file, path);
-      onChanged();
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const { image_url } = await uploadBuilderMediaImage(realRootId, file, path);
+      onChanged(image_url, realRootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
     } finally {
@@ -359,8 +313,9 @@ function MediaImageEditor({
     setUploading(true);
     setError(null);
     try {
-      await deleteBuilderMediaImage(rootId, path);
-      onChanged();
+      const realRootId = await onEnsureRootPersisted(rootId);
+      await deleteBuilderMediaImage(realRootId, path);
+      onChanged("", realRootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
     } finally {
@@ -413,22 +368,22 @@ function MediaImageEditor({
   );
 }
 
-// GalleryGridEditor -- Canvas Page Builder Fase 2 langkah 7: grid
-// multi-foto blok "gallery" (tile "Image Grid"), pola visual disalin dari
-// panel "Kelola foto" dashboard/links/page.tsx TAPI UI baru berdiri
-// sendiri (bukan reuse komponen -- tidak ada komponen gallery panel yang
-// reusable, lihat catatan lengkap di plan) memakai fungsi upload yang
-// SAMA (uploadGalleryImage/deleteGalleryImage) dengan tambahan `path`.
+// GalleryGridEditor -- lihat catatan lengkap di MediaImageEditor di atas:
+// `onChanged` sekarang menerima array `images` TERBARU langsung dari
+// respons upload/delete (BUKAN callback tanpa argumen), PLUS id root ASLI
+// yang benar-benar dipakai request (lihat `onEnsureRootPersisted`).
 function GalleryGridEditor({
   rootId,
   path,
   images,
+  onEnsureRootPersisted,
   onChanged,
 }: {
   rootId: string;
   path: BuilderSeg[];
   images: string[];
-  onChanged: () => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onChanged: (images: string[], resolvedRootId: string) => void;
 }) {
   const { t } = useLocale();
   const [uploading, setUploading] = useState(false);
@@ -441,8 +396,9 @@ function GalleryGridEditor({
     setUploading(true);
     setError(null);
     try {
-      await uploadGalleryImage(rootId, file, path);
-      onChanged();
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await uploadGalleryImage(realRootId, file, path);
+      onChanged(res.images, realRootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
     } finally {
@@ -453,8 +409,9 @@ function GalleryGridEditor({
   async function handleDelete(index: number) {
     setError(null);
     try {
-      await deleteGalleryImage(rootId, index, path);
-      onChanged();
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await deleteGalleryImage(realRootId, index, path);
+      onChanged(res.images, realRootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
     }
@@ -634,9 +591,10 @@ function ListItemsEditor({
 // PATCH yang sama, jadi kalau url & embed dikirim terpisah, mengedit URL
 // SETELAH toggle embed sudah aktif akan meninggalkan koordinat lama/basi.
 // State lokal (url/embed) dipakai supaya nilai TERBARU dari KEDUA field
-// selalu ikut terbawa, apa pun yang baru saja diubah pengguna -- pola
-// SAMA PERSIS `handleSaveContent` (dashboard/links/page.tsx) yang
-// mengirim url+block_data.embed sekaligus lewat satu tombol Simpan.
+// selalu ikut terbawa, apa pun yang baru saja diubah pengguna -- di rute
+// Builder yang baru, "onUpdate" di sini menulis ke DRAFT lokal (bukan
+// langsung API), jadi catatan di atas soal satu-PATCH-sekaligus sekarang
+// berlaku terhadap satu setLinks() sekaligus, bukan satu HTTP request.
 function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url: string, embed: boolean) => void }) {
   const { t } = useLocale();
   const [url, setUrl] = useState(node.url ?? "");
@@ -666,6 +624,394 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
   );
 }
 
+// NodeFieldEditor -- redesain total (10 September 2026): badan JSX dari
+// panel "Edit Blok Terpilih" LAMA (dulu satu blok terpisah, mengambang di
+// BAWAH seluruh tree) -- APA ADANYA (per-blockType switch yang sama persis),
+// cuma diekstrak jadi komponen sendiri supaya bisa dirender IN-PLACE di
+// bawah baris accordion node yang sedang dipilih (lihat TreeNodeView di
+// bawah), bukan di lokasi tetap terpisah dari daftar blok.
+function NodeFieldEditor({
+  node,
+  onUpdateNode,
+  onEnsureRootPersisted,
+  onMediaImageChanged,
+  onGalleryImagesChanged,
+}: {
+  node: BuilderTreeNode;
+  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
+  onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+}) {
+  const { t } = useLocale();
+  const sel = selectionOf(node);
+
+  if (node.blockType === "text") {
+    return (
+      <RichTextEditor
+        key={node.id}
+        html={(node.blockData?.text as string) ?? ""}
+        onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+      />
+    );
+  }
+
+  if (node.blockType === "button") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={node.url ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "video") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={(node.blockData?.video_url as string) ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
+          placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "faq") {
+    return <FaqItemsEditor node={node} onUpdate={(items) => onUpdateNode(sel, { blockData: { items } })} />;
+  }
+
+  if (node.blockType === "image") {
+    return (
+      <MediaImageEditor
+        key={node.id}
+        rootId={node.rootId}
+        path={node.path}
+        imageUrl={(node.blockData?.image_url as string) || undefined}
+        onEnsureRootPersisted={onEnsureRootPersisted}
+        onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
+      />
+    );
+  }
+
+  if (node.blockType === "gallery" || node.blockType === "image_slider") {
+    return (
+      <GalleryGridEditor
+        key={node.id}
+        rootId={node.rootId}
+        path={node.path}
+        images={(node.blockData?.images as string[] | undefined) ?? []}
+        onEnsureRootPersisted={onEnsureRootPersisted}
+        onChanged={(images, resolvedRootId) => onGalleryImagesChanged(resolvedRootId, node.path, images)}
+      />
+    );
+  }
+
+  if (node.blockType === "video_image") {
+    return (
+      <div className="flex flex-col gap-3">
+        <input
+          defaultValue={(node.blockData?.video_url as string) ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
+          placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <MediaImageEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          imageUrl={(node.blockData?.image_url as string) || undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "embed_link") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={node.url ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <textarea
+          defaultValue={node.description ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { description: e.target.value })}
+          rows={2}
+          placeholder={t("dashboard.pages.linksBuilder.embedLinkDescriptionPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <MediaImageEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          imageUrl={(node.blockData?.image_url as string) || undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "countdown") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          type="datetime-local"
+          defaultValue={toDatetimeLocalValue(node.blockData?.target_at as string | undefined)}
+          onBlur={(e) =>
+            onUpdateNode(sel, {
+              blockData: { target_at: e.target.value ? new Date(e.target.value).toISOString() : "" },
+            })
+          }
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "list") {
+    return (
+      <ListItemsEditor
+        node={node}
+        onUpdateStyle={(style) => onUpdateNode(sel, { blockData: { style } })}
+        onUpdateItems={(items) => onUpdateNode(sel, { blockData: { items } })}
+      />
+    );
+  }
+
+  if (node.blockType === "embed") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={(node.blockData?.embed_url as string) ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { blockData: { embed_url: e.target.value } })}
+          placeholder={t("dashboard.pages.linksBuilder.embedUrlPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.embedHint")}</p>
+      </div>
+    );
+  }
+
+  if (node.blockType === "maps") {
+    return <MapsEditor node={node} onUpdate={(url, embed) => onUpdateNode(sel, { url, blockData: { embed } })} />;
+  }
+
+  if (node.blockType === "column") {
+    return (
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.columnCount")}</label>
+        <select
+          defaultValue={((node.blockData?.columns as unknown[] | undefined)?.length ?? 2).toString()}
+          onChange={(e) => {
+            const count = Number(e.target.value);
+            const existing = (node.blockData?.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
+            const columns = Array.from({ length: count }, (_, i) => existing[i] ?? { children: [] });
+            onUpdateNode(sel, { blockData: { columns } });
+          }}
+          className="rounded-lg border border-app-border px-2 py-1 text-xs outline-none focus:border-jeon-purple"
+        >
+          {[2, 3, 4].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  // section/divider/column-slot -- murni wadah, tidak ada field sendiri.
+  return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>;
+}
+
+// TreeNodeView -- redesain total (permintaan langsung pengguna 10 September
+// 2026, referensi "LYNK": "ketika kita mau merubah isi tiap blok/component
+// kita klik sekali pada blok nya baru muncul opsi merubah nya"): SEBELUMNYA
+// klik baris di tree cuma menyalakan `isSelected` (dipakai HANYA sbg
+// highlight visual) sementara editor field-nya mengambang terpisah di
+// BAWAH SELURUH tree (`{selectedNode && (...)}` lama) -- pengguna harus
+// scroll turun mencarinya, tidak jelas blok mana yang sedang diedit kalau
+// tree panjang. SEKARANG: baris yang TERPILIH langsung expand IN-PLACE
+// menampilkan NodeFieldEditor tepat di bawah dirinya sendiri (accordion),
+// mendorong baris-baris lain -- BUKAN mengubah `canExpand`/`collapsed`
+// (itu MASIH murni utk anak Section/Column, konsep terpisah dari "sedang
+// diedit").
+function TreeNodeView({
+  node,
+  depth,
+  selection,
+  onSelect,
+  onDeselect,
+  onDelete,
+  collapsed,
+  onToggleCollapsed,
+  onUpdateNode,
+  onEnsureRootPersisted,
+  onMediaImageChanged,
+  onGalleryImagesChanged,
+}: {
+  node: BuilderTreeNode;
+  depth: number;
+  selection: BuilderSelection | null;
+  onSelect: (node: BuilderTreeNode) => void;
+  onDeselect: () => void;
+  onDelete: (target: BuilderSelection) => void;
+  collapsed: Set<string>;
+  onToggleCollapsed: (id: string) => void;
+  onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
+  onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+}) {
+  const { t } = useLocale();
+  // useSortable -- HANYA node "block" yang bisa diseret (column-slot murni
+  // wadah tampilan "Kolom N", tidak punya urutan sendiri untuk diubah).
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: node.kind !== "block",
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  const isThisSelected = !!selection && selection.rootId === node.rootId && JSON.stringify(selection.path) === JSON.stringify(node.path);
+  const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
+  const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
+  const label = previewLabelFor(node, t);
+  const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        style={{ paddingLeft: `${depth * 16}px` }}
+        className={`flex items-center gap-1 rounded-lg py-1.5 pr-1.5 text-xs ${isThisSelected ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
+      >
+        {node.kind === "block" ? (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={t("dashboard.pages.linksBuilder.dragHandle")}
+            className="flex-shrink-0 cursor-grab touch-none text-app-muted active:cursor-grabbing"
+          >
+            <IconGripVertical className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <span className="w-3.5 flex-shrink-0" />
+        )}
+        {canExpand ? (
+          <button type="button" onClick={() => onToggleCollapsed(node.id)} className="flex-shrink-0 text-app-muted">
+            <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${collapsed.has(node.id) ? "" : "rotate-90"}`} />
+          </button>
+        ) : (
+          <span className="w-3.5 flex-shrink-0" />
+        )}
+        <button
+          type="button"
+          onClick={() => (isThisSelected ? onDeselect() : onSelect(node))}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+        >
+          {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
+          <span className={`truncate ${isThisSelected ? "font-bold text-jeon-purple" : "font-semibold text-app-ink"}`}>{label}</span>
+        </button>
+        {node.kind === "block" && isThisSelected && (
+          <button
+            type="button"
+            onClick={() => {
+              onDelete(selectionOf(node));
+              onDeselect();
+            }}
+            aria-label={t("dashboard.pages.linksBuilder.deleteSelected")}
+            className="flex-shrink-0 text-red-500 hover:text-red-600"
+          >
+            <IconTrash className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {isThisSelected && (
+        <div style={{ paddingLeft: `${(depth + 1) * 16}px` }} className="pb-2.5 pr-1.5 pt-1">
+          <NodeFieldEditor
+            node={node}
+            onUpdateNode={onUpdateNode}
+            onEnsureRootPersisted={onEnsureRootPersisted}
+            onMediaImageChanged={onMediaImageChanged}
+            onGalleryImagesChanged={onGalleryImagesChanged}
+          />
+        </div>
+      )}
+
+      {canExpand && !collapsed.has(node.id) && (
+        <div>
+          {node.children.length === 0 ? (
+            <p style={{ paddingLeft: `${(depth + 1) * 16 + 20}px` }} className="py-1 text-[11px] text-app-muted">
+              {t("dashboard.pages.linksBuilder.emptyContainer")}
+            </p>
+          ) : (
+            <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
+              {node.children.map((child) => (
+                <TreeNodeView
+                  key={child.id}
+                  node={child}
+                  depth={depth + 1}
+                  selection={selection}
+                  onSelect={onSelect}
+                  onDeselect={onDeselect}
+                  onDelete={onDelete}
+                  collapsed={collapsed}
+                  onToggleCollapsed={onToggleCollapsed}
+                  onUpdateNode={onUpdateNode}
+                  onEnsureRootPersisted={onEnsureRootPersisted}
+                  onMediaImageChanged={onMediaImageChanged}
+                  onGalleryImagesChanged={onGalleryImagesChanged}
+                />
+              ))}
+            </SortableContext>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BuilderLeftPanel({
   links,
   selection,
@@ -675,7 +1021,9 @@ export default function BuilderLeftPanel({
   onReorderRoot,
   onReorderChildren,
   onUpdateNode,
-  onRefresh,
+  onEnsureRootPersisted,
+  onMediaImageChanged,
+  onGalleryImagesChanged,
   settingsHref,
   page,
   isPremium,
@@ -702,11 +1050,21 @@ export default function BuilderLeftPanel({
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
-  // onRefresh -- Fase 2 langkah 7: upload/hapus foto (image/gallery/
-  // video_image/embed_link) memutasi baris `links` LANGSUNG di backend
-  // (bukan lewat PATCH onUpdateNode) -- panel ini perlu memicu refetch
-  // supaya `links` prop (dan tree turunannya) ikut termutakhir.
-  onRefresh: () => void;
+  // onEnsureRootPersisted -- ditemukan lewat tinjauan kode sendiri (bukan
+  // dari plan): upload gambar blok (lihat onMediaImageChanged/
+  // onGalleryImagesChanged di bawah) butuh id ROOT ASLI dari backend --
+  // dipanggil MediaImageEditor/GalleryGridEditor SEBELUM upload/hapus,
+  // supaya root yang BARU ditambah & belum pernah disimpan (id masih
+  // "temp-...") otomatis di-create dulu ke server kalau perlu.
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  // onMediaImageChanged/onGalleryImagesChanged -- redesain total (10
+  // September 2026, arsitektur draft): pengganti `onRefresh` lama (refetch
+  // PENUH dari server, menimpa balik SELURUH `links` -- termasuk draft blok
+  // LAIN yang belum disimpan). Upload gambar tetap langsung ke server
+  // (pengecualian yang disetujui, lihat plan), tapi hasilnya ditambal HANYA
+  // ke path spesifik ini di draft & server snapshot rute Builder.
+  onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
+  onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
   settingsHref: string;
   // page/isPremium/onPatch/onLocalChange/onStyleOverride/onUploadAvatar/
   // onUploadBackground/onError/stickers/onStickersChange/designSection/
@@ -715,7 +1073,10 @@ export default function BuilderLeftPanel({
   // bawah SEBELUMNYA cuma placeholder + tautan keluar ke /dashboard/design
   // (Fase 1 builder) -- sekarang berisi Tema/Header/Tombol/Font/Stiker
   // SUNGGUHAN, komponen yang SAMA dipakai ProdukPageEditor.tsx (lihat
-  // components/dashboard/page/design-sections.tsx).
+  // components/dashboard/page/design-sections.tsx). `onPatch`/`onStyleOverride`
+  // di rute Builder (arsitektur draft) SEKARANG menulis ke draft lokal saja,
+  // TIDAK memanggil API -- komponen ini sendiri TIDAK berubah sama sekali,
+  // cuma perilaku pemanggil (app/builder/[pageId]/page.tsx) yang beda.
   page: DesignSectionPage;
   isPremium: boolean;
   onPatch: (patch: DesignSectionPatch) => void;
@@ -756,10 +1117,6 @@ export default function BuilderLeftPanel({
       else next.add(id);
       return next;
     });
-  }
-
-  function isSelected(node: BuilderTreeNode) {
-    return !!selection && selection.rootId === node.rootId && JSON.stringify(selection.path) === JSON.stringify(node.path);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -839,229 +1196,34 @@ export default function BuilderLeftPanel({
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
                   {tree.map((node) => (
-                    <TreeNodeView key={node.id} node={node} depth={0} isSelected={isSelected} onSelect={(n) => onSelectionChange(selectionOf(n))} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+                    <TreeNodeView
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      selection={selection}
+                      onSelect={(n) => onSelectionChange(selectionOf(n))}
+                      onDeselect={() => onSelectionChange(null)}
+                      onDelete={onDelete}
+                      collapsed={collapsed}
+                      onToggleCollapsed={toggleCollapsed}
+                      onUpdateNode={onUpdateNode}
+                      onEnsureRootPersisted={onEnsureRootPersisted}
+                      onMediaImageChanged={onMediaImageChanged}
+                      onGalleryImagesChanged={onGalleryImagesChanged}
+                    />
                   ))}
                 </SortableContext>
               </DndContext>
             )}
           </div>
-
-          {selectedNode && (
-            <div className="flex-shrink-0 border-t border-app-border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wider text-app-muted">{t("dashboard.pages.linksBuilder.editSelected")}</p>
-                {selectedNode.kind === "block" && (
-                  <button
-                    type="button"
-                    onClick={() => { onDelete(selectionOf(selectedNode)); onSelectionChange(null); }}
-                    aria-label={t("dashboard.pages.linksBuilder.deleteSelected")}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {selectedNode.blockType === "text" && (
-                <textarea
-                  defaultValue={(selectedNode.blockData?.text as string) ?? ""}
-                  onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { text: e.target.value } })}
-                  rows={4}
-                  placeholder={t("dashboard.pages.linksBuilder.textPlaceholder")}
-                  className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                />
-              )}
-
-              {selectedNode.blockType === "button" && (
-                <div className="flex flex-col gap-2">
-                  <input
-                    defaultValue={selectedNode.title}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <input
-                    defaultValue={selectedNode.url ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { url: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                </div>
-              )}
-
-              {selectedNode.blockType === "video" && (
-                <div className="flex flex-col gap-2">
-                  <input
-                    defaultValue={selectedNode.title}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <input
-                    defaultValue={(selectedNode.blockData?.video_url as string) ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { video_url: e.target.value } })}
-                    placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                </div>
-              )}
-
-              {selectedNode.blockType === "faq" && (
-                <FaqItemsEditor
-                  node={selectedNode}
-                  onUpdate={(items) => onUpdateNode(selectionOf(selectedNode), { blockData: { items } })}
-                />
-              )}
-
-              {selectedNode.blockType === "image" && (
-                <MediaImageEditor
-                  key={selectedNode.id}
-                  rootId={selectedNode.rootId}
-                  path={selectedNode.path}
-                  imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
-                  onChanged={onRefresh}
-                />
-              )}
-
-              {(selectedNode.blockType === "gallery" || selectedNode.blockType === "image_slider") && (
-                <GalleryGridEditor
-                  key={selectedNode.id}
-                  rootId={selectedNode.rootId}
-                  path={selectedNode.path}
-                  images={(selectedNode.blockData?.images as string[] | undefined) ?? []}
-                  onChanged={onRefresh}
-                />
-              )}
-
-              {selectedNode.blockType === "video_image" && (
-                <div className="flex flex-col gap-3">
-                  <input
-                    defaultValue={(selectedNode.blockData?.video_url as string) ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { video_url: e.target.value } })}
-                    placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <MediaImageEditor
-                    key={selectedNode.id}
-                    rootId={selectedNode.rootId}
-                    path={selectedNode.path}
-                    imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
-                    onChanged={onRefresh}
-                  />
-                </div>
-              )}
-
-              {selectedNode.blockType === "embed_link" && (
-                <div className="flex flex-col gap-2">
-                  <input
-                    defaultValue={selectedNode.title}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <input
-                    defaultValue={selectedNode.url ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { url: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <textarea
-                    defaultValue={selectedNode.description ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { description: e.target.value })}
-                    rows={2}
-                    placeholder={t("dashboard.pages.linksBuilder.embedLinkDescriptionPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <MediaImageEditor
-                    key={selectedNode.id}
-                    rootId={selectedNode.rootId}
-                    path={selectedNode.path}
-                    imageUrl={(selectedNode.blockData?.image_url as string) || undefined}
-                    onChanged={onRefresh}
-                  />
-                </div>
-              )}
-
-              {selectedNode.blockType === "countdown" && (
-                <div className="flex flex-col gap-2">
-                  <input
-                    defaultValue={selectedNode.title}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <input
-                    type="datetime-local"
-                    defaultValue={toDatetimeLocalValue(selectedNode.blockData?.target_at as string | undefined)}
-                    onBlur={(e) =>
-                      onUpdateNode(selectionOf(selectedNode), {
-                        blockData: { target_at: e.target.value ? new Date(e.target.value).toISOString() : "" },
-                      })
-                    }
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                </div>
-              )}
-
-              {selectedNode.blockType === "list" && (
-                <ListItemsEditor
-                  node={selectedNode}
-                  onUpdateStyle={(style) => onUpdateNode(selectionOf(selectedNode), { blockData: { style } })}
-                  onUpdateItems={(items) => onUpdateNode(selectionOf(selectedNode), { blockData: { items } })}
-                />
-              )}
-
-              {selectedNode.blockType === "embed" && (
-                <div className="flex flex-col gap-2">
-                  <input
-                    defaultValue={selectedNode.title}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { title: e.target.value })}
-                    placeholder={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <input
-                    defaultValue={(selectedNode.blockData?.embed_url as string) ?? ""}
-                    onBlur={(e) => onUpdateNode(selectionOf(selectedNode), { blockData: { embed_url: e.target.value } })}
-                    placeholder={t("dashboard.pages.linksBuilder.embedUrlPlaceholder")}
-                    className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-                  />
-                  <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.embedHint")}</p>
-                </div>
-              )}
-
-              {selectedNode.blockType === "maps" && (
-                <MapsEditor
-                  node={selectedNode}
-                  onUpdate={(url, embed) => onUpdateNode(selectionOf(selectedNode), { url, blockData: { embed } })}
-                />
-              )}
-
-              {selectedNode.blockType === "column" && (
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.columnCount")}</label>
-                  <select
-                    defaultValue={((selectedNode.blockData?.columns as unknown[] | undefined)?.length ?? 2).toString()}
-                    onChange={(e) => {
-                      const count = Number(e.target.value);
-                      const existing = (selectedNode.blockData?.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
-                      const columns = Array.from({ length: count }, (_, i) => existing[i] ?? { children: [] });
-                      onUpdateNode(selectionOf(selectedNode), { blockData: { columns } });
-                    }}
-                    className="rounded-lg border border-app-border px-2 py-1 text-xs outline-none focus:border-jeon-purple"
-                  >
-                    {[2, 3, 4].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {(selectedNode.blockType === "section" || selectedNode.blockType === "divider" || selectedNode.kind === "column-slot") && (
-                <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>
-              )}
-            </div>
+          {/* selectedNode dipakai HANYA supaya `addTarget` (di atas) & modal
+              tambah-komponen tahu konteksnya -- editor field-nya sendiri
+              SEKARANG inline di TreeNodeView (lihat catatan lengkap di
+              atas komponen itu), bukan di sini lagi. */}
+          {selectedNode === null && selection && (
+            <p className="flex-shrink-0 border-t border-app-border p-3 text-center text-[11px] text-app-muted">
+              {t("dashboard.pages.linksBuilder.containerHint")}
+            </p>
           )}
         </div>
       )}

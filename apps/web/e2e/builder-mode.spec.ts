@@ -1,18 +1,48 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { registerAndLogin, TEST_IMAGE_PNG_BASE64 } from "./fixtures";
 
 // Canvas Page Builder (migrasi 000096, permintaan langsung pengguna 7
-// September 2026, dua screenshot Lynk.id) -- Fase 1: Section/Column/Text/
-// Button/Divider. Pola sama seperti catalog-nested-blocks.spec.ts: alur
-// dashboard penuh lewat UI SUNGGUHAN, lalu verifikasi reload (bukti
-// tersimpan di server, bukan cuma state React lokal) & halaman publik.
+// September 2026, dua screenshot Lynk.id) -- REDESAIN TOTAL 10 September
+// 2026 (referensi "LYNK"): rute pindah ke /builder/[pageId] (fullscreen,
+// lihat app/builder/layout.tsx), arsitektur DRAFT (semua edit blok/desain
+// murni lokal, baru benar-benar tersimpan ke server begitu tombol
+// "Simpan"/"Simpan & Terbitkan" diklik -- lihat saveDraft di bawah & commitSave,
+// app/builder/[pageId]/page.tsx), blok "Teks" jadi rich-text sungguhan
+// (RichTextEditor.tsx/TipTap, lihat richTextEditor di bawah), label baris
+// tree blok Teks/FAQ/List/Gallery/Image Slider berubah jadi cuplikan ISI
+// begitu terisi (previewLabelFor, BuilderLeftPanel.tsx) BUKAN nama tipe
+// generik lagi selama masih kosong. Pengecualian: upload gambar (foto/
+// gallery) TETAP langsung ke server terlepas status draft (ensureRootPersisted
+// meng-create root yang masih "temp-..." secara diam-diam kalau perlu) --
+// jadi bagian test yang upload lalu langsung reload TETAP valid tanpa perlu
+// Simpan dulu, tapi edit TEKS/judul/url/reorder/hapus WAJIB diikuti Simpan
+// sebelum reload/pindah ke halaman publik, kalau tidak datanya hilang.
+//
+// Pola dasar test TIDAK berubah dari sebelumnya: alur dashboard penuh lewat
+// UI SUNGGUHAN, verifikasi reload (bukti tersimpan di server, bukan cuma
+// state React lokal) & halaman publik.
+
+async function saveDraft(page: Page) {
+  await page.getByRole("button", { name: "Simpan", exact: true }).click();
+  await expect(page.getByText("Perubahan tersimpan.")).toBeVisible({ timeout: 15000 });
+}
+
+// richTextEditor -- blok "Teks" sekarang rich-text (TipTap,
+// RichTextEditor.tsx): area contenteditable TANPA placeholder HTML biasa
+// (beda dari <textarea placeholder="Tulis teks di sini..."> lama) --
+// SATU-SATUNYA elemen contenteditable di seluruh halaman builder (accordion
+// cuma satu blok terbuka sekaligus), aman dicari tanpa scoping tambahan.
+function richTextEditor(page: Page) {
+  return page.locator('[contenteditable="true"]');
+}
+
 test.describe("Canvas Page Builder", () => {
   test("kreator: Section > Column > Text tersimpan & tampil di halaman publik", async ({ page }) => {
     const { username } = await registerAndLogin(page, "builder1");
     await page.goto("/dashboard/links");
 
     await page.getByRole("link", { name: "Buka Mode Builder (Kanvas)" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/links\/builder\/main/);
+    await expect(page).toHaveURL(/\/builder\/main/);
     await expect(page.getByText("Mode Builder")).toBeVisible();
 
     // Tambah Section di root.
@@ -37,20 +67,26 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "Tambah Komponen" }).click();
     await page.getByRole("button", { name: "Teks", exact: true }).click();
     // Menambah komponen TIDAK otomatis memilihnya (selection tetap di
-    // container induk) -- klik baris barunya di pohon dulu sebelum form
-    // edit (textarea) muncul di panel bawah.
-    await page.getByRole("button", { name: "Teks", exact: true }).click({ timeout: 10000 });
-    await expect(page.getByPlaceholder("Tulis teks di sini...")).toBeVisible({ timeout: 10000 });
-    await page.getByPlaceholder("Tulis teks di sini...").fill("Halo dari kolom pertama!");
-    await page.getByPlaceholder("Tulis teks di sini...").blur();
-    await page.waitForTimeout(1000);
+    // container induk) -- klik baris barunya di pohon dulu sebelum editor
+    // rich-text muncul IN-PLACE (accordion, redesain total 10 September
+    // 2026). Baris blok Teks yang MASIH KOSONG berlabel "(Belum ada teks)"
+    // (previewLabelFor, BuilderLeftPanel.tsx) -- BUKAN "Teks" lagi.
+    await page.getByText("(Belum ada teks)").click({ timeout: 10000 });
+    await richTextEditor(page).click();
+    await page.keyboard.type("Halo dari kolom pertama!");
+    // Draft SEKARANG murni lokal -- tekan Simpan & tunggu toast sukses
+    // sebelum reload, kalau tidak perubahan hilang (redesain arsitektur
+    // draft, 10 September 2026).
+    await saveDraft(page);
 
-    // Reload -- pastikan tersimpan di server (block_data bersarang PATCH
-    // ke baris root Section), bukan cuma state lokal.
+    // Reload -- pastikan tersimpan di server (block_data bersarang di baris
+    // root Section), bukan cuma state lokal. Label baris pohon SEKARANG
+    // cuplikan isi teks itu sendiri, bukan "Teks" lagi.
     await page.reload();
-    await expect(page.getByRole("button", { name: "Teks", exact: true })).toBeVisible({ timeout: 10000 });
-    await page.getByRole("button", { name: "Teks", exact: true }).click();
-    await expect(page.getByPlaceholder("Tulis teks di sini...")).toHaveValue("Halo dari kolom pertama!", { timeout: 10000 });
+    const textRow = page.getByRole("button", { name: "Halo dari kolom pertama!", exact: true });
+    await expect(textRow).toBeVisible({ timeout: 10000 });
+    await textRow.click();
+    await expect(richTextEditor(page)).toHaveText("Halo dari kolom pertama!", { timeout: 10000 });
 
     // Halaman publik: Section/Column/Text tampil.
     await page.goto(`/${username}`);
@@ -58,15 +94,16 @@ test.describe("Canvas Page Builder", () => {
 
     // Drag-and-drop DI DALAM SATU kontainer (bukan root): tambah Divider
     // kedua di Kolom 1 (sekarang ada Text lalu Divider), seret Divider ke
-    // atas Text -- verifikasi handleReorderChildren (PATCH block_data
-    // Section, BUKAN reorderLinks).
-    await page.goto(`/dashboard/links/builder/main`);
+    // atas Text -- verifikasi handleReorderChildren (mutasi draft block_data
+    // Section, BUKAN reorderLinks) -- reorder ini draft lokal juga, perlu
+    // Simpan sebelum reload.
+    await page.goto(`/builder/main`);
     await page.getByText("Kolom 1").click();
     await page.getByRole("button", { name: "Tambah Komponen" }).click();
     await page.getByRole("button", { name: "Pemisah", exact: true }).click();
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).toBeVisible({ timeout: 10000 });
 
-    const textHandleNested = page.getByRole("button", { name: "Teks", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
+    const textHandleNested = page.getByRole("button", { name: "Halo dari kolom pertama!", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
     const dividerHandleNested = page.getByRole("button", { name: "Pemisah", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
     const textBoxBefore = await textHandleNested.boundingBox();
     const dividerBoxBefore = await dividerHandleNested.boundingBox();
@@ -82,6 +119,7 @@ test.describe("Canvas Page Builder", () => {
     const dividerBoxAfter = await dividerHandleNested.boundingBox();
     expect(dividerBoxAfter!.y).toBeLessThan(textBoxAfter!.y);
 
+    await saveDraft(page);
     await page.reload();
     await page.getByText("Kolom 1").click();
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).toBeVisible({ timeout: 10000 });
@@ -90,16 +128,19 @@ test.describe("Canvas Page Builder", () => {
     expect(dividerBoxReload!.y).toBeLessThan(textBoxReload!.y);
 
     // Bersihkan Pemisah nested ini sebelum lanjut -- kalau tidak, label
-    // "Pemisah" bakal ganda begitu Pemisah ROOT ditambah di bawah.
+    // "Pemisah" bakal ganda begitu Pemisah ROOT ditambah di bawah. Simpan
+    // dulu supaya penghapusan ini benar-benar tersimpan sebelum navigasi
+    // penuh (page.goto) di bawah membaca ulang dari server.
     await page.getByRole("button", { name: "Pemisah", exact: true }).click();
     await page.getByRole("button", { name: "Hapus blok ini" }).click();
-    await page.waitForTimeout(500);
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).not.toBeVisible();
+    await saveDraft(page);
 
     // Root-level: Divider & Button (URL wajib diisi di ROOT, beda dari
     // anak tertanam) -- lalu reorder & hapus, lewat endpoint links yang
-    // SUDAH ADA (reorderLinks/deleteLink), bukan lib/builder-blocks.ts.
-    await page.goto(`/dashboard/links/builder/main`);
+    // SUDAH ADA (reorderLinks/deleteLink dipanggil commitSave saat Simpan
+    // ditekan), bukan lib/builder-blocks.ts.
+    await page.goto(`/builder/main`);
     await page.getByRole("button", { name: "Tambah Komponen" }).click();
     await page.getByRole("button", { name: "Pemisah", exact: true }).click();
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).toBeVisible({ timeout: 10000 });
@@ -109,9 +150,9 @@ test.describe("Canvas Page Builder", () => {
     await expect(page.getByRole("button", { name: "Tombol", exact: true }).first()).toBeVisible({ timeout: 10000 });
 
     // Drag-and-drop (@dnd-kit) di level root: seret baris Tombol (paling
-    // bawah) ke atas Pemisah -- urutan baru tersimpan lewat reorderLinks
-    // (handleReorderRoot, links/builder/[pageId]/page.tsx), BUKAN
-    // lib/builder-blocks.ts (itu cuma utk isi Section/Column).
+    // bawah) ke atas Pemisah -- urutan baru disimpan lewat reorderLinks
+    // saat Simpan ditekan (commitSave, app/builder/[pageId]/page.tsx),
+    // BUKAN lib/builder-blocks.ts (itu cuma utk isi Section/Column).
     const pemisahHandle = page.getByRole("button", { name: "Pemisah", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
     const tombolHandle = page.getByRole("button", { name: "Tombol", exact: true }).first().locator("..").getByLabel("Seret untuk mengurutkan");
     const pemisahBoxBefore = await pemisahHandle.boundingBox();
@@ -134,17 +175,18 @@ test.describe("Canvas Page Builder", () => {
 
     // Reload -- urutan baru tersimpan di server (reorderLinks), bukan
     // cuma state lokal.
+    await saveDraft(page);
     await page.reload();
     await expect(page.getByRole("button", { name: "Tombol", exact: true }).first()).toBeVisible({ timeout: 10000 });
     const pemisahBoxReload = await pemisahHandle.boundingBox();
     const tombolBoxReload = await tombolHandle.boundingBox();
     expect(tombolBoxReload!.y).toBeLessThan(pemisahBoxReload!.y);
 
-    // Hapus blok Pemisah root (lewat deleteLink yang sudah ada).
+    // Hapus blok Pemisah root (lewat deleteLink saat Simpan ditekan).
     await page.getByRole("button", { name: "Pemisah", exact: true }).click();
     await page.getByRole("button", { name: "Hapus blok ini" }).click();
-    await page.waitForTimeout(500);
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).not.toBeVisible();
+    await saveDraft(page);
 
     await page.reload();
     await expect(page.getByRole("button", { name: "Tombol", exact: true }).first()).toBeVisible({ timeout: 10000 });
@@ -269,13 +311,22 @@ test.describe("Canvas Page Builder", () => {
     // Kolom 2: tambah Foto juga (occurrence ke-3), TAPI JANGAN unggah --
     // kontrol isolasi sibling (harus tetap "Unggah Foto" terus, tidak
     // boleh ketiban image_url dari Kolom 1 lewat resolveBuilderBlockData
-    // yang salah jalan).
+    // yang salah jalan). Blok ini TIDAK PERNAH diunggah fotonya, jadi
+    // TIDAK auto-persisted lewat ensureRootPersisted -- murni draft, wajib
+    // ikut Simpan (lihat di bawah) supaya tetap ada setelah reload.
     await page.getByText("Kolom 2").click();
     await addComponent("Foto");
     await expect(page.getByRole("button", { name: "Foto", exact: true }).nth(2)).toBeVisible({ timeout: 10000 });
     await page.getByRole("button", { name: "Foto", exact: true }).nth(2).click();
     await expect(page.getByText("Unggah Foto")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("Ganti Foto")).not.toBeVisible();
+
+    // ---- Simpan -- WAJIB sebelum reload (redesain arsitektur draft, 10
+    // September 2026): Video/FAQ/Embed Link TIDAK PERNAH diupload fotonya,
+    // jadi TIDAK auto-persisted lewat ensureRootPersisted seperti Foto/
+    // Video+Foto/Image Grid -- tanpa Simpan, ketiganya (dan Foto Kolom 2
+    // yang tanpa upload) akan LENYAP begitu reload (masih id "temp-...").
+    await saveDraft(page);
 
     // ---- Reload -- pastikan semuanya tersimpan di server ----
     await page.reload();
@@ -357,7 +408,7 @@ test.describe("Canvas Page Builder", () => {
     await expect(treeRow("Card/List/Testimoni")).toBeVisible({ timeout: 10000 });
     await treeRow("Card/List/Testimoni").click();
     await page.getByRole("button", { name: "Testimoni", exact: true }).click();
-    await page.waitForTimeout(700); // PATCH ganti style -- tunggu selesai sebelum Tambah Item (butuh style testimony utk placeholder "Nama").
+    await page.waitForTimeout(700); // ganti style ke draft lokal -- tunggu re-render sebelum Tambah Item (butuh style testimony utk placeholder "Nama").
     await page.getByRole("button", { name: "Tambah Item" }).click();
     await page.waitForTimeout(700);
     await page.getByPlaceholder("Nama").fill("Budi Santoso");
@@ -391,30 +442,43 @@ test.describe("Canvas Page Builder", () => {
     await treeRow("Lokasi/Maps").click();
     await page.getByPlaceholder("Tautan berbagi Google Maps").fill("https://www.google.com/maps/place/Monas/@-6.1753871,106.8249641,17z");
     await page.getByPlaceholder("Tautan berbagi Google Maps").blur();
-    await page.waitForTimeout(500);
-    // resolveMapsEmbedCoords (backend) benar-benar memanggil Google Maps
-    // sungguhan begitu toggle embed dinyalakan -- beri waktu lebih.
-    const [mapsPatchResp] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes("/dashboard/links/") && r.request().method() === "PATCH"),
-      page.getByText("Tampilkan peta interaktif (embed)").click(),
-    ]);
-    expect(mapsPatchResp.status()).toBe(200);
-    await page.waitForTimeout(500);
+    await page.getByText("Tampilkan peta interaktif (embed)").click();
+    await expect(page.locator('input[type="checkbox"]')).toBeChecked();
+
+    // ---- Simpan -- SEMUA blok di atas draft lokal murni sampai di sini
+    // (redesain arsitektur draft, 10 September 2026), KECUALI Image Slider
+    // (fotonya sudah auto-persisted lewat ensureRootPersisted saat upload).
+    // resolveMapsEmbedCoords (backend) dipanggil begitu blok Maps ini
+    // benar-benar dibuat/diperbarui ke server (POST /dashboard/blocks kalau
+    // baru pertama kali, PATCH /dashboard/links/:id kalau sudah ada) --
+    // toast sukses di bawah cukup jadi bukti resolveMapsEmbedCoords TIDAK
+    // gagal (kalau gagal, commitSave akan menampilkan pesan error, bukan
+    // toast sukses).
+    await saveDraft(page);
 
     // ---- Reload -- pastikan semuanya tersimpan di server ----
     await page.reload();
     await expect(treeRow("Countdown")).toBeVisible({ timeout: 10000 });
-    await expect(treeRow("Card/List/Testimoni")).toBeVisible();
-    await expect(treeRow("Image Slider")).toBeVisible();
+    // List & Image Slider SEKARANG berlabel jumlah isi ("1 item"/"1 foto"),
+    // BUKAN nama tipe generik lagi -- previewLabelFor, BuilderLeftPanel.tsx
+    // (redesain total 10 September 2026, isinya sudah terisi di titik ini).
+    await expect(treeRow("1 item")).toBeVisible();
+    await expect(treeRow("1 foto")).toBeVisible();
     await expect(treeRow("Embed")).toBeVisible();
     await expect(treeRow("Lokasi/Maps")).toBeVisible();
 
-    await treeRow("Card/List/Testimoni").click();
+    await treeRow("1 item").click();
     // style "testimony" bertahan setelah reload -- bukti langsung bug
     // merge block_data (handleUpdateNode cabang root) sudah diperbaiki,
     // bukan cuma "items tersimpan" tanpa "style" ikut hilang diam-diam.
     await expect(page.getByRole("button", { name: "Testimoni", exact: true })).toHaveClass(/border-jeon-purple/);
     await expect(page.getByPlaceholder("Nama")).toHaveValue("Budi Santoso", { timeout: 10000 });
+
+    await treeRow("Lokasi/Maps").click();
+    // Toggle embed bertahan setelah reload -- bukti field ini benar-benar
+    // ikut tersimpan (BUKAN cuma state lokal MapsEditor yang hilang begitu
+    // komponen remount, lihat catatan lengkap di MapsEditor, BuilderLeftPanel.tsx).
+    await expect(page.locator('input[type="checkbox"]')).toBeChecked();
 
     // ---- Halaman publik: verifikasi render + CSP frame-src nyata ----
     const cspViolations: string[] = [];

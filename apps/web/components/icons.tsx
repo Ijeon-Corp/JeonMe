@@ -944,3 +944,70 @@ export function IconIframe({ className }: IconProps) {
     </svg>
   );
 }
+
+// IconBold/IconItalic/IconUnderline/IconStrikethrough/IconListBullet/
+// IconListNumbered -- toolbar RichTextEditor.tsx (redesain total Canvas
+// Page Builder, 10 September 2026, referensi "LYNK"): set baru, tidak ada
+// padanan sebelumnya di file ini (TYPE_ICON di BuilderLeftPanel.tsx cuma
+// ikon TIPE blok, bukan ikon FORMAT teks di dalamnya).
+export function IconBold({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M7 4.5h6.2a3.55 3.55 0 0 1 0 7.1H7Zm0 7.1h6.9a3.7 3.7 0 0 1 0 7.4H7Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconItalic({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M11 4.5h7M6 19.5h7M14.5 4.5 9.5 19.5" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconUnderline({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M6 4.5v6.5a6 6 0 0 0 12 0V4.5M5 19.5h14" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconStrikethrough({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M6.5 7c0-1.7 2-3 5-3s5 1 5.3 2.6M7 17c.3 1.7 2.3 3 5.3 3s5-1.3 5-3c0-1.4-1-2.3-2.6-2.8M4 12h16"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function IconListBullet({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M9 6.5h11M9 12h11M9 17.5h11" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <circle cx="4.3" cy="6.5" r="1.1" fill="currentColor" />
+      <circle cx="4.3" cy="12" r="1.1" fill="currentColor" />
+      <circle cx="4.3" cy="17.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconListNumbered({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M9 6.5h11M9 12h11M9 17.5h11" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path d="M4 5.5h1v3M4 8.5h2M4.3 13.2c0-.6.5-1 1.1-1s1.1.4 1.1 1c0 .5-.3.8-.7 1.1l-1.4 1.2h2.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -1896,7 +1896,7 @@ export default function DashboardLinksPage() {
             halaman utama, id halaman tambahan selain itu -- konvensi BARU
             route ini (lihat catatan lengkap di page.tsx-nya). */}
         <Link
-          href={`/dashboard/links/builder/${activePage ? activePage.id : "main"}`}
+          href={`/builder/${activePage ? activePage.id : "main"}`}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border-2 border-jeon-ink bg-app-surface py-2.5 text-sm font-bold text-app-ink transition-transform hover:scale-[1.01]"
         >
           <IconColumns className="h-4 w-4" />

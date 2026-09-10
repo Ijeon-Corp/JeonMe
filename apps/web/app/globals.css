@@ -981,3 +981,28 @@ h1, h2, h3, h4, h5 {
   border-color: #7657ff;
   color: #7657ff;
 }
+
+/* jeon-rich-text-content -- redesain total Canvas Page Builder (permintaan
+   langsung pengguna 10 September 2026, blok "text" pakai RichTextEditor.tsx/
+   TipTap sekarang): dipakai KEDUA sisi (editor TipTap di builder & render
+   publik tersanitasi di PagePreview.tsx) supaya tampilannya identik.
+   Tailwind preflight menghapus margin/padding/list-style bawaan ul/ol/p --
+   tanpa ini, "list" hasil toolbar Bullet/Numbered tampil rata tanpa bullet
+   ataupun indentasi sama sekali. */
+.jeon-rich-text-content p {
+  margin: 0.35em 0;
+}
+.jeon-rich-text-content ul,
+.jeon-rich-text-content ol {
+  margin: 0.35em 0;
+  padding-left: 1.25em;
+}
+.jeon-rich-text-content ul {
+  list-style: disc;
+}
+.jeon-rich-text-content ol {
+  list-style: decimal;
+}
+.jeon-rich-text-content li {
+  margin: 0.15em 0;
+}

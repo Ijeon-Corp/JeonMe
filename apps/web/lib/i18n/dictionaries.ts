@@ -953,6 +953,42 @@ export const dictionaries = {
           addingInto: "Komponen baru akan ditambahkan ke dalam blok yang dipilih.",
           editSelected: "Edit Blok Terpilih",
           deleteSelected: "Hapus blok ini",
+          // save/savePublish/saving/saveSuccess/publishSuccess/
+          // unsavedChangesWarning -- redesain total (permintaan langsung
+          // pengguna 10 September 2026, referensi "LYNK"): SEBELUMNYA tiap
+          // field autosave sendiri-sendiri, TIDAK ADA tombol simpan sama
+          // sekali -- sekarang seluruh builder pakai model draft, cuma
+          // benar-benar tersimpan ke server saat salah satu tombol ini
+          // ditekan (dikonfirmasi via AskUserQuestion, "Draft sungguhan
+          // spt referensi").
+          save: "Simpan",
+          savePublish: "Simpan & Terbitkan",
+          saving: "Menyimpan...",
+          saveSuccess: "Perubahan tersimpan.",
+          publishSuccess: "Tersimpan & diterbitkan.",
+          unsavedChangesWarning: "Ada perubahan yang belum disimpan. Yakin ingin keluar?",
+          renameTitlePlaceholder: "Nama halaman",
+          // textEmptyPreview/faqCount/listCount/photoCount -- redesain total
+          // (permintaan langsung pengguna 10 September 2026, "tidak perlu
+          // tampilkan teks component nya tetapi hanya isi dari component
+          // nya saja"): preview isi blok di tree kiri, pengganti nama tipe
+          // generik ("Text"/dst) yang SEBELUMNYA selalu tampil kalau field
+          // `title` blok itu kosong.
+          textEmptyPreview: "(Belum ada teks)",
+          faqCount: "{n} pertanyaan",
+          listCount: "{n} item",
+          photoCount: "{n} foto",
+          // richText.* -- toolbar RichTextEditor.tsx (TipTap), blok "text"
+          // (permintaan langsung pengguna 10 September 2026, "bangun
+          // rich-text sungguhan", dikonfirmasi via AskUserQuestion).
+          richText: {
+            bold: "Tebal",
+            italic: "Miring",
+            underline: "Garis bawah",
+            strike: "Coret",
+            bulletList: "Daftar poin",
+            orderedList: "Daftar bernomor",
+          },
           textPlaceholder: "Tulis teks di sini...",
           buttonTitlePlaceholder: "Label tombol",
           buttonUrlPlaceholder: "https://...",
@@ -3838,6 +3874,25 @@ export const dictionaries = {
           addingInto: "The new component will be added inside the selected block.",
           editSelected: "Edit Selected Block",
           deleteSelected: "Delete this block",
+          save: "Save",
+          savePublish: "Save & Publish",
+          saving: "Saving...",
+          saveSuccess: "Changes saved.",
+          publishSuccess: "Saved & published.",
+          unsavedChangesWarning: "You have unsaved changes. Leave anyway?",
+          renameTitlePlaceholder: "Page name",
+          textEmptyPreview: "(No text yet)",
+          faqCount: "{n} questions",
+          listCount: "{n} items",
+          photoCount: "{n} photos",
+          richText: {
+            bold: "Bold",
+            italic: "Italic",
+            underline: "Underline",
+            strike: "Strikethrough",
+            bulletList: "Bullet list",
+            orderedList: "Numbered list",
+          },
           textPlaceholder: "Write your text here...",
           buttonTitlePlaceholder: "Button label",
           buttonUrlPlaceholder: "https://...",
