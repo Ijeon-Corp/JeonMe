@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ApiError,
@@ -24,6 +24,7 @@ import { IconCheck, IconChevronRight, IconClock, IconStar, IconX } from "@/compo
 // webhook belum sempat diproses.
 export default function CheckoutStatusPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [status, setStatus] = useState<CheckoutStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +118,42 @@ export default function CheckoutStatusPage() {
 
   const backToCreatorHref = status?.creator_username ? `/${status.creator_username}` : null;
 
+  // showsActionableContent -- permintaan langsung pengguna, 11 September
+  // 2026 ("info bahwa produk telah dikirimkan ke email lalu redirect ke lp
+  // lagi setelah 5 detik"): auto-redirect HANYA masuk akal kalau halaman
+  // ini TIDAK punya apa pun untuk diambil pembeli (Payment Link/Donasi/
+  // Event registrasi -- delivery_method-nya sengaja kosong, lihat
+  // CheckoutStatus.delivery_method) -- produk digital/bundel/kursus TETAP
+  // seperti sebelumnya (TIDAK auto-redirect) supaya pembeli sempat
+  // mengunduh & memberi rating dulu (dikonfirmasi via AskUserQuestion).
+  const showsActionableContent = Boolean(status?.is_bundle || status?.is_course || status?.delivery_method);
+
+  // redirectSeconds/redirectCancelled -- hitung mundur 5 detik + tombol
+  // "Batal" (permintaan sama) supaya pembeli yang masih ingin memberi
+  // rating tetap punya jalan keluar, bukan dipaksa pergi begitu saja.
+  // Nilai awal 5 lewat useState (BUKAN di-set balik di badan efek) --
+  // react-hooks/set-state-in-effect (lihat CLAUDE.md) melarang setState
+  // sinkron di badan efek, kedua panggilan di bawah SENGAJA hanya terjadi
+  // di dalam callback interval/timeout (async), bukan langsung di badan efek.
+  const [redirectSeconds, setRedirectSeconds] = useState(5);
+  const [redirectCancelled, setRedirectCancelled] = useState(false);
+  const showRedirectCountdown = status?.status === "paid" && !showsActionableContent && !!backToCreatorHref && !redirectCancelled;
+
+  useEffect(() => {
+    if (!showRedirectCountdown || !backToCreatorHref) return;
+    const interval = setInterval(() => {
+      setRedirectSeconds((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    const timeout = setTimeout(() => {
+      router.push(backToCreatorHref);
+    }, 5000);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router stabil dari Next, tidak perlu memicu ulang efek.
+  }, [showRedirectCountdown, backToCreatorHref]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-jeon-purple/5 px-4">
       {status?.social_proof && (
@@ -172,6 +209,30 @@ export default function CheckoutStatusPage() {
                     </>
                   )}
                 </p>
+
+                {/* Info email + auto-redirect -- permintaan langsung pengguna,
+                    11 September 2026 ("infokan bahwa misal product telah
+                    dikirimkan ke email lalu redirect ke lp lagi setelah 5
+                    detik"): HANYA untuk Payment Link/Donasi/Event registrasi
+                    (lihat showsActionableContent) -- produk digital/bundel/
+                    kursus TETAP seperti sebelumnya (dikonfirmasi via
+                    AskUserQuestion), supaya pembeli sempat mengunduh & kasih
+                    rating dulu tanpa dipaksa pergi. */}
+                {showRedirectCountdown && (
+                  <div className="mt-4 rounded-xl border border-border bg-jeon-purple/5 p-3.5 text-center">
+                    <p className="text-sm text-app-ink">Detail pesanan sudah dikirim ke emailmu.</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Mengalihkan ke halaman kreator dalam {redirectSeconds} detik...{" "}
+                      <button
+                        type="button"
+                        onClick={() => setRedirectCancelled(true)}
+                        className="font-semibold text-jeon-purple underline"
+                      >
+                        Batal
+                      </button>
+                    </p>
+                  </div>
+                )}
 
                 {status.is_bundle && (
                   <div className="mt-4 flex flex-col gap-2 text-left">
