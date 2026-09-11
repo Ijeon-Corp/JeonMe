@@ -968,16 +968,19 @@ export const dictionaries = {
           publishSuccess: "Tersimpan & diterbitkan.",
           unsavedChangesWarning: "Ada perubahan yang belum disimpan. Yakin ingin keluar?",
           renameTitlePlaceholder: "Nama halaman",
-          // textEmptyPreview/faqCount/listCount/photoCount -- redesain total
-          // (permintaan langsung pengguna 10 September 2026, "tidak perlu
-          // tampilkan teks component nya tetapi hanya isi dari component
-          // nya saja"): preview isi blok di tree kiri, pengganti nama tipe
-          // generik ("Text"/dst) yang SEBELUMNYA selalu tampil kalau field
-          // `title` blok itu kosong.
+          // textEmptyPreview -- redesain total (permintaan langsung pengguna
+          // 10 September 2026, "tidak perlu tampilkan teks component nya
+          // tetapi hanya isi dari component nya saja"): preview ISI blok
+          // "text" di tree kiri, pengganti nama tipe generik ("Text") yang
+          // SEBELUMNYA selalu tampil kalau field `title` blok itu kosong.
+          // Susulan 12 September 2026 ("harusnya teks yang muncul itu teks
+          // jenis blok nya"): "text" TETAP pengecualian ini (isinya sendiri
+          // langsung berguna dibaca sekilas), tapi FAQ/List/Gallery/Image
+          // Slider/Produk DIKEMBALIKAN ke nama tipe generik biasa (lihat
+          // previewLabelFor, BuilderLeftPanel.tsx) -- faqCount/listCount/
+          // photoCount/produkCount/produkEmptyPreview yang dulu dipakai di
+          // sana DIHAPUS, sudah tidak terpakai di mana pun.
           textEmptyPreview: "(Belum ada teks)",
-          faqCount: "{n} pertanyaan",
-          listCount: "{n} item",
-          photoCount: "{n} foto",
           // richText.* -- toolbar RichTextEditor.tsx (TipTap), blok "text"
           // (permintaan langsung pengguna 10 September 2026, "bangun
           // rich-text sungguhan", dikonfirmasi via AskUserQuestion).
@@ -998,9 +1001,7 @@ export const dictionaries = {
           videoUrlPlaceholder: "Tautan YouTube atau TikTok",
           embedLinkTitlePlaceholder: "Judul kartu",
           embedLinkUrlPlaceholder: "https://... (opsional)",
-          embedLinkDescriptionPlaceholder: "Deskripsi singkat (opsional)",
           faqQuestionPlaceholder: "Pertanyaan",
-          faqAnswerPlaceholder: "Jawaban",
           faqAddQuestion: "Tambah Pertanyaan",
           faqRemoveQuestion: "Hapus pertanyaan",
           // Fase 2 langkah 7 (permintaan langsung pengguna 8 September
@@ -1020,8 +1021,6 @@ export const dictionaries = {
           listStyleTestimony: "Testimoni",
           listItemTitlePlaceholder: "Judul",
           listItemNamePlaceholder: "Nama",
-          listItemDescriptionPlaceholder: "Deskripsi",
-          listItemQuotePlaceholder: "Kutipan/testimoni",
           listItemAuthorPlaceholder: "Peran/perusahaan (opsional)",
           listAddItem: "Tambah Item",
           listRemoveItem: "Hapus item",
@@ -1033,7 +1032,6 @@ export const dictionaries = {
           legacyBlockHint: "Blok ini dibuat lewat editor lama dan belum bisa diedit di sini -- kelola isinya lewat halaman Tautan.",
           // produk* -- blok "Produk" (permintaan langsung pengguna 10
           // September 2026, "harusnya ada blok produk").
-          produkEmptyPreview: "(Belum pilih produk)",
           produkSelectExisting: "Pilih produk yang sudah ada",
           produkCreateNew: "Buat Produk Baru",
           produkNoProducts: "Belum ada produk -- buat yang pertama.",
@@ -1046,12 +1044,11 @@ export const dictionaries = {
           produkLayoutCardSmall: "Kartu Kecil",
           produkLayoutRowWithImage: "Baris dengan Gambar",
           produkLayoutRowNoImage: "Baris Tanpa Gambar",
-          // produkCount/produkAddMore/produkDone/produkRemoveProduct --
-          // susulan 12 September 2026 ("bisa di atur per blok misal berisi
-          // 2 produk"): blok "produk" sekarang bisa berisi BANYAK produk
-          // sekaligus (multi-select), tersusun grid 2 kolom begitu isinya
-          // 2 atau lebih (lihat renderBuilderNode, PagePreview.tsx).
-          produkCount: "{n} Produk",
+          // produkAddMore/produkDone/produkRemoveProduct -- susulan 12
+          // September 2026 ("bisa di atur per blok misal berisi 2 produk"):
+          // blok "produk" sekarang bisa berisi BANYAK produk sekaligus
+          // (multi-select), tersusun grid 2 kolom begitu isinya 2 atau
+          // lebih (lihat renderBuilderNode, PagePreview.tsx).
           produkAddMore: "+ Tambah Produk",
           produkDone: "Selesai",
           produkRemoveProduct: "Hapus {name} dari blok ini",
@@ -3913,9 +3910,6 @@ export const dictionaries = {
           unsavedChangesWarning: "You have unsaved changes. Leave anyway?",
           renameTitlePlaceholder: "Page name",
           textEmptyPreview: "(No text yet)",
-          faqCount: "{n} questions",
-          listCount: "{n} items",
-          photoCount: "{n} photos",
           richText: {
             bold: "Bold",
             italic: "Italic",
@@ -3931,9 +3925,7 @@ export const dictionaries = {
           videoUrlPlaceholder: "YouTube or TikTok link",
           embedLinkTitlePlaceholder: "Card title",
           embedLinkUrlPlaceholder: "https://... (optional)",
-          embedLinkDescriptionPlaceholder: "Short description (optional)",
           faqQuestionPlaceholder: "Question",
-          faqAnswerPlaceholder: "Answer",
           faqAddQuestion: "Add Question",
           faqRemoveQuestion: "Remove question",
           uploadPhoto: "Upload Photo",
@@ -3949,8 +3941,6 @@ export const dictionaries = {
           listStyleTestimony: "Testimonial",
           listItemTitlePlaceholder: "Title",
           listItemNamePlaceholder: "Name",
-          listItemDescriptionPlaceholder: "Description",
-          listItemQuotePlaceholder: "Quote/testimonial",
           listItemAuthorPlaceholder: "Role/company (optional)",
           listAddItem: "Add Item",
           listRemoveItem: "Remove item",
@@ -3960,7 +3950,6 @@ export const dictionaries = {
           containerHint: "This block is just a container -- select one of its children to edit, or add a new component inside it.",
           legacyLinkHint: "This link's icon, lock, and schedule are still managed on the Links page.",
           legacyBlockHint: "This block was created with an older editor and can't be edited here yet -- manage it from the Links page.",
-          produkEmptyPreview: "(No product selected)",
           produkSelectExisting: "Select an existing product",
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",
@@ -3969,7 +3958,6 @@ export const dictionaries = {
           produkLayoutCardSmall: "Small Card",
           produkLayoutRowWithImage: "Row with Image",
           produkLayoutRowNoImage: "Row, No Image",
-          produkCount: "{n} Products",
           produkAddMore: "+ Add Product",
           produkDone: "Done",
           produkRemoveProduct: "Remove {name} from this block",

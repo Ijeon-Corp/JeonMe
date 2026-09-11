@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconChevronRight } from "@/components/icons";
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 
 export interface FaqItem {
   question: string;
@@ -54,7 +55,16 @@ export default function FaqBlock({
                 className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${openIndex === i ? "rotate-90" : ""}`}
               />
             </button>
-            {openIndex === i && <p className={`pb-2 text-xs ${itemBodyClassName}`}>{item.answer}</p>}
+            {openIndex === i && (
+              // whitespace-pre-line -- kompatibilitas mundur: jawaban FAQ
+              // yang dibuat SEBELUM diperluas jadi rich text (12 September
+              // 2026) menyimpan plain string dgn newline literal, TANPA
+              // tag <p>/<br> -- lihat catatan lengkap yang sama di blok "text".
+              <p
+                className={`jeon-rich-text-content whitespace-pre-line pb-2 text-xs ${itemBodyClassName}`}
+                dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(item.answer) }}
+              />
+            )}
           </div>
         ))}
       </div>

@@ -196,39 +196,26 @@ function getBlockProductIds(node: BuilderTreeNode): string[] {
 // JUMLAH item -- tipe lain (button/video/embed_link/dst) SUDAH benar
 // (title terisi begitu pengguna mengisinya), fallback nama tipe generik
 // HANYA kalau benar-benar belum diisi sama sekali, sama seperti sebelumnya.
-function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string, products: DashboardProduct[]): string {
+function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): string {
   if (node.kind === "column-slot") {
     const lastSeg = node.path[node.path.length - 1];
     return `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`;
   }
   const generic = () => node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
   switch (node.blockType) {
-    case "produk": {
-      const ids = getBlockProductIds(node);
-      if (ids.length === 0) return t("dashboard.pages.linksBuilder.produkEmptyPreview");
-      if (ids.length === 1) {
-        const product = products.find((p) => p.id === ids[0]);
-        return product ? product.name : t("dashboard.pages.linksBuilder.produkEmptyPreview");
-      }
-      return t("dashboard.pages.linksBuilder.produkCount").replace("{n}", String(ids.length));
-    }
+    // "text" TETAP tampilkan cuplikan ISI (bukan nama tipe generik) --
+    // SATU-SATUNYA pengecualian, karena isinya sendiri (bukan sekadar
+    // jumlah item) langsung berguna dibaca sekilas di tree.
     case "text": {
       const plain = stripHtml((node.blockData?.text as string) ?? "");
       return plain ? truncate(plain, 40) : t("dashboard.pages.linksBuilder.textEmptyPreview");
     }
-    case "faq": {
-      const count = ((node.blockData?.items as unknown[] | undefined) ?? []).length;
-      return count > 0 ? t("dashboard.pages.linksBuilder.faqCount").replace("{n}", String(count)) : generic();
-    }
-    case "list": {
-      const count = ((node.blockData?.items as unknown[] | undefined) ?? []).length;
-      return count > 0 ? t("dashboard.pages.linksBuilder.listCount").replace("{n}", String(count)) : generic();
-    }
-    case "gallery":
-    case "image_slider": {
-      const count = ((node.blockData?.images as unknown[] | undefined) ?? []).length;
-      return count > 0 ? t("dashboard.pages.linksBuilder.photoCount").replace("{n}", String(count)) : generic();
-    }
+    // produk/faq/list/gallery/image_slider -- perbaikan langsung pengguna
+    // 12 September 2026 ("harusnya teks yang muncul itu teks jenis blok
+    // nya"): SEBELUMNYA tampilkan ringkasan jumlah item ("2 questions"/
+    // "2 Products"/"2 photos") -- kreator lebih suka lihat NAMA JENIS
+    // BLOK-nya sekilas (jatuh ke `generic()` di bawah, SAMA seperti
+    // button/video/embed_link/dst yang sudah begitu sejak awal).
     default:
       return generic();
   }
@@ -272,13 +259,11 @@ function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (
               <IconTrash className="h-3.5 w-3.5" />
             </button>
           </div>
-          <textarea
-            defaultValue={item.answer}
-            onBlur={(e) => updateItem(i, { answer: e.target.value })}
-            rows={2}
-            placeholder={t("dashboard.pages.linksBuilder.faqAnswerPlaceholder")}
-            className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
-          />
+          {/* Jawaban FAQ -- rich text (susulan 12 September 2026, "tiap
+              blok yang ada teks nya buat semua jadi rich teks",
+              dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
+              saja) -- reuse RichTextEditor sama persis blok "text". */}
+          <RichTextEditor html={item.answer} onChange={(html) => updateItem(i, { answer: html })} />
         </div>
       ))}
       <button
@@ -588,15 +573,14 @@ function ListItemsEditor({
                 <IconTrash className="h-3.5 w-3.5" />
               </button>
             </div>
-            <textarea
-              defaultValue={item.description ?? ""}
-              onBlur={(e) => updateItem(i, { description: e.target.value })}
-              rows={2}
-              placeholder={
-                isTestimony ? t("dashboard.pages.linksBuilder.listItemQuotePlaceholder") : t("dashboard.pages.linksBuilder.listItemDescriptionPlaceholder")
-              }
-              className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
-            />
+            {/* Deskripsi/kutipan -- rich text (susulan 12 September 2026,
+                "tiap blok yang ada teks nya buat semua jadi rich teks",
+                dikonfirmasi via AskUserQuestion: field isi/deskripsi
+                panjang saja) -- reuse RichTextEditor sama persis blok
+                "text" (TIDAK punya placeholder dinamis list/testimoni
+                seperti textarea lama, TipTap tidak punya extension
+                placeholder terpasang). */}
+            <RichTextEditor html={item.description ?? ""} onChange={(html) => updateItem(i, { description: html })} />
             {isTestimony && (
               <input
                 defaultValue={item.author ?? ""}
@@ -1038,12 +1022,14 @@ function NodeFieldEditor({
           placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
           className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
         />
-        <textarea
-          defaultValue={node.description ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { description: e.target.value })}
-          rows={2}
-          placeholder={t("dashboard.pages.linksBuilder.embedLinkDescriptionPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        {/* Deskripsi Embed Link -- rich text (susulan 12 September 2026,
+            "tiap blok yang ada teks nya buat semua jadi rich teks",
+            dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
+            saja) -- reuse RichTextEditor sama persis blok "text". */}
+        <RichTextEditor
+          key={node.id}
+          html={node.description ?? ""}
+          onChange={(html) => onUpdateNode(sel, { description: html })}
         />
         <MediaImageEditor
           key={node.id}
@@ -1228,7 +1214,7 @@ function TreeNodeView({
   const isThisSelected = !!selection && selection.rootId === node.rootId && JSON.stringify(selection.path) === JSON.stringify(node.path);
   const Icon = node.kind === "block" ? (TYPE_ICON[node.blockType ?? ""] ?? IconBox) : null;
   const canExpand = node.kind === "column-slot" || node.blockType === "section" || node.blockType === "column";
-  const label = previewLabelFor(node, t, products);
+  const label = previewLabelFor(node, t);
   const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
 
   return (

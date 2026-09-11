@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import DOMPurify from "isomorphic-dompurify";
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import type { FaqItem } from "@/components/FaqBlock";
@@ -3282,23 +3282,6 @@ function builderSelectionRing(id: string, selectedNodeId: string | undefined): s
   return id === selectedNodeId ? " ring-2 ring-jeon-purple ring-offset-2" : "";
 }
 
-// sanitizeBuilderTextHtml -- redesain total Canvas Page Builder (permintaan
-// langsung pengguna 10 September 2026, "bangun rich-text sungguhan",
-// dikonfirmasi via AskUserQuestion): block_data.text blok "text" SEKARANG
-// HTML dari RichTextEditor.tsx (TipTap), bukan plain string lagi. Halaman
-// ini merender ke PENGUNJUNG SUNGGUHAN (rute traffic tertinggi, lihat
-// catatan di atas file) -- HTML APA PUN dari kreator WAJIB disaring lewat
-// DOMPurify sebelum dangerouslySetInnerHTML, whitelist SEMPIT (cuma tag
-// yang benar-benar bisa dihasilkan toolbar RichTextEditor: bold/italic/
-// underline/strike/list/paragraph/line-break) -- TANPA script/iframe/style/
-// atribut event apa pun, mencegah XSS lewat blok teks kreator.
-function sanitizeBuilderTextHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["p", "br", "strong", "b", "em", "i", "u", "s", "strike", "ol", "ul", "li"],
-    ALLOWED_ATTR: [],
-  });
-}
-
 function renderBuilderNode(
   node: BuilderRenderNode,
   theme: PageTheme,
@@ -3338,7 +3321,7 @@ function renderBuilderNode(
           // via CSS ini). Konten BARU dari RichTextEditor (TipTap) sudah
           // pakai elemen blok <p> sungguhan, tidak terpengaruh sama sekali.
           className={`jeon-rich-text-content w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}${ring}`}
-          dangerouslySetInnerHTML={{ __html: sanitizeBuilderTextHtml((node.blockData.text as string) ?? "") }}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml((node.blockData.text as string) ?? "") }}
         />
       );
     case "button":
@@ -3500,7 +3483,17 @@ function renderBuilderNode(
             <img src={imageUrl} alt="" loading="lazy" className="-m-2.5 mb-0 aspect-video w-[calc(100%+20px)] object-cover" />
           )}
           <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
-          {node.description && <p className={`text-[11px] ${theme.bio}`}>{node.description}</p>}
+          {node.description && (
+            // whitespace-pre-line -- kompatibilitas mundur: deskripsi Embed
+            // Link yang dibuat SEBELUM diperluas jadi rich text (12
+            // September 2026, "tiap blok yang ada teks nya buat semua jadi
+            // rich teks") menyimpan plain string dgn newline literal, TANPA
+            // tag <p>/<br> -- lihat catatan lengkap yang sama di blok "text".
+            <p
+              className={`jeon-rich-text-content whitespace-pre-line text-[11px] ${theme.bio}`}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(node.description) }}
+            />
+          )}
         </>
       );
       if (!node.url) {

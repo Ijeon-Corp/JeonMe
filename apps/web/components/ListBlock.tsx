@@ -1,3 +1,20 @@
+import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
+
+// renderDescription -- deskripsi item/kutipan testimoni SEKARANG rich text
+// (susulan 12 September 2026, "tiap blok yang ada teks nya buat semua
+// jadi rich teks", dikonfirmasi via AskUserQuestion: field isi/deskripsi
+// panjang saja) -- whitespace-pre-line utk kompatibilitas mundur item
+// lama (plain string dgn newline literal, TANPA tag <p>/<br>), pola SAMA
+// PERSIS blok "text" (PagePreview.tsx).
+function renderDescription(description: string, className: string): React.ReactNode {
+  return (
+    <p
+      className={`jeon-rich-text-content whitespace-pre-line ${className}`}
+      dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(description) }}
+    />
+  );
+}
+
 // ListBlock -- Canvas Page Builder Fase 3 (kategori INFORMATION,
 // gabungan "Card/List/Testimony" dari peta jalan awal jadi SATU
 // block_type fleksibel "list", dikonfirmasi via AskUserQuestion 8
@@ -48,7 +65,7 @@ export default function ListBlock({
           {items.map((item, i) => (
             <div key={i} className="rounded-lg border border-current/10 p-2.5">
               <p className={`text-xs font-semibold ${itemTitleClassName}`}>{item.title}</p>
-              {item.description && <p className={`mt-1 text-[11px] ${itemBodyClassName}`}>{item.description}</p>}
+              {item.description && renderDescription(item.description, `mt-1 text-[11px] ${itemBodyClassName}`)}
             </div>
           ))}
         </div>
@@ -59,7 +76,7 @@ export default function ListBlock({
               <p className={`text-2xl leading-none ${itemTitleClassName}`} aria-hidden="true">
                 &ldquo;
               </p>
-              {item.description && <p className={`text-xs italic ${itemBodyClassName}`}>{item.description}</p>}
+              {item.description && renderDescription(item.description, `text-xs italic ${itemBodyClassName}`)}
               <p className={`mt-2 text-[11px] font-semibold ${itemTitleClassName}`}>{item.title}</p>
               {item.author && <p className={`text-[11px] ${itemBodyClassName}`}>{item.author}</p>}
             </div>
@@ -70,7 +87,7 @@ export default function ListBlock({
           {items.map((item, i) => (
             <div key={i} className="py-2">
               <p className={`text-xs font-semibold ${itemTitleClassName}`}>{item.title}</p>
-              {item.description && <p className={`mt-0.5 text-[11px] ${itemBodyClassName}`}>{item.description}</p>}
+              {item.description && renderDescription(item.description, `mt-0.5 text-[11px] ${itemBodyClassName}`)}
             </div>
           ))}
         </div>
