@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -22,7 +22,9 @@ import {
   IconChevronRight,
   IconClock,
   IconColumns,
+  IconCopy,
   IconDivider,
+  IconDotsVertical,
   IconExternal,
   IconGripVertical,
   IconIframe,
@@ -1178,6 +1180,7 @@ function TreeNodeView({
   onSelect,
   onDeselect,
   onDelete,
+  onClone,
   collapsed,
   onToggleCollapsed,
   onUpdateNode,
@@ -1193,6 +1196,7 @@ function TreeNodeView({
   onSelect: (node: BuilderTreeNode) => void;
   onDeselect: () => void;
   onDelete: (target: BuilderSelection) => void;
+  onClone: (target: BuilderSelection) => void;
   collapsed: Set<string>;
   onToggleCollapsed: (id: string) => void;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
@@ -1203,6 +1207,33 @@ function TreeNodeView({
   onProductCreated: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
+  // menuOpen -- permintaan langsung pengguna, 12 September 2026 ("tambahkan
+  // titik tiga diujung tiap blok untuk hapus dan clone"): menggantikan
+  // ikon hapus lama yang cuma tampil saat baris terpilih -- menu ini
+  // SELALU ada di tiap baris blok, apa pun status pilihannya. Tutup lewat
+  // listener dokumen (klik di luar ATAU tombol Escape) -- BUKAN backdrop
+  // `fixed inset-0` (percobaan awal, dibuang): backdrop begitu menutupi
+  // SELURUH viewport dengan z-index eksplisit ternyata malah ikut
+  // menghalangi klik ke tombol pemicu "..." itu sendiri (elemen biasa
+  // tanpa z-index eksplisit kalah tumpuk terhadap sibling `fixed`
+  // ber-z-index, ditemukan lewat verifikasi live/Playwright).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
   // useSortable -- HANYA node "block" yang bisa diseret (column-slot murni
   // wadah tampilan "Kolom N", tidak punya urutan sendiri untuk diubah).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -1221,7 +1252,9 @@ function TreeNodeView({
     <div ref={setNodeRef} style={style}>
       <div
         style={{ paddingLeft: `${depth * 16}px` }}
-        className={`flex items-center gap-1 rounded-lg py-1.5 pr-1.5 text-xs ${isThisSelected ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
+        // py-2 -- permintaan langsung pengguna, 12 September 2026
+        // ("perbesar sedikit tinggi tiap blok nya"), naik dari py-1.5.
+        className={`flex items-center gap-1 rounded-lg py-2 pr-1.5 text-xs ${isThisSelected ? "bg-jeon-lavender/60" : "hover:bg-app-surface-2"}`}
       >
         {node.kind === "block" ? (
           <button
@@ -1251,18 +1284,47 @@ function TreeNodeView({
           {Icon && <Icon className="h-3.5 w-3.5 flex-shrink-0 text-app-muted" />}
           <span className={`truncate ${isThisSelected ? "font-bold text-jeon-purple" : "font-semibold text-app-ink"}`}>{label}</span>
         </button>
-        {node.kind === "block" && isThisSelected && (
-          <button
-            type="button"
-            onClick={() => {
-              onDelete(selectionOf(node));
-              onDeselect();
-            }}
-            aria-label={t("dashboard.pages.linksBuilder.deleteSelected")}
-            className="flex-shrink-0 text-red-500 hover:text-red-600"
-          >
-            <IconTrash className="h-3.5 w-3.5" />
-          </button>
+        {node.kind === "block" && (
+          <div ref={menuRef} className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((prev) => !prev);
+              }}
+              aria-label={t("dashboard.pages.linksBuilder.blockMenu")}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-app-muted hover:bg-app-surface hover:text-app-ink"
+            >
+              <IconDotsVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border-2 border-jeon-ink bg-app-surface shadow-brutal">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onClone(selectionOf(node));
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2"
+                >
+                  <IconCopy className="h-3.5 w-3.5" />
+                  {t("dashboard.pages.linksBuilder.duplicateBlock")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(selectionOf(node));
+                    if (isThisSelected) onDeselect();
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
+                >
+                  <IconTrash className="h-3.5 w-3.5" />
+                  {t("dashboard.pages.linksBuilder.deleteSelected")}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -1297,6 +1359,7 @@ function TreeNodeView({
                   onSelect={onSelect}
                   onDeselect={onDeselect}
                   onDelete={onDelete}
+                  onClone={onClone}
                   collapsed={collapsed}
                   onToggleCollapsed={onToggleCollapsed}
                   onUpdateNode={onUpdateNode}
@@ -1321,6 +1384,7 @@ export default function BuilderLeftPanel({
   onSelectionChange,
   onAdd,
   onDelete,
+  onClone,
   onReorderRoot,
   onReorderChildren,
   onUpdateNode,
@@ -1355,6 +1419,9 @@ export default function BuilderLeftPanel({
   onSelectionChange: (selection: BuilderSelection | null) => void;
   onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") => void;
   onDelete: (target: BuilderSelection) => void;
+  // onClone -- permintaan langsung pengguna, 12 September 2026 ("tambahkan
+  // titik tiga diujung tiap blok untuk hapus dan clone").
+  onClone: (target: BuilderSelection) => void;
   onReorderRoot: (orderedIds: string[]) => void;
   onReorderChildren: (rootId: string, containerPath: BuilderSeg[], orderedIds: string[]) => void;
   onUpdateNode: (target: BuilderSelection, patch: { title?: string; url?: string; description?: string; blockData?: Record<string, unknown> }) => void;
@@ -1530,6 +1597,7 @@ export default function BuilderLeftPanel({
                       onSelect={(n) => onSelectionChange(selectionOf(n))}
                       onDeselect={() => onSelectionChange(null)}
                       onDelete={onDelete}
+                      onClone={onClone}
                       collapsed={collapsed}
                       onToggleCollapsed={toggleCollapsed}
                       onUpdateNode={onUpdateNode}

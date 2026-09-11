@@ -953,6 +953,12 @@ export const dictionaries = {
           addingInto: "Komponen baru akan ditambahkan ke dalam blok yang dipilih.",
           editSelected: "Edit Blok Terpilih",
           deleteSelected: "Hapus blok ini",
+          // blockMenu/duplicateBlock -- permintaan langsung pengguna, 12
+          // September 2026 ("tambahkan titik tiga diujung tiap blok untuk
+          // hapus dan clone"): menu "..." di tiap baris tree, menggantikan
+          // ikon hapus yang SEBELUMNYA cuma tampil saat baris itu terpilih.
+          blockMenu: "Menu blok",
+          duplicateBlock: "Duplikat blok",
           // save/savePublish/saving/saveSuccess/publishSuccess/
           // unsavedChangesWarning -- redesain total (permintaan langsung
           // pengguna 10 September 2026, referensi "LYNK"): SEBELUMNYA tiap
@@ -3902,6 +3908,8 @@ export const dictionaries = {
           addingInto: "The new component will be added inside the selected block.",
           editSelected: "Edit Selected Block",
           deleteSelected: "Delete this block",
+          blockMenu: "Block menu",
+          duplicateBlock: "Duplicate block",
           save: "Save",
           savePublish: "Save & Publish",
           saving: "Saving...",

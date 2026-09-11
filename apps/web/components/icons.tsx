@@ -681,6 +681,19 @@ export function IconGripVertical({ className }: IconProps) {
   );
 }
 
+// IconDotsVertical -- menu "titik tiga" (hapus/duplikat, dst) -- permintaan
+// langsung pengguna 12 September 2026 ("tambahkan titik tiga diujung tiap
+// blok untuk hapus dan clone"), lihat TreeNodeView (BuilderLeftPanel.tsx).
+export function IconDotsVertical({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="12" cy="5" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="12" cy="19" r="1.6" />
+    </svg>
+  );
+}
+
 // ---------- Galeri tema ala Linktree (kartu "Custom" berikon kuas) ----------
 
 export function IconPaintbrush({ className }: IconProps) {

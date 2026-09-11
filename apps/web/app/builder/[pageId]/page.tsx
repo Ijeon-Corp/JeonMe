@@ -146,6 +146,38 @@ function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> 
 // (SAMA seperti nilai default kolom di backend, links.go) -- tidak pernah
 // benar-benar dikirim ke server dalam bentuk ini, cuma dipakai representasi
 // draft di memori sebelum create sungguhan.
+// cloneBlockDataWithNewIds -- permintaan langsung pengguna, 12 September
+// 2026 ("tambahkan titik tiga diujung tiap blok untuk hapus dan clone"):
+// menggandakan block_data SATU blok, meregenerasi id SEMUA anak
+// bersarang (children[] Section, columns[].children[] Column) secara
+// REKURSIF -- WAJIB, bukan sekadar rapi: dnd-kit (useSortable, dipakai
+// TIAP baris tree) mendaftarkan id ke SATU registry per <DndContext>
+// (bukan per-<SortableContext>), jadi id anak yang IKUT tersalin apa
+// adanya dari original akan bentrok begitu blok hasil clone & aslinya
+// tampil BERSAMAAN di tree yang sama.
+function cloneBlockDataWithNewIds(blockData: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!blockData) return {};
+  const cloned: Record<string, unknown> = { ...blockData };
+  if (Array.isArray(blockData.children)) {
+    cloned.children = (blockData.children as EmbeddedBuilderBlock[]).map((child) => ({
+      ...child,
+      id: crypto.randomUUID(),
+      block_data: cloneBlockDataWithNewIds(child.block_data),
+    }));
+  }
+  if (Array.isArray(blockData.columns)) {
+    cloned.columns = (blockData.columns as BuilderColumn[]).map((col) => ({
+      ...col,
+      children: ((col.children as EmbeddedBuilderBlock[] | undefined) ?? []).map((child) => ({
+        ...child,
+        id: crypto.randomUUID(),
+        block_data: cloneBlockDataWithNewIds(child.block_data),
+      })),
+    }));
+  }
+  return cloned;
+}
+
 function makeTempLinkItem(type: LinkItem["block_type"], title: string, url: string | undefined, blockData: Record<string, unknown>, position: number): LinkItem {
   return {
     id: `temp-${crypto.randomUUID()}`,
@@ -377,6 +409,56 @@ export default function BuilderPage() {
         parentPath,
         siblings.filter((c) => c.id !== lastSeg.id)
       );
+      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+    });
+  }
+
+  // handleClone -- permintaan langsung pengguna, 12 September 2026
+  // ("tambahkan titik tiga diujung tiap blok untuk hapus dan clone"):
+  // salinan ditaruh TEPAT SETELAH blok aslinya (bukan di akhir daftar) --
+  // paling wajar untuk "duplikat lalu edit sedikit" (varian A/B konten
+  // berdekatan), pola root vs bersarang SAMA PERSIS handleDelete. Root
+  // baru pakai id "temp-..." (SAMA seperti blok baru dari "Tambah
+  // Komponen", createRootOnServer yang menggantinya dgn id asli saat
+  // Save) -- anak bersarang cukup id UUID biasa (bukan baris `links`
+  // sendiri, murni JSON di dalam block_data, tidak pernah dikirim
+  // terpisah ke server).
+  function handleClone(target: BuilderSelection) {
+    setError(null);
+    if (target.path.length === 0) {
+      setLinks((prev) => {
+        const index = prev.findIndex((l) => l.id === target.rootId);
+        if (index === -1) return prev;
+        const original = prev[index];
+        const clone: LinkItem = {
+          ...original,
+          id: `temp-${crypto.randomUUID()}`,
+          block_data: cloneBlockDataWithNewIds(original.block_data),
+        };
+        const next = [...prev];
+        next.splice(index + 1, 0, clone);
+        return next;
+      });
+      return;
+    }
+    setLinks((prev) => {
+      const root = prev.find((l) => l.id === target.rootId);
+      if (!root) return prev;
+      const builderRoot = rootToBuilderRoot(root);
+      const parentPath = target.path.slice(0, -1);
+      const lastSeg = target.path[target.path.length - 1];
+      if (lastSeg.kind !== "child") return prev; // column-slot sendiri tidak bisa di-clone.
+      const siblings = getChildrenAt(builderRoot, parentPath);
+      const originalIndex = siblings.findIndex((c) => c.id === lastSeg.id);
+      if (originalIndex === -1) return prev;
+      const clonedChild: EmbeddedBuilderBlock = {
+        ...siblings[originalIndex],
+        id: crypto.randomUUID(),
+        block_data: cloneBlockDataWithNewIds(siblings[originalIndex].block_data),
+      };
+      const nextSiblings = [...siblings];
+      nextSiblings.splice(originalIndex + 1, 0, clonedChild);
+      const updated = setChildrenAt(builderRoot, parentPath, nextSiblings);
       return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
     });
   }
@@ -809,6 +891,7 @@ export default function BuilderPage() {
           onSelectionChange={setSelection}
           onAdd={handleAdd}
           onDelete={handleDelete}
+          onClone={handleClone}
           onReorderRoot={handleReorderRoot}
           onReorderChildren={handleReorderChildren}
           onUpdateNode={handleUpdateNode}
