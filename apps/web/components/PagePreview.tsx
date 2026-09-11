@@ -777,6 +777,168 @@ function renderProductListRow(
   );
 }
 
+// renderProductCardSmall -- opsi ke-2 dari 4 tata letak blok "produk"
+// (permintaan langsung pengguna 11 September 2026, dikonfirmasi via
+// AskUserQuestion: "2 variasi Kartu + 2 variasi Baris"): versi lebih
+// PADAT dari renderSingleProductCard -- gambar pita pendek (BUKAN
+// aspect-square penuh) + padding/ukuran font lebih kecil, cocok kalau
+// blok ini diletakkan di antara konten lain yang tidak butuh kartu besar.
+function renderProductCardSmall(
+  product: PagePreviewProduct,
+  theme: PageTheme,
+  canBuy: boolean,
+  ctx: { referralCode?: string; username: string; pageSlug?: string; shopPaused?: boolean },
+  onTrackClick: (productId: string) => void
+): React.ReactNode {
+  const cover = (
+    <div className={`mb-1.5 flex h-20 items-center justify-center rounded-lg ${theme.card}`}>
+      {product.cover_image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-lg object-cover" />
+      ) : (
+        <IconBox className={`h-5 w-5 ${theme.chevron}`} />
+      )}
+    </div>
+  );
+  const priceBlock = renderProductPriceBlock(product, theme);
+
+  if (product.isExternalLink && product.externalUrl) {
+    return (
+      <a
+        key={product.id}
+        href={product.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => onTrackClick(product.id)}
+        className={`flex flex-col rounded-lg p-2 ${theme.productCard}`}
+      >
+        {cover}
+        <p className={`truncate text-[11px] font-semibold ${theme.productTitle}`}>{product.name}</p>
+        {priceBlock}
+        <span className={`mt-1.5 block w-full rounded-md py-1 text-center text-[11px] transition-all duration-200 ${theme.buyButton}`}>
+          Lihat Produk ↗
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <div key={product.id} className={`flex flex-col rounded-lg p-2 ${theme.productCard}`}>
+      {cover}
+      <p className={`truncate text-[11px] font-semibold ${theme.productTitle}`}>{product.name}</p>
+      {priceBlock}
+      {canBuy ? (
+        <BuyProductButton
+          productId={product.id}
+          buttonClassName={theme.buyButton}
+          pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+          referralCode={ctx.referralCode}
+          username={ctx.username}
+          pageSlug={ctx.pageSlug}
+          productName={product.name}
+          basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+        />
+      ) : (
+        <button
+          type="button"
+          disabled
+          title={ctx.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+          className={`mt-1.5 w-full cursor-not-allowed rounded-md py-1 text-[11px] opacity-80 ${theme.buyButton}`}
+        >
+          Beli
+        </button>
+      )}
+    </div>
+  );
+}
+
+// renderProductRowWithImage -- opsi ke-3 dari 4 tata letak blok "produk"
+// (permintaan sama, 11 September 2026): baris horizontal (thumbnail
+// kecil + nama/harga sejajar), tombol Beli TETAP baris PENUH sendiri di
+// bawahnya -- BUKAN disejajarkan horizontal dgn thumbnail, karena
+// BuyProductButton SELALU `w-full` (lihat komponennya sendiri), memaksanya
+// ke kolom sempit di sebelah thumbnail akan bikin lebar tombol ambigu.
+function renderProductRowWithImage(
+  product: PagePreviewProduct,
+  theme: PageTheme,
+  canBuy: boolean,
+  ctx: { referralCode?: string; username: string; pageSlug?: string; shopPaused?: boolean },
+  onTrackClick: (productId: string) => void
+): React.ReactNode {
+  const priceBlock = renderProductPriceBlock(product, theme);
+  const thumb = (
+    <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg ${theme.card}`}>
+      {product.cover_image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-lg object-cover" />
+      ) : (
+        <IconBox className={`h-4 w-4 ${theme.chevron}`} />
+      )}
+    </div>
+  );
+  const info = (
+    <div className="min-w-0 flex-1">
+      <p className={`truncate text-sm font-semibold ${theme.productTitle}`}>{product.name}</p>
+      {product.isCourse && <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>}
+      {typeof product.soldCount === "number" && (
+        <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.soldCount} terjual</p>
+      )}
+      {priceBlock}
+    </div>
+  );
+
+  if (product.isExternalLink && product.externalUrl) {
+    return (
+      <a
+        key={product.id}
+        href={product.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => onTrackClick(product.id)}
+        className={`flex w-full flex-col rounded-xl p-3 ${theme.productCard}`}
+      >
+        <div className="flex items-center gap-3">
+          {thumb}
+          {info}
+        </div>
+        <span className={`mt-2.5 block w-full rounded-lg py-1.5 text-center text-xs transition-all duration-200 ${theme.buyButton}`}>
+          Lihat Produk ↗
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <div key={product.id} className={`flex w-full flex-col rounded-xl p-3 ${theme.productCard}`}>
+      <div className="flex items-center gap-3">
+        {thumb}
+        {info}
+      </div>
+      {canBuy ? (
+        <BuyProductButton
+          productId={product.id}
+          buttonClassName={theme.buyButton}
+          pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+          referralCode={ctx.referralCode}
+          username={ctx.username}
+          pageSlug={ctx.pageSlug}
+          productName={product.name}
+          basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+        />
+      ) : (
+        <button
+          type="button"
+          disabled
+          title={ctx.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+          className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+        >
+          Beli
+        </button>
+      )}
+    </div>
+  );
+}
+
 function renderProductGrid(
   data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
   theme: PageTheme,
@@ -3446,12 +3608,21 @@ function renderBuilderNode(
       const productId = node.blockData.product_id as string | undefined;
       const product = productId ? data.products.find((p) => p.id === productId) : undefined;
       // layout -- permintaan langsung pengguna, 11 September 2026 ("juga
-      // tambahkan pilihan layout product nya"): "list" reuse
-      // renderProductListRow APA ADANYA (SAMA PERSIS opsi ke-4 grid produk
-      // Halaman Toko, lihat renderProductGrid) -- bawaan "card" tetap
-      // renderSingleProductCard, TIDAK ada perubahan perilaku untuk blok
-      // yang sudah ada sebelum opsi ini ditambahkan.
-      const renderProduct = node.blockData.layout === "list" ? renderProductListRow : renderSingleProductCard;
+      // tambahkan pilihan layout product nya", lalu "harusnya ada 4
+      // pilihan layout" dikonfirmasi via AskUserQuestion: "2 variasi Kartu
+      // + 2 variasi Baris") -- "row_no_image" reuse renderProductListRow
+      // APA ADANYA (SAMA PERSIS opsi ke-4 grid produk Halaman Toko, lihat
+      // renderProductGrid). Bawaan "card_large" (undefined jatuh ke sini
+      // juga, termasuk blok lama yang masih pakai nilai "card" sebelum
+      // opsi ini diperluas jadi 4) tetap renderSingleProductCard, TIDAK
+      // ada perubahan perilaku untuk blok yang sudah ada.
+      const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = {
+        card_small: renderProductCardSmall,
+        row_with_image: renderProductRowWithImage,
+        row_no_image: renderProductListRow,
+        list: renderProductListRow, // kompatibilitas mundur (nilai lama sebelum diperluas jadi 4 opsi).
+      };
+      const renderProduct = PRODUK_LAYOUT_RENDERERS[node.blockData.layout as string] ?? renderSingleProductCard;
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full max-w-xs rounded-xl${ring}`}>
           {product ? (

@@ -651,6 +651,20 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
 // pola styling sama `ManageProductModal.tsx`). Produk baru langsung
 // terpilih (onProductCreated dipanggil PLUS onSelectProduct via pemanggil
 // di NodeFieldEditor) supaya kreator tidak perlu klik pilih lagi.
+// ProdukBlockLayout -- 4 opsi tata letak blok "produk" (permintaan
+// langsung pengguna 11 September 2026, dikonfirmasi via AskUserQuestion:
+// "2 variasi Kartu + 2 variasi Baris") -- lihat fungsi render masing-
+// masing di PagePreview.tsx (renderSingleProductCard/renderProductCardSmall/
+// renderProductRowWithImage/renderProductListRow).
+type ProdukBlockLayout = "card_large" | "card_small" | "row_with_image" | "row_no_image";
+
+const PRODUK_LAYOUT_OPTIONS: { value: ProdukBlockLayout; labelKey: string }[] = [
+  { value: "card_large", labelKey: "produkLayoutCardLarge" },
+  { value: "card_small", labelKey: "produkLayoutCardSmall" },
+  { value: "row_with_image", labelKey: "produkLayoutRowWithImage" },
+  { value: "row_no_image", labelKey: "produkLayoutRowNoImage" },
+];
+
 function ProdukBlockEditor({
   node,
   products,
@@ -662,14 +676,14 @@ function ProdukBlockEditor({
   products: DashboardProduct[];
   onSelectProduct: (productId: string) => void;
   onProductCreated: (product: DashboardProduct) => void;
-  onLayoutChange: (layout: "card" | "list") => void;
+  onLayoutChange: (layout: ProdukBlockLayout) => void;
 }) {
   const { t } = useLocale();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const selectedId = node.blockData?.product_id as string | undefined;
   const selectedProduct = selectedId ? products.find((p) => p.id === selectedId) : undefined;
-  const layout = (node.blockData?.layout as "card" | "list" | undefined) ?? "card";
+  const layout = (node.blockData?.layout as ProdukBlockLayout | undefined) ?? "card_large";
   // picking -- permintaan langsung pengguna, 11 September 2026 ("ketika
   // sudah pilih satu produk ya tampil 1 saja di blok nya"): daftar PENUH
   // (+ "Buat Produk Baru") SEBELUMNYA selalu tampil apa pun status
@@ -709,31 +723,24 @@ function ProdukBlockEditor({
           </button>
         </div>
 
-        {/* Tata Letak -- permintaan sama (11 September 2026, "tambahkan
-            pilihan layout product nya"): "card" (bawaan) reuse
-            renderSingleProductCard, "list" reuse renderProductListRow --
-            SAMA PERSIS opsi ke-4 grid produk Halaman Toko (PagePreview.tsx). */}
+        {/* Tata Letak -- 4 opsi (permintaan sama, 11 September 2026,
+            diperluas dari 2 setelah dikonfirmasi via AskUserQuestion: "2
+            variasi Kartu + 2 variasi Baris"). */}
         <div>
           <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkLayoutTitle")}</p>
           <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={() => onLayoutChange("card")}
-              className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
-                layout === "card" ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
-              }`}
-            >
-              {t("dashboard.pages.linksBuilder.produkLayoutCard")}
-            </button>
-            <button
-              type="button"
-              onClick={() => onLayoutChange("list")}
-              className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
-                layout === "list" ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
-              }`}
-            >
-              {t("dashboard.pages.linksBuilder.produkLayoutList")}
-            </button>
+            {PRODUK_LAYOUT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onLayoutChange(opt.value)}
+                className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
+                  layout === opt.value ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
+                }`}
+              >
+                {t(`dashboard.pages.linksBuilder.${opt.labelKey}`)}
+              </button>
+            ))}
           </div>
         </div>
       </div>

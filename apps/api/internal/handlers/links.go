@@ -757,15 +757,18 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				return "product_id wajib berupa teks", false
 			}
 		}
-		// layout -- permintaan langsung pengguna, 11 September 2026 ("juga
-		// tambahkan pilihan layout product nya"): "card" (kartu dengan
-		// gambar, bawaan) atau "list" (baris penuh tanpa gambar, reuse
-		// renderProductListRow -- SAMA PERSIS opsi layout ke-4 grid produk
-		// Halaman Toko, lihat PagePreview.tsx).
+		// layout -- permintaan langsung pengguna, 11 September 2026, diperluas
+		// dari 2 jadi 4 opsi setelah dikonfirmasi via AskUserQuestion ("2
+		// variasi Kartu + 2 variasi Baris"): card_large (bawaan, kartu
+		// gambar penuh) / card_small (kartu padat) / row_with_image (baris
+		// horizontal + thumbnail kecil) / row_no_image (baris tanpa gambar
+		// sama sekali, reuse renderProductListRow -- SAMA PERSIS opsi
+		// layout ke-4 grid produk Halaman Toko, lihat PagePreview.tsx).
 		if raw, ok := data["layout"]; ok {
 			layout, isStr := raw.(string)
-			if !isStr || (layout != "card" && layout != "list") {
-				return "layout blok produk harus \"card\" atau \"list\"", false
+			validLayouts := layout == "card_large" || layout == "card_small" || layout == "row_with_image" || layout == "row_no_image"
+			if !isStr || !validLayouts {
+				return "layout blok produk tidak dikenal", false
 			}
 		}
 	case "gallery", "image_slider":
