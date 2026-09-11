@@ -142,7 +142,13 @@ export default function BuilderCanvas({
                 editableStickers={editableStickers}
                 onStickersChange={onStickersChange}
                 data={{
-                  ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products),
+                  // includeInactiveProducts -- lihat catatan lengkap di
+                  // toPreviewData (page-preview-data.ts): kanvas ini SELALU
+                  // pratinjau MILIK KREATOR SENDIRI (interactive=false, tidak
+                  // pernah dilihat pengunjung sungguhan), jadi blok "produk"
+                  // yang baru memilih produk digital yang belum diaktifkan
+                  // tetap harus terlihat, bukan jatuh ke placeholder kosong.
+                  ...toPreviewData({ ...page, is_verified: page.verification.is_verified }, links, products, true),
                   pageType,
                   pageSlug,
                   builderMode: "builder",

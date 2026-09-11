@@ -12,7 +12,20 @@ import type { PagePreviewData, PreviewSourcePage, PreviewSourceLink, PreviewSour
 export function toPreviewData(
   page: PreviewSourcePage,
   links: PreviewSourceLink[],
-  products: PreviewSourceProduct[]
+  products: PreviewSourceProduct[],
+  // includeInactiveProducts -- bug ditemukan lewat laporan langsung
+  // pengguna, 11 September 2026 ("hasil create new product lewat builder
+  // tidak ada gambar yang tampil di builder nya"): produk Digital BARU
+  // (beda dari Payment Link/Link Eksternal) TIDAK auto-aktif begitu dibuat
+  // -- filter `is_active` di bawah (dibutuhkan supaya halaman PUBLIK tidak
+  // pernah menampilkan produk draft) membuat blok "produk" yang baru saja
+  // memilih produk digital itu jatuh ke placeholder kosong di kanvas
+  // Builder, padahal kreator sedang melihat PRATINJAU MILIKNYA SENDIRI
+  // (BuilderCanvas.tsx, `interactive={false}`, tidak pernah dilihat
+  // pengunjung sungguhan) -- SEHARUSNYA tetap terlihat apa pun status
+  // aktifnya, sama seperti field draft lain di rute Builder. Default false
+  // (perilaku lama, WAJIB untuk rute publik `[username]`/`[username]/[slug]`).
+  includeInactiveProducts = false
 ): PagePreviewData {
   return {
     username: page.username,
@@ -76,7 +89,7 @@ export function toPreviewData(
         description: l.description || undefined,
       })),
     products: products
-      .filter((p) => p.is_active)
+      .filter((p) => p.is_active || includeInactiveProducts)
       .map((p) => ({
         id: p.id,
         name: p.name,
