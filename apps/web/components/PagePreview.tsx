@@ -3599,14 +3599,29 @@ function renderBuilderNode(
       );
     case "produk": {
       // "produk" -- permintaan langsung pengguna 10 September 2026:
-      // tampilkan SATU produk kreator di lokasi bebas dalam layout (beda
-      // dari grid produk otomatis Halaman Toko). Reuse renderSingleProductCard
-      // APA ADANYA (perilaku tombol Beli/harga/dst IDENTIK dengan kartu di
-      // grid) -- fallback redup non-interaktif kalau product_id kosong/
-      // produk sudah dihapus, konsisten dengan pola blok "image"/"video_image"
-      // di atas (placeholder alih-alih merender apa pun kalau isinya kosong).
-      const productId = node.blockData.product_id as string | undefined;
-      const product = productId ? data.products.find((p) => p.id === productId) : undefined;
+      // tampilkan SATU (atau lebih, lihat catatan product_ids di bawah)
+      // produk kreator di lokasi bebas dalam layout (beda dari grid
+      // produk otomatis Halaman Toko). Reuse renderSingleProductCard APA
+      // ADANYA (perilaku tombol Beli/harga/dst IDENTIK dengan kartu di
+      // grid) -- fallback redup non-interaktif kalau tidak ada produk
+      // valid, konsisten dengan pola blok "image"/"video_image" di atas
+      // (placeholder alih-alih merender apa pun kalau isinya kosong).
+      //
+      // product_ids -- permintaan langsung pengguna, 12 September 2026
+      // ("bisa di atur per blok misal berisi 2 produk"): blok ini SEKARANG
+      // bisa menampung BANYAK produk sekaligus -- fallback baca
+      // `product_id` tunggal (field lama) kalau `product_ids` tidak ada,
+      // kompatibilitas mundur blok yang sudah ada di staging sebelum
+      // perubahan ini (frontend TIDAK PERNAH menulis field tunggal lagi).
+      const rawProductIds = node.blockData.product_ids as string[] | undefined;
+      const productIds = Array.isArray(rawProductIds)
+        ? rawProductIds
+        : node.blockData.product_id
+          ? [node.blockData.product_id as string]
+          : [];
+      const selectedProducts = productIds
+        .map((id) => data.products.find((p) => p.id === id))
+        .filter((p): p is PagePreviewProduct => !!p);
       // layout -- permintaan langsung pengguna, 11 September 2026 ("juga
       // tambahkan pilihan layout product nya", lalu "harusnya ada 4
       // pilihan layout" dikonfirmasi via AskUserQuestion: "2 variasi Kartu
@@ -3615,7 +3630,8 @@ function renderBuilderNode(
       // renderProductGrid). Bawaan "card_large" (undefined jatuh ke sini
       // juga, termasuk blok lama yang masih pakai nilai "card" sebelum
       // opsi ini diperluas jadi 4) tetap renderSingleProductCard, TIDAK
-      // ada perubahan perilaku untuk blok yang sudah ada.
+      // ada perubahan perilaku untuk blok yang sudah ada. SATU pilihan
+      // "layout" berlaku untuk SEMUA produk di blok ini (bukan per-produk).
       const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = {
         card_small: renderProductCardSmall,
         row_with_image: renderProductRowWithImage,
@@ -3623,28 +3639,34 @@ function renderBuilderNode(
         list: renderProductListRow, // kompatibilitas mundur (nilai lama sebelum diperluas jadi 4 opsi).
       };
       const renderProduct = PRODUK_LAYOUT_RENDERERS[node.blockData.layout as string] ?? renderSingleProductCard;
+      const trackProduct = (productClickId: string) =>
+        data.pageSlug
+          ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
+          : trackEvent(data.username, { event_type: "product_click", product_id: productClickId });
+      const ctx = { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused };
       // Bug ditemukan lewat laporan langsung pengguna, 12 September 2026
       // ("harusnya semua lebar blok itu disamakan dengan yang lain"):
       // wrapper ini SEBELUMNYA dibatasi `max-w-xs`, jadi lebih sempit dari
       // SEMUA blok lain (text/button/image/dst, semuanya cuma `w-full`
       // tanpa batas lebar) -- tidak ada alasan blok ini dikecualikan,
       // dihapus supaya konsisten dengan blok lain apa pun tata letaknya.
+      //
+      // Grid 2 kolom -- HANYA aktif begitu blok ini berisi 2+ produk
+      // (dikonfirmasi via AskUserQuestion: jumlah kolom TETAP 2, tidak
+      // perlu pengaturan terpisah). PERSIS 1 produk tetap wrapper tunggal
+      // lebar penuh SEPERTI SEBELUMNYA, TIDAK berubah sama sekali -- blok
+      // lama (1 produk) visual IDENTIK dgn sebelum perubahan ini.
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full rounded-xl${ring}`}>
-          {product ? (
-            renderProduct(
-              product,
-              theme,
-              canBuy,
-              { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused },
-              (productClickId) =>
-                data.pageSlug
-                  ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
-                  : trackEvent(data.username, { event_type: "product_click", product_id: productClickId })
-            )
-          ) : (
+          {selectedProducts.length === 0 ? (
             <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
               {node.title || "Produk"}
+            </div>
+          ) : selectedProducts.length === 1 ? (
+            renderProduct(selectedProducts[0], theme, canBuy, ctx, trackProduct)
+          ) : (
+            <div className="grid w-full grid-cols-2 gap-3">
+              {selectedProducts.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}
             </div>
           )}
         </div>

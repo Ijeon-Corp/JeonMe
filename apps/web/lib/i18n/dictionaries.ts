@@ -1037,18 +1037,24 @@ export const dictionaries = {
           produkSelectExisting: "Pilih produk yang sudah ada",
           produkCreateNew: "Buat Produk Baru",
           produkNoProducts: "Belum ada produk -- buat yang pertama.",
-          // produkChangeProduct/produkCancelChange/produkLayout* -- susulan
-          // 11 September 2026 ("tampil 1 saja di blok nya ... tambahkan
-          // pilihan layout product nya"): panel HANYA tampilkan ringkasan
-          // produk terpilih (bukan daftar penuh lagi) begitu sudah dipilih,
-          // + pilihan tata letak kartu/baris tanpa gambar untuk blok ini.
-          produkChangeProduct: "Ganti Produk",
-          produkCancelChange: "Batal, pakai produk sebelumnya",
+          // produkLayout* -- susulan 11 September 2026 ("tampil 1 saja di
+          // blok nya ... tambahkan pilihan layout product nya"): panel
+          // HANYA tampilkan ringkasan produk terpilih (bukan daftar penuh
+          // lagi) begitu sudah dipilih, + pilihan tata letak untuk blok ini.
           produkLayoutTitle: "Tata Letak",
           produkLayoutCardLarge: "Kartu Besar",
           produkLayoutCardSmall: "Kartu Kecil",
           produkLayoutRowWithImage: "Baris dengan Gambar",
           produkLayoutRowNoImage: "Baris Tanpa Gambar",
+          // produkCount/produkAddMore/produkDone/produkRemoveProduct --
+          // susulan 12 September 2026 ("bisa di atur per blok misal berisi
+          // 2 produk"): blok "produk" sekarang bisa berisi BANYAK produk
+          // sekaligus (multi-select), tersusun grid 2 kolom begitu isinya
+          // 2 atau lebih (lihat renderBuilderNode, PagePreview.tsx).
+          produkCount: "{n} Produk",
+          produkAddMore: "+ Tambah Produk",
+          produkDone: "Selesai",
+          produkRemoveProduct: "Hapus {name} dari blok ini",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
           openDesignPage: "Buka Halaman Desain",
           settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
@@ -3958,13 +3964,15 @@ export const dictionaries = {
           produkSelectExisting: "Select an existing product",
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",
-          produkChangeProduct: "Change Product",
-          produkCancelChange: "Cancel, keep current product",
           produkLayoutTitle: "Layout",
           produkLayoutCardLarge: "Large Card",
           produkLayoutCardSmall: "Small Card",
           produkLayoutRowWithImage: "Row with Image",
           produkLayoutRowNoImage: "Row, No Image",
+          produkCount: "{n} Products",
+          produkAddMore: "+ Add Product",
+          produkDone: "Done",
+          produkRemoveProduct: "Remove {name} from this block",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
           openDesignPage: "Open Design Page",
           settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",

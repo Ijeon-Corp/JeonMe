@@ -587,6 +587,16 @@ func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, bloc
 func collectBuilderProductIDs(blockType string, data map[string]any) []string {
 	var ids []string
 	if blockType == "produk" {
+		// product_ids (banyak produk, 12 September 2026) + product_id
+		// (tunggal, field lama -- kompatibilitas mundur blok yang sudah
+		// ada sebelum blok ini mendukung banyak produk sekaligus).
+		if rawIDs, ok := data["product_ids"].([]any); ok {
+			for _, rawID := range rawIDs {
+				if id, ok := rawID.(string); ok && strings.TrimSpace(id) != "" {
+					ids = append(ids, id)
+				}
+			}
+		}
 		if productID, _ := data["product_id"].(string); strings.TrimSpace(productID) != "" {
 			ids = append(ids, productID)
 		}
@@ -755,6 +765,29 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		if raw, ok := data["product_id"]; ok {
 			if _, isStr := raw.(string); !isStr {
 				return "product_id wajib berupa teks", false
+			}
+		}
+		// product_ids -- permintaan langsung pengguna, 12 September 2026
+		// ("bisa di atur per blok misal berisi 2 produk"): blok SEKARANG
+		// bisa menampung BANYAK produk sekaligus (tersusun grid 2 kolom
+		// begitu isinya 2+, lihat renderBuilderNode PagePreview.tsx) --
+		// menggantikan `product_id` tunggal di atas untuk blok BARU (field
+		// lama TETAP divalidasi apa adanya di atas, murni kompatibilitas
+		// baca blok LAMA yang sudah ada di staging sebelum perubahan ini).
+		// Batas 12 item -- defense-in-depth, blok ini spotlight kurasi
+		// manual, bukan pengganti grid produk penuh Halaman Toko.
+		if raw, ok := data["product_ids"]; ok {
+			rawList, isArr := raw.([]any)
+			if !isArr {
+				return "product_ids wajib berupa daftar", false
+			}
+			if len(rawList) > 12 {
+				return "maksimal 12 produk per blok", false
+			}
+			for _, item := range rawList {
+				if _, isStr := item.(string); !isStr {
+					return "product_ids wajib berisi teks", false
+				}
 			}
 		}
 		// layout -- permintaan langsung pengguna, 11 September 2026, diperluas
