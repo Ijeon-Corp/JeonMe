@@ -2355,7 +2355,10 @@ type updateExtraPageRequest struct {
 	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
 	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
 	// kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
-	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category"`
+	// "list" -- permintaan langsung pengguna, 11 September 2026: "tambahkan
+	// tipe layout 1 lagi yaitu 1 baris blok penuh tanpa gambar" -- kartu
+	// produk full-width TANPA cover, cocok untuk daftar padat/banyak item.
+	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category list"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
 	// (migrasi 000096). Halaman tambahan BISA page_type='produk' (Toko) --
 	// SEMPAT dikecualikan dari mode builder saat Fase 1-3 (produk/katalog

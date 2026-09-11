@@ -48,7 +48,7 @@ import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconPencil } from "@/components/icons";
 import BuilderLeftPanel, { type BuilderDesignSection } from "@/components/BuilderLeftPanel";
 import BuilderCanvas, { BUILDER_DEVICE_WIDTHS, type BuilderDeviceWidth } from "@/components/BuilderCanvas";
-import type { DesignSectionPage, DesignSectionPatch } from "@/components/dashboard/page/design-sections";
+import type { DesignSectionPage, DesignSectionPatch, ProductLayoutValue } from "@/components/dashboard/page/design-sections";
 
 // TYPE_LABEL_KEY -- SATU-SATUNYA pemakaian tersisa di rute ini: label root
 // baru begitu ditambahkan lewat "Tambah Komponen" di ROOT (target null),
@@ -105,7 +105,36 @@ function extractPageDesignPatch(p: MyPage): Partial<MyPage> {
     social_linkedin: p.social_linkedin,
     social_telegram: p.social_telegram,
     social_email: p.social_email,
+    // product_layout -- permintaan langsung pengguna 11 September 2026
+    // ("mode simple dan builder untuk produk langsung sediakan pilihan
+    // layoutnya"): ikut satu PATCH "Halaman" yang sama dgn tema/header/dst
+    // (lihat commitSave langkah 5) -- untuk halaman Bio field ini SELALU
+    // undefined (lihat catatan lengkap di MyPage.product_layout, api-client.ts).
+    product_layout: p.product_layout,
   };
+}
+
+// diffPageDesignPatch -- perbaikan bug ditemukan 11 September 2026 (lewat
+// verifikasi live fitur product_layout di atas): commitSave langkah 5
+// SEBELUMNYA mengirim SELURUH extractPageDesignPatch(page) begitu SATU
+// SAJA field berubah -- termasuk custom_background_type/value APA ADANYA
+// walau TIDAK ikut berubah sama sekali. Backend (UpdateMyPage/UpdatePage,
+// page.go) menolak SEMUA "Simpan" kreator GRATIS dengan pesan keliru
+// "khusus Premium" begitu kedua field itu MUNCUL di request, terlepas
+// nilainya berubah atau tidak -- gerbang itu SENGAJA seketat itu (lihat
+// TestUpdateMyPage_RejectsCustomBackgroundValueForFreeUser di backend,
+// TIDAK diubah) jadi perbaikannya di SINI: kirim HANYA field yang
+// NILAINYA benar-benar berbeda dari snapshot server, bukan seluruh objek.
+function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> {
+  const draft = extractPageDesignPatch(page);
+  const server = extractPageDesignPatch(serverPage);
+  const diff: Partial<MyPage> = {};
+  (Object.keys(draft) as (keyof MyPage)[]).forEach((key) => {
+    if (draft[key] !== server[key]) {
+      (diff as Record<string, unknown>)[key] = draft[key];
+    }
+  });
+  return diff;
 }
 
 // makeTempLinkItem -- redesain total (arsitektur draft, 10 September
@@ -520,6 +549,16 @@ export default function BuilderPage() {
   function handleStickersChange(stickers: PageStickerData[]) {
     setPage((prev) => (prev ? { ...prev, stickers } : prev));
   }
+  // handleProductLayoutChange -- permintaan langsung pengguna 11 September
+  // 2026 ("mode simple dan builder untuk produk langsung sediakan pilihan
+  // layoutnya"): draft-only sama seperti handlePatch di atas, TERPISAH
+  // darinya (bukan DesignSectionPatch) karena `product_layout` SENGAJA
+  // bukan bagian DesignSectionPage (field ini cuma relevan utk halaman
+  // Toko, lihat catatan lengkap di ProductLayoutSection, design-sections.tsx)
+  // -- disertakan ke server lewat extractPageDesignPatch di commitSave.
+  function handleProductLayoutChange(value: ProductLayoutValue) {
+    setPage((prev) => (prev ? { ...prev, product_layout: value } : prev));
+  }
 
   const selectedNodeId = useMemo(() => {
     if (!selection || selection.kind !== "block") return undefined;
@@ -619,10 +658,13 @@ export default function BuilderPage() {
         await (isMain ? reorderLinks(items) : reorderExtraPageLinks(pageId, items));
       }
 
-      // 5) Halaman (tema/header/tombol/font/publish) -- satu PATCH.
-      const pageChanged = JSON.stringify(extractPageDesignPatch(page)) !== JSON.stringify(extractPageDesignPatch(serverPage));
-      const patch: Partial<MyPage> = {};
-      if (pageChanged) Object.assign(patch, extractPageDesignPatch(page));
+      // 5) Halaman (tema/header/tombol/font/publish) -- satu PATCH, HANYA
+      // field yang benar-benar berubah (lihat catatan lengkap di
+      // diffPageDesignPatch -- backend menolak keras field custom_background_*
+      // begitu MUNCUL di request sama sekali, jadi mengirim seluruh objek
+      // padahal cuma satu field lain yang berubah akan salah ditolak
+      // "khusus Premium").
+      const patch: Partial<MyPage> = diffPageDesignPatch(page, serverPage);
       if (publish) patch.is_published = true;
       if (Object.keys(patch).length > 0) {
         await (isMain ? updateMyPage(patch) : updateExtraPage(pageId, patch));
@@ -788,6 +830,9 @@ export default function BuilderPage() {
           onDesignSectionChange={setDesignSection}
           products={products}
           onProductCreated={(p) => setProducts((prev) => [...prev, p])}
+          pageType={extraPageType}
+          productLayout={page.product_layout}
+          onProductLayoutChange={handleProductLayoutChange}
         />
         <BuilderCanvas
           page={page}

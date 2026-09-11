@@ -542,3 +542,69 @@ export function FontSection({
     </section>
   );
 }
+
+// ---------- Tata Letak Produk ----------
+//
+// ProductLayoutSection -- diekstrak dari ProdukPageEditor.tsx (permintaan
+// langsung pengguna 11 September 2026: "mode simple dan builder untuk
+// produk langsung sediakan pilihan layoutnya") SUPAYA bisa dipakai ULANG
+// oleh rute Canvas Page Builder juga (BuilderLeftPanel.tsx, tab
+// "settings", HANYA saat mengedit halaman Toko/produk) -- sebelumnya
+// picker ini cuma ada di ProdukPageEditor.tsx, kreator harus keluar dari
+// Builder ke dashboard klasik untuk mengubahnya.
+//
+// SENGAJA TIDAK reuse DesignSectionPage/DesignSectionPatch di atas --
+// `product_layout` cuma relevan untuk halaman Toko (bio TIDAK PERNAH
+// merender grid produk sama sekali, lihat PagePreview.tsx), jadi
+// menaruhnya di interface "minimal" yang dibagi Bio+Toko itu cuma akan
+// menambah field yang selalu undefined untuk Bio. Prop sendiri, lebih
+// sempit & jujur soal cakupannya.
+//
+// "list" -- opsi ke-4 (permintaan sama, 11 September 2026): "tambahkan
+// tipe layout 1 lagi yaitu 1 baris blok penuh tanpa gambar" -- kartu
+// produk full-width TANPA cover (lihat renderProductListRow, PagePreview.tsx).
+export type ProductLayoutValue = "grid" | "stacked" | "category" | "list";
+
+const PRODUCT_LAYOUT_OPTIONS: { value: ProductLayoutValue; labelKey: "grid" | "stacked" | "category" | "list" }[] = [
+  { value: "grid", labelKey: "grid" },
+  { value: "stacked", labelKey: "stacked" },
+  { value: "category", labelKey: "category" },
+  { value: "list", labelKey: "list" },
+];
+
+export function ProductLayoutSection({
+  productLayout,
+  onChange,
+}: {
+  productLayout: ProductLayoutValue | undefined;
+  onChange: (value: ProductLayoutValue) => void;
+}) {
+  const { t } = useLocale();
+  return (
+    <div>
+      <p className="text-sm font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.productLayout.title")}</p>
+      <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        {PRODUCT_LAYOUT_OPTIONS.map((opt) => {
+          // "grid" -- default bawaan kolom DB (lihat migrasi 000072), undefined
+          // di draft/respons lama dianggap setara "grid" APA ADANYA dari logic asli.
+          const active = opt.value === "grid" ? !productLayout || productLayout === "grid" : productLayout === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`rounded-xl border px-3 py-2 text-xs font-bold ${
+                active ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted hover:text-app-ink"
+              }`}
+            >
+              {t(`dashboard.components.produkPageEditor.productLayout.${opt.labelKey}`)}
+            </button>
+          );
+        })}
+      </div>
+      {productLayout === "category" && (
+        <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.productLayout.categoryHint")}</p>
+      )}
+    </div>
+  );
+}

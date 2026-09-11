@@ -47,7 +47,14 @@ import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import Toggle from "@/components/Toggle";
 import SectionCard from "@/components/dashboard/page/SectionCard";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
-import { DesignSectionPatch, FontSection, HeaderSection, TemaSection, TombolSection } from "@/components/dashboard/page/design-sections";
+import {
+  DesignSectionPatch,
+  FontSection,
+  HeaderSection,
+  ProductLayoutSection,
+  TemaSection,
+  TombolSection,
+} from "@/components/dashboard/page/design-sections";
 import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
@@ -342,52 +349,12 @@ export default function ProdukPageEditor({
             1 product tampil memenuhi 1 baris jika ada 2 product berarti
             ada dibawah nya". Cuma relevan di sini (Halaman Toko) --
             grid Produk sudah tidak lagi dirender di halaman Bio sama
-            sekali (lihat PagePreview.tsx).
-
-            Opsi ketiga "category" -- susulan 20 Agustus 2026: "bagian
-            produk bisa ga dibuat layout baru di kelompokan seperti ini,
-            misal ada blok sepatu, baju, celana ketika di klik blok sepatu
-            maka akan muncul semua product sepatu nya" -- blok per kategori,
-            klik untuk drill-down (lihat renderProductGrid, PagePreview.tsx).
-            Perbandingan aktif diubah jadi kesetaraan EKSPLISIT per opsi
-            (bukan `!== "stacked"` seperti sebelumnya) supaya opsi ketiga ini
-            tidak ikut salah ke-highlight sebagai "Grid 2 Kolom". */}
+            sekali (lihat PagePreview.tsx). Diekstrak ke ProductLayoutSection
+            (design-sections.tsx) 11 September 2026 supaya bisa dipakai
+            ulang di Builder (BuilderLeftPanel.tsx) juga -- lihat catatan
+            lengkap opsi "category"/"list" di sana. */}
         <div className="mt-4">
-          <p className="text-sm font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.productLayout.title")}</p>
-          <div className="mt-1.5 flex flex-col gap-1.5 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => handlePatch({ product_layout: "grid" })}
-              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                !page.product_layout || page.product_layout === "grid"
-                  ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple"
-                  : "border-app-border text-app-muted hover:text-app-ink"
-              }`}
-            >
-              {t("dashboard.components.produkPageEditor.productLayout.grid")}
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePatch({ product_layout: "stacked" })}
-              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "stacked" ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted hover:text-app-ink"
-              }`}
-            >
-              {t("dashboard.components.produkPageEditor.productLayout.stacked")}
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePatch({ product_layout: "category" })}
-              className={`flex-1 rounded-xl border px-3 py-2 text-xs font-bold ${
-                page.product_layout === "category" ? "border-jeon-purple bg-jeon-purple/10 text-jeon-purple" : "border-app-border text-app-muted hover:text-app-ink"
-              }`}
-            >
-              {t("dashboard.components.produkPageEditor.productLayout.category")}
-            </button>
-          </div>
-          {page.product_layout === "category" && (
-            <p className="mt-1.5 text-[11px] text-app-muted">{t("dashboard.components.produkPageEditor.productLayout.categoryHint")}</p>
-          )}
+          <ProductLayoutSection productLayout={page.product_layout} onChange={(value) => handlePatch({ product_layout: value })} />
         </div>
 
         {/* Canvas Page Builder utk Halaman Toko -- permintaan langsung

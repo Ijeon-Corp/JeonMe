@@ -253,7 +253,7 @@ export interface PagePreviewData {
   // Bio) -- undefined/nilai lain jatuh balik ke 'grid'. 'category' --
   // susulan 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
   // kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
-  productLayout?: "grid" | "stacked" | "category";
+  productLayout?: "grid" | "stacked" | "category" | "list";
   events?: PagePreviewEvent[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
   // poin pengunjung dicek terpisah lewat LoyaltyPointsWidget (butuh email).
@@ -420,7 +420,7 @@ export interface PreviewSourcePage {
     | "duo"
     | "masthead"
     | "portrait";
-  product_layout?: "grid" | "stacked" | "category";
+  product_layout?: "grid" | "stacked" | "category" | "list";
   // builder_mode -- lihat catatan lengkap di PagePreviewData.builderMode.
   builder_mode?: "simple" | "builder";
 }
@@ -592,6 +592,47 @@ function PageSwitcher({
 // (renderBuilderNode di bawah) supaya kartu satu-produk di lokasi bebas
 // dalam layout PERSIS sama tampilan/perilakunya dengan kartu di grid
 // produk otomatis (Halaman Toko), tanpa duplikasi kode.
+// renderProductPriceBlock -- diekstrak dari renderSingleProductCard (blok
+// "produk"/harga PWYW/flash-sale/bundle, APA ADANYA) supaya bisa dipakai
+// ULANG oleh renderProductListRow (layout "list", permintaan langsung
+// pengguna 11 September 2026) tanpa duplikasi ternary yang sama.
+function renderProductPriceBlock(product: PagePreviewProduct, theme: PageTheme): React.ReactNode {
+  if (product.pwywEnabled) {
+    return (
+      <p className={`text-xs font-bold ${theme.productPrice}`}>
+        Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
+      </p>
+    );
+  }
+  if (product.isBundle && product.bundleOriginalPriceIdr !== undefined) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
+          Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
+        </p>
+        <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+      </div>
+    );
+  }
+  if (product.isFlashSaleActive && product.effectivePriceIdr !== undefined) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
+        <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.effectivePriceIdr.toLocaleString("id-ID")}</p>
+      </div>
+    );
+  }
+  if (product.isExternalLink && product.price_idr === 0) {
+    // Harga opsional khusus Link Eksternal (permintaan langsung pengguna,
+    // 20 Agustus 2026: "untuk produk affiliate harga jadikan optional") --
+    // 0 berarti sengaja tidak diisi (jenis produk lain harga tetap wajib
+    // >= Rp1.000, jadi 0 TIDAK PERNAH berarti "gratis" untuk mereka),
+    // jangan tampilkan baris harga sama sekali daripada "Rp 0".
+    return null;
+  }
+  return <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>;
+}
+
 function renderSingleProductCard(
   product: PagePreviewProduct,
   theme: PageTheme,
@@ -609,32 +650,7 @@ function renderSingleProductCard(
       )}
     </div>
   );
-  const priceBlock = product.pwywEnabled ? (
-    <p className={`text-xs font-bold ${theme.productPrice}`}>
-      Mulai dari Rp {(product.pwywMinPriceIdr ?? 0).toLocaleString("id-ID")}
-    </p>
-  ) : product.isBundle && product.bundleOriginalPriceIdr !== undefined ? (
-    <div className="flex items-center gap-1.5">
-      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>
-        Rp {product.bundleOriginalPriceIdr.toLocaleString("id-ID")}
-      </p>
-      <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
-    </div>
-  ) : product.isFlashSaleActive && product.effectivePriceIdr !== undefined ? (
-    <div className="flex items-center gap-1.5">
-      <p className={`text-[10px] line-through opacity-60 ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
-      <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.effectivePriceIdr.toLocaleString("id-ID")}</p>
-    </div>
-  ) : product.isExternalLink && product.price_idr === 0 ? (
-    // Harga opsional khusus Link Eksternal (permintaan langsung pengguna,
-    // 20 Agustus 2026: "untuk produk affiliate harga jadikan optional") --
-    // 0 berarti sengaja tidak diisi (jenis produk lain harga tetap wajib
-    // >= Rp1.000, jadi 0 TIDAK PERNAH berarti "gratis" untuk mereka),
-    // jangan tampilkan baris harga sama sekali daripada "Rp 0".
-    null
-  ) : (
-    <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>
-  );
+  const priceBlock = renderProductPriceBlock(product, theme);
 
   if (product.isExternalLink && product.externalUrl) {
     return (
@@ -690,6 +706,77 @@ function renderSingleProductCard(
   );
 }
 
+// renderProductListRow -- layout "list" (permintaan langsung pengguna 11
+// September 2026: "tambahkan tipe layout 1 lagi yaitu 1 baris blok penuh
+// tanpa gambar"): SATU blok penuh lebar per produk, SAMA PERSIS
+// renderSingleProductCard TAPI TANPA `cover` sama sekali (bukan cover
+// kosong/placeholder ikon -- dihilangkan total) -- cocok untuk daftar
+// padat banyak item. Vertikal (nama -> harga -> tombol Beli), BUKAN
+// horizontal -- BuyProductButton SELALU `w-full` (lihat komponennya
+// sendiri), memaksanya ke kolom sempit sebelah kartu akan bikin lebar
+// tombol ambigu/tidak terduga, jadi tata letak di sini SENGAJA tetap
+// menumpuk vertikal seperti kartu biasa, cuma minus gambarnya.
+function renderProductListRow(
+  product: PagePreviewProduct,
+  theme: PageTheme,
+  canBuy: boolean,
+  ctx: { referralCode?: string; username: string; pageSlug?: string; shopPaused?: boolean },
+  onTrackClick: (productId: string) => void
+): React.ReactNode {
+  const priceBlock = renderProductPriceBlock(product, theme);
+
+  if (product.isExternalLink && product.externalUrl) {
+    return (
+      <a
+        key={product.id}
+        href={product.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => onTrackClick(product.id)}
+        className={`flex w-full flex-col rounded-xl p-3 ${theme.productCard}`}
+      >
+        <p className={`truncate text-sm font-semibold ${theme.productTitle}`}>{product.name}</p>
+        {priceBlock}
+        <span className={`mt-2.5 block w-full rounded-lg py-1.5 text-center text-xs transition-all duration-200 ${theme.buyButton}`}>
+          Lihat Produk ↗
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <div key={product.id} className={`flex w-full flex-col rounded-xl p-3 ${theme.productCard}`}>
+      <p className={`truncate text-sm font-semibold ${theme.productTitle}`}>{product.name}</p>
+      {product.isCourse && <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.chapterCount ?? 0} Bab</p>}
+      {typeof product.soldCount === "number" && (
+        <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{product.soldCount} terjual</p>
+      )}
+      {priceBlock}
+      {canBuy ? (
+        <BuyProductButton
+          productId={product.id}
+          buttonClassName={theme.buyButton}
+          pwywMinPriceIdr={product.pwywEnabled ? product.pwywMinPriceIdr : undefined}
+          referralCode={ctx.referralCode}
+          username={ctx.username}
+          pageSlug={ctx.pageSlug}
+          productName={product.name}
+          basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+        />
+      ) : (
+        <button
+          type="button"
+          disabled
+          title={ctx.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
+          className={`mt-2.5 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
+        >
+          Beli
+        </button>
+      )}
+    </div>
+  );
+}
+
 function renderProductGrid(
   data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
   theme: PageTheme,
@@ -697,7 +784,7 @@ function renderProductGrid(
   selectedCategory: string,
   onSelectCategory: (c: string) => void
 ) {
-  const gridColsClass = data.productLayout === "stacked" ? "grid-cols-1" : "grid-cols-2";
+  const gridColsClass = data.productLayout === "stacked" || data.productLayout === "list" ? "grid-cols-1" : "grid-cols-2";
   // categoryLayout -- permintaan langsung pengguna, 20 Agustus 2026: "bagian
   // produk bisa ga dibuat layout baru di kelompokan seperti ini, misal ada
   // blok sepatu, baju, celana ketika di klik blok sepatu maka akan muncul
@@ -783,7 +870,7 @@ function renderProductGrid(
               : p.category === selectedCategory
           )
           .map((product) =>
-            renderSingleProductCard(
+            (data.productLayout === "list" ? renderProductListRow : renderSingleProductCard)(
               product,
               theme,
               canBuy,
