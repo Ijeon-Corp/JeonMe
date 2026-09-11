@@ -757,6 +757,17 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				return "product_id wajib berupa teks", false
 			}
 		}
+		// layout -- permintaan langsung pengguna, 11 September 2026 ("juga
+		// tambahkan pilihan layout product nya"): "card" (kartu dengan
+		// gambar, bawaan) atau "list" (baris penuh tanpa gambar, reuse
+		// renderProductListRow -- SAMA PERSIS opsi layout ke-4 grid produk
+		// Halaman Toko, lihat PagePreview.tsx).
+		if raw, ok := data["layout"]; ok {
+			layout, isStr := raw.(string)
+			if !isStr || (layout != "card" && layout != "list") {
+				return "layout blok produk harus \"card\" atau \"list\"", false
+			}
+		}
 	case "gallery", "image_slider":
 		// "gallery" -- hasil analisa galeri tema kompetitor (17 Agustus
 		// 2026, folder theme/: template portofolio/wisata s.id memakai grid

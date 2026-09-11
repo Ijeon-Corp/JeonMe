@@ -1037,6 +1037,16 @@ export const dictionaries = {
           produkSelectExisting: "Pilih produk yang sudah ada",
           produkCreateNew: "Buat Produk Baru",
           produkNoProducts: "Belum ada produk -- buat yang pertama.",
+          // produkChangeProduct/produkCancelChange/produkLayout* -- susulan
+          // 11 September 2026 ("tampil 1 saja di blok nya ... tambahkan
+          // pilihan layout product nya"): panel HANYA tampilkan ringkasan
+          // produk terpilih (bukan daftar penuh lagi) begitu sudah dipilih,
+          // + pilihan tata letak kartu/baris tanpa gambar untuk blok ini.
+          produkChangeProduct: "Ganti Produk",
+          produkCancelChange: "Batal, pakai produk sebelumnya",
+          produkLayoutTitle: "Tata Letak",
+          produkLayoutCard: "Kartu (dengan Gambar)",
+          produkLayoutList: "Baris Penuh Tanpa Gambar",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
           openDesignPage: "Buka Halaman Desain",
           settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
@@ -3946,6 +3956,11 @@ export const dictionaries = {
           produkSelectExisting: "Select an existing product",
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",
+          produkChangeProduct: "Change Product",
+          produkCancelChange: "Cancel, keep current product",
+          produkLayoutTitle: "Layout",
+          produkLayoutCard: "Card (with Image)",
+          produkLayoutList: "Full Row, No Image",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
           openDesignPage: "Open Design Page",
           settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",

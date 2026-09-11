@@ -3445,10 +3445,17 @@ function renderBuilderNode(
       // di atas (placeholder alih-alih merender apa pun kalau isinya kosong).
       const productId = node.blockData.product_id as string | undefined;
       const product = productId ? data.products.find((p) => p.id === productId) : undefined;
+      // layout -- permintaan langsung pengguna, 11 September 2026 ("juga
+      // tambahkan pilihan layout product nya"): "list" reuse
+      // renderProductListRow APA ADANYA (SAMA PERSIS opsi ke-4 grid produk
+      // Halaman Toko, lihat renderProductGrid) -- bawaan "card" tetap
+      // renderSingleProductCard, TIDAK ada perubahan perilaku untuk blok
+      // yang sudah ada sebelum opsi ini ditambahkan.
+      const renderProduct = node.blockData.layout === "list" ? renderProductListRow : renderSingleProductCard;
       return (
         <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full max-w-xs rounded-xl${ring}`}>
           {product ? (
-            renderSingleProductCard(
+            renderProduct(
               product,
               theme,
               canBuy,

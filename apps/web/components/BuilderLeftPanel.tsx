@@ -656,16 +656,89 @@ function ProdukBlockEditor({
   products,
   onSelectProduct,
   onProductCreated,
+  onLayoutChange,
 }: {
   node: BuilderTreeNode;
   products: DashboardProduct[];
   onSelectProduct: (productId: string) => void;
   onProductCreated: (product: DashboardProduct) => void;
+  onLayoutChange: (layout: "card" | "list") => void;
 }) {
   const { t } = useLocale();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const selectedId = node.blockData?.product_id as string | undefined;
+  const selectedProduct = selectedId ? products.find((p) => p.id === selectedId) : undefined;
+  const layout = (node.blockData?.layout as "card" | "list" | undefined) ?? "card";
+  // picking -- permintaan langsung pengguna, 11 September 2026 ("ketika
+  // sudah pilih satu produk ya tampil 1 saja di blok nya"): daftar PENUH
+  // (+ "Buat Produk Baru") SEBELUMNYA selalu tampil apa pun status
+  // pilihan, memaksa kreator scroll ulang tiap kali membuka blok yang
+  // sudah terisi -- sekarang panel HANYA menampilkan ringkasan produk
+  // terpilih begitu sudah ada, daftar penuh cuma muncul lagi kalau
+  // kreator sengaja klik "Ganti Produk" (atau belum pernah memilih apa pun).
+  const [picking, setPicking] = useState(!selectedId);
+
+  function handleSelect(productId: string) {
+    onSelectProduct(productId);
+    setPicking(false);
+  }
+
+  if (selectedProduct && !picking) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 rounded-lg border-2 border-jeon-purple bg-jeon-lavender/40 p-1.5">
+          {selectedProduct.cover_image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selectedProduct.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
+          ) : (
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
+              <IconShoppingBag className="h-4 w-4 text-jeon-purple" />
+            </span>
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-semibold text-app-ink">{selectedProduct.name}</span>
+            <span className="block text-[11px] text-app-muted">Rp {selectedProduct.effective_price_idr.toLocaleString("id-ID")}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="flex-shrink-0 text-[11px] font-semibold text-jeon-purple underline"
+          >
+            {t("dashboard.pages.linksBuilder.produkChangeProduct")}
+          </button>
+        </div>
+
+        {/* Tata Letak -- permintaan sama (11 September 2026, "tambahkan
+            pilihan layout product nya"): "card" (bawaan) reuse
+            renderSingleProductCard, "list" reuse renderProductListRow --
+            SAMA PERSIS opsi ke-4 grid produk Halaman Toko (PagePreview.tsx). */}
+        <div>
+          <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkLayoutTitle")}</p>
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => onLayoutChange("card")}
+              className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
+                layout === "card" ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
+              }`}
+            >
+              {t("dashboard.pages.linksBuilder.produkLayoutCard")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayoutChange("list")}
+              className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
+                layout === "list" ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
+              }`}
+            >
+              {t("dashboard.pages.linksBuilder.produkLayoutList")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -678,7 +751,7 @@ function ProdukBlockEditor({
             <button
               key={p.id}
               type="button"
-              onClick={() => onSelectProduct(p.id)}
+              onClick={() => handleSelect(p.id)}
               className={`flex items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
                 selectedId === p.id ? "border-jeon-purple bg-jeon-lavender/40" : "border-app-border hover:border-jeon-purple"
               }`}
@@ -707,6 +780,15 @@ function ProdukBlockEditor({
         <IconPlus className="h-3.5 w-3.5" />
         {t("dashboard.pages.linksBuilder.produkCreateNew")}
       </button>
+      {selectedProduct && (
+        <button
+          type="button"
+          onClick={() => setPicking(false)}
+          className="text-center text-[11px] font-semibold text-app-muted underline"
+        >
+          {t("dashboard.pages.linksBuilder.produkCancelChange")}
+        </button>
+      )}
 
       {creating && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreating(false)}>
@@ -728,6 +810,7 @@ function ProdukBlockEditor({
             <CreateProductForm
               onCreated={(product) => {
                 setCreating(false);
+                setPicking(false);
                 onProductCreated(product);
               }}
               onCancel={() => setCreating(false)}
@@ -995,6 +1078,7 @@ function NodeFieldEditor({
           onProductCreated(product);
           onUpdateNode(sel, { blockData: { product_id: product.id } });
         }}
+        onLayoutChange={(layout) => onUpdateNode(sel, { blockData: { layout } })}
       />
     );
   }
