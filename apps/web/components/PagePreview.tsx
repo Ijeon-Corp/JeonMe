@@ -3623,8 +3623,14 @@ function renderBuilderNode(
         list: renderProductListRow, // kompatibilitas mundur (nilai lama sebelum diperluas jadi 4 opsi).
       };
       const renderProduct = PRODUK_LAYOUT_RENDERERS[node.blockData.layout as string] ?? renderSingleProductCard;
+      // Bug ditemukan lewat laporan langsung pengguna, 12 September 2026
+      // ("harusnya semua lebar blok itu disamakan dengan yang lain"):
+      // wrapper ini SEBELUMNYA dibatasi `max-w-xs`, jadi lebih sempit dari
+      // SEMUA blok lain (text/button/image/dst, semuanya cuma `w-full`
+      // tanpa batas lebar) -- tidak ada alasan blok ini dikecualikan,
+      // dihapus supaya konsisten dengan blok lain apa pun tata letaknya.
       return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full max-w-xs rounded-xl${ring}`}>
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full rounded-xl${ring}`}>
           {product ? (
             renderProduct(
               product,
