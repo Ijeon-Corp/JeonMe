@@ -132,8 +132,24 @@ export default function RootLayout({
           catatan lengkap di lib/theme-context.tsx. suppressHydrationWarning
           di <html> WAJIB ada berdampingan dengan skrip ini -- tanpanya
           React mencatat peringatan hydration mismatch tiap kali skrip ini
-          menambah atribut data-theme sebelum React sempat merender. */}
-      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+          menambah atribut data-theme sebelum React sempat merender.
+          Bug ditemukan 13 September 2026 (investigasi laporan "dashboard
+          2x refresh"): <script> di sini SEBELUMNYA anak LANGSUNG <html>,
+          BUKAN di dalam <head> -- HTML tidak mengizinkan itu ("In HTML,
+          <script> cannot be a child of <html>", error nyata di konsol
+          browser tiap load), jadi parser HTML browser diam-diam
+          memindahkan elemen ini ke <head> sendiri saat mem-parsing. Hasil
+          parse browser jadi BEDA dari yang React kira dirender -- mismatch
+          struktural tepat di root, yang membuat React kadang membuang &
+          me-render ulang SELURUH pohon dari awal saat hydration (bukan
+          cuma elemen ini), melipatgandakan semua efek fetch data dashboard
+          di baliknya. Pola resmi Next.js 16 (node_modules/next/dist/docs/
+          01-app/02-guides/preventing-flash-before-hydration.md, bagian
+          "Themes") membungkus skrip ini dalam <head> eksplisit -- diikuti
+          persis di sini. */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="bg-app-bg font-body text-app-ink antialiased">
         <ThemeProvider>
           <LocaleProvider>{children}</LocaleProvider>

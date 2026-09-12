@@ -28,7 +28,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     // tersedia saat SSR.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasToken(true);
-  }, [router]);
+    // Bug ditemukan 13 September 2026 (laporan pengguna: halaman dashboard
+    // "2x refresh" -- diverifikasi lewat instrumentasi langsung, TERJADI
+    // JUGA di production build, bukan cuma artefak React Strict Mode dev):
+    // deps [router] SEBELUMNYA di sini berasumsi referensi router dari
+    // useRouter() selalu stabil antar render -- kalau asumsi itu meleset,
+    // efek pengecekan token ini (yang harusnya sekali saja saat mount) bisa
+    // jalan ulang, ikut memicu unmount/remount {children} sehingga SEMUA
+    // efek fetch data dashboard di bawahnya (layout+halaman) jalan 2x.
+    // Efek ini murni "cek token sekali saat mount", tidak pernah perlu
+    // jalan ulang gara-gara router berubah -- deps kosong sesuai maksud
+    // aslinya.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (hasToken !== true) {
     // Kerangka BERBENTUK SHELL, bukan layar kosong (permintaan langsung

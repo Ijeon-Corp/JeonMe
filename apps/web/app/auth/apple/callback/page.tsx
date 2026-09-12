@@ -61,7 +61,12 @@ export default function AppleCallbackPage() {
       setToken(result.token);
       redirectAfterAuth(router);
     });
-  }, [router]);
+    // Pola sama seperti app/auth/google/callback/page.tsx (lihat catatan
+    // lengkap di sana, bug "2x refresh" 13 September 2026) -- `code` OAuth
+    // Apple juga cuma sekali pakai, deps kosong mencegah efek ini jalan
+    // ulang gara-gara referensi router berubah.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AuthShell>

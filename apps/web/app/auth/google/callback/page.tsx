@@ -67,7 +67,15 @@ export default function GoogleCallbackPage() {
       setToken(result.token);
       redirectAfterAuth(router);
     });
-  }, [router]);
+    // Bug ditemukan 13 September 2026 (investigasi laporan "dashboard 2x
+    // refresh", lihat catatan lengkap di AuthGuard.tsx): deps [router] bisa
+    // memicu efek ini jalan ulang. DI SINI dampaknya lebih serius dari
+    // sekadar fetch dobel -- `code` OAuth Google cuma bisa dipakai SEKALI,
+    // percobaan kedua akan ditolak Google, berpotensi jadi login gagal
+    // intermiten yang sulit dilacak. Deps kosong sesuai maksud asli (proses
+    // callback ini cuma boleh jalan sekali per kunjungan halaman).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AuthShell>

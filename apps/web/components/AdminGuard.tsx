@@ -26,7 +26,11 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     getMe()
       .then((me) => setStatus(me.role === "admin" || me.role === "support" ? "authorized" : "denied"))
       .catch(() => setStatus("denied"));
-  }, [router]);
+    // Pola sama seperti AuthGuard.tsx (lihat catatan lengkap di sana, bug
+    // dashboard "2x refresh" 13 September 2026) -- efek sekali-saat-mount
+    // ini tidak perlu jalan ulang gara-gara referensi router berubah.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (status === "denied") {
     return (

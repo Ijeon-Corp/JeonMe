@@ -419,9 +419,17 @@ export default function DashboardLayout({
       .catch(() => {
         // Sama seperti di atas -- gagal dimuat diamkan saja.
       });
-    // router dari useRouter() stabil antar render (dijamin Next.js) -- aman
-    // dimasukkan ke deps tanpa memicu efek ini jalan ulang.
-  }, [router]);
+    // Bug ditemukan 13 September 2026 (laporan pengguna: dashboard "2x
+    // refresh" -- dikonfirmasi via instrumentasi langsung, terjadi juga di
+    // production build). Komentar LAMA di sini mengasumsikan referensi
+    // router dari useRouter() stabil antar render sehingga aman masuk deps
+    // -- asumsi itu ternyata tidak selalu berlaku, dan efek ini (murni
+    // pengecekan sekali saat mount: role admin/support + getMyPage +
+    // listWorkspaces) jalan ulang kalau referensi router berubah, ikut
+    // menduplikasi fetch /dashboard/page & /dashboard/workspaces. Deps
+    // kosong sesuai maksud aslinya (sekali saat mount saja).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Bug ditemukan 12 September 2026 (laporan langsung pengguna: kolaborator
   // yang baru menerima undangan tidak tahu "dimana" cara mengelola akun

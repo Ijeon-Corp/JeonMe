@@ -36,7 +36,11 @@ export default function GuestGuard({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRedirecting(true);
     void redirectAfterAuth({ push: (href: string) => router.replace(href) });
-  }, [router]);
+    // Pola sama seperti AuthGuard.tsx (lihat catatan lengkap di sana, bug
+    // dashboard "2x refresh" 13 September 2026) -- efek sekali-saat-mount
+    // ini tidak perlu jalan ulang gara-gara referensi router berubah.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (redirecting) {
     return (
