@@ -111,7 +111,14 @@ services:
     # langsung ke Docker Hub, 4 September 2026) -- TIDAK mengubah versi
     # yang berjalan, cuma menghentikan pergerakan diam-diam ke depan.
     # Naikkan sengaja (bukan otomatis) kalau perlu versi MinIO baru.
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    #
+    # Registry pindah ke quay.io (deploy staging #525 gagal, 12 September
+    # 2026: "pull access denied for minio/minio") -- MinIO menghapus
+    # TOTAL repo "minio/minio" dari Docker Hub (dikonfirmasi lewat Docker
+    # Hub API, bukan cuma tag ini yang hilang), image yang SAMA PERSIS
+    # masih ada di quay.io/minio/minio -- ganti host registry saja, tag
+    # TIDAK berubah.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     restart: unless-stopped
     env_file: .env

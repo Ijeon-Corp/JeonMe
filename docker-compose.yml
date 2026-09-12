@@ -47,7 +47,14 @@ services:
     # Audit OWASP A08 (4 September 2026): dikunci ke versi tetap, sama
     # seperti docker-compose.prod.yml/staging.yml, supaya dev lokal
     # memakai versi MinIO yang sama dengan yang sungguhan berjalan.
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    #
+    # Registry pindah ke quay.io (deploy staging gagal, 12 September 2026):
+    # "minio/minio" DIHAPUS TOTAL dari Docker Hub oleh MinIO sendiri (bukan
+    # cuma tag ini -- seluruh repo, dikonfirmasi lewat Docker Hub API,
+    # "object not found") -- image yang SAMA PERSIS (tag tidak berubah)
+    # masih ada di quay.io/minio/minio, jadi cukup ganti host registry-nya,
+    # BUKAN naikkan versi.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000" # API S3-compatible
