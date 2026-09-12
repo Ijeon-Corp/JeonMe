@@ -61,6 +61,13 @@ export const dictionaries = {
         membersRoles: "Anggota & Peran",
         activityLog: "Activity Log",
         settings: "Pengaturan",
+        // manageAsLabel -- dropdown "Kelola sebagai" di sidebar (pemilih
+        // ruang kerja kolaborator, No.87). Sebelumnya literal string
+        // Indonesia tertulis langsung di JSX (tidak ikut ganti bahasa) --
+        // ditemukan saat menambahkan teks toast yang MENYEBUT label ini
+        // (12 September 2026, lihat inviteAcceptedToast) supaya keduanya
+        // tetap konsisten di mode EN.
+        manageAsLabel: "Kelola sebagai",
         comingSoonBadge: "Segera",
         comingSoonTitle: "Fitur ini akan segera hadir.",
         bottomHome: "Beranda",
@@ -339,7 +346,15 @@ export const dictionaries = {
           revokeConfirmButton: "Ya, Cabut",
           revokedToast: "Akses kolaborator dicabut.",
           revokeError: "Gagal mencabut akses.",
-          inviteAcceptedToast: "Undangan diterima.",
+          // inviteAcceptedToast -- bug ditemukan 12 September 2026 (laporan
+          // langsung pengguna: kolaborator yang menerima undangan tidak tahu
+          // "dimana" cara mengelola akun pemilik): pesan sebelumnya cuma
+          // "Undangan diterima." tanpa petunjuk lanjutan sama sekali --
+          // sekarang menyebut dropdown "Kelola sebagai" di sidebar (lihat
+          // dashboard.nav.manageAsLabel & WORKSPACES_CHANGED_EVENT,
+          // api-client.ts, yang membuat dropdown itu langsung muncul tanpa
+          // reload manual).
+          inviteAcceptedToast: "Undangan diterima. Buka menu \"Kelola sebagai\" di sidebar kiri untuk mulai mengelola halaman pemilik.",
           acceptError: "Gagal menerima undangan.",
           intro: "Undang admin/tim kecil untuk membantu kelola tautan, produk, atau desain halamanmu -- mereka TIDAK bisa menyentuh saldo, penarikan, verifikasi KYC, atau menghapus akunmu.",
           tabMembers: "Anggota",
@@ -3033,6 +3048,7 @@ export const dictionaries = {
         membersRoles: "Members & Roles",
         activityLog: "Activity Log",
         settings: "Settings",
+        manageAsLabel: "Manage as",
         comingSoonBadge: "Soon",
         comingSoonTitle: "This feature is coming soon.",
         bottomHome: "Home",
@@ -3307,7 +3323,7 @@ export const dictionaries = {
           revokeConfirmButton: "Yes, Revoke",
           revokedToast: "Collaborator access revoked.",
           revokeError: "Failed to revoke access.",
-          inviteAcceptedToast: "Invite accepted.",
+          inviteAcceptedToast: "Invite accepted. Open the \"Manage as\" menu in the left sidebar to start managing the owner's page.",
           acceptError: "Failed to accept invite.",
           intro: "Invite an admin/small team to help manage your links, products, or page design -- they CANNOT touch your balance, withdrawals, KYC verification, or delete your account.",
           tabMembers: "Members",

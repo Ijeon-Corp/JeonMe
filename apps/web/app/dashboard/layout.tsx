@@ -18,6 +18,7 @@ import { SITE_URL } from "@/lib/site";
 import DashboardSidebarNav, { SidebarFooterV2, buildRailItemsV2 } from "@/components/dashboard/shell/DashboardSidebarNav";
 import { getDashboardPageMeta } from "@/components/dashboard/shell/page-registry";
 import {
+  WORKSPACES_CHANGED_EVENT,
   Workspace,
   clearToken,
   getActiveWorkspaceOwnerId,
@@ -423,6 +424,28 @@ export default function DashboardLayout({
     // dimasukkan ke deps tanpa memicu efek ini jalan ulang.
   }, [router]);
 
+  // Bug ditemukan 12 September 2026 (laporan langsung pengguna: kolaborator
+  // yang baru menerima undangan tidak tahu "dimana" cara mengelola akun
+  // pemilik): efek DI ATAS cuma mengambil listWorkspaces() SEKALI saat
+  // layout ini pertama kali mount. Menerima undangan terjadi di
+  // dashboard/team/page.tsx (halaman anak terpisah) -- tanpa efek INI,
+  // dropdown "Kelola sebagai" tetap kosong sampai kolaborator me-reload
+  // browser SECARA MANUAL, tanpa petunjuk apa pun. acceptCollaborationInvite
+  // (api-client.ts) men-dispatch WORKSPACES_CHANGED_EVENT setelah sukses --
+  // dengarkan di sini supaya dropdown langsung muncul begitu undangan
+  // diterima, sama sekali tanpa perlu reload manual.
+  useEffect(() => {
+    function handleWorkspacesChanged() {
+      listWorkspaces()
+        .then(setWorkspaces)
+        .catch(() => {
+          // Sama seperti efek mount di atas -- gagal dimuat diamkan saja.
+        });
+    }
+    window.addEventListener(WORKSPACES_CHANGED_EVENT, handleWorkspacesChanged);
+    return () => window.removeEventListener(WORKSPACES_CHANGED_EVENT, handleWorkspacesChanged);
+  }, []);
+
   function handleWorkspaceChange(ownerId: string) {
     const isSelf = workspaces.find((w) => w.owner_user_id === ownerId)?.is_self;
     setActiveWorkspaceOwnerId(isSelf ? null : ownerId);
@@ -497,7 +520,7 @@ export default function DashboardLayout({
         {workspaces.length > 1 && (
           <div className="mt-4">
             <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-white/50">
-              Kelola sebagai
+              {t("dashboard.nav.manageAsLabel")}
             </label>
             <select
               value={activeOwnerId ?? workspaces.find((w) => w.is_self)?.owner_user_id ?? ""}

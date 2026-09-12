@@ -70,6 +70,20 @@ export function setActiveWorkspaceOwnerId(ownerId: string | null): void {
   }
 }
 
+// WORKSPACES_CHANGED_EVENT -- bug ditemukan 12 September 2026 (laporan
+// langsung pengguna: kolaborator yang baru menerima undangan tidak tahu
+// "dimana" cara mengelola akun pemilik): dropdown "Kelola sebagai" di
+// dashboard/layout.tsx cuma memanggil listWorkspaces() SEKALI saat layout
+// pertama kali mount -- menerima undangan lewat dashboard/team/page.tsx
+// (halaman ANAK yang berbeda) tidak pernah memberi tahu layout supaya
+// mengambil ulang daftar itu, jadi dropdown-nya tetap kosong/tidak muncul
+// sampai kolaborator me-reload browser SECARA MANUAL (F5) -- tidak ada
+// petunjuk apa pun kalau itu yang perlu dilakukan. acceptCollaborationInvite
+// di bawah men-dispatch event ini setelah sukses; dashboard/layout.tsx
+// mendengarkan lewat window.addEventListener supaya dropdown langsung
+// muncul tanpa reload manual.
+export const WORKSPACES_CHANGED_EVENT = "jeonme:workspaces-changed";
+
 // Header X-Act-As-Owner HANYA berpengaruh pada rute yang dipasangi
 // middleware.ActAsOwner di backend (tautan/produk/desain) -- rute lain
 // (saldo/KYC/domain/dst.) mengabaikannya sepenuhnya, jadi aman dikirim di
@@ -4202,7 +4216,12 @@ export function listInvitesForMe() {
 }
 
 export function acceptCollaborationInvite(id: string) {
-  return apiFetch<{ message: string }>(`/dashboard/collaboration-invites/${id}/accept`, { method: "POST" }, { auth: true });
+  return apiFetch<{ message: string }>(`/dashboard/collaboration-invites/${id}/accept`, { method: "POST" }, { auth: true }).then(
+    (res) => {
+      if (typeof window !== "undefined") window.dispatchEvent(new Event(WORKSPACES_CHANGED_EVENT));
+      return res;
+    }
+  );
 }
 
 // Modul Settings §4 acceptance criteria: pemilik bisa lihat siapa mengubah
