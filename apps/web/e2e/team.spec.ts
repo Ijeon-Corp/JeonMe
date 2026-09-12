@@ -47,7 +47,17 @@ test.describe("Pengaturan: Tim & Kolaborator", () => {
       await expect(inviteSection.getByText(`@${ownerUsername}`)).toBeVisible();
       await expect(inviteSection.getByText("Admin Konten (Tautan & Desain)")).toBeVisible();
       await collabPage.getByRole("button", { name: "Terima" }).click();
-      await expect(collabPage.getByText(`@${ownerUsername}`)).not.toBeVisible();
+      // Perbaikan UX kedua alur kolaborator (12 September 2026, laporan
+      // pengguna "masih tidak tau alur member... setelah accept dimana
+      // bisa edit"): tab OTOMATIS pindah ke "Anggota" begitu diterima
+      // (BUKAN tetap di "Undangan"), section baru "Akun yang Bisa Kamu
+      // Kelola" langsung terlihat di situ dgn tombol aksi "Kelola
+      // Sekarang" -- assertion lama ("@owner tidak lagi terlihat di mana
+      // pun") sudah usang sejak fitur ini ada (@owner SEKARANG memang
+      // sengaja tampil lagi, di section baru ini).
+      await expect(collabPage.getByRole("tab", { name: "Anggota", exact: true })).toHaveAttribute("aria-selected", "true");
+      const managedSection = collabPage.locator("section", { has: collabPage.getByRole("heading", { name: "Akun yang Bisa Kamu Kelola" }) });
+      await expect(managedSection.getByText(`@${ownerUsername}`, { exact: true })).toBeVisible();
 
       // page.reload() mengembalikan teamTab ke default ("Anggota").
       await page.reload();

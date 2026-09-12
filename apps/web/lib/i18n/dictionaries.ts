@@ -68,6 +68,14 @@ export const dictionaries = {
         // (12 September 2026, lihat inviteAcceptedToast) supaya keduanya
         // tetap konsisten di mode EN.
         manageAsLabel: "Kelola sebagai",
+        // managingOtherLabel/backToMyAccount -- permintaan langsung
+        // pengguna, 12 September 2026 ("masih tidak tau alur member...
+        // buat lebih jelas dari UX"): dropdown ganti label + bingkai emas
+        // begitu SEDANG mengelola akun orang lain (bukan cuma tampil
+        // pilihan biasa), supaya jelas terlihat lagi kalau pindah halaman
+        // & lupa konteksnya.
+        managingOtherLabel: "Sedang Mengelola",
+        backToMyAccount: "← Kembali ke akun saya",
         comingSoonBadge: "Segera",
         comingSoonTitle: "Fitur ini akan segera hadir.",
         bottomHome: "Beranda",
@@ -348,13 +356,15 @@ export const dictionaries = {
           revokeError: "Gagal mencabut akses.",
           // inviteAcceptedToast -- bug ditemukan 12 September 2026 (laporan
           // langsung pengguna: kolaborator yang menerima undangan tidak tahu
-          // "dimana" cara mengelola akun pemilik): pesan sebelumnya cuma
-          // "Undangan diterima." tanpa petunjuk lanjutan sama sekali --
-          // sekarang menyebut dropdown "Kelola sebagai" di sidebar (lihat
-          // dashboard.nav.manageAsLabel & WORKSPACES_CHANGED_EVENT,
-          // api-client.ts, yang membuat dropdown itu langsung muncul tanpa
-          // reload manual).
-          inviteAcceptedToast: "Undangan diterima. Buka menu \"Kelola sebagai\" di sidebar kiri untuk mulai mengelola halaman pemilik.",
+          // "dimana" cara mengelola akun pemilik). Perbaikan PERTAMA
+          // (dropdown "Kelola sebagai" sidebar + toast menyebutnya) ternyata
+          // masih tidak cukup jelas menurut pengguna -- perbaikan KEDUA:
+          // handleAccept sekarang loncat OTOMATIS ke tab "Anggota" tempat
+          // section "Akun yang Bisa Kamu Kelola" (managedWorkspacesHeading)
+          // langsung tampil dgn tombol aksi, jadi toast ini TIDAK perlu lagi
+          // menjelaskan KE MANA harus pergi -- tab yang terbuka sudah
+          // menjawabnya sendiri.
+          inviteAcceptedToast: "Undangan diterima!",
           acceptError: "Gagal menerima undangan.",
           intro: "Undang admin/tim kecil untuk membantu kelola tautan, produk, atau desain halamanmu -- mereka TIDAK bisa menyentuh saldo, penarikan, verifikasi KYC, atau menghapus akunmu.",
           tabMembers: "Anggota",
@@ -373,6 +383,15 @@ export const dictionaries = {
           invitingButton: "Mengundang...",
           sendInviteButton: "Kirim Undangan",
           myCollaboratorsHeading: "Kolaboratorku",
+          // managedWorkspaces* -- permintaan langsung pengguna, 12
+          // September 2026 ("masih tidak tau alur member... setelah
+          // accept dimana bisa edit semua link tim nya"): section BARU
+          // di tab "Anggota", KEBALIKAN "Kolaboratorku" di atas (orang
+          // lain yang membantu PENGGUNA INI) -- ini akun ORANG LAIN yang
+          // pengguna ini BANTU kelola.
+          managedWorkspacesHeading: "Akun yang Bisa Kamu Kelola",
+          managedWorkspacesDesc: "Kamu jadi kolaborator di akun-akun ini. Klik \"Kelola Sekarang\" untuk langsung mulai mengedit tautan/produk mereka.",
+          manageNowButton: "Kelola Sekarang",
           roleAriaLabelTemplate: "Role {email}",
           revokeTitle: "Cabut akses",
           emptyCollaborators: "Belum ada kolaborator.",
@@ -3151,6 +3170,8 @@ export const dictionaries = {
         activityLog: "Activity Log",
         settings: "Settings",
         manageAsLabel: "Manage as",
+        managingOtherLabel: "Currently Managing",
+        backToMyAccount: "← Back to my account",
         comingSoonBadge: "Soon",
         comingSoonTitle: "This feature is coming soon.",
         bottomHome: "Home",
@@ -3425,7 +3446,7 @@ export const dictionaries = {
           revokeConfirmButton: "Yes, Revoke",
           revokedToast: "Collaborator access revoked.",
           revokeError: "Failed to revoke access.",
-          inviteAcceptedToast: "Invite accepted. Open the \"Manage as\" menu in the left sidebar to start managing the owner's page.",
+          inviteAcceptedToast: "Invite accepted!",
           acceptError: "Failed to accept invite.",
           intro: "Invite an admin/small team to help manage your links, products, or page design -- they CANNOT touch your balance, withdrawals, KYC verification, or delete your account.",
           tabMembers: "Members",
@@ -3444,6 +3465,9 @@ export const dictionaries = {
           invitingButton: "Inviting...",
           sendInviteButton: "Send Invite",
           myCollaboratorsHeading: "My Collaborators",
+          managedWorkspacesHeading: "Accounts You Can Manage",
+          managedWorkspacesDesc: "You're a collaborator on these accounts. Click \"Manage Now\" to start editing their links/products right away.",
+          manageNowButton: "Manage Now",
           roleAriaLabelTemplate: "Role for {email}",
           revokeTitle: "Revoke access",
           emptyCollaborators: "No collaborators yet.",

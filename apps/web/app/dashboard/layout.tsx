@@ -518,9 +518,22 @@ export default function DashboardLayout({
         </Link>
 
         {workspaces.length > 1 && (
-          <div className="mt-4">
-            <label className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-white/50">
-              {t("dashboard.nav.manageAsLabel")}
+          // Bingkai emas + label ganti jadi "Sedang Mengelola" begitu
+          // activeOwnerId terisi (bukan akun sendiri) -- permintaan
+          // langsung pengguna, 12 September 2026 ("masih tidak tau alur
+          // member... buat lebih jelas dari UX"): dropdown polos SEBELUMNYA
+          // tidak cukup mencolok utk memberi tahu "kamu SEDANG mengelola
+          // akun orang lain, bukan akun sendiri" -- terutama kalau
+          // pengguna pindah halaman lalu lupa konteksnya. Warna emas
+          // (BUKAN ungu brand biasa) SENGAJA dipilih supaya kontras jelas
+          // dari latar hijau tua sidebar & tombol ungu yang sudah ada di
+          // tempat lain, konsisten dengan aksen "berlian emas" yang sudah
+          // jadi bahasa visual sidebar ini.
+          <div className={`mt-4 rounded-lg p-2 ${activeOwnerId ? "border-2 border-amber-400 bg-amber-400/10" : ""}`}>
+            <label
+              className={`px-0.5 text-[10px] font-bold uppercase tracking-wider ${activeOwnerId ? "text-amber-300" : "text-white/50"}`}
+            >
+              {activeOwnerId ? t("dashboard.nav.managingOtherLabel") : t("dashboard.nav.manageAsLabel")}
             </label>
             <select
               value={activeOwnerId ?? workspaces.find((w) => w.is_self)?.owner_user_id ?? ""}
@@ -536,6 +549,21 @@ export default function DashboardLayout({
                 </option>
               ))}
             </select>
+            {/* Jalan cepat kembali -- SATU klik balik ke akun sendiri,
+                tanpa perlu buka dropdown & cari opsi "Akun saya" lagi. */}
+            {activeOwnerId && (
+              <button
+                type="button"
+                onClick={() => {
+                  const selfId = workspaces.find((w) => w.is_self)?.owner_user_id ?? "";
+                  setActiveOwnerIdState(selfId);
+                  handleWorkspaceChange(selfId);
+                }}
+                className="mt-1.5 text-[10px] font-semibold text-amber-200 underline hover:text-amber-100"
+              >
+                {t("dashboard.nav.backToMyAccount")}
+              </button>
+            )}
           </div>
         )}
 

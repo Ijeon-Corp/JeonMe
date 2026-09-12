@@ -8,16 +8,19 @@ import {
   PendingCollaborationInvite,
   TeamAuditLogEntry,
   TeamRole,
+  Workspace,
   acceptCollaborationInvite,
   inviteCollaborator,
   listCollaborators,
   listInvitesForMe,
   listTeamAuditLog,
+  listWorkspaces,
   revokeCollaborator,
+  setActiveWorkspaceOwnerId,
   updateCollaboratorRole,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
-import { IconCheck, IconClock, IconTrash, IconUsers } from "@/components/icons";
+import { IconCheck, IconChevronRight, IconClock, IconTrash, IconUsers } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
@@ -82,20 +85,30 @@ export default function DashboardTeamPage() {
   const [collaborators, setCollaborators] = useState<DashboardCollaborator[]>([]);
   const [invitesForMe, setInvitesForMe] = useState<PendingCollaborationInvite[]>([]);
   const [auditLog, setAuditLog] = useState<TeamAuditLogEntry[]>([]);
+  // workspaces -- permintaan langsung pengguna, 12 September 2026
+  // ("masih tidak tau alur member... setelah accept dimana bisa edit
+  // semua link tim nya"): SEBELUMNYA satu-satunya tempat melihat "akun
+  // mana saja yang bisa aku kelola" adalah dropdown kecil "Kelola
+  // sebagai" di sidebar (gampang terlewat) -- sekarang ditampilkan
+  // LANGSUNG di halaman ini juga (lihat section "Akun yang Bisa Kamu
+  // Kelola" di bawah), tepat di tempat undangan diterima.
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const managedWorkspaces = workspaces.filter((w) => !w.is_self);
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [role, setRole] = useState<TeamRole>("content_admin");
   const [inviting, setInviting] = useState(false);
 
   function reload() {
-    return Promise.all([listCollaborators(), listInvitesForMe(), listTeamAuditLog()]).then(([c, i, a]) => {
+    return Promise.all([listCollaborators(), listInvitesForMe(), listTeamAuditLog(), listWorkspaces()]).then(([c, i, a, w]) => {
       setCollaborators(c);
       setInvitesForMe(i);
       setAuditLog(a);
+      setWorkspaces(w);
     });
   }
 
@@ -162,12 +175,43 @@ export default function DashboardTeamPage() {
     try {
       await acceptCollaborationInvite(invite.id);
       await reload();
+      // Loncat OTOMATIS ke tab "Anggota" -- di situlah section "Akun
+      // yang Bisa Kamu Kelola" (di bawah) muncul, alur paling langsung
+      // dari "terima undangan" ke "tahu ke mana harus pergi" tanpa perlu
+      // menjelaskan lewat toast/teks sama sekali.
+      setTeamTab("members");
       showToast(t("dashboard.pages.team.inviteAcceptedToast"));
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : t("dashboard.pages.team.acceptError"), "error");
     } finally {
       setBusyId(null);
     }
+  }
+
+  // handleManageNow -- tombol "Kelola Sekarang" di section "Akun yang
+  // Bisa Kamu Kelola": ganti ruang kerja aktif LALU navigasi LANGSUNG ke
+  // /dashboard/links (bukan cuma reload di tempat seperti sidebar) --
+  // menjawab persis "setelah accept dimana bisa edit semua link tim
+  // nya". window.location.href (BUKAN router.push) SENGAJA -- pola sama
+  // seperti handleWorkspaceChange (dashboard/layout.tsx): banyak halaman
+  // dashboard fetch datanya SEKALI saat mount, ganti ruang kerja lewat
+  // navigasi client-side biasa akan meninggalkan data BASI dari ruang
+  // kerja sebelumnya di halaman manapun yang sudah pernah dibuka sesi
+  // ini.
+  function handleManageNow(ws: Workspace) {
+    setActiveWorkspaceOwnerId(ws.owner_user_id);
+    // False positive dikonfirmasi lewat reproduksi terisolasi: rule
+    // react-hooks/immutability SALAH menandai `window.location.href = ...`
+    // sebagai "modifikasi variabel di luar komponen" HANYA kalau fungsi
+    // pemanggilnya (di sini: handleManageNow) dipanggil dari dalam
+    // `.map()` JSX (lihat onClick={() => handleManageNow(ws)} di bawah) --
+    // assignment identik di luar konteks .map() (mis. handleCheckout,
+    // settings/subscription/page.tsx) TIDAK kena rule ini sama sekali.
+    // Pola window.location.href = string SUDAH established & aman dipakai
+    // di banyak tempat lain di codebase ini (BuyProductButton.tsx, OAuth
+    // button components, dst).
+    // eslint-disable-next-line react-hooks/immutability
+    window.location.href = "/dashboard/links";
   }
 
   if (loading) return <PageSkeleton />;
@@ -258,6 +302,45 @@ export default function DashboardTeamPage() {
           </button>
         </form>
       </section>
+      )}
+
+      {/* "Akun yang Bisa Kamu Kelola" -- permintaan langsung pengguna, 12
+          September 2026 ("masih tidak tau alur member... setelah accept
+          dimana bisa edit semua link tim nya"): daftar akun ORANG LAIN
+          yang pengguna ini bantu kelola (kebalikan "Kolaboratorku" di
+          bawah, yang isinya orang lain yang membantu PENGGUNA INI).
+          SEBELUMNYA info ini cuma ada di dropdown kecil sidebar "Kelola
+          sebagai" -- sekarang tampil LANGSUNG di sini, tab yang otomatis
+          terbuka begitu undangan diterima (lihat handleAccept), dengan
+          tombol aksi langsung (handleManageNow) alih-alih cuma
+          penjelasan teks ke tempat lain. Section ini SENGAJA di ATAS
+          "Kolaboratorku" -- lebih mendesak begitu baru menerima undangan. */}
+      {teamTab === "members" && managedWorkspaces.length > 0 && (
+        <section className="mt-4 rounded-jlg border-2 border-jeon-purple bg-jeon-purple/5 p-5">
+          <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.team.managedWorkspacesHeading")}</h2>
+          <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.team.managedWorkspacesDesc")}</p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {managedWorkspaces.map((ws) => (
+              <li
+                key={ws.owner_user_id}
+                className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-app-ink">@{ws.owner_username}</p>
+                  <p className="text-[11px] text-app-muted">{ROLE_LABEL[ws.role as TeamRole] ?? ws.role}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleManageNow(ws)}
+                  className="btn-primary flex flex-shrink-0 items-center gap-1 rounded-lg px-3.5 py-2 text-xs font-bold text-white"
+                >
+                  {t("dashboard.pages.team.manageNowButton")}
+                  <IconChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {teamTab === "members" && (

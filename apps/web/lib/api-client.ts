@@ -4262,6 +4262,10 @@ export interface Workspace {
   can_edit_links: boolean;
   can_edit_products: boolean;
   can_edit_design: boolean;
+  // role -- kosong untuk baris is_self (tidak relevan). Dipakai
+  // dashboard/team/page.tsx utk label peran yang ramah, lihat catatan
+  // lengkap di collaborator.go's workspaceItem.
+  role: string;
 }
 
 export function listWorkspaces() {

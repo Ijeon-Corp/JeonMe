@@ -441,6 +441,13 @@ type workspaceItem struct {
 	CanEditLinks    bool   `json:"can_edit_links"`
 	CanEditProducts bool   `json:"can_edit_products"`
 	CanEditDesign   bool   `json:"can_edit_design"`
+	// Role -- permintaan langsung pengguna, 12 September 2026 ("masih
+	// tidak tau alur member... buat lebih jelas dari UX"): dashboard/
+	// team/page.tsx sekarang menampilkan daftar akun yang bisa dikelola
+	// LANGSUNG di halaman Tim (bukan cuma dropdown sidebar) -- butuh label
+	// peran yang ramah ("Akses Penuh" dst), bukan cuma 3 flag boolean.
+	// Kosong untuk baris "is_self" (tidak relevan, itu akun sendiri).
+	Role string `json:"role"`
 }
 
 // ListWorkspaces — dipakai pemilih ruang kerja di dashboard: workspace
@@ -463,7 +470,7 @@ func (h *CollaboratorHandler) ListWorkspaces(c *gin.Context) {
 	}
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT c.owner_user_id, u.username, c.can_edit_links, c.can_edit_products, c.can_edit_design
+		SELECT c.owner_user_id, u.username, c.can_edit_links, c.can_edit_products, c.can_edit_design, c.role
 		FROM collaborators c JOIN users u ON u.id = c.owner_user_id
 		WHERE c.collaborator_user_id = $1 AND c.status = 'active'
 		ORDER BY u.username ASC
@@ -472,7 +479,7 @@ func (h *CollaboratorHandler) ListWorkspaces(c *gin.Context) {
 		defer rows.Close()
 		for rows.Next() {
 			var it workspaceItem
-			if err := rows.Scan(&it.OwnerUserID, &it.OwnerUsername, &it.CanEditLinks, &it.CanEditProducts, &it.CanEditDesign); err == nil {
+			if err := rows.Scan(&it.OwnerUserID, &it.OwnerUsername, &it.CanEditLinks, &it.CanEditProducts, &it.CanEditDesign, &it.Role); err == nil {
 				items = append(items, it)
 			}
 		}
