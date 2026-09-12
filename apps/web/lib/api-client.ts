@@ -691,6 +691,11 @@ export interface Me {
   email: string;
   username: string;
   role: string;
+  // has_password -- permintaan langsung pengguna, 12 September 2026:
+  // akun Google/Apple OAuth-only tidak pernah punya password (NULL sejak
+  // dibuat) -- dipakai settings/security/page.tsx utk menampilkan form
+  // "Buat Password" (bukan "Ganti Password") begitu false.
+  has_password: boolean;
 }
 
 export function getMe() {
@@ -3785,6 +3790,19 @@ export function changePassword(input: { old_password: string; new_password: stri
   return apiFetch<{ message: string }>(
     "/dashboard/security/password",
     { method: "PATCH", body: JSON.stringify(input) },
+    { auth: true }
+  );
+}
+
+// setPassword -- permintaan langsung pengguna, 12 September 2026: akun
+// Google/Apple OAuth-only "Buat Password" pertama kali (has_password
+// false di Me, lihat catatan lengkap di interface itu) -- POST (bukan
+// PATCH seperti changePassword di atas) di path YANG SAMA, tidak ada
+// field old_password karena memang belum ada password lama.
+export function setPassword(input: { new_password: string }) {
+  return apiFetch<{ message: string }>(
+    "/dashboard/security/password",
+    { method: "POST", body: JSON.stringify(input) },
     { auth: true }
   );
 }

@@ -12,9 +12,11 @@ import {
   disable2FA,
   enable2FA,
   get2FAStatus,
+  getMe,
   listSessions,
   revokeSession,
   revokeAllSessions,
+  setPassword,
   verify2FA,
 } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
@@ -31,6 +33,14 @@ export default function SettingsSecurityPage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  // hasPassword -- permintaan langsung pengguna, 12 September 2026: akun
+  // Google/Apple OAuth-only tidak punya password (has_password false di
+  // GET /auth/me) -- null = belum dimuat, default TAMPILKAN form "Ganti
+  // Password" yang sudah ada (asumsi paling umum) supaya tidak flash
+  // kosong sebelum getMe() selesai.
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [setPasswordValue, setSetPasswordValue] = useState("");
+  const [savingSetPassword, setSavingSetPassword] = useState(false);
 
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [setupSecret, setSetupSecret] = useState<{ secret: string; otpauth_url: string } | null>(null);
@@ -57,6 +67,11 @@ export default function SettingsSecurityPage() {
     listSessions()
       .then(setSessions)
       .catch(() => setSessions([]));
+    getMe()
+      .then((me) => setHasPassword(me.has_password))
+      .catch(() => {
+        // Non-fatal -- default (form "Ganti Password") tetap dipakai.
+      });
   }, []);
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -71,6 +86,25 @@ export default function SettingsSecurityPage() {
       showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.passwordChangeError"), "error");
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  // handleSetPassword -- akun Google/Apple OAuth-only "Buat Password"
+  // pertama kali (lihat catatan lengkap di hasPassword). Berhasil ->
+  // langsung switch ke form "Ganti Password" (setHasPassword(true)),
+  // tanpa perlu reload halaman.
+  async function handleSetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingSetPassword(true);
+    try {
+      await setPassword({ new_password: setPasswordValue });
+      setSetPasswordValue("");
+      setHasPassword(true);
+      showToast(t("dashboard.pages.settingsSecurity.setPasswordSuccess"));
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSecurity.setPasswordError"), "error");
+    } finally {
+      setSavingSetPassword(false);
     }
   }
 
@@ -165,35 +199,65 @@ export default function SettingsSecurityPage() {
       <h1 className="mt-3 font-display text-2xl font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.title")}</h1>
       <p className="mt-1 text-sm text-app-muted">{t("dashboard.pages.settingsSecurity.subtitle")}</p>
 
-      <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
-        <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
-        <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
-          <input
-            type="password"
-            required
-            placeholder={t("dashboard.pages.settingsSecurity.oldPasswordPlaceholder")}
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
-          />
-          <input
-            type="password"
-            required
-            minLength={8}
-            placeholder={t("dashboard.pages.settingsSecurity.newPasswordPlaceholder")}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={savingPassword}
-            className="self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-          >
-            {savingPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.changePasswordButton")}
-          </button>
-        </form>
-      </section>
+      {/* hasPassword === false -- akun Google/Apple OAuth-only (belum
+          pernah punya password sama sekali) -- form "Buat Password" SATU
+          field (tanpa password lama, memang belum ada). hasPassword
+          true/null (masih dimuat, default aman) -- form "Ganti Password"
+          LAMA, TIDAK berubah. */}
+      {hasPassword === false ? (
+        <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
+          <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.setPasswordTitle")}</h2>
+          <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.settingsSecurity.setPasswordDescription")}</p>
+          <form onSubmit={handleSetPassword} className="mt-3 flex flex-col gap-3">
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder={t("dashboard.pages.settingsSecurity.newPasswordPlaceholder")}
+              value={setPasswordValue}
+              onChange={(e) => setSetPasswordValue(e.target.value)}
+              className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={savingSetPassword}
+              className="self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {savingSetPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.setPasswordButton")}
+            </button>
+          </form>
+        </section>
+      ) : (
+        <section className="mt-6 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
+          <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.settingsSecurity.changePasswordTitle")}</h2>
+          <form onSubmit={handleChangePassword} className="mt-3 flex flex-col gap-3">
+            <input
+              type="password"
+              required
+              placeholder={t("dashboard.pages.settingsSecurity.oldPasswordPlaceholder")}
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
+            />
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder={t("dashboard.pages.settingsSecurity.newPasswordPlaceholder")}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="self-start rounded-xl btn-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {savingPassword ? t("dashboard.pages.settingsSecurity.saving") : t("dashboard.pages.settingsSecurity.changePasswordButton")}
+            </button>
+          </form>
+        </section>
+      )}
 
       <section className="mt-4 rounded-jlg border-2 border-jeon-ink bg-app-surface p-5">
         <div className="flex items-center justify-between">

@@ -49,12 +49,23 @@ func (h *SecurityHandler) ChangePassword(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var currentHash string
+	// *string (nullable) -- akun Google/Apple OAuth-only (belum pernah
+	// "Buat Password", lihat SetPassword di bawah) punya password_hash
+	// NULL di database (oauth_google.go). Scan ke string non-nullable di
+	// sini SEBELUMNYA gagal diam-diam ke cabang generic 500 di bawah,
+	// bukan pesan jelas -- bug ditemukan 12 September 2026 saat menambah
+	// SetPassword (akun begini sekarang lebih sering mampir ke halaman
+	// Keamanan, jadi celah ini lebih sering kena).
+	var currentHash *string
 	if err := h.DB.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.OldPassword)); err != nil {
+	if currentHash == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini belum punya password, buat password dulu di halaman Keamanan"})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*currentHash), []byte(req.OldPassword)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "password lama salah"})
 		return
 	}
@@ -85,6 +96,67 @@ func (h *SecurityHandler) ChangePassword(c *gin.Context) {
 	_ = audit.Log(ctx, h.DB, userID, "security.password_changed", "user", userID, nil)
 
 	c.JSON(http.StatusOK, gin.H{"message": "password berhasil diganti"})
+}
+
+type setPasswordRequest struct {
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// SetPassword — permintaan langsung pengguna, 12 September 2026: akun
+// yang masuk lewat Google/Apple OAuth (password_hash NULL sejak dibuat,
+// lihat oauth_google.go/oauth_apple.go) TIDAK PERNAH punya password sama
+// sekali, jadi satu-satunya cara masuk selama ini adalah tombol OAuth
+// itu. Endpoint ini beri jalan RESMI dari Settings > Keamanan untuk
+// menambahkan password, supaya sesudahnya bisa masuk lewat OAUTH *atau*
+// email+password biasa. BEDA dari ChangePassword (method POST, bukan
+// PATCH, di path yang sama) -- TIDAK ada re-auth "password lama" (memang
+// belum ada password lama), dan SENGAJA menolak kalau password SUDAH ada
+// (pengguna yang ingin GANTI password yang sudah ada harus lewat
+// ChangePassword yang mewajibkan re-auth, endpoint ini bukan jalan pintas
+// untuk itu).
+func (h *SecurityHandler) SetPassword(c *gin.Context) {
+	userID := c.GetString("userID")
+
+	var req setPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("security: validasi gagal: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var currentHash *string
+	if err := h.DB.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentHash); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
+		return
+	}
+	if currentHash != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini sudah punya password, gunakan Ganti Password"})
+		return
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memproses password baru"})
+		return
+	}
+
+	if _, err := h.DB.Exec(ctx, `UPDATE users SET password_hash = $1 WHERE id = $2`, string(newHash), userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan password baru"})
+		return
+	}
+
+	// Sama seperti ChangePassword -- cabut sesi lain (kalau ada), pertahankan
+	// sesi pemanggil sendiri.
+	currentJTI, _ := c.Get("jti")
+	currentJTIStr, _ := currentJTI.(string)
+	revokeAllUserSessions(ctx, h.RDB, userID, currentJTIStr)
+
+	_ = audit.Log(ctx, h.DB, userID, "security.password_set", "user", userID, nil)
+
+	c.JSON(http.StatusOK, gin.H{"message": "password berhasil dibuat"})
 }
 
 // Enable2FA — langkah 1/2: buat secret TOTP baru & simpan sebagai "belum
@@ -183,12 +255,17 @@ func (h *SecurityHandler) Disable2FA(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var currentHash string
+	// *string (nullable) -- lihat catatan lengkap di ChangePassword.
+	var currentHash *string
 	if err := h.DB.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.Password)); err != nil {
+	if currentHash == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini belum punya password, buat password dulu di halaman Keamanan"})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*currentHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "password salah"})
 		return
 	}

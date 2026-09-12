@@ -1847,6 +1847,16 @@ export const dictionaries = {
           changePasswordButton: "Ganti Password",
           passwordChangeSuccess: "Password berhasil diganti.",
           passwordChangeError: "Gagal mengganti password.",
+          // setPassword* -- permintaan langsung pengguna, 12 September
+          // 2026: akun yang masuk lewat Google/Apple belum pernah punya
+          // password -- form ini menggantikan "Ganti Password" di atas
+          // KHUSUS untuk akun begitu (lihat hasPassword,
+          // security/page.tsx).
+          setPasswordTitle: "Buat Password",
+          setPasswordDescription: "Akun ini masuk lewat Google/Apple -- buat password supaya bisa masuk pakai email & password juga, tidak cuma lewat tombol OAuth.",
+          setPasswordButton: "Buat Password",
+          setPasswordSuccess: "Password berhasil dibuat. Sekarang kamu bisa masuk pakai email & password juga.",
+          setPasswordError: "Gagal membuat password.",
           twoFactorTitle: "Verifikasi Dua Langkah (2FA)",
           statusActive: "Aktif",
           statusInactive: "Nonaktif",
@@ -4847,6 +4857,11 @@ export const dictionaries = {
           changePasswordButton: "Change Password",
           passwordChangeSuccess: "Password changed successfully.",
           passwordChangeError: "Failed to change password.",
+          setPasswordTitle: "Set Password",
+          setPasswordDescription: "This account signed in with Google/Apple -- set a password so you can also sign in with email & password, not just the OAuth button.",
+          setPasswordButton: "Set Password",
+          setPasswordSuccess: "Password created successfully. You can now sign in with email & password too.",
+          setPasswordError: "Failed to set password.",
           twoFactorTitle: "Two-Factor Verification (2FA)",
           statusActive: "Active",
           statusInactive: "Inactive",

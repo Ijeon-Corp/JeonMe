@@ -668,6 +668,12 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			// limit, beda dari 2fa/verify-login yang sudah dilindungi
 			// authRateLimit.
 			dashboard.PATCH("/security/password", authRateLimit, security.ChangePassword)
+			// SetPassword -- permintaan langsung pengguna, 12 September 2026:
+			// akun Google/Apple OAuth-only "Buat Password" pertama kali (tidak
+			// ada password lama utk re-auth, beda dari ChangePassword di atas)
+			// -- POST (buat baru) di path YANG SAMA dgn PATCH (ubah yang sudah
+			// ada) di atas, method HTTP-nya sendiri yang membedakan.
+			dashboard.POST("/security/password", authRateLimit, security.SetPassword)
 			dashboard.POST("/security/2fa/enable", security.Enable2FA)
 			dashboard.POST("/security/2fa/verify", authRateLimit, security.Verify2FA)
 			dashboard.POST("/security/2fa/disable", authRateLimit, security.Disable2FA)

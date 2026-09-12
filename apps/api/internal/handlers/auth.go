@@ -512,6 +512,13 @@ type meResponse struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
+	// HasPassword -- permintaan langsung pengguna, 12 September 2026
+	// ("buatkan menu create password" untuk akun Google): akun OAuth-only
+	// (password_hash NULL, lihat oauth_google.go/oauth_apple.go) perlu
+	// dibedakan frontend dari akun biasa supaya Settings > Keamanan bisa
+	// menampilkan form "Buat Password" (bukan "Ganti Password", yang
+	// mewajibkan re-auth password lama yang memang belum ada).
+	HasPassword bool `json:"has_password"`
 }
 
 // GetMe — permintaan langsung pengguna, 5 September 2026: admin bisa masuk
@@ -532,8 +539,8 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	defer cancel()
 
 	resp := meResponse{ID: userID}
-	err := h.DB.QueryRow(ctx, `SELECT email, username, role FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).
-		Scan(&resp.Email, &resp.Username, &resp.Role)
+	err := h.DB.QueryRow(ctx, `SELECT email, username, role, password_hash IS NOT NULL FROM users WHERE id = $1 AND deleted_at IS NULL`, userID).
+		Scan(&resp.Email, &resp.Username, &resp.Role, &resp.HasPassword)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "pengguna tidak ditemukan"})
 		return

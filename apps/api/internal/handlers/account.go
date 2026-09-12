@@ -67,12 +67,20 @@ func (h *AccountHandler) Deactivate(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var currentHash string
+	// *string (nullable) -- akun Google/Apple OAuth-only bisa punya
+	// password_hash NULL (lihat catatan lengkap di
+	// SecurityHandler.ChangePassword, security.go), scan non-nullable
+	// SEBELUMNYA gagal diam-diam ke 500 generik di bawah.
+	var currentHash *string
 	if err := h.DB.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.Password)); err != nil {
+	if currentHash == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini belum punya password, buat password dulu di halaman Keamanan"})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*currentHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "password salah"})
 		return
 	}
@@ -128,7 +136,10 @@ func (h *AccountHandler) RequestDeletion(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	var username, passwordHash string
+	// *string (nullable) -- lihat catatan lengkap di Deactivate/
+	// SecurityHandler.ChangePassword soal akun Google/Apple OAuth-only.
+	var username string
+	var passwordHash *string
 	if err := h.DB.QueryRow(ctx, `SELECT username, password_hash FROM users WHERE id = $1`, userID).Scan(&username, &passwordHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat akun"})
 		return
@@ -137,7 +148,11 @@ func (h *AccountHandler) RequestDeletion(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "username konfirmasi tidak cocok"})
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
+	if passwordHash == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "akun ini belum punya password, buat password dulu di halaman Keamanan"})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*passwordHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "password salah"})
 		return
 	}
