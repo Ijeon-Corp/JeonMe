@@ -158,7 +158,22 @@ const V2_TILE_KEYS: Record<string, string[]> = {
   // URL sudah ada duluan).
   populer: ["link", "video", "contact_form", "faq"],
   konten: ["text", "accordion", "maps", "gallery", "audio", "file", "faq", "video"],
-  lanjutan: ["project_showcase", "catalog"],
+  // 9 tipe blok "full parity" mode Builder (permintaan langsung pengguna 12
+  // September 2026) -- masuk "Lanjutan", sama seperti project_showcase/
+  // catalog yang sudah ada.
+  lanjutan: [
+    "project_showcase",
+    "catalog",
+    "button",
+    "image",
+    "video_image",
+    "image_slider",
+    "list",
+    "countdown",
+    "produk",
+    "embed_link",
+    "embed",
+  ],
   sosial: [],
 };
 

@@ -7,6 +7,7 @@ import FormField from "@/components/FormField";
 import { CatalogBlockTypePicker } from "@/components/CatalogBlockTypePicker";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
+import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import {
   CatalogRoot,
   CatalogSeg,
@@ -478,6 +479,21 @@ function CatalogItemFrame({
   const atLimit = blocks.length >= maxCatalogItemBlocks || depth >= maxCatalogDepth;
   const isUploading = uploadingItemId === item.id;
 
+  // descriptionSaveTimer -- deskripsi item katalog jadi rich text (susulan
+  // 12 September 2026, "tiap blok yang ada teks nya buat semua jadi rich
+  // teks") -- RichTextEditor.onChange terpanggil PER KETUKAN (lihat catatan
+  // "AMAN dipanggil sesering itu" di komponen itu, SENGAJA aman karena rute
+  // Builder cuma menulis draft lokal). onUpdateField di sini UJUNGNYA
+  // memanggil commitRoot -> onCommitCatalogRoot -> PATCH jaringan LANGSUNG
+  // (autosave, TIDAK ada draft lokal) -- tanpa debounce, tiap ketukan akan
+  // mengirim satu PATCH penuh. Field title TIDAK butuh ini (input polos,
+  // sudah alami di-throttle lewat onBlur).
+  const descriptionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function scheduleDescriptionSave(value: string) {
+    if (descriptionSaveTimer.current) clearTimeout(descriptionSaveTimer.current);
+    descriptionSaveTimer.current = setTimeout(() => onUpdateField("description", value), 700);
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-2">
@@ -492,13 +508,7 @@ function CatalogItemFrame({
             />
           </FormField>
           <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
-            <textarea
-              defaultValue={item.description}
-              placeholder={t("dashboard.pages.links.catalogPanel.itemDescriptionPlaceholder")}
-              rows={2}
-              onBlur={(e) => onUpdateField("description", e.target.value.trim())}
-              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
-            />
+            <RichTextEditor html={item.description} onChange={scheduleDescriptionSave} />
           </FormField>
         </div>
         <button
@@ -615,6 +625,15 @@ function EmbeddedBlockFrame({
   onDeleteBlock: () => void;
 }) {
   const { t } = useLocale();
+  // textSaveTimer -- sama alasan persis descriptionSaveTimer di
+  // CatalogItemFrame (lihat catatan lengkap di sana): onUpdate berujung ke
+  // PATCH jaringan langsung (autosave, tanpa draft lokal), RichTextEditor
+  // memanggil onChange per ketukan -- perlu di-debounce di sini.
+  const textSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function scheduleTextSave(value: string) {
+    if (textSaveTimer.current) clearTimeout(textSaveTimer.current);
+    textSaveTimer.current = setTimeout(() => onUpdate({ block_data: { ...block.block_data, text: value } }), 700);
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -631,14 +650,7 @@ function EmbeddedBlockFrame({
       </div>
 
       {block.block_type === "text" && (
-        <textarea
-          defaultValue={(block.block_data.text as string) ?? ""}
-          onBlur={(e) => onUpdate({ block_data: { ...block.block_data, text: e.target.value } })}
-          placeholder={t("dashboard.components.catalogBlocksEditor.textContentPlaceholder")}
-          aria-label={t("dashboard.components.catalogBlocksEditor.textContentAriaLabel")}
-          rows={4}
-          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
-        />
+        <RichTextEditor html={(block.block_data.text as string) ?? ""} onChange={scheduleTextSave} />
       )}
 
       {block.block_type === "video" && (

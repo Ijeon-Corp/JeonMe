@@ -21,6 +21,7 @@ import {
   deleteAudioBlock,
   deleteCatalogItemImage,
   deleteExtraPage,
+  deleteBuilderMediaImage,
   deleteFileBlock,
   deleteGalleryImage,
   deleteLink,
@@ -40,6 +41,7 @@ import {
   updateMyPage,
   uploadAudioBlock,
   uploadAvatar,
+  uploadBuilderMediaImage,
   uploadCatalogItemImage,
   uploadExtraPageAvatar,
   uploadFileBlock,
@@ -61,10 +63,13 @@ import {
   IconClose,
   IconColumns,
   IconCopy,
+  IconExternal,
   IconFileText,
   IconGrid,
   IconGripVertical,
+  IconIframe,
   IconLink,
+  IconListCard,
   IconLock,
   IconMail,
   IconMapPin,
@@ -74,9 +79,12 @@ import {
   IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
+  IconShoppingBag,
+  IconSlideshow,
   IconStar,
   IconTextLines,
   IconTrash,
+  IconVideoImage,
   IconX,
 } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
@@ -89,6 +97,9 @@ import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
 import { LayoutGrid, TriangleAlert } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
+import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
+import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
+import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -132,6 +143,21 @@ function buildBlockTypeLabel(t: (key: string) => string): Record<string, string>
     file: t("dashboard.pages.links.blockTypes.file"),
     project_showcase: t("dashboard.pages.links.blockTypes.projectShowcase"),
     catalog: t("dashboard.pages.links.blockTypes.catalog"),
+    // 9 tipe blok yang sebelumnya HANYA ada di mode Builder (Canvas) --
+    // "full parity" mode Simple vs Builder, permintaan langsung pengguna 12
+    // September 2026 ("sesuaikan juga dengan blok blok yang ada di mode
+    // builder"), dikonfirmasi via AskUserQuestion. section/column SENGAJA
+    // dilewati -- konsep tree/nesting Builder yang tidak cocok dengan
+    // struktur list datar mode Simple.
+    button: t("dashboard.pages.links.blockTypes.button"),
+    image: t("dashboard.pages.links.blockTypes.image"),
+    video_image: t("dashboard.pages.links.blockTypes.videoImage"),
+    image_slider: t("dashboard.pages.links.blockTypes.imageSlider"),
+    list: t("dashboard.pages.links.blockTypes.list"),
+    countdown: t("dashboard.pages.links.blockTypes.countdown"),
+    produk: t("dashboard.pages.links.blockTypes.produk"),
+    embed_link: t("dashboard.pages.links.blockTypes.embedLink"),
+    embed: t("dashboard.pages.links.blockTypes.embed"),
   };
 }
 
@@ -157,7 +183,30 @@ export type PlatformQuickAdd = {
 };
 
 export type ContentTile = {
-  key: "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog";
+  key:
+    | "link"
+    | "video"
+    | "faq"
+    | "contact_form"
+    | "maps"
+    | "text"
+    | "accordion"
+    | "gallery"
+    | "audio"
+    | "file"
+    | "project_showcase"
+    | "catalog"
+    // 9 tipe blok "full parity" mode Builder (lihat catatan lengkap di
+    // buildBlockTypeLabel).
+    | "button"
+    | "image"
+    | "video_image"
+    | "image_slider"
+    | "list"
+    | "countdown"
+    | "produk"
+    | "embed_link"
+    | "embed";
   label: string;
   description: string;
   Icon: IconComponent;
@@ -212,6 +261,21 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
     // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
     // (bukan buka tautan/expand di tempat seperti tipe lain).
     { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconGrid },
+    // 9 tile baru -- "full parity" mode Simple vs Builder (permintaan
+    // langsung pengguna 12 September 2026, dikonfirmasi via
+    // AskUserQuestion: "Full parity semua tipe blok"). Semua masuk kategori
+    // "Lanjutan" (V2_TILE_KEYS.lanjutan, AddLinkModal.tsx) -- tipe yang
+    // lebih jarang dipakai kreator awam, sama seperti project_showcase/
+    // catalog yang sudah ada di kategori itu.
+    { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: IconExternal },
+    { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: IconCamera },
+    { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: IconVideoImage },
+    { key: "image_slider", label: t("dashboard.pages.links.contentTiles.imageSlider.label"), description: t("dashboard.pages.links.contentTiles.imageSlider.description"), Icon: IconSlideshow },
+    { key: "list", label: t("dashboard.pages.links.contentTiles.list.label"), description: t("dashboard.pages.links.contentTiles.list.description"), Icon: IconListCard },
+    { key: "countdown", label: t("dashboard.pages.links.contentTiles.countdown.label"), description: t("dashboard.pages.links.contentTiles.countdown.description"), Icon: IconClock },
+    { key: "produk", label: t("dashboard.pages.links.contentTiles.produk.label"), description: t("dashboard.pages.links.contentTiles.produk.description"), Icon: IconShoppingBag },
+    { key: "embed_link", label: t("dashboard.pages.links.contentTiles.embedLink.label"), description: t("dashboard.pages.links.contentTiles.embedLink.description"), Icon: IconLink },
+    { key: "embed", label: t("dashboard.pages.links.contentTiles.embed.label"), description: t("dashboard.pages.links.contentTiles.embed.description"), Icon: IconIframe },
   ];
 }
 
@@ -241,17 +305,23 @@ const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
   // didaftarkan di sini; pemakaiannya di bawah TETAP punya fallback supaya
   // tipe baru di masa depan tidak pernah bisa menjatuhkan halaman lagi.
   heading: IconTextLines,
-  button: IconLink,
-  image: IconPhotoLibrary,
+  // button/image/video_image/image_slider/list/countdown/embed_link/embed --
+  // ikon disamakan dengan BuilderAddComponentModal.tsx (mode Builder) untuk
+  // parity visual, bukan lagi placeholder generik defensif (produk BARU
+  // ditambahkan di sini -- 8 tipe lain sudah didaftarkan lebih dulu sebagai
+  // pencegahan crash, sekarang benar-benar dipakai membuat blok baru juga).
+  button: IconExternal,
+  image: IconCamera,
   section: IconGrid,
   column: IconColumns,
   divider: IconGripVertical,
-  video_image: IconPlayCircle,
+  video_image: IconVideoImage,
   embed_link: IconLink,
   countdown: IconClock,
-  list: IconGrid,
-  image_slider: IconPhotoLibrary,
-  embed: IconLink,
+  list: IconListCard,
+  image_slider: IconSlideshow,
+  embed: IconIframe,
+  produk: IconShoppingBag,
 };
 
 // FormField -- dipindahkan ke components/FormField.tsx (6 September 2026,
@@ -425,7 +495,30 @@ export default function DashboardLinksPage() {
   // No.77 (Sprint 9): blok konten baru (video/formulir kontak/FAQ).
   const [addingBlock, setAddingBlock] = useState(false);
   const [blockType, setBlockType] = useState<
-    "video" | "contact_form" | "faq" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog"
+    | "video"
+    | "contact_form"
+    | "faq"
+    | "maps"
+    | "text"
+    | "accordion"
+    | "gallery"
+    | "audio"
+    | "file"
+    | "project_showcase"
+    | "catalog"
+    // 9 tipe blok "full parity" mode Builder (permintaan langsung pengguna
+    // 12 September 2026, dikonfirmasi via AskUserQuestion: "Full parity
+    // semua tipe blok"). section/column SENGAJA dilewati -- konsep tree
+    // Builder yang tidak cocok struktur list datar mode ini.
+    | "button"
+    | "image"
+    | "video_image"
+    | "image_slider"
+    | "list"
+    | "countdown"
+    | "produk"
+    | "embed_link"
+    | "embed"
   >("video");
   const [blockTitle, setBlockTitle] = useState("");
   const [blockVideoUrl, setBlockVideoUrl] = useState("");
@@ -464,6 +557,32 @@ export default function DashboardLinksPage() {
   const [savingBlock, setSavingBlock] = useState(false);
   const [showcaseUploadingId, setShowcaseUploadingId] = useState<string | null>(null);
 
+  // 9 tipe blok baru "full parity" (12 September 2026) -- state field
+  // per-tipe TERPISAH, pola sama persis blockShowcase*/blockVideoUrl di
+  // atas (supaya isian tidak nyasar kalau kreator ganti-ganti pilihan tipe
+  // blok di form yang sama sebelum submit). image/image_slider/produk
+  // TIDAK butuh state di sini -- murni shell-first, isi diatur lewat panel
+  // "Kelola X" SETELAH blok dibuat (lihat handleMediaImageUpload/
+  // handleGalleryImageUpload/ProdukBlockEditor lebih lanjut di file ini).
+  const [blockButtonUrl, setBlockButtonUrl] = useState("");
+  const [blockCountdownTargetAt, setBlockCountdownTargetAt] = useState("");
+  const [blockEmbedUrl, setBlockEmbedUrl] = useState("");
+  const [blockVideoImageVideoUrl, setBlockVideoImageVideoUrl] = useState("");
+  const [blockEmbedLinkUrl, setBlockEmbedLinkUrl] = useState("");
+  const [blockEmbedLinkDescription, setBlockEmbedLinkDescription] = useState("");
+  // "list" -- style (list/card/testimony) + item array, pola SAMA PERSIS
+  // blockFaqItems di atas (shell boleh kosong, validasi backend longgar,
+  // beda dari FAQ top-level yang wajib question+answer terisi).
+  const [blockListStyle, setBlockListStyle] = useState<"list" | "card" | "testimony">("list");
+  const [blockListItems, setBlockListItems] = useState<{ title: string; description: string; author: string }[]>([
+    { title: "", description: "", author: "" },
+  ]);
+  // mediaImageUploadingId -- id blok yang gambarnya sedang diunggah lewat
+  // panel "Kelola Gambar" bersama (image/video_image/embed_link, SATU
+  // endpoint uploadBuilderMediaImage yang sama, lihat catatan lengkap di
+  // situ) -- pola sama persis showcaseUploadingId/galleryUploadingId.
+  const [mediaImageUploadingId, setMediaImageUploadingId] = useState<string | null>(null);
+
   // "catalog" -- permintaan langsung pengguna, 25 Agustus 2026: blok
   // drill-down "Jenis Rumah" -> daftar jenis -> detail per jenis, gambar
   // bisa multiple. Item (judul/deskripsi/foto) dikelola lewat
@@ -496,6 +615,14 @@ export default function DashboardLinksPage() {
   const [editShowcaseDescription, setEditShowcaseDescription] = useState("");
   const [editShowcaseBadge, setEditShowcaseBadge] = useState("");
   const [editShowcaseCta, setEditShowcaseCta] = useState("");
+  // 9 tipe blok baru "full parity" -- mirror edit-in-place dari state
+  // create-form di atas, pola sama persis editVideoUrl/editShowcase*.
+  const [editButtonUrl, setEditButtonUrl] = useState("");
+  const [editCountdownTargetAt, setEditCountdownTargetAt] = useState("");
+  const [editEmbedUrl, setEditEmbedUrl] = useState("");
+  const [editVideoImageVideoUrl, setEditVideoImageVideoUrl] = useState("");
+  const [editEmbedLinkUrl, setEditEmbedLinkUrl] = useState("");
+  const [editEmbedLinkDescription, setEditEmbedLinkDescription] = useState("");
   const [savingContent, setSavingContent] = useState(false);
 
   useEffect(() => {
@@ -822,7 +949,25 @@ export default function DashboardLinksPage() {
   }
 
   function openBlockFormPrefilled(
-    type: "faq" | "contact_form" | "text" | "accordion" | "gallery" | "audio" | "file" | "project_showcase" | "catalog",
+    type:
+      | "faq"
+      | "contact_form"
+      | "text"
+      | "accordion"
+      | "gallery"
+      | "audio"
+      | "file"
+      | "project_showcase"
+      | "catalog"
+      | "button"
+      | "image"
+      | "video_image"
+      | "image_slider"
+      | "list"
+      | "countdown"
+      | "produk"
+      | "embed_link"
+      | "embed",
     title: string
   ) {
     setBlockType(type);
@@ -834,6 +979,18 @@ export default function DashboardLinksPage() {
       setBlockShowcaseDescription("");
       setBlockShowcaseBadge("");
       setBlockShowcaseCta("");
+    }
+    if (type === "button") setBlockButtonUrl("");
+    if (type === "countdown") setBlockCountdownTargetAt("");
+    if (type === "embed") setBlockEmbedUrl("");
+    if (type === "video_image") setBlockVideoImageVideoUrl("");
+    if (type === "embed_link") {
+      setBlockEmbedLinkUrl("");
+      setBlockEmbedLinkDescription("");
+    }
+    if (type === "list") {
+      setBlockListStyle("list");
+      setBlockListItems([{ title: "", description: "", author: "" }]);
     }
     setAddingBlock(true);
     setAddModalOpen(false);
@@ -1002,6 +1159,87 @@ export default function DashboardLinksPage() {
     } finally {
       setShowcaseUploadingId(null);
     }
+  }
+
+  // handleMediaImageUpload/Delete -- panel "Kelola Gambar" bersama blok
+  // "image"/"video_image"/"embed_link" ("full parity" mode Builder, 12
+  // September 2026) -- SATU endpoint uploadBuilderMediaImage/
+  // deleteBuilderMediaImage dipakai bersama ketiganya (mediaImageBlockTypes,
+  // links.go), pola sama persis handleShowcaseImageUpload di atas (satu
+  // gambar, unggah ulang menimpa) tapi tanpa `path` (selalu root di mode
+  // Simple, tidak ada konsep bersarang Section/Column di sini).
+  async function handleMediaImageUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setMediaImageUploadingId(link.id);
+    setError(null);
+    try {
+      const { image_url } = await uploadBuilderMediaImage(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, image_url } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadImageFailed"));
+    } finally {
+      setMediaImageUploadingId(null);
+    }
+  }
+
+  async function handleMediaImageDelete(link: LinkItem) {
+    setError(null);
+    try {
+      await deleteBuilderMediaImage(link.id);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: { ...l.block_data, image_url: "" } } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteImageFailed"));
+    }
+  }
+
+  // handleBlockDataPatch -- panel "Kelola Item" (blok "list") & "Kelola
+  // Produk" (blok "produk"), keduanya PATCH generik ke updateLink (bukan
+  // endpoint upload multipart khusus) -- ...link.block_data WAJIB
+  // di-spread dulu (links.go's Update MENGGANTI block_data utuh, bukan
+  // merge, lihat catatan lengkap di handleSaveContent) supaya field
+  // sebelah yang tidak disentuh panel ini (mis. `layout` saat cuma
+  // product_ids yang berubah) tidak ikut hilang.
+  async function handleBlockDataPatch(link: LinkItem, patch: Record<string, unknown>) {
+    setError(null);
+    const nextBlockData = { ...link.block_data, ...patch };
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: nextBlockData } : l)));
+    try {
+      await updateLink(link.id, { block_data: nextBlockData });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
+    }
+  }
+
+  // handleListItemsPatch -- panel "Kelola Item" (blok "list"), varian
+  // DEBOUNCE dari handleBlockDataPatch di atas KHUSUS untuk `items[]` --
+  // ListItemsEditor's onUpdateItems terpanggil PER KETUKAN untuk field
+  // deskripsi (RichTextEditor.onChange, lihat catatan lengkap "AMAN
+  // dipanggil sesering itu" di komponen itu -- SENGAJA aman karena rute
+  // Builder cuma menulis draft lokal, TIDAK memanggil API tiap ketukan).
+  // Mode Simple TIDAK punya draft -- tanpa debounce ini, PATCH generik
+  // (bukan endpoint upload khusus) akan terkirim ke server SETIAP ketukan
+  // saat mengetik deskripsi item. State lokal (`links`) tetap diperbarui
+  // LANGSUNG (optimis, supaya RichTextEditor yang terkontrol tetap
+  // responsif) -- cuma panggilan API-nya yang ditunda.
+  const listItemsSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  function handleListItemsPatch(link: LinkItem, items: ListEditorItem[]) {
+    setError(null);
+    const nextBlockData = { ...link.block_data, items };
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: nextBlockData } : l)));
+    const existing = listItemsSaveTimers.current.get(link.id);
+    if (existing) clearTimeout(existing);
+    listItemsSaveTimers.current.set(
+      link.id,
+      setTimeout(() => {
+        listItemsSaveTimers.current.delete(link.id);
+        updateLink(link.id, { block_data: nextBlockData }).catch((err) => {
+          setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.saveBlockContentFailed"));
+        });
+      }, 700)
+    );
   }
 
   // ---------- "catalog" -- panel "Kelola Katalog" ----------
@@ -1455,6 +1693,46 @@ export default function DashboardLinksPage() {
       }
       blockUrl = blockShowcaseUrl.trim();
       blockData = { badge_text: blockShowcaseBadge.trim(), cta_text: blockShowcaseCta.trim() };
+    } else if (blockType === "button") {
+      // "button" -- reuse title/url apa adanya (SAMA seperti tautan biasa),
+      // backend sengaja TIDAK punya validasi block_data khusus utk tipe ini.
+      if (!blockButtonUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
+        return;
+      }
+      blockUrl = blockButtonUrl.trim();
+    } else if (blockType === "countdown") {
+      if (!blockCountdownTargetAt) {
+        setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
+        return;
+      }
+      blockData = { target_at: new Date(blockCountdownTargetAt).toISOString() };
+    } else if (blockType === "embed") {
+      if (!blockEmbedUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.embedUrlRequired"));
+        return;
+      }
+      blockData = { embed_url: blockEmbedUrl.trim() };
+    } else if (blockType === "video_image") {
+      // video_url opsional (gambar diisi SETELAH blok dibuat lewat panel
+      // "Kelola Gambar", pola shell-first sama seperti gallery/file) --
+      // backend menerima video_url/image_url independen, tidak ada yang
+      // wajib.
+      if (blockVideoImageVideoUrl.trim()) blockData = { video_url: blockVideoImageVideoUrl.trim() };
+    } else if (blockType === "embed_link") {
+      if (!blockEmbedLinkUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.embedLinkUrlRequired"));
+        return;
+      }
+      blockUrl = blockEmbedLinkUrl.trim();
+    } else if (blockType === "list") {
+      // "list" -- validasi backend longgar (item cuma perlu berupa object,
+      // TIDAK wajib title/description terisi) -- BEDA dari FAQ top-level,
+      // jadi item kosong pun boleh terkirim, buang baris yang benar-benar
+      // kosong semua (title+description+author) supaya tidak menyisakan
+      // sampah kalau kreator batal mengisi.
+      const items = blockListItems.filter((it) => it.title.trim() || it.description.trim() || it.author.trim());
+      blockData = { style: blockListStyle, items };
     }
     setError(null);
     setSavingBlock(true);
@@ -1464,7 +1742,12 @@ export default function DashboardLinksPage() {
         title: blockTitle.trim(),
         url: blockUrl,
         block_data: blockData,
-        description: blockType === "project_showcase" ? blockShowcaseDescription.trim() : undefined,
+        description:
+          blockType === "project_showcase"
+            ? blockShowcaseDescription.trim()
+            : blockType === "embed_link"
+              ? blockEmbedLinkDescription.trim()
+              : undefined,
       });
       setLinks((prev) => [...prev, created]);
       // Auto-buka BlockDrilldownEditor setelah blok "catalog" baru dibuat --
@@ -1484,6 +1767,14 @@ export default function DashboardLinksPage() {
       setBlockShowcaseDescription("");
       setBlockShowcaseBadge("");
       setBlockShowcaseCta("");
+      setBlockButtonUrl("");
+      setBlockCountdownTargetAt("");
+      setBlockEmbedUrl("");
+      setBlockVideoImageVideoUrl("");
+      setBlockEmbedLinkUrl("");
+      setBlockEmbedLinkDescription("");
+      setBlockListStyle("list");
+      setBlockListItems([{ title: "", description: "", author: "" }]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.createBlockFailed"));
     } finally {
@@ -1507,6 +1798,17 @@ export default function DashboardLinksPage() {
       setEditShowcaseDescription(link.description ?? "");
       setEditShowcaseBadge((link.block_data?.badge_text as string) ?? "");
       setEditShowcaseCta((link.block_data?.cta_text as string) ?? "");
+    } else if (link.block_type === "button") {
+      setEditButtonUrl(link.url ?? "");
+    } else if (link.block_type === "countdown") {
+      setEditCountdownTargetAt(toDatetimeLocalValue(link.block_data?.target_at as string | undefined));
+    } else if (link.block_type === "embed") {
+      setEditEmbedUrl((link.block_data?.embed_url as string) ?? "");
+    } else if (link.block_type === "video_image") {
+      setEditVideoImageVideoUrl((link.block_data?.video_url as string) ?? "");
+    } else if (link.block_type === "embed_link") {
+      setEditEmbedLinkUrl(link.url ?? "");
+      setEditEmbedLinkDescription(link.description ?? "");
     }
   }
 
@@ -1546,7 +1848,51 @@ export default function DashboardLinksPage() {
       }
       blockUrl = editShowcaseUrl.trim();
       blockDescription = editShowcaseDescription.trim();
-      blockData = { badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
+      // ...link.block_data -- bug ditemukan lewat review 12 September 2026
+      // (menulis panel serupa utk video_image/embed_link): SEBELUMNYA
+      // baris ini mengganti block_data UTUH dgn cuma {badge_text,cta_text},
+      // MENGHAPUS image_url yang sudah diunggah lewat panel "Kelola gambar"
+      // terpisah (endpoint PATCH generik ini MENGGANTI block_data
+      // sepenuhnya, bukan merge -- lihat catatan Update handler, links.go)
+      // -- kalau kreator edit isi SETELAH unggah gambar, gambar hilang
+      // diam-diam. Spread dulu supaya field yang tidak disentuh form ini
+      // tetap aman.
+      blockData = { ...link.block_data, badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
+    } else if (link.block_type === "button") {
+      if (!editButtonUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
+        return;
+      }
+      blockUrl = editButtonUrl.trim();
+      blockData = {};
+    } else if (link.block_type === "countdown") {
+      if (!editCountdownTargetAt) {
+        setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
+        return;
+      }
+      blockData = { target_at: new Date(editCountdownTargetAt).toISOString() };
+    } else if (link.block_type === "embed") {
+      if (!editEmbedUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.embedUrlRequired"));
+        return;
+      }
+      blockData = { embed_url: editEmbedUrl.trim() };
+    } else if (link.block_type === "video_image") {
+      // ...link.block_data -- SAMA seperti catatan project_showcase di
+      // atas: video_image punya image_url yang diisi lewat panel "Kelola
+      // Gambar" terpisah (uploadBuilderMediaImage), spread dulu supaya
+      // tidak ikut terhapus saat cuma video_url yang diubah di sini.
+      blockData = { ...link.block_data, video_url: editVideoImageVideoUrl.trim() };
+    } else if (link.block_type === "embed_link") {
+      if (!editEmbedLinkUrl.trim()) {
+        setError(t("dashboard.pages.links.errors.embedLinkUrlRequired"));
+        return;
+      }
+      blockUrl = editEmbedLinkUrl.trim();
+      blockDescription = editEmbedLinkDescription.trim();
+      // ...link.block_data -- SAMA alasan video_image di atas (image_url
+      // dikelola panel terpisah).
+      blockData = { ...link.block_data };
     } else {
       // Dulu `else` polos menampung FAQ tanpa cek block_type eksplisit --
       // diperbaiki 6 September 2026 (audit BlockDrilldownEditor) supaya
@@ -1976,6 +2322,15 @@ export default function DashboardLinksPage() {
                       | "file"
                       | "project_showcase"
                       | "catalog"
+                      | "button"
+                      | "image"
+                      | "video_image"
+                      | "image_slider"
+                      | "list"
+                      | "countdown"
+                      | "produk"
+                      | "embed_link"
+                      | "embed"
                   )
                 }
                 className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
@@ -1991,13 +2346,27 @@ export default function DashboardLinksPage() {
                 <option value="file">{t("dashboard.pages.links.blockForm.options.file")}</option>
                 <option value="project_showcase">{t("dashboard.pages.links.blockForm.options.projectShowcase")}</option>
                 <option value="catalog">{t("dashboard.pages.links.blockForm.options.catalog")}</option>
+                <option value="button">{t("dashboard.pages.links.blockForm.options.button")}</option>
+                <option value="image">{t("dashboard.pages.links.blockForm.options.image")}</option>
+                <option value="video_image">{t("dashboard.pages.links.blockForm.options.videoImage")}</option>
+                <option value="image_slider">{t("dashboard.pages.links.blockForm.options.imageSlider")}</option>
+                <option value="list">{t("dashboard.pages.links.blockForm.options.list")}</option>
+                <option value="countdown">{t("dashboard.pages.links.blockForm.options.countdown")}</option>
+                <option value="produk">{t("dashboard.pages.links.blockForm.options.produk")}</option>
+                <option value="embed_link">{t("dashboard.pages.links.blockForm.options.embedLink")}</option>
+                <option value="embed">{t("dashboard.pages.links.blockForm.options.embed")}</option>
               </select>
             </FormField>
             {(blockType === "gallery" ||
               blockType === "audio" ||
               blockType === "file" ||
               blockType === "project_showcase" ||
-              blockType === "catalog") && (
+              blockType === "catalog" ||
+              blockType === "image" ||
+              blockType === "image_slider" ||
+              blockType === "video_image" ||
+              blockType === "embed_link" ||
+              blockType === "produk") && (
               <p className="rounded-lg bg-jeon-purple/5 px-3 py-2 text-[11px] text-app-muted">
                 {blockType === "gallery"
                   ? t("dashboard.pages.links.blockForm.uploadHints.gallery")
@@ -2007,7 +2376,17 @@ export default function DashboardLinksPage() {
                   ? t("dashboard.pages.links.blockForm.uploadHints.file")
                   : blockType === "catalog"
                   ? t("dashboard.pages.links.blockForm.uploadHints.catalog")
-                  : t("dashboard.pages.links.blockForm.uploadHints.projectShowcase")}
+                  : blockType === "project_showcase"
+                  ? t("dashboard.pages.links.blockForm.uploadHints.projectShowcase")
+                  : blockType === "image"
+                  ? t("dashboard.pages.links.blockForm.uploadHints.image")
+                  : blockType === "image_slider"
+                  ? t("dashboard.pages.links.blockForm.uploadHints.imageSlider")
+                  : blockType === "video_image"
+                  ? t("dashboard.pages.links.blockForm.uploadHints.videoImage")
+                  : blockType === "embed_link"
+                  ? t("dashboard.pages.links.blockForm.uploadHints.embedLink")
+                  : t("dashboard.pages.links.blockForm.uploadHints.produk")}
               </p>
             )}
             <FormField
@@ -2051,14 +2430,7 @@ export default function DashboardLinksPage() {
                   />
                 </FormField>
                 <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
-                  <textarea
-                    placeholder={t("dashboard.pages.links.blockForm.showcase.descriptionPlaceholder")}
-                    value={blockShowcaseDescription}
-                    onChange={(e) => setBlockShowcaseDescription(e.target.value)}
-                    rows={2}
-                    maxLength={240}
-                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-                  />
+                  <RichTextEditor html={blockShowcaseDescription} onChange={setBlockShowcaseDescription} />
                 </FormField>
                 <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
                   <input
@@ -2083,23 +2455,84 @@ export default function DashboardLinksPage() {
             )}
             {blockType === "text" && (
               <FormField label={t("dashboard.pages.links.blockForm.text.label")}>
-                <textarea
-                  placeholder={t("dashboard.pages.links.blockForm.text.placeholder")}
-                  value={blockText}
-                  onChange={(e) => setBlockText(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-                />
+                <RichTextEditor html={blockText} onChange={setBlockText} />
               </FormField>
             )}
             {blockType === "accordion" && (
               <FormField label={t("dashboard.pages.links.blockForm.accordion.label")}>
-                <textarea
-                  placeholder={t("dashboard.pages.links.blockForm.accordion.placeholderAdd")}
-                  value={blockAccordionText}
-                  onChange={(e) => setBlockAccordionText(e.target.value)}
-                  rows={3}
+                <RichTextEditor html={blockAccordionText} onChange={setBlockAccordionText} />
+              </FormField>
+            )}
+            {blockType === "button" && (
+              <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={blockButtonUrl}
+                  onChange={(e) => setBlockButtonUrl(e.target.value)}
                   className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                />
+              </FormField>
+            )}
+            {blockType === "countdown" && (
+              <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
+                <input
+                  type="datetime-local"
+                  required
+                  value={blockCountdownTargetAt}
+                  onChange={(e) => setBlockCountdownTargetAt(e.target.value)}
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                />
+              </FormField>
+            )}
+            {blockType === "embed" && (
+              <FormField label={t("dashboard.pages.links.blockForm.embed.urlLabel")} hint={t("dashboard.pages.links.blockForm.embed.urlHint")}>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={blockEmbedUrl}
+                  onChange={(e) => setBlockEmbedUrl(e.target.value)}
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                />
+              </FormField>
+            )}
+            {blockType === "video_image" && (
+              <FormField label={t("dashboard.pages.links.blockForm.video.label")} hint={t("dashboard.pages.links.blockForm.videoImage.videoUrlHint")}>
+                <input
+                  type="url"
+                  placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
+                  value={blockVideoImageVideoUrl}
+                  onChange={(e) => setBlockVideoImageVideoUrl(e.target.value)}
+                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                />
+              </FormField>
+            )}
+            {blockType === "embed_link" && (
+              <div className="flex flex-col gap-2">
+                <FormField label={t("dashboard.pages.links.blockForm.embedLink.urlLabel")}>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://..."
+                    value={blockEmbedLinkUrl}
+                    onChange={(e) => setBlockEmbedLinkUrl(e.target.value)}
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                  />
+                </FormField>
+                <FormField label={t("dashboard.pages.links.blockForm.embedLink.descriptionLabel")}>
+                  <RichTextEditor html={blockEmbedLinkDescription} onChange={setBlockEmbedLinkDescription} />
+                </FormField>
+              </div>
+            )}
+            {blockType === "list" && (
+              <FormField label={t("dashboard.pages.links.blockForm.list.itemsLabel")}>
+                <ListItemsEditor
+                  style={blockListStyle}
+                  items={blockListItems}
+                  onUpdateStyle={setBlockListStyle}
+                  onUpdateItems={(items) => setBlockListItems(items.map((it) => ({ title: it.title, description: it.description ?? "", author: it.author ?? "" })))}
                 />
               </FormField>
             )}
@@ -2344,7 +2777,17 @@ export default function DashboardLinksPage() {
                   link.block_type === "accordion" ||
                   link.block_type === "project_showcase" ||
                   link.block_type === "catalog" ||
-                  link.block_type === "faq") && (
+                  link.block_type === "faq" ||
+                  // 9 tipe blok "full parity" -- button/countdown/embed/
+                  // video_image/embed_link punya field yang diedit inline di
+                  // sini juga (image/image_slider/list/produk TIDAK, semua
+                  // kontennya sudah tercakup penuh oleh panel "Kelola X" +
+                  // judul generik yang sudah otomatis bisa diedit inline).
+                  link.block_type === "button" ||
+                  link.block_type === "countdown" ||
+                  link.block_type === "embed" ||
+                  link.block_type === "video_image" ||
+                  link.block_type === "embed_link") && (
                   <button
                     type="button"
                     onClick={() =>
@@ -2664,7 +3107,12 @@ export default function DashboardLinksPage() {
                   dibalik toggle "Edit Konten") -- pola sama seperti panel
                   Featured Link di atas, karena kelola-foto justru INTI dari
                   blok ini, bukan pengaturan sekunder. */}
-              {link.block_type === "gallery" && (
+              {/* image_slider -- alias tervalidasi "gallery" di backend
+                  (gallery/image_slider berbagi SATU case validasi persis
+                  sama, links.go) -- REUSE PERSIS panel ini, endpoint upload/
+                  hapus SAMA (uploadGalleryImage/deleteGalleryImage tidak
+                  peduli block_type), tidak ada kode baru yang perlu ditulis. */}
+              {(link.block_type === "gallery" || link.block_type === "image_slider") && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="text-[11px] font-semibold text-app-muted">
                     {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} {t("dashboard.pages.links.galleryPanel.photoCountSuffix")}
@@ -2825,6 +3273,97 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
+              {/* Panel "Kelola Gambar" -- blok "image"/"video_image"/
+                  "embed_link" ("full parity" mode Builder, 12 September
+                  2026), SATU panel dipakai bersama ketiganya, pola sama
+                  persis panel "Kelola gambar" project_showcase di atas
+                  (satu gambar, unggah ulang menimpa) TAPI pakai
+                  uploadBuilderMediaImage/deleteBuilderMediaImage -- endpoint
+                  INI yang memang didesain generik lintas 3 tipe ini (lihat
+                  mediaImageBlockTypes, links.go). */}
+              {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && (
+                <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  {link.block_data?.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={link.block_data.image_url as string}
+                      alt=""
+                      className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
+                      {t("dashboard.pages.links.common.noneYet")}
+                    </div>
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.mediaImagePanel.imageHint")}</p>
+                    <div className="flex items-center gap-2">
+                      <label className="w-fit cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                        {mediaImageUploadingId === link.id ? t("dashboard.pages.links.common.uploading") : link.block_data?.image_url ? t("dashboard.pages.links.showcasePanel.changeImage") : t("dashboard.pages.links.showcasePanel.uploadImage")}
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                          onChange={(e) => handleMediaImageUpload(e, link)}
+                          disabled={mediaImageUploadingId === link.id}
+                          className="hidden"
+                        />
+                      </label>
+                      {Boolean(link.block_data?.image_url) && (
+                        <button
+                          type="button"
+                          onClick={() => handleMediaImageDelete(link)}
+                          className="text-[11px] font-semibold text-red-600 hover:underline"
+                        >
+                          {t("dashboard.pages.links.common.delete")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Panel "Kelola Item" -- blok "list" ("full parity" mode
+                  Builder) -- ListItemsEditor sama persis yang dipakai di
+                  form "Tambah Blok" (lihat di atas), autosave onBlur per
+                  field lewat handleBlockDataPatch (validasi backend "list"
+                  longgar, item boleh berubah bertahap tanpa tombol Simpan
+                  eksplisit, beda dari FAQ top-level). */}
+              {link.block_type === "list" && (
+                <div className="ml-11 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  <ListItemsEditor
+                    style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
+                    items={(link.block_data?.items as { title: string; description?: string; author?: string }[] | undefined) ?? []}
+                    onUpdateStyle={(style) => handleBlockDataPatch(link, { style })}
+                    onUpdateItems={(items) => handleListItemsPatch(link, items)}
+                  />
+                </div>
+              )}
+
+              {/* Panel "Kelola Produk" -- blok "produk" ("full parity" mode
+                  Builder) -- ProdukBlockEditor sama persis yang dipakai di
+                  panel Builder (BuilderLeftPanel.tsx), `products`/
+                  `setProducts` SUDAH ADA di halaman ini (di-fetch sekali di
+                  awal, dipakai LivePreviewPanel juga). */}
+              {link.block_type === "produk" && (
+                <div className="ml-11 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  <ProdukBlockEditor
+                    blockData={link.block_data}
+                    products={products}
+                    onToggleProduct={(productId) => {
+                      const current = ((link.block_data?.product_ids as string[] | undefined) ?? []);
+                      const next = current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId];
+                      handleBlockDataPatch(link, { product_ids: next });
+                    }}
+                    onProductCreated={(product) => {
+                      setProducts((prev) => [...prev, product]);
+                      const current = ((link.block_data?.product_ids as string[] | undefined) ?? []);
+                      handleBlockDataPatch(link, { product_ids: [...current, product.id] });
+                    }}
+                    onLayoutChange={(layout) => handleBlockDataPatch(link, { layout })}
+                  />
+                </div>
+              )}
+
               {link.block_type === "link" &&
                 (scheduleEditId === link.id ? (
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
@@ -2953,7 +3492,14 @@ export default function DashboardLinksPage() {
                 link.block_type === "maps" ||
                 link.block_type === "text" ||
                 link.block_type === "accordion" ||
-                link.block_type === "project_showcase") &&
+                link.block_type === "project_showcase" ||
+                // 9 tipe blok "full parity" -- lihat catatan lengkap di
+                // trigger tombol "Edit isi" di atas.
+                link.block_type === "button" ||
+                link.block_type === "countdown" ||
+                link.block_type === "embed" ||
+                link.block_type === "video_image" ||
+                link.block_type === "embed_link") &&
                 contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-jeon-purple">{t("dashboard.pages.links.contentEdit.editingLabel")}: {blockTypeLabel[link.block_type]}</p>
@@ -2969,24 +3515,66 @@ export default function DashboardLinksPage() {
                     </FormField>
                   ) : link.block_type === "text" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.text.label")}>
-                      <textarea
-                        placeholder={t("dashboard.pages.links.blockForm.text.placeholder")}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        rows={3}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                      />
+                      <RichTextEditor html={editText} onChange={setEditText} />
                     </FormField>
                   ) : link.block_type === "accordion" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.accordion.label")}>
-                      <textarea
-                        placeholder={t("dashboard.pages.links.blockForm.accordion.placeholderEdit")}
-                        value={editAccordionText}
-                        onChange={(e) => setEditAccordionText(e.target.value)}
-                        rows={3}
+                      <RichTextEditor html={editAccordionText} onChange={setEditAccordionText} />
+                    </FormField>
+                  ) : link.block_type === "button" ? (
+                    <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={editButtonUrl}
+                        onChange={(e) => setEditButtonUrl(e.target.value)}
                         className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
                       />
                     </FormField>
+                  ) : link.block_type === "countdown" ? (
+                    <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
+                      <input
+                        type="datetime-local"
+                        value={editCountdownTargetAt}
+                        onChange={(e) => setEditCountdownTargetAt(e.target.value)}
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                  ) : link.block_type === "embed" ? (
+                    <FormField label={t("dashboard.pages.links.blockForm.embed.urlLabel")} hint={t("dashboard.pages.links.blockForm.embed.urlHint")}>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={editEmbedUrl}
+                        onChange={(e) => setEditEmbedUrl(e.target.value)}
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                  ) : link.block_type === "video_image" ? (
+                    <FormField label={t("dashboard.pages.links.blockForm.video.label")} hint={t("dashboard.pages.links.blockForm.videoImage.videoUrlHint")}>
+                      <input
+                        type="url"
+                        placeholder={t("dashboard.pages.links.blockForm.video.placeholder")}
+                        value={editVideoImageVideoUrl}
+                        onChange={(e) => setEditVideoImageVideoUrl(e.target.value)}
+                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                  ) : link.block_type === "embed_link" ? (
+                    <div className="flex flex-col gap-2">
+                      <FormField label={t("dashboard.pages.links.blockForm.embedLink.urlLabel")}>
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={editEmbedLinkUrl}
+                          onChange={(e) => setEditEmbedLinkUrl(e.target.value)}
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label={t("dashboard.pages.links.blockForm.embedLink.descriptionLabel")}>
+                        <RichTextEditor html={editEmbedLinkDescription} onChange={setEditEmbedLinkDescription} />
+                      </FormField>
+                    </div>
                   ) : link.block_type === "maps" ? (
                     <div className="flex flex-col gap-2">
                       <FormField label={t("dashboard.pages.links.blockForm.maps.label")}>
@@ -3044,14 +3632,7 @@ export default function DashboardLinksPage() {
                         />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")} hint={t("dashboard.pages.links.blockForm.showcase.descriptionHint")}>
-                        <textarea
-                          placeholder={t("dashboard.pages.links.contentEdit.showcaseDescriptionPlaceholder")}
-                          value={editShowcaseDescription}
-                          onChange={(e) => setEditShowcaseDescription(e.target.value)}
-                          rows={2}
-                          maxLength={240}
-                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                        />
+                        <RichTextEditor html={editShowcaseDescription} onChange={setEditShowcaseDescription} />
                       </FormField>
                       <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
                         <input

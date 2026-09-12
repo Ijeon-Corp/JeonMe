@@ -598,6 +598,15 @@ export const dictionaries = {
               file: "File & Unduhan (PDF/ZIP/EPUB)",
               projectShowcase: "Project Unggulan",
               catalog: "Katalog (daftar item & detail)",
+              button: "Tombol (CTA)",
+              image: "Gambar",
+              videoImage: "Video + Gambar",
+              imageSlider: "Slideshow Foto",
+              list: "Daftar/Testimoni",
+              countdown: "Hitung Mundur",
+              produk: "Produk",
+              embedLink: "Link Tertanam",
+              embed: "Embed (Google Forms/Calendly/dst)",
             },
             uploadHints: {
               gallery: "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok.",
@@ -605,6 +614,11 @@ export const dictionaries = {
               file: "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok.",
               catalog: "Buat blok dulu, item (jenis/paket/menu) ditambahkan setelahnya lewat editor drill-down yang terbuka otomatis.",
               projectShowcase: "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola gambar\" di kartu blok.",
+              image: "Buat blok dulu, gambar diunggah setelahnya lewat panel \"Kelola Gambar\" di kartu blok.",
+              imageSlider: "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok.",
+              videoImage: "Buat blok dulu, isi tautan video di bawah (opsional) -- gambar diunggah setelahnya lewat panel \"Kelola Gambar\" di kartu blok.",
+              embedLink: "Buat blok dulu, gambar kartu diunggah setelahnya lewat panel \"Kelola Gambar\" di kartu blok.",
+              produk: "Buat blok dulu, pilih produk & tata letak setelahnya lewat panel \"Kelola Produk\" di kartu blok.",
             },
             titleLabel: {
               project: "Judul Proyek",
@@ -663,6 +677,27 @@ export const dictionaries = {
               answerPlaceholder: "Jawaban",
               addQuestion: "+ Tambah pertanyaan",
             },
+            // 9 tipe blok "full parity" mode Builder (12 September 2026).
+            button: {
+              urlLabel: "Tautan Tombol",
+            },
+            countdown: {
+              targetLabel: "Tanggal & Jam Target",
+            },
+            embed: {
+              urlLabel: "Tautan Embed",
+              urlHint: "Google Forms, Calendly, atau Spotify.",
+            },
+            videoImage: {
+              videoUrlHint: "Opsional -- gambar diunggah setelah blok dibuat.",
+            },
+            embedLink: {
+              urlLabel: "Tautan",
+              descriptionLabel: "Deskripsi (opsional)",
+            },
+            list: {
+              itemsLabel: "Item",
+            },
             creating: "Membuat...",
             createBlock: "Buat Blok",
           },
@@ -678,6 +713,15 @@ export const dictionaries = {
             file: "File & Unduhan",
             projectShowcase: "Project Unggulan",
             catalog: "Katalog",
+            button: "Tombol",
+            image: "Gambar",
+            videoImage: "Video + Gambar",
+            imageSlider: "Slideshow Foto",
+            list: "Daftar/Testimoni",
+            countdown: "Hitung Mundur",
+            produk: "Produk",
+            embedLink: "Link Tertanam",
+            embed: "Embed",
           },
           contentTiles: {
             link: {
@@ -727,6 +771,42 @@ export const dictionaries = {
             catalog: {
               label: "Katalog",
               description: "Klik untuk membuka daftar item (mis. jenis produk/paket/menu), tiap item punya deskripsi & galeri foto sendiri",
+            },
+            button: {
+              label: "Tombol",
+              description: "Tombol CTA menonjol yang menautkan ke URL mana pun",
+            },
+            image: {
+              label: "Gambar",
+              description: "Satu foto berdiri sendiri di antara tautan",
+            },
+            videoImage: {
+              label: "Video + Gambar",
+              description: "Video dan foto sekaligus dalam satu blok",
+            },
+            imageSlider: {
+              label: "Slideshow Foto",
+              description: "Beberapa foto bergeser bergantian (carousel), beda dari Galeri Foto yang grid",
+            },
+            list: {
+              label: "Daftar/Testimoni",
+              description: "Daftar item fleksibel -- bisa jadi daftar biasa, kartu, atau kutipan testimoni",
+            },
+            countdown: {
+              label: "Hitung Mundur",
+              description: "Timer hitung mundur ke tanggal & jam tertentu (promo, peluncuran, dst)",
+            },
+            produk: {
+              label: "Produk",
+              description: "Tampilkan satu atau beberapa produk dari Toko di lokasi bebas dalam daftar",
+            },
+            embedLink: {
+              label: "Link Tertanam",
+              description: "Kartu tautan manual dengan gambar, judul, dan deskripsi",
+            },
+            embed: {
+              label: "Embed",
+              description: "Tanamkan konten dari Google Forms/Calendly/Spotify, dst",
             },
           },
           suggestedPlatforms: {
@@ -799,6 +879,13 @@ export const dictionaries = {
             imageHint: "Gambar kartu Project Unggulan.",
             changeImage: "Ganti Gambar",
             uploadImage: "Unggah Gambar",
+          },
+          // mediaImagePanel -- panel "Kelola Gambar" bersama blok "image"/
+          // "video_image"/"embed_link" ("full parity" mode Builder, 12
+          // September 2026). Tombol ganti/unggah REUSE showcasePanel.changeImage/
+          // uploadImage di atas (teks sama persis, tidak perlu key baru).
+          mediaImagePanel: {
+            imageHint: "Gambar blok ini.",
           },
           catalogPanel: {
             noItems: "Belum ada item -- tambahkan di bawah.",
@@ -903,6 +990,7 @@ export const dictionaries = {
             uploadGalleryPhotoFailed: "Gagal mengunggah foto galeri.",
             deleteGalleryPhotoFailed: "Gagal menghapus foto galeri.",
             uploadImageFailed: "Gagal mengunggah gambar.",
+            deleteImageFailed: "Gagal menghapus gambar.",
             saveCatalogItemFailed: "Gagal menyimpan item katalog.",
             uploadPhotoFailed: "Gagal mengunggah foto.",
             deletePhotoFailed: "Gagal menghapus foto.",
@@ -931,6 +1019,10 @@ export const dictionaries = {
             textRequired: "Isi teksnya dulu.",
             accordionTextRequired: "Isi teks yang muncul saat diklik.",
             ctaUrlRequired: "Tautan tujuan (CTA) wajib diisi.",
+            buttonUrlRequired: "Tautan tombol wajib diisi.",
+            countdownTargetRequired: "Tanggal & jam target wajib diisi.",
+            embedUrlRequired: "Tautan embed wajib diisi.",
+            embedLinkUrlRequired: "Tautan wajib diisi.",
             createBlockFailed: "Gagal membuat blok.",
             saveBlockContentFailed: "Gagal menyimpan konten blok.",
             reorderFailed: "Gagal menyimpan urutan tautan.",
@@ -3563,6 +3655,15 @@ export const dictionaries = {
               file: "Files & Downloads (PDF/ZIP/EPUB)",
               projectShowcase: "Featured Project",
               catalog: "Catalog (item list & details)",
+              button: "Button (CTA)",
+              image: "Image",
+              videoImage: "Video + Image",
+              imageSlider: "Photo Slideshow",
+              list: "List/Testimonials",
+              countdown: "Countdown",
+              produk: "Product",
+              embedLink: "Embedded Link",
+              embed: "Embed (Google Forms/Calendly/etc.)",
             },
             uploadHints: {
               gallery: "Create the block first -- photos are added afterward via the \"Manage photos\" panel on the block card.",
@@ -3570,6 +3671,11 @@ export const dictionaries = {
               file: "Create the block first -- the PDF/ZIP/EPUB file is uploaded afterward via the \"Manage file\" panel on the block card.",
               catalog: "Create the block first -- items (types/packages/menu) are added afterward via the drill-down editor that opens automatically.",
               projectShowcase: "Create the block first -- the card image is uploaded afterward via the \"Manage image\" panel on the block card.",
+              image: "Create the block first -- the image is uploaded afterward via the \"Manage Image\" panel on the block card.",
+              imageSlider: "Create the block first -- photos are added afterward via the \"Manage photos\" panel on the block card.",
+              videoImage: "Create the block first -- fill in the video link below (optional) -- the image is uploaded afterward via the \"Manage Image\" panel on the block card.",
+              embedLink: "Create the block first -- the card image is uploaded afterward via the \"Manage Image\" panel on the block card.",
+              produk: "Create the block first -- pick products & layout afterward via the \"Manage Product\" panel on the block card.",
             },
             titleLabel: {
               project: "Project Title",
@@ -3628,6 +3734,27 @@ export const dictionaries = {
               answerPlaceholder: "Answer",
               addQuestion: "+ Add question",
             },
+            // 9 block types "full parity" with Builder mode (Sept 12, 2026).
+            button: {
+              urlLabel: "Button Link",
+            },
+            countdown: {
+              targetLabel: "Target Date & Time",
+            },
+            embed: {
+              urlLabel: "Embed Link",
+              urlHint: "Google Forms, Calendly, or Spotify.",
+            },
+            videoImage: {
+              videoUrlHint: "Optional -- the image is uploaded after the block is created.",
+            },
+            embedLink: {
+              urlLabel: "Link",
+              descriptionLabel: "Description (optional)",
+            },
+            list: {
+              itemsLabel: "Items",
+            },
             creating: "Creating...",
             createBlock: "Create Block",
           },
@@ -3643,6 +3770,15 @@ export const dictionaries = {
             file: "Files & Downloads",
             projectShowcase: "Featured Project",
             catalog: "Catalog",
+            button: "Button",
+            image: "Image",
+            videoImage: "Video + Image",
+            imageSlider: "Photo Slideshow",
+            list: "List/Testimonials",
+            countdown: "Countdown",
+            produk: "Product",
+            embedLink: "Embedded Link",
+            embed: "Embed",
           },
           contentTiles: {
             link: {
@@ -3692,6 +3828,42 @@ export const dictionaries = {
             catalog: {
               label: "Catalog",
               description: "Click to open a list of items (e.g. product types/packages/menu), each item has its own description & photo gallery",
+            },
+            button: {
+              label: "Button",
+              description: "A prominent CTA button linking to any URL",
+            },
+            image: {
+              label: "Image",
+              description: "A single standalone photo among your links",
+            },
+            videoImage: {
+              label: "Video + Image",
+              description: "A video and a photo together in one block",
+            },
+            imageSlider: {
+              label: "Photo Slideshow",
+              description: "Multiple photos that swipe through (carousel), unlike the grid Photo Gallery",
+            },
+            list: {
+              label: "List/Testimonials",
+              description: "A flexible item list -- can be a plain list, cards, or testimonial quotes",
+            },
+            countdown: {
+              label: "Countdown",
+              description: "A countdown timer to a specific date & time (promo, launch, etc.)",
+            },
+            produk: {
+              label: "Product",
+              description: "Show one or more Store products at any spot in your list",
+            },
+            embedLink: {
+              label: "Embedded Link",
+              description: "A manual link card with an image, title, and description",
+            },
+            embed: {
+              label: "Embed",
+              description: "Embed content from Google Forms/Calendly/Spotify, etc.",
             },
           },
           suggestedPlatforms: {
@@ -3760,6 +3932,9 @@ export const dictionaries = {
             imageHint: "Featured Project card image.",
             changeImage: "Change Image",
             uploadImage: "Upload Image",
+          },
+          mediaImagePanel: {
+            imageHint: "This block's image.",
           },
           catalogPanel: {
             noItems: "No items yet -- add one below.",
@@ -3864,6 +4039,7 @@ export const dictionaries = {
             uploadGalleryPhotoFailed: "Failed to upload gallery photo.",
             deleteGalleryPhotoFailed: "Failed to delete gallery photo.",
             uploadImageFailed: "Failed to upload image.",
+            deleteImageFailed: "Failed to delete image.",
             saveCatalogItemFailed: "Failed to save catalog item.",
             uploadPhotoFailed: "Failed to upload photo.",
             deletePhotoFailed: "Failed to delete photo.",
@@ -3892,6 +4068,10 @@ export const dictionaries = {
             textRequired: "Fill in the text first.",
             accordionTextRequired: "Fill in the text that appears when clicked.",
             ctaUrlRequired: "Destination link (CTA) is required.",
+            buttonUrlRequired: "Button link is required.",
+            countdownTargetRequired: "Target date & time is required.",
+            embedUrlRequired: "Embed link is required.",
+            embedLinkUrlRequired: "Link is required.",
             createBlockFailed: "Failed to create block.",
             saveBlockContentFailed: "Failed to save block content.",
             reorderFailed: "Failed to save link order.",
