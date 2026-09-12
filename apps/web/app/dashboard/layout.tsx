@@ -51,7 +51,6 @@ import {
   IconMenu,
   IconPaintbrush,
   IconPhone,
-  IconPlayCircle,
   IconSearch,
   IconSettings,
   IconShield,
@@ -811,36 +810,17 @@ export default function DashboardLayout({
                 <ThemeToggle
                   className="hidden h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple lg:flex"
                 />
-                {/* Tutorial -- konsolidasi sidebar (lihat catatan panjang
-                    di NAV_ITEMS): bukan lagi baris menu permanen, jadi ikon
-                    bantuan bulat di sini, pola sama seperti ikon bantuan
-                    "?" di Linktree/Lynk.id -- ada kapan pun dibutuhkan
-                    tanpa merebut tempat di sidebar sepanjang waktu. */}
-                <Link
-                  href="/dashboard/tutorial"
-                  title={t("dashboard.extraPages.tutorial")}
-                  aria-label={t("dashboard.extraPages.tutorial")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-                >
-                  <IconPlayCircle className="h-4 w-4" />
-                </Link>
-                {/* "Lihat halaman publik" & "Kode QR profil" SEBELUMNYA ada
-                    di sini -- dihapus dari top bar (susulan permintaan
-                    pengguna, 30 Agustus 2026: "di navbar hilangkan view
-                    public sites dan juga qrcode"). Bukan fitur yang hilang:
-                    kode QR sudah bisa dibuka dari halaman Profil & Akun
-                    (lihat tombol "Lihat Kode QR" di
-                    app/dashboard/settings/profile/page.tsx), dan tautan
-                    halaman publik tetap ada lewat chip "jeon.id/{username}"
-                    di sebelah kanan top bar ini (klik = salin tautan). */}
-                <Link
-                  href="/dashboard/settings"
-                  title={t("dashboard.nav.settings")}
-                  aria-label={t("dashboard.nav.settings")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-jeon-ink bg-app-surface text-app-ink hover:border-jeon-purple hover:text-jeon-purple"
-                >
-                  <IconSettings className="h-4 w-4" />
-                </Link>
+                {/* Tutorial & Pengaturan (ikon bulat topbar) dihapus dari
+                    navbar (permintaan langsung pengguna, 13 September 2026:
+                    "hapus tutorial dan settings di navbar") -- Pengaturan
+                    tetap bisa diakses lewat item sidebar "Pengaturan"
+                    (NAV_ITEMS) dan dropdown akun ("Profil & Akun"), Tutorial
+                    tetap ada sbg halaman (/dashboard/tutorial) walau kini
+                    tanpa entry point permanen di topbar. "Lihat halaman
+                    publik" & "Kode QR profil" sebelumnya juga di sini,
+                    dihapus 30 Agustus 2026 (lihat git blame) -- QR tetap di
+                    halaman Profil & Akun, tautan publik tetap via chip
+                    "jeon.id/{username}" di kanan topbar. */}
                 <NotificationBell />
                 {/* Pil status Live/Draft (redesign spec §12.3): status
                     publish halaman utama DARI DATA BACKEND (pages.is_published,
