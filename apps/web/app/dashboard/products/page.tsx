@@ -1075,6 +1075,8 @@ function DashboardProductsPageInner() {
               onStickersChange={handleTokoStickersChange}
               section={tokoSection}
               setSection={setTokoSection}
+              products={products}
+              onProductCreated={handleProductCreated}
             />
           </div>
         ) : tab === "reviews" ? (

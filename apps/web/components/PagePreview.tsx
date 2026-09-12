@@ -3930,6 +3930,10 @@ function BuilderPagePreview({
   const isBio = data.pageType === "bio" || data.pageType === undefined;
   const isProduk = data.pageType === "produk";
   const showHeaderChrome = data.pageType !== "landing";
+  // hasProdukBlock -- permintaan langsung pengguna, 13 September 2026:
+  // grid otomatis Halaman Toko (di bawah) jadi fallback begitu Toko punya
+  // minimal satu blok "produk" -- lihat catatan lengkap di titik pemakaian.
+  const hasProdukBlock = isProduk && data.links.some((l) => l.blockType === "produk");
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
   // selectedProductCategory -- HANYA relevan pageType "produk", lihat
   // catatan lengkap di getProductCategories/renderCategoryTabs (dekat
@@ -4036,8 +4040,15 @@ function BuilderPagePreview({
             terpilih lokal), cuma pindah lokasi supaya Toko juga bisa masuk
             mode builder. Katalog produk TETAP dikelola lewat tab Produk
             terpisah di dashboard (bukan lewat blok di sini) -- ini murni
-            menampilkan produk yang sudah ada, sama seperti mode non-builder. */}
+            menampilkan produk yang sudah ada, sama seperti mode non-builder.
+            Susulan 13 September 2026 ("jangan tampil langsung di link nya,
+            tapi data produk itu akan bisa dipilih ketika menggunakan blok
+            produk"): grid otomatis ini sekarang FALLBACK -- begitu Toko
+            punya minimal satu blok "produk" (sudah dirender di .map() di
+            atas, lewat renderBuilderNode), grid otomatis berhenti tampil
+            supaya tidak dobel dengan blok yang sudah dikurasi manual. */}
         {isProduk &&
+          !hasProdukBlock &&
           (data.products.length > 0 ? (
             <div className="mt-8 w-full">
               {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
@@ -4250,6 +4261,9 @@ function ProdukPagePreview({
   // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
   // renderCategoryTabs (dekat toPreviewData, atas file ini).
   const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
+  // hasProdukBlock -- lihat catatan lengkap di BuilderPagePreview (pola
+  // identik, komponen ini adalah versi non-builder Halaman Toko).
+  const hasProdukBlock = data.links.some((l) => l.blockType === "produk");
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
@@ -4298,13 +4312,18 @@ function ProdukPagePreview({
           </div>
         )}
 
-        {data.products.length > 0 ? (
-          <div className="mt-8 w-full">
-            {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
-          </div>
-        ) : (
-          <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
-        )}
+        {/* Grid produk otomatis -- FALLBACK sejak 13 September 2026 (lihat
+            catatan lengkap di BuilderPagePreview): begitu Toko punya
+            minimal satu blok "produk" (sudah dirender lewat renderLinkOrBlock
+            di atas), grid ini berhenti tampil supaya tidak dobel. */}
+        {!hasProdukBlock &&
+          (data.products.length > 0 ? (
+            <div className="mt-8 w-full">
+              {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
+            </div>
+          ) : (
+            <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
+          ))}
 
         {!hideFooterChrome && (
           <div className="mt-auto flex flex-col items-center gap-3 pt-10">

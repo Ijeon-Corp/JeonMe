@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
+  DashboardProduct,
   ExtraPageDetail,
   LinkItem,
   PageStickerData,
@@ -17,6 +18,7 @@ import {
   deleteLink,
   reorderExtraPageLinks,
   updateExtraPage,
+  updateLink,
   uploadAudioBlock,
   uploadExtraPageAvatar,
   uploadExtraPageBackground,
@@ -38,12 +40,14 @@ import {
   IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
+  IconShoppingBag,
   IconSparkle,
   IconTextLines,
   IconTrash,
   IconX,
 } from "@/components/icons";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
+import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import Toggle from "@/components/Toggle";
 import SectionCard from "@/components/dashboard/page/SectionCard";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
@@ -59,7 +63,7 @@ import { SITE_URL } from "@/lib/site";
 import { useLocale } from "@/lib/locale-context";
 import { useErrorToast } from "@/lib/use-error-toast";
 
-type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file";
+type BlockType = "link" | "video" | "faq" | "contact_form" | "maps" | "text" | "accordion" | "gallery" | "audio" | "file" | "produk";
 
 // maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go).
 const maxGalleryImages = 9;
@@ -98,6 +102,15 @@ function getContentTiles(
     // (pola sama persis, dipakai ulang di sini untuk paritas halaman
     // utama/Toko).
     { key: "file", label: t("dashboard.components.produkPageEditor.contentTiles.file.label"), description: t("dashboard.components.produkPageEditor.contentTiles.file.desc"), Icon: IconFileText },
+    // "produk" -- permintaan langsung pengguna, 13 September 2026 ("jangan
+    // tampil langsung di link nya, tapi data produk itu akan bisa dipilih
+    // ketika menggunakan blok produk"): grid otomatis Halaman Toko (SEMUA
+    // produk aktif, lihat renderProductGrid di PagePreview.tsx) sekarang
+    // jadi FALLBACK -- begitu Toko punya minimal satu blok "produk" ini,
+    // grid otomatis berhenti tampil & kreator kurasi sendiri produk mana
+    // yang muncul, persis seperti blok "produk" di halaman Bio/Landing
+    // (ProdukBlockEditor, dipakai ulang APA ADANYA di bawah).
+    { key: "produk", label: t("dashboard.components.produkPageEditor.contentTiles.produk.label"), description: t("dashboard.components.produkPageEditor.contentTiles.produk.desc"), Icon: IconShoppingBag },
   ];
 }
 
@@ -112,6 +125,7 @@ function getBlockLabel(t: (key: string) => string): Record<string, string> {
     gallery: t("dashboard.components.produkPageEditor.contentTiles.gallery.label"),
     audio: t("dashboard.components.produkPageEditor.contentTiles.audio.label"),
     file: t("dashboard.components.produkPageEditor.contentTiles.file.label"),
+    produk: t("dashboard.components.produkPageEditor.contentTiles.produk.label"),
   };
 }
 
@@ -155,6 +169,8 @@ export default function ProdukPageEditor({
   onStickersChange,
   section,
   setSection,
+  products,
+  onProductCreated,
 }: {
   loading: boolean;
   username: string;
@@ -167,6 +183,10 @@ export default function ProdukPageEditor({
   creating: boolean;
   onCreateNow: () => void;
   onStickersChange: (stickers: PageStickerData[]) => void;
+  // products/onProductCreated -- blok "produk" di Toko (permintaan langsung
+  // pengguna, 13 September 2026), lihat catatan lengkap di BlockSection.
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
   // section/setSection -- diangkat ke induk (dashboard/products/page.tsx,
   // permintaan langsung pengguna: "langsung edit di bagian pratinjau nya")
   // supaya induk tahu tab Stiker sedang aktif atau tidak, untuk menyalakan
@@ -400,7 +420,14 @@ export default function ProdukPageEditor({
 
       <div className="mt-4">
         {section === "blok" && (
-          <BlockSection pageId={page.id} links={links} setLinks={setLinks} setError={setError} />
+          <BlockSection
+            pageId={page.id}
+            links={links}
+            setLinks={setLinks}
+            setError={setError}
+            products={products}
+            onProductCreated={onProductCreated}
+          />
         )}
         {section === "tema" && (
           <TemaSection page={page} isPremium={page.is_premium} onPatch={handlePatch} onError={setError} onUploadBackground={handleUploadBackground} />
@@ -451,11 +478,15 @@ function BlockSection({
   links,
   setLinks,
   setError,
+  products,
+  onProductCreated,
 }: {
   pageId: string;
   links: LinkItem[];
   setLinks: (fn: (prev: LinkItem[]) => LinkItem[]) => void;
   setError: (msg: string | null) => void;
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
 }) {
   const { t } = useLocale();
   const CONTENT_TILES = getContentTiles(t);
@@ -650,6 +681,20 @@ function BlockSection({
     }
   }
 
+  // handleBlockDataPatch -- pola identik dashboard/links/page.tsx (blok
+  // "produk"): PATCH langsung ke updateLink, dipakai ProdukBlockEditor di
+  // bawah utk menyimpan pilihan product_ids/layout kreator.
+  async function handleBlockDataPatch(link: LinkItem, patch: Record<string, unknown>) {
+    setError(null);
+    const nextBlockData = { ...link.block_data, ...patch };
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, block_data: nextBlockData } : l)));
+    try {
+      await updateLink(link.id, { block_data: nextBlockData });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.addBlock"));
+    }
+  }
+
   async function handleDelete(id: string) {
     setLinks((prev) => prev.filter((l) => l.id !== id));
     try {
@@ -836,13 +881,15 @@ function BlockSection({
             {blockType === "contact_form" && (
               <p className="text-xs text-app-muted">{t("dashboard.components.produkPageEditor.blockForm.contactFormHint")}</p>
             )}
-            {(blockType === "gallery" || blockType === "audio" || blockType === "file") && (
+            {(blockType === "gallery" || blockType === "audio" || blockType === "file" || blockType === "produk") && (
               <p className="text-xs text-app-muted">
                 {blockType === "gallery"
                   ? t("dashboard.components.produkPageEditor.blockForm.galleryHint")
                   : blockType === "audio"
                   ? t("dashboard.components.produkPageEditor.blockForm.audioHint")
-                  : t("dashboard.components.produkPageEditor.blockForm.fileHint")}
+                  : blockType === "file"
+                  ? t("dashboard.components.produkPageEditor.blockForm.fileHint")
+                  : t("dashboard.components.produkPageEditor.blockForm.produkHint")}
               </p>
             )}
 
@@ -1003,6 +1050,31 @@ function BlockSection({
                     {t("dashboard.components.produkPageEditor.blockForm.delete")}
                   </button>
                 )}
+              </div>
+            )}
+            {/* Panel "Kelola Produk" -- blok "produk" di Halaman Toko
+                (permintaan langsung pengguna, 13 September 2026), pola
+                IDENTIK dashboard/links/page.tsx: ProdukBlockEditor yang
+                sama dipakai ulang apa adanya. Begitu blok ini ADA di Toko,
+                grid otomatis Halaman Toko berhenti tampil (lihat gating
+                hasProdukBlock di PagePreview.tsx). */}
+            {link.block_type === "produk" && (
+              <div className="ml-6 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                <ProdukBlockEditor
+                  blockData={link.block_data}
+                  products={products}
+                  onToggleProduct={(productId) => {
+                    const current = (link.block_data?.product_ids as string[] | undefined) ?? [];
+                    const next = current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId];
+                    handleBlockDataPatch(link, { product_ids: next });
+                  }}
+                  onProductCreated={(product) => {
+                    onProductCreated(product);
+                    const current = (link.block_data?.product_ids as string[] | undefined) ?? [];
+                    handleBlockDataPatch(link, { product_ids: [...current, product.id] });
+                  }}
+                  onLayoutChange={(layout) => handleBlockDataPatch(link, { layout })}
+                />
               </div>
             )}
           </div>

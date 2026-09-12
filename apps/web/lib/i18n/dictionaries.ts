@@ -2431,6 +2431,10 @@ export const dictionaries = {
               label: "File & Unduhan",
               desc: "Bagikan PDF/ZIP/EPUB gratis untuk diunduh",
             },
+            produk: {
+              label: "Produk",
+              desc: "Pilih produk mana saja yang tampil, bukan otomatis semua",
+            },
           },
           notActive: {
             title: "Halaman Toko belum aktif",
@@ -2509,6 +2513,7 @@ export const dictionaries = {
             galleryHint: "Buat blok dulu, foto ditambahkan setelahnya lewat panel \"Kelola foto\" di kartu blok.",
             audioHint: "Buat blok dulu, file audio diunggah setelahnya lewat panel \"Kelola audio\" di kartu blok.",
             fileHint: "Buat blok dulu, file PDF/ZIP/EPUB diunggah setelahnya lewat panel \"Kelola file\" di kartu blok.",
+            produkHint: "Buat blok dulu, pilih produk yang mau ditampilkan setelahnya lewat panel \"Kelola Produk\" di kartu blok. Begitu ada blok ini, grid produk otomatis di halaman Toko berhenti tampil.",
             cancel: "Batal",
             saving: "Menyimpan...",
             add: "Tambah",
@@ -5443,6 +5448,10 @@ export const dictionaries = {
               label: "File & Download",
               desc: "Share a free PDF/ZIP/EPUB for download",
             },
+            produk: {
+              label: "Product",
+              desc: "Choose which products show, instead of all of them automatically",
+            },
           },
           notActive: {
             title: "Store Page is not active yet",
@@ -5521,6 +5530,7 @@ export const dictionaries = {
             galleryHint: "Create the block first, photos are added afterward via the \"Manage photos\" panel on the block card.",
             audioHint: "Create the block first, the audio file is uploaded afterward via the \"Manage audio\" panel on the block card.",
             fileHint: "Create the block first, the PDF/ZIP/EPUB file is uploaded afterward via the \"Manage file\" panel on the block card.",
+            produkHint: "Create the block first, then choose which products to show via the \"Manage Products\" panel on the block card. Once this block exists, the Toko page's automatic product grid stops showing.",
             cancel: "Cancel",
             saving: "Saving...",
             add: "Add",
