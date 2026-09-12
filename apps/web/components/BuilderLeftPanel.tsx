@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   DndContext,
@@ -18,7 +17,6 @@ import {
   IconBook,
   IconBox,
   IconCamera,
-  IconCheck,
   IconChevronRight,
   IconClock,
   IconColumns,
@@ -66,6 +64,7 @@ import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
+import { ProdukBlockEditor, getBlockProductIds } from "@/components/dashboard/page/ProdukBlockEditor";
 import {
   FontSection,
   HeaderSection,
@@ -76,12 +75,6 @@ import {
   type DesignSectionPatch,
   type ProductLayoutValue,
 } from "@/components/dashboard/page/design-sections";
-
-// CreateProductForm -- lihat catatan lengkap di komponen itu sendiri:
-// blok "produk" (NodeFieldEditor case di bawah) memakai form BUAT PRODUK
-// BARU yang SAMA PERSIS dengan menu Produk dashboard, dibungkus modal
-// overlay baru di sini (dashboard/products/page.tsx makainya inline).
-const CreateProductForm = dynamic(() => import("@/components/dashboard/products/CreateProductForm"));
 
 // BuilderDesignSection -- 5 sub-tab Design di dalam builder (permintaan
 // langsung pengguna 9 September 2026, "design langsung di builder juga")
@@ -176,20 +169,6 @@ function stripHtml(html: string): string {
 }
 function truncate(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n).trimEnd()}…` : s;
-}
-
-// getBlockProductIds -- permintaan langsung pengguna, 12 September 2026
-// ("bisa di atur per blok misal berisi 2 produk"): blok "produk" SEKARANG
-// menyimpan `product_ids` (array, banyak produk sekaligus) alih-alih
-// `product_id` tunggal -- fallback baca field lama di sini supaya blok
-// yang sudah ada di staging (dibuat sebelum perubahan ini) tidak tiba-tiba
-// kosong. Field lama TIDAK PERNAH ditulis lagi mulai sekarang (SELALU
-// `product_ids`, cuma dibaca untuk kompatibilitas mundur).
-function getBlockProductIds(node: BuilderTreeNode): string[] {
-  const ids = node.blockData?.product_ids as string[] | undefined;
-  if (Array.isArray(ids)) return ids;
-  const single = node.blockData?.product_id as string | undefined;
-  return single ? [single] : [];
 }
 
 // previewLabelFor -- pengganti `label` lama (SELALU nama tipe generik utk
@@ -647,214 +626,6 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
   );
 }
 
-// ProdukBlockEditor -- editor blok "produk" (permintaan langsung pengguna
-// 10 September 2026, "harusnya ada blok produk isinya sama seperti mengisi
-// di menu product... ada 3 pilihan"): pilih SATU produk existing dari
-// daftar milik kreator, ATAU buat produk baru langsung dari builder lewat
-// `CreateProductForm` (SAMA PERSIS alur menu Produk dashboard) dibungkus
-// modal overlay baru (panel builder terlalu sempit utk form penuh inline,
-// pola styling sama `ManageProductModal.tsx`). Produk baru langsung
-// terpilih (onProductCreated dipanggil PLUS onSelectProduct via pemanggil
-// di NodeFieldEditor) supaya kreator tidak perlu klik pilih lagi.
-// ProdukBlockLayout -- 4 opsi tata letak blok "produk" (permintaan
-// langsung pengguna 11 September 2026, dikonfirmasi via AskUserQuestion:
-// "2 variasi Kartu + 2 variasi Baris") -- lihat fungsi render masing-
-// masing di PagePreview.tsx (renderSingleProductCard/renderProductCardSmall/
-// renderProductRowWithImage/renderProductListRow).
-type ProdukBlockLayout = "card_large" | "card_small" | "row_with_image" | "row_no_image";
-
-const PRODUK_LAYOUT_OPTIONS: { value: ProdukBlockLayout; labelKey: string }[] = [
-  { value: "card_large", labelKey: "produkLayoutCardLarge" },
-  { value: "card_small", labelKey: "produkLayoutCardSmall" },
-  { value: "row_with_image", labelKey: "produkLayoutRowWithImage" },
-  { value: "row_no_image", labelKey: "produkLayoutRowNoImage" },
-];
-
-function ProdukBlockEditor({
-  node,
-  products,
-  onToggleProduct,
-  onProductCreated,
-  onLayoutChange,
-}: {
-  node: BuilderTreeNode;
-  products: DashboardProduct[];
-  onToggleProduct: (productId: string) => void;
-  onProductCreated: (product: DashboardProduct) => void;
-  onLayoutChange: (layout: ProdukBlockLayout) => void;
-}) {
-  const { t } = useLocale();
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const selectedIds = getBlockProductIds(node);
-  const selectedProducts = selectedIds
-    .map((id) => products.find((p) => p.id === id))
-    .filter((p): p is DashboardProduct => !!p);
-  const layout = (node.blockData?.layout as ProdukBlockLayout | undefined) ?? "card_large";
-  // picking -- permintaan langsung pengguna, 11 September 2026 ("ketika
-  // sudah pilih satu produk ya tampil 1 saja di blok nya"): daftar PENUH
-  // (+ "Buat Produk Baru") SEBELUMNYA selalu tampil apa pun status
-  // pilihan, memaksa kreator scroll ulang tiap kali membuka blok yang
-  // sudah terisi -- panel HANYA menampilkan ringkasan produk terpilih
-  // begitu sudah ada, daftar penuh cuma muncul lagi kalau kreator sengaja
-  // klik "+ Tambah Produk" (atau belum pernah memilih apa pun). Susulan 12
-  // September 2026 ("bisa di atur per blok misal berisi 2 produk"): daftar
-  // SEKARANG multi-select (klik toggle, BUKAN auto-close begitu satu
-  // diklik) -- kreator klik "Selesai" sendiri begitu selesai memilih
-  // semuanya, supaya tidak perlu buka-tutup panel berkali-kali untuk tiap
-  // produk.
-  const [picking, setPicking] = useState(selectedIds.length === 0);
-
-  if (selectedProducts.length > 0 && !picking) {
-    return (
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          {selectedProducts.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-lg border-2 border-jeon-purple bg-jeon-lavender/40 p-1.5">
-              {p.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
-              ) : (
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
-                  <IconShoppingBag className="h-4 w-4 text-jeon-purple" />
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-app-ink">{p.name}</span>
-                <span className="block text-[11px] text-app-muted">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => onToggleProduct(p.id)}
-                aria-label={t("dashboard.pages.linksBuilder.produkRemoveProduct").replace("{name}", p.name)}
-                className="flex-shrink-0 text-app-muted hover:text-red-600"
-              >
-                <IconX className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-        >
-          <IconPlus className="h-3.5 w-3.5" />
-          {t("dashboard.pages.linksBuilder.produkAddMore")}
-        </button>
-
-        {/* Tata Letak -- 4 opsi, berlaku untuk SEMUA produk di blok ini
-            (dikonfirmasi via AskUserQuestion: "2 variasi Kartu + 2 variasi
-            Baris"). 2+ produk otomatis tersusun grid 2 kolom (lihat
-            renderBuilderNode, PagePreview.tsx) -- TIDAK ada pengaturan
-            jumlah kolom terpisah (dikonfirmasi via AskUserQuestion). */}
-        <div>
-          <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkLayoutTitle")}</p>
-          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-            {PRODUK_LAYOUT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onLayoutChange(opt.value)}
-                className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
-                  layout === opt.value ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
-                }`}
-              >
-                {t(`dashboard.pages.linksBuilder.${opt.labelKey}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkSelectExisting")}</p>
-      {products.length === 0 ? (
-        <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.produkNoProducts")}</p>
-      ) : (
-        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
-          {products.map((p) => {
-            const isSelected = selectedIds.includes(p.id);
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onToggleProduct(p.id)}
-                className={`flex items-center gap-2 rounded-lg border-2 p-1.5 text-left ${
-                  isSelected ? "border-jeon-purple bg-jeon-lavender/40" : "border-app-border hover:border-jeon-purple"
-                }`}
-              >
-                {p.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
-                ) : (
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
-                    <IconShoppingBag className="h-4 w-4 text-jeon-purple" />
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-semibold text-app-ink">{p.name}</span>
-                  <span className="block text-[11px] text-app-muted">Rp {p.effective_price_idr.toLocaleString("id-ID")}</span>
-                </span>
-                {isSelected && <IconCheck className="h-4 w-4 flex-shrink-0 text-jeon-purple" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => setCreating(true)}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-      >
-        <IconPlus className="h-3.5 w-3.5" />
-        {t("dashboard.pages.linksBuilder.produkCreateNew")}
-      </button>
-      <button
-        type="button"
-        onClick={() => setPicking(false)}
-        disabled={selectedIds.length === 0}
-        className="text-center text-[11px] font-semibold text-app-muted underline disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {t("dashboard.pages.linksBuilder.produkDone")}
-      </button>
-
-      {creating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setCreating(false)}>
-          <div
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-4 shadow-brutal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.linksBuilder.produkCreateNew")}</h2>
-              <button
-                type="button"
-                onClick={() => setCreating(false)}
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
-              >
-                <IconX className="h-4 w-4" />
-              </button>
-            </div>
-            {createError && <p className="mt-1 text-[11px] text-red-600">{createError}</p>}
-            <CreateProductForm
-              onCreated={(product) => {
-                setCreating(false);
-                setPicking(false);
-                onProductCreated(product);
-              }}
-              onCancel={() => setCreating(false)}
-              onError={setCreateError}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // NodeFieldEditor -- redesain total (10 September 2026): badan JSX dari
 // panel "Edit Blok Terpilih" LAMA (dulu satu blok terpisah, mengambang di
 // BAWAH seluruh tree) -- APA ADANYA (per-blockType switch yang sama persis),
@@ -1105,16 +876,16 @@ function NodeFieldEditor({
   if (node.blockType === "produk") {
     return (
       <ProdukBlockEditor
-        node={node}
+        blockData={node.blockData}
         products={products}
         onToggleProduct={(productId) => {
-          const current = getBlockProductIds(node);
+          const current = getBlockProductIds(node.blockData);
           const next = current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId];
           onUpdateNode(sel, { blockData: { product_ids: next } });
         }}
         onProductCreated={(product) => {
           onProductCreated(product);
-          onUpdateNode(sel, { blockData: { product_ids: [...getBlockProductIds(node), product.id] } });
+          onUpdateNode(sel, { blockData: { product_ids: [...getBlockProductIds(node.blockData), product.id] } });
         }}
         onLayoutChange={(layout) => onUpdateNode(sel, { blockData: { layout } })}
       />
