@@ -58,11 +58,99 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
   );
 }
 
+const NEW_CATEGORY_VALUE = "__new__";
+const CATEGORY_FIELD_CLASSNAME =
+  "w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
+
+// CategoryField -- permintaan langsung pengguna, 13 September 2026 ("jika
+// creator sudah pernah membuat category produk tampil drop down untuk
+// memilih category produk selanjutnya"): begitu kreator PUNYA >=1 kategori
+// dari produk sebelumnya, field ini defaultnya jadi <select> (bukan lagi
+// input teks bebas) supaya penamaan kategori konsisten antar produk (mis.
+// tidak ada "Ebook"/"ebook"/"E-book" jadi 3 kategori terpisah gara-gara
+// typo). Tetap ada jalan keluar bikin kategori BARU lewat opsi
+// "+ Kategori baru" di dropdown -- balik ke input teks biasa -- supaya
+// kreator tidak pernah terkunci cuma bisa pilih dari yang sudah ada.
+// Kreator TANPA kategori sama sekali (produk pertama) tetap dapat input
+// teks polos apa adanya, tidak ada apa pun utk dipilih.
+function CategoryField({
+  value,
+  onChange,
+  categories,
+  placeholder,
+  wrapperClassName,
+  t,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  categories: string[];
+  placeholder: string;
+  wrapperClassName: string;
+  t: (key: string) => string;
+}) {
+  const [addingNew, setAddingNew] = useState(categories.length === 0);
+
+  if (categories.length > 0 && !addingNew) {
+    return (
+      <div className={wrapperClassName}>
+        <select
+          value={categories.includes(value) ? value : ""}
+          onChange={(e) => {
+            if (e.target.value === NEW_CATEGORY_VALUE) {
+              setAddingNew(true);
+              onChange("");
+            } else {
+              onChange(e.target.value);
+            }
+          }}
+          className={CATEGORY_FIELD_CLASSNAME}
+        >
+          <option value="">{placeholder}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+          <option value={NEW_CATEGORY_VALUE}>{t("dashboard.pages.products.form.newCategoryOption")}</option>
+        </select>
+      </div>
+    );
+  }
+
+  return (
+    <div className={wrapperClassName}>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={CATEGORY_FIELD_CLASSNAME}
+      />
+      {categories.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setAddingNew(false);
+            onChange("");
+          }}
+          className="mt-1 text-[10px] font-semibold text-jeon-purple hover:underline"
+        >
+          {t("dashboard.pages.products.form.backToCategoryList")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function CreateProductForm({
+  categories,
   onCreated,
   onCancel,
   onError,
 }: {
+  // categories -- daftar kategori UNIK milik kreator ini (dihitung
+  // pemanggil dari produk yang sudah ada, lihat CategoryField di atas).
+  categories: string[];
   onCreated: (product: DashboardProduct) => void;
   onCancel: () => void;
   onError: (message: string) => void;
@@ -259,12 +347,13 @@ export default function CreateProductForm({
             onChange={(e) => setPriceIDR(e.target.value)}
             className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
           />
-          <input
-            type="text"
-            placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
+          <CategoryField
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+            onChange={setCategory}
+            categories={categories}
+            placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
+            wrapperClassName="flex-1"
+            t={t}
           />
         </div>
         {renderCoverPicker(coverFile, setCoverFile, t)}
@@ -380,12 +469,13 @@ export default function CreateProductForm({
         onChange={(e) => setExternalUrl(e.target.value)}
         className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
       />
-      <input
-        type="text"
-        placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
+      <CategoryField
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className="w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+        onChange={setCategory}
+        categories={categories}
+        placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
+        wrapperClassName="w-full"
+        t={t}
       />
       {renderCoverPicker(coverFile, setCoverFile, t)}
       <div className="flex gap-2">

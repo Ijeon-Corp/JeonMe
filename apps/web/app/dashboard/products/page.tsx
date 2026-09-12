@@ -1215,6 +1215,7 @@ function DashboardProductsPageInner() {
                 ke CreateProductForm.tsx, lihat catatan lengkap di sana. */}
             {addingProduct && (
               <CreateProductForm
+                categories={categories}
                 onCreated={handleProductCreated}
                 onCancel={() => setAddingProduct(false)}
                 onError={setError}

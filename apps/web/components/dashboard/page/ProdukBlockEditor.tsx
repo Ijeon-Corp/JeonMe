@@ -77,6 +77,11 @@ export function ProdukBlockEditor({
   const { t } = useLocale();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // categories -- sama seperti dashboard/products/page.tsx: daftar kategori
+  // UNIK dari produk yang sudah ada, dioper ke CreateProductForm supaya
+  // field kategorinya jadi dropdown begitu kreator sudah pernah punya
+  // kategori (lihat CategoryField di CreateProductForm.tsx).
+  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort();
   const selectedIds = getBlockProductIds(blockData);
   const selectedProducts = selectedIds
     .map((id) => products.find((p) => p.id === id))
@@ -232,6 +237,7 @@ export function ProdukBlockEditor({
             </div>
             {createError && <p className="mt-1 text-[11px] text-red-600">{createError}</p>}
             <CreateProductForm
+              categories={categories}
               onCreated={(product) => {
                 setCreating(false);
                 setPicking(false);
