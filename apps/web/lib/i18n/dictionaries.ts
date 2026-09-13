@@ -1114,15 +1114,31 @@ export const dictionaries = {
           textPlaceholder: "Tulis teks di sini...",
           buttonTitlePlaceholder: "Label tombol",
           buttonUrlPlaceholder: "https://...",
+          // buttonUrlLabel/buttonUrlHint/videoUrlLabel -- redesain panel
+          // blok (13 September 2026, benchmark Linktree): field yang
+          // sebelumnya cuma punya placeholder (hilang begitu diketik)
+          // sekarang punya label TETAP di atasnya (FormField.tsx) --
+          // placeholder lama TETAP dipakai sbg contoh format, bukan diganti.
+          buttonUrlLabel: "Tautan Tujuan",
+          buttonUrlHint: "Dibuka saat pengunjung menekan tombol ini.",
           // Fase 2 (permintaan langsung pengguna 8 September 2026): panel
           // edit video/faq/embed_link.
           videoTitlePlaceholder: "Judul video (opsional)",
           videoUrlPlaceholder: "Tautan YouTube atau TikTok",
+          videoUrlLabel: "Tautan Video",
           embedLinkTitlePlaceholder: "Judul kartu",
           embedLinkUrlPlaceholder: "https://... (opsional)",
           faqQuestionPlaceholder: "Pertanyaan",
           faqAddQuestion: "Tambah Pertanyaan",
           faqRemoveQuestion: "Hapus pertanyaan",
+          // faqQuestionLabel/faqAnswerLabel/faqEmptySubtitle/faqCountSubtitle
+          // -- redesain panel blok (13 September 2026, benchmark Linktree):
+          // label eksplisit per field + subjudul dinamis jumlah pertanyaan
+          // di header panel (BlockPanelHeader).
+          faqQuestionLabel: "Pertanyaan",
+          faqAnswerLabel: "Jawaban",
+          faqEmptySubtitle: "Belum ada pertanyaan",
+          faqCountSubtitle: "{n} pertanyaan",
           // Fase 2 langkah 7 (permintaan langsung pengguna 8 September
           // 2026): panel upload foto image/gallery/video_image/embed_link.
           uploadPhoto: "Unggah Foto",
@@ -1177,6 +1193,10 @@ export const dictionaries = {
           produkAddMore: "+ Tambah Produk",
           produkDone: "Selesai",
           produkRemoveProduct: "Hapus {name} dari blok ini",
+          // produkSelectedSubtitle -- redesain panel blok (13 September
+          // 2026, benchmark Linktree): subjudul dinamis di header panel
+          // (BlockPanelHeader), jumlah produk yang sudah dipilih di blok ini.
+          produkSelectedSubtitle: "{n} produk dipilih",
           designPlaceholder: "Tema/Header/Tombol/Font dikelola di halaman Desain yang sudah ada.",
           openDesignPage: "Buka Halaman Desain",
           settingsPlaceholder: "Pengaturan SEO/publikasi dikelola di halaman Pengaturan yang sudah ada.",
@@ -4172,13 +4192,20 @@ export const dictionaries = {
           textPlaceholder: "Write your text here...",
           buttonTitlePlaceholder: "Button label",
           buttonUrlPlaceholder: "https://...",
+          buttonUrlLabel: "Destination Link",
+          buttonUrlHint: "Opened when a visitor taps this button.",
           videoTitlePlaceholder: "Video title (optional)",
           videoUrlPlaceholder: "YouTube or TikTok link",
+          videoUrlLabel: "Video Link",
           embedLinkTitlePlaceholder: "Card title",
           embedLinkUrlPlaceholder: "https://... (optional)",
           faqQuestionPlaceholder: "Question",
           faqAddQuestion: "Add Question",
           faqRemoveQuestion: "Remove question",
+          faqQuestionLabel: "Question",
+          faqAnswerLabel: "Answer",
+          faqEmptySubtitle: "No questions yet",
+          faqCountSubtitle: "{n} questions",
           uploadPhoto: "Upload Photo",
           replacePhoto: "Replace Photo",
           removePhoto: "Remove photo",
@@ -4213,6 +4240,7 @@ export const dictionaries = {
           produkAddMore: "+ Add Product",
           produkDone: "Done",
           produkRemoveProduct: "Remove {name} from this block",
+          produkSelectedSubtitle: "{n} products selected",
           designPlaceholder: "Theme/Header/Button/Font are managed on the existing Design page.",
           openDesignPage: "Open Design Page",
           settingsPlaceholder: "SEO/publish settings are managed on the existing Settings page.",

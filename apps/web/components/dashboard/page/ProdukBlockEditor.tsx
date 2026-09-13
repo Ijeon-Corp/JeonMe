@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { IconCheck, IconPlus, IconShoppingBag, IconX } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import type { DashboardProduct } from "@/lib/api-client";
+import BlockPanelHeader from "@/components/dashboard/page/BlockPanelHeader";
 
 // CreateProductForm -- lihat catatan lengkap di komponen itu sendiri: blok
 // "produk" memakai form BUAT PRODUK BARU yang SAMA PERSIS dengan menu
@@ -104,6 +105,11 @@ export function ProdukBlockEditor({
   if (selectedProducts.length > 0 && !picking) {
     return (
       <div className="flex flex-col gap-3">
+        <BlockPanelHeader
+          icon={IconShoppingBag}
+          title={t("dashboard.components.builderAddComponentModal.typeProduk")}
+          subtitle={t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", String(selectedProducts.length))}
+        />
         <div className="flex flex-col gap-1.5">
           {selectedProducts.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded-lg border-2 border-jeon-purple bg-jeon-lavender/40 p-1.5">
@@ -145,16 +151,16 @@ export function ProdukBlockEditor({
             renderBuilderNode/renderLinkOrBlock, PagePreview.tsx) -- TIDAK
             ada pengaturan jumlah kolom terpisah (dikonfirmasi via
             AskUserQuestion). */}
-        <div>
-          <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkLayoutTitle")}</p>
-          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <div className="flex flex-col gap-1.5 rounded-xl bg-app-surface-2 p-3">
+          <p className="text-[10.5px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.linksBuilder.produkLayoutTitle")}</p>
+          <div className="grid grid-cols-2 gap-1.5">
             {PRODUK_LAYOUT_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => onLayoutChange(opt.value)}
                 className={`rounded-lg border-2 px-2 py-1.5 text-[11px] font-bold ${
-                  layout === opt.value ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border text-app-muted"
+                  layout === opt.value ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted"
                 }`}
               >
                 {t(`dashboard.pages.linksBuilder.${opt.labelKey}`)}
@@ -167,7 +173,12 @@ export function ProdukBlockEditor({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <BlockPanelHeader
+        icon={IconShoppingBag}
+        title={t("dashboard.components.builderAddComponentModal.typeProduk")}
+        subtitle={t("dashboard.components.builderAddComponentModal.typeProdukDesc")}
+      />
       <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.pages.linksBuilder.produkSelectExisting")}</p>
       {products.length === 0 ? (
         <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.produkNoProducts")}</p>

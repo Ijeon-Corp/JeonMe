@@ -69,6 +69,8 @@ import {
   type BuilderTreeNode,
 } from "@/lib/builder-blocks";
 import BuilderAddComponentModal from "@/components/BuilderAddComponentModal";
+import FormField from "@/components/FormField";
+import BlockPanelHeaderView from "@/components/dashboard/page/BlockPanelHeader";
 import DesignCategoryTabs from "@/components/dashboard/page/DesignCategoryTabs";
 import StickerCanvasEditor from "@/components/StickerCanvasEditor";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
@@ -215,49 +217,65 @@ function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): str
 // setiap kali panjang array berubah (tambah/hapus), menghindari baris yang
 // digeser index-nya menampilkan teks BASI dari baris lain (uncontrolled
 // input, defaultValue cuma berlaku saat mount pertama).
+// FaqItemsEditor -- redesain panel blok (13 September 2026, benchmark
+// Linktree, lihat BlockPanelHeader): header ikon+jumlah pertanyaan
+// dinamis, tiap item jadi kartu bernomor dengan label eksplisit per
+// field (bukan cuma placeholder), bukan cuma baris tipis bertumpuk.
 function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (items: { question: string; answer: string }[]) => void }) {
   const { t } = useLocale();
   const items = (node.blockData?.items as { question: string; answer: string }[] | undefined) ?? [];
+  const subtitle =
+    items.length === 0
+      ? t("dashboard.pages.linksBuilder.faqEmptySubtitle")
+      : t("dashboard.pages.linksBuilder.faqCountSubtitle").replace("{n}", String(items.length));
 
   function updateItem(index: number, patch: Partial<{ question: string; answer: string }>) {
     onUpdate(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {items.map((item, i) => (
-        <div key={`${i}-${items.length}`} className="flex flex-col gap-1 rounded-lg border border-app-border p-2">
-          <div className="flex items-center gap-1">
-            <input
-              defaultValue={item.question}
-              onBlur={(e) => updateItem(i, { question: e.target.value })}
-              placeholder={t("dashboard.pages.linksBuilder.faqQuestionPlaceholder")}
-              className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
-            />
+    <div className="flex flex-col gap-3">
+      <BlockPanelHeader node={node} t={t} subtitle={subtitle} />
+      <div className="flex flex-col gap-2.5">
+        {items.map((item, i) => (
+          <div key={`${i}-${items.length}`} className="relative flex flex-col gap-2 rounded-xl border border-app-border p-3 pt-4">
+            <span className="absolute -top-2.5 left-3 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-[10px] font-bold text-white">
+              {i + 1}
+            </span>
             <button
               type="button"
               onClick={() => onUpdate(items.filter((_, idx) => idx !== i))}
               aria-label={t("dashboard.pages.linksBuilder.faqRemoveQuestion")}
-              className="flex-shrink-0 text-app-muted hover:text-red-600"
+              className="absolute right-2.5 top-2.5 text-app-muted hover:text-red-600"
             >
               <IconTrash className="h-3.5 w-3.5" />
             </button>
+            <FormField label={t("dashboard.pages.linksBuilder.faqQuestionLabel")}>
+              <input
+                defaultValue={item.question}
+                onBlur={(e) => updateItem(i, { question: e.target.value })}
+                placeholder={t("dashboard.pages.linksBuilder.faqQuestionPlaceholder")}
+                className="w-full rounded-md border border-app-border p-1.5 pr-6 text-xs outline-none focus:border-jeon-purple"
+              />
+            </FormField>
+            <FormField label={t("dashboard.pages.linksBuilder.faqAnswerLabel")}>
+              {/* Jawaban FAQ -- rich text (susulan 12 September 2026, "tiap
+                  blok yang ada teks nya buat semua jadi rich teks",
+                  dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
+                  saja) -- reuse RichTextEditor sama persis blok "text". */}
+              <RichTextEditor html={item.answer} onChange={(html) => updateItem(i, { answer: html })} />
+            </FormField>
           </div>
-          {/* Jawaban FAQ -- rich text (susulan 12 September 2026, "tiap
-              blok yang ada teks nya buat semua jadi rich teks",
-              dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
-              saja) -- reuse RichTextEditor sama persis blok "text". */}
-          <RichTextEditor html={item.answer} onChange={(html) => updateItem(i, { answer: html })} />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => onUpdate([...items, { question: "", answer: "" }])}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
-      >
-        <IconPlus className="h-3.5 w-3.5" />
-        {t("dashboard.pages.linksBuilder.faqAddQuestion")}
-      </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => onUpdate([...items, { question: "", answer: "" }])}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+          {t("dashboard.pages.linksBuilder.faqAddQuestion")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -686,6 +704,28 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
   );
 }
 
+// BlockPanelHeader -- redesain panel edit blok (permintaan langsung
+// pengguna 13 September 2026, "saya mau redesign ui dan ux setiap blok
+// mengikuti benchmark seperti di linktree" -- draf disetujui via Artifact
+// sebelum implementasi). Header ikon+nama tipe+subjudul di atas tiap
+// panel, supaya jelas blok APA yang sedang diedit tanpa perlu lihat tree
+// -- reuse TYPE_ICON/TYPE_LABEL_KEY yang sudah ada, TIDAK menambah
+// pemetaan baru. `subtitle` opsional -- kalau tidak diisi, jatuh ke
+// deskripsi statis tipe blok (typeXDesc, sudah ada dari
+// BuilderAddComponentModal.tsx); diisi kalau panel butuh info DINAMIS
+// (mis. "2 pertanyaan", "1 produk dipilih"). Diterapkan BERTAHAP mulai
+// dari blok tersering dipakai (Tombol/Video/FAQ/Produk) -- tipe lain
+// MASIH pakai <input> polos tanpa header ini, menyusul di putaran
+// berikutnya, JANGAN dianggap lupa/tidak konsisten kalau ditemukan blok
+// lain belum migrasi ke pola ini.
+function BlockPanelHeader({ node, t, subtitle }: { node: BuilderTreeNode; t: (key: string) => string; subtitle?: string }) {
+  const Icon = TYPE_ICON[node.blockType ?? ""] ?? IconBox;
+  const typeLabelKey = TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText";
+  const title = t(`dashboard.components.builderAddComponentModal.${typeLabelKey}`);
+  const desc = subtitle ?? t(`dashboard.components.builderAddComponentModal.${typeLabelKey}Desc`);
+  return <BlockPanelHeaderView icon={Icon} title={title} subtitle={desc} />;
+}
+
 // NodeFieldEditor -- redesain total (10 September 2026): badan JSX dari
 // panel "Edit Blok Terpilih" LAMA (dulu satu blok terpisah, mengambang di
 // BAWAH seluruh tree) -- APA ADANYA (per-blockType switch yang sama persis),
@@ -772,38 +812,50 @@ function NodeFieldEditor({
 
   if (node.blockType === "button") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={node.url ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.buttonUrlLabel")} hint={t("dashboard.pages.linksBuilder.buttonUrlHint")}>
+            <input
+              defaultValue={node.url ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+              placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
 
   if (node.blockType === "video") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={(node.blockData?.video_url as string) ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
-          placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.videoTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.videoUrlLabel")}>
+            <input
+              defaultValue={(node.blockData?.video_url as string) ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
+              placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
