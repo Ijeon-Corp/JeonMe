@@ -40,14 +40,44 @@ export function getToken(): string | null {
   return window.localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
+// setToken -- HANYA dipanggil dari alur login sungguhan (login password,
+// verify-email auto-login, callback OAuth Google/Apple -- dicek semua call
+// site-nya, TIDAK ADA mekanisme refresh token diam-diam di app ini), tidak
+// pernah dari token refresh, jadi aman membersihkan ACTIVE_WORKSPACE_STORAGE_KEY
+// di sini juga (bukan cuma di clearToken, lihat catatan lengkap di sana) --
+// menutup celah kalau browser SEBELUMNYA tidak pernah logout eksplisit (tab
+// ditutup begitu saja / sesi kedaluwarsa tanpa clearToken sempat terpanggil)
+// lalu ada login BARU (akun sama ATAU beda) di browser yang sama -- login
+// baru harus SELALU mulai dari "bertindak sebagai diri sendiri", bukan
+// mewarisi pilihan ruang kerja dari sesi mana pun sebelumnya.
 export function setToken(token: string): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  window.localStorage.removeItem(ACTIVE_WORKSPACE_STORAGE_KEY);
 }
 
+// clearToken -- bug ditemukan lewat laporan langsung pengguna (14 September
+// 2026, "habis login pakai OAuth Google, masuk dashboard error 'kamu tidak
+// punya akses ke ruang kerja ini', terjebak tidak bisa logout"): komentar di
+// ACTIVE_WORKSPACE_STORAGE_KEY di bawah SUDAH MENGKLAIM key itu "dibersihkan
+// saat clearToken", TAPI implementasi clearToken sebelumnya cuma menghapus
+// TOKEN_STORAGE_KEY -- klaim itu tidak pernah benar-benar diimplementasikan.
+// Akibatnya: kalau browser yang sama PERNAH dipakai "bertindak sebagai"
+// pemilik lain (kolaborator), lalu logout & login lagi (termasuk lewat
+// OAuth, akun BEDA sekalipun) di browser yang sama, header X-Act-As-Owner
+// basi itu TETAP terkirim ke server -- akun baru pasti bukan kolaborator
+// aktif utk pemilik lama itu, middleware.ActAsOwner (backend) menolak
+// SETIAP request ke rute tautan/produk/desain dengan 403 "kamu tidak punya
+// akses ke ruang kerja ini", termasuk fetch awal yang dibutuhkan dashboard
+// utk merender sama sekali -- pengguna terjebak tanpa jalan keluar yang
+// jelas (403 ini BUKAN salah satu SESSION_INVALID_MESSAGES, jadi
+// handleUnauthorized di atas tidak pernah memicu pembersihan/redirect
+// otomatis untuknya). Dibersihkan di sini SEKARANG supaya logout SUNGGUHAN
+// selalu mengembalikan browser ke keadaan "bertindak sebagai diri sendiri".
 export function clearToken(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(ACTIVE_WORKSPACE_STORAGE_KEY);
 }
 
 // No.87 (Sprint 10): ruang kerja aktif ("bertindak sebagai" pemilik lain
@@ -120,6 +150,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
   // terautentikasi), BUKAN sesi yang berakhir -- tidak ada yang perlu
   // dibersihkan atau diberitahukan.
   let sentToken = false;
+  // sentWorkspaceHeader -- dipakai sama seperti `sentToken` di bawah, tapi
+  // utk bug ditemukan lewat laporan langsung pengguna (14 September 2026,
+  // lihat catatan lengkap di clearToken/setToken): kalau server menolak
+  // X-Act-As-Owner yang TERNYATA basi (403 "kamu tidak punya akses ke ruang
+  // kerja ini"), harus dibedakan dari 403 permission LAIN yang sungguhan
+  // (mis. mencoba akses fitur yang memang bukan haknya) -- cuma bersihkan &
+  // self-heal kalau permintaan INI memang membawa header itu.
+  let sentWorkspaceHeader = false;
   if (opts.auth) {
     const token = getToken();
     if (token) {
@@ -128,6 +166,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
     }
     const workspaceHeaders = activeWorkspaceHeaders();
     for (const [key, value] of Object.entries(workspaceHeaders)) headers.set(key, value);
+    sentWorkspaceHeader = Object.keys(workspaceHeaders).length > 0;
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
@@ -136,10 +175,41 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, opts: { auth
 
   if (!res.ok) {
     if (res.status === 401 && sentToken) handleUnauthorized(path, body?.error);
+    if (res.status === 403 && sentWorkspaceHeader) handleWorkspaceAccessDenied(body?.error);
     throw new ApiError(res.status, body?.error ?? `Permintaan gagal (${res.status})`, body ?? {});
   }
 
   return body as T;
+}
+
+// WORKSPACE_ACCESS_DENIED_MESSAGE -- pesan PERSIS dari middleware.ActAsOwner
+// (apps/api/internal/middleware/middleware.go) begitu header X-Act-As-Owner
+// menunjuk pemilik yang bukan/tidak lagi kolaborator aktif pengguna ini.
+const WORKSPACE_ACCESS_DENIED_MESSAGE = "kamu tidak punya akses ke ruang kerja ini";
+
+let workspaceAccessDeniedHandled = false;
+
+// handleWorkspaceAccessDenied -- bug ditemukan lewat laporan langsung
+// pengguna (14 September 2026, "habis login pakai OAuth Google... terjebak
+// tidak bisa logout"): sebelum ini, X-Act-As-Owner basi (lihat catatan
+// lengkap di clearToken/setToken -- akar masalahnya SUDAH ditutup di sana)
+// yang ditolak server membuat SETIAP permintaan ke rute tautan/produk/desain
+// gagal 403 tanpa penanganan apa pun -- dashboard tidak pernah bisa
+// merender, pengguna terjebak tanpa jalan keluar yang jelas. Lapisan
+// pertahanan KEDUA ini (bukan cuma mengandalkan akar masalah sudah
+// ditutup) -- kalau SUATU SAAT nanti header basi lolos lagi lewat jalur
+// lain yang belum ketahuan (mis. kolaborator yang izinnya baru saja
+// dicabut PEMILIK selagi masih aktif memakai ruang kerja itu), self-heal
+// di sini SEGERA membersihkan pilihan ruang kerja & reload SEKALI supaya
+// permintaan berikutnya otomatis jalan sbg diri sendiri lagi -- pengguna
+// tidak pernah terjebak menatap error tanpa tahu harus berbuat apa.
+function handleWorkspaceAccessDenied(message: unknown): void {
+  if (typeof window === "undefined") return;
+  if (String(message ?? "") !== WORKSPACE_ACCESS_DENIED_MESSAGE) return;
+  if (workspaceAccessDeniedHandled) return;
+  workspaceAccessDeniedHandled = true;
+  setActiveWorkspaceOwnerId(null);
+  window.location.reload();
 }
 
 // Pesan 401 yang HANYA dikeluarkan middleware.AuthRequired (apps/api/internal/
