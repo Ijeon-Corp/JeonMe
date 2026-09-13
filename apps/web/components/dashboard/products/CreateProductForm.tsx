@@ -293,32 +293,41 @@ export default function CreateProductForm({
         <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
           {t("dashboard.pages.products.createStep1")}
         </p>
+        {/* min-w-0 -- bug dilaporkan pengguna 13 September 2026 ("pop up
+            create produk tidak responsif data teks melewati batas"): tile
+            ini anak grid (sm:grid-cols-3), yang defaultnya min-width:auto
+            menolak menyusut di bawah ukuran KONTEN (pola overflow berulang
+            di repo ini, lihat CLAUDE.md). Deskripsi Link Eksternal juga
+            punya frasa tanpa spasi ("Shopee/Tokopedia/toko") yang browser
+            tidak mau patahkan di tengah tanpa break-words -- keduanya
+            perlu diperbaiki bersamaan supaya teks benar-benar berhenti di
+            dalam kartu, bukan cuma di layar lebar yang kebetulan cukup. */}
         <button
           type="button"
           onClick={() => setMode("digital")}
-          className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
+          className="flex min-w-0 flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
         >
           <IconUpload className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
-          <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
+          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
         </button>
         <button
           type="button"
           onClick={() => setMode("payment_link")}
-          className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
+          className="flex min-w-0 flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
         >
           <IconWallet className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
-          <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
+          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
         </button>
         <button
           type="button"
           onClick={() => setMode("external_link")}
-          className="flex flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
+          className="flex min-w-0 flex-col items-start gap-1 rounded-xl border-2 border-jeon-ink p-3.5 text-left hover:border-jeon-purple"
         >
           <IconExternal className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
-          <span className="text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
+          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
         </button>
       </div>
     );
