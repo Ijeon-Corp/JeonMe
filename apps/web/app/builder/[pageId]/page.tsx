@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ApiError,
+  CatalogItem,
   DashboardProduct,
   EmbeddedBuilderBlock,
+  EmbeddedCatalogBlock,
   ExtraPageDetail,
   LinkItem,
   MyPage,
@@ -190,11 +192,46 @@ function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> 
 // pernah diisi.
 const STORAGE_KEYED_BLOCK_DATA_FIELDS = ["image_url", "images", "audio_url", "file_url", "file_name", "file_size_bytes"];
 
+// cloneCatalogItems -- bug ditemukan lewat audit ROUND 2 (13 September
+// 2026): cloneBlockDataWithNewIds di bawah cuma rekursi ke `children`/
+// `columns` (bentuk Section/Column) -- root block_type "catalog" punya
+// bentuk BEDA (`block_data.items[]`, lihat CatalogItem, api-client.ts)
+// yang TIDAK PERNAH tersentuh, jadi duplikat root Katalog tetap menyalin
+// `items[].images` APA ADANYA (persis kelas bug yang sama dgn A2/A3
+// putaran 1) -- backend DeleteCatalogItemImage menghapus objek S3
+// berdasar URL yang tersimpan itu sendiri, jadi hapus foto di salah satu
+// copy Katalog ikut merusak foto di copy lainnya. Item bersarang lewat
+// `blocks[]` (EmbeddedCatalogBlock, cuma 5 tipe: text/faq/video/maps/
+// catalog) direkursi juga -- HANYA block_type "catalog" di dalamnya yang
+// punya `items[]` sendiri yang perlu ikut dibersihkan, 4 tipe lainnya
+// tidak menyimpan field berkunci storage apa pun di block_data-nya.
+function cloneCatalogItems(items: CatalogItem[] | undefined): CatalogItem[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => ({
+    ...item,
+    id: crypto.randomUUID(),
+    images: [],
+    blocks: Array.isArray(item.blocks)
+      ? item.blocks.map((block: EmbeddedCatalogBlock) => ({
+          ...block,
+          id: crypto.randomUUID(),
+          block_data:
+            block.block_type === "catalog"
+              ? { ...block.block_data, items: cloneCatalogItems((block.block_data as { items?: CatalogItem[] })?.items) }
+              : block.block_data,
+        }))
+      : item.blocks,
+  }));
+}
+
 function cloneBlockDataWithNewIds(blockData: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!blockData) return {};
   const cloned: Record<string, unknown> = { ...blockData };
   for (const field of STORAGE_KEYED_BLOCK_DATA_FIELDS) {
     delete cloned[field];
+  }
+  if (Array.isArray(blockData.items)) {
+    cloned.items = cloneCatalogItems(blockData.items as CatalogItem[]);
   }
   if (Array.isArray(blockData.children)) {
     cloned.children = (blockData.children as EmbeddedBuilderBlock[]).map((child) => ({
@@ -459,6 +496,20 @@ export default function BuilderPage() {
       if (!freshRoot) return prev;
       const freshBuilderRoot = rootToBuilderRoot(freshRoot);
       const freshExisting = getChildrenAt(freshBuilderRoot, target.path);
+      // Cek batas ULANG di sini (bukan cuma di atas) -- bug ditemukan lewat
+      // audit ROUND 2 (13 September 2026): dua pengecekan di atas membaca
+      // `links`/`existing` dari closure render SAAT `handleAdd` dipanggil --
+      // kalau `handleAdd` pernah terpanggil 2x dalam tick yang sama (mis.
+      // via reuse handler ini tanpa unmount UI pemanggilnya), keduanya lolos
+      // cek yang SAMA (closure belum sempat ter-update), keduanya menambah,
+      // total anak/depth bisa melewati batas TANPA satu pun pesan error yang
+      // benar (Simpan baru gagal belakangan dgn error backend yg generik).
+      // Updater `setLinks` SELALU menerima `prev` TERBARU (garansi React) --
+      // no-op diam-diam di sini kalau batas SUDAH tercapai di titik mutasi
+      // sesungguhnya (TIDAK memanggil setError dari sini -- updater harus
+      // murni, lihat pelajaran C8/putaran 1 soal setState di dalam updater).
+      if (freshExisting.length >= maxBuilderContainerChildren) return prev;
+      if ((type === "section" || type === "column") && target.path.length + 2 > maxBuilderDepth) return prev;
       const updated = setChildrenAt(freshBuilderRoot, target.path, [...freshExisting, newBuilderBlock(type)]);
       return prev.map((l) => (l.id === freshRoot.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
     });
@@ -666,9 +717,33 @@ export default function BuilderPage() {
   // GalleryGridEditor) SEBELUM upload/hapus -- kalau id target masih
   // sementara, root itu di-create dulu ke server (silent, transparan bagi
   // pengguna), lalu id sementara ditambal jadi id asli di `links`/
-  // `serverLinks`/`selection` SEKALIGUS (pola sama seperti idRemap di
-  // commitSave) sebelum id asli itu dikembalikan ke pemanggil.
+  // `serverLinks`/`selection` SEKALIGUS (pola sama seperti remap selection
+  // per-iterasi di commitSave) sebelum id asli itu dikembalikan ke pemanggil.
+  // pendingRootPersistRef -- bug ditemukan lewat audit ROUND 2 (13
+  // September 2026): ensureRootPersistedImpl di bawah TIDAK PUNYA lock
+  // apa pun -- dua blok anak dalam SATU root yang sama-sama masih
+  // "temp-..." (mis. Kolom baru diisi 2 foto sekaligus SEBELUM pernah
+  // Simpan) memicu 2 panggilan hampir bersamaan dengan rootId yang SAMA,
+  // masing-masing lolos cek `rootId.startsWith("temp-")` dan memanggil
+  // createRootOnServer SENDIRI-SENDIRI -- dua baris server terpisah utk
+  // satu root yang sama, `setServerLinks` menambahkan KEDUANYA tanpa
+  // guard (`links`/draft cuma menyimpan hasil yang resolve TERAKHIR,
+  // yang lain jadi baris yatim di server). Kalau reload/buka ulang
+  // terjadi SEBELUM Simpan berikutnya (yang biasanya membersihkan baris
+  // yatim ini lewat langkah 1 commitSave), duplikat itu permanen ikut
+  // termuat. Di-cache di sini per rootId supaya panggilan KEDUA (dst)
+  // menunggu promise panggilan PERTAMA selesai, bukan create baru.
+  const pendingRootPersistRef = useRef<Map<string, Promise<string>>>(new Map());
   async function ensureRootPersisted(rootId: string): Promise<string> {
+    const pending = pendingRootPersistRef.current.get(rootId);
+    if (pending) return pending;
+    const promise = ensureRootPersistedImpl(rootId).finally(() => {
+      pendingRootPersistRef.current.delete(rootId);
+    });
+    pendingRootPersistRef.current.set(rootId, promise);
+    return promise;
+  }
+  async function ensureRootPersistedImpl(rootId: string): Promise<string> {
     if (rootId.startsWith("temp-")) {
       const root = links.find((l) => l.id === rootId);
       if (!root) return rootId;
@@ -847,22 +922,22 @@ export default function BuilderPage() {
 
       // 2) Buat root baru (id sementara "temp-...") -- urutan draft dijaga,
       // id sementara diganti id asli hasil createBlock/createExtraPageBlock.
-      // idRemap dipakai menambal `selection` di bawah -- kalau blok yang
-      // BARU dibuat ini (atau anak DI DALAMNYA, lihat catatan idRemap di
-      // bawah) sedang terbuka/terpilih di accordion panel kiri saat Save
-      // ditekan, `selection.rootId` yang masih mengacu id sementara harus
-      // ikut diperbarui ke id asli -- kalau tidak, accordion itu akan
-      // terlihat tertutup sendiri sesaat setelah Save (rootId lama tidak
-      // ketemu lagi di tree yang baru dibangun ulang dari `nextDraftLinks`).
+      // Remap `selection` ke id asli JUGA per-iterasi (bukan sekali di luar
+      // loop, bug ROUND 2 -- lihat catatan setLinks per-iterasi di bawah utk
+      // alasan yang SAMA PERSIS): kalau root ke-3 dari 5 gagal dibuat, root
+      // 1 & 2 sudah sukses & `links`/`serverLinks` sudah ditambal betul,
+      // TAPI remap `selection` yang dulu ditaruh SETELAH loop tidak pernah
+      // tercapai -- kalau salah satu dari root 1/2 itu sedang terpilih,
+      // `selection.rootId` tetap mengacu id sementara yang sudah lenyap dari
+      // `links`, panel kiri deselect sendiri padahal bloknya SUDAH tersimpan.
       let nextDraftLinks: LinkItem[] = [];
-      const idRemap = new Map<string, string>();
       for (const root of links) {
         if (!root.id.startsWith("temp-")) {
           nextDraftLinks = [...nextDraftLinks, root];
           continue;
         }
         const created = await createRootOnServer(root);
-        idRemap.set(root.id, created.id);
+        setSelection((prev) => (prev && prev.rootId === root.id ? { ...prev, rootId: created.id } : prev));
         // setLinks per-iterasi (BUKAN sekali di luar loop) -- bug ditemukan
         // lewat audit (13 September 2026): SEBELUMNYA hanya `serverLinks`
         // yang ditambal per-iterasi, `links` (draft) ditambal SEKALI di
@@ -880,9 +955,6 @@ export default function BuilderPage() {
         setLinks(nextDraftLinks);
         nextServerLinks = [...nextServerLinks, created];
         setServerLinks(nextServerLinks);
-      }
-      if (idRemap.size > 0) {
-        setSelection((prev) => (prev && idRemap.has(prev.rootId) ? { ...prev, rootId: idRemap.get(prev.rootId)! } : prev));
       }
 
       // 3) PATCH root yang sudah ada SEBELUM Save ini (bukan baru dibuat di
@@ -960,11 +1032,16 @@ export default function BuilderPage() {
   // cancelRenameTitle -- Escape membatalkan tanpa menyimpan (gap ditemukan
   // lewat audit, 13 September 2026: SEBELUMNYA hanya Enter/blur yang
   // commit, TIDAK ADA cara membatalkan sekali sudah mengetik selain
-  // mengetik ulang nama lama secara manual).
+  // mengetik ulang nama lama secara manual). SEKARANG JUGA dipakai sbg
+  // `onBlur` input (lihat catatan lengkap di situ, bug ROUND 2) --
+  // fungsi yang SAMA, satu tempat.
   function cancelRenameTitle() {
     setRenamingTitle(false);
     setTitleDraft(extraPageName ?? "");
   }
+  // saveRenameTitle -- SEKARANG hanya dipicu Enter (bukan lagi onBlur juga,
+  // lihat catatan lengkap di JSX input-nya, bug ROUND 2) -- commit ke
+  // server cuma terjadi atas AKSI EKSPLISIT pengguna.
   async function saveRenameTitle() {
     setRenamingTitle(false);
     const name = titleDraft.trim();
@@ -1022,7 +1099,28 @@ export default function BuilderPage() {
               disabled={renamingSaving}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={saveRenameTitle}
+              // onBlur=cancelRenameTitle (BUKAN lagi saveRenameTitle) -- bug
+              // ditemukan lewat audit ROUND 2 (13 September 2026, verifikasi
+              // Playwright LANGSUNG, bukan cuma tinjauan kode): blur-flush
+              // tombol Simpan (onMouseDown di wrapper tombol Simpan/Terbitkan
+              // di bawah) meng-blur field APA PUN yang sedang fokus SEBELUM
+              // `click` didispatch -- percobaan awal mengecualikan input ini
+              // dari blur-flush TERNYATA TIDAK CUKUP: `e.preventDefault()`
+              // pada mousedown cuma mencegah FOKUS BARU pindah ke tombol,
+              // TIDAK mencegah BLUR elemen lama itu sendiri (dikonfirmasi
+              // lewat page.evaluate() di test, document.activeElement jatuh
+              // ke <body> tepat sesudah mousedown, MESKI preventDefault
+              // sudah dipanggil) -- browser lebih dulu blur elemen lama,
+              // BARU cek apakah boleh fokus ke target baru, dua langkah
+              // terpisah yang tidak sama-sama dibatalkan oleh satu
+              // preventDefault. Karena blur TIDAK BISA dicegah dari sisi
+              // JS secara andal, field ini diubah supaya blur (apa pun
+              // penyebabnya -- klik Simpan, klik area lain, dst) SAMA
+              // PERSIS dengan Escape: batalkan tanpa menyimpan. Commit ke
+              // server (saveRenameTitle) HANYA lewat Enter -- field ini
+              // langsung PATCH ke API (bukan lewat draft/isDirty, gap A10
+              // yang sudah diketahui), jadi harus butuh AKSI EKSPLISIT.
+              onBlur={cancelRenameTitle}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRenameTitle();
                 else if (e.key === "Escape") cancelRenameTitle();
@@ -1098,7 +1196,20 @@ export default function BuilderPage() {
         </div>
       </div>
       {error && <p className="flex-shrink-0 bg-red-50 px-4 py-2 text-center text-xs text-red-600">{error}</p>}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[420px_1fr]">
+      {/* grid-rows-[minmax(0,1fr)_minmax(0,1fr)] -- bug ditemukan lewat
+          audit ROUND 2 (13 September 2026): di bawah breakpoint `lg`
+          (tablet/HP, `grid-cols-1`), grid ini TIDAK PUNYA baris eksplisit
+          sama sekali -- CSS Grid default `grid-auto-rows: auto` menyusun
+          tinggi tiap baris berdasar KONTEN, bukan membagi tinggi grid yang
+          sebenarnya sudah pasti (dari `flex-1` di parent flex-col). Kedua
+          panel (BuilderLeftPanel/BuilderCanvas) sama-sama pakai `h-full` +
+          scroll internal sendiri -- `h-full` yg resolve ke baris "auto"
+          kehilangan tinggi pasti utk dibagi, scroll internal jadi tidak
+          aktif & seluruh halaman (tanpa overflow-hidden di root) terpaksa
+          tumbuh memuat SELURUH tree + SELURUH bingkai kanvas ditumpuk
+          vertikal. `lg:grid-rows-1` mengembalikan ke satu baris implisit
+          di desktop (sisi-bersisi, tidak perlu dibagi). */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[420px_1fr] lg:grid-rows-1">
         <BuilderLeftPanel
           links={links}
           selection={selection}

@@ -1384,6 +1384,24 @@ function NodeFieldEditor({
 // mendorong baris-baris lain -- BUKAN mengubah `canExpand`/`collapsed`
 // (itu MASIH murni utk anak Section/Column, konsep terpisah dari "sedang
 // diedit").
+// selectionsEqual -- bug ditemukan lewat audit ROUND 2 (13 September
+// 2026): pengecekan "apakah seleksi berubah" di bawah (pola resmi
+// "adjust state during render") membandingkan `selection` lewat
+// IDENTITAS OBJEK (`!==`) -- ensureRootPersisted & commitSave
+// (app/builder/[pageId]/page.tsx) SAMA-SAMA menambal `selection.rootId`
+// dari id sementara ke id asli lewat `setSelection((prev) => ({...prev,
+// rootId: ...}))`, objek BARU meski secara LOGIS seleksinya tidak
+// berubah sama sekali -- perbandingan reference menganggap ini "seleksi
+// baru" & memaksa tab balik ke "Konten", membatalkan pindah tab manual
+// pengguna ke "Desain"/"Pengaturan" persis saat upload/Save selesai.
+// Dibandingkan lewat NILAI (rootId+path) di sini supaya remap id murni
+// tidak dianggap seleksi baru.
+function selectionsEqual(a: BuilderSelection | null, b: BuilderSelection | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.rootId === b.rootId && JSON.stringify(a.path) === JSON.stringify(b.path);
+}
+
 // collectAncestorIds -- bug ditemukan lewat audit (13 September 2026):
 // memilih blok lewat KANVAS (BuilderCanvas.tsx, klik langsung di
 // pratinjau) tidak pernah membuka otomatis Section/Column/kolom
@@ -1398,7 +1416,17 @@ function NodeFieldEditor({
 function collectAncestorIds(tree: BuilderTreeNode[], rootId: string, path: BuilderSeg[]): string[] {
   const root = tree.find((n) => n.rootId === rootId && n.path.length === 0);
   if (!root) return [];
-  const ids: string[] = [];
+  // Bug ditemukan lewat audit ROUND 2 (13 September 2026): loop di bawah
+  // cuma mengumpulkan ancestor DI ANTARA root & target -- utk path
+  // sepanjang 1 (anak LANGSUNG root, mis. klik anak Section top-level
+  // lewat kanvas) loop TIDAK PERNAH jalan sama sekali (`0 < 0` false),
+  // jadi id root itu SENDIRI tidak pernah masuk `ids` & tidak pernah
+  // dihapus dari `collapsed` -- bug asli yang mau diperbaiki fungsi ini
+  // (ring ungu menyala di kanvas, panel kiri tidak menampilkan apa pun)
+  // masih terjadi persis, cuma butuh root-nya collapsed (bukan 2 level
+  // ke bawah) utk memicunya. Root SELALU relevan begitu path tidak
+  // kosong -- masukkan lebih dulu di sini, di luar loop penelusuran anak.
+  const ids: string[] = path.length > 0 ? [root.id] : [];
   let current = root;
   for (let i = 0; i < path.length - 1; i++) {
     const seg = path[i];
@@ -1482,10 +1510,32 @@ function TreeNodeView({
     function handlePointerDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
+    // ArrowDown/ArrowUp -- gap ditemukan lewat audit ROUND 2 (13 September
+    // 2026): menu ini diberi `role="menu"`/`role="menuitem"` (putaran 1,
+    // C9) tapi tidak ada navigasi panah sama sekali -- role ARIA menu
+    // MENGISYARATKAN ke pembaca layar bahwa Panah Atas/Bawah berpindah
+    // antar item (pola baku WAI-ARIA APG), padahal cuma Tab yang berfungsi
+    // di sini. Fokus mulai dari tombol pemicu (currentIndex -1) ->
+    // ArrowDown ke item pertama, ArrowUp ke item terakhir; dari sebuah
+    // item, muter (wrap) ke ujung yang berlawanan.
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setMenuOpen(false);
         menuTriggerRef.current?.focus();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const items = menuRef.current ? Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')) : [];
+        if (items.length === 0) return;
+        e.preventDefault();
+        const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+        const nextIndex =
+          currentIndex === -1
+            ? e.key === "ArrowDown"
+              ? 0
+              : items.length - 1
+            : (currentIndex + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+        items[nextIndex]?.focus();
       }
     }
     document.addEventListener("mousedown", handlePointerDown);
@@ -1546,7 +1596,24 @@ function TreeNodeView({
           <span className={`truncate ${isThisSelected ? "font-bold text-jeon-purple" : "font-semibold text-app-ink"}`}>{label}</span>
         </button>
         {node.kind === "block" && (
-          <div ref={menuRef} className="relative flex-shrink-0">
+          <div
+            ref={menuRef}
+            className="relative flex-shrink-0"
+            // onBlur (focusout, ikut BUBBLE dari anak) -- gap ditemukan
+            // lewat audit ROUND 2 (13 September 2026): sebelumnya menu
+            // cuma tertutup lewat klik-di-luar atau Escape -- pengguna
+            // keyboard yang Tab MENJAUH dari menu (bukan Escape) meninggalkan
+            // menu ini tetap terbuka (absolute, z-20) menutupi baris tree
+            // di bawahnya sampai diklik/Escape secara terpisah. Tutup begitu
+            // fokus pindah ke elemen di LUAR menu ini (relatedTarget null
+            // pun dihitung "di luar" -- kasus fokus jatuh ke elemen yang
+            // tidak bisa difokus/luar dokumen, mis. klik area non-interaktif).
+            onBlur={(e) => {
+              if (!menuRef.current) return;
+              const next = e.relatedTarget as Node | null;
+              if (!next || !menuRef.current.contains(next)) setMenuOpen(false);
+            }}
+          >
             <button
               ref={menuTriggerRef}
               type="button"
@@ -1800,8 +1867,16 @@ export default function BuilderLeftPanel({
   // kiri sedang di "design"/"settings" -- pindahkan otomatis ke "content"
   // supaya field edit-nya langsung terlihat. Pola "adjust state during
   // render" resmi React (BUKAN useEffect+setState, lihat CLAUDE.md) --
-  // bandingkan `selection` (identitas objek) ke render sebelumnya. Bagian
-  // buka-otomatis-kontainer-leluhur (bug ditemukan lewat audit, 13
+  // bandingkan `selection` (identitas objek) ke render sebelumnya --
+  // SENGAJA identitas, BUKAN nilai (selectionsEqual) utk gerbang LUAR ini:
+  // findSelectionByNodeId (dipakai tiap klik tree/kanvas) SELALU
+  // mengonstruksi objek BARU meski nodenya SAMA PERSIS dgn seleksi
+  // sebelumnya -- re-klik blok yang SUDAH terpilih di kanvas (mis. setelah
+  // leluhurnya di-collapse manual TANPA mengubah seleksi) harus TETAP
+  // memicu buka-otomatis-leluhur di bawah supaya baris itu tidak jadi
+  // jalan buntu (bug asli #3) -- kalau gerbang ini pakai NILAI, re-klik
+  // semacam itu dianggap "tidak berubah" & uncollapse tidak pernah jalan.
+  // Bagian buka-otomatis-kontainer-leluhur (bug ditemukan lewat audit, 13
   // September 2026, lihat catatan lengkap di collectAncestorIds di atas)
   // DIGABUNG ke blok yang SAMA (bukan useEffect terpisah) -- react-hooks/
   // set-state-in-effect (ESLint, lihat CLAUDE.md) melarang setState
@@ -1810,9 +1885,21 @@ export default function BuilderLeftPanel({
   // prop yang berubah" macam ini.
   const [prevSelection, setPrevSelection] = useState(selection);
   if (selection !== prevSelection) {
+    // setTab("content") sendiri DIGERBANG lebih ketat, SECARA NILAI (bug
+    // ROUND 2 -- 13 September 2026): ensureRootPersisted/commitSave
+    // (app/builder/[pageId]/page.tsx) menambal `selection.rootId` dari id
+    // sementara ke id asli lewat objek BARU meski seleksi LOGISNYA sama
+    // sekali tidak berubah -- gerbang identitas di atas (perlu, lihat
+    // alasannya) akan salah mengira ini "seleksi baru" & memaksa tab
+    // balik ke "Konten", membatalkan pindah tab manual pengguna ke
+    // "Desain"/"Pengaturan" persis saat upload/Save selesai. Uncollapse
+    // ancestor TETAP jalan tanpa syarat tambahan ini -- menjalankannya
+    // ulang thd seleksi yang logisnya sama itu tidak berbahaya (idempoten,
+    // paling banter menghapus id yang memang sudah tidak collapsed).
+    const valueChanged = !selectionsEqual(selection, prevSelection);
     setPrevSelection(selection);
     if (selection) {
-      setTab("content");
+      if (valueChanged) setTab("content");
       const ancestorIds = collectAncestorIds(tree, selection.rootId, selection.path);
       if (ancestorIds.length > 0) {
         setCollapsed((prev) => {

@@ -28,7 +28,18 @@ export default function BlockPanelHeader({
       </span>
       <div className="min-w-0">
         <p className="text-xs font-bold text-app-ink">{title}</p>
-        {subtitle && <p className="truncate text-[10.5px] text-app-muted">{subtitle}</p>}
+        {/* title={subtitle} -- gap ditemukan lewat audit ROUND 2 (13
+            September 2026): subtitle statis (typeXDesc) bisa berupa
+            kalimat penuh yang kepotong `truncate` tanpa cara APA PUN utk
+            membaca sisanya (tidak ada tooltip, tidak ada mode "lihat
+            selengkapnya") -- baik utk mouse (hover) maupun pembaca
+            layar/perangkat bantu (title attribute diumumkan sbg
+            deskripsi tambahan). */}
+        {subtitle && (
+          <p title={subtitle} className="truncate text-[10.5px] text-app-muted">
+            {subtitle}
+          </p>
+        )}
       </div>
     </div>
   );
