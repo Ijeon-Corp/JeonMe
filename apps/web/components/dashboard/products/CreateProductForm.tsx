@@ -293,15 +293,26 @@ export default function CreateProductForm({
         <p className="text-[10px] font-extrabold uppercase tracking-wider text-jeon-purple sm:col-span-3">
           {t("dashboard.pages.products.createStep1")}
         </p>
-        {/* min-w-0 -- bug dilaporkan pengguna 13 September 2026 ("pop up
-            create produk tidak responsif data teks melewati batas"): tile
-            ini anak grid (sm:grid-cols-3), yang defaultnya min-width:auto
-            menolak menyusut di bawah ukuran KONTEN (pola overflow berulang
-            di repo ini, lihat CLAUDE.md). Deskripsi Link Eksternal juga
-            punya frasa tanpa spasi ("Shopee/Tokopedia/toko") yang browser
-            tidak mau patahkan di tengah tanpa break-words -- keduanya
-            perlu diperbaiki bersamaan supaya teks benar-benar berhenti di
-            dalam kartu, bukan cuma di layar lebar yang kebetulan cukup. */}
+        {/* min-w-0 + w-full -- bug dilaporkan pengguna 13 September 2026
+            ("pop up create produk tidak responsif data teks melewati
+            batas"), DUA KALI (perbaikan pertama tidak cukup, lihat riwayat
+            di bawah). Tile ini anak grid (sm:grid-cols-3), yang defaultnya
+            min-width:auto menolak menyusut di bawah ukuran KONTEN (pola
+            overflow berulang di repo ini, lihat CLAUDE.md) -- min-w-0 di
+            <button> mengatasi itu. TAPI verifikasi pertama cuma dicek di
+            konteks LEBAR (halaman Produk langsung), bukan modal SEMPIT
+            max-w-md sungguhan (ProdukBlockEditor.tsx, dibuka lewat blok
+            "produk") tempat laporan aslinya berasal -- di situ overflow
+            MASIH terjadi walau min-w-0+break-words sudah ada. Sebabnya:
+            <button> ini punya `items-start` (icon+judul+deskripsi rata
+            kiri, bukan stretch) -- itu MEMATIKAN stretch bawaan flexbox
+            utk children-nya, jadi <span> deskripsi dilebarkan lewat
+            shrink-to-fit ATAS TEKSNYA SENDIRI (tidak terikat lebar
+            <button>), break-words jadi tidak berlaku efektif karena span
+            itu sendiri tidak pernah dipaksa muat ke lebar kartu. `w-full`
+            eksplisit di span memaksanya ikut lebar <button> (yang sudah
+            benar via min-w-0), BARU break-words punya batas nyata utk
+            mematahkan teks panjang tanpa spasi ("Shopee/Tokopedia/toko"). */}
         <button
           type="button"
           onClick={() => setMode("digital")}
@@ -309,7 +320,7 @@ export default function CreateProductForm({
         >
           <IconUpload className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.digitalTitle")}</span>
-          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
+          <span className="w-full break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.digitalDesc")}</span>
         </button>
         <button
           type="button"
@@ -318,7 +329,7 @@ export default function CreateProductForm({
         >
           <IconWallet className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.paymentLinkTitle")}</span>
-          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
+          <span className="w-full break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.paymentLinkDesc")}</span>
         </button>
         <button
           type="button"
@@ -327,7 +338,7 @@ export default function CreateProductForm({
         >
           <IconExternal className="h-5 w-5 text-jeon-purple" />
           <span className="text-sm font-bold text-app-ink">{t("dashboard.pages.products.addChoose.externalLinkTitle")}</span>
-          <span className="break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
+          <span className="w-full break-words text-[11px] text-app-muted">{t("dashboard.pages.products.addChoose.externalLinkDesc")}</span>
         </button>
       </div>
     );
