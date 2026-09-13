@@ -2700,7 +2700,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={libraryIcon.label}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]"
                       >
                         <libraryIcon.Icon className="h-4 w-4" />
                       </span>
@@ -2723,7 +2723,7 @@ export default function DashboardLinksPage() {
                     return (
                       <span
                         title={blockTypeLabel[link.block_type] ?? link.block_type}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm border-2 border-[#111111] bg-jeon-lavender text-[#111111]"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]"
                       >
                         <DefaultIcon className="h-4 w-4" />
                       </span>
@@ -2759,7 +2759,7 @@ export default function DashboardLinksPage() {
                     </div>
                   )}
                   {link.block_type !== "link" && (
-                    <span className="mt-1 inline-block rounded-full border-2 border-[#111111] bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
+                    <span className="mt-1 inline-block rounded-full bg-jeon-lavender px-2 py-0.5 text-[10px] font-bold text-[#111111]">
                       {blockTypeLabel[link.block_type] ?? link.block_type}
                     </span>
                   )}
