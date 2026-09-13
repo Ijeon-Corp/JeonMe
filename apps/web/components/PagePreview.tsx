@@ -3464,9 +3464,13 @@ function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
 // rekursif blok Section/Column, TERPISAH SENGAJA dari renderLinkOrBlock
 // (bio/produk) & switch inline LandingPagePreview di atas -- keduanya
 // SUDAH divergen satu sama lain, menambah cabang lagi ke salah satunya
-// cuma menambah duplikasi konflik. Cakupan Fase 1: leaf "text"/"button"/
-// "divider" + kontainer "section"/"column" (5 tipe kategori GENERAL) --
-// tipe MEDIA/INFORMATION/CONVERSION/OTHERS menyusul Fase 2/3.
+// cuma menambah duplikasi konflik. Cakupan Fase 1 (7 September 2026):
+// leaf "text"/"button"/"divider" + kontainer "section"/"column" (5 tipe
+// kategori GENERAL). Fase 2/3 (8 September) menambah tipe MEDIA/
+// INFORMATION/CONVERSION/OTHERS, Fase 4 (13 September) menambah sisa
+// tipe klasik lama (heading/accordion/audio/file/project_showcase) --
+// SEMUANYA sudah rampung, lihat BUILDER_NODE_BLOCK_TYPES di bawah utk
+// daftar LENGKAP yang benar-benar ditangani saat ini.
 // BUILDER_NODE_BLOCK_TYPES -- daftar PERSIS case yang ditangani switch
 // renderBuilderNode di bawah. Dipakai BuilderPagePreview untuk memutuskan
 // blok akar mana yang dirender lewat jalur builder vs jalur klasik
@@ -3529,7 +3533,15 @@ function renderBuilderNode(
   const ring = builderSelectionRing(node.id, selectedNodeId);
   switch (node.blockType) {
     case "divider":
-      return (
+      // Target klik diperlebar (py-2.5 di kanvas KREATOR SAJA, `!interactive`)
+      // -- bug ditemukan lewat audit (13 September 2026): garis 1px nyaris
+      // mustahil diklik tepat (target seukuran 1px), praktis cuma bisa
+      // dipilih lewat tree kiri. `interactive=true` (halaman publik
+      // sungguhan) TETAP garis polos apa adanya -- renderBuilderNode ini
+      // dipakai BERSAMA utk kanvas builder & halaman publik sungguhan,
+      // padding tambahan TIDAK BOLEH bocor jadi spasi ekstra yang terlihat
+      // pengunjung asli.
+      return interactive ? (
         <div
           key={node.id}
           data-builder-node-id={node.id}
@@ -3538,6 +3550,10 @@ function renderBuilderNode(
           aria-hidden
           className={`h-px w-full opacity-20 bg-current ${theme.bio}${ring}`}
         />
+      ) : (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="divider" className={`flex w-full items-center py-2.5${ring}`}>
+          <div role="separator" aria-hidden className={`h-px w-full opacity-20 bg-current ${theme.bio}`} />
+        </div>
       );
     case "text":
       return (

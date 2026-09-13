@@ -110,7 +110,14 @@ export function TemaSection({
   isPremium: boolean;
   onPatch: (patch: DesignSectionPatch) => void;
   onError: (msg: string | null) => void;
-  onUploadBackground: (file: File) => Promise<void>;
+  // onUploadBackground -- SEKARANG mengembalikan URL hasil unggah (BUKAN
+  // Promise<void>). Bug ditemukan lewat audit (13 September 2026):
+  // sebelumnya `onPatch({})` dipanggil tanpa argumen apa pun sesudah
+  // upload -- no-op TOTAL di arsitektur draft (TIDAK ADA field yang
+  // berubah utk memicu re-render pratinjau), padahal gambar SUDAH
+  // berhasil diunggah ke server. Kreator melihat kanvas/pratinjau TIDAK
+  // BERUBAH SAMA SEKALI sampai reload halaman penuh, tanpa error apa pun.
+  onUploadBackground: (file: File) => Promise<string>;
 }) {
   const { t } = useLocale();
   const [bgUploading, setBgUploading] = useState(false);
@@ -121,8 +128,13 @@ export function TemaSection({
     if (!file) return;
     setBgUploading(true);
     try {
-      await onUploadBackground(file);
-      onPatch({});
+      const custom_background_value = await onUploadBackground(file);
+      // custom_background_type -- backend SUDAH memaksanya jadi "image"
+      // sekaligus saat upload (lihat catatan uploadCustomBackground,
+      // api-client.ts) -- draft lokal HARUS ikut, kalau tidak toggle
+      // solid/gradient/gambar di UI ini akan salah tampil dari draft
+      // walau server sudah benar.
+      onPatch({ custom_background_type: "image", custom_background_value });
     } catch (err) {
       onError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.uploadBackground"));
     } finally {

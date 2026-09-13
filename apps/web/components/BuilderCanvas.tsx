@@ -72,7 +72,7 @@ export default function BuilderCanvas({
   // lapis komponen presentasional (VideoEmbedBlock/FaqBlock/dst) dengan
   // onClick masing-masing.
   selectedNodeId?: string;
-  onSelectNode?: (nodeId: string) => void;
+  onSelectNode?: (nodeId: string | null) => void;
   // editableStickers/onStickersChange -- Bagian 2 (design langsung di
   // builder): diteruskan APA ADANYA ke PagePreview, yang sudah punya
   // seluruh logic drag/resize (StickerOverlay) -- aktif hanya saat
@@ -122,8 +122,30 @@ export default function BuilderCanvas({
   function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!onSelectNode) return;
     const el = (e.target as HTMLElement).closest("[data-builder-node-id]");
-    if (el) onSelectNode(el.getAttribute("data-builder-node-id")!);
+    // Klik area kosong kanvas (tidak kena blok mana pun) -- bug ditemukan
+    // lewat audit (13 September 2026): SEBELUMNYA tidak terjadi apa-apa
+    // sama sekali di sini, padahal baris yang sama di tree kiri BISA
+    // dilepas seleksinya dgn klik ulang -- kanvas jadi satu-satunya
+    // tempat yang tidak konsisten. `null` melepas seleksi.
+    onSelectNode(el ? el.getAttribute("data-builder-node-id")! : null);
   }
+
+  // Scroll kanvas ke blok terpilih -- bug ditemukan lewat audit (13
+  // September 2026): SEBELUMNYA memilih baris di tree kiri mengubah
+  // `selectedNodeId` (ring ungu muncul di kanvas) tapi kanvas TIDAK
+  // pernah ikut menggulir ke posisinya -- di halaman panjang, blok yang
+  // baru dipilih bisa berada jauh di luar area kanvas yang sedang
+  // terlihat, terasa seperti klik tree tidak berpengaruh sama sekali.
+  // Arah SEBALIKNYA (klik di kanvas -> scroll tree kiri) diperbaiki
+  // terpisah di BuilderLeftPanel.tsx. `block: "nearest"` -- tidak
+  // memaksa blok yang SUDAH terlihat (mis. baru saja diklik langsung di
+  // kanvas) melompat ke tengah, cuma menggulir kalau memang di luar
+  // pandangan.
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    const el = containerRef.current?.querySelector(`[data-builder-node-id="${selectedNodeId}"]`);
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedNodeId]);
 
   return (
     <div className="flex h-full min-w-0 flex-col">

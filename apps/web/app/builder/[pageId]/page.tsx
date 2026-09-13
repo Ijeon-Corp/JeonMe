@@ -39,6 +39,8 @@ import {
   findNodeByPath,
   findSelectionByNodeId,
   getChildrenAt,
+  maxBuilderContainerChildren,
+  maxBuilderDepth,
   newBuilderBlock,
   setChildrenAt,
   updateAt,
@@ -57,6 +59,14 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   text: "typeText",
   button: "typeButton",
   divider: "typeDivider",
+  // "link" -- TIDAK PERNAH benar-benar dipakai di sini (handleAdd tidak
+  // pernah membuat root tipe ini, cuma bisa MUNCUL dari tautan Mode
+  // Simple yang sudah ada) -- entry ini SEKEDAR menutup kerapuhan (gap
+  // ditemukan lewat audit, 13 September 2026): tanpa ini, fallback
+  // "typeText" akan salah tampil kalau suatu saat kode berubah &
+  // TYPE_LABEL_KEY[type] dipanggil dgn "link" di sini juga. Salinan
+  // SEBENARNYA yang dipakai (BuilderLeftPanel.tsx) sudah punya ini.
+  link: "typeLink",
   column: "typeColumn",
   section: "typeSection",
   video: "typeVideo",
@@ -163,9 +173,29 @@ function diffPageDesignPatch(page: MyPage, serverPage: MyPage): Partial<MyPage> 
 // (bukan per-<SortableContext>), jadi id anak yang IKUT tersalin apa
 // adanya dari original akan bentrok begitu blok hasil clone & aslinya
 // tampil BERSAMAAN di tree yang sama.
+// STORAGE_KEYED_BLOCK_DATA_FIELDS -- field block_data yang key storage-nya
+// diturunkan dari id NODE itu sendiri (audio-blocks/<id>.ext,
+// file-blocks/<id>.ext, link-media/<linkId>/<nodeId>.webp -- lihat
+// UploadAudio/UploadFile/UploadMediaImage/UploadGalleryImage, links.go).
+// Clone MEREGENERASI id (di bawah), TAPI nilai STRING URL di field ini
+// disalin apa adanya dari original -- jadi clone & original akan
+// menunjuk OBJEK STORAGE YANG SAMA PERSIS walau id node-nya sudah beda.
+// Bug ditemukan lewat audit (13 September 2026): hapus gambar/audio/file
+// di SALAH SATU (clone ATAU original) memanggil endpoint Delete* yang
+// menghapus objek FISIK dari storage (bukan cuma lepas referensi) --
+// yang SATU LAGI ikut rusak (<img>/<audio> patah, block_data-nya masih
+// menyimpan URL mati). Field-field ini DIKOSONGKAN di clone (bukan
+// disalin) -- clone mulai dari status "belum ada media", pengguna
+// unggah ulang sendiri kalau perlu, sama seperti blok baru yang belum
+// pernah diisi.
+const STORAGE_KEYED_BLOCK_DATA_FIELDS = ["image_url", "images", "audio_url", "file_url", "file_name", "file_size_bytes"];
+
 function cloneBlockDataWithNewIds(blockData: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!blockData) return {};
   const cloned: Record<string, unknown> = { ...blockData };
+  for (const field of STORAGE_KEYED_BLOCK_DATA_FIELDS) {
+    delete cloned[field];
+  }
   if (Array.isArray(blockData.children)) {
     cloned.children = (blockData.children as EmbeddedBuilderBlock[]).map((child) => ({
       ...child,
@@ -261,6 +291,7 @@ export default function BuilderPage() {
   const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
   const [renamingTitle, setRenamingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
+  const [renamingSaving, setRenamingSaving] = useState(false);
 
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const tree = useMemo(() => buildTree(links), [links]);
@@ -354,10 +385,15 @@ export default function BuilderPage() {
         setPage((prev) => (prev ? { ...prev, builder_mode: "builder" } : prev));
         setServerPage((prev) => (prev ? { ...prev, builder_mode: "builder" } : prev));
       })
-      .catch(() => {
+      .catch((err) => {
         // Soft-fail -- kanvas tetap bisa dipakai, cuma halaman publik belum
         // ikut pindah render sampai patch ini berhasil (dicoba ulang tiap
-        // kali rute ini dibuka lagi).
+        // kali rute ini dibuka lagi). console.error SAJA (bukan toast/error
+        // banner -- soft-fail SENGAJA tidak mengganggu alur utama, lihat
+        // konvensi CLAUDE.md) -- gap ditemukan lewat audit (13 September
+        // 2026): sebelumnya benar-benar TANPA jejak apa pun, kegagalan
+        // berulang tidak bisa didiagnosis sama sekali bahkan dari console.
+        console.error("gagal menandai builder_mode='builder'", err);
       });
   }, [page, isMain, pageId]);
 
@@ -385,28 +421,66 @@ export default function BuilderPage() {
       // kosong apa adanya, sama seperti "maps" sebelumnya.
       const blockData =
         type === "maps" || type === "catalog" || type === "contact_form" ? {} : newBuilderBlock(type as EmbeddedBuilderBlock["block_type"]).block_data;
-      // "https://" saja gagal validasi http_url backend (tidak ada host) --
-      // root "button"/"maps"/"project_showcase" WAJIB url non-kosong (beda
-      // dari anak tertanam di Section/Column) -- placeholder valid ini
-      // diedit belakangan lewat panel kiri, ditimpa tautan Maps sungguhan
-      // lewat MapsEditor / CTA sungguhan lewat field url project_showcase.
-      const url = type === "button" || type === "maps" || type === "project_showcase" ? "https://example.com" : undefined;
-      setLinks((prev) => [...prev, makeTempLinkItem(type as LinkItem["block_type"], title, url, blockData, prev.length)]);
+      // url dibiarkan KOSONG di sini (bukan diisi placeholder) -- lihat
+      // catatan lengkap di createRootOnServer soal KENAPA & di MANA
+      // placeholder itu sekarang disuntikkan (hanya di request ke server,
+      // bukan ditampilkan sbg data yang terlihat asli di field editor).
+      setLinks((prev) => [...prev, makeTempLinkItem(type as LinkItem["block_type"], title, undefined, blockData, prev.length)]);
       return;
     }
     if (type === "maps" || type === "catalog" || type === "contact_form") return; // modal sudah menyaring ini, jaga-jaga saja.
+    const root = links.find((l) => l.id === target.rootId);
+    if (!root) return;
+    const builderRoot = rootToBuilderRoot(root);
+    const existing = getChildrenAt(builderRoot, target.path);
+    // Tegakkan batas yang SAMA dgn backend (maxBuilderContainerChildren/
+    // maxBuilderDepth, lib/builder-blocks.ts) SEBELUM menambah -- bug
+    // ditemukan lewat audit (13 September 2026): dua konstanta ini SUDAH
+    // ADA & berkomentar "murni utk UI (nonaktifkan tombol lebih awal)"
+    // tapi TIDAK ADA satu pun konsumen di frontend -- UI mengizinkan
+    // Section 5 tingkat atau kontainer 31 blok, kegagalannya baru
+    // muncul saat Simpan ("section maksimal 4 tingkat kedalaman"/
+    // "maksimal 30 blok per kontainer", links.go), MEMBATALKAN SELURUH
+    // Save (bukan cuma blok yang bermasalah).
+    if (existing.length >= maxBuilderContainerChildren) {
+      setError(t("dashboard.pages.linksBuilder.errors.containerChildrenLimitReached").replace("{max}", String(maxBuilderContainerChildren)));
+      return;
+    }
+    // target.path.length -- jumlah hop dari root ke KONTAINER ini (root
+    // sendiri = depth backend 1) -- kontainer ini sendiri di depth
+    // target.path.length+1, ANAK BARU yang ditambahkan (kalau section/
+    // column) berada di depth+1 lagi = target.path.length+2.
+    if ((type === "section" || type === "column") && target.path.length + 2 > maxBuilderDepth) {
+      setError(t("dashboard.pages.linksBuilder.errors.containerDepthLimitReached").replace("{max}", String(maxBuilderDepth)));
+      return;
+    }
     setLinks((prev) => {
-      const root = prev.find((l) => l.id === target.rootId);
-      if (!root) return prev;
-      const builderRoot = rootToBuilderRoot(root);
-      const existing = getChildrenAt(builderRoot, target.path);
-      const updated = setChildrenAt(builderRoot, target.path, [...existing, newBuilderBlock(type)]);
-      return prev.map((l) => (l.id === root.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
+      const freshRoot = prev.find((l) => l.id === target.rootId);
+      if (!freshRoot) return prev;
+      const freshBuilderRoot = rootToBuilderRoot(freshRoot);
+      const freshExisting = getChildrenAt(freshBuilderRoot, target.path);
+      const updated = setChildrenAt(freshBuilderRoot, target.path, [...freshExisting, newBuilderBlock(type)]);
+      return prev.map((l) => (l.id === freshRoot.id ? { ...l, block_data: { ...l.block_data, ...updated } } : l));
     });
   }
 
   function handleDelete(target: BuilderSelection) {
     setError(null);
+    // Bug ditemukan lewat audit (13 September 2026): menu "..." (TreeNodeView,
+    // BuilderLeftPanel.tsx) cuma memanggil onDeselect kalau blok yang
+    // DIHAPUS itu SENDIRI yang sedang terpilih -- kalau yang terpilih
+    // adalah ANAK DI DALAM kontainer (Section/Column) yang dihapus,
+    // `selection` tetap menunjuk path yang sudah lenyap sesudahnya, dan
+    // panel kiri merender pesan "murni wadah" yang tidak nyambung sampai
+    // pengguna mengklik blok lain secara manual. Dibersihkan DI SINI
+    // (independen dari pemanggil mana pun) kalau `selection` SAMA DENGAN
+    // atau anak dari `target`.
+    setSelection((prev) => {
+      if (!prev || prev.rootId !== target.rootId) return prev;
+      const isSameOrDescendant =
+        prev.path.length >= target.path.length && JSON.stringify(prev.path.slice(0, target.path.length)) === JSON.stringify(target.path);
+      return isSameOrDescendant ? null : prev;
+    });
     if (target.path.length === 0) {
       setLinks((prev) => prev.filter((l) => l.id !== target.rootId));
       return;
@@ -445,10 +519,27 @@ export default function BuilderPage() {
         const index = prev.findIndex((l) => l.id === target.rootId);
         if (index === -1) return prev;
         const original = prev[index];
+        // "link" -- tautan klasik lama, BUKAN bisa dikirim ulang lewat
+        // createBlock/createExtraPageBlock (createRootOnServer di bawah)
+        // -- clone-nya akan mengunci Save selamanya (bug ditemukan lewat
+        // audit, 13 September 2026). UI (BuilderLeftPanel.tsx, menu "...")
+        // sudah menyembunyikan opsi Duplikat utk tipe ini, guard ini
+        // jaga-jaga kalau ada jalur pemanggilan lain di masa depan.
+        if (original.block_type === "link") return prev;
         const clone: LinkItem = {
           ...original,
           id: `temp-${crypto.randomUUID()}`,
           block_data: cloneBlockDataWithNewIds(original.block_data),
+          // custom_icon_url/thumbnail_url -- field ROOT (LinkItem), BUKAN
+          // di dalam block_data, jadi tidak ikut dibersihkan
+          // cloneBlockDataWithNewIds -- SAMA PERSIS kasusnya (key storage
+          // "link-icons/<id>.webp"/"link-thumbnails/<id>.webp" diturunkan
+          // dari id link, disalin verbatim dari original walau id clone
+          // sudah baru). Dikosongkan di sini secara eksplisit, is_featured
+          // ikut dimatikan krn kartu Featured tanpa thumbnail tidak masuk akal.
+          custom_icon_url: "",
+          thumbnail_url: "",
+          is_featured: false,
         };
         const next = [...prev];
         next.splice(index + 1, 0, clone);
@@ -544,9 +635,21 @@ export default function BuilderPage() {
     // "link", yang TIDAK diterima createBlock/createExtraPageBlock) --
     // cast ini aman krn dijamin oleh cara root ini dibuat.
     const blockType = root.block_type as Exclude<LinkItem["block_type"], "link">;
+    // url fallback -- backend MEWAJIBKAN url non-kosong utk root
+    // "button"/"maps"/"project_showcase" (links.go). Bug ditemukan lewat
+    // audit (13 September 2026): SEBELUMNYA "https://example.com" ini
+    // disuntikkan lewat handleAdd LANGSUNG ke field `url` yang terlihat di
+    // editor -- kalau blok itu di-Simpan&Terbitkan tanpa pernah disentuh,
+    // halaman publik berakhir dengan tombol/CTA sungguhan menuju
+    // example.com, terlihat seperti data asli yang lupa diisi, bukan
+    // placeholder. Fallback ini SEKARANG cuma dipakai di REQUEST ke server
+    // (kalau field-nya MASIH kosong di titik ini), field yang TERLIHAT di
+    // editor tetap kosong apa adanya sampai kreator benar-benar mengisinya.
+    const needsUrlFallback = (blockType === "button" || blockType === "maps" || blockType === "project_showcase") && !root.url;
+    const url = needsUrlFallback ? "https://example.com" : root.url || undefined;
     return isMain
-      ? createBlock({ block_type: blockType, title: root.title, url: root.url || undefined, block_data: root.block_data, description: root.description || undefined })
-      : createExtraPageBlock(pageId, { block_type: blockType, title: root.title, url: root.url || undefined, block_data: root.block_data, description: root.description || undefined });
+      ? createBlock({ block_type: blockType, title: root.title, url, block_data: root.block_data, description: root.description || undefined })
+      : createExtraPageBlock(pageId, { block_type: blockType, title: root.title, url, block_data: root.block_data, description: root.description || undefined });
   }
 
   // ensureRootPersisted -- upload gambar blok (image/gallery/video_image/
@@ -566,14 +669,34 @@ export default function BuilderPage() {
   // `serverLinks`/`selection` SEKALIGUS (pola sama seperti idRemap di
   // commitSave) sebelum id asli itu dikembalikan ke pemanggil.
   async function ensureRootPersisted(rootId: string): Promise<string> {
-    if (!rootId.startsWith("temp-")) return rootId;
+    if (rootId.startsWith("temp-")) {
+      const root = links.find((l) => l.id === rootId);
+      if (!root) return rootId;
+      const created = await createRootOnServer(root);
+      setLinks((prev) => prev.map((l) => (l.id === rootId ? created : l)));
+      setServerLinks((prev) => [...prev, created]);
+      setSelection((prev) => (prev && prev.rootId === rootId ? { ...prev, rootId: created.id } : prev));
+      return created.id;
+    }
+    // Root sudah pernah dipersist SEBELUMNYA (bukan lagi "temp-..."), TAPI
+    // salinan server-nya bisa saja sudah basi -- BUG ditemukan lewat audit
+    // (13 September 2026): kalau anak BARU ditambah ke root ini SETELAH
+    // upload sebelumnya (yang mempersist root ini apa adanya saat itu,
+    // lihat cabang di atas) tanpa Simpan di antaranya, salinan server tetap
+    // tidak punya anak baru itu -- upload/hapus ke anak baru itu 404
+    // "blok tidak ditemukan pada path yang diminta" karena resolveBuilderBlockData
+    // (backend) jalan di atas block_data basi. Sinkronkan draft SAAT INI ke
+    // server dulu (SEBELUM upload/hapus jalan) kalau memang berbeda dari
+    // snapshot server -- generalisasi, bukan cuma menutup satu skenario:
+    // menutupi SEMUA kasus draft root ini berubah sejak terakhir disimpan
+    // (anak baru, urutan berubah, dst), bukan hanya "anak baru ditambah".
     const root = links.find((l) => l.id === rootId);
-    if (!root) return rootId;
-    const created = await createRootOnServer(root);
-    setLinks((prev) => prev.map((l) => (l.id === rootId ? created : l)));
-    setServerLinks((prev) => [...prev, created]);
-    setSelection((prev) => (prev && prev.rootId === rootId ? { ...prev, rootId: created.id } : prev));
-    return created.id;
+    const serverRoot = serverLinks.find((l) => l.id === rootId);
+    if (root && serverRoot && JSON.stringify(root.block_data) !== JSON.stringify(serverRoot.block_data)) {
+      await updateLink(rootId, { block_data: root.block_data });
+      setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, block_data: root.block_data } : l)));
+    }
+    return rootId;
   }
 
   // handleMediaImageChanged/handleGalleryImagesChanged -- lihat catatan
@@ -660,7 +783,16 @@ export default function BuilderPage() {
     return isMain ? uploadAvatar(file) : uploadExtraPageAvatar(pageId, file);
   }
   async function handleUploadBackground(file: File) {
-    await (isMain ? uploadCustomBackground(file) : uploadExtraPageBackground(pageId, file));
+    const { custom_background_value } = isMain ? await uploadCustomBackground(file) : await uploadExtraPageBackground(pageId, file);
+    // Sinkronkan field ini ke snapshot server JUGA -- pola sama seperti
+    // handleMediaImageChanged/handleGalleryImagesChanged (field ini sendiri
+    // sudah "resmi tersimpan" begitu upload sukses, TIDAK BOLEH ikut
+    // dianggap draft belum disimpan/isDirty). TemaSection (design-sections.tsx)
+    // masih memanggil onPatch({...}) sesudah ini utk update draft `page`
+    // yang terlihat di UI -- baris ini KHUSUS melengkapi sisi `serverPage`
+    // yang tidak terjangkau onPatch generik itu.
+    setServerPage((prev) => (prev ? { ...prev, custom_background_type: "image", custom_background_value } : prev));
+    return custom_background_value;
   }
   function handleStickersChange(stickers: PageStickerData[]) {
     setPage((prev) => (prev ? { ...prev, stickers } : prev));
@@ -682,8 +814,8 @@ export default function BuilderPage() {
     return findNodeByPath(tree, selection.rootId, selection.path)?.id;
   }, [selection, tree]);
 
-  function handleSelectNode(nodeId: string) {
-    setSelection(findSelectionByNodeId(tree, nodeId));
+  function handleSelectNode(nodeId: string | null) {
+    setSelection(nodeId ? findSelectionByNodeId(tree, nodeId) : null);
   }
 
   // commitSave -- SATU-SATUNYA tempat rute ini benar-benar memanggil API
@@ -722,20 +854,33 @@ export default function BuilderPage() {
       // ikut diperbarui ke id asli -- kalau tidak, accordion itu akan
       // terlihat tertutup sendiri sesaat setelah Save (rootId lama tidak
       // ketemu lagi di tree yang baru dibangun ulang dari `nextDraftLinks`).
-      const nextDraftLinks: LinkItem[] = [];
+      let nextDraftLinks: LinkItem[] = [];
       const idRemap = new Map<string, string>();
       for (const root of links) {
         if (!root.id.startsWith("temp-")) {
-          nextDraftLinks.push(root);
+          nextDraftLinks = [...nextDraftLinks, root];
           continue;
         }
         const created = await createRootOnServer(root);
         idRemap.set(root.id, created.id);
-        nextDraftLinks.push(created);
+        // setLinks per-iterasi (BUKAN sekali di luar loop) -- bug ditemukan
+        // lewat audit (13 September 2026): SEBELUMNYA hanya `serverLinks`
+        // yang ditambal per-iterasi, `links` (draft) ditambal SEKALI di
+        // akhir loop -- kalau root ke-3 dari 5 gagal dibuat, root 1 &amp; 2
+        // SUDAH ada di `serverLinks` tapi `links` masih memegang id
+        // "temp-..." lama utk keduanya. Retry Save berikutnya melihat id
+        // server 1 &amp; 2 tidak ada di draftIds (masih temp-) -> langkah 1
+        // MENGHAPUS keduanya -> langkah 2 MEMBUATNYA ULANG dgn id baru --
+        // bukan duplikat (self-healing), TAPI churn hapus-buat-ulang yang
+        // seharusnya tidak perlu, bertentangan dgn klaim "langkah yang
+        // sudah sukses tidak diulang" di komentar atas. Update SEKARANG
+        // (array baru tiap iterasi, bukan mutasi in-place) supaya `links`
+        // SELALU selaras dgn `serverLinks` di titik kegagalan mana pun.
+        nextDraftLinks = [...nextDraftLinks, created];
+        setLinks(nextDraftLinks);
         nextServerLinks = [...nextServerLinks, created];
         setServerLinks(nextServerLinks);
       }
-      setLinks(nextDraftLinks);
       if (idRemap.size > 0) {
         setSelection((prev) => (prev && idRemap.has(prev.rootId) ? { ...prev, rootId: idRemap.get(prev.rootId)! } : prev));
       }
@@ -812,17 +957,28 @@ export default function BuilderPage() {
     setTitleDraft(extraPageName);
     setRenamingTitle(true);
   }
+  // cancelRenameTitle -- Escape membatalkan tanpa menyimpan (gap ditemukan
+  // lewat audit, 13 September 2026: SEBELUMNYA hanya Enter/blur yang
+  // commit, TIDAK ADA cara membatalkan sekali sudah mengetik selain
+  // mengetik ulang nama lama secara manual).
+  function cancelRenameTitle() {
+    setRenamingTitle(false);
+    setTitleDraft(extraPageName ?? "");
+  }
   async function saveRenameTitle() {
     setRenamingTitle(false);
     const name = titleDraft.trim();
     if (!name || name === extraPageName) return;
     const previous = extraPageName;
     setExtraPageName(name);
+    setRenamingSaving(true);
     try {
       await updateExtraPage(pageId, { name });
     } catch (err) {
       setExtraPageName(previous);
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
+    } finally {
+      setRenamingSaving(false);
     }
   }
 
@@ -863,12 +1019,16 @@ export default function BuilderPage() {
             <input
               type="text"
               autoFocus
+              disabled={renamingSaving}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={saveRenameTitle}
-              onKeyDown={(e) => e.key === "Enter" && saveRenameTitle()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveRenameTitle();
+                else if (e.key === "Escape") cancelRenameTitle();
+              }}
               placeholder={t("dashboard.pages.linksBuilder.renameTitlePlaceholder")}
-              className="w-full max-w-xs rounded-md border border-jeon-purple px-2 py-1 text-center text-sm font-bold text-app-ink outline-none"
+              className="w-full max-w-xs rounded-md border border-jeon-purple px-2 py-1 text-center text-sm font-bold text-app-ink outline-none disabled:opacity-60"
             />
           ) : (
             <button
@@ -898,7 +1058,27 @@ export default function BuilderPage() {
           ))}
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        {/* onMouseDown -- bug ditemukan lewat audit (13 September 2026):
+            hampir semua field di panel kiri pakai defaultValue+onBlur
+            (BUKAN onChange terkontrol) -- mengetik lalu LANGSUNG klik
+            Simpan tanpa klik di tempat lain dulu berarti onBlur field itu
+            belum sempat jalan saat tombol Simpan dievaluasi, `isDirty`
+            masih false, tombol disabled, klik TIDAK BERPENGARUH sama
+            sekali (tombol native disabled tidak menerima event apa pun).
+            Blur paksa di SINI (div pembungkus, BUKAN tombolnya sendiri --
+            div tidak pernah "disabled" jadi selalu menerima mousedown)
+            terjadi SEBELUM `click` didispatch ke tombol, memberi React
+            waktu me-render ulang `disabled` dengan `isDirty` yang sudah
+            benar sebelum browser mengevaluasi apakah tombol boleh
+            menerima klik itu. */}
+        <div
+          className="flex flex-shrink-0 items-center gap-2"
+          onMouseDown={() => {
+            if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+              document.activeElement.blur();
+            }
+          }}
+        >
           <button
             type="button"
             onClick={() => commitSave(false)}

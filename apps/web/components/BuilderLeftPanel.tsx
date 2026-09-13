@@ -436,7 +436,18 @@ function GalleryGridEditor({
     }
   }
 
+  // uploading dipakai bersama guard upload MAUPUN hapus -- bug ditemukan
+  // lewat audit (13 September 2026): SEBELUMNYA hapus tidak pernah
+  // men-set `uploading` sama sekali, tombol X tidak pernah disabled --
+  // `deleteGalleryImage` berbasis INDEKS, jadi dua klik X cepat berurutan
+  // (mis. hapus foto index 1 lalu index 2 sebelum request pertama
+  // selesai) berbahaya: request kedua menghapus indeks dari daftar yang
+  // sudah bergeser akibat request pertama, salah foto yang terhapus.
+  // Guard bersama ini membuat upload & hapus MUTUAL EXCLUSIVE (satu per
+  // satu), menutup race ini sepenuhnya.
   async function handleDelete(index: number) {
+    if (uploading) return;
+    setUploading(true);
     setError(null);
     try {
       const realRootId = await onEnsureRootPersisted(rootId);
@@ -444,6 +455,8 @@ function GalleryGridEditor({
       onChanged(res.images, realRootId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -460,8 +473,9 @@ function GalleryGridEditor({
             <button
               type="button"
               onClick={() => handleDelete(i)}
+              disabled={uploading}
               title={t("dashboard.pages.linksBuilder.removePhoto")}
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
             >
               <IconX className="h-3 w-3" />
             </button>
@@ -719,11 +733,14 @@ function MapsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (url:
 // pemetaan baru. `subtitle` opsional -- kalau tidak diisi, jatuh ke
 // deskripsi statis tipe blok (typeXDesc, sudah ada dari
 // BuilderAddComponentModal.tsx); diisi kalau panel butuh info DINAMIS
-// (mis. "2 pertanyaan", "1 produk dipilih"). Diterapkan BERTAHAP mulai
-// dari blok tersering dipakai (Tombol/Video/FAQ/Produk) -- tipe lain
-// MASIH pakai <input> polos tanpa header ini, menyusul di putaran
-// berikutnya, JANGAN dianggap lupa/tidak konsisten kalau ditemukan blok
-// lain belum migrasi ke pola ini.
+// (mis. "2 pertanyaan", "1 produk dipilih"). Diterapkan BERTAHAP: Tahap 1
+// (Tombol/Video/FAQ/Produk, tersering dipakai) lalu Tahap 2/3 SAMA HARI
+// (13 September 2026, permintaan "lanjut") merampungkan SEMUA tipe blok
+// tersisa dgn pola yang SAMA -- SEMUA tipe blok di panel ini sekarang
+// pakai header ini, TIDAK ADA lagi yang tertinggal di pola lama. Kalau
+// sesi mendatang menemukan tipe blok TANPA header ini, itu genuinely
+// terlewat (bukan "belum sempat", lihat riwayat lengkap di atas), layak
+// diperbaiki.
 function BlockPanelHeader({ node, t, subtitle }: { node: BuilderTreeNode; t: (key: string) => string; subtitle?: string }) {
   const Icon = TYPE_ICON[node.blockType ?? ""] ?? IconBox;
   const typeLabelKey = TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText";
@@ -1296,6 +1313,18 @@ function NodeFieldEditor({
             onChange={(e) => {
               const count = Number(e.target.value);
               const existing = (node.blockData?.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
+              // Konfirmasi kalau MENGURANGI jumlah kolom akan membuang isi
+              // kolom yang dibuang (bug ditemukan lewat audit, 13 September
+              // 2026): SEBELUMNYA mengganti 4->2 langsung menghapus
+              // columns[2]/columns[3] BESERTA SEMUA blok di dalamnya,
+              // instan (onChange, bukan onBlur) tanpa peringatan ATAU undo
+              // -- salah pilih di dropdown = kehilangan data.
+              const droppedColumns = existing.slice(count);
+              const willLoseContent = droppedColumns.some((col) => (col.children ?? []).length > 0);
+              if (willLoseContent && !window.confirm(t("dashboard.pages.linksBuilder.columnReduceWarning"))) {
+                e.target.value = String(existing.length || 2);
+                return;
+              }
               const columns = Array.from({ length: count }, (_, i) => existing[i] ?? { children: [] });
               onUpdateNode(sel, { blockData: { columns } });
             }}
@@ -1312,8 +1341,24 @@ function NodeFieldEditor({
     );
   }
 
-  // section/divider/column-slot -- murni wadah, tidak ada field sendiri.
-  if (node.kind === "column-slot" || node.blockType === "section" || node.blockType === "divider") {
+  // "divider" -- BUKAN kontainer (tidak punya children, canExpand di
+  // TreeNodeView bawah SUDAH TIDAK menyertakannya), jadi pesan
+  // containerHint ("pilih salah satu isinya...") tidak nyambung sama
+  // sekali kalau dipakai di sini. Bug ditemukan lewat audit (13 September
+  // 2026, kategori sama dgn perbaikan "link" 10 September di atas) --
+  // sebelumnya ikut baris section/column-slot di bawah, dipisah sendiri
+  // dgn pesan yang jujur soal batasannya.
+  if (node.blockType === "divider") {
+    return (
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.dividerNoSettings")}</p>
+      </div>
+    );
+  }
+
+  // section/column-slot -- murni wadah, tidak ada field sendiri.
+  if (node.kind === "column-slot" || node.blockType === "section") {
     return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>;
   }
 
@@ -1339,6 +1384,33 @@ function NodeFieldEditor({
 // mendorong baris-baris lain -- BUKAN mengubah `canExpand`/`collapsed`
 // (itu MASIH murni utk anak Section/Column, konsep terpisah dari "sedang
 // diedit").
+// collectAncestorIds -- bug ditemukan lewat audit (13 September 2026):
+// memilih blok lewat KANVAS (BuilderCanvas.tsx, klik langsung di
+// pratinjau) tidak pernah membuka otomatis Section/Column/kolom
+// pembungkusnya kalau sedang di-collapse -- ring ungu menyala di kanvas,
+// tapi panel kiri tidak menampilkan APA PUN (baris & editornya
+// tersembunyi di dalam kontainer yang collapsed), jalan buntu total.
+// Fungsi ini menelusuri `path` seleksi turun dari root, mengumpulkan id
+// SETIAP kontainer (Section/Column blok ATAU kolom-slot "Kolom N") yang
+// dilewati SEBELUM node target sendiri -- dipakai utk menghapus id-id
+// itu dari `collapsed` begitu seleksi berubah (lihat efek di
+// BuilderLeftPanel di bawah).
+function collectAncestorIds(tree: BuilderTreeNode[], rootId: string, path: BuilderSeg[]): string[] {
+  const root = tree.find((n) => n.rootId === rootId && n.path.length === 0);
+  if (!root) return [];
+  const ids: string[] = [];
+  let current = root;
+  for (let i = 0; i < path.length - 1; i++) {
+    const seg = path[i];
+    const next: BuilderTreeNode | undefined =
+      seg.kind === "child" ? current.children.find((c) => c.kind === "block" && c.id === seg.id) : current.children[seg.index];
+    if (!next) break;
+    ids.push(next.id);
+    current = next;
+  }
+  return ids;
+}
+
 function TreeNodeView({
   node,
   depth,
@@ -1388,14 +1460,33 @@ function TreeNodeView({
   // tanpa z-index eksplisit kalah tumpuk terhadap sibling `fixed`
   // ber-z-index, ditemukan lewat verifikasi live/Playwright).
   const [menuOpen, setMenuOpen] = useState(false);
+  // menuFlipUp -- bug ditemukan lewat audit (13 September 2026): menu ini
+  // SELALU muncul KE BAWAH (`top-full`) di dalam kontainer tree yang
+  // sendirinya overflow-y-auto -- utk beberapa baris terakhir (dekat
+  // dasar panel), menu muncul di bawah lipatan panel, tersembunyi sampai
+  // pengguna scroll dulu. Dihitung sekali saat menu DIBUKA (bukan terus-
+  // menerus via effect) dari posisi tombol pemicu relatif terhadap
+  // viewport -- ~90px = perkiraan tinggi menu (2 item), cukup akurat
+  // tanpa perlu ukur DOM menu-nya sendiri (yang belum ter-render saat
+  // keputusan flip harus diambil, SEBELUM menuOpen jadi true).
+  const [menuFlipUp, setMenuFlipUp] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  // menuTriggerRef -- aksesibilitas (gap ditemukan lewat audit, 13
+  // September 2026): fokus dikembalikan ke tombol "..." begitu menu
+  // ditutup lewat Escape, supaya pengguna keyboard tidak "kehilangan"
+  // posisi fokusnya (tanpa ini, fokus jatuh ke <body>, harus Tab ulang
+  // dari awal dokumen).
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
     function handlePointerDown(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -1419,7 +1510,7 @@ function TreeNodeView({
   const childIds = node.children.filter((c) => c.kind === "block").map((c) => c.id);
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} data-tree-node-id={node.id}>
       <div
         style={{ paddingLeft: `${depth * 16}px` }}
         // py-2 -- permintaan langsung pengguna, 12 September 2026
@@ -1457,31 +1548,59 @@ function TreeNodeView({
         {node.kind === "block" && (
           <div ref={menuRef} className="relative flex-shrink-0">
             <button
+              ref={menuTriggerRef}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (!menuOpen) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const estimatedMenuHeight = 90;
+                  setMenuFlipUp(window.innerHeight - rect.bottom < estimatedMenuHeight);
+                }
                 setMenuOpen((prev) => !prev);
               }}
               aria-label={t("dashboard.pages.linksBuilder.blockMenu")}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               className="flex h-6 w-6 items-center justify-center rounded-md text-app-muted hover:bg-app-surface hover:text-app-ink"
             >
               <IconDotsVertical className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border-2 border-jeon-ink bg-app-surface shadow-brutal">
+              <div
+                role="menu"
+                className={`absolute right-0 z-20 w-40 overflow-hidden rounded-lg border-2 border-jeon-ink bg-app-surface shadow-brutal ${
+                  menuFlipUp ? "bottom-full mb-1" : "top-full mt-1"
+                }`}
+              >
+                {/* "link" -- tautan klasik lama (dari Mode Simple, BUKAN
+                    tipe Canvas, lihat catatan NodeFieldEditor) SENGAJA TIDAK
+                    bisa diduplikat. Bug ditemukan lewat audit (13 September
+                    2026): clone root "link" dikirim ke createBlock/
+                    createExtraPageBlock saat Save (createRootOnServer,
+                    app/builder/[pageId]/page.tsx) yang MENOLAK block_type
+                    itu (binding oneof backend, links.go) -- Save gagal
+                    terus-menerus tanpa cara pengguna mendiagnosis blok mana
+                    penyebabnya. Rute clone yang benar (createLink) kehilangan
+                    field ikon/kunci/jadwal, jadi bukan solusi -- paling aman
+                    cuma disembunyikan sama sekali. */}
+                {node.blockType !== "link" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onClone(selectionOf(node));
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2"
+                  >
+                    <IconCopy className="h-3.5 w-3.5" />
+                    {t("dashboard.pages.linksBuilder.duplicateBlock")}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onClone(selectionOf(node));
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-app-ink hover:bg-app-surface-2"
-                >
-                  <IconCopy className="h-3.5 w-3.5" />
-                  {t("dashboard.pages.linksBuilder.duplicateBlock")}
-                </button>
-                <button
-                  type="button"
+                  role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
                     onDelete(selectionOf(node));
@@ -1643,7 +1762,7 @@ export default function BuilderLeftPanel({
   onLocalChange: (patch: DesignSectionPatch) => void;
   onStyleOverride: (patch: Omit<DesignSectionPatch, "theme" | "custom_style_override">) => void;
   onUploadAvatar: (file: File) => Promise<{ avatar_url: string }>;
-  onUploadBackground: (file: File) => Promise<void>;
+  onUploadBackground: (file: File) => Promise<string>;
   onError: (msg: string | null) => void;
   stickers: PageStickerData[];
   onStickersChange: (stickers: PageStickerData[]) => void;
@@ -1681,11 +1800,29 @@ export default function BuilderLeftPanel({
   // kiri sedang di "design"/"settings" -- pindahkan otomatis ke "content"
   // supaya field edit-nya langsung terlihat. Pola "adjust state during
   // render" resmi React (BUKAN useEffect+setState, lihat CLAUDE.md) --
-  // bandingkan `selection` (identitas objek) ke render sebelumnya.
+  // bandingkan `selection` (identitas objek) ke render sebelumnya. Bagian
+  // buka-otomatis-kontainer-leluhur (bug ditemukan lewat audit, 13
+  // September 2026, lihat catatan lengkap di collectAncestorIds di atas)
+  // DIGABUNG ke blok yang SAMA (bukan useEffect terpisah) -- react-hooks/
+  // set-state-in-effect (ESLint, lihat CLAUDE.md) melarang setState
+  // langsung di badan efek; pola "adjust state during render" ini SUDAH
+  // resmi diizinkan pattern-nya utk kasus "sinkronkan state lokal dari
+  // prop yang berubah" macam ini.
   const [prevSelection, setPrevSelection] = useState(selection);
   if (selection !== prevSelection) {
     setPrevSelection(selection);
-    if (selection) setTab("content");
+    if (selection) {
+      setTab("content");
+      const ancestorIds = collectAncestorIds(tree, selection.rootId, selection.path);
+      if (ancestorIds.length > 0) {
+        setCollapsed((prev) => {
+          if (!ancestorIds.some((id) => prev.has(id))) return prev;
+          const next = new Set(prev);
+          ancestorIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+    }
   }
 
   function toggleCollapsed(id: string) {
@@ -1696,6 +1833,26 @@ export default function BuilderLeftPanel({
       return next;
     });
   }
+
+  // Scroll ke baris terpilih -- SISA perbaikan bug di atas, murni efek
+  // DOM (bukan setState) jadi TETAP di useEffect biasa apa adanya. Butuh
+  // DOM sudah ter-render dgn `collapsed` TERBARU (dari penyesuaian di
+  // atas) -- `setTimeout(...,0)` menunggu satu microtask render (React
+  // commit dulu, baru DOM query) supaya baris yang baru saja dibuka dari
+  // collapsed sudah benar-benar ada di DOM saat scrollIntoView dipanggil.
+  useEffect(() => {
+    if (!selection) return;
+    const targetId = selection.path.length === 0 ? selection.rootId : (findNodeByPath(tree, selection.rootId, selection.path)?.id ?? null);
+    if (!targetId) return;
+    const timer = setTimeout(() => {
+      document.querySelector(`[data-tree-node-id="${targetId}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 0);
+    return () => clearTimeout(timer);
+    // `tree` sengaja tidak ikut dependency: berubah tiap ketikan (RichTextEditor
+    // dst) via buildTree ulang, TIDAK boleh memicu re-scroll tiap keystroke --
+    // hanya `selection` (blok MANA yang aktif) yang relevan di sini.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -1711,7 +1868,18 @@ export default function BuilderLeftPanel({
     const dragged = findById(tree, String(active.id));
     const target = findById(tree, String(over.id));
     if (!dragged || !target || dragged.kind !== "block") return;
-    if (containerKeyOf(dragged) !== containerKeyOf(target)) return; // lintas kontainer belum didukung Fase 1
+    if (containerKeyOf(dragged) !== containerKeyOf(target)) {
+      // Lintas kontainer belum didukung (Fase 1) -- bug ditemukan lewat
+      // audit (13 September 2026): SEBELUMNYA drop ditolak SENYAP (blok
+      // memantul balik ke tempat semula, tanpa pesan apa pun) -- dari
+      // sisi pengguna ini terbaca sbg bug ("kenapa drag-nya tidak
+      // berhasil"), bukan batasan yang disengaja. Pesan ini SEKURANG-nya
+      // menjelaskan APA yang terjadi -- implementasi drag lintas
+      // kontainer sungguhan tetap di luar cakupan perbaikan bug ini
+      // (fitur baru, bukan bug).
+      onError(t("dashboard.pages.linksBuilder.errors.crossContainerDragUnsupported"));
+      return;
+    }
 
     const siblings = siblingsOf(tree, dragged).filter((n) => n.kind === "block");
     const ids = siblings.map((n) => n.id);
@@ -1773,9 +1941,37 @@ export default function BuilderLeftPanel({
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
-                  {tree.map((node) => (
+                  {/* key={index}, BUKAN key={node.id} -- bug ditemukan lewat
+                      audit (13 September 2026): id ROOT berubah format
+                      ("temp-..." -> id asli backend) begitu ensureRootPersisted
+                      mempersist blok ini (dipicu upload gambar/audio/file ke
+                      blok ROOT itu SENDIRI, lihat catatan lengkap di sana) --
+                      key={node.id} membuat React unmount+remount SELURUH
+                      subtree baris itu PERSIS di tengah upload sedang
+                      berjalan, mematikan komponen editor upload sebelum
+                      `finally`/`catch`-nya sempat jalan: spinner "Mengunggah..."
+                      hilang seketika (kembali ke tombol "Unggah" semula
+                      padahal masih proses, mendorong klik ganda) DAN pesan
+                      error kalau upload gagal TIDAK PERNAH tampil sama sekali
+                      (setState dipanggil ke instance yang sudah unmount).
+                      Blok BERSARANG (di dalam Section/Column) tidak kena
+                      masalah ini -- id-nya murni JSON di block_data,
+                      TIDAK PERNAH berubah setelah dibuat, jadi TreeNodeView
+                      children tetap key={child.id} apa adanya. Trade-off:
+                      dnd-kit's SortableContext/useSortable tetap pakai
+                      node.id (id SEBENARNYA, bukan index) utk identitas
+                      sortable-nya -- itu prop TERPISAH dari React key di
+                      sini, tidak terpengaruh. Konsekuensi index-key yang
+                      diterima: kalau root #2 dihapus lalu root BARU lain
+                      ditambah tepat menempati index yang sama sebelum
+                      re-render berikutnya, root baru itu bisa mewarisi state
+                      lokal TreeNodeView milik root lama (mis. menu "..."
+                      sempat kebuka) -- glitch UI kecil &amp; jarang, jauh lebih
+                      ringan drpd upload yang senyap gagal di skenario yang
+                      jauh lebih umum ("tambah blok, langsung unggah"). */}
+                  {tree.map((node, index) => (
                     <TreeNodeView
-                      key={node.id}
+                      key={index}
                       node={node}
                       depth={0}
                       selection={selection}
@@ -1851,7 +2047,15 @@ export default function BuilderLeftPanel({
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <IconSettings className="h-6 w-6 text-app-muted" />
             <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.settingsPlaceholder")}</p>
-            <Link href={settingsHref} className="flex items-center gap-1 text-xs font-bold text-jeon-purple hover:underline">
+            {/* target="_blank" -- bug ditemukan lewat audit (13 September
+                2026): tanpa ini, navigasi client-side Next.js TIDAK
+                memicu listener beforeunload (page.tsx) ATAUPUN lewat
+                handleBack (yang punya window.confirm) -- klik tautan ini
+                membuang SELURUH draft belum tersimpan TANPA peringatan
+                apa pun. Tautan Katalog (BuilderLeftPanel.tsx, panel
+                "catalog") sudah benar pakai target="_blank" -- disamakan
+                di sini. */}
+            <Link href={settingsHref} target="_blank" className="flex items-center gap-1 text-xs font-bold text-jeon-purple hover:underline">
               {t("dashboard.pages.linksBuilder.openSettingsPage")}
               <IconExternal className="h-3.5 w-3.5" />
             </Link>

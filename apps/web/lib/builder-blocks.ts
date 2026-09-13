@@ -175,23 +175,6 @@ export function setChildrenAt(root: BuilderRoot, path: BuilderSeg[], children: E
   });
 }
 
-// getColumnsAt/setColumnsAt -- baca/ganti columns[] milik SATU node
-// Column (path berakhir {kind:"child"} menunjuk node Column itu, atau
-// path=[] kalau root ITU SENDIRI adalah block_data Column).
-export function getColumnsAt(root: BuilderRoot, path: BuilderSeg[]): BuilderColumn[] {
-  if (path.length === 0) return root.columns ?? [];
-  const node = resolveAt(root, path);
-  return node ? columnsOf(node) : [];
-}
-
-export function setColumnsAt(root: BuilderRoot, path: BuilderSeg[], columns: BuilderColumn[]): BuilderRoot {
-  if (path.length === 0) return { ...root, columns };
-  return updateAt(root, path, (node) => {
-    const block = node as EmbeddedBuilderBlock;
-    return { ...block, block_data: { ...block.block_data, columns } };
-  });
-}
-
 // emptyBuilderBlockData/newBuilderBlock -- shell kosong dulu, diisi
 // belakangan lewat klik-utk-edit di kanvas (pola sama gallery/audio/file
 // & catalog) -- "column" SENGAJA dibuatkan minBuilderColumns (2) kolom

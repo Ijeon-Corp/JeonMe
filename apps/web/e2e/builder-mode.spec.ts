@@ -45,10 +45,14 @@ function richTextEditor(page: Page) {
 // ke dalam menu "..." per-baris (duplicate/delete), BUKAN lagi tombol
 // langsung tampil begitu blok dipilih -- klik dulu tombol "Menu blok"
 // (aria-label, SATU per baris tree) tepat di sebelah baris berlabel
-// `label`, baru "Hapus blok ini" muncul di dropdown-nya.
+// `label`, baru "Hapus blok ini" muncul di dropdown-nya. Audit 13
+// September 2026 (C9) menambah `role="menu"`/`role="menuitem"` eksplisit
+// ke dropdown ini (pola ARIA menu-button baku) -- role EKSPLISIT itu
+// menimpa role implisit "button" bawaan elemen <button>, jadi item di
+// dalamnya sekarang dicari lewat role "menuitem", bukan "button" lagi.
 async function deleteBlock(page: Page, label: string) {
   await page.getByRole("button", { name: label, exact: true }).locator("..").getByLabel("Menu blok").click();
-  await page.getByRole("button", { name: "Hapus blok ini" }).click();
+  await page.getByRole("menuitem", { name: "Hapus blok ini" }).click();
 }
 
 test.describe("Canvas Page Builder", () => {

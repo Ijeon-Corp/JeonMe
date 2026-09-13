@@ -36,14 +36,17 @@ import type { EmbeddedBuilderBlock } from "@/lib/api-client";
 // screenshot Lynk.id yang ditunjukkan pengguna (GENERAL/MEDIA/INFORMATION/
 // CONVERSION/OTHERS). Mengikuti pola visual AddLinkModal.tsx (kartu 4
 // kolom + baris berdeskripsi) TAPI struktur data sendiri -- kategori &
-// 17 tipe komponen di sini SAMA SEKALI beda konsep dari tile platform/
+// tipe komponen di sini SAMA SEKALI beda konsep dari tile platform/
 // blok konten AddLinkModal (link-in-bio biasa), jadi tidak reuse
 // ContentTile/PlatformQuickAdd punya links/page.tsx.
 //
-// Fase 1 (dikonfirmasi user: "Bertahap 3 fase"): HANYA kategori GENERAL
-// terisi (Text/Button/Divider/Column/Section) -- 4 kategori lain TAMPIL
-// dengan status "segera hadir" supaya kerangka 5-kategori sudah ada sejak
-// awal walau isinya menyusul Fase 2/3 (lihat peta jalan di plan).
+// Riwayat pengisian bertahap (dikonfirmasi user: "Bertahap 3 fase"): Fase
+// 1 (7 September 2026) HANYA kategori GENERAL (Text/Button/Divider/
+// Column/Section), 4 kategori lain tampil "segera hadir". Fase 2/3 (8
+// September) mengisi MEDIA/INFORMATION/CONVERSION/OTHERS. Fase 4 (13
+// September) menambah 6 tipe klasik lama + Katalog (root-only) --
+// SEMUA kategori sudah terisi penuh sekarang, "segera hadir" TIDAK
+// PERNAH tampil lagi kecuali pencarian tidak menemukan hasil apa pun.
 
 export type BuilderComponentCategory = "general" | "media" | "information" | "conversion" | "others";
 

@@ -238,8 +238,9 @@ export default function ProdukPageEditor({
     return uploadExtraPageAvatar(page.id, file);
   }
   async function handleUploadBackground(file: File) {
-    if (!page) return;
-    await uploadExtraPageBackground(page.id, file);
+    if (!page) throw new Error("no page");
+    const { custom_background_value } = await uploadExtraPageBackground(page.id, file);
+    return custom_background_value;
   }
 
   // handleSlugChange/handleSlugBlur -- permintaan langsung pengguna 9
