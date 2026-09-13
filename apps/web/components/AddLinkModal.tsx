@@ -290,7 +290,7 @@ export default function AddLinkModal({
                     onClick={() => onSelectContentTile(tile)}
                     className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-jeon-ink p-2.5 hover:border-jeon-purple/50"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-jmd bg-jeon-lavender text-[#111111]">
                       <tile.Icon className="h-5 w-5" />
                     </span>
                     <span className="text-center text-[11px] font-semibold text-app-ink">{tile.label}</span>
@@ -312,7 +312,7 @@ export default function AddLinkModal({
                 onClick={() => onSelectContentTile(tile)}
                 className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd bg-jeon-lavender text-[#111111]">
                   <tile.Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
