@@ -24,11 +24,15 @@ import {
   IconDivider,
   IconDotsVertical,
   IconExternal,
+  IconFileText,
   IconGripVertical,
+  IconGrid,
   IconIframe,
   IconLink,
   IconListCard,
+  IconMail,
   IconMapPin,
+  IconMusicNote,
   IconPhotoLibrary,
   IconPlayCircle,
   IconPlus,
@@ -43,9 +47,13 @@ import {
 import { useLocale } from "@/lib/locale-context";
 import {
   ApiError,
+  deleteAudioBlock,
   deleteBuilderMediaImage,
+  deleteFileBlock,
   deleteGalleryImage,
+  uploadAudioBlock,
   uploadBuilderMediaImage,
+  uploadFileBlock,
   uploadGalleryImage,
   type DashboardProduct,
   type EmbeddedBuilderBlock,
@@ -120,6 +128,13 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   embed: IconIframe,
   maps: IconMapPin,
   produk: IconShoppingBag,
+  heading: IconTextLines,
+  contact_form: IconMail,
+  accordion: IconChevronRight,
+  audio: IconMusicNote,
+  file: IconFileText,
+  project_showcase: IconCamera,
+  catalog: IconGrid,
 };
 
 // TYPE_LABEL_KEY -- pemetaan STATIS block_type -> suffix key
@@ -145,6 +160,13 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   embed: "typeEmbed",
   maps: "typeMaps",
   produk: "typeProduk",
+  heading: "typeHeading",
+  contact_form: "typeContactForm",
+  accordion: "typeAccordion",
+  audio: "typeAudio",
+  file: "typeFile",
+  project_showcase: "typeProjectShowcase",
+  catalog: "typeCatalog",
 };
 
 // DESIGN_SECTION_ENTRIES -- 5 sub-tab tab "design" (Bagian 2, permintaan
@@ -447,6 +469,182 @@ function GalleryGridEditor({
   );
 }
 
+// AudioUploadEditor/FileUploadEditor -- Fase 4 (13 September 2026, blok
+// klasik "audio"/"file" ditambahkan ke Builder): pola SAMA PERSIS
+// MediaImageEditor di atas (SATU file per blok, upload/hapus langsung ke
+// server terlepas status draft, `onEnsureRootPersisted` dulu supaya blok
+// "temp-..." yang belum pernah disimpan tetap bisa diunggah). Audio
+// PUNYA field title auto-derive dari tag ID3 -- backend HANYA mengisi
+// `title` di respons kalau path kosong (root), lihat catatan lengkap di
+// UploadAudio (links.go) -- makanya `onChanged` audio ikut membawa title
+// opsional, file tidak pernah menyentuh title sama sekali.
+function AudioUploadEditor({
+  rootId,
+  path,
+  audioUrl,
+  onEnsureRootPersisted,
+  onChanged,
+}: {
+  rootId: string;
+  path: BuilderSeg[];
+  audioUrl: string | undefined;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onChanged: (patch: { audio_url: string; title?: string }, resolvedRootId: string) => void;
+}) {
+  const { t } = useLocale();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = path.length > 0 ? await uploadAudioBlock(realRootId, file, path) : await uploadAudioBlock(realRootId, file);
+      onChanged({ audio_url: res.audio_url, title: res.title }, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      await deleteAudioBlock(realRootId, path);
+      onChanged({ audio_url: "" }, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {audioUrl && (
+        <div className="flex items-center gap-2">
+          <audio controls src={audioUrl} className="h-9 flex-1" />
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={uploading}
+            title={t("dashboard.pages.linksBuilder.removePhoto")}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+          >
+            <IconX className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+      <label
+        className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+          uploading ? "opacity-60" : ""
+        }`}
+      >
+        {uploading ? (
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+        ) : (
+          <IconPlus className="h-3.5 w-3.5" />
+        )}
+        {uploading ? t("dashboard.pages.linksBuilder.uploading") : audioUrl ? t("dashboard.pages.linksBuilder.replacePhoto") : t("dashboard.pages.linksBuilder.uploadPhoto")}
+        <input type="file" accept=".mp3,.wav,.m4a,.ogg,audio/*" onChange={handleUpload} disabled={uploading} className="hidden" />
+      </label>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function FileUploadEditor({
+  rootId,
+  path,
+  fileUrl,
+  fileName,
+  onEnsureRootPersisted,
+  onChanged,
+}: {
+  rootId: string;
+  path: BuilderSeg[];
+  fileUrl: string | undefined;
+  fileName: string | undefined;
+  onEnsureRootPersisted: (rootId: string) => Promise<string>;
+  onChanged: (patch: { file_url: string; file_name?: string; file_size_bytes?: number }, resolvedRootId: string) => void;
+}) {
+  const { t } = useLocale();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      const res = await uploadFileBlock(realRootId, file, path);
+      onChanged({ file_url: res.file_url, file_name: res.file_name, file_size_bytes: res.file_size_bytes }, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.uploadImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setUploading(true);
+    setError(null);
+    try {
+      const realRootId = await onEnsureRootPersisted(rootId);
+      await deleteFileBlock(realRootId, path);
+      onChanged({ file_url: "" }, realRootId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.deleteImageFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {fileUrl && (
+        <div className="flex items-center gap-2 rounded-lg border border-app-border p-2">
+          <IconFileText className="h-4 w-4 flex-shrink-0 text-app-muted" />
+          <span className="min-w-0 flex-1 truncate text-xs text-app-ink">{fileName || fileUrl}</span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={uploading}
+            title={t("dashboard.pages.linksBuilder.removePhoto")}
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+          >
+            <IconX className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      <label
+        className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+          uploading ? "opacity-60" : ""
+        }`}
+      >
+        {uploading ? (
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+        ) : (
+          <IconPlus className="h-3.5 w-3.5" />
+        )}
+        {uploading ? t("dashboard.pages.linksBuilder.uploading") : fileUrl ? t("dashboard.pages.linksBuilder.replacePhoto") : t("dashboard.pages.linksBuilder.uploadPhoto")}
+        <input type="file" accept=".pdf,.zip,.epub" onChange={handleUpload} disabled={uploading} className="hidden" />
+      </label>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 // MapsEditor -- Canvas Page Builder Fase 3, block "maps" (ROOT-ONLY, lihat
 // catatan lengkap di plan): url+embed WAJIB dikirim BERSAMAAN dalam SATU
 // PATCH tiap kali salah satunya berubah (BUKAN per-field onBlur independen
@@ -500,6 +698,8 @@ function NodeFieldEditor({
   onEnsureRootPersisted,
   onMediaImageChanged,
   onGalleryImagesChanged,
+  onAudioChanged,
+  onFileChanged,
   products,
   onProductCreated,
 }: {
@@ -508,6 +708,8 @@ function NodeFieldEditor({
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+  onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
 }) {
@@ -515,6 +717,21 @@ function NodeFieldEditor({
   const sel = selectionOf(node);
 
   if (node.blockType === "text") {
+    return (
+      <RichTextEditor
+        key={node.id}
+        html={(node.blockData?.text as string) ?? ""}
+        onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+      />
+    );
+  }
+
+  // "heading" -- Fase 4 (13 September 2026): SEBELUMNYA tipe legacy
+  // landing-page saja (lihat LandingPagePreview, PagePreview.tsx), tidak
+  // pernah punya editor apa pun -- sekarang blok Builder biasa, isi teks
+  // sama persis "text" (RichTextEditor), bedanya cuma cara tampil di
+  // halaman publik (judul besar, bukan paragraf).
+  if (node.blockType === "heading") {
     return (
       <RichTextEditor
         key={node.id}
@@ -755,6 +972,167 @@ function NodeFieldEditor({
     );
   }
 
+  // "accordion" -- Fase 4 (13 September 2026): title = pertanyaan yang
+  // diklik pengunjung utk buka isinya (sama persis field `title` node
+  // ini), body = RichTextEditor blockData.text -- render publiknya reuse
+  // FaqBlock 1-item (lihat renderBuilderNode/PagePreview.tsx), field &
+  // placeholder di sini SENGAJA reuse namespace blockForm.* Simple Mode
+  // (sudah ada, t() tidak terikat rute -- lihat catatan i18n key insertion
+  // pitfall).
+  if (node.blockType === "accordion") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.accordion")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.blockForm.titleHint.accordion")}</p>
+        <RichTextEditor
+          key={node.id}
+          html={(node.blockData?.text as string) ?? ""}
+          onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+        />
+      </div>
+    );
+  }
+
+  // "contact_form" -- Fase 4 (13 September 2026), ROOT-ONLY (lihat
+  // allowedBuilderEmbeddedBlockTypes, links.go, utk alasan teknis --
+  // SubmitContactForm resolve linkID langsung ke baris `links`, belum
+  // path-walk ke block_data bersarang). Title saja, sama seperti "button"
+  // tanpa url -- isi form sendiri (nama/email/pesan) di-render langsung
+  // oleh ContactFormBlock, tidak ada field lain utk diedit di sini.
+  if (node.blockType === "contact_form") {
+    return (
+      <input
+        defaultValue={node.title}
+        onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+        placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+        className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+      />
+    );
+  }
+
+  // "audio"/"file" -- Fase 4 (13 September 2026): title + AudioUploadEditor/
+  // FileUploadEditor (path-aware, lihat catatan lengkap di komponen itu
+  // sendiri di atas).
+  if (node.blockType === "audio") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <AudioUploadEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          audioUrl={(node.blockData?.audio_url as string) || undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(patch, resolvedRootId) => onAudioChanged(resolvedRootId, node.path, patch)}
+        />
+      </div>
+    );
+  }
+
+  if (node.blockType === "file") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <FileUploadEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          fileUrl={(node.blockData?.file_url as string) || undefined}
+          fileName={node.blockData?.file_name as string | undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(patch, resolvedRootId) => onFileChanged(resolvedRootId, node.path, patch)}
+        />
+      </div>
+    );
+  }
+
+  // "project_showcase" -- Fase 4 (13 September 2026): pola SAMA PERSIS
+  // "embed_link" di atas (title+url+rich-text description+gambar), url
+  // di sini WAJIB (CTA, ditegakkan backend saat create ROOT) -- gambar
+  // lewat MediaImageEditor yang sama (project_showcase SEKARANG masuk
+  // mediaImageBlockTypes, links.go).
+  if (node.blockType === "project_showcase") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.projectShowcase")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={(node.blockData?.badge_text as string) ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { blockData: { badge_text: e.target.value } })}
+          placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        {/* url -- WAJIB utk root (backend menolak project_showcase root
+            tanpa url, links.go), placeholder pakai ctaUrlLabel (BUKAN
+            embedLinkUrlPlaceholder yang bilang "(opsional)" -- field itu
+            memang opsional utk embed_link, TAPI TIDAK utk project_showcase). */}
+        <input
+          defaultValue={node.url ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <input
+          defaultValue={(node.blockData?.cta_text as string) ?? ""}
+          onBlur={(e) => onUpdateNode(sel, { blockData: { cta_text: e.target.value } })}
+          placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <RichTextEditor key={node.id} html={node.description ?? ""} onChange={(html) => onUpdateNode(sel, { description: html })} />
+        <MediaImageEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          imageUrl={(node.blockData?.image_url as string) || undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
+        />
+      </div>
+    );
+  }
+
+  // "catalog" -- ROOT-ONLY (keputusan v1, sama seperti backend, lihat
+  // allowedBuilderEmbeddedBlockTypes/links.go), TAPI editor drill-down
+  // penuhnya (BlockDrilldownEditor.tsx) belum diintegrasikan ke Builder --
+  // baris `links` yang sama persis bisa langsung diisi lewat Mode Simple
+  // (editor Tautan klasik), jadi arahkan ke sana alih-alih tampilan kosong
+  // yang menyesatkan.
+  if (node.blockType === "catalog") {
+    return (
+      <div className="flex flex-col gap-2">
+        <input
+          defaultValue={node.title}
+          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+        />
+        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>
+        <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
+          {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
+        </Link>
+      </div>
+    );
+  }
+
   if (node.blockType === "column") {
     return (
       <div className="flex items-center gap-2">
@@ -784,14 +1162,13 @@ function NodeFieldEditor({
     return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.containerHint")}</p>;
   }
 
-  // Tipe blok klasik lain (heading/contact_form/accordion/audio/file/
-  // project_showcase/catalog) -- dibuat lewat editor Tautan klasik
-  // (dashboard/links/page.tsx) atau BlockDrilldownEditor, BUKAN tile
-  // "Tambah Komponen" builder ini, jadi belum punya editor in-place di
-  // sini. Bug ditemukan lewat laporan langsung pengguna (10 September
-  // 2026): fallback LAMA di sini SELALU bilang "blok ini murni wadah"
-  // (salah, blok-blok ini bukan wadah sama sekali) -- pesan ini jujur
-  // soal batasannya alih-alih menyesatkan.
+  // Fallback murni jaga-jaga -- SEMUA block_type yang dikenal repo ini
+  // sekarang punya case sendiri di atas (Fase 4, 13 September 2026,
+  // melengkapi heading/contact_form/accordion/audio/file/project_showcase/
+  // catalog yang SEBELUMNYA jatuh ke sini dengan pesan "blok ini murni
+  // wadah" yang salah -- bug ditemukan lewat laporan langsung pengguna 10
+  // September 2026). Baris ini seharusnya TIDAK PERNAH ter-render lagi
+  // kecuali ada block_type baru yang lupa ditambah case-nya.
   return <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>;
 }
 
@@ -821,6 +1198,8 @@ function TreeNodeView({
   onEnsureRootPersisted,
   onMediaImageChanged,
   onGalleryImagesChanged,
+  onAudioChanged,
+  onFileChanged,
   products,
   onProductCreated,
 }: {
@@ -837,6 +1216,8 @@ function TreeNodeView({
   onEnsureRootPersisted: (rootId: string) => Promise<string>;
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+  onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
 }) {
@@ -970,6 +1351,8 @@ function TreeNodeView({
             onEnsureRootPersisted={onEnsureRootPersisted}
             onMediaImageChanged={onMediaImageChanged}
             onGalleryImagesChanged={onGalleryImagesChanged}
+            onAudioChanged={onAudioChanged}
+            onFileChanged={onFileChanged}
             products={products}
             onProductCreated={onProductCreated}
           />
@@ -1000,6 +1383,8 @@ function TreeNodeView({
                   onEnsureRootPersisted={onEnsureRootPersisted}
                   onMediaImageChanged={onMediaImageChanged}
                   onGalleryImagesChanged={onGalleryImagesChanged}
+                  onAudioChanged={onAudioChanged}
+                  onFileChanged={onFileChanged}
                   products={products}
                   onProductCreated={onProductCreated}
                 />
@@ -1025,6 +1410,8 @@ export default function BuilderLeftPanel({
   onEnsureRootPersisted,
   onMediaImageChanged,
   onGalleryImagesChanged,
+  onAudioChanged,
+  onFileChanged,
   settingsHref,
   page,
   isPremium,
@@ -1051,7 +1438,7 @@ export default function BuilderLeftPanel({
   // (klik tree) sekarang menulis ke SATU state yang sama di induk.
   selection: BuilderSelection | null;
   onSelectionChange: (selection: BuilderSelection | null) => void;
-  onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") => void;
+  onAdd: (target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps" | "catalog" | "contact_form") => void;
   onDelete: (target: BuilderSelection) => void;
   // onClone -- permintaan langsung pengguna, 12 September 2026 ("tambahkan
   // titik tiga diujung tiap blok untuk hapus dan clone").
@@ -1074,6 +1461,15 @@ export default function BuilderLeftPanel({
   // ke path spesifik ini di draft & server snapshot rute Builder.
   onMediaImageChanged: (rootId: string, path: BuilderSeg[], imageUrl: string) => void;
   onGalleryImagesChanged: (rootId: string, path: BuilderSeg[], images: string[]) => void;
+  // onAudioChanged/onFileChanged -- Fase 4 (13 September 2026): pola SAMA
+  // PERSIS onMediaImageChanged/onGalleryImagesChanged di atas (upload
+  // langsung ke server terlepas draft, hasil ditambal ke path spesifik),
+  // generalisasi jadi objek patch (bukan satu string) karena audio/file
+  // masing-masing punya lebih dari satu field block_data yang berubah
+  // sekaligus (audio: audio_url+title opsional; file: file_url/file_name/
+  // file_size_bytes).
+  onAudioChanged: (rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) => void;
+  onFileChanged: (rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) => void;
   settingsHref: string;
   // page/isPremium/onPatch/onLocalChange/onStyleOverride/onUploadAvatar/
   // onUploadBackground/onError/stickers/onStickersChange/designSection/
@@ -1238,6 +1634,8 @@ export default function BuilderLeftPanel({
                       onEnsureRootPersisted={onEnsureRootPersisted}
                       onMediaImageChanged={onMediaImageChanged}
                       onGalleryImagesChanged={onGalleryImagesChanged}
+                      onAudioChanged={onAudioChanged}
+                      onFileChanged={onFileChanged}
                       products={products}
                       onProductCreated={onProductCreated}
                     />

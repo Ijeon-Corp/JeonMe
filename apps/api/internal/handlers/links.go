@@ -525,6 +525,24 @@ var allowedBuilderEmbeddedBlockTypes = map[string]bool{
 	// ditanam di Section/Column (TIDAK root-only spt "maps" -- tidak ada
 	// keterbatasan resolusi server-side serupa utk tipe ini).
 	"produk": true,
+	// Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"):
+	// 5 tipe klasik lama (SEBELUMNYA cuma ada di Simple Mode/dashboard/
+	// links/page.tsx, sama sekali tidak bisa ditambahkan di Builder)
+	// dipindah ke sini. "heading" &amp; "accordion" murni teks, tidak ada
+	// requirement upload/fetch server-side. "audio"/"file" upload-nya
+	// SEKARANG path-aware (lihat UploadAudio/UploadFile, mirror
+	// UploadMediaImage) jadi aman ditanam berapa pun dalam. "project_showcase"
+	// gambarnya lewat mediaImageBlockTypes (SUDAH path-aware sejak lama).
+	// "contact_form" &amp; "catalog" SENGAJA TIDAK masuk sini (tetap root-only):
+	// SubmitContactForm (baris ~3126) resolve linkID langsung ke baris
+	// `links`, tidak path-walk ke block_data bersarang -- anak Section/
+	// Column bukan baris `links` sungguhan, submit akan 404. "catalog"
+	// tetap ikut alasan v1 yang sudah ada di atas.
+	"heading":          true,
+	"accordion":        true,
+	"audio":            true,
+	"file":             true,
+	"project_showcase": true,
 }
 
 func validateBlockData(blockType string, data map[string]any) (string, bool) {
@@ -2254,6 +2272,11 @@ var mediaImageBlockTypes = map[string]bool{
 	"image":       true,
 	"video_image": true,
 	"embed_link":  true,
+	// "project_showcase" -- Fase 4 (13 September 2026, blok klasik lama
+	// ditambahkan ke Builder): field gambarnya SAMA PERSIS `block_data.image_url`
+	// ditimpa bukan ditambah, jadi drop-in ke endpoint bersama ini alih-alih
+	// bikin endpoint upload baru.
+	"project_showcase": true,
 }
 
 // UploadMediaImage -- lihat catatan lengkap di mediaImageBlockTypes &
@@ -2457,11 +2480,21 @@ var allowedAudioExt = map[string]string{
 
 // UploadAudio -- blok "audio" (hasil analisa galeri tema kompetitor, 17
 // Agustus 2026, mockup "Music"): SATU file audio per blok, key storage
-// TETAP "audio-blocks/<linkID>.<ext>" (unggah ulang menimpa, pola sama
-// seperti UploadIcon) -- beda dari gallery images yang memang perlu banyak
-// per blok. Cover art blok ini SENGAJA TIDAK dapat endpoint upload baru --
-// dipakai ulang custom_icon_url yang sudah ada (UploadIcon, generik untuk
-// SEMUA block_type, lihat resolveBlockIcon di PagePreview.tsx).
+// TETAP "audio-blocks/<linkID>.<ext>" utk ROOT (unggah ulang menimpa, pola
+// sama seperti UploadIcon) -- beda dari gallery images yang memang perlu
+// banyak per blok. Cover art blok ini SENGAJA TIDAK dapat endpoint upload
+// baru -- dipakai ulang custom_icon_url yang sudah ada (UploadIcon, generik
+// untuk SEMUA block_type, lihat resolveBlockIcon di PagePreview.tsx).
+//
+// Path-aware (Fase 4, 13 September 2026, "audio" ditanam di Section/Column
+// Builder): `path` OPSIONAL sama seperti UploadMediaImage -- kosong berarti
+// baris ROOT (perilaku LAMA, TIDAK berubah, termasuk judul auto-derive dari
+// tag ID3 di bawah). Kalau path TERISI (blok bersarang), judul auto-derive
+// SENGAJA DILEWATI -- baris `links` tidak dipakai lagi sbg sumber title utk
+// blok bersarang (title-nya field SIBLING `block_data` di dalam JSON child,
+// resolveBuilderBlockData cuma mengembalikan block_data-nya, bukan child
+// map penuh) -- kreator tetap bisa isi title manual lewat NodeFieldEditor
+// spt tipe blok lain, cuma auto-fill dari tag ID3 yang tidak berlaku di sini.
 func (h *LinksHandler) UploadAudio(c *gin.Context) {
 	if h.Storage == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
@@ -2479,9 +2512,29 @@ func (h *LinksHandler) UploadAudio(c *gin.Context) {
 		return
 	}
 
-	var blockType string
-	if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&blockType); err != nil {
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
 		return
 	}
 	if blockType != "audio" {
@@ -2524,7 +2577,9 @@ func (h *LinksHandler) UploadAudio(c *gin.Context) {
 	// diunggah baik ada tag maupun tidak. tag.ReadFrom butuh io.ReadSeeker
 	// -- multipart.File sudah memenuhi itu, Seek balik ke awal WAJIB
 	// sebelum Storage.Upload supaya body yang terunggah tidak kepotong
-	// bagian yang sudah "dibaca habis" oleh pembaca tag.
+	// bagian yang sudah "dibaca habis" oleh pembaca tag. HANYA dipakai utk
+	// ROOT (path kosong) -- lihat catatan di atas fungsi ini soal blok
+	// bersarang.
 	derivedTitle := ""
 	if meta, terr := tag.ReadFrom(file); terr == nil {
 		artist := strings.TrimSpace(meta.Artist())
@@ -2544,38 +2599,43 @@ func (h *LinksHandler) UploadAudio(c *gin.Context) {
 		return
 	}
 
-	key := fmt.Sprintf("audio-blocks/%s%s", linkID, ext)
+	// nodeKey -- sama pola dgn UploadMediaImage: id blok itu sendiri kalau
+	// bersarang (supaya banyak blok audio tertanam tidak berebut satu key
+	// storage), linkID kalau root.
+	nodeKey := linkID
+	if len(path) > 0 {
+		if last := path[len(path)-1]; last.Kind == "child" && last.ID != "" {
+			nodeKey = last.ID
+		}
+	}
+	key := fmt.Sprintf("audio-blocks/%s%s", nodeKey, ext)
 	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah audio"})
 		return
 	}
 
 	audioURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
-		return
-	}
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
-	}
-	if blockData == nil {
-		blockData = map[string]any{}
-	}
 	blockData["audio_url"] = audioURL
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
 	}
-	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1, title = $2 WHERE id = $3`, encoded, derivedTitle, linkID); err != nil {
+	if len(path) == 0 {
+		if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1, title = $2 WHERE id = $3`, encoded, derivedTitle, linkID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "audio terunggah tapi gagal menyimpan referensinya"})
+			return
+		}
+		h.invalidateLinkCache(ctx, linkID)
+		c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "title": derivedTitle, "message": "audio berhasil diunggah, judul otomatis dari file"})
+		return
+	}
+	if _, err := h.DB.Exec(ctx, `UPDATE links SET block_data = $1 WHERE id = $2`, encoded, linkID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "audio terunggah tapi gagal menyimpan referensinya"})
 		return
 	}
-
 	h.invalidateLinkCache(ctx, linkID)
-	c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "title": derivedTitle, "message": "audio berhasil diunggah, judul otomatis dari file"})
+	c.JSON(http.StatusOK, gin.H{"audio_url": audioURL, "message": "audio berhasil diunggah"})
 }
 
 // titleFromFilename -- fallback saat file audio tidak punya tag ID3 (atau
@@ -2608,20 +2668,33 @@ func (h *LinksHandler) DeleteAudio(c *gin.Context) {
 		return
 	}
 
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
 		return
 	}
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
 	}
-	if blockData == nil {
-		blockData = map[string]any{}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, _, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
 	}
 	delete(blockData, "audio_url")
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
@@ -2632,8 +2705,14 @@ func (h *LinksHandler) DeleteAudio(c *gin.Context) {
 	}
 
 	if h.Storage != nil {
+		nodeKey := linkID
+		if len(path) > 0 {
+			if last := path[len(path)-1]; last.Kind == "child" && last.ID != "" {
+				nodeKey = last.ID
+			}
+		}
 		for ext := range allowedAudioExt {
-			_ = h.Storage.Delete(ctx, fmt.Sprintf("audio-blocks/%s%s", linkID, ext))
+			_ = h.Storage.Delete(ctx, fmt.Sprintf("audio-blocks/%s%s", nodeKey, ext))
 		}
 	}
 
@@ -2663,13 +2742,16 @@ var allowedFileBlockExt = map[string]string{
 
 // UploadFile -- blok "file" (permintaan langsung pengguna, 20 Agustus 2026:
 // "tambahkan file pdf download"). Pola SAMA PERSIS dengan UploadAudio di
-// atas (SATU file per blok, key storage TETAP "file-blocks/<linkID>.<ext>",
-// unggah ulang menimpa) -- beda utama: title blok TIDAK ditimpa otomatis
-// (PDF tidak punya metadata judul semudah tag ID3 audio, & judul blok di
-// sini biasanya sudah deskriptif dari kreator sendiri, mis. "Download
-// E-book Gratis") -- nama file asli & ukurannya disimpan terpisah di
-// block_data (file_name/file_size_bytes) murni untuk ditampilkan di kartu
-// unduh (FileDownloadBlock.tsx), bukan menggantikan title.
+// atas (SATU file per blok, key storage TETAP "file-blocks/<linkID>.<ext>"
+// utk ROOT, unggah ulang menimpa) -- beda utama: title blok TIDAK ditimpa
+// otomatis (PDF tidak punya metadata judul semudah tag ID3 audio, & judul
+// blok di sini biasanya sudah deskriptif dari kreator sendiri, mis.
+// "Download E-book Gratis") -- nama file asli & ukurannya disimpan terpisah
+// di block_data (file_name/file_size_bytes) murni untuk ditampilkan di
+// kartu unduh (FileDownloadBlock.tsx), bukan menggantikan title. Karena
+// tidak pernah menyentuh title, path-aware (Fase 4, 13 September 2026)
+// jauh lebih sederhana dari UploadAudio -- tidak ada trade-off apa pun
+// utk blok bersarang.
 func (h *LinksHandler) UploadFile(c *gin.Context) {
 	if h.Storage == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "object storage belum dikonfigurasi"})
@@ -2687,9 +2769,29 @@ func (h *LinksHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	var blockType string
-	if err := h.DB.QueryRow(ctx, `SELECT block_type FROM links WHERE id = $1`, linkID).Scan(&blockType); err != nil {
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
+		return
+	}
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
+	}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, blockType, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
 		return
 	}
 	if blockType != "file" {
@@ -2721,29 +2823,23 @@ func (h *LinksHandler) UploadFile(c *gin.Context) {
 	}
 	defer file.Close()
 
-	key := fmt.Sprintf("file-blocks/%s%s", linkID, ext)
+	nodeKey := linkID
+	if len(path) > 0 {
+		if last := path[len(path)-1]; last.Kind == "child" && last.ID != "" {
+			nodeKey = last.ID
+		}
+	}
+	key := fmt.Sprintf("file-blocks/%s%s", nodeKey, ext)
 	if err := h.Storage.Upload(ctx, key, file, fileHeader.Size, contentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengunggah file"})
 		return
 	}
 
 	fileURL := fmt.Sprintf("%s?v=%d", h.Storage.PublicURL(key), time.Now().UnixNano())
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
-		return
-	}
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
-	}
-	if blockData == nil {
-		blockData = map[string]any{}
-	}
 	blockData["file_url"] = fileURL
 	blockData["file_name"] = fileHeader.Filename
 	blockData["file_size_bytes"] = fileHeader.Size
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
@@ -2778,22 +2874,35 @@ func (h *LinksHandler) DeleteFile(c *gin.Context) {
 		return
 	}
 
-	var blockDataRaw []byte
-	if err := h.DB.QueryRow(ctx, `SELECT block_data FROM links WHERE id = $1`, linkID).Scan(&blockDataRaw); err != nil {
+	path, err := parseBuilderPath(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path blok tidak valid"})
+		return
+	}
+
+	var rootBlockType string
+	var rootDataRaw []byte
+	if err := h.DB.QueryRow(ctx, `SELECT block_type, block_data FROM links WHERE id = $1`, linkID).Scan(&rootBlockType, &rootDataRaw); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat blok"})
 		return
 	}
-	var blockData map[string]any
-	if len(blockDataRaw) > 0 {
-		_ = json.Unmarshal(blockDataRaw, &blockData)
+	var rootData map[string]any
+	if len(rootDataRaw) > 0 {
+		_ = json.Unmarshal(rootDataRaw, &rootData)
 	}
-	if blockData == nil {
-		blockData = map[string]any{}
+	if rootData == nil {
+		rootData = map[string]any{}
+	}
+
+	blockData, _, ok := resolveBuilderBlockData(rootData, rootBlockType, path)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "blok tidak ditemukan pada path yang diminta"})
+		return
 	}
 	delete(blockData, "file_url")
 	delete(blockData, "file_name")
 	delete(blockData, "file_size_bytes")
-	encoded, err := json.Marshal(blockData)
+	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})
 		return
@@ -2804,8 +2913,14 @@ func (h *LinksHandler) DeleteFile(c *gin.Context) {
 	}
 
 	if h.Storage != nil {
+		nodeKey := linkID
+		if len(path) > 0 {
+			if last := path[len(path)-1]; last.Kind == "child" && last.ID != "" {
+				nodeKey = last.ID
+			}
+		}
 		for ext := range allowedFileBlockExt {
-			_ = h.Storage.Delete(ctx, fmt.Sprintf("file-blocks/%s%s", linkID, ext))
+			_ = h.Storage.Delete(ctx, fmt.Sprintf("file-blocks/%s%s", nodeKey, ext))
 		}
 	}
 

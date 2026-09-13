@@ -5,15 +5,20 @@ import {
   IconBook,
   IconBox,
   IconCamera,
+  IconChevronRight,
   IconClock,
   IconClose,
   IconColumns,
   IconDivider,
   IconExternal,
+  IconFileText,
+  IconGrid,
   IconIframe,
   IconLink,
   IconListCard,
+  IconMail,
   IconMapPin,
+  IconMusicNote,
   IconPhotoLibrary,
   IconPlayCircle,
   IconSearch,
@@ -46,8 +51,17 @@ export type BuilderComponentCategory = "general" | "media" | "information" | "co
 // LEBIH LUAS dari EmbeddedBuilderBlock["block_type"] (anak tertanam
 // Section/Column) -- "maps" ROOT-ONLY di Fase 3 (lihat catatan lengkap di
 // plan), jadi tile-nya perlu tipe ini, disaring dari daftar via prop
-// `nested` kalau target tambahnya bukan root.
-export type AddableBlockType = EmbeddedBuilderBlock["block_type"] | "maps";
+// `nested` kalau target tambahnya bukan root. Fase 4 (13 September 2026):
+// "catalog" dan "contact_form" SAMA -- root-only (lihat
+// allowedBuilderEmbeddedBlockTypes, links.go, utk alasan teknis lengkap
+// keduanya, BEDA satu sama lain: catalog sengaja v1, contact_form karena
+// SubmitContactForm belum path-walk ke block_data bersarang).
+export type AddableBlockType = EmbeddedBuilderBlock["block_type"] | "maps" | "catalog" | "contact_form";
+
+// ROOT_ONLY_TYPES -- disaring dari daftar tile begitu `nested` true (target
+// tambah di dalam Section/Column, bukan root) supaya kreator tidak sempat
+// memilih tipe yang backend pasti tolak.
+const ROOT_ONLY_TYPES: ReadonlySet<AddableBlockType> = new Set(["maps", "catalog", "contact_form"]);
 
 export interface BuilderComponentTile {
   type: AddableBlockType;
@@ -65,6 +79,12 @@ function buildBuilderComponentCategories(
       label: t("dashboard.components.builderAddComponentModal.categoryGeneral"),
       tiles: [
         { type: "text", label: t("dashboard.components.builderAddComponentModal.typeText"), description: t("dashboard.components.builderAddComponentModal.typeTextDesc"), Icon: IconTextLines },
+        // "heading" -- Fase 4 (13 September 2026, "kenapa banyak blok blok
+        // yang hilang"): sebelumnya tipe legacy landing-page saja, sama
+        // sekali tidak bisa ditambahkan lewat UI mana pun -- sekarang jadi
+        // blok Builder biasa (judul besar, mirip "text" tapi tampil sbg
+        // heading di halaman publik).
+        { type: "heading", label: t("dashboard.components.builderAddComponentModal.typeHeading"), description: t("dashboard.components.builderAddComponentModal.typeHeadingDesc"), Icon: IconTextLines },
         { type: "button", label: t("dashboard.components.builderAddComponentModal.typeButton"), description: t("dashboard.components.builderAddComponentModal.typeButtonDesc"), Icon: IconExternal },
         { type: "divider", label: t("dashboard.components.builderAddComponentModal.typeDivider"), description: t("dashboard.components.builderAddComponentModal.typeDividerDesc"), Icon: IconDivider },
         { type: "column", label: t("dashboard.components.builderAddComponentModal.typeColumn"), description: t("dashboard.components.builderAddComponentModal.typeColumnDesc"), Icon: IconColumns },
@@ -83,6 +103,10 @@ function buildBuilderComponentCategories(
         { type: "video", label: t("dashboard.components.builderAddComponentModal.typeVideo"), description: t("dashboard.components.builderAddComponentModal.typeVideoDesc"), Icon: IconPlayCircle },
         { type: "video_image", label: t("dashboard.components.builderAddComponentModal.typeVideoImage"), description: t("dashboard.components.builderAddComponentModal.typeVideoImageDesc"), Icon: IconVideoImage },
         { type: "image_slider", label: t("dashboard.components.builderAddComponentModal.typeImageSlider"), description: t("dashboard.components.builderAddComponentModal.typeImageSliderDesc"), Icon: IconSlideshow },
+        // "audio"/"file" -- Fase 4 (13 September 2026): dua blok klasik
+        // lama, sebelumnya cuma bisa lewat Simple Mode.
+        { type: "audio", label: t("dashboard.components.builderAddComponentModal.typeAudio"), description: t("dashboard.components.builderAddComponentModal.typeAudioDesc"), Icon: IconMusicNote },
+        { type: "file", label: t("dashboard.components.builderAddComponentModal.typeFile"), description: t("dashboard.components.builderAddComponentModal.typeFileDesc"), Icon: IconFileText },
       ],
     },
     {
@@ -94,6 +118,9 @@ function buildBuilderComponentCategories(
       tiles: [
         { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconBook },
         { type: "list", label: t("dashboard.components.builderAddComponentModal.typeList"), description: t("dashboard.components.builderAddComponentModal.typeListDesc"), Icon: IconListCard },
+        // "accordion" -- Fase 4 (13 September 2026): satu judul, klik utk
+        // buka isinya -- beda dari FAQ yang bisa banyak pertanyaan sekaligus.
+        { type: "accordion", label: t("dashboard.components.builderAddComponentModal.typeAccordion"), description: t("dashboard.components.builderAddComponentModal.typeAccordionDesc"), Icon: IconChevronRight },
       ],
     },
     {
@@ -108,6 +135,9 @@ function buildBuilderComponentCategories(
         // lokasi bebas dalam layout, beda dari grid produk otomatis
         // Halaman Toko.
         { type: "produk", label: t("dashboard.components.builderAddComponentModal.typeProduk"), description: t("dashboard.components.builderAddComponentModal.typeProdukDesc"), Icon: IconShoppingBag },
+        // "contact_form" -- Fase 4 (13 September 2026): ROOT-ONLY (lihat
+        // catatan AddableBlockType/ROOT_ONLY_TYPES di atas).
+        { type: "contact_form", label: t("dashboard.components.builderAddComponentModal.typeContactForm"), description: t("dashboard.components.builderAddComponentModal.typeContactFormDesc"), Icon: IconMail },
       ],
     },
     {
@@ -120,6 +150,19 @@ function buildBuilderComponentCategories(
         { type: "embed_link", label: t("dashboard.components.builderAddComponentModal.typeEmbedLink"), description: t("dashboard.components.builderAddComponentModal.typeEmbedLinkDesc"), Icon: IconLink },
         { type: "embed", label: t("dashboard.components.builderAddComponentModal.typeEmbed"), description: t("dashboard.components.builderAddComponentModal.typeEmbedDesc"), Icon: IconIframe },
         { type: "maps", label: t("dashboard.components.builderAddComponentModal.typeMaps"), description: t("dashboard.components.builderAddComponentModal.typeMapsDesc"), Icon: IconMapPin },
+        // "project_showcase" -- Fase 4 (13 September 2026): kartu proyek
+        // unggulan (badge + gambar + deskripsi + tombol CTA).
+        {
+          type: "project_showcase",
+          label: t("dashboard.components.builderAddComponentModal.typeProjectShowcase"),
+          description: t("dashboard.components.builderAddComponentModal.typeProjectShowcaseDesc"),
+          Icon: IconCamera,
+        },
+        // "catalog" -- Fase 4 (13 September 2026, permintaan langsung
+        // pengguna "harusnya ada blok katalog"): ROOT-ONLY (lihat catatan
+        // AddableBlockType/ROOT_ONLY_TYPES di atas, keputusan v1 yang sudah
+        // ada di backend, allowedBuilderEmbeddedBlockTypes/links.go).
+        { type: "catalog", label: t("dashboard.components.builderAddComponentModal.typeCatalog"), description: t("dashboard.components.builderAddComponentModal.typeCatalogDesc"), Icon: IconGrid },
       ],
     },
   ];
@@ -144,7 +187,7 @@ export default function BuilderAddComponentModal({
   const [search, setSearch] = useState("");
   const categories = buildBuilderComponentCategories(t).map((c) => ({
     ...c,
-    tiles: nested ? c.tiles.filter((tile) => tile.type !== "maps") : c.tiles,
+    tiles: nested ? c.tiles.filter((tile) => !ROOT_ONLY_TYPES.has(tile.type)) : c.tiles,
   }));
   const searchLower = search.trim().toLowerCase();
 
@@ -209,7 +252,7 @@ export default function BuilderAddComponentModal({
                   aria-label={tile.label}
                   className="flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-app-surface-2"
                 >
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd border-2 border-[#111111] bg-jeon-lavender text-[#111111]">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-jmd bg-jeon-lavender text-[#111111]">
                     <tile.Icon className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">

@@ -3491,6 +3491,18 @@ const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
   "list",
   "embed",
   "produk",
+  // Fase 4 (13 September 2026): 5 tipe klasik lama, boleh root MAUPUN
+  // bersarang (lihat allowedBuilderEmbeddedBlockTypes, links.go).
+  // "contact_form"/"catalog" SENGAJA TIDAK di sini (root-only) -- baris
+  // ROOT tipe itu tetap jatuh ke renderLinkOrBlock yang SUDAH bekerja
+  // penuh (termasuk submit form sungguhan & drill-down katalog), menulis
+  // ulang logic itu di renderBuilderNode cuma menambah duplikasi tanpa
+  // manfaat karena keduanya TIDAK PERNAH muncul bersarang.
+  "heading",
+  "accordion",
+  "audio",
+  "file",
+  "project_showcase",
 ]);
 
 // builderSelectionRing -- lihat catatan lengkap Bagian 1c di plan (9
@@ -3880,6 +3892,121 @@ function renderBuilderNode(
               {selectedProducts.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}
             </div>
           )}
+        </div>
+      );
+    }
+    // Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"): 5
+    // tipe klasik lama (heading/accordion/audio/file/project_showcase)
+    // ditambahkan ke Builder -- pola SAMA PERSIS renderLinkOrBlock (dipakai
+    // ulang komponen presentasi yang sama, VideoEmbedBlock/FaqBlock/dst
+    // di atas), TAPI BuilderRenderNode TIDAK punya beberapa field root-only
+    // (customIconUrl/iconKey/dst -- lihat normalizeEmbeddedBuilderNode) jadi
+    // cover art audio & ikon file TIDAK tersedia utk instance blok ini
+    // (baik root maupun bersarang) -- trade-off yang disengaja, bukan bug:
+    // kreator yang butuh cover/ikon kustom tetap bisa pakai blok ini lewat
+    // Mode Simple (dashboard/links/page.tsx) yang masih mendukungnya penuh.
+    case "heading":
+      return (
+        <h1
+          key={node.id}
+          data-builder-node-id={node.id}
+          data-builder-block-type="heading"
+          className={`jeon-rich-text-content w-full text-center font-heading text-xl font-bold ${theme.name}${ring}`}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml((node.blockData.text as string) ?? "") }}
+        />
+      );
+    case "accordion":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="accordion" className={`w-full rounded-xl${ring}`}>
+          <FaqBlock
+            title=""
+            items={[{ question: node.title, answer: (node.blockData.text as string) ?? "" }]}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+            itemTitleClassName={theme.cardTitle}
+            itemBodyClassName={theme.bio}
+          />
+        </div>
+      );
+    case "audio":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="audio" className={`w-full rounded-xl${ring}`}>
+          <AudioPlayerBlock
+            title={node.title}
+            audioUrl={(node.blockData.audio_url as string) ?? ""}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
+    case "file":
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="file" className={`w-full rounded-xl${ring}`}>
+          <FileDownloadBlock
+            title={node.title}
+            fileUrl={(node.blockData.file_url as string) ?? ""}
+            fileName={node.blockData.file_name as string | undefined}
+            fileSizeBytes={node.blockData.file_size_bytes as number | undefined}
+            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
+            titleClassName={theme.cardTitle}
+          />
+        </div>
+      );
+    case "project_showcase": {
+      // Pola SAMA PERSIS "embed_link" di atas (kartu klik penuh, gambar+
+      // judul+deskripsi rich-text), tambahan badge_text di atas gambar &
+      // cta_text (bawaan "Lihat detail") di bawah -- lihat renderLinkOrBlock
+      // utk versi root LinkItem-nya (behaviornya disamakan persis).
+      const badgeText = (node.blockData.badge_text as string) ?? "";
+      const imageUrl = (node.blockData.image_url as string) ?? "";
+      const ctaText = (node.blockData.cta_text as string) || "Lihat detail";
+      const cardClassName = `flex w-full flex-col ${theme.cardRounded ?? "rounded-2xl"} p-4 text-left transition-all duration-300 ${theme.card}`;
+      const inner = (
+        <>
+          {badgeText && (
+            <span className={`mb-3 inline-block w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${theme.buyButton}`}>
+              {badgeText}
+            </span>
+          )}
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="" loading="lazy" className="mb-3 aspect-video w-full rounded-lg object-cover" />
+          )}
+          <p className={`text-sm font-bold ${theme.cardTitle}`}>{node.title}</p>
+          {node.description && (
+            <p
+              className={`jeon-rich-text-content mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75 ${theme.cardTitle}`}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(node.description) }}
+            />
+          )}
+          <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.chevron}`}>
+            {ctaText} <IconChevronRight className="h-3.5 w-3.5" />
+          </span>
+        </>
+      );
+      if (!node.url) {
+        return (
+          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="project_showcase" className={`${cardClassName}${ring}`}>
+            {inner}
+          </div>
+        );
+      }
+      return interactive ? (
+        <TrackedLink
+          key={node.id}
+          username={data.username}
+          pageSlug={data.pageSlug}
+          linkId={node.id}
+          href={buildUtmHref(node.url, node.title, data.utmEnabled)}
+          className={`${cardClassName}${ring}`}
+        >
+          <span data-builder-node-id={node.id} data-builder-block-type="project_showcase" className="contents">
+            {inner}
+          </span>
+        </TrackedLink>
+      ) : (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="project_showcase" className={`${cardClassName} opacity-80${ring}`}>
+          {inner}
         </div>
       );
     }

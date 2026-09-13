@@ -1149,6 +1149,12 @@ export const dictionaries = {
           containerHint: "Blok ini murni wadah -- pilih salah satu isinya untuk mengedit, atau tambah komponen baru ke dalamnya.",
           legacyLinkHint: "Ikon, kunci, dan jadwal tautan ini masih dikelola di halaman Tautan.",
           legacyBlockHint: "Blok ini dibuat lewat editor lama dan belum bisa diedit di sini -- kelola isinya lewat halaman Tautan.",
+          // catalogOpenInLinksPage -- Fase 4 (13 September 2026): blok
+          // "catalog" SEKARANG bisa ditambah dari Builder (root-only), tapi
+          // editor drill-down penuhnya (BlockDrilldownEditor.tsx) belum
+          // diintegrasikan ke Builder -- baris `links` yang sama persis
+          // bisa langsung diisi lewat Mode Simple.
+          catalogOpenInLinksPage: "Buka & isi katalog di halaman Tautan",
           // produk* -- blok "Produk" (permintaan langsung pengguna 10
           // September 2026, "harusnya ada blok produk").
           produkSelectExisting: "Pilih produk yang sudah ada",
@@ -2811,6 +2817,23 @@ export const dictionaries = {
           typeEmbedDesc: "Tempel tautan Google Forms, Calendly, atau Spotify",
           typeMaps: "Lokasi/Maps",
           typeMapsDesc: "Tampilkan lokasi dari tautan Google Maps",
+          // Fase 4 (13 September 2026, "kenapa banyak blok blok yang
+          // hilang"): 7 tipe klasik lama (SEBELUMNYA cuma bisa lewat Mode
+          // Simple, dashboard/links/page.tsx) ditambahkan ke Builder.
+          typeHeading: "Judul Besar",
+          typeHeadingDesc: "Teks judul besar, rata tengah",
+          typeContactForm: "Formulir Kontak",
+          typeContactFormDesc: "Formulir nama/email/pesan dari pengunjung",
+          typeAccordion: "Accordion",
+          typeAccordionDesc: "Satu judul, klik untuk buka isinya",
+          typeAudio: "Audio/Musik",
+          typeAudioDesc: "Pemutar audio dengan satu file musik",
+          typeFile: "File & Unduhan",
+          typeFileDesc: "Kartu unduh PDF/ZIP/EPUB",
+          typeProjectShowcase: "Project Unggulan",
+          typeProjectShowcaseDesc: "Kartu proyek dengan badge, gambar, dan tombol CTA",
+          typeCatalog: "Katalog",
+          typeCatalogDesc: "Daftar item & detail drill-down gaya Linktree",
         },
         deliveryMethodPanel: {
           methodDownloadLink: "Download Link",
@@ -4178,6 +4201,7 @@ export const dictionaries = {
           containerHint: "This block is just a container -- select one of its children to edit, or add a new component inside it.",
           legacyLinkHint: "This link's icon, lock, and schedule are still managed on the Links page.",
           legacyBlockHint: "This block was created with an older editor and can't be edited here yet -- manage it from the Links page.",
+          catalogOpenInLinksPage: "Open & fill in the catalog on the Links page",
           produkSelectExisting: "Select an existing product",
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",
@@ -5803,6 +5827,20 @@ export const dictionaries = {
           typeEmbedDesc: "Paste a Google Forms, Calendly, or Spotify link",
           typeMaps: "Location/Maps",
           typeMapsDesc: "Show a location from a Google Maps link",
+          typeHeading: "Heading",
+          typeHeadingDesc: "A large, centered heading text",
+          typeContactForm: "Contact Form",
+          typeContactFormDesc: "A name/email/message form for visitors",
+          typeAccordion: "Accordion",
+          typeAccordionDesc: "One heading, click to expand its content",
+          typeAudio: "Audio/Music",
+          typeAudioDesc: "An audio player with one music file",
+          typeFile: "Files & Downloads",
+          typeFileDesc: "A download card for PDF/ZIP/EPUB",
+          typeProjectShowcase: "Featured Project",
+          typeProjectShowcaseDesc: "A project card with a badge, image, and CTA button",
+          typeCatalog: "Catalog",
+          typeCatalogDesc: "A Linktree-style drill-down item list & detail view",
         },
         deliveryMethodPanel: {
           methodDownloadLink: "Download Link",

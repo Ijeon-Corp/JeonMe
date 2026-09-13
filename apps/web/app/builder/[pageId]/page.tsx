@@ -70,6 +70,14 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   image_slider: "typeImageSlider",
   embed: "typeEmbed",
   maps: "typeMaps",
+  produk: "typeProduk",
+  heading: "typeHeading",
+  contact_form: "typeContactForm",
+  accordion: "typeAccordion",
+  audio: "typeAudio",
+  file: "typeFile",
+  project_showcase: "typeProjectShowcase",
+  catalog: "typeCatalog",
 };
 
 // extractPageDesignPatch -- field yang benar-benar bisa disentuh Tab Design
@@ -366,20 +374,27 @@ export default function BuilderPage() {
   // komponen ini. Badan logic path-based (getChildrenAt/setChildrenAt/
   // updateAt) APA ADANYA dari versi lama, cuma dibungkus `setLinks`
   // (functional update) alih-alih await+refresh().
-  function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps") {
+  function handleAdd(target: BuilderSelection | null, type: EmbeddedBuilderBlock["block_type"] | "maps" | "catalog" | "contact_form") {
     setError(null);
     if (!target) {
       const title = t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[type] ?? "typeText"}`);
-      const blockData = type === "maps" ? {} : newBuilderBlock(type as EmbeddedBuilderBlock["block_type"]).block_data;
+      // "maps"/"catalog"/"contact_form" -- ketiganya ROOT-ONLY, BUKAN
+      // bagian EmbeddedBuilderBlock["block_type"] (lihat catatan lengkap di
+      // AddableBlockType, BuilderAddComponentModal.tsx), jadi newBuilderBlock
+      // (yang cuma tahu tipe anak tertanam) tidak berlaku -- block_data
+      // kosong apa adanya, sama seperti "maps" sebelumnya.
+      const blockData =
+        type === "maps" || type === "catalog" || type === "contact_form" ? {} : newBuilderBlock(type as EmbeddedBuilderBlock["block_type"]).block_data;
       // "https://" saja gagal validasi http_url backend (tidak ada host) --
-      // root "button"/"maps" WAJIB url non-kosong (beda dari anak tertanam
-      // di Section/Column) -- placeholder valid ini diedit belakangan lewat
-      // panel kiri, ditimpa tautan Maps sungguhan lewat MapsEditor.
-      const url = type === "button" || type === "maps" ? "https://example.com" : undefined;
+      // root "button"/"maps"/"project_showcase" WAJIB url non-kosong (beda
+      // dari anak tertanam di Section/Column) -- placeholder valid ini
+      // diedit belakangan lewat panel kiri, ditimpa tautan Maps sungguhan
+      // lewat MapsEditor / CTA sungguhan lewat field url project_showcase.
+      const url = type === "button" || type === "maps" || type === "project_showcase" ? "https://example.com" : undefined;
       setLinks((prev) => [...prev, makeTempLinkItem(type as LinkItem["block_type"], title, url, blockData, prev.length)]);
       return;
     }
-    if (type === "maps") return; // modal sudah menyaring ini, jaga-jaga saja.
+    if (type === "maps" || type === "catalog" || type === "contact_form") return; // modal sudah menyaring ini, jaga-jaga saja.
     setLinks((prev) => {
       const root = prev.find((l) => l.id === target.rootId);
       if (!root) return prev;
@@ -595,6 +610,25 @@ export default function BuilderPage() {
   }
   function handleGalleryImagesChanged(rootId: string, path: BuilderSeg[], images: string[]) {
     applyFieldToPath(rootId, path, (bd) => ({ ...bd, images }));
+  }
+  // handleAudioChanged/handleFileChanged -- Fase 4 (13 September 2026, blok
+  // "audio"/"file" ditanam di Section/Column): pola SAMA PERSIS
+  // handleMediaImageChanged/handleGalleryImagesChanged di atas via
+  // applyFieldToPath yang sama, cuma menerima objek patch (bukan satu
+  // string) karena lebih dari satu field block_data berubah sekaligus.
+  // Audio JUGA menimpa `title` blok -- TAPI HANYA kalau backend
+  // mengembalikannya (root/path kosong, lihat catatan lengkap di
+  // UploadAudio, links.go) -- title BUKAN bagian block_data, jadi ditambal
+  // terpisah ke `links`/`serverLinks` (bukan lewat applyFieldToPath).
+  function handleAudioChanged(rootId: string, path: BuilderSeg[], patch: { audio_url: string; title?: string }) {
+    applyFieldToPath(rootId, path, (bd) => ({ ...bd, audio_url: patch.audio_url }));
+    if (patch.title !== undefined) {
+      setLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, title: patch.title! } : l)));
+      setServerLinks((prev) => prev.map((l) => (l.id === rootId ? { ...l, title: patch.title! } : l)));
+    }
+  }
+  function handleFileChanged(rootId: string, path: BuilderSeg[], patch: { file_url: string; file_name?: string; file_size_bytes?: number }) {
+    applyFieldToPath(rootId, path, (bd) => ({ ...bd, file_url: patch.file_url, file_name: patch.file_name, file_size_bytes: patch.file_size_bytes }));
   }
 
   // handlePatch/handleStyleOverride/handleDesignLocalChange -- redesain
@@ -897,6 +931,8 @@ export default function BuilderPage() {
           onUpdateNode={handleUpdateNode}
           onMediaImageChanged={handleMediaImageChanged}
           onGalleryImagesChanged={handleGalleryImagesChanged}
+          onAudioChanged={handleAudioChanged}
+          onFileChanged={handleFileChanged}
           onEnsureRootPersisted={ensureRootPersisted}
           settingsHref="/dashboard/settings"
           page={designPage}

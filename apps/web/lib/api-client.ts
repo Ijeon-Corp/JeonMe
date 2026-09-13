@@ -1428,7 +1428,18 @@ export interface EmbeddedBuilderBlock {
     // "produk" -- permintaan langsung pengguna 10 September 2026: BOLEH
     // ditanam di Section/Column (TIDAK root-only spt "maps" -- tidak ada
     // keterbatasan resolusi server-side serupa utk tipe ini).
-    | "produk";
+    | "produk"
+    // Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"):
+    // 5 tipe klasik lama, boleh ditanam Section/Column (upload audio/file
+    // SEKARANG path-aware, gambar project_showcase lewat mediaImageBlockTypes
+    // yang sudah path-aware). "contact_form"/"catalog" SENGAJA TIDAK di
+    // sini -- lihat allowedBuilderEmbeddedBlockTypes (links.go) utk alasan
+    // lengkap keduanya tetap root-only spt "maps".
+    | "heading"
+    | "accordion"
+    | "audio"
+    | "file"
+    | "project_showcase";
   title: string;
   url?: string;
   description?: string;
@@ -1503,10 +1514,23 @@ export function deleteCatalogItemImage(linkId: string, itemId: string, index: nu
 // "otomatis ambil judul dari audio yang di upload" -- backend membaca tag
 // ID3 (atau fallback nama file) & MENIMPA title blok, dikembalikan di sini
 // supaya UI langsung menampilkan judul baru tanpa perlu refetch terpisah.
-export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_url: string; title: string; message: string }> {
+// `path` OPSIONAL -- Fase 4 (13 September 2026, "audio" ditanam di
+// Section/Column): auto-derive title HANYA berlaku utk root (path kosong),
+// lihat catatan lengkap di UploadAudio (links.go) -- makanya `title` di
+// tipe balikan opsional, tidak selalu ada.
+export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_url: string; title: string; message: string }>;
+export async function uploadAudioBlock(id: string, file: File, path: BuilderSeg[]): Promise<{ audio_url: string; title?: string; message: string }>;
+export async function uploadAudioBlock(
+  id: string,
+  file: File,
+  path?: BuilderSeg[]
+): Promise<{ audio_url: string; title?: string; message: string }> {
   const token = getToken();
   const form = new FormData();
   form.append("audio", file);
+  if (path && path.length > 0) {
+    form.append("path", JSON.stringify(path));
+  }
 
   const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/audio`, {
     method: "POST",
@@ -1521,8 +1545,9 @@ export async function uploadAudioBlock(id: string, file: File): Promise<{ audio_
   return body;
 }
 
-export function deleteAudioBlock(id: string) {
-  return apiFetch<{ message: string }>(`/dashboard/links/${id}/audio`, { method: "DELETE" }, { auth: true });
+export function deleteAudioBlock(id: string, path?: BuilderSeg[]) {
+  const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/audio${query}`, { method: "DELETE" }, { auth: true });
 }
 
 // uploadFileBlock/deleteFileBlock -- blok "file" (permintaan langsung
@@ -1531,14 +1556,20 @@ export function deleteAudioBlock(id: string) {
 // key storage tetap (unggah ulang menimpa). Beda dari audio: title blok
 // TIDAK ikut ditimpa di respons (lihat catatan UploadFile, links.go) --
 // file_name/file_size_bytes dikembalikan terpisah murni untuk ditampilkan
-// di kartu unduh (FileDownloadBlock.tsx).
+// di kartu unduh (FileDownloadBlock.tsx). `path` OPSIONAL, Fase 4 (13
+// September 2026) -- lebih sederhana dari audio, tidak ada title yg
+// disentuh sama sekali jadi tidak ada trade-off root vs bersarang.
 export async function uploadFileBlock(
   id: string,
-  file: File
+  file: File,
+  path?: BuilderSeg[]
 ): Promise<{ file_url: string; file_name: string; file_size_bytes: number; message: string }> {
   const token = getToken();
   const form = new FormData();
   form.append("file", file);
+  if (path && path.length > 0) {
+    form.append("path", JSON.stringify(path));
+  }
 
   const res = await fetch(`${API_BASE_URL}/dashboard/links/${id}/file`, {
     method: "POST",
@@ -1553,8 +1584,9 @@ export async function uploadFileBlock(
   return body;
 }
 
-export function deleteFileBlock(id: string) {
-  return apiFetch<{ message: string }>(`/dashboard/links/${id}/file`, { method: "DELETE" }, { auth: true });
+export function deleteFileBlock(id: string, path?: BuilderSeg[]) {
+  const query = path && path.length > 0 ? `?path=${encodeURIComponent(JSON.stringify(path))}` : "";
+  return apiFetch<{ message: string }>(`/dashboard/links/${id}/file${query}`, { method: "DELETE" }, { auth: true });
 }
 
 export function reorderLinks(items: { id: string; position: number }[]) {
