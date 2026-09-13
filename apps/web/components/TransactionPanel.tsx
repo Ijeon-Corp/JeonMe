@@ -47,7 +47,15 @@ export default function TransactionPanel() {
     listOrders({ status: statusFilter || undefined, search: search || undefined })
       .then((r) => setOrders(r.orders))
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.loadError")));
-  }, [statusFilter, search, t]);
+    // Bug ditemukan 13 September 2026 (laporan pengguna: "diseluruh menu
+    // sales" fetch dobel): `t` di sini CUMA dipakai memformat pesan error
+    // di .catch(), tidak menentukan APA yang di-fetch -- tidak perlu jadi
+    // dependency. Referensi `t` bisa berubah lebih sering dari yang
+    // dikira (lihat catatan di useLocale()), memicu fetch order berulang
+    // tiap kali itu terjadi walau statusFilter/search tidak berubah sama
+    // sekali.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -176,7 +184,10 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
     getOrderDetail(orderId)
       .then(setDetail)
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.detailLoadError")));
-  }, [orderId, t]);
+    // Sama seperti efek listOrders di atas -- `t` cuma dipakai format
+    // pesan error, bukan penentu data yang diambil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId]);
 
   async function handleRefund() {
     setRefunding(true);

@@ -27,7 +27,11 @@ export default function ShopSettingsPanel() {
         setMessage(s.shop_paused_message);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.shopSettingsPanel.loadError")));
-  }, [t]);
+    // Sama seperti ReviewsPanel/TransactionPanel dkk (bug 13 September
+    // 2026, "diseluruh menu sales" fetch dobel) -- `t` cuma format pesan
+    // error, bukan penentu data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function save(paused: boolean, msg: string) {
     setSaving(true);

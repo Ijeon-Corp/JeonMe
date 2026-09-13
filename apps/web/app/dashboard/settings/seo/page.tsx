@@ -52,7 +52,12 @@ export default function SettingsSeoPage() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.settingsSeo.loadError")))
       .finally(() => setLoading(false));
-  }, [t]);
+    // Bug ditemukan 13 September 2026 (sapuan lintas-app setelah laporan
+    // fetch dobel di menu Jualan, lihat catatan lengkap di
+    // TransactionPanel.tsx dkk) -- `t` cuma format pesan error, bukan
+    // penentu data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

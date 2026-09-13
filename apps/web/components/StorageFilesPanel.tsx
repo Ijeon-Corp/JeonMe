@@ -32,7 +32,11 @@ export default function StorageFilesPanel() {
     listStorage()
       .then(setData)
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.storageFilesPanel.loadError")));
-  }, [t]);
+    // Sama seperti ReviewsPanel/TransactionPanel dkk (bug 13 September
+    // 2026, "diseluruh menu sales" fetch dobel) -- `t` cuma format pesan
+    // error, bukan penentu data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleDelete(item: StorageFileItem) {
     const confirmText = t("dashboard.components.storageFilesPanel.confirmDeleteText").replace("{name}", item.product_name);

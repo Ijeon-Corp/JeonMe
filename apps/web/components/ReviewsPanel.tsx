@@ -30,7 +30,13 @@ export default function ReviewsPanel() {
     listReviews()
       .then(setReviews)
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.reviewsPanel.loadError")));
-  }, [t]);
+    // Bug ditemukan 13 September 2026 (laporan pengguna: "diseluruh menu
+    // sales" fetch dobel) -- `t` cuma dipakai format pesan error di
+    // .catch(), bukan penentu apa yang di-fetch. Pola sama persis
+    // ditemukan & diperbaiki di TransactionPanel/StorageFilesPanel/
+    // WebhookEventsPanel/ShopSettingsPanel (semua tab menu Jualan).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleToggleHidden(review: ProductReview) {
     const next = !review.is_hidden;

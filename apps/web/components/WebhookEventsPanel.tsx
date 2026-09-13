@@ -20,7 +20,11 @@ export default function WebhookEventsPanel() {
     listWebhookEvents()
       .then(setEvents)
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.webhookEventsPanel.loadError")));
-  }, [t]);
+    // Sama seperti ReviewsPanel/TransactionPanel dkk (bug 13 September
+    // 2026, "diseluruh menu sales" fetch dobel) -- `t` cuma format pesan
+    // error, bukan penentu data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (events === null) {
     return <PageSkeleton />;
