@@ -160,47 +160,27 @@ const DESIGN_SECTION_ENTRIES: [BuilderDesignSection, string][] = [
   ["stiker", "dashboard.components.produkPageEditor.designTabs.stiker"],
 ];
 
-// stripHtml/truncate -- redesain total (permintaan langsung pengguna 10
-// September 2026, "tidak perlu tampilkan teks component nya tetapi hanya
-// isi dari component nya saja"): blok "text" sekarang HTML (RichTextEditor),
-// preview di tree HARUS teks polos ringkas, bukan markup mentah ataupun
-// nama tipe generik "Text".
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-function truncate(s: string, n: number): string {
-  return s.length > n ? `${s.slice(0, n).trimEnd()}…` : s;
-}
-
-// previewLabelFor -- pengganti `label` lama (SELALU nama tipe generik utk
-// blok tanpa `title`, keluhan langsung pengguna): "text" tampilkan cuplikan
-// ISI, blok berbasis daftar (faq/list/gallery/image_slider) tampilkan
-// JUMLAH item -- tipe lain (button/video/embed_link/dst) SUDAH benar
-// (title terisi begitu pengguna mengisinya), fallback nama tipe generik
-// HANYA kalau benar-benar belum diisi sama sekali, sama seperti sebelumnya.
+// previewLabelFor -- riwayat perbaikan bolak-balik di titik yang SAMA
+// PERSIS (baca dulu sebelum mengubah lagi kalau ada laporan baru):
+// (1) awalnya SELALU nama tipe generik; (2) 10 September 2026 diubah
+// utk "text" tampilkan cuplikan ISI ("tidak perlu tampilkan teks
+// component nya tetapi hanya isi dari component nya saja"); (3) 12
+// September 2026 blok daftar (produk/faq/list/gallery/image_slider)
+// dikembalikan ke nama tipe generik ("harusnya teks yang muncul itu
+// teks jenis blok nya"); (4) 13 September 2026 (permintaan ini,
+// screenshot tree menunjukkan campuran judul kustom & cuplikan isi):
+// "nama nama blok ini harusnya itu nama tiap blok bukan nama tiap isi
+// dari blok" -- SEMUA blok, TERMASUK "text", sekarang SELALU nama tipe
+// generik. `node.title` (isi kustom yg diketik kreator) TIDAK LAGI
+// dipakai sama sekali di tree ini -- baris (3) sudah menghapus itu utk
+// sebagian tipe, permintaan ini menuntaskannya utk SEMUA tipe termasuk
+// "text" yang tadinya masih pengecualian.
 function previewLabelFor(node: BuilderTreeNode, t: (key: string) => string): string {
   if (node.kind === "column-slot") {
     const lastSeg = node.path[node.path.length - 1];
     return `${t("dashboard.pages.linksBuilder.columnLabel")} ${lastSeg && lastSeg.kind === "column" ? lastSeg.index + 1 : ""}`;
   }
-  const generic = () => node.title || t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
-  switch (node.blockType) {
-    // "text" TETAP tampilkan cuplikan ISI (bukan nama tipe generik) --
-    // SATU-SATUNYA pengecualian, karena isinya sendiri (bukan sekadar
-    // jumlah item) langsung berguna dibaca sekilas di tree.
-    case "text": {
-      const plain = stripHtml((node.blockData?.text as string) ?? "");
-      return plain ? truncate(plain, 40) : t("dashboard.pages.linksBuilder.textEmptyPreview");
-    }
-    // produk/faq/list/gallery/image_slider -- perbaikan langsung pengguna
-    // 12 September 2026 ("harusnya teks yang muncul itu teks jenis blok
-    // nya"): SEBELUMNYA tampilkan ringkasan jumlah item ("2 questions"/
-    // "2 Products"/"2 photos") -- kreator lebih suka lihat NAMA JENIS
-    // BLOK-nya sekilas (jatuh ke `generic()` di bawah, SAMA seperti
-    // button/video/embed_link/dst yang sudah begitu sejak awal).
-    default:
-      return generic();
-  }
+  return t(`dashboard.components.builderAddComponentModal.${TYPE_LABEL_KEY[node.blockType ?? ""] ?? "typeText"}`);
 }
 
 // FaqItemsEditor -- Canvas Page Builder Fase 2 (permintaan langsung

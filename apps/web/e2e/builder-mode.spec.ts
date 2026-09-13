@@ -8,15 +8,20 @@ import { registerAndLogin, TEST_IMAGE_PNG_BASE64 } from "./fixtures";
 // murni lokal, baru benar-benar tersimpan ke server begitu tombol
 // "Simpan"/"Simpan & Terbitkan" diklik -- lihat saveDraft di bawah & commitSave,
 // app/builder/[pageId]/page.tsx), blok "Teks" jadi rich-text sungguhan
-// (RichTextEditor.tsx/TipTap, lihat richTextEditor di bawah), label baris
-// tree blok Teks/FAQ/List/Gallery/Image Slider berubah jadi cuplikan ISI
-// begitu terisi (previewLabelFor, BuilderLeftPanel.tsx) BUKAN nama tipe
-// generik lagi selama masih kosong. Pengecualian: upload gambar (foto/
-// gallery) TETAP langsung ke server terlepas status draft (ensureRootPersisted
-// meng-create root yang masih "temp-..." secara diam-diam kalau perlu) --
-// jadi bagian test yang upload lalu langsung reload TETAP valid tanpa perlu
-// Simpan dulu, tapi edit TEKS/judul/url/reorder/hapus WAJIB diikuti Simpan
-// sebelum reload/pindah ke halaman publik, kalau tidak datanya hilang.
+// (RichTextEditor.tsx/TipTap, lihat richTextEditor di bawah). Label baris
+// tree SEKARANG SELALU nama tipe generik blok itu (previewLabelFor,
+// BuilderLeftPanel.tsx) -- riwayat sempat berubah jadi cuplikan ISI blok
+// Teks/FAQ/List/Gallery/Image Slider begitu terisi (10 & 12 September
+// 2026), tapi 13 September 2026 dikembalikan permanen ke nama tipe
+// generik utk SEMUA tipe termasuk Teks ("nama nama blok ini harusnya itu
+// nama tiap blok bukan nama tiap isi dari blok") -- lihat komentar
+// lengkap di previewLabelFor sebelum mengubah lagi. Pengecualian: upload
+// gambar (foto/gallery) TETAP langsung ke server terlepas status draft
+// (ensureRootPersisted meng-create root yang masih "temp-..." secara diam-
+// diam kalau perlu) -- jadi bagian test yang upload lalu langsung reload
+// TETAP valid tanpa perlu Simpan dulu, tapi edit TEKS/judul/url/reorder/
+// hapus WAJIB diikuti Simpan sebelum reload/pindah ke halaman publik,
+// kalau tidak datanya hilang.
 //
 // Pola dasar test TIDAK berubah dari sebelumnya: alur dashboard penuh lewat
 // UI SUNGGUHAN, verifikasi reload (bukti tersimpan di server, bukan cuma
@@ -34,6 +39,16 @@ async function saveDraft(page: Page) {
 // cuma satu blok terbuka sekaligus), aman dicari tanpa scoping tambahan.
 function richTextEditor(page: Page) {
   return page.locator('[contenteditable="true"]');
+}
+
+// deleteBlock -- Fase 8 (12 September 2026) memindahkan "Hapus blok ini"
+// ke dalam menu "..." per-baris (duplicate/delete), BUKAN lagi tombol
+// langsung tampil begitu blok dipilih -- klik dulu tombol "Menu blok"
+// (aria-label, SATU per baris tree) tepat di sebelah baris berlabel
+// `label`, baru "Hapus blok ini" muncul di dropdown-nya.
+async function deleteBlock(page: Page, label: string) {
+  await page.getByRole("button", { name: label, exact: true }).locator("..").getByLabel("Menu blok").click();
+  await page.getByRole("button", { name: "Hapus blok ini" }).click();
 }
 
 test.describe("Canvas Page Builder", () => {
@@ -69,9 +84,10 @@ test.describe("Canvas Page Builder", () => {
     // Menambah komponen TIDAK otomatis memilihnya (selection tetap di
     // container induk) -- klik baris barunya di pohon dulu sebelum editor
     // rich-text muncul IN-PLACE (accordion, redesain total 10 September
-    // 2026). Baris blok Teks yang MASIH KOSONG berlabel "(Belum ada teks)"
-    // (previewLabelFor, BuilderLeftPanel.tsx) -- BUKAN "Teks" lagi.
-    await page.getByText("(Belum ada teks)").click({ timeout: 10000 });
+    // 2026). Baris blok Teks berlabel "Teks" (nama tipe generik,
+    // previewLabelFor) baik kosong maupun sudah terisi -- lihat catatan di
+    // atas file ini soal riwayat perubahan label ini.
+    await page.getByRole("button", { name: "Teks", exact: true }).click({ timeout: 10000 });
     await richTextEditor(page).click();
     await page.keyboard.type("Halo dari kolom pertama!");
     // Draft SEKARANG murni lokal -- tekan Simpan & tunggu toast sukses
@@ -80,10 +96,10 @@ test.describe("Canvas Page Builder", () => {
     await saveDraft(page);
 
     // Reload -- pastikan tersimpan di server (block_data bersarang di baris
-    // root Section), bukan cuma state lokal. Label baris pohon SEKARANG
-    // cuplikan isi teks itu sendiri, bukan "Teks" lagi.
+    // root Section), bukan cuma state lokal. Label baris pohon TETAP "Teks"
+    // (nama tipe generik), bukan cuplikan isi teksnya.
     await page.reload();
-    const textRow = page.getByRole("button", { name: "Halo dari kolom pertama!", exact: true });
+    const textRow = page.getByRole("button", { name: "Teks", exact: true });
     await expect(textRow).toBeVisible({ timeout: 10000 });
     await textRow.click();
     await expect(richTextEditor(page)).toHaveText("Halo dari kolom pertama!", { timeout: 10000 });
@@ -103,7 +119,7 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "Pemisah", exact: true }).click();
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).toBeVisible({ timeout: 10000 });
 
-    const textHandleNested = page.getByRole("button", { name: "Halo dari kolom pertama!", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
+    const textHandleNested = page.getByRole("button", { name: "Teks", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
     const dividerHandleNested = page.getByRole("button", { name: "Pemisah", exact: true }).locator("..").getByLabel("Seret untuk mengurutkan");
     const textBoxBefore = await textHandleNested.boundingBox();
     const dividerBoxBefore = await dividerHandleNested.boundingBox();
@@ -131,8 +147,7 @@ test.describe("Canvas Page Builder", () => {
     // "Pemisah" bakal ganda begitu Pemisah ROOT ditambah di bawah. Simpan
     // dulu supaya penghapusan ini benar-benar tersimpan sebelum navigasi
     // penuh (page.goto) di bawah membaca ulang dari server.
-    await page.getByRole("button", { name: "Pemisah", exact: true }).click();
-    await page.getByRole("button", { name: "Hapus blok ini" }).click();
+    await deleteBlock(page, "Pemisah");
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).not.toBeVisible();
     await saveDraft(page);
 
@@ -183,8 +198,7 @@ test.describe("Canvas Page Builder", () => {
     expect(tombolBoxReload!.y).toBeLessThan(pemisahBoxReload!.y);
 
     // Hapus blok Pemisah root (lewat deleteLink saat Simpan ditekan).
-    await page.getByRole("button", { name: "Pemisah", exact: true }).click();
-    await page.getByRole("button", { name: "Hapus blok ini" }).click();
+    await deleteBlock(page, "Pemisah");
     await expect(page.getByRole("button", { name: "Pemisah", exact: true })).not.toBeVisible();
     await saveDraft(page);
 
@@ -237,8 +251,11 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "FAQ", exact: true }).last().click();
     await page.getByText("Tambah Pertanyaan").click();
     await page.getByPlaceholder("Pertanyaan").fill("Apa ini?");
-    await page.getByPlaceholder("Jawaban").fill("Ini FAQ builder Fase 2.");
-    await page.getByPlaceholder("Jawaban").blur();
+    // Jawaban FAQ -- rich text (susulan 12 September 2026), tidak lagi
+    // input placeholder "Jawaban" biasa -- lihat FaqItemsEditor,
+    // BuilderLeftPanel.tsx. Satu-satunya contenteditable di titik ini.
+    await richTextEditor(page).click();
+    await page.keyboard.type("Ini FAQ builder Fase 2.");
     await page.waitForTimeout(700);
 
     // ---- ROOT: "Foto" (image) -- upload foto tunggal ----
@@ -271,8 +288,12 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "Embed Link", exact: true }).last().click();
     await page.getByPlaceholder("Judul kartu").fill("Kartu Embed");
     await page.getByPlaceholder("https://... (opsional)").fill("https://example.com/promo");
-    await page.getByPlaceholder("Deskripsi singkat (opsional)").fill("Deskripsi embed link.");
-    await page.getByPlaceholder("Deskripsi singkat (opsional)").blur();
+    // Deskripsi Embed Link -- rich text (susulan 12 September 2026), tidak
+    // lagi input placeholder "Deskripsi singkat (opsional)" biasa -- lihat
+    // BuilderLeftPanel.tsx blok "embed_link". Satu-satunya contenteditable
+    // di titik ini.
+    await richTextEditor(page).click();
+    await page.keyboard.type("Deskripsi embed link.");
     await page.waitForTimeout(700);
 
     // ---- ROOT: "Image Grid" (alias block_type "gallery") -- 1 foto ----
@@ -412,7 +433,11 @@ test.describe("Canvas Page Builder", () => {
     await page.getByRole("button", { name: "Tambah Item" }).click();
     await page.waitForTimeout(700);
     await page.getByPlaceholder("Nama").fill("Budi Santoso");
-    await page.getByPlaceholder("Kutipan/testimoni").fill("Produk ini sangat membantu bisnis saya!");
+    // Kutipan/testimoni -- rich text (susulan 12 September 2026), tidak lagi
+    // input placeholder biasa -- lihat ListItemsEditor.tsx. Satu-satunya
+    // contenteditable di titik ini.
+    await richTextEditor(page).click();
+    await page.keyboard.type("Produk ini sangat membantu bisnis saya!");
     await page.getByPlaceholder("Peran/perusahaan (opsional)").fill("CEO, Budi Corp");
     await page.getByPlaceholder("Peran/perusahaan (opsional)").blur();
     await page.waitForTimeout(700);
@@ -459,15 +484,15 @@ test.describe("Canvas Page Builder", () => {
     // ---- Reload -- pastikan semuanya tersimpan di server ----
     await page.reload();
     await expect(treeRow("Countdown")).toBeVisible({ timeout: 10000 });
-    // List & Image Slider SEKARANG berlabel jumlah isi ("1 item"/"1 foto"),
-    // BUKAN nama tipe generik lagi -- previewLabelFor, BuilderLeftPanel.tsx
-    // (redesain total 10 September 2026, isinya sudah terisi di titik ini).
-    await expect(treeRow("1 item")).toBeVisible();
-    await expect(treeRow("1 foto")).toBeVisible();
+    // List & Image Slider TETAP berlabel nama tipe generik walau sudah
+    // terisi -- previewLabelFor, BuilderLeftPanel.tsx (13 September 2026,
+    // lihat catatan di atas file ini).
+    await expect(treeRow("Card/List/Testimoni")).toBeVisible();
+    await expect(treeRow("Image Slider")).toBeVisible();
     await expect(treeRow("Embed")).toBeVisible();
     await expect(treeRow("Lokasi/Maps")).toBeVisible();
 
-    await treeRow("1 item").click();
+    await treeRow("Card/List/Testimoni").click();
     // style "testimony" bertahan setelah reload -- bukti langsung bug
     // merge block_data (handleUpdateNode cabang root) sudah diperbaiki,
     // bukan cuma "items tersimpan" tanpa "style" ikut hilang diam-diam.

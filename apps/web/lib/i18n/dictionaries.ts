@@ -1100,19 +1100,6 @@ export const dictionaries = {
           publishSuccess: "Tersimpan & diterbitkan.",
           unsavedChangesWarning: "Ada perubahan yang belum disimpan. Yakin ingin keluar?",
           renameTitlePlaceholder: "Nama halaman",
-          // textEmptyPreview -- redesain total (permintaan langsung pengguna
-          // 10 September 2026, "tidak perlu tampilkan teks component nya
-          // tetapi hanya isi dari component nya saja"): preview ISI blok
-          // "text" di tree kiri, pengganti nama tipe generik ("Text") yang
-          // SEBELUMNYA selalu tampil kalau field `title` blok itu kosong.
-          // Susulan 12 September 2026 ("harusnya teks yang muncul itu teks
-          // jenis blok nya"): "text" TETAP pengecualian ini (isinya sendiri
-          // langsung berguna dibaca sekilas), tapi FAQ/List/Gallery/Image
-          // Slider/Produk DIKEMBALIKAN ke nama tipe generik biasa (lihat
-          // previewLabelFor, BuilderLeftPanel.tsx) -- faqCount/listCount/
-          // photoCount/produkCount/produkEmptyPreview yang dulu dipakai di
-          // sana DIHAPUS, sudah tidak terpakai di mana pun.
-          textEmptyPreview: "(Belum ada teks)",
           // richText.* -- toolbar RichTextEditor.tsx (TipTap), blok "text"
           // (permintaan langsung pengguna 10 September 2026, "bangun
           // rich-text sungguhan", dikonfirmasi via AskUserQuestion).
@@ -4151,7 +4138,6 @@ export const dictionaries = {
           publishSuccess: "Saved & published.",
           unsavedChangesWarning: "You have unsaved changes. Leave anyway?",
           renameTitlePlaceholder: "Page name",
-          textEmptyPreview: "(No text yet)",
           richText: {
             bold: "Bold",
             italic: "Italic",
