@@ -12,6 +12,7 @@ import (
 
 	"github.com/jeonme/api/internal/database"
 	"github.com/jeonme/api/internal/midtrans"
+	"github.com/jeonme/api/internal/payment"
 )
 
 func newTestCheckoutHandler(t *testing.T, serverKey string) (*CheckoutHandler, *AuthHandler) {
@@ -35,7 +36,7 @@ func newTestCheckoutHandler(t *testing.T, serverKey string) (*CheckoutHandler, *
 	// Storage & Queue sengaja nil -- test checkout fokus ke logika
 	// order/pembayaran, bukan upload file atau notifikasi async (yang
 	// masing-masing sudah punya soft-fail log-only saat nil).
-	checkout := NewCheckoutHandler(db, midtransClient, serverKey, "http://localhost:3000", 5.0, nil, nil, nil, "")
+	checkout := NewCheckoutHandler(db, midtransClient, payment.NewMidtransGateway(midtransClient), serverKey, "http://localhost:3000", 5.0, nil, nil, nil, "")
 
 	return checkout, NewAuthHandler(db, rdb, "test-secret", "test")
 }

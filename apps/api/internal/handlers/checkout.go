@@ -19,7 +19,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jeonme/api/internal/audit"
+	"github.com/jeonme/api/internal/duitku"
 	"github.com/jeonme/api/internal/midtrans"
+	"github.com/jeonme/api/internal/payment"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/storage"
 )
@@ -38,8 +40,15 @@ var ErrOrderNotFoundForPSPReference = errors.New("checkout: order tidak ditemuka
 // notifikasi order.paid (REQ-F-405) akan dilewati dengan log peringatan,
 // BUKAN membuat webhook PSP gagal, sama seperti pola soft-fail Storage.
 type CheckoutHandler struct {
-	DB                 *pgxpool.Pool
-	Midtrans           *midtrans.Client
+	DB       *pgxpool.Pool
+	Midtrans *midtrans.Client
+	// PaymentGateway -- kerangka multi-gateway (13 September 2026, lihat
+	// internal/payment/gateway.go): dipakai Create/Webhook/
+	// ReconcilePendingOrders (gateway-agnostic). `Midtrans` di atas TETAP
+	// ADA terpisah (BUKAN duplikat) -- RefundOrder & seluruh
+	// SubscriptionHandler TETAP langsung ke Midtrans konkret, di luar
+	// cakupan abstraksi ini, lihat catatan lingkup di payment/gateway.go.
+	PaymentGateway     payment.Gateway
 	MidtransServerKey  string
 	PublicWebURL       string
 	PlatformFeePercent float64
@@ -57,9 +66,9 @@ type CheckoutHandler struct {
 	AppEnv string
 }
 
-func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, midtransServerKey, publicWebURL string, platformFeePercent float64, s3 *storage.Client, queueClient *asynq.Client, rdb *redis.Client, appEnv string) *CheckoutHandler {
+func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, gateway payment.Gateway, midtransServerKey, publicWebURL string, platformFeePercent float64, s3 *storage.Client, queueClient *asynq.Client, rdb *redis.Client, appEnv string) *CheckoutHandler {
 	return &CheckoutHandler{
-		DB: db, Midtrans: midtransClient, MidtransServerKey: midtransServerKey,
+		DB: db, Midtrans: midtransClient, PaymentGateway: gateway, MidtransServerKey: midtransServerKey,
 		PublicWebURL: publicWebURL, PlatformFeePercent: platformFeePercent,
 		Storage: s3, Queue: queueClient, RDB: rdb, AppEnv: appEnv,
 	}
@@ -389,7 +398,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		}
 	}
 
-	txn, err := h.Midtrans.CreateTransaction(ctx, midtrans.CreateTransactionRequest{
+	txn, err := h.PaymentGateway.CreateTransaction(ctx, payment.CreateTransactionInput{
 		OrderID:           externalID,
 		GrossAmountIDR:    finalAmountIDR,
 		ItemName:          fmt.Sprintf("Jeonme: %s", productName),
@@ -397,7 +406,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 		FinishRedirectURL: h.PublicWebURL + "/checkout/" + orderID,
 	})
 	if err != nil {
-		if err == midtrans.ErrNotConfigured {
+		if errors.Is(err, midtrans.ErrNotConfigured) || errors.Is(err, duitku.ErrNotConfigured) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "pembayaran belum dikonfigurasi, hubungi admin"})
 			return
 		}
@@ -412,7 +421,7 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"order_id":    orderID,
-		"invoice_url": txn.RedirectURL,
+		"invoice_url": txn.PaymentURL,
 	})
 }
 
@@ -1042,7 +1051,50 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := h.ApplyOrderStatus(ctx, payload.OrderID, orderStatus, payload.PaymentType, payload.TransactionID, body); err != nil {
+	if err := h.ApplyOrderStatus(ctx, "midtrans", payload.OrderID, orderStatus, payload.PaymentType, payload.TransactionID, body); err != nil {
+		if errors.Is(err, ErrOrderNotFoundForPSPReference) {
+			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "webhook diproses"})
+}
+
+// DuitkuWebhook -- kerangka 13 September 2026 (lihat internal/payment/
+// gateway.go & internal/duitku/client.go). Route TERPISAH dari Webhook
+// (Midtrans) di atas, BUKAN cabang if/else di dalam fungsi yang sama --
+// format payload (form-urlencoded vs JSON) & skema signature-nya beda
+// total, memaksakan keduanya jadi satu fungsi cuma akan bikin percabangan
+// membingungkan tanpa manfaat nyata. TIDAK ADA logika pendaftaran
+// langganan di sini (beda dari Webhook Midtrans) -- Langganan Premium
+// TETAP Midtrans-only sesuai keputusan lingkup di payment/gateway.go,
+// Duitku tidak pernah menerima order_id pendaftaran langganan sama sekali.
+func (h *CheckoutHandler) DuitkuWebhook(c *gin.Context) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "gagal membaca payload"})
+		return
+	}
+
+	notif, err := h.PaymentGateway.ParseWebhook(body)
+	if err != nil {
+		log.Printf("checkout: webhook duitku DITOLAK -- %v (IP=%s)", err, c.ClientIP())
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "signature webhook tidak valid"})
+		return
+	}
+
+	if !notif.Recognized {
+		c.JSON(http.StatusOK, gin.H{"message": "diterima, tidak ada aksi untuk status ini"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.ApplyOrderStatus(ctx, "duitku", notif.OrderID, notif.OrderStatus, notif.PaymentType, notif.TransactionID, body); err != nil {
 		if errors.Is(err, ErrOrderNotFoundForPSPReference) {
 			c.JSON(http.StatusOK, gin.H{"message": "order tidak ditemukan, diabaikan"})
 			return
@@ -1058,12 +1110,17 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 // ledger + enqueue notifikasi) diekstrak dari Webhook 10 September 2026
 // supaya bisa dipakai ULANG oleh ReconcilePendingOrders TANPA duplikasi
 // logika finansial yang sensitif ini -- SATU sumber kebenaran dipakai baik
-// saat notifikasi webhook Midtrans benar-benar tiba MAUPUN saat
-// reconciliation job mengecek ulang status langsung ke Midtrans (kasus
-// notifikasi webhook hilang -- lihat catatan lengkap di
-// ReconcilePendingOrders).
+// saat notifikasi webhook (Midtrans MAUPUN Duitku, lihat DuitkuWebhook)
+// benar-benar tiba MAUPUN saat reconciliation job mengecek ulang status
+// langsung ke gateway (kasus notifikasi webhook hilang -- lihat catatan
+// lengkap di ReconcilePendingOrders).
 //
-// pspOrderID -- order_id versi Midtrans (kolom orders.psp_reference),
+// psp -- nama gateway yang melapor ("midtrans"/"duitku"), ditulis apa
+// adanya ke kolom payments.psp (SEBELUMNYA hardcoded literal 'midtrans' di
+// SQL, sebelum kerangka multi-gateway 13 September 2026 -- lihat
+// internal/payment/gateway.go).
+//
+// pspOrderID -- order_id versi gateway (kolom orders.psp_reference),
 // BUKAN orders.id internal. rawPayload -- disimpan APA ADANYA ke
 // payments.raw_webhook_payload utk audit (body webhook mentah kalau
 // dipanggil dari Webhook, atau JSON respons GetTransactionStatus kalau
@@ -1072,7 +1129,7 @@ func (h *CheckoutHandler) Webhook(c *gin.Context) {
 // Mengembalikan ErrOrderNotFoundForPSPReference (BUKAN error sungguhan,
 // lihat catatan di variabelnya) kalau pspOrderID tidak cocok order mana
 // pun.
-func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, pspOrderID, orderStatus, paymentType, pspTransactionID string, rawPayload []byte) error {
+func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID, orderStatus, paymentType, pspTransactionID string, rawPayload []byte) error {
 	var orderID, productID, productUserID, buyerEmail, deliveryMethod string
 	var amountIDR, platformFeeIDR, affiliateCommissionIDR int64
 	var affiliateID *string
@@ -1103,9 +1160,9 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, pspOrderID, orde
 	// order/ledger lagi.
 	res, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, order_id, psp, method, psp_transaction_id, status, raw_webhook_payload, verified_at)
-		VALUES ($1, $2, 'midtrans', $3, $4, $5, $6, now())
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 		ON CONFLICT (psp_transaction_id) WHERE psp_transaction_id != '' DO NOTHING
-	`, uuid.NewString(), orderID, paymentType, pspTransactionID, orderStatus, rawPayload)
+	`, uuid.NewString(), orderID, psp, paymentType, pspTransactionID, orderStatus, rawPayload)
 	if err != nil {
 		return fmt.Errorf("gagal menyimpan pembayaran")
 	}
@@ -1327,16 +1384,26 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, pspOrderID, orde
 // scheduler, lihat queue.TypeOrderReconcile & main.go runWorker) -- scan
 // order yang SUDAH cukup lama (>5 menit, kasih waktu webhook normal tiba
 // dulu SEBELUM dianggap "mungkin hilang") TAPI belum terlalu lama (<2
-// hari -- setelah itu transaksi Midtrans sendiri sudah expire, tidak ada
+// hari -- setelah itu transaksi PSP sendiri sudah expire, tidak ada
 // gunanya dicek berulang selamanya), cek ulang statusnya LANGSUNG ke
-// Midtrans (GetTransactionStatus, SUMBER KEBENARAN, bukan menunggu
-// notifikasi lagi), lalu proses lewat ApplyOrderStatus -- fungsi yang SAMA
-// PERSIS dipakai Webhook, supaya ledger/notifikasi TIDAK PERNAH diproses
-// beda antara jalur webhook normal vs jalur pemulihan ini. Kegagalan APA
-// PUN di sini (satu order gagal dicek, Midtrans API down) di-log & lanjut
-// ke order berikutnya -- TIDAK BOLEH menghentikan seluruh scan.
+// gateway AKTIF (h.PaymentGateway.GetTransactionStatus, SUMBER KEBENARAN,
+// bukan menunggu notifikasi lagi -- lihat internal/payment/gateway.go),
+// lalu proses lewat ApplyOrderStatus -- fungsi yang SAMA PERSIS dipakai
+// Webhook, supaya ledger/notifikasi TIDAK PERNAH diproses beda antara
+// jalur webhook normal vs jalur pemulihan ini. Kegagalan APA PUN di sini
+// (satu order gagal dicek, API gateway down) di-log & lanjut ke order
+// berikutnya -- TIDAK BOLEH menghentikan seluruh scan.
+//
+// Keterbatasan disengaja (kerangka multi-gateway, 13 September 2026):
+// fungsi ini SELALU polling gateway yang SEDANG AKTIF (PAYMENT_GATEWAY_
+// PROVIDER saat ini), BUKAN gateway yang benar-benar dipakai saat order
+// itu dibuat -- kalau providernya PERNAH diganti sementara ada order
+// pending lama dari provider SEBELUMNYA, order itu tidak akan pernah
+// ketemu (gateway baru tidak pernah punya referensinya). Diterima sebagai
+// batasan kerangka awal, bukan terlewat -- lihat catatan lingkup di
+// payment/gateway.go.
 func (h *CheckoutHandler) ReconcilePendingOrders(ctx context.Context) {
-	if h.Midtrans == nil {
+	if h.PaymentGateway == nil {
 		return
 	}
 	rows, err := h.DB.Query(ctx, `
@@ -1359,19 +1426,18 @@ func (h *CheckoutHandler) ReconcilePendingOrders(ctx context.Context) {
 	rows.Close()
 
 	for _, pspOrderID := range pspOrderIDs {
-		status, err := h.Midtrans.GetTransactionStatus(ctx, pspOrderID)
+		status, err := h.PaymentGateway.GetTransactionStatus(ctx, pspOrderID)
 		if err != nil {
 			// Wajar utk transaksi yang benar-benar belum pernah dibayar
-			// sama sekali (Midtrans balas 404) -- bukan kegagalan yang
-			// perlu dicatat, cukup lewati ke order berikutnya.
+			// sama sekali (gateway balas 404/tidak ditemukan) -- bukan
+			// kegagalan yang perlu dicatat, cukup lewati ke order berikutnya.
 			continue
 		}
-		orderStatus, recognized := midtrans.StatusToOrderStatus(status.TransactionStatus, status.FraudStatus)
-		if !recognized {
+		if !status.Recognized {
 			continue
 		}
 		rawStatus, _ := json.Marshal(status)
-		if err := h.ApplyOrderStatus(ctx, pspOrderID, orderStatus, status.PaymentType, status.TransactionID, rawStatus); err != nil && !errors.Is(err, ErrOrderNotFoundForPSPReference) {
+		if err := h.ApplyOrderStatus(ctx, h.PaymentGateway.Name(), pspOrderID, status.OrderStatus, status.PaymentType, status.TransactionID, rawStatus); err != nil && !errors.Is(err, ErrOrderNotFoundForPSPReference) {
 			log.Printf("checkout: reconcile gagal memproses order %s: %v", pspOrderID, err)
 		}
 	}

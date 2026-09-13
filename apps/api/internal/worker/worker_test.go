@@ -13,6 +13,7 @@ import (
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/midtrans"
+	"github.com/jeonme/api/internal/payment"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/whatsapp"
 )
@@ -53,7 +54,8 @@ func newTestHandler(t *testing.T) *Handler {
 	// lengkap di Handler.Checkout, worker.go); MidtransServerKey/Queue
 	// kosong sengaja -- test worker ini tidak menguji reconcile sungguhan
 	// ke Midtrans (butuh kredensial asli), cukup membuktikan wiring.
-	checkoutHandler := handlers.NewCheckoutHandler(db, midtrans.NewClient("", false), "", "", 0, nil, nil, nil, "")
+	midtransClient := midtrans.NewClient("", false)
+	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, payment.NewMidtransGateway(midtransClient), "", "", 0, nil, nil, nil, "")
 	return NewHandler(db, rdb, mailerClient, whatsappClient, "http://localhost:8080/api/v1", 3, []byte("jeonme-dev-encryption-key-32-ok!"), checkoutHandler)
 }
 

@@ -30,6 +30,21 @@ type Config struct {
 	MidtransClientKey    string
 	MidtransIsProduction bool
 
+	// Duitku -- payment gateway KEDUA (kerangka, permintaan langsung
+	// pengguna 13 September 2026: "buatkan kerangka payment gateway
+	// menggunakan duitku, tapi tetep keep midtrans untuk transaksi
+	// sandbox"). PaymentGatewayProvider memilih gateway AKTIF untuk alur
+	// checkout sekali-bayar (lihat internal/payment/gateway.go) --
+	// default "midtrans" kalau env var kosong/tidak diset SAMA SEKALI,
+	// jadi tidak menyalakan diri sendiri tanpa disengaja di lingkungan mana
+	// pun (termasuk staging/sandbox, yang memang harus TETAP Midtrans).
+	// Langganan Premium (subscription.go) TIDAK ikut toggle ini, TETAP
+	// Midtrans-only -- lihat catatan lingkup lengkap di payment/gateway.go.
+	DuitkuMerchantCode     string
+	DuitkuAPIKey           string
+	DuitkuIsProduction     bool
+	PaymentGatewayProvider string
+
 	// Google OAuth (login/register via Google, permintaan langsung
 	// pengguna 13 Agustus 2026) -- alur Authorization Code penuh, lihat
 	// internal/googleoauth. Kosong secara default (pola soft-fail sama
@@ -183,6 +198,11 @@ func Load() *Config {
 		MidtransServerKey:    getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransClientKey:    getEnv("MIDTRANS_CLIENT_KEY", ""),
 		MidtransIsProduction: getEnv("MIDTRANS_IS_PRODUCTION", "false") == "true",
+
+		DuitkuMerchantCode:     getEnv("DUITKU_MERCHANT_CODE", ""),
+		DuitkuAPIKey:           getEnv("DUITKU_API_KEY", ""),
+		DuitkuIsProduction:     getEnv("DUITKU_IS_PRODUCTION", "false") == "true",
+		PaymentGatewayProvider: getEnv("PAYMENT_GATEWAY_PROVIDER", "midtrans"),
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),

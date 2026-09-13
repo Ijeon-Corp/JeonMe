@@ -10,6 +10,7 @@ import (
 
 	"github.com/jeonme/api/internal/appleoauth"
 	"github.com/jeonme/api/internal/config"
+	"github.com/jeonme/api/internal/duitku"
 	"github.com/jeonme/api/internal/googleoauth"
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/instagramoauth"
@@ -17,6 +18,7 @@ import (
 	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/moderation"
 	"github.com/jeonme/api/internal/pageimport"
+	"github.com/jeonme/api/internal/payment"
 	"github.com/jeonme/api/internal/storage"
 	"github.com/jeonme/api/internal/tiktokoauth"
 )
@@ -63,7 +65,16 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	socialProof := handlers.NewSocialProofHandler(db, rdb)
 	links := handlers.NewLinksHandler(db, queueClient, rdb, s3)
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
-	checkout := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient, rdb, cfg.AppEnv)
+	// Kerangka multi-gateway (13 September 2026, permintaan langsung
+	// pengguna: "buatkan kerangka payment gateway menggunakan duitku,
+	// tapi tetep keep midtrans untuk transaksi sandbox") -- lihat catatan
+	// lengkap lingkup & alasan di internal/payment/gateway.go.
+	// PaymentGatewayProvider default "midtrans" (config.go) kalau env var
+	// tidak diset, jadi sandbox/staging TETAP Midtrans tanpa perubahan apa
+	// pun kecuali sengaja di-set "duitku".
+	duitkuClient := duitku.NewClient(cfg.DuitkuMerchantCode, cfg.DuitkuAPIKey, cfg.DuitkuIsProduction)
+	paymentGateway := payment.SelectGateway(cfg.PaymentGatewayProvider, midtransClient, duitkuClient, cfg.PublicAPIURL+"/webhooks/duitku")
+	checkout := handlers.NewCheckoutHandler(db, midtransClient, paymentGateway, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, s3, queueClient, rdb, cfg.AppEnv)
 	subscription := handlers.NewSubscriptionHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PremiumMonthlyPriceIDR, cfg.PremiumYearlyPriceIDR)
 	encryptionKey := []byte(cfg.EncryptionKey)
 	socialConnect.EncryptionKey = encryptionKey
@@ -783,6 +794,13 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi
 		// lewat unique constraint psp_transaction_id).
 		api.POST("/webhooks/midtrans", checkout.Webhook)
+		// Duitku -- kerangka multi-gateway 13 September 2026, lihat catatan
+		// lengkap di CheckoutHandler.DuitkuWebhook & payment/gateway.go.
+		// Route ini SELALU terdaftar (bukan hanya kalau provider aktif
+		// "duitku") -- mendaftarkannya bersyarat cuma menambah kerumitan
+		// tanpa manfaat keamanan (tanpa signature Duitku yang valid,
+		// payload ditolak 401 apa pun provider aktifnya).
+		api.POST("/webhooks/duitku", checkout.DuitkuWebhook)
 
 		// Modul Langganan Premium: notifikasi siklus penagihan BERULANG --
 		// endpoint TERPISAH dari webhook order biasa di atas (Midtrans

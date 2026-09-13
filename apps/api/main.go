@@ -15,11 +15,13 @@ import (
 
 	"github.com/jeonme/api/internal/config"
 	"github.com/jeonme/api/internal/database"
+	"github.com/jeonme/api/internal/duitku"
 	"github.com/jeonme/api/internal/handlers"
 	"github.com/jeonme/api/internal/mailer"
 	"github.com/jeonme/api/internal/middleware"
 	"github.com/jeonme/api/internal/midtrans"
 	"github.com/jeonme/api/internal/migrate"
+	"github.com/jeonme/api/internal/payment"
 	"github.com/jeonme/api/internal/queue"
 	"github.com/jeonme/api/internal/routes"
 	"github.com/jeonme/api/internal/storage"
@@ -259,7 +261,15 @@ func runWorker() {
 	queueClient := asynq.NewClient(redisOpt)
 	defer queueClient.Close()
 	midtransClient := midtrans.NewClient(cfg.MidtransServerKey, cfg.MidtransIsProduction)
-	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, nil, queueClient, rdb, cfg.AppEnv)
+	// Kerangka multi-gateway (lihat catatan lengkap di routes.go &
+	// internal/payment/gateway.go) -- worker HARUS memilih gateway yang
+	// SAMA PERSIS dengan proses HTTP server (SelectGateway satu-satunya
+	// titik keputusan, dipanggil identik di kedua tempat) supaya
+	// ReconcilePendingOrders (dijalankan proses worker ini) tidak pernah
+	// polling gateway yang berbeda dari yang benar-benar dipakai order.
+	duitkuClient := duitku.NewClient(cfg.DuitkuMerchantCode, cfg.DuitkuAPIKey, cfg.DuitkuIsProduction)
+	paymentGateway := payment.SelectGateway(cfg.PaymentGatewayProvider, midtransClient, duitkuClient, cfg.PublicAPIURL+"/webhooks/duitku")
+	checkoutHandler := handlers.NewCheckoutHandler(db, midtransClient, paymentGateway, cfg.MidtransServerKey, cfg.PublicWebURL, cfg.PlatformFeePercent, nil, queueClient, rdb, cfg.AppEnv)
 
 	handler := worker.NewHandler(db, rdb, mailerClient, whatsappClient, cfg.PublicAPIURL, cfg.HoldingPeriodDays, []byte(cfg.EncryptionKey), checkoutHandler)
 
