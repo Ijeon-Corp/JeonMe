@@ -489,10 +489,44 @@ function CatalogItemFrame({
   // mengirim satu PATCH penuh. Field title TIDAK butuh ini (input polos,
   // sudah alami di-throttle lewat onBlur).
   const descriptionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // pendingDescription -- bug ditemukan lewat verifikasi Playwright live (14
+  // September 2026, saat memperbaiki test e2e yang menunjukkan gejalanya):
+  // timer debounce di atas TIDAK PERNAH dibatalkan/di-flush kalau komponen
+  // ini unmount (mis. pengguna klik "Kembali"/pindah item SEBELUM 700ms
+  // berlalu) -- setTimeout tetap jalan di background, menembak PATCH
+  // "onUpdateField" BELAKANGAN dgn closure `item`/`value` yang beku dari
+  // SAAT DIJADWALKAN. Kalau di antara itu pengguna sempat commit perubahan
+  // LAIN (field lain, item lain) yang selesai lebih dulu, PATCH basi ini
+  // menimpanya begitu akhirnya menembak -- kehilangan data diam-diam, tanpa
+  // error apa pun. Di-flush SINKRON saat unmount (bukan dibiarkan mengambang
+  // ATAU dibuang) supaya urutan commit tetap sesuai urutan aksi pengguna
+  // yang sesungguhnya, sekaligus tidak kehilangan ketikan yang belum sempat
+  // di-debounce.
+  const pendingDescription = useRef<string | null>(null);
   function scheduleDescriptionSave(value: string) {
     if (descriptionSaveTimer.current) clearTimeout(descriptionSaveTimer.current);
-    descriptionSaveTimer.current = setTimeout(() => onUpdateField("description", value), 700);
+    pendingDescription.current = value;
+    descriptionSaveTimer.current = setTimeout(() => {
+      descriptionSaveTimer.current = null;
+      pendingDescription.current = null;
+      onUpdateField("description", value);
+    }, 700);
   }
+  useEffect(() => {
+    return () => {
+      if (descriptionSaveTimer.current && pendingDescription.current !== null) {
+        clearTimeout(descriptionSaveTimer.current);
+        onUpdateField("description", pendingDescription.current);
+      }
+    };
+    // Flush SEKALI saat unmount instance INI (item/path tetap sepanjang
+    // hidup komponen, lihat catatan arsitektur stack/frame di komponen
+    // induk), bukan tiap kali `onUpdateField` berganti identitas (fungsi
+    // baru tiap render dari induk) -- deps penuh akan menjalankan efek
+    // cleanup ini berulang (dgn `onUpdateField` versi LAMA tiap kali) alih-
+    // alih sekali di akhir hidup komponen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col gap-3">
@@ -628,12 +662,32 @@ function EmbeddedBlockFrame({
   // textSaveTimer -- sama alasan persis descriptionSaveTimer di
   // CatalogItemFrame (lihat catatan lengkap di sana): onUpdate berujung ke
   // PATCH jaringan langsung (autosave, tanpa draft lokal), RichTextEditor
-  // memanggil onChange per ketukan -- perlu di-debounce di sini.
+  // memanggil onChange per ketukan -- perlu di-debounce di sini. Flush saat
+  // unmount JUGA sama alasan persis (bug ditemukan lewat verifikasi
+  // Playwright live, 14 September 2026) -- lihat catatan lengkap di
+  // descriptionSaveTimer/pendingDescription, CatalogItemFrame.
   const textSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingText = useRef<string | null>(null);
   function scheduleTextSave(value: string) {
     if (textSaveTimer.current) clearTimeout(textSaveTimer.current);
-    textSaveTimer.current = setTimeout(() => onUpdate({ block_data: { ...block.block_data, text: value } }), 700);
+    pendingText.current = value;
+    textSaveTimer.current = setTimeout(() => {
+      textSaveTimer.current = null;
+      pendingText.current = null;
+      onUpdate({ block_data: { ...block.block_data, text: value } });
+    }, 700);
   }
+  useEffect(() => {
+    return () => {
+      if (textSaveTimer.current && pendingText.current !== null) {
+        clearTimeout(textSaveTimer.current);
+        onUpdate({ block_data: { ...block.block_data, text: pendingText.current } });
+      }
+    };
+    // Flush SEKALI saat unmount instance INI, lihat catatan lengkap di
+    // descriptionSaveTimer/CatalogItemFrame (alasan sama persis).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
