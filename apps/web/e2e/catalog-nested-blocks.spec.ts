@@ -32,11 +32,21 @@ test.describe("Catalog nested blocks", () => {
     // picker. Harus klik "Kembali" dulu tiap kali sebelum tile picker
     // (dan blok yang sudah ada) tampil lagi utk menambah blok berikutnya.
 
-    // Tambah blok Teks
+    // Tambah blok Teks -- blok "text" tertanam SEKARANG rich-text (TipTap,
+    // commit 4399631 "full parity mode Simple vs Builder"), placeholder
+    // <textarea> "Isi teks" lama sudah tidak ada, ganti contenteditable.
+    // scheduleTextSave (BlockDrilldownEditor.tsx) debounce 700ms sebelum
+    // PATCH sungguhan -- tunggu dulu (pola SAMA PERSIS sudah dipakai utk
+    // Jawaban FAQ di bawah) sebelum "Kembali", kalau tidak timer debounce
+    // yang masih pending bisa menembak PATCH belakangan & menimpa
+    // perubahan blok LAIN yang sudah ditambah sesudahnya (race autosave).
     await page.getByRole("button", { name: "Teks", exact: true }).click();
-    await expect(page.getByPlaceholder("Isi teks")).toBeVisible();
-    await page.getByPlaceholder("Isi teks").fill("Deskripsi lengkap tipe rumah ini.");
-    await page.getByPlaceholder("Isi teks").blur();
+    const textEditor = page.locator('[contenteditable="true"]');
+    await expect(textEditor).toBeVisible();
+    await textEditor.click();
+    await page.keyboard.type("Deskripsi lengkap tipe rumah ini.");
+    await textEditor.blur();
+    await page.waitForTimeout(1500);
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
     // Tambah blok Video
@@ -84,7 +94,7 @@ test.describe("Catalog nested blocks", () => {
     await page.getByRole("button", { name: /Perumahan Tipe A/ }).click();
 
     await page.getByText("Teks", { exact: true }).first().click();
-    await expect(page.getByPlaceholder("Isi teks")).toHaveValue("Deskripsi lengkap tipe rumah ini.", { timeout: 10000 });
+    await expect(page.locator('[contenteditable="true"]')).toHaveText("Deskripsi lengkap tipe rumah ini.", { timeout: 10000 });
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
     await page.getByText("Video", { exact: true }).first().click();

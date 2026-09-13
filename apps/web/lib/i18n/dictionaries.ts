@@ -1182,11 +1182,23 @@ export const dictionaries = {
           legacyLinkHint: "Ikon, kunci, dan jadwal tautan ini masih dikelola di halaman Tautan.",
           legacyBlockHint: "Blok ini dibuat lewat editor lama dan belum bisa diedit di sini -- kelola isinya lewat halaman Tautan.",
           // catalogOpenInLinksPage -- Fase 4 (13 September 2026): blok
-          // "catalog" SEKARANG bisa ditambah dari Builder (root-only), tapi
-          // editor drill-down penuhnya (BlockDrilldownEditor.tsx) belum
-          // diintegrasikan ke Builder -- baris `links` yang sama persis
-          // bisa langsung diisi lewat Mode Simple.
-          catalogOpenInLinksPage: "Buka & isi katalog di halaman Tautan",
+          // "catalog" SEKARANG bisa ditambah dari Builder (root-only).
+          // catalogItems* -- audit ROUND 2 (C10, 14 September 2026): editor
+          // judul+deskripsi per item SEKARANG native di Builder (CatalogItemsEditor,
+          // pola sama FaqItemsEditor) -- SEBELUMNYA panel ini cuma judul blok
+          // + link keluar, jalan buntu total kalau mau isi item apa pun. Foto
+          // & blok tertanam (video/FAQ/lokasi/katalog bersarang) TETAP lewat
+          // BlockDrilldownEditor.tsx di halaman Tautan (catalogOpenInLinksPage,
+          // sekarang berlabel "fitur lanjutan") -- port penuh drill-down itu ke
+          // Builder di luar cakupan perbaikan ini.
+          catalogOpenInLinksPage: "Buka fitur lanjutan (foto & blok tertanam) di halaman Tautan",
+          catalogItemsEmptySubtitle: "Belum ada item",
+          catalogItemsCountSubtitle: "{n} item",
+          catalogItemTitleLabel: "Judul item",
+          catalogItemTitlePlaceholder: "mis. Tipe 36",
+          catalogItemDescriptionLabel: "Deskripsi",
+          catalogAddItem: "Tambah Item",
+          catalogRemoveItem: "Hapus item",
           // produk* -- blok "Produk" (permintaan langsung pengguna 10
           // September 2026, "harusnya ada blok produk").
           produkSelectExisting: "Pilih produk yang sudah ada",
@@ -4264,7 +4276,14 @@ export const dictionaries = {
           dividerNoSettings: "The divider block has no settings.",
           legacyLinkHint: "This link's icon, lock, and schedule are still managed on the Links page.",
           legacyBlockHint: "This block was created with an older editor and can't be edited here yet -- manage it from the Links page.",
-          catalogOpenInLinksPage: "Open & fill in the catalog on the Links page",
+          catalogOpenInLinksPage: "Open advanced features (photos & embedded blocks) on the Links page",
+          catalogItemsEmptySubtitle: "No items yet",
+          catalogItemsCountSubtitle: "{n} items",
+          catalogItemTitleLabel: "Item title",
+          catalogItemTitlePlaceholder: "e.g. Type 36",
+          catalogItemDescriptionLabel: "Description",
+          catalogAddItem: "Add Item",
+          catalogRemoveItem: "Remove item",
           produkSelectExisting: "Select an existing product",
           produkCreateNew: "Create New Product",
           produkNoProducts: "No products yet -- create your first one.",

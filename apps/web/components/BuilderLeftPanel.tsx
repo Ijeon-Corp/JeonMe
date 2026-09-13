@@ -55,6 +55,7 @@ import {
   uploadBuilderMediaImage,
   uploadFileBlock,
   uploadGalleryImage,
+  type CatalogItem,
   type DashboardProduct,
   type EmbeddedBuilderBlock,
   type LinkItem,
@@ -280,6 +281,75 @@ function FaqItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (
         >
           <IconPlus className="h-3.5 w-3.5" />
           {t("dashboard.pages.linksBuilder.faqAddQuestion")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// CatalogItemsEditor -- audit ROUND 2 (C10, 14 September 2026): SEBELUMNYA
+// blok "catalog" di Builder cuma menampilkan judul blok + link keluar ke
+// halaman Tautan, jalan buntu total kalau mau isi item apa pun dari dalam
+// Builder sendiri. Pola SAMA PERSIS FaqItemsEditor di atas (kartu bernomor,
+// key `${i}-${items.length}` supaya baris yang bergeser index-nya tidak
+// menampilkan teks basi dari baris lain, defaultValue+onBlur utk title,
+// RichTextEditor utk deskripsi) -- CAKUPAN SENGAJA dibatasi ke judul+
+// deskripsi teks saja, TIDAK termasuk foto (`images[]`) atau blok tertanam
+// (`blocks[]`, sampai 5 tipe termasuk katalog bersarang) yang TETAP hanya
+// bisa diatur lewat BlockDrilldownEditor.tsx di halaman Tautan (link
+// "fitur lanjutan" di bawah) -- port PENUH drill-down itu (upload gambar
+// path-aware + navigasi bertingkat per blok tertanam) ke UI panel sempit
+// Builder adalah pekerjaan tersendiri yang jauh lebih besar, di luar
+// cakupan perbaikan bug/dead-end ini.
+function CatalogItemsEditor({ node, onUpdate }: { node: BuilderTreeNode; onUpdate: (items: CatalogItem[]) => void }) {
+  const { t } = useLocale();
+  const items = (node.blockData?.items as CatalogItem[] | undefined) ?? [];
+  const subtitle =
+    items.length === 0
+      ? t("dashboard.pages.linksBuilder.catalogItemsEmptySubtitle")
+      : t("dashboard.pages.linksBuilder.catalogItemsCountSubtitle").replace("{n}", String(items.length));
+
+  function updateItem(index: number, patch: Partial<CatalogItem>) {
+    onUpdate(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <BlockPanelHeader node={node} t={t} subtitle={subtitle} />
+      <div className="flex flex-col gap-2.5">
+        {items.map((item, i) => (
+          <div key={`${i}-${items.length}`} className="relative flex flex-col gap-2 rounded-xl border border-app-border p-3 pt-4">
+            <span className="absolute -top-2.5 left-3 flex h-5 w-5 items-center justify-center rounded-full bg-jeon-purple text-[10px] font-bold text-white">
+              {i + 1}
+            </span>
+            <button
+              type="button"
+              onClick={() => onUpdate(items.filter((_, idx) => idx !== i))}
+              aria-label={t("dashboard.pages.linksBuilder.catalogRemoveItem")}
+              className="absolute right-2.5 top-2.5 text-app-muted hover:text-red-600"
+            >
+              <IconTrash className="h-3.5 w-3.5" />
+            </button>
+            <FormField label={t("dashboard.pages.linksBuilder.catalogItemTitleLabel")}>
+              <input
+                defaultValue={item.title}
+                onBlur={(e) => updateItem(i, { title: e.target.value })}
+                placeholder={t("dashboard.pages.linksBuilder.catalogItemTitlePlaceholder")}
+                className="w-full rounded-md border border-app-border p-1.5 pr-6 text-xs outline-none focus:border-jeon-purple"
+              />
+            </FormField>
+            <FormField label={t("dashboard.pages.linksBuilder.catalogItemDescriptionLabel")}>
+              <RichTextEditor html={item.description ?? ""} onChange={(html) => updateItem(i, { description: html })} />
+            </FormField>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onUpdate([...items, { id: crypto.randomUUID(), title: "", description: "", images: [] }])}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+          {t("dashboard.pages.linksBuilder.catalogAddItem")}
         </button>
       </div>
     </div>
@@ -1275,16 +1345,17 @@ function NodeFieldEditor({
   }
 
   // "catalog" -- ROOT-ONLY (keputusan v1, sama seperti backend, lihat
-  // allowedBuilderEmbeddedBlockTypes/links.go), TAPI editor drill-down
-  // penuhnya (BlockDrilldownEditor.tsx) belum diintegrasikan ke Builder --
-  // baris `links` yang sama persis bisa langsung diisi lewat Mode Simple
-  // (editor Tautan klasik), jadi arahkan ke sana alih-alih tampilan kosong
-  // yang menyesatkan.
+  // allowedBuilderEmbeddedBlockTypes/links.go). Item (judul+deskripsi)
+  // SEKARANG bisa diisi native di sini lewat CatalogItemsEditor (audit
+  // ROUND 2, C10 -- lihat catatan lengkap di deklarasi komponennya):
+  // SEBELUMNYA panel ini cuma judul blok + link keluar, jalan buntu
+  // total. Foto per item & blok tertanam (video/FAQ/lokasi/katalog
+  // bersarang) TETAP hanya lewat halaman Tautan (link "fitur lanjutan"
+  // di bawah, BlockDrilldownEditor.tsx) -- di luar cakupan.
   if (node.blockType === "catalog") {
     return (
       <div className="flex flex-col gap-3">
-        <BlockPanelHeader node={node} t={t} />
-        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+        <div className="rounded-xl bg-app-surface-2 p-3">
           <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
             <input
               defaultValue={node.title}
@@ -1293,11 +1364,11 @@ function NodeFieldEditor({
               className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
             />
           </FormField>
-          <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>
-          <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
-            {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
-          </Link>
         </div>
+        <CatalogItemsEditor node={node} onUpdate={(items) => onUpdateNode(sel, { blockData: { items } })} />
+        <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
+          {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
+        </Link>
       </div>
     );
   }

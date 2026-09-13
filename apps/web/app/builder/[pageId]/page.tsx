@@ -319,6 +319,15 @@ export default function BuilderPage() {
   const [extraPageType, setExtraPageType] = useState<"bio" | "landing" | "produk" | undefined>(undefined);
   const [extraPageSlug, setExtraPageSlug] = useState<string | undefined>(undefined);
   const [extraPageName, setExtraPageName] = useState<string | undefined>(undefined);
+  // serverExtraPageName -- snapshot terakhir tersimpan dari `extraPageName`,
+  // pola SAMA PERSIS `page`/`serverPage` (bug ditemukan lewat audit ROUND 2,
+  // A10): SEBELUMNYA `extraPageName` TIDAK PUNYA snapshot server sama
+  // sekali -- rename judul commit LANGSUNG ke API dari saveRenameTitle,
+  // bypass total draft/isDirty/tombol Simpan di file ini. Sekarang
+  // `extraPageName` murni draft lokal sampai Simpan (lihat isDirty &
+  // commitSave langkah 5 di bawah), `serverExtraPageName` menandai nilai
+  // yang BENAR-BENAR tersimpan di server.
+  const [serverExtraPageName, setServerExtraPageName] = useState<string | undefined>(undefined);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [serverLinks, setServerLinks] = useState<LinkItem[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
@@ -328,7 +337,6 @@ export default function BuilderPage() {
   const [device, setDevice] = useState<BuilderDeviceWidth>("desktop");
   const [renamingTitle, setRenamingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-  const [renamingSaving, setRenamingSaving] = useState(false);
 
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
   const tree = useMemo(() => buildTree(links), [links]);
@@ -338,11 +346,18 @@ export default function BuilderPage() {
   // selection/path di seluruh builder ini sejak Fase 1 (BuilderLeftPanel.tsx),
   // dipilih lagi di sini demi konsistensi -- ukuran draft (blok + field
   // desain per halaman) realistis kecil, biaya JSON.stringify di sini
-  // dapat diabaikan dibanding jelasnya kode.
+  // dapat diabaikan dibanding jelasnya kode. `extraPageName` diikutkan
+  // (A10, lihat catatan lengkap di deklarasi serverExtraPageName) --
+  // rename judul yang belum Disimpan sekarang benar-benar menyalakan
+  // tombol Simpan & peringatan "perubahan belum tersimpan" spt field lain.
   const isDirty = useMemo(() => {
     if (!page || !serverPage) return false;
-    return JSON.stringify(links) !== JSON.stringify(serverLinks) || JSON.stringify(page) !== JSON.stringify(serverPage);
-  }, [links, serverLinks, page, serverPage]);
+    return (
+      JSON.stringify(links) !== JSON.stringify(serverLinks) ||
+      JSON.stringify(page) !== JSON.stringify(serverPage) ||
+      extraPageName !== serverExtraPageName
+    );
+  }, [links, serverLinks, page, serverPage, extraPageName, serverExtraPageName]);
   // isDirtyRef -- dibaca dari listener `beforeunload` (lihat efek di bawah)
   // yang HANYA dipasang SEKALI saat mount -- closure listener itu akan
   // menangkap `isDirty` versi PERTAMA (selalu false) kalau tidak lewat ref,
@@ -393,6 +408,7 @@ export default function BuilderPage() {
     setExtraPageType(result.extraPageType);
     setExtraPageSlug(result.extraPageSlug);
     setExtraPageName(result.extraPageName);
+    setServerExtraPageName(result.extraPageName);
     setLinks(result.links);
     setServerLinks(result.links);
     setProducts(result.products);
@@ -462,7 +478,22 @@ export default function BuilderPage() {
       // catatan lengkap di createRootOnServer soal KENAPA & di MANA
       // placeholder itu sekarang disuntikkan (hanya di request ke server,
       // bukan ditampilkan sbg data yang terlihat asli di field editor).
-      setLinks((prev) => [...prev, makeTempLinkItem(type as LinkItem["block_type"], title, undefined, blockData, prev.length)]);
+      // Posisi sisip -- bug ditemukan lewat audit ROUND 2 (13 September
+      // 2026, A11): SEBELUMNYA blok baru SELALU ditaruh di UJUNG paling
+      // bawah daftar root, tidak peduli blok mana yang sedang dipilih --
+      // di halaman panjang, "Tambah Komponen" berulang kali berarti
+      // scroll jauh ke bawah tiap kali cuma utk menemukan blok yang baru
+      // ditambah. Sekarang disisipkan tepat SESUDAH root yang memuat
+      // seleksi SAAT INI (`selection.rootId` -- kalau seleksi itu sendiri
+      // blok bersarang di dalam Section/Column, tetap dianggap "dekat"
+      // root pembungkusnya, BUKAN di akhir array) -- kalau tidak ada
+      // seleksi sama sekali, tetap ditaruh di ujung (perilaku lama).
+      setLinks((prev) => {
+        const newItem = makeTempLinkItem(type as LinkItem["block_type"], title, undefined, blockData, prev.length);
+        const insertAfterIndex = selection ? prev.findIndex((l) => l.id === selection.rootId) : -1;
+        if (insertAfterIndex === -1) return [...prev, newItem];
+        return [...prev.slice(0, insertAfterIndex + 1), newItem, ...prev.slice(insertAfterIndex + 1)];
+      });
       return;
     }
     if (type === "maps" || type === "catalog" || type === "contact_form") return; // modal sudah menyaring ini, jaga-jaga saja.
@@ -996,12 +1027,25 @@ export default function BuilderPage() {
       // diffPageDesignPatch -- backend menolak keras field custom_background_*
       // begitu MUNCUL di request sama sekali, jadi mengirim seluruh objek
       // padahal cuma satu field lain yang berubah akan salah ditolak
-      // "khusus Premium").
+      // "khusus Premium"). Judul halaman tambahan (`extraPageName`) IKUT
+      // di sini sekarang (bug ditemukan lewat audit ROUND 2, A10) --
+      // SEBELUMNYA rename judul PATCH langsung ke server dari saveRenameTitle
+      // sendiri (bypass total arsitektur draft/isDirty/Simpan di file ini) --
+      // sekarang `extraPageName` cuma draft lokal (lihat startRenameTitle/
+      // saveRenameTitle) sampai Simpan ditekan, konsisten dgn field halaman
+      // lain. `name` BUKAN bagian `Partial<MyPage>` (halaman utama tidak
+      // punya nama), jadi ditambahkan terpisah HANYA di cabang non-isMain.
       const patch: Partial<MyPage> = diffPageDesignPatch(page, serverPage);
       if (publish) patch.is_published = true;
-      if (Object.keys(patch).length > 0) {
-        await (isMain ? updateMyPage(patch) : updateExtraPage(pageId, patch));
+      const nameChanged = !isMain && extraPageName !== serverExtraPageName;
+      if (Object.keys(patch).length > 0 || nameChanged) {
+        if (isMain) {
+          await updateMyPage(patch);
+        } else {
+          await updateExtraPage(pageId, nameChanged ? { ...patch, name: extraPageName } : patch);
+        }
       }
+      if (nameChanged) setServerExtraPageName(extraPageName);
 
       // 6) Stiker -- endpoint terpisah (ganti array utuh, bukan PATCH per field).
       if (JSON.stringify(page.stickers) !== JSON.stringify(serverPage.stickers)) {
@@ -1039,24 +1083,23 @@ export default function BuilderPage() {
     setRenamingTitle(false);
     setTitleDraft(extraPageName ?? "");
   }
-  // saveRenameTitle -- SEKARANG hanya dipicu Enter (bukan lagi onBlur juga,
-  // lihat catatan lengkap di JSX input-nya, bug ROUND 2) -- commit ke
-  // server cuma terjadi atas AKSI EKSPLISIT pengguna.
-  async function saveRenameTitle() {
+  // saveRenameTitle -- hanya dipicu Enter (bukan lagi onBlur juga, lihat
+  // catatan lengkap di JSX input-nya, bug ROUND 2/C8). SEKARANG cuma
+  // menulis DRAFT lokal (`extraPageName`), TIDAK ADA panggilan API sama
+  // sekali di sini -- bug ditemukan lewat audit ROUND 2 (13 September
+  // 2026, A10): SEBELUMNYA fungsi ini PATCH langsung ke server, bypass
+  // total arsitektur draft/isDirty/tombol Simpan file ini (satu-satunya
+  // field di seluruh Builder yang begitu) -- rename sekarang menyalakan
+  // `isDirty` spt field lain (lihat deklarasinya) & baru benar-benar
+  // terkirim ke server lewat commitSave langkah 5, PERSIS field halaman
+  // lainnya (tema/header/dst). Escape/klik-keluar TETAP membatalkan tanpa
+  // menyimpan draft (cancelRenameTitle) -- cuma Enter yang commit ke
+  // draft (BUKAN ke server, itu tugas Simpan).
+  function saveRenameTitle() {
     setRenamingTitle(false);
     const name = titleDraft.trim();
     if (!name || name === extraPageName) return;
-    const previous = extraPageName;
     setExtraPageName(name);
-    setRenamingSaving(true);
-    try {
-      await updateExtraPage(pageId, { name });
-    } catch (err) {
-      setExtraPageName(previous);
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.linksBuilder.errors.saveFailed"));
-    } finally {
-      setRenamingSaving(false);
-    }
   }
 
   if (loading) {
@@ -1096,10 +1139,9 @@ export default function BuilderPage() {
             <input
               type="text"
               autoFocus
-              disabled={renamingSaving}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
-              // onBlur=cancelRenameTitle (BUKAN lagi saveRenameTitle) -- bug
+              // onBlur=cancelRenameTitle (BUKAN saveRenameTitle) -- bug
               // ditemukan lewat audit ROUND 2 (13 September 2026, verifikasi
               // Playwright LANGSUNG, bukan cuma tinjauan kode): blur-flush
               // tombol Simpan (onMouseDown di wrapper tombol Simpan/Terbitkan
@@ -1116,17 +1158,19 @@ export default function BuilderPage() {
               // preventDefault. Karena blur TIDAK BISA dicegah dari sisi
               // JS secara andal, field ini diubah supaya blur (apa pun
               // penyebabnya -- klik Simpan, klik area lain, dst) SAMA
-              // PERSIS dengan Escape: batalkan tanpa menyimpan. Commit ke
-              // server (saveRenameTitle) HANYA lewat Enter -- field ini
-              // langsung PATCH ke API (bukan lewat draft/isDirty, gap A10
-              // yang sudah diketahui), jadi harus butuh AKSI EKSPLISIT.
+              // PERSIS dengan Escape: batalkan tanpa menyimpan draft.
+              // Enter commit ke DRAFT (`extraPageName`, bukan langsung ke
+              // server -- gap A10 SUDAH diperbaiki, lihat catatan lengkap
+              // di saveRenameTitle & isDirty), baru benar-benar terkirim
+              // ke server saat tombol Simpan ditekan spt field lain, jadi
+              // tidak perlu lagi `disabled`/loading state di sini.
               onBlur={cancelRenameTitle}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRenameTitle();
                 else if (e.key === "Escape") cancelRenameTitle();
               }}
               placeholder={t("dashboard.pages.linksBuilder.renameTitlePlaceholder")}
-              className="w-full max-w-xs rounded-md border border-jeon-purple px-2 py-1 text-center text-sm font-bold text-app-ink outline-none disabled:opacity-60"
+              className="w-full max-w-xs rounded-md border border-jeon-purple px-2 py-1 text-center text-sm font-bold text-app-ink outline-none"
             />
           ) : (
             <button

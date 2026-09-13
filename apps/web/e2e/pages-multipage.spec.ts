@@ -211,8 +211,10 @@ test.describe("Halaman Tambahan & Batas Premium", () => {
     // konteks Toko yang sedang aktif, bukan selalu canonical.
     await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}/toko-kedua-e2e`));
 
-    // Pindah balik ke Toko canonical.
+    // Pindah balik ke Toko canonical -- slug-nya "produk" (bukan lagi
+    // username, susulan 9 September 2026: "Toko slug now 'produk' not
+    // username"), assertion ini stale dari SEBELUM perubahan itu.
     await page.getByRole("button", { name: new RegExp(`^Toko ${username}`) }).click();
-    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}/${username}$`));
+    await expect(page.getByRole("link", { name: "Buka", exact: true })).toHaveAttribute("href", new RegExp(`/${username}/produk$`));
   });
 });
