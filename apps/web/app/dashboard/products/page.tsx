@@ -570,21 +570,17 @@ function DashboardProductsPageInner() {
     }
   }
 
-  async function handleToggleActive(product: DashboardProduct) {
-    if (!product.has_file && !product.is_active) {
-      setError(t("dashboard.pages.products.errors.uploadFileBeforeActivate"));
-      return;
-    }
-    const nextActive = !product.is_active;
-    setError(null);
-    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, is_active: nextActive } : p)));
-    try {
-      await updateProduct(product.id, { is_active: nextActive });
-    } catch (err) {
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, is_active: product.is_active } : p)));
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.products.errors.updateProductStatus"));
-    }
-  }
+  // handleToggleActive (toggle status ON/OFF manual) DIHAPUS -- permintaan
+  // langsung pengguna, 13 September 2026 ("hilangkan status on atau off
+  // untuk menampilkan di pratinjau nya, karna saya mau ini menu untuk
+  // menyimpan data produk yang nantinya bisa di fetch menggunakan blok
+  // product"): menu Produk sekarang murni tempat MENYIMPAN data produk,
+  // visibilitas publik sepenuhnya ditentukan blok "produk" (lihat catatan
+  // lingkup lengkap di ProdukBlockEditor.tsx & Toko produk-block
+  // fallback). is_active produk digital sekarang otomatis begitu file
+  // diunggah (backend, product.go UploadFile) -- pola sama seperti
+  // payment_link/external_link yang sudah lama auto-aktif begitu sampul
+  // terunggah, tidak pernah ada toggle manual utk 2 jenis itu.
 
   // No.85: watermark otomatis (email pembeli + ID pesanan) hanya berlaku
   // untuk file PDF -- lihat catatan lingkup di applyPdfWatermark backend.
@@ -1240,7 +1236,6 @@ function DashboardProductsPageInner() {
                           kolom baru di sebelah "Terjual", pola sama persis
                           (dihitung backend, bukan angka rekaan). */}
                       <th className="px-4 py-3">{t("dashboard.pages.products.table.clicked")}</th>
-                      <th className="px-4 py-3">{t("dashboard.pages.products.table.status")}</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -1328,14 +1323,6 @@ function DashboardProductsPageInner() {
                         </td>
                         <td className="px-4 py-3 align-top text-app-ink">{p.sold_count.toLocaleString("id-ID")}</td>
                         <td className="px-4 py-3 align-top text-app-muted">{p.click_count.toLocaleString("id-ID")}</td>
-                        <td className="px-4 py-3 align-top">
-                          <Toggle
-                            checked={p.is_active}
-                            onChange={() => handleToggleActive(p)}
-                            disabled={!p.has_file && !p.is_active}
-                            label={t("dashboard.pages.products.activateToggleLabel").replace("{name}", p.name)}
-                          />
-                        </td>
                         <td className="px-4 py-3 align-top text-right">
                           <button
                             type="button"

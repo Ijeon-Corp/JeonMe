@@ -1,0 +1,7 @@
+-- Backfill data (UPDATE is_active=true) SENGAJA TIDAK dibatalkan --
+-- tidak ada cara membedakan produk yang memang sudah is_active=true
+-- sebelum migrasi ini dengan yang ikut ter-backfill, mengembalikan ke
+-- false berisiko membuat produk yang sudah lama terjual/tampil publik
+-- mendadak tidak bisa dibeli. Pola sama seperti
+-- 000074_auto_publish_pages.down.sql. Tidak ada perubahan skema di
+-- migrasi up ini, jadi tidak ada apa pun untuk di-rollback di sini.

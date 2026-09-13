@@ -1265,8 +1265,21 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
-	var exists int
-	if err := h.DB.QueryRow(ctx, `SELECT 1 FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&exists); err != nil {
+	// coverImageURL -- permintaan langsung pengguna, 13 September 2026
+	// ("saya mau ini menu untuk menyimpan data produk yang nantinya bisa
+	// di fetch menggunakan blok produk", "hilangkan status on atau off"):
+	// SEBELUMNYA produk digital butuh toggle "Aktifkan" MANUAL terpisah
+	// di dashboard setelah file diunggah (lihat pesan sukses di bawah,
+	// "produk siap diaktifkan") -- sekarang menu Produk murni tempat
+	// MENYIMPAN data, visibilitas publik sepenuhnya ditentukan blok
+	// "produk" (lihat catatan lingkup di links.go & ProdukBlockEditor.tsx,
+	// bukan lagi field is_active manual. Begitu sampul SUDAH ada (wajib
+	// diisi sejak create, lihat CreateProductForm.tsx) dan file produk ini
+	// baru saja diunggah, produk otomatis aktif -- pola SAMA PERSIS produk
+	// payment_link/external_link yang sudah lama auto-aktif begitu sampul
+	// terunggah, TIDAK PERNAH ada toggle manual utk 2 jenis itu.
+	var coverImageURL string
+	if err := h.DB.QueryRow(ctx, `SELECT cover_image_url FROM products WHERE id = $1 AND user_id = $2`, productID, userID).Scan(&coverImageURL); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "produk tidak ditemukan"})
 		return
 	}
@@ -1303,15 +1316,15 @@ func (h *ProductHandler) UploadFile(c *gin.Context) {
 	}
 
 	if _, err := h.DB.Exec(ctx, `
-		UPDATE products SET file_key = $1, file_size_bytes = $2 WHERE id = $3
-	`, key, fileHeader.Size, productID); err != nil {
+		UPDATE products SET file_key = $1, file_size_bytes = $2, is_active = (is_active OR $3 != '') WHERE id = $4
+	`, key, fileHeader.Size, coverImageURL, productID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "file terunggah tapi gagal menyimpan referensinya"})
 		return
 	}
 
 	h.invalidatePageCache(ctx, userID)
 
-	c.JSON(http.StatusOK, gin.H{"message": "file berhasil diunggah, produk siap diaktifkan"})
+	c.JSON(http.StatusOK, gin.H{"message": "file berhasil diunggah, produk aktif"})
 }
 
 // UploadCover — gambar sampul produk yang ditampilkan di halaman publik &
