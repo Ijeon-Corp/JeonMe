@@ -286,7 +286,10 @@ test.describe("Canvas Page Builder", () => {
     await addComponent("Embed Link");
     await expect(page.getByRole("button", { name: "Embed Link", exact: true })).toBeVisible({ timeout: 10000 });
     await page.getByRole("button", { name: "Embed Link", exact: true }).last().click();
-    await page.getByPlaceholder("Judul kartu").fill("Kartu Embed");
+    // "Judul kartu" -- redesain panel blok (13 September 2026, benchmark
+    // Linktree, Tahap 2/3): label TETAP di atas field (FormField.tsx)
+    // menggantikan placeholder lama, jadi dicari lewat getByLabel sekarang.
+    await page.getByLabel("Judul kartu").fill("Kartu Embed");
     await page.getByPlaceholder("https://... (opsional)").fill("https://example.com/promo");
     // Deskripsi Embed Link -- rich text (susulan 12 September 2026), tidak
     // lagi input placeholder "Deskripsi singkat (opsional)" biasa -- lihat

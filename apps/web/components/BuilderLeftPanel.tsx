@@ -116,6 +116,11 @@ const TYPE_ICON: Record<string, (p: { className?: string }) => React.ReactElemen
   text: IconTextLines,
   button: IconExternal,
   divider: IconDivider,
+  // "link" -- tautan klasik lama (bukan tipe Canvas, lihat catatan
+  // lengkap di NodeFieldEditor case-nya) -- perlu entry di sini SUPAYA
+  // BlockPanelHeader (redesain panel blok, 13 September 2026) tidak
+  // jatuh ke fallback "typeText"/IconTextLines yang salah.
+  link: IconLink,
   column: IconColumns,
   section: IconBox,
   video: IconPlayCircle,
@@ -148,6 +153,7 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   text: "typeText",
   button: "typeButton",
   divider: "typeDivider",
+  link: "typeLink",
   column: "typeColumn",
   section: "typeSection",
   video: "typeVideo",
@@ -758,11 +764,14 @@ function NodeFieldEditor({
 
   if (node.blockType === "text") {
     return (
-      <RichTextEditor
-        key={node.id}
-        html={(node.blockData?.text as string) ?? ""}
-        onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <RichTextEditor
+          key={node.id}
+          html={(node.blockData?.text as string) ?? ""}
+          onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+        />
+      </div>
     );
   }
 
@@ -773,11 +782,14 @@ function NodeFieldEditor({
   // halaman publik (judul besar, bukan paragraf).
   if (node.blockType === "heading") {
     return (
-      <RichTextEditor
-        key={node.id}
-        html={(node.blockData?.text as string) ?? ""}
-        onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <RichTextEditor
+          key={node.id}
+          html={(node.blockData?.text as string) ?? ""}
+          onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+        />
+      </div>
     );
   }
 
@@ -792,20 +804,25 @@ function NodeFieldEditor({
   // fitur lanjutan (ikon/kunci/jadwal) tetap lewat halaman Tautan klasik.
   if (node.blockType === "link") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={node.url ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyLinkHint")}</p>
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} subtitle={t("dashboard.pages.linksBuilder.legacyLinkHint")} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.buttonTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.buttonUrlLabel")}>
+            <input
+              defaultValue={node.url ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+              placeholder={t("dashboard.pages.linksBuilder.buttonUrlPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
@@ -866,39 +883,48 @@ function NodeFieldEditor({
 
   if (node.blockType === "image") {
     return (
-      <MediaImageEditor
-        key={node.id}
-        rootId={node.rootId}
-        path={node.path}
-        imageUrl={(node.blockData?.image_url as string) || undefined}
-        onEnsureRootPersisted={onEnsureRootPersisted}
-        onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <MediaImageEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          imageUrl={(node.blockData?.image_url as string) || undefined}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(url, resolvedRootId) => onMediaImageChanged(resolvedRootId, node.path, url)}
+        />
+      </div>
     );
   }
 
   if (node.blockType === "gallery" || node.blockType === "image_slider") {
     return (
-      <GalleryGridEditor
-        key={node.id}
-        rootId={node.rootId}
-        path={node.path}
-        images={(node.blockData?.images as string[] | undefined) ?? []}
-        onEnsureRootPersisted={onEnsureRootPersisted}
-        onChanged={(images, resolvedRootId) => onGalleryImagesChanged(resolvedRootId, node.path, images)}
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <GalleryGridEditor
+          key={node.id}
+          rootId={node.rootId}
+          path={node.path}
+          images={(node.blockData?.images as string[] | undefined) ?? []}
+          onEnsureRootPersisted={onEnsureRootPersisted}
+          onChanged={(images, resolvedRootId) => onGalleryImagesChanged(resolvedRootId, node.path, images)}
+        />
+      </div>
     );
   }
 
   if (node.blockType === "video_image") {
     return (
       <div className="flex flex-col gap-3">
-        <input
-          defaultValue={(node.blockData?.video_url as string) ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
-          placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+        <BlockPanelHeader node={node} t={t} />
+        <FormField label={t("dashboard.pages.linksBuilder.videoUrlLabel")}>
+          <input
+            defaultValue={(node.blockData?.video_url as string) ?? ""}
+            onBlur={(e) => onUpdateNode(sel, { blockData: { video_url: e.target.value } })}
+            placeholder={t("dashboard.pages.linksBuilder.videoUrlPlaceholder")}
+            className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+          />
+        </FormField>
         <MediaImageEditor
           key={node.id}
           rootId={node.rootId}
@@ -913,28 +939,36 @@ function NodeFieldEditor({
 
   if (node.blockType === "embed_link") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={node.url ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        {/* Deskripsi Embed Link -- rich text (susulan 12 September 2026,
-            "tiap blok yang ada teks nya buat semua jadi rich teks",
-            dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
-            saja) -- reuse RichTextEditor sama persis blok "text". */}
-        <RichTextEditor
-          key={node.id}
-          html={node.description ?? ""}
-          onChange={(html) => onUpdateNode(sel, { description: html })}
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.embedLinkTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.embedLinkUrlLabel")}>
+            <input
+              defaultValue={node.url ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+              placeholder={t("dashboard.pages.linksBuilder.embedLinkUrlPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.embedLinkDescLabel")}>
+            {/* Deskripsi Embed Link -- rich text (susulan 12 September 2026,
+                "tiap blok yang ada teks nya buat semua jadi rich teks",
+                dikonfirmasi via AskUserQuestion: field isi/deskripsi panjang
+                saja) -- reuse RichTextEditor sama persis blok "text". */}
+            <RichTextEditor
+              key={node.id}
+              html={node.description ?? ""}
+              onChange={(html) => onUpdateNode(sel, { description: html })}
+            />
+          </FormField>
+        </div>
         <MediaImageEditor
           key={node.id}
           rootId={node.rootId}
@@ -949,60 +983,88 @@ function NodeFieldEditor({
 
   if (node.blockType === "countdown") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          type="datetime-local"
-          defaultValue={toDatetimeLocalValue(node.blockData?.target_at as string | undefined)}
-          onBlur={(e) =>
-            onUpdateNode(sel, {
-              blockData: { target_at: e.target.value ? new Date(e.target.value).toISOString() : "" },
-            })
-          }
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.countdownTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.countdownTargetLabel")}>
+            <input
+              type="datetime-local"
+              defaultValue={toDatetimeLocalValue(node.blockData?.target_at as string | undefined)}
+              onBlur={(e) =>
+                onUpdateNode(sel, {
+                  blockData: { target_at: e.target.value ? new Date(e.target.value).toISOString() : "" },
+                })
+              }
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
 
   if (node.blockType === "list") {
+    const listItems = (node.blockData?.items as { title: string; description?: string; author?: string }[] | undefined) ?? [];
     return (
-      <ListItemsEditor
-        style={(node.blockData?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
-        items={(node.blockData?.items as { title: string; description?: string; author?: string }[] | undefined) ?? []}
-        onUpdateStyle={(style) => onUpdateNode(sel, { blockData: { style } })}
-        onUpdateItems={(items) => onUpdateNode(sel, { blockData: { items } })}
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader
+          node={node}
+          t={t}
+          subtitle={
+            listItems.length === 0
+              ? t("dashboard.pages.linksBuilder.listEmptySubtitle")
+              : t("dashboard.pages.linksBuilder.listCountSubtitle").replace("{n}", String(listItems.length))
+          }
+        />
+        <ListItemsEditor
+          style={(node.blockData?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
+          items={listItems}
+          onUpdateStyle={(style) => onUpdateNode(sel, { blockData: { style } })}
+          onUpdateItems={(items) => onUpdateNode(sel, { blockData: { items } })}
+        />
+      </div>
     );
   }
 
   if (node.blockType === "embed") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={(node.blockData?.embed_url as string) ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { blockData: { embed_url: e.target.value } })}
-          placeholder={t("dashboard.pages.linksBuilder.embedUrlPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.embedHint")}</p>
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.embedTitlePlaceholder")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.embedUrlLabel")} hint={t("dashboard.pages.linksBuilder.embedHint")}>
+            <input
+              defaultValue={(node.blockData?.embed_url as string) ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { blockData: { embed_url: e.target.value } })}
+              placeholder={t("dashboard.pages.linksBuilder.embedUrlPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
 
   if (node.blockType === "maps") {
-    return <MapsEditor node={node} onUpdate={(url, embed) => onUpdateNode(sel, { url, blockData: { embed } })} />;
+    return (
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <MapsEditor node={node} onUpdate={(url, embed) => onUpdateNode(sel, { url, blockData: { embed } })} />
+      </div>
+    );
   }
 
   if (node.blockType === "produk") {
@@ -1033,19 +1095,28 @@ function NodeFieldEditor({
   // pitfall).
   if (node.blockType === "accordion") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.accordion")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.blockForm.titleHint.accordion")}</p>
-        <RichTextEditor
-          key={node.id}
-          html={(node.blockData?.text as string) ?? ""}
-          onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField
+            label={t("dashboard.pages.linksBuilder.accordionTitleLabel")}
+            hint={t("dashboard.pages.links.blockForm.titleHint.accordion")}
+          >
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.accordion")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.linksBuilder.faqAnswerLabel")}>
+            <RichTextEditor
+              key={node.id}
+              html={(node.blockData?.text as string) ?? ""}
+              onChange={(html) => onUpdateNode(sel, { blockData: { text: html } })}
+            />
+          </FormField>
+        </div>
       </div>
     );
   }
@@ -1058,12 +1129,19 @@ function NodeFieldEditor({
   // oleh ContactFormBlock, tidak ada field lain utk diedit di sini.
   if (node.blockType === "contact_form") {
     return (
-      <input
-        defaultValue={node.title}
-        onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-        placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
-        className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-      />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+        </div>
+      </div>
     );
   }
 
@@ -1072,13 +1150,16 @@ function NodeFieldEditor({
   // sendiri di atas).
   if (node.blockType === "audio") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+          <input
+            defaultValue={node.title}
+            onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+            placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+            className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+          />
+        </FormField>
         <AudioUploadEditor
           key={node.id}
           rootId={node.rootId}
@@ -1093,13 +1174,16 @@ function NodeFieldEditor({
 
   if (node.blockType === "file") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+          <input
+            defaultValue={node.title}
+            onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+            placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+            className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
+          />
+        </FormField>
         <FileUploadEditor
           key={node.id}
           rootId={node.rootId}
@@ -1120,36 +1204,47 @@ function NodeFieldEditor({
   // mediaImageBlockTypes, links.go).
   if (node.blockType === "project_showcase") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.projectShowcase")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={(node.blockData?.badge_text as string) ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { blockData: { badge_text: e.target.value } })}
-          placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        {/* url -- WAJIB utk root (backend menolak project_showcase root
-            tanpa url, links.go), placeholder pakai ctaUrlLabel (BUKAN
-            embedLinkUrlPlaceholder yang bilang "(opsional)" -- field itu
-            memang opsional utk embed_link, TAPI TIDAK utk project_showcase). */}
-        <input
-          defaultValue={node.url ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <input
-          defaultValue={(node.blockData?.cta_text as string) ?? ""}
-          onBlur={(e) => onUpdateNode(sel, { blockData: { cta_text: e.target.value } })}
-          placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <RichTextEditor key={node.id} html={node.description ?? ""} onChange={(html) => onUpdateNode(sel, { description: html })} />
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.projectShowcase")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.links.blockForm.showcase.badgeLabel")} hint={t("dashboard.pages.links.blockForm.showcase.badgeHint")}>
+            <input
+              defaultValue={(node.blockData?.badge_text as string) ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { blockData: { badge_text: e.target.value } })}
+              placeholder={t("dashboard.pages.links.blockForm.showcase.badgePlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          {/* url -- WAJIB utk root (backend menolak project_showcase root
+              tanpa url, links.go). */}
+          <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaUrlLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaUrlHint")}>
+            <input
+              defaultValue={node.url ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { url: e.target.value })}
+              placeholder="https://..."
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.links.blockForm.showcase.ctaTextLabel")} hint={t("dashboard.pages.links.blockForm.showcase.ctaTextHint")}>
+            <input
+              defaultValue={(node.blockData?.cta_text as string) ?? ""}
+              onBlur={(e) => onUpdateNode(sel, { blockData: { cta_text: e.target.value } })}
+              placeholder={t("dashboard.pages.links.blockForm.showcase.ctaTextPlaceholder")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <FormField label={t("dashboard.pages.links.blockForm.showcase.descriptionLabel")}>
+            <RichTextEditor key={node.id} html={node.description ?? ""} onChange={(html) => onUpdateNode(sel, { description: html })} />
+          </FormField>
+        </div>
         <MediaImageEditor
           key={node.id}
           rootId={node.rootId}
@@ -1170,41 +1265,49 @@ function NodeFieldEditor({
   // yang menyesatkan.
   if (node.blockType === "catalog") {
     return (
-      <div className="flex flex-col gap-2">
-        <input
-          defaultValue={node.title}
-          onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
-          placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
-          className="w-full rounded-lg border border-app-border p-2 text-xs outline-none focus:border-jeon-purple"
-        />
-        <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>
-        <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
-          {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
-        </Link>
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex flex-col gap-2.5 rounded-xl bg-app-surface-2 p-3">
+          <FormField label={t("dashboard.pages.linksBuilder.genericTitleLabel")}>
+            <input
+              defaultValue={node.title}
+              onBlur={(e) => onUpdateNode(sel, { title: e.target.value })}
+              placeholder={t("dashboard.pages.links.blockForm.titlePlaceholder.default")}
+              className="w-full rounded-lg border border-app-border bg-app-surface p-2 text-xs outline-none focus:border-jeon-purple"
+            />
+          </FormField>
+          <p className="text-[11px] text-app-muted">{t("dashboard.pages.linksBuilder.legacyBlockHint")}</p>
+          <Link href="/dashboard/links" target="_blank" className="text-center text-[11px] font-semibold text-jeon-purple underline">
+            {t("dashboard.pages.linksBuilder.catalogOpenInLinksPage")}
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (node.blockType === "column") {
     return (
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.columnCount")}</label>
-        <select
-          defaultValue={((node.blockData?.columns as unknown[] | undefined)?.length ?? 2).toString()}
-          onChange={(e) => {
-            const count = Number(e.target.value);
-            const existing = (node.blockData?.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
-            const columns = Array.from({ length: count }, (_, i) => existing[i] ?? { children: [] });
-            onUpdateNode(sel, { blockData: { columns } });
-          }}
-          className="rounded-lg border border-app-border px-2 py-1 text-xs outline-none focus:border-jeon-purple"
-        >
-          {[2, 3, 4].map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-3">
+        <BlockPanelHeader node={node} t={t} />
+        <div className="flex items-center gap-2 rounded-xl bg-app-surface-2 p-3">
+          <label className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.columnCount")}</label>
+          <select
+            defaultValue={((node.blockData?.columns as unknown[] | undefined)?.length ?? 2).toString()}
+            onChange={(e) => {
+              const count = Number(e.target.value);
+              const existing = (node.blockData?.columns as { children?: EmbeddedBuilderBlock[] }[] | undefined) ?? [];
+              const columns = Array.from({ length: count }, (_, i) => existing[i] ?? { children: [] });
+              onUpdateNode(sel, { blockData: { columns } });
+            }}
+            className="rounded-lg border border-app-border bg-app-surface px-2 py-1 text-xs outline-none focus:border-jeon-purple"
+          >
+            {[2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     );
   }

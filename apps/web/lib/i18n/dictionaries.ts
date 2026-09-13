@@ -1151,6 +1151,20 @@ export const dictionaries = {
           embedTitlePlaceholder: "Judul (opsional)",
           embedUrlPlaceholder: "Tautan Google Forms, Calendly, atau Spotify",
           embedHint: "Mendukung tautan Google Forms, Calendly, dan Spotify.",
+          // Label field baru -- redesain panel blok (13 September 2026,
+          // benchmark Linktree, Tahap 2/3): field yang sebelumnya cuma
+          // punya placeholder sekarang punya label tetap di atasnya
+          // (FormField.tsx). genericTitleLabel dipakai bersama beberapa
+          // tipe blok sekaligus (contact_form/audio/file/project_showcase/
+          // catalog) yang semuanya cuma punya SATU field judul generik.
+          countdownTargetLabel: "Tanggal & Waktu Target",
+          embedLinkUrlLabel: "Tautan (opsional)",
+          embedLinkDescLabel: "Deskripsi",
+          embedUrlLabel: "Tautan Embed",
+          listEmptySubtitle: "Belum ada item",
+          listCountSubtitle: "{n} item",
+          accordionTitleLabel: "Judul (Pertanyaan)",
+          genericTitleLabel: "Judul Blok",
           listStyleList: "List",
           listStyleCard: "Card",
           listStyleTestimony: "Testimoni",
@@ -2799,6 +2813,13 @@ export const dictionaries = {
           comingSoon: "Segera hadir",
           typeText: "Teks",
           typeTextDesc: "Paragraf teks bebas",
+          // typeLink -- redesain panel blok (13 September 2026): tautan
+          // klasik lama (dari Mode Simple, mis. template Quick Setup),
+          // BUKAN tipe yang bisa ditambah lewat modal ini -- entry ini
+          // HANYA supaya BlockPanelHeader (BuilderLeftPanel.tsx) tidak
+          // salah tampil "Teks" utk blok ini.
+          typeLink: "Tautan",
+          typeLinkDesc: "Tautan biasa dari Mode Simple",
           typeButton: "Tombol",
           typeButtonDesc: "Tombol CTA menuju tautan",
           typeDivider: "Pemisah",
@@ -4214,6 +4235,14 @@ export const dictionaries = {
           embedTitlePlaceholder: "Title (optional)",
           embedUrlPlaceholder: "Google Forms, Calendly, or Spotify link",
           embedHint: "Supports Google Forms, Calendly, and Spotify links.",
+          countdownTargetLabel: "Target Date & Time",
+          embedLinkUrlLabel: "Link (optional)",
+          embedLinkDescLabel: "Description",
+          embedUrlLabel: "Embed Link",
+          listEmptySubtitle: "No items yet",
+          listCountSubtitle: "{n} items",
+          accordionTitleLabel: "Title (Question)",
+          genericTitleLabel: "Block Title",
           listStyleList: "List",
           listStyleCard: "Card",
           listStyleTestimony: "Testimonial",
@@ -5823,6 +5852,8 @@ export const dictionaries = {
           comingSoon: "Coming soon",
           typeText: "Text",
           typeTextDesc: "Free-form text paragraph",
+          typeLink: "Link",
+          typeLinkDesc: "A regular link from Simple Mode",
           typeButton: "Button",
           typeButtonDesc: "CTA button linking out",
           typeDivider: "Divider",
