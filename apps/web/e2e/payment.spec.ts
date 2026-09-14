@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
+import { TEST_IMAGE_PNG_BASE64, grantAvailableBalance, registerAndLogin } from "./fixtures";
 
 test.describe("Pengaturan: Pembayaran & Penarikan", () => {
   test("tambah metode pembayaran, verifikasi, jadikan utama, lalu muncul di form penarikan", async ({ page }) => {
-    await registerAndLogin(page, "paymethod");
+    const { username } = await registerAndLogin(page, "paymethod");
 
     await page.goto("/dashboard/settings/payment");
     await expect(page.getByRole("heading", { name: "Pembayaran & Penarikan" })).toBeVisible();
@@ -42,16 +42,35 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
 
     // Modul Settings §3 (keputusan pengguna 2026-07-31): penarikan wajib
     // lewat metode terverifikasi -- harus muncul otomatis di form penarikan.
+    //
+    // Test drift (ditemukan 14 Sept 2026): form penarikan (termasuk <select>
+    // metode ini) dulu langsung ada di halaman, sekarang di DALAM dialog
+    // "Tarik Dana" (SPEC §17.1 Phase 7, lihat payoutOpen di
+    // dashboard/balance/page.tsx, commit 2d08f63) -- perlu diklik dulu.
+    // Tombol pemicunya SENGAJA disabled sampai saldo tersedia >= Rp50.000
+    // (lihat primaryAction.disabled di page.tsx & checklist "Kesiapan
+    // Pencairan"), dan akun uji baru SELALU bersaldo 0 -- jadi dialog ini
+    // tidak akan pernah terbuka tanpa saldo asli. grantAvailableBalance
+    // (fixtures.ts) menyuntik satu kredit ledger LAMA (created_at jauh di
+    // luar masa tahan anti-fraud) supaya saldo langsung "Tersedia", bukan
+    // "Tertahan" -- lihat komentar lengkap di fixtures.ts kenapa ini beda
+    // dari larangan runSql untuk hal yang BISA diuji lewat UI (saldo tetap
+    // biasanya lewat checkout asli, tapi masa tahan 3 hari tidak realistis
+    // ditunggu di E2E).
+    grantAvailableBalance(username, 60000);
     await page.goto("/dashboard/balance");
+    await page.getByRole("button", { name: "Tarik Dana" }).click();
     await expect(page.locator("select").filter({ hasText: "BCA" })).toBeVisible();
 
     // Modul Settings audit fase 6: hasil ajukan penarikan (sukses/gagal)
-    // wajib muncul lewat toast, bukan silent save -- akun baru bersaldo 0
-    // jadi ini menguji jalur gagal, yang sebelumnya cuma nampil di banner
-    // setError diam-diam.
-    await page.getByPlaceholder("Jumlah (IDR)").fill("50000");
+    // wajib muncul lewat toast, bukan silent save. Saldo tersedia disuntik
+    // Rp60.000 di atas (minimum utk membuka dialog) -- minta Rp100.000
+    // (LEBIH dari saldo tersedia) supaya tetap menguji JALUR GAGAL yang
+    // dimaksud test ini semula (payout.ErrInsufficientBalance, lihat
+    // balance.go), bukan jalur sukses.
+    await page.getByPlaceholder("Jumlah (IDR)").fill("100000");
     await page.getByRole("button", { name: "Ajukan" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "saldo tersedia tidak cukup" })).toBeVisible();
   });
 
   test("auto-withdraw ditolak sebelum ada metode utama terverifikasi, diterima sesudahnya", async ({ page }) => {
@@ -103,28 +122,39 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
       const { email: collabEmail } = await registerAndLogin(collabPage, "splitcollab");
 
       // Pemilik mengundang kolaborator (role Admin Penjualan -> akses
-      // Produk saja, cukup untuk test ini).
+      // Produk saja, cukup untuk test ini). Dashboard Redesign v2 -- halaman
+      // Tim jadi bertab (Anggota/Undangan/Aktivitas, lihat catatan lengkap +
+      // pola yang sama persis di team.spec.ts): form undang ada di tab
+      // "Undangan", BUKAN langsung tampil di halaman datar seperti dulu.
       await page.goto("/dashboard/team");
+      await page.getByRole("tab", { name: "Undangan" }).click();
       await page.getByPlaceholder("email@contoh.com atau username").fill(collabEmail);
       await page.getByLabel("Role kolaborator baru").selectOption("sales_admin");
       await page.getByRole("button", { name: "Kirim Undangan" }).click();
-      await expect(page.getByText(collabEmail, { exact: true })).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "Undangan dikirim." })).toBeVisible();
 
-      // Kolaborator menerima undangan.
+      // Kolaborator menerima undangan -- undangan masuk tampil di tab
+      // "Undangan" miliknya sendiri (section "Undangan untuk Saya"), BUKAN
+      // langsung di halaman datar.
       await collabPage.goto("/dashboard/team");
-      await expect(collabPage.getByText(`@${ownerUsername}`)).toBeVisible();
-      await collabPage.getByRole("button", { name: "Terima" }).click();
-      await expect(collabPage.getByText(`@${ownerUsername}`)).not.toBeVisible();
+      await collabPage.getByRole("tab", { name: "Undangan" }).click();
+      const inviteSection = collabPage.locator("section", { has: collabPage.getByText("Undangan untuk Saya") });
+      await expect(inviteSection.getByText(`@${ownerUsername}`)).toBeVisible();
+      await inviteSection.getByRole("button", { name: "Terima" }).click();
 
       // Pemilik membuat produk lalu mengatur split ke kolaborator. Tombol
-      // "Tambah Produk" & form hanya ada di tab "Manage Items" (bukan
+      // "Tambah Produk" & form hanya ada di tab "Produk" (dulu "Manage
+      // Items", diganti nama lewat redesain dashboard Fase 2/5 -- lihat
+      // dashboard.nav.salesProducts di lib/i18n/dictionaries.ts) (bukan
       // "Overview" yang jadi tab default) -- lihat page.tsx tab === "manage",
       // dan sejak refactor "Add Items" (Fase B3) "Tambah Produk" membuka
       // panel pilihan jenis item dulu (Digital Product vs Payment Link)
-      // sebelum form muncul.
+      // sebelum form muncul. .first() -- saat daftar produk masih kosong,
+      // tombol "+ Tambah Produk" di header tab DAN CTA di dalam EmptyState
+      // sama-sama tampil dengan label identik.
       await page.goto("/dashboard/products");
-      await page.getByRole("button", { name: "Manage Items" }).click();
-      await page.getByRole("button", { name: "Tambah Produk" }).click();
+      await page.getByRole("button", { name: "Produk" }).click();
+      await page.getByRole("button", { name: "Tambah Produk" }).first().click();
       await page.getByRole("button", { name: "Digital Product" }).click();
       await page.getByPlaceholder("Nama produk").fill("Produk Split E2E");
       await page.getByPlaceholder("Harga (IDR)").fill("100000");

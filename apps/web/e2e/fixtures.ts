@@ -265,6 +265,28 @@ export function grantPremium(username: string, plan: "monthly" | "yearly" = "mon
   `);
 }
 
+// Saldo TERSEDIA (bukan cuma dikreditkan) beda dari Premium di atas -- ADA
+// jalur UI resmi untuk mendapatkannya (checkout produk asli, lihat
+// payOrderViaWebhook & products-checkout.spec.ts), jadi ini BUKAN celah yang
+// sama seperti langganan Premium. Alasan tetap butuh SQL: balanceFor()
+// (balance.go) menghitung "held" sebagai kredit yang created_at-nya LEBIH
+// BARU dari HoldingPeriodDays (anti-fraud, default 3 hari) -- checkout
+// sungguhan lewat webhook SELALU mencatat created_at = now(), jadi saldo
+// baru selalu "Tertahan" dulu, tidak pernah langsung "Tersedia" tanpa
+// menunggu hari sungguhan berlalu. Tidak ada E2E suite yang menunggu 3 hari
+// nyata, jadi satu-satunya cara menguji apa pun yang butuh SALDO TERSEDIA
+// (mis. tombol "Tarik Dana" di /dashboard/balance, disabled sampai
+// available_idr >= Rp50.000, lihat primaryAction di balance/page.tsx) di
+// E2E adalah menyuntik satu baris ledger_entries dengan created_at yang
+// sudah lama lewat masa tahan -- balance_after diisi SAMA dengan amountIDR
+// (asumsi akun baru, belum ada entri ledger lain sebelumnya).
+export function grantAvailableBalance(username: string, amountIDR: number): void {
+  runSql(`
+    INSERT INTO ledger_entries (user_id, type, amount_idr, balance_after, created_at)
+    VALUES ((SELECT id FROM users WHERE username = '${username}'), 'credit', ${amountIDR}, ${amountIDR}, now() - interval '365 days');
+  `);
+}
+
 // Signature Midtrans: SHA512(order_id + status_code + gross_amount +
 // server_key) -- rumus resmi Midtrans, harus SAMA PERSIS dengan
 // midtrans.Sign di backend (internal/midtrans/client.go) supaya

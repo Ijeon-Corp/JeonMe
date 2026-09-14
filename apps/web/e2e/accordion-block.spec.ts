@@ -16,24 +16,39 @@ test("accordion: tombol Edit Konten muncul dan isi bisa diedit & tersimpan", asy
   await page.getByRole("button", { name: "Konten", exact: true }).click();
   await page.getByRole("button", { name: /Accordion/ }).click();
   await page.getByPlaceholder("mis. Kebijakan Pengembalian").fill("Kebijakan Pengembalian");
-  await page.getByPlaceholder("Isi teks yang muncul saat judul di atas diklik").fill("Isi awal.");
+  // Isi "Saat Diklik" SEKARANG rich-text (TipTap, commit 4399631 "full
+  // parity mode Simple vs Builder"), placeholder <textarea> lama sudah
+  // tidak ada, ganti contenteditable (pola sama dengan
+  // catalog-nested-blocks.spec.ts / builder-mode.spec.ts).
+  const contentEditor = page.locator('[contenteditable="true"]');
+  await contentEditor.click();
+  // toBeFocused() sebelum mengetik -- editor TipTap baru mount saat blockType
+  // "accordion" dipilih (immediatelyRender:false di RichTextEditor.tsx),
+  // tanpa jeda ini karakter pertama kadang hilang (klik terjadi sebelum
+  // binding keydown ProseMirror sungguh siap, ditemukan lewat flake nyata
+  // saat memperbaiki test ini -- "Isi awal." jadi "si awal.").
+  await expect(contentEditor).toBeFocused();
+  await page.keyboard.type("Isi awal.");
   await page.getByRole("button", { name: "Buat Blok" }).click();
 
   const editButton = page.getByRole("button", { name: "Edit Konten" });
   await expect(editButton).toBeVisible({ timeout: 10000 });
   await editButton.click();
 
-  const textarea = page.getByPlaceholder("Isi teks yang muncul saat judul diklik");
-  await expect(textarea).toBeVisible();
-  await textarea.fill("Barang bisa dikembalikan dalam 7 hari.");
+  await expect(contentEditor).toBeVisible();
+  await expect(contentEditor).toHaveText("Isi awal.");
+  // Ganti seluruh isi: select-all lalu ketik ulang (ControlOrMeta menangani
+  // Cmd di macOS vs Ctrl di Linux/Windows secara otomatis).
+  await contentEditor.click();
+  await expect(contentEditor).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("Barang bisa dikembalikan dalam 7 hari.");
   await page.getByRole("button", { name: "Simpan", exact: true }).click();
   await expect(editButton).toBeVisible({ timeout: 10000 });
 
   await page.reload();
   await editButton.click();
-  await expect(page.getByPlaceholder("Isi teks yang muncul saat judul diklik")).toHaveValue(
-    "Barang bisa dikembalikan dalam 7 hari."
-  );
+  await expect(contentEditor).toHaveText("Barang bisa dikembalikan dalam 7 hari.");
 
   await page.goto(`/${username}`);
   await expect(page.getByText("Kebijakan Pengembalian", { exact: true })).toBeVisible();

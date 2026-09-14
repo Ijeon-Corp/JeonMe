@@ -18,7 +18,13 @@ test.describe("Langganan Premium: Gating Watermark", () => {
   test("akun gratis tidak bisa hilangkan watermark (UI terkunci & backend re-gate), Premium bisa", async ({ page }) => {
     const { username } = await registerAndLogin(page, "premium");
 
-    const watermarkPill = "Buat halaman gratis di Jeon.id";
+    // Sejak redesain watermark pakai logo (cedf62d, 29 Agustus 2026), teks
+    // pil bukan lagi satu string "Buat halaman gratis di Jeon.id" -- sekarang
+    // format "[watermark.cta] [ikon] jeon.id" (lihat komponen Watermark() di
+    // PagePreview.tsx & key watermark.cta di lib/i18n/dictionaries.ts). Cukup
+    // cocokkan teks CTA-nya saja (bagian yang benar-benar berubah antara
+    // gratis/Premium), bukan wordmark "jeon.id" yang statis.
+    const watermarkPill = "Buat milikmu di";
 
     await page.goto("/dashboard/design");
     const watermarkToggle = page.getByRole("switch", { name: "Sembunyikan watermark" });

@@ -19,10 +19,18 @@ test.describe("Toko: layout Blok Kategori", () => {
     const { username } = await registerAndLogin(page, "catlayout");
 
     await page.goto("/dashboard/products");
-    await page.getByRole("button", { name: "Manage Items" }).click();
+    // Tab "Manage Items" diganti nama jadi "Produk" (i18n EN/ID dashboard,
+    // lihat dashboard.nav.salesProducts di lib/i18n/dictionaries.ts) sebagai
+    // bagian redesain dashboard Fase 2/5 (commit 378324f/22ed78c).
+    await page.getByRole("button", { name: "Produk" }).click();
 
     async function createExternalLinkProduct(name: string, category: string) {
-      await page.getByRole("button", { name: "Tambah Produk" }).click();
+      // .first() -- saat daftar produk masih kosong, tombol "+ Tambah Produk"
+      // di header tab DAN CTA di dalam EmptyState (redesain empty state 1
+      // Sept 2026, commit 0f5cdf5) sama-sama tampil dengan label identik;
+      // keduanya cuma memanggil setAddingProduct(true), jadi aman diambil
+      // yang pertama.
+      await page.getByRole("button", { name: "Tambah Produk" }).first().click();
       await page.getByRole("button", { name: "Link Eksternal" }).click();
       const form = page.locator("form", { has: page.getByPlaceholder("Nama produk") });
       await form.getByPlaceholder("Nama produk").fill(name);
@@ -53,8 +61,13 @@ test.describe("Toko: layout Blok Kategori", () => {
 
     // Toko publik: SEBELUM klik blok apa pun, harus tampil blok kategori
     // ("Sepatu"/"Baju" + jumlah produk), BUKAN nama produk individual.
+    // URL Toko pertama akun baru = `/{username}/produk` (slug KONSTAN
+    // "produk", BUKAN lagi username diulang) -- diubah lewat commit
+    // 2c32957c, 9 Sept 2026 ("URL Toko tidak lagi dobel username", akun lama
+    // yang belum diubah masih slug=username tapi akun BARU seperti test ini
+    // selalu dapat "produk", lihat autoProdukPageSlug di page.go).
     await expect(async () => {
-      await page.goto(`/${username}/${username}`);
+      await page.goto(`/${username}/produk`);
       await expect(page.getByText("Sepatu", { exact: true })).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 75000, intervals: [5000] });
     await expect(page.getByText("Baju", { exact: true })).toBeVisible();

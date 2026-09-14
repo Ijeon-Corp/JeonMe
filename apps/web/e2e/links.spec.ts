@@ -188,7 +188,16 @@ test.describe("Tautan", () => {
     const blockTitle = "Info Internal";
     const blockText = "Isi teks yang cuma boleh dilihat setelah klik lanjut.";
     await page.getByLabel("Judul Blok").fill(blockTitle);
-    await page.getByPlaceholder("Isi teks yang tampil di halaman publik").fill(blockText);
+    // Isi Teks blok "text" SEKARANG rich-text (TipTap, commit 4399631 "full
+    // parity mode Simple vs Builder"), placeholder <textarea> lama "Isi
+    // teks yang tampil di halaman publik" sudah tidak ada, ganti
+    // contenteditable (pola sama dengan catalog-nested-blocks.spec.ts).
+    const contentEditor = page.locator('[contenteditable="true"]');
+    await contentEditor.click();
+    // toBeFocused() sebelum mengetik -- lihat catatan lengkap di
+    // accordion-block.spec.ts (karakter pertama kadang hilang tanpa jeda ini).
+    await expect(contentEditor).toBeFocused();
+    await page.keyboard.type(blockText);
     await page.getByRole("button", { name: "Buat Blok" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: blockTitle })).toBeVisible({ timeout: 10000 });
 

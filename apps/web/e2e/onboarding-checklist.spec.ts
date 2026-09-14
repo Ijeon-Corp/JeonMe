@@ -77,11 +77,15 @@ test.describe("Onboarding: Checklist Progresif", () => {
     await expect(page.getByText("Lengkapi setup akunmu -- 0/3 selesai")).toBeVisible({ timeout: 10000 });
 
     // Navigasi ke Link Bio lewat SIDEBAR (klik <Link>, bukan page.goto) --
-    // "Link Bio" ada di dalam grup collapsible "Link Saya" (nama grup ganti
-    // dari "Halaman Saya", susulan permintaan pengguna 30 Agustus 2026), buka
-    // dulu.
-    await page.getByRole("button", { name: "Link Saya" }).click();
-    await page.getByRole("link", { name: "Link Bio", exact: true }).click();
+    // "Link Bio" ada di dalam grup collapsible. Grup ini SEMPAT dinamai
+    // "Link Saya" (commit 29cf0ba, 30 Agustus 2026) tapi SEHARI kemudian
+    // (commit 5ace96f, 31 Agustus 2026, restrukturisasi IA ke 7 menu bisnis
+    // DASHBOARD-DESIGN-JEONID.md) label grup dikembalikan ke "Halaman Saya"
+    // DAN item di dalamnya diganti nama dari "Link Bio" jadi "Konten"
+    // (DashboardSidebarNav.tsx buildNavItemsV2, key dashboard.nav.tabContent)
+    // -- test ini tidak pernah disesuaikan sejak itu. Buka grupnya dulu.
+    await page.getByRole("button", { name: "Halaman Saya" }).click();
+    await page.getByRole("link", { name: "Konten", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/links$/);
     await page.getByRole("button", { name: "Tambah" }).first().click();
     await page.getByRole("button", { name: "Tautan", exact: true }).click();
@@ -93,9 +97,11 @@ test.describe("Onboarding: Checklist Progresif", () => {
       .click();
     await expect(page.getByRole("listitem").filter({ hasText: "Toko Online Saya" })).toBeVisible({ timeout: 10000 });
 
-    // Balik ke Ringkasan lewat SIDEBAR juga -- ini transisi client-side
+    // Balik ke Beranda lewat SIDEBAR juga -- ini transisi client-side
     // yang SEBELUM fix tidak pernah memicu refetch checklist sama sekali.
-    await page.getByRole("link", { name: "Ringkasan", exact: true }).click();
+    // Label link root "/dashboard" ganti dari "Ringkasan" jadi "Beranda"
+    // di commit 5ace96f yang sama (31 Agustus 2026) -- lihat catatan di atas.
+    await page.getByRole("link", { name: "Beranda", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByText("Lengkapi setup akunmu -- 1/3 selesai")).toBeVisible({ timeout: 10000 });
   });

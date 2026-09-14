@@ -13,7 +13,11 @@ test.describe("Broadcast Email Audiens", () => {
   test("subscriber mendaftar lewat form publik, kreator kirim broadcast, status jadi terkirim", async ({ page, browser }) => {
     const { username } = await registerAndLogin(page, "broadcast");
 
-    await page.goto("/dashboard/audience");
+    // Halaman Audiens dipecah jadi 3 tab lewat ?view= (Phase 6 redesign,
+    // lihat komentar AUDIENCE_VIEW_FROM_URL di app/dashboard/audience/page.tsx)
+    // -- toggle pengumpulan lead sekarang ada di tab "Form Capture", bukan
+    // tampil bareng di halaman utama seperti sebelum redesign.
+    await page.goto("/dashboard/audience?view=forms");
     const enableToggle = page.getByRole("switch", { name: "Aktifkan blok pengumpulan lead" });
     if ((await enableToggle.getAttribute("aria-checked")) !== "true") {
       await enableToggle.click();
@@ -40,7 +44,10 @@ test.describe("Broadcast Email Audiens", () => {
       await visitorContext.close();
     }
 
-    await page.reload();
+    // Tab "Broadcast" (?view=broadcast) terpisah dari tab "Form Capture" di
+    // atas -- reload polos akan tetap di ?view=forms, jadi navigasi eksplisit
+    // ke tab Broadcast di sini.
+    await page.goto("/dashboard/audience?view=broadcast");
     await expect(page.getByText("Kirim pesan ke 1 subscriber", { exact: false })).toBeVisible({ timeout: 10000 });
 
     const subjectInput = page.locator('input[placeholder="Subjek email"]');

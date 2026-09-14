@@ -16,8 +16,15 @@ test.describe("Toko & Checkout", () => {
     const priceIDR = 25000;
 
     await page.goto("/dashboard/products");
-    await page.getByRole("button", { name: "Manage Items" }).click();
-    await page.getByRole("button", { name: "Tambah Produk" }).click();
+    // Tab "Manage Items" diganti nama jadi "Produk" (i18n EN/ID dashboard,
+    // lihat dashboard.nav.salesProducts di lib/i18n/dictionaries.ts) sebagai
+    // bagian redesain dashboard Fase 2/5 (commit 378324f/22ed78c).
+    await page.getByRole("button", { name: "Produk" }).click();
+    // .first() -- saat daftar produk masih kosong, tombol "+ Tambah Produk"
+    // di header tab DAN CTA di dalam EmptyState (redesain empty state 1 Sept
+    // 2026, commit 0f5cdf5) sama-sama tampil dengan label identik; keduanya
+    // cuma memanggil setAddingProduct(true), jadi aman diambil yang pertama.
+    await page.getByRole("button", { name: "Tambah Produk" }).first().click();
     await page.getByRole("button", { name: "Digital Product" }).click();
 
     await page.getByPlaceholder("Nama produk").fill(productName);
@@ -38,11 +45,15 @@ test.describe("Toko & Checkout", () => {
     // Belum ada file & belum aktif -- TIDAK boleh muncul di halaman Toko
     // publik sama sekali (GetPublicPage/list backend filter is_active=true,
     // lihat riset alur checkout sebelum test ini ditulis).
-    await page.goto(`/${username}/${username}`);
+    // URL Toko pertama akun baru = `/{username}/produk` (slug KONSTAN
+    // "produk", BUKAN lagi username diulang) -- diubah lewat commit
+    // 2c32957c, 9 Sept 2026 ("URL Toko tidak lagi dobel username"), lihat
+    // autoProdukPageSlug di page.go.
+    await page.goto(`/${username}/produk`);
     await expect(page.getByText(productName)).toHaveCount(0);
 
     await page.goto("/dashboard/products");
-    await page.getByRole("button", { name: "Manage Items" }).click();
+    await page.getByRole("button", { name: "Produk" }).click();
     await productRow.getByRole("button", { name: "Kelola" }).click();
 
     // Input file produk (BUKAN input sampul -- sampul punya atribut accept
@@ -52,20 +63,22 @@ test.describe("Toko & Checkout", () => {
       .setInputFiles({ name: "ebook.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 konten uji e2e") });
     await expect(page.getByRole("button", { name: "File Produk terunggah" })).toBeVisible({ timeout: 10000 });
 
-    // Sakelar "Aktifkan {nama}" ada di BARIS TABEL (bukan di dalam modal
-    // Kelola) -- modal harus ditutup dulu, sebelum ditutup backdrop-nya
-    // (fixed inset-0 z-50) menutupi baris tabel di belakangnya dan
-    // mencegat klik. getByLabel (bukan getByRole name) -- ada tombol
-    // "Tutup" LAIN yang tidak terkait (banner tutorial "Baru di Jeonme?"),
-    // tombol tutup modal ini pakai aria-label bukan teks visible.
+    // Sakelar manual "Aktifkan {nama}" DIHAPUS -- permintaan langsung
+    // pengguna, 13 September 2026 ("hilangkan status on atau off untuk
+    // menampilkan di pratinjau nya"): menu Produk sekarang murni tempat
+    // menyimpan data, is_active produk digital jadi OTOMATIS begitu file
+    // diunggah (backend product.go UploadFile: `is_active = (is_active OR
+    // cover_image_url != '')`, sampul sudah wajib sejak create) -- pola
+    // sama seperti payment_link/external_link yang sudah lama auto-aktif.
+    // Tidak ada lagi toggle utk diklik di sini, cukup tutup modal.
+    // getByLabel (bukan getByRole name) -- ada tombol "Tutup" LAIN yang
+    // tidak terkait (banner tutorial "Baru di Jeonme?"), tombol tutup
+    // modal ini pakai aria-label bukan teks visible.
     await page.getByLabel("Tutup").click();
-    const activateToggle = page.getByRole("switch", { name: `Aktifkan ${productName}` });
-    await activateToggle.click();
-    await expect(activateToggle).toHaveAttribute("aria-checked", "true");
 
     // Sekarang HARUS tampil di Toko publik lengkap dengan harga & tombol Beli.
     await expect(async () => {
-      await page.goto(`/${username}/${username}`);
+      await page.goto(`/${username}/produk`);
       await expect(page.getByText(productName)).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 30000, intervals: [3000] });
     await expect(page.getByText(`Rp ${priceIDR.toLocaleString("id-ID")}`)).toBeVisible();
@@ -84,7 +97,7 @@ test.describe("Toko & Checkout", () => {
     // Toko sebelum mengklik "Beli" di bawah -- tombolnya memang tidak
     // pernah ada di Bio (baru saja dibuktikan barisnya sendiri), jadi klik
     // itu selalu timeout menunggu elemen yang tidak akan pernah muncul.
-    await page.goto(`/${username}/${username}`);
+    await page.goto(`/${username}/produk`);
 
     // Alur beli: buka form, isi email pembeli, submit -- ini SUNGGUHAN
     // memanggil Midtrans (server-to-server dari API Go) untuk membuat
@@ -136,9 +149,9 @@ test.describe("Toko & Checkout", () => {
     await expect(page.getByText("Pembayaran Berhasil")).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(productName)).toBeVisible();
 
-    // Terjual bertambah di dashboard Manage Items setelah lunas.
+    // Terjual bertambah di dashboard Manage Items (tab "Produk") setelah lunas.
     await page.goto("/dashboard/products");
-    await page.getByRole("button", { name: "Manage Items" }).click();
+    await page.getByRole("button", { name: "Produk" }).click();
     await expect(page.getByRole("row", { name: new RegExp(productName) }).getByRole("cell").nth(2)).toHaveText("1");
   });
 });
