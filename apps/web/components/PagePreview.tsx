@@ -13,7 +13,7 @@ import TrackedLink from "@/components/TrackedLink";
 import PageFooterLinks from "@/components/PageFooterLinks";
 import ShareButton from "@/components/ShareButton";
 import StickerIcon from "@/components/StickerIcon";
-import { CatalogItem, PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
+import { CatalogItem, EmbeddedCatalogBlock, PageStickerData, RecentPurchase, trackEvent, trackEventBySlug } from "@/lib/api-client";
 import {
   IconBadgeCheck,
   IconBox,
@@ -2697,6 +2697,24 @@ interface CatalogFrame {
 // tidak bisa diklik). Cakupan awal: kreator yang benar-benar butuh blok
 // ini (contoh nyata: agen properti dgn banyak tipe rumah) pasti
 // memakainya di halaman Bio utama, bukan Toko/Landing.
+// findCatalogLinkedProduct -- item katalog "referensi hidup" ke produk
+// (permintaan langsung pengguna 14 September 2026, dikonfirmasi lewat
+// AskUserQuestion, ala katalog Tokopedia): begitu item punya blok "produk"
+// tertanam, tampilan grid & detail HARUS mengambil nama/harga/sampul
+// LANGSUNG dari data.products TERKINI, bukan title/images statis yang
+// tersimpan di item itu sendiri -- supaya kalau produknya diedit lagi
+// nanti, katalog ikut berubah otomatis tanpa perlu disinkronkan manual.
+// Pola pembacaan product_ids/product_id SAMA PERSIS blok "produk" tingkat
+// atas (lihat case "produk" di renderLinkOrBlock/renderBuilderNode).
+function findCatalogLinkedProduct(blocks: EmbeddedCatalogBlock[] | undefined, products: PagePreviewProduct[]): PagePreviewProduct | undefined {
+  const produkBlock = (blocks ?? []).find((b) => b.block_type === "produk");
+  if (!produkBlock) return undefined;
+  const rawProductIds = produkBlock.block_data?.product_ids as string[] | undefined;
+  const productId = Array.isArray(rawProductIds) ? rawProductIds[0] : (produkBlock.block_data?.product_id as string | undefined);
+  if (!productId) return undefined;
+  return products.find((p) => p.id === productId);
+}
+
 function CatalogTakeoverView({
   link,
   theme,
@@ -2757,6 +2775,13 @@ function CatalogTakeoverView({
     setStack((s) => [...s, { title: nestedLink.title, items: nestedItems, selectedItemId: null }]);
   }
 
+  // selectedItemLinkedProduct -- lihat catatan lengkap findCatalogLinkedProduct
+  // di atas. Kalau ada, header judul & blok foto/deskripsi statis item DISKIP
+  // total (bukan cuma diganti nilainya) supaya tidak redundan dgn kartu produk
+  // sungguhan yang sudah dirender via blocks.map di bawah -- kartu itu SENDIRI
+  // yang menampilkan foto/harga/deskripsi produk terkini.
+  const selectedItemLinkedProduct = selectedItem ? findCatalogLinkedProduct(selectedItem.blocks, data.products) : undefined;
+
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 py-8">
@@ -2770,13 +2795,13 @@ function CatalogTakeoverView({
             <ChevronLeft className={`h-5 w-5 ${theme.cardTitle}`} />
           </button>
           <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>
-            {selectedItem ? selectedItem.title : frame.title}
+            {selectedItem ? (selectedItemLinkedProduct?.name ?? selectedItem.title) : frame.title}
           </h1>
         </div>
 
         {selectedItem ? (
           <div className="flex flex-col gap-4">
-            {selectedItem.images.length > 0 && (
+            {!selectedItemLinkedProduct && selectedItem.images.length > 0 && (
               <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
                 {selectedItem.images.map((src, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -2792,7 +2817,7 @@ function CatalogTakeoverView({
             )}
             {/* Rich text (susulan 12 September 2026) -- whitespace-pre-line
                 utk kompatibilitas mundur konten lama (plain string ber-"\n"). */}
-            {selectedItem.description && (
+            {!selectedItemLinkedProduct && selectedItem.description && (
               <p
                 className={`jeon-rich-text-content whitespace-pre-line text-sm leading-relaxed ${theme.bio}`}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(selectedItem.description) }}
@@ -2832,26 +2857,35 @@ function CatalogTakeoverView({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {frame.items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setStack((s) => { const next = [...s]; next[next.length - 1] = { ...frame, selectedItemId: item.id }; return next; })}
-                className={`flex flex-col overflow-hidden text-left ${theme.cardRounded ?? "rounded-xl"} ${theme.card}`}
-              >
-                <div className="aspect-square w-full overflow-hidden bg-black/10">
-                  {item.images[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <LayoutGrid className={`h-8 w-8 opacity-30 ${theme.cardTitle}`} />
-                    </div>
-                  )}
-                </div>
-                <p className={`truncate px-2.5 py-2 text-xs font-semibold ${theme.cardTitle}`}>{item.title}</p>
-              </button>
-            ))}
+            {frame.items.map((item) => {
+              // linkedProduct -- lihat catatan findCatalogLinkedProduct di
+              // atas: tile grid ikut nama & sampul produk TERKINI, bukan
+              // title/images statis item, begitu item ini "referensi hidup"
+              // ke sebuah produk.
+              const linkedProduct = findCatalogLinkedProduct(item.blocks, data.products);
+              const thumbnail = linkedProduct?.cover_image_url || item.images[0];
+              const tileTitle = linkedProduct?.name ?? item.title;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setStack((s) => { const next = [...s]; next[next.length - 1] = { ...frame, selectedItemId: item.id }; return next; })}
+                  className={`flex flex-col overflow-hidden text-left ${theme.cardRounded ?? "rounded-xl"} ${theme.card}`}
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-black/10">
+                    {thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <LayoutGrid className={`h-8 w-8 opacity-30 ${theme.cardTitle}`} />
+                      </div>
+                    )}
+                  </div>
+                  <p className={`truncate px-2.5 py-2 text-xs font-semibold ${theme.cardTitle}`}>{tileTitle}</p>
+                </button>
+              );
+            })}
             {frame.items.length === 0 && <p className={`col-span-2 py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
           </div>
         )}

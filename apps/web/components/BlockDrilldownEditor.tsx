@@ -268,6 +268,7 @@ export default function BlockDrilldownEditor({
                 item={item}
                 canUploadImages={canUploadImages}
                 uploadingItemId={uploadingItemId}
+                products={products}
                 onUploadImage={(file) => onUploadImage(item.id, file)}
                 onDeleteImage={(index) => onDeleteImage(item.id, index)}
                 onUpdateField={(field, value) => updateItemField(frame.path, field, value)}
@@ -461,6 +462,7 @@ function CatalogItemFrame({
   item,
   canUploadImages,
   uploadingItemId,
+  products,
   onUploadImage,
   onDeleteImage,
   onUpdateField,
@@ -477,6 +479,14 @@ function CatalogItemFrame({
   // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
   // milik parent), null kalau tidak ada unggahan berjalan.
   uploadingItemId: string | null;
+  // products -- susulan 14 September 2026 (permintaan langsung pengguna:
+  // "di dalam blok katalog kita tidak mengisi item title, description
+  // ataupun photo semua diisi berdasarkan blok yang kita pilih... blok
+  // product menampilkan semua product saya"). Dipakai HANYA utk mendeteksi
+  // dan menampilkan nama produk yang sudah dipilih (lihat linkedProduct di
+  // bawah) -- daftar produk ITU SENDIRI dikelola ProdukBlockEditor di
+  // EmbeddedBlockFrame, bukan di sini.
+  products: DashboardProduct[];
   onUploadImage: (file: File) => void;
   onDeleteImage: (index: number) => void;
   onUpdateField: (field: "title" | "description", value: string) => void;
@@ -491,6 +501,21 @@ function CatalogItemFrame({
   const blocks = item.blocks ?? [];
   const atLimit = blocks.length >= maxCatalogItemBlocks || depth >= maxCatalogDepth;
   const isUploading = uploadingItemId === item.id;
+  // linkedProduct -- item "referensi hidup" ke produk (dikonfirmasi lewat
+  // AskUserQuestion, 14 September 2026, ala katalog Tokopedia): begitu
+  // item punya blok "produk" tertanam dgn 1 produk terpilih, field title/
+  // description/photo MANUAL disembunyikan total -- tampilan grid & detail
+  // di halaman publik (lihat PagePreview.tsx, CatalogTakeoverView) SELALU
+  // mengambil nama/harga/sampul LANGSUNG dari data produk terkini, BUKAN
+  // salinan statis, jadi kalau produk diedit lagi nanti (nama/harga/foto),
+  // katalog ikut berubah otomatis tanpa perlu disinkronkan manual. Title
+  // yang SUDAH tersimpan dari alur "+ Tambah Item" (wajib diisi saat
+  // pembuatan item, lihat panel "Kelola Katalog") tetap ada di data TAPI
+  // jadi murni bookkeeping internal -- tidak pernah ditampilkan lagi ke
+  // kreator maupun pengunjung begitu produk terpilih.
+  const linkedProdukBlock = blocks.find((b) => b.block_type === "produk");
+  const linkedProductId = linkedProdukBlock ? getBlockProductIds(linkedProdukBlock.block_data)[0] : undefined;
+  const linkedProduct = linkedProductId ? products.find((p) => p.id === linkedProductId) : undefined;
 
   // descriptionSaveTimer -- deskripsi item katalog jadi rich text (susulan
   // 12 September 2026, "tiap blok yang ada teks nya buat semua jadi rich
@@ -543,80 +568,115 @@ function CatalogItemFrame({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
-            <input
-              type="text"
-              defaultValue={item.title}
-              placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
-              onBlur={(e) => e.target.value.trim() && onUpdateField("title", e.target.value.trim())}
-              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm font-semibold focus:border-jeon-purple focus:outline-none"
-            />
-          </FormField>
-          <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
-            <RichTextEditor html={item.description} onChange={scheduleDescriptionSave} />
-          </FormField>
+      {linkedProduct ? (
+        // Item "referensi hidup" ke produk -- title/description/photo
+        // MANUAL disembunyikan total (dikonfirmasi lewat AskUserQuestion).
+        // Nama/harga/sampul yang tampil di sini SEKADAR pratinjau -- sumber
+        // kebenaran tetap data produk terkini, diambil ulang tiap render
+        // (lihat catatan linkedProduct di atas dan render publik PagePreview.tsx).
+        <div className="flex items-center gap-3 rounded-lg border-2 border-jeon-purple/30 bg-jeon-lavender/30 p-3">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+            {linkedProduct.cover_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={linkedProduct.cover_image_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <IconTrash className="h-4 w-4 text-jeon-purple/40" />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-jeon-purple">
+              {t("dashboard.components.blockDrilldown.linkedProductLabel")}
+            </p>
+            <p className="truncate text-sm font-semibold text-app-ink">{linkedProduct.name}</p>
+            <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.linkedProductHint")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onDeleteItem}
+            title={t("dashboard.pages.links.catalogPanel.deleteItem")}
+            className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
+          >
+            <IconTrash className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onDeleteItem}
-          title={t("dashboard.pages.links.catalogPanel.deleteItem")}
-          className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
-        >
-          <IconTrash className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div>
-        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">
-          {t("dashboard.components.blockDrilldown.photosHeading")}
-        </p>
-        {canUploadImages ? (
-          <div className="flex flex-wrap gap-2">
-            {item.images.map((src, i) => (
-              <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
-                <button
-                  type="button"
-                  onClick={() => onDeleteImage(i)}
-                  title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
-                >
-                  <IconTrash className="h-2.5 w-2.5" />
-                </button>
-              </div>
-            ))}
-            {item.images.length < maxCatalogImagesPerItem && (
-              <label
-                className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
-                  isUploading ? "opacity-60" : ""
-                }`}
-              >
-                {isUploading ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                ) : (
-                  <IconPlus className="h-4 w-4" />
-                )}
+      ) : (
+        <>
+          <div className="flex items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
                 <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (file) onUploadImage(file);
-                  }}
-                  disabled={isUploading}
-                  className="hidden"
+                  type="text"
+                  defaultValue={item.title}
+                  placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
+                  onBlur={(e) => e.target.value.trim() && onUpdateField("title", e.target.value.trim())}
+                  className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm font-semibold focus:border-jeon-purple focus:outline-none"
                 />
-              </label>
+              </FormField>
+              <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
+                <RichTextEditor html={item.description} onChange={scheduleDescriptionSave} />
+              </FormField>
+            </div>
+            <button
+              type="button"
+              onClick={onDeleteItem}
+              title={t("dashboard.pages.links.catalogPanel.deleteItem")}
+              className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
+            >
+              <IconTrash className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">
+              {t("dashboard.components.blockDrilldown.photosHeading")}
+            </p>
+            {canUploadImages ? (
+              <div className="flex flex-wrap gap-2">
+                {item.images.map((src, i) => (
+                  <div key={i} className="group relative h-16 w-16 flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                    <button
+                      type="button"
+                      onClick={() => onDeleteImage(i)}
+                      title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
+                    >
+                      <IconTrash className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {item.images.length < maxCatalogImagesPerItem && (
+                  <label
+                    className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
+                      isUploading ? "opacity-60" : ""
+                    }`}
+                  >
+                    {isUploading ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                    ) : (
+                      <IconPlus className="h-4 w-4" />
+                    )}
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) onUploadImage(file);
+                      }}
+                      disabled={isUploading}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            ) : (
+              <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.photosNestedUnsupported")}</p>
             )}
           </div>
-        ) : (
-          <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.photosNestedUnsupported")}</p>
-        )}
-      </div>
+        </>
+      )}
 
       <div>
         <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">
