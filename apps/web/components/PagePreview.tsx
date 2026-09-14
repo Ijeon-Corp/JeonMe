@@ -4231,6 +4231,34 @@ function BuilderPagePreview({
   // catatan lengkap di getProductCategories/renderCategoryTabs (dekat
   // toPreviewData, atas file ini) & ProdukPagePreview (pola SAMA PERSIS).
   const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
+  // catalogView -- bug dilaporkan langsung pengguna, 14 September 2026
+  // (screenshot halaman publik: "kenapa blok katalog nya tidak bisa di
+  // klik dan menampilkan isinya"). Blok "catalog" akar SENGAJA tidak
+  // ditangani sendiri oleh renderBuilderNode (lihat catatan
+  // BUILDER_NODE_BLOCK_TYPES di atas: "baris ROOT tipe itu tetap jatuh ke
+  // renderLinkOrBlock yang SUDAH bekerja penuh termasuk... drill-down
+  // katalog") -- TAPI klaim komentar lama itu SALAH: pemanggilan
+  // renderLinkOrBlock di bawah tidak pernah dioper argumen ke-6
+  // (onOpenCatalog) sama sekali, DAN komponen ini juga tidak pernah punya
+  // state `catalogView`-nya sendiri (beda dari layout Bio klasik & dari
+  // ProdukPagePreview yang sudah diperbaiki hari ini juga) -- jadi blok
+  // Katalog akar di HALAMAN MODE BUILDER MANA PUN (bio/Toko/landing) tetap
+  // tampil sbg baris tapi klik tidak melakukan apa pun sama sekali. State +
+  // takeover di bawah SAMA PERSIS pola yang sudah dipakai layout Bio klasik.
+  const [catalogView, setCatalogView] = useState<PagePreviewLink | null>(null);
+  if (catalogView) {
+    return (
+      <CatalogTakeoverView
+        link={catalogView}
+        theme={theme}
+        data={data}
+        interactive={interactive}
+        canBuy={canBuy}
+        rootClassName={rootClassName}
+        onExit={() => setCatalogView(null)}
+      />
+    );
+  }
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
@@ -4311,7 +4339,16 @@ function BuilderPagePreview({
                 data-builder-block-type={blockType}
                 className={`w-full rounded-xl${builderSelectionRing(link.id, selectedNodeId)}`}
               >
-                {renderLinkOrBlock(link, theme, data, interactive, canBuy)}
+                {/* onOpenCatalog HANYA dioper saat interactive=true (halaman
+                    publik sungguhan) -- kanvas Canvas Builder sendiri
+                    (interactive=false, LivePreviewPanel) memakai klik pada
+                    node ini utk MEMILIH blok (delegasi closest
+                    "[data-builder-node-id]"), BUKAN membuka takeover
+                    katalog penuh layar, yang akan mengganti SELURUH kanvas
+                    edit dgn CatalogTakeoverView dan mematahkan alur
+                    edit -- pola sama seperti percabangan `interactive` lain
+                    di renderBuilderNode (mis. case "button"/"image"). */}
+                {renderLinkOrBlock(link, theme, data, interactive, canBuy, interactive ? setCatalogView : undefined)}
               </div>
             );
           }
@@ -4556,6 +4593,30 @@ function ProdukPagePreview({
   // hasProdukBlock -- lihat catatan lengkap di BuilderPagePreview (pola
   // identik, komponen ini adalah versi non-builder Halaman Toko).
   const hasProdukBlock = data.links.some((l) => l.blockType === "produk");
+  // catalogView -- bug dilaporkan langsung pengguna, 14 September 2026
+  // (screenshot Halaman Toko publik: "kenapa blok katalog nya tidak bisa
+  // di klik dan menampilkan isinya"). SEBELUMNYA renderLinkOrBlock di sini
+  // dipanggil TANPA onOpenCatalog SAMA SEKALI (lihat catatan lama di
+  // CatalogTakeoverView: "cakupan awal... kreator pasti memakainya di
+  // halaman Bio utama, bukan Toko/Landing" -- asumsi itu SEKARANG terbukti
+  // salah lewat laporan nyata ini) -- blok Katalog tetap tampil sbg baris
+  // tapi klik tidak melakukan apa pun, TIDAK ada state `catalogView` sama
+  // sekali di komponen ini. State + takeover di bawah SAMA PERSIS pola yang
+  // sudah dipakai versi Bio (PagePreview default di atas).
+  const [catalogView, setCatalogView] = useState<PagePreviewLink | null>(null);
+  if (catalogView) {
+    return (
+      <CatalogTakeoverView
+        link={catalogView}
+        theme={theme}
+        data={data}
+        interactive={interactive}
+        canBuy={canBuy}
+        rootClassName={rootClassName}
+        onExit={() => setCatalogView(null)}
+      />
+    );
+  }
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
       {renderVideoBackground(theme)}
@@ -4600,7 +4661,7 @@ function ProdukPagePreview({
 
         {data.links.length > 0 && (
           <div className="mt-8 flex w-full flex-col gap-2.5">
-            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy))}
+            {data.links.map((link) => renderLinkOrBlock(link, theme, data, interactive, canBuy, setCatalogView))}
           </div>
         )}
 

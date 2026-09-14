@@ -563,4 +563,48 @@ test.describe("Canvas Page Builder", () => {
 
     expect(cspViolations.filter((v) => /frame-src/i.test(v))).toEqual([]);
   });
+
+  // Bug dilaporkan langsung pengguna, 14 September 2026 (screenshot halaman
+  // publik): "kenapa blok katalog nya tidak bisa di klik dan menampilkan
+  // isinya". Akar masalah: blok "catalog" akar SENGAJA jatuh ke
+  // renderLinkOrBlock (bukan renderBuilderNode, lihat komentar
+  // BUILDER_NODE_BLOCK_TYPES di PagePreview.tsx), TAPI BuilderPagePreview
+  // (dipakai kanvas Mode Builder MAUPUN halaman publik sungguhan begitu
+  // builder_mode="builder") tidak pernah punya state `catalogView` sendiri
+  // sama sekali, DAN pemanggilan renderLinkOrBlock di sana tidak pernah
+  // mengoper argumen onOpenCatalog -- jadi baris Katalog tampil tapi klik
+  // di halaman publik tidak melakukan apa pun, berapa pun page_type-nya
+  // (bio/Toko/landing, ketiganya lewat komponen yang sama).
+  test("kreator: blok Katalog akar di Mode Builder bisa diklik & menampilkan isinya di halaman publik", async ({ page }) => {
+    const { username } = await registerAndLogin(page, "builder4");
+    await page.goto("/dashboard/links");
+    await page.getByRole("link", { name: "Buka Mode Builder (Kanvas)" }).click();
+    await expect(page.getByText("Mode Builder")).toBeVisible();
+
+    await page.getByRole("button", { name: "Tambah Komponen" }).click();
+    await expect(page.getByRole("heading", { name: "Tambah Komponen" })).toBeVisible();
+    await page.getByRole("button", { name: "Lainnya", exact: true }).click();
+    await page.getByRole("button", { name: "Katalog", exact: true }).click();
+
+    // Menambah komponen root-only TIDAK otomatis memilihnya (sama seperti
+    // Section/Kolom/dst, lihat catatan "Tambah Komponen" di test pertama
+    // file ini) -- klik baris tree-nya dulu baru editor Katalog (JUDUL
+    // BLOK/daftar item/"+ Tambah Item") tampil.
+    await page.getByRole("button", { name: "Katalog", exact: true }).first().click();
+    await expect(page.getByRole("button", { name: "Tambah Item" })).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Tambah Item" }).click();
+    await page.getByPlaceholder("mis. Tipe 36").fill("Tipe Rumah A");
+    await page.getByPlaceholder("mis. Tipe 36").blur();
+
+    await saveDraft(page);
+
+    await page.goto(`/${username}`);
+    const catalogRow = page.getByRole("button", { name: "Katalog", exact: true });
+    await expect(catalogRow).toBeVisible({ timeout: 10000 });
+    // SEBELUM perbaikan: baris ini disabled (cursor-default opacity-70,
+    // tidak ada IconChevronRight) -- klik tidak melakukan apa pun.
+    await expect(catalogRow).toBeEnabled();
+    await catalogRow.click();
+    await expect(page.getByRole("button", { name: "Tipe Rumah A" })).toBeVisible({ timeout: 10000 });
+  });
 });
