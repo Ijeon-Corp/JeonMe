@@ -863,13 +863,7 @@ function TopLevelFaqItemFrame({
         />
       </FormField>
       <FormField label={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}>
-        <textarea
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          placeholder={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}
-          rows={4}
-          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
-        />
+        <RichTextEditor html={answer} onChange={setAnswer} />
       </FormField>
       {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
       <div className="flex gap-2">
@@ -918,6 +912,33 @@ function EmbeddedFaqItemFrame({
   onDelete?: () => void;
 }) {
   const { t } = useLocale();
+  // answerSaveTimer/pendingAnswer -- sama alasan persis textSaveTimer di
+  // EmbeddedBlockFrame (lihat catatan lengkap di sana): onUpdate berujung
+  // ke PATCH jaringan langsung (autosave, tanpa draft lokal), RichTextEditor
+  // memanggil onChange per ketukan -- didebounce di sini, flush saat
+  // unmount supaya ketikan terakhir sebelum pindah blok tidak hilang.
+  const answerSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingAnswer = useRef<string | null>(null);
+  function scheduleAnswerSave(value: string) {
+    if (answerSaveTimer.current) clearTimeout(answerSaveTimer.current);
+    pendingAnswer.current = value;
+    answerSaveTimer.current = setTimeout(() => {
+      answerSaveTimer.current = null;
+      pendingAnswer.current = null;
+      onUpdate({ question: qa.question, answer: value });
+    }, 700);
+  }
+  useEffect(() => {
+    return () => {
+      if (answerSaveTimer.current && pendingAnswer.current !== null) {
+        clearTimeout(answerSaveTimer.current);
+        onUpdate({ question: qa.question, answer: pendingAnswer.current });
+      }
+    };
+    // Flush SEKALI saat unmount instance INI, lihat catatan lengkap di
+    // textSaveTimer/EmbeddedBlockFrame (alasan sama persis).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.autosaveHint")}</p>
@@ -931,13 +952,7 @@ function EmbeddedFaqItemFrame({
         />
       </FormField>
       <FormField label={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}>
-        <textarea
-          defaultValue={qa.answer}
-          onBlur={(e) => onUpdate({ question: qa.question, answer: e.target.value })}
-          placeholder={t("dashboard.components.catalogBlocksEditor.answerPlaceholder")}
-          rows={4}
-          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
-        />
+        <RichTextEditor html={qa.answer} onChange={scheduleAnswerSave} />
       </FormField>
       {onDelete && (
         <button type="button" onClick={onDelete} className="self-start text-xs font-semibold text-red-600 hover:underline">

@@ -2730,12 +2730,9 @@ export default function DashboardLinksPage() {
                       />
                     </FormField>
                     <FormField label={t("dashboard.pages.links.blockForm.faq.answerLabel")}>
-                      <textarea
-                        placeholder={t("dashboard.pages.links.blockForm.faq.answerPlaceholder")}
-                        value={item.answer}
-                        onChange={(e) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: e.target.value } : it)))}
-                        rows={2}
-                        className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                      <RichTextEditor
+                        html={item.answer}
+                        onChange={(html) => setBlockFaqItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, answer: html } : it)))}
                       />
                     </FormField>
                   </div>
