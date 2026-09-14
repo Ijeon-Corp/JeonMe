@@ -140,11 +140,14 @@ test.describe("Catalog nested blocks", () => {
     await page.getByRole("button", { name: "Lihat Paket Premium" }).click();
     await expect(page).toHaveURL(/\/dashboard\/settings\/subscription/);
 
-    // Verifikasi tampilan publik: klik ke item (tile fallback "Item",
-    // susulan 15 September 2026) lihat blok tertanam.
+    // Verifikasi tampilan publik: "flatten total" (susulan 15 September
+    // 2026, permintaan langsung pengguna: "kenapa saya harus klik blok
+    // ini baru tampil semua blok yang saya tambahkan... harusnya kan
+    // ketika klik katalog langsung muncul semua blok yang sudah saya
+    // tambahkan") -- klik "Perumahan" LANGSUNG menampilkan semua blok
+    // tertanam item ini, TANPA perlu klik tile item apa pun lagi.
     await page.goto(`/${username}`);
     await page.getByText("Perumahan", { exact: true }).click();
-    await page.getByRole("button", { name: "Item" }).click();
     await expect(page.getByText("Deskripsi lengkap tipe rumah ini.")).toBeVisible();
     await expect(page.getByText("Apakah bisa nego harga?")).toBeVisible();
   });
@@ -226,27 +229,21 @@ test.describe("Catalog nested blocks", () => {
     await page.getByText("Teks", { exact: true }).first().click();
     await expect(page.locator('[contenteditable="true"]')).toHaveText("Unit 1 -- 2 kamar tidur.", { timeout: 10000 });
 
+    // "Flatten total" (susulan 15 September 2026): klik "Perumahan" LANGSUNG
+    // menampilkan baris "Katalog (bersarang)" (satu-satunya blok tertanam
+    // item ini) TANPA tile/klik item apa pun. Baris "catalog" bersarang
+    // SENDIRI tetap satu-satunya pengecualian klik-untuk-buka (drill-down
+    // asli dipertahankan, dikonfirmasi lewat AskUserQuestion) -- di
+    // dalamnya, item Teks-nya juga langsung tampil tanpa klik lagi.
     await page.goto(`/${username}`);
     await page.getByText("Perumahan", { exact: true }).click();
-    await page.getByRole("button", { name: "Item" }).click();
     await page.getByText("Katalog (bersarang)", { exact: true }).click();
-    await expect(page.getByRole("button", { name: "Item" })).toBeVisible();
-    await page.getByRole("button", { name: "Item" }).click();
     await expect(page.getByText("Unit 1 -- 2 kamar tidur.")).toBeVisible();
 
-    // 3x "Kembali" (SATU lebih banyak dari sebelum susulan 15 September
-    // 2026 -- dulu tes ini cukup mengecek tile "Unit 1" TERLIHAT di grid
-    // bersarang tanpa masuk ke detailnya, karena judul dulu jadi penanda
-    // isi yang cukup; sekarang tanpa judul, verifikasi isi HARUS masuk ke
-    // detail item bersarang itu sendiri, menambah satu tingkat navigasi):
-    // detail item bersarang -> grid katalog bersarang -> detail item induk
-    // (baris "Katalog (bersarang)" tampil lagi) -> grid katalog induk.
-    await page.getByLabel("Kembali").click();
-    await expect(page.getByRole("button", { name: "Item" })).toBeVisible();
+    // "Kembali" -- cukup 1x sekarang (pop stack katalog bersarang), TIDAK
+    // ADA lagi lapisan "detail item" terpisah (flatten total menghapusnya).
     await page.getByLabel("Kembali").click();
     await expect(page.getByText("Katalog (bersarang)", { exact: true })).toBeVisible();
-    await page.getByLabel("Kembali").click();
-    await expect(page.getByRole("button", { name: "Item" })).toBeVisible();
   });
 
   // Judul item katalog jadi OPSIONAL -- susulan 14 September 2026,
@@ -308,9 +305,10 @@ test.describe("Catalog nested blocks", () => {
     await expect(page.getByText("Item tanpa judul")).toBeVisible({ timeout: 10000 });
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // Halaman publik: tile grid jatuh ke fallback "Item" (bukan blank).
+    // Halaman publik: "flatten total" -- isi blok Teks item ini tampil
+    // LANGSUNG begitu klik "Katalog Uji", tanpa tile/klik item apa pun.
     await page.goto(`/${username}`);
-    await page.getByRole("button", { name: "Katalog Uji" }).click();
-    await expect(page.getByRole("button", { name: "Item" })).toBeVisible({ timeout: 10000 });
+    await page.getByText("Katalog Uji", { exact: true }).click();
+    await expect(page.getByText("Konten langsung tanpa judul item.")).toBeVisible({ timeout: 10000 });
   });
 });

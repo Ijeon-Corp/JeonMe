@@ -13,9 +13,13 @@ import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
 // findCatalogLinkedProduct), bukan salinan statis -- kalau produk diedit
 // lagi nanti, katalog ikut berubah otomatis tanpa perlu disinkronkan
 // manual, sama seperti katalog produk Tokopedia. Susulan 15 September
-// 2026: field title/description/photo manual DIHAPUS TOTAL dari layar
-// item (bukan lagi disembunyikan kondisional begitu produk ditautkan) --
-// alur "Tambah Item" sekarang langsung membuka popup pilih tipe blok.
+// 2026 (dua perbaikan sekaligus): (1) field title/description/photo
+// manual DIHAPUS TOTAL dari layar item (bukan lagi disembunyikan
+// kondisional begitu produk ditautkan) -- alur "Tambah Item" sekarang
+// langsung membuka popup pilih tipe blok; (2) "flatten total" -- item
+// dgn PERSIS 1 blok "produk" tampil LANGSUNG sbg kartu produk penuh di
+// halaman publik, TANPA tile grid & TANPA klik apa pun (dikonfirmasi
+// lewat AskUserQuestion).
 test.describe("Katalog: item referensi hidup ke produk", () => {
   test("field manual tersembunyi begitu produk ditautkan, grid & detail publik ikut data produk terkini", async ({ page, request }) => {
     const { username } = await registerAndLogin(page, "catliveref");
@@ -64,20 +68,15 @@ test.describe("Katalog: item referensi hidup ke produk", () => {
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // 5) Halaman publik: tile grid katalog ikut nama & sampul PRODUK (bukan
-    // title/images statis item yang tidak pernah diisi).
+    // 5) Halaman publik: "flatten total" (susulan 15 September 2026) --
+    // klik "Toko Sepatu" LANGSUNG menampilkan kartu produk asli (nama &
+    // sampul PRODUK terkini, bukan title/images statis item yang tidak
+    // pernah diisi), TANPA tile/klik item apa pun lagi.
     await page.goto(`/${username}`);
-    await page.getByRole("button", { name: "Toko Sepatu" }).click();
-    const tile = page.getByRole("button", { name: "Sepatu Lari Merah" });
-    await expect(tile).toBeVisible({ timeout: 10000 });
-    await expect(tile.locator("img")).toHaveCount(1);
-
-    await tile.click();
-    // Detail: header pakai nama produk, kartu produk asli tertanam via
-    // blocks[] (Link Eksternal -> tombol "Lihat Produk") -- BUKAN header
-    // generik + kartu terpisah yang redundan.
-    await expect(page.getByRole("heading", { name: "Sepatu Lari Merah" })).toBeVisible();
+    await page.getByText("Toko Sepatu", { exact: true }).click();
+    await expect(page.getByText("Sepatu Lari Merah")).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("link", { name: /Lihat Produk/ })).toBeVisible();
+    await expect(page.locator("img[alt='Sepatu Lari Merah']")).toHaveCount(1);
 
     // 6) Ubah nama produk LANGSUNG lewat API (menu Produk dashboard belum
     // punya UI edit-nama -- ManageProductModal.tsx cuma expose kategori/
@@ -98,7 +97,7 @@ test.describe("Katalog: item referensi hidup ke produk", () => {
     expect(patchRes.ok()).toBeTruthy();
 
     await page.goto(`/${username}`);
-    await page.getByRole("button", { name: "Toko Sepatu" }).click();
-    await expect(page.getByRole("button", { name: "Sepatu Lari Biru Edisi Baru" })).toBeVisible({ timeout: 10000 });
+    await page.getByText("Toko Sepatu", { exact: true }).click();
+    await expect(page.getByText("Sepatu Lari Biru Edisi Baru")).toBeVisible({ timeout: 10000 });
   });
 });

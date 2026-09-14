@@ -605,6 +605,8 @@ test.describe("Canvas Page Builder", () => {
     // tidak ada IconChevronRight) -- klik tidak melakukan apa pun.
     await expect(catalogRow).toBeEnabled();
     await catalogRow.click();
-    await expect(page.getByRole("button", { name: "Tipe Rumah A" })).toBeVisible({ timeout: 10000 });
+    // "Flatten total" (susulan 15 September 2026): judul item tampil
+    // LANGSUNG sbg teks, tanpa tile/klik apa pun lagi.
+    await expect(page.getByText("Tipe Rumah A", { exact: true })).toBeVisible({ timeout: 10000 });
   });
 });

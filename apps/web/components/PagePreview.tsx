@@ -2662,12 +2662,15 @@ function renderLinkOrBlock(
 }
 
 // CatalogFrame -- satu "layar" dalam tumpukan drill-down katalog (lihat
-// catatan lengkap di CatalogTakeoverView di bawah soal kenapa ini berubah
-// dari state 2-tingkat tetap jadi tumpukan/stack).
+// catatan lengkap di CatalogTakeoverView di bawah). Sejak "flatten total"
+// (15 September 2026) TIDAK ADA lagi `selectedItemId`/grid-tile -- SATU
+// frame = SATU layar yang langsung menampilkan SEMUA item & SEMUA
+// bloknya sekaligus, tanpa klik apa pun. Tumpukan (`stack`) tersisa
+// HANYA untuk katalog BERSARANG (Premium, blok "catalog" di dalam
+// sebuah item) -- itu SATU-SATUNYA alasan push/pop frame baru sekarang.
 interface CatalogFrame {
   title: string;
   items: CatalogItem[];
-  selectedItemId: string | null;
 }
 
 // CatalogTakeoverView -- permintaan langsung pengguna, 25 Agustus 2026:
@@ -2683,20 +2686,32 @@ interface CatalogFrame {
 // item boleh punya `blocks[]` tertanam (EmbeddedCatalogBlock, lihat
 // api-client.ts), salah satunya boleh bertipe "catalog" lagi (Premium,
 // lihat validateBlockDataAtDepth/checkCatalogPremiumGate di links.go),
-// yang membuka FRAME BARU di atas tumpukan alih-alih mengganti
-// selectedItemId tunggal -- begitulah kedalaman jadi dinamis (bukan
-// selalu persis 2 langkah lagi), dibatasi maxCatalogDepth=5 di backend.
-// goBack() SEKARANG punya 3 kemungkinan (bukan 2): detail item -> grid
-// frame ini -> frame sebelumnya (pop stack) -> onExit (stack kosong).
+// yang membuka FRAME BARU di atas tumpukan.
 //
-// SENGAJA cuma dipakai di layout bio biasa (lihat pemanggilan di
-// PagePreview di bawah) -- TIDAK di LandingPagePreview (blok manual
-// full-width, arsitektur render blok yang sama sekali terpisah) atau
-// ProdukPagePreview (renderLinkOrBlock di sana dipanggil TANPA
-// onOpenCatalog, lihat komentar parameter itu -- baris tetap tampil tapi
-// tidak bisa diklik). Cakupan awal: kreator yang benar-benar butuh blok
-// ini (contoh nyata: agen properti dgn banyak tipe rumah) pasti
-// memakainya di halaman Bio utama, bukan Toko/Landing.
+// Revisi 15 September 2026 (permintaan langsung pengguna, screenshot
+// item "Product Shopee": "kenapa saya harus klik blok ini baru tampil
+// semua blok yang saya tambahkan... harusnya kan ketika klik katalog
+// langsung muncul semua blok yang sudah saya tambahkan"): grid-tile +
+// klik-per-item DIHAPUS TOTAL (dikonfirmasi lewat AskUserQuestion --
+// opsi yang dipilih pengguna: "semua item & semua bloknya langsung
+// tampil, tanpa klik sama sekali", BUKAN opsi tengah yang masih
+// menyisakan klik untuk item multi-blok). goBack() sekarang cuma 2
+// kemungkinan (bukan 3): pop stack (keluar dari katalog bersarang) ->
+// onExit (stack kosong, keluar dari takeover). Satu pengecualian
+// disengaja: blok "catalog" BERSARANG di dalam sebuah item TETAP
+// klik-untuk-buka (drill-down asli, TIDAK ikut diratakan rekursif) --
+// meratakan pohon bercabang tak berbatas (maxCatalogDepth=5) ke satu
+// layar bisa menghasilkan halaman sangat panjang tanpa kendali, dan pola
+// "Jenis Rumah -> daftar jenis -> detail" yang jadi alasan awal fitur
+// bersarang ini memang tentang penjelajahan bertingkat, bukan tampilan
+// datar. Lihat segmentasi grid produk di badan fungsi ini.
+//
+// Sekarang dipakai DI SEMUA jalur render halaman publik (Bio klasik,
+// Toko klasik/ProdukPagePreview, MAUPUN Mode Builder/BuilderPagePreview)
+// -- ketiganya sekarang benar mengoper onOpenCatalog (bug jalur Toko/
+// Builder ditemukan & diperbaiki 14 September 2026, lihat commit
+// 0d7f14b), beda dari catatan lama di sini yang bilang "SENGAJA cuma di
+// Bio" (sudah tidak akurat).
 // findCatalogLinkedProduct -- item katalog "referensi hidup" ke produk
 // (permintaan langsung pengguna 14 September 2026, dikonfirmasi lewat
 // AskUserQuestion, ala katalog Tokopedia): begitu item punya blok "produk"
@@ -2747,18 +2762,11 @@ function CatalogTakeoverView({
   onExit: () => void;
 }) {
   const rootItems = ((link.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
-  const [stack, setStack] = useState<CatalogFrame[]>([{ title: link.title, items: rootItems, selectedItemId: null }]);
+  const [stack, setStack] = useState<CatalogFrame[]>([{ title: link.title, items: rootItems }]);
   const frame = stack[stack.length - 1];
-  const selectedItem = frame.items.find((it) => it.id === frame.selectedItemId) ?? null;
 
   function goBack() {
-    if (selectedItem) {
-      setStack((s) => {
-        const next = [...s];
-        next[next.length - 1] = { ...frame, selectedItemId: null };
-        return next;
-      });
-    } else if (stack.length > 1) {
+    if (stack.length > 1) {
       setStack((s) => s.slice(0, -1));
     } else {
       onExit();
@@ -2767,20 +2775,62 @@ function CatalogTakeoverView({
 
   // openNestedCatalog -- dioper sebagai `onOpenCatalog` ke renderLinkOrBlock
   // saat merender blok tertanam bertipe "catalog" (lihat pemetaan
-  // EmbeddedCatalogBlock -> PagePreviewLink sintetis di bawah) -- MENDORONG
-  // frame baru ke tumpukan, bukan mengganti isi frame saat ini, supaya
-  // "Kembali" tetap bisa naik satu tingkat demi satu tingkat.
+  // EmbeddedCatalogBlock -> PagePreviewLink sintetis di bawah) -- SATU-
+  // SATUNYA jalur yang masih mendorong frame baru ke tumpukan sejak
+  // "flatten total" (lihat catatan lengkap di atas fungsi ini).
   function openNestedCatalog(nestedLink: PagePreviewLink) {
     const nestedItems = ((nestedLink.blockData?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
-    setStack((s) => [...s, { title: nestedLink.title, items: nestedItems, selectedItemId: null }]);
+    setStack((s) => [...s, { title: nestedLink.title, items: nestedItems }]);
   }
 
-  // selectedItemLinkedProduct -- lihat catatan lengkap findCatalogLinkedProduct
-  // di atas. Kalau ada, header judul & blok foto/deskripsi statis item DISKIP
-  // total (bukan cuma diganti nilainya) supaya tidak redundan dgn kartu produk
-  // sungguhan yang sudah dirender via blocks.map di bawah -- kartu itu SENDIRI
-  // yang menampilkan foto/harga/deskripsi produk terkini.
-  const selectedItemLinkedProduct = selectedItem ? findCatalogLinkedProduct(selectedItem.blocks, data.products) : undefined;
+  // trackProduct/productCtx -- SAMA PERSIS pola blok "produk" tingkat atas
+  // (lihat case "produk" di renderLinkOrBlock), dipakai khusus utk render
+  // GRID produk gaya Tokopedia di bawah (segmen "products") -- blok
+  // "produk" LAIN (bukan bagian grid ini, mis. tertanam bareng blok lain
+  // dalam satu item) tetap lewat renderLinkOrBlock apa adanya, sudah
+  // punya trackProduct/ctx sendiri di sana.
+  const trackProduct = (productClickId: string) =>
+    data.pageSlug
+      ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
+      : trackEvent(data.username, { event_type: "product_click", product_id: productClickId });
+  const productCtx = { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused };
+
+  // segments -- "flatten total" (susulan 15 September 2026, permintaan
+  // langsung pengguna dari screenshot item "Product Shopee": "kenapa saya
+  // harus klik blok ini baru tampil semua blok yang saya tambahkan...
+  // harusnya kan ketika klik katalog langsung muncul semua blok yang
+  // sudah saya tambahkan", lalu sekalian diminta tingkatkan UI/UX-nya).
+  // Dikonfirmasi lewat AskUserQuestion: SEMUA item & bloknya tampil
+  // LANGSUNG di layar ini, tanpa grid-tile & tanpa klik apa pun (kecuali
+  // katalog bersarang, lihat catatan di atas fungsi).
+  //
+  // Item yang PERSIS py 1 blok "produk" bertaut ke produk sungguhan
+  // dikelompokkan jadi RUN berurutan (mempertahankan urutan asli item,
+  // bukan disortir ulang) & dirender sbg GRID 2 kolom kartu produk --
+  // gaya "grid Tokopedia" yang diminta (SAMA PERSIS renderSingleProductCard
+  // yang dipakai blok "produk" tingkat atas dgn 2+ produk), jauh lebih
+  // rapi & padat drpd satu kolom kartu berturut-turut. Layout kustom yang
+  // sempat dipilih kreator di blok "produk" itu sendiri (row/list/dst)
+  // SENGAJA diabaikan di sini -- grid katalog butuh SATU bentuk kartu
+  // seragam di semua sel, mencampur beberapa layout akan merusak
+  // kerapian grid. Item lain (judul/deskripsi/foto manual peninggalan
+  // dari sebelum field itu dihapus, ATAU item dgn >1 blok tertanam)
+  // dirender apa adanya sbg bagiannya sendiri, TIDAK ikut grid.
+  type CatalogSegment =
+    | { kind: "products"; entries: { item: CatalogItem; product: PagePreviewProduct }[] }
+    | { kind: "item"; item: CatalogItem };
+  const segments: CatalogSegment[] = [];
+  for (const item of frame.items) {
+    const blocks = item.blocks ?? [];
+    const linkedProduct = blocks.length === 1 ? findCatalogLinkedProduct(blocks, data.products) : undefined;
+    if (linkedProduct) {
+      const last = segments[segments.length - 1];
+      if (last?.kind === "products") last.entries.push({ item, product: linkedProduct });
+      else segments.push({ kind: "products", entries: [{ item, product: linkedProduct }] });
+    } else {
+      segments.push({ kind: "item", item });
+    }
+  }
 
   return (
     <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
@@ -2794,109 +2844,79 @@ function CatalogTakeoverView({
           >
             <ChevronLeft className={`h-5 w-5 ${theme.cardTitle}`} />
           </button>
-          <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>
-            {/* "Item" -- fallback susulan 14 September 2026: judul item
-                katalog SEKARANG opsional saat dibuat (links.go, permintaan
-                langsung pengguna "gausah mengisi new item title") -- item
-                tanpa produk tertaut & tanpa judul manual jatuh ke sini,
-                alih-alih judul kosong tak terlihat. */}
-            {selectedItem ? selectedItemLinkedProduct?.name || selectedItem.title || "Item" : frame.title}
-          </h1>
+          <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>{frame.title}</h1>
         </div>
 
-        {selectedItem ? (
-          <div className="flex flex-col gap-4">
-            {!selectedItemLinkedProduct && selectedItem.images.length > 0 && (
-              <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
-                {selectedItem.images.map((src, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={src}
-                    alt=""
-                    loading="lazy"
-                    className={`h-64 w-full flex-shrink-0 snap-center rounded-2xl object-cover ${selectedItem.images.length > 1 ? "w-[85%]" : ""}`}
-                  />
+        <div className="flex flex-col gap-6">
+          {segments.map((seg, i) =>
+            seg.kind === "products" ? (
+              <div key={`products-${i}`} className={seg.entries.length === 1 ? "" : "grid grid-cols-2 gap-3"}>
+                {seg.entries.map(({ item, product }) => (
+                  <div key={item.id}>{renderSingleProductCard(product, theme, canBuy, productCtx, trackProduct)}</div>
                 ))}
               </div>
-            )}
-            {/* Rich text (susulan 12 September 2026) -- whitespace-pre-line
-                utk kompatibilitas mundur konten lama (plain string ber-"\n"). */}
-            {!selectedItemLinkedProduct && selectedItem.description && (
-              <p
-                className={`jeon-rich-text-content whitespace-pre-line text-sm leading-relaxed ${theme.bio}`}
-                dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(selectedItem.description) }}
-              />
-            )}
-            {/* blocks[] -- permintaan langsung pengguna: "bisa menambahkan
-                semua blok yang sudah ada di web ini di dalam katalog".
-                Tiap blok tertanam dipetakan jadi PagePreviewLink SINTETIS
-                (bukan baris `links` sungguhan -- id gabungan cuma untuk
-                React key, TIDAK pernah dipakai buat tracking/analitik
-                karena tipe v1 -- text/faq/video/maps/catalog -- semuanya
-                TIDAK memanggil TrackedLink sama sekali, dicek langsung di
-                renderLinkOrBlock sebelum pola ini dipakai) lalu dirender
-                lewat renderLinkOrBlock APA ADANYA -- satu sumber kebenaran
-                tampilan yang sama dengan blok tingkat atas, tidak perlu
-                logika render terpisah. onOpenCatalog=openNestedCatalog di
-                sini (bukan dari prop) -- blok tertanam bertipe "catalog"
-                (Premium) membuka FRAME BARU di tumpukan komponen ini
-                sendiri, terlepas dari trigger awal takeover ini. */}
-            {(selectedItem.blocks ?? []).map((b) =>
-              renderLinkOrBlock(
-                { id: `${link.id}:${b.id}`, title: b.title, url: b.url ?? "", blockType: b.block_type, blockData: b.block_data, description: b.description },
-                theme,
-                data,
-                interactive,
-                // canBuy diteruskan apa adanya (lihat catatan lengkap di
-                // props CatalogTakeoverView) -- SEBELUMNYA hardcode false,
-                // membuat blok "produk" tertanam selalu tampil tombol Beli
-                // nonaktif.
-                canBuy,
-                openNestedCatalog
-              )
-            )}
-            {selectedItem.images.length === 0 && !selectedItem.description && (selectedItem.blocks ?? []).length === 0 && (
-              <p className={`text-sm ${theme.bio}`}>Belum ada foto/deskripsi untuk item ini.</p>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {frame.items.map((item) => {
-              // linkedProduct -- lihat catatan findCatalogLinkedProduct di
-              // atas: tile grid ikut nama & sampul produk TERKINI, bukan
-              // title/images statis item, begitu item ini "referensi hidup"
-              // ke sebuah produk.
-              const linkedProduct = findCatalogLinkedProduct(item.blocks, data.products);
-              const thumbnail = linkedProduct?.cover_image_url || item.images[0];
-              // "Item" -- fallback susulan 14 September 2026, lihat catatan
-              // lengkap di header detail di atas (judul item sekarang
-              // opsional saat dibuat).
-              const tileTitle = linkedProduct?.name || item.title || "Item";
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setStack((s) => { const next = [...s]; next[next.length - 1] = { ...frame, selectedItemId: item.id }; return next; })}
-                  className={`flex flex-col overflow-hidden text-left ${theme.cardRounded ?? "rounded-xl"} ${theme.card}`}
-                >
-                  <div className="aspect-square w-full overflow-hidden bg-black/10">
-                    {thumbnail ? (
+            ) : (
+              <div key={seg.item.id} className="flex flex-col gap-3">
+                {/* Judul/foto/deskripsi manual -- peninggalan item lama
+                    (sebelum field ini dihapus dari editor, lihat commit
+                    f5e3ce6) TETAP ditampilkan apa adanya di sini, TIDAK
+                    dihapus datanya -- cuma UI utk MENGISI yang sudah tidak
+                    ada lagi di dashboard. */}
+                {seg.item.title && <p className={`text-sm font-bold ${theme.cardTitle}`}>{seg.item.title}</p>}
+                {seg.item.images.length > 0 && (
+                  <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
+                    {seg.item.images.map((src, idx) => (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <LayoutGrid className={`h-8 w-8 opacity-30 ${theme.cardTitle}`} />
-                      </div>
-                    )}
+                      <img
+                        key={idx}
+                        src={src}
+                        alt=""
+                        loading="lazy"
+                        className={`h-64 w-full flex-shrink-0 snap-center rounded-2xl object-cover ${seg.item.images.length > 1 ? "w-[85%]" : ""}`}
+                      />
+                    ))}
                   </div>
-                  <p className={`truncate px-2.5 py-2 text-xs font-semibold ${theme.cardTitle}`}>{tileTitle}</p>
-                </button>
-              );
-            })}
-            {frame.items.length === 0 && <p className={`col-span-2 py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
-          </div>
-        )}
+                )}
+                {seg.item.description && (
+                  <p
+                    className={`jeon-rich-text-content whitespace-pre-line text-sm leading-relaxed ${theme.bio}`}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(seg.item.description) }}
+                  />
+                )}
+                {/* blocks[] -- permintaan langsung pengguna: "bisa menambahkan
+                    semua blok yang sudah ada di web ini di dalam katalog".
+                    Tiap blok tertanam dipetakan jadi PagePreviewLink SINTETIS
+                    (bukan baris `links` sungguhan -- id gabungan cuma untuk
+                    React key, TIDAK pernah dipakai buat tracking/analitik
+                    karena tipe v1 -- text/faq/video/maps/catalog -- semuanya
+                    TIDAK memanggil TrackedLink sama sekali, dicek langsung di
+                    renderLinkOrBlock sebelum pola ini dipakai) lalu dirender
+                    lewat renderLinkOrBlock APA ADANYA -- satu sumber kebenaran
+                    tampilan yang sama dengan blok tingkat atas, tidak perlu
+                    logika render terpisah. onOpenCatalog=openNestedCatalog di
+                    sini (bukan dari prop) -- blok tertanam bertipe "catalog"
+                    (Premium) TETAP membuka FRAME BARU (SATU-SATUNYA
+                    pengecualian dari "flatten total", lihat catatan di atas
+                    fungsi ini). */}
+                {(seg.item.blocks ?? []).map((b) =>
+                  renderLinkOrBlock(
+                    { id: `${link.id}:${b.id}`, title: b.title, url: b.url ?? "", blockType: b.block_type, blockData: b.block_data, description: b.description },
+                    theme,
+                    data,
+                    interactive,
+                    // canBuy diteruskan apa adanya (lihat catatan lengkap di
+                    // props CatalogTakeoverView) -- SEBELUMNYA hardcode false,
+                    // membuat blok "produk" tertanam selalu tampil tombol Beli
+                    // nonaktif.
+                    canBuy,
+                    openNestedCatalog
+                  )
+                )}
+              </div>
+            )
+          )}
+          {frame.items.length === 0 && <p className={`py-8 text-center text-xs ${theme.bio}`}>Belum ada item di katalog ini.</p>}
+        </div>
       </div>
     </main>
   );
