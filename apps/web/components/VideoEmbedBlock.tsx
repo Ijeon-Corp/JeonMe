@@ -1,6 +1,19 @@
-// No.77 (Sprint 9): blok video embed (YouTube/TikTok). Server Component murni
-// (tidak butuh interaktivitas apa pun) -- konversi URL asli ke URL embed
-// dilakukan sekali di sini, bukan client-side.
+"use client";
+
+import { useState } from "react";
+import { IconPlayCircle } from "@/components/icons";
+
+// No.77 (Sprint 9): blok video embed (YouTube/TikTok).
+//
+// Pola thumbnail-klik-buka -- susulan 14 September 2026 (audit benchmark
+// Linktree: "video opens out from the link and plays natively", pola
+// thumbnail dulu baru expand & main -- BEDA dari Jeon.id sebelumnya yang
+// SELALU merender iframe aktif penuh langsung). Jadi Client Component
+// (dulu Server Component murni) HANYA utk state klik-utk-main -- kalau
+// halaman publik kreator punya banyak blok video sekaligus, sebelumnya
+// SEMUA iframe termuat &amp; aktif bersamaan sejak page load (boros bandwidth
+// &amp; performa nyata, bukan cuma kosmetik); sekarang cuma iframe yang
+// benar-benar diklik yang dimuat.
 function toEmbedUrl(raw: string): string | null {
   let u: URL;
   try {
@@ -28,6 +41,20 @@ function toEmbedUrl(raw: string): string | null {
   return null;
 }
 
+// getYoutubeThumbnail -- URL thumbnail YouTube TERPREDIKSI dari ID video
+// saja (tanpa panggilan API terpisah, format publik resmi img.youtube.com)
+// -- BEDA dari TikTok yang tidak punya pola URL thumbnail statis serupa
+// tanpa panggilan oEmbed tambahan (di luar cakupan perbaikan ini, lihat
+// catatan lengkap riset benchmark: "TikTok tidak sesederhana itu tanpa
+// oEmbed call tambahan"). TikTok tetap dapat manfaat performa dari pola
+// klik-utk-buka ini, cuma tanpa gambar pratinjau sungguhan (placeholder
+// ikon generik).
+function getYoutubeThumbnail(embedUrl: string): string | null {
+  const match = embedUrl.match(/\/embed\/([^/?]+)/);
+  if (!match) return null;
+  return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+}
+
 export default function VideoEmbedBlock({
   title,
   videoUrl,
@@ -44,6 +71,9 @@ export default function VideoEmbedBlock({
   icon?: React.ReactNode;
 }) {
   const embedUrl = toEmbedUrl(videoUrl);
+  const [playing, setPlaying] = useState(false);
+  const isYoutube = embedUrl?.includes("youtube.com/embed/") ?? false;
+  const thumbnail = embedUrl && isYoutube ? getYoutubeThumbnail(embedUrl) : null;
 
   return (
     <div className={cardClassName}>
@@ -55,13 +85,32 @@ export default function VideoEmbedBlock({
       )}
       {embedUrl ? (
         <div className="aspect-video w-full overflow-hidden rounded-xl">
-          <iframe
-            src={embedUrl}
-            title={title || "Video"}
-            className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          {playing ? (
+            <iframe
+              src={`${embedUrl}${embedUrl.includes("?") ? "&" : "?"}autoplay=1`}
+              title={title || "Video"}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPlaying(true)}
+              aria-label={`Putar video${title ? `: ${title}` : ""}`}
+              className="group relative flex h-full w-full items-center justify-center bg-black"
+            >
+              {thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-app-surface-2 to-black/40" />
+              )}
+              <span className="absolute flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg transition-transform group-hover:scale-110">
+                <IconPlayCircle className="h-8 w-8" />
+              </span>
+            </button>
+          )}
         </div>
       ) : (
         <p className="text-xs text-red-500">Video tidak dapat ditampilkan.</p>

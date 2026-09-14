@@ -376,6 +376,11 @@ test.describe("Canvas Page Builder", () => {
 
     // ---- Halaman publik: verifikasi render + isolasi sibling ----
     await page.goto(`/${username}`);
+    // Pola thumbnail-klik-buka (susulan 14 September 2026, benchmark
+    // Linktree "opens out from the link and plays natively") -- iframe
+    // TIDAK PERNAH langsung aktif lagi sejak page load, klik tombol Putar
+    // dulu (VideoEmbedBlock.tsx) sebelum iframe sungguhan dimuat.
+    await page.getByRole("button", { name: /Putar video/ }).first().click();
     await expect(page.locator('iframe[src*="youtube.com/embed"]').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("Apa ini?")).toBeVisible();
     await expect(page.getByText("Kartu Embed")).toBeVisible();
@@ -395,7 +400,14 @@ test.describe("Canvas Page Builder", () => {
 
     // Gallery (Image Grid) & Video+Foto sama-sama tampil dengan foto.
     await expect(page.locator('[data-builder-block-type="gallery"] img')).toHaveCount(1);
-    await expect(page.locator('[data-builder-block-type="video_image"] img')).toHaveCount(1);
+    // "> img" (direct child, BUKAN lagi descendant polos) -- susulan 14
+    // September 2026 (pola thumbnail-klik-buka blok Video): VideoEmbedBlock
+    // SEKARANG juga merender <img> (thumbnail YouTube di dalam tombol
+    // Putar) sebagai descendant blok "video_image" ini -- descendant polos
+    // akan menghitung DUA <img> (foto asli blok + thumbnail video),
+    // padahal assertion ini cuma peduli foto ASLI yang diunggah kreator
+    // (direct child dari wrapper, lihat case "video_image" PagePreview.tsx).
+    await expect(page.locator('[data-builder-block-type="video_image"] > img')).toHaveCount(1);
   });
 
   // Fase 3 (permintaan langsung pengguna 8 September 2026): Countdown,
