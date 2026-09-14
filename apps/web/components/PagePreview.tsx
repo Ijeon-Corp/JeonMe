@@ -2702,18 +2702,29 @@ function CatalogTakeoverView({
   theme,
   data,
   interactive,
+  canBuy,
   rootClassName,
   onExit,
 }: {
   link: PagePreviewLink;
   theme: PageTheme;
-  // "products" -- ditambahkan ke Pick ini supaya bisa diteruskan ke
-  // renderLinkOrBlock (butuh data.products utk cabang blockType "produk",
-  // "full parity" mode Simple 12 September 2026) walau "produk" sendiri
-  // BUKAN tipe blok tertanam katalog yang valid -- widening TypeScript
-  // murni, tidak ada pemakaian baru di komponen ini sendiri.
+  // "products" -- dipakai renderLinkOrBlock utk cabang blockType "produk"
+  // (blok "produk" tertanam di dalam item katalog, susulan 14 September
+  // 2026 -- SEBELUMNYA komentar di sini bilang "produk" bukan tipe
+  // tertanam yang valid, sudah tidak akurat sejak allowedCatalogEmbeddedBlockTypes
+  // diperluas, lihat links.go).
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused">;
   interactive: boolean;
+  // canBuy -- bug ditemukan lewat laporan langsung pengguna (14 September
+  // 2026, screenshot editor katalog): SEBELUMNYA di-hardcode `false` di
+  // pemanggilan renderLinkOrBlock utk blocks[] tertanam (komentar lama
+  // "produk BUKAN tipe blok tertanam yang valid, canBuy tidak pernah
+  // dipakai" -- sudah basi), membuat tombol Beli produk yang ditanam di
+  // dalam item katalog SELALU tampil sbg placeholder nonaktif ("tombol
+  // ini tidak aktif"), bukan tombol Beli sungguhan walau toko TIDAK
+  // sedang dijeda. Sekarang diteruskan APA ADANYA dari pemanggil, pola
+  // sama persis blok "produk" tingkat atas/Canvas Builder.
+  canBuy: boolean;
   rootClassName: string;
   onExit: () => void;
 }) {
@@ -2807,10 +2818,11 @@ function CatalogTakeoverView({
                 theme,
                 data,
                 interactive,
-                // "produk" BUKAN tipe blok tertanam katalog yang valid
-                // (EmbeddedCatalogBlock hanya text/faq/video/maps/catalog) --
-                // canBuy tidak pernah benar-benar dipakai di jalur ini.
-                false,
+                // canBuy diteruskan apa adanya (lihat catatan lengkap di
+                // props CatalogTakeoverView) -- SEBELUMNYA hardcode false,
+                // membuat blok "produk" tertanam selalu tampil tombol Beli
+                // nonaktif.
+                canBuy,
                 openNestedCatalog
               )
             )}
@@ -2974,6 +2986,7 @@ export default function PagePreview({
         theme={theme}
         data={data}
         interactive={interactive}
+        canBuy={canBuy}
         rootClassName={rootClassName}
         onExit={() => setCatalogView(null)}
       />
