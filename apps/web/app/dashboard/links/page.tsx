@@ -3194,37 +3194,60 @@ export default function DashboardLinksPage() {
                   TIDAK berubah, cuma dibungkus kondisional + kontainer. */}
               {toolsOpenId === link.id && (
               <div className="ml-11 flex flex-wrap items-center gap-1.5 rounded-jsm border-2 border-jeon-ink bg-app-surface-2 p-2">
-                {link.block_type === "link" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => openScheduleForm(link)}
-                      title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                        link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
-                      }`}
-                    >
-                      <IconClock className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openLockForm(link)}
-                      title={t("dashboard.pages.links.linkCard.lockTooltip")}
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
-                        link.lock_type ? "text-jeon-purple" : "text-app-muted"
-                      }`}
-                    >
-                      <IconLock className="h-4 w-4" />
-                    </button>
-                  </>
+                {/* Jadwal tayang -- susulan 14 September 2026 (permintaan
+                    langsung pengguna: "buka jadwal tayang & kunci akses ke
+                    semua tipe blok, bukan cuma link"). starts_at/ends_at
+                    SUDAH generik per-row di backend (tidak ada gerbang
+                    block_type sama sekali, lihat UpdateLink) -- hanya
+                    mengontrol TAMPIL/TIDAK-nya seluruh blok, tidak
+                    menyembunyikan sebagian isi, jadi aman dibuka ke semua
+                    tipe. BEDA dari kunci age/code/subscribe di bawah. */}
+                <button
+                  type="button"
+                  onClick={() => openScheduleForm(link)}
+                  title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
+                  }`}
+                >
+                  <IconClock className="h-4 w-4" />
+                </button>
+                {/* Kunci akses PENUH (age/code/subscribe) -- SENGAJA TETAP
+                    dibatasi ke "link"/"button" (diperluas dari cuma "link"
+                    sebelumnya, backend UpdateLink SUDAH lama mengizinkan
+                    "button" juga, UI-nya saja belum pernah membuka). TIDAK
+                    diperluas ke block_type lain (video/text/dst) -- gerbang
+                    ini menyembunyikan `url` dari payload publik sampai
+                    terbuka, tapi block_type lain menaruh isinya di
+                    block_data yang SELALU terkirim penuh apa pun status
+                    kunci. Membuka menu ini ke tipe lain akan membuat UI
+                    mengklaim ada gerbang padahal isinya sudah bocor duluan
+                    -- persis alasan yang sama kenapa backend menolaknya
+                    (lihat komentar di UpdateLink, links.go). "sensitive"
+                    tetap satu-satunya opsi utk tipe lain, lewat toggle
+                    ringkas di bawah. */}
+                {(link.block_type === "link" || link.block_type === "button") && (
+                  <button
+                    type="button"
+                    onClick={() => openLockForm(link)}
+                    title={t("dashboard.pages.links.linkCard.lockTooltip")}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.lock_type ? "text-jeon-purple" : "text-app-muted"
+                    }`}
+                  >
+                    <IconLock className="h-4 w-4" />
+                  </button>
                 )}
                 {/* Tandai konten sensitif -- permintaan langsung pengguna, 20
                     Agustus 2026: "tambahkan juga sensitive content supaya
                     nanti tampil ke user ketika mau akses". Versi RINGKAS
                     (satu klik toggle, bukan form kunci penuh) khusus block_type
-                    SELAIN "link" -- lihat catatan lengkap di handleToggleSensitive
-                    kenapa age/kode/subscribe tidak ditawarkan di sini. */}
-                {link.block_type !== "link" && (
+                    SELAIN "link"/"button" -- lihat catatan lengkap di
+                    handleToggleSensitive kenapa age/kode/subscribe tidak
+                    ditawarkan di sini. "button" dikeluarkan 14 September
+                    2026 bersamaan dgn menu kunci penuh dibuka utknya
+                    (redundan kalau dua-duanya tampil sekaligus). */}
+                {link.block_type !== "link" && link.block_type !== "button" && (
                   <button
                     type="button"
                     onClick={() => handleToggleSensitive(link)}
@@ -3682,8 +3705,7 @@ export default function DashboardLinksPage() {
                 </div>
               )}
 
-              {link.block_type === "link" &&
-                (scheduleEditId === link.id ? (
+              {(scheduleEditId === link.id ? (
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                     <div className="flex gap-1.5">
                       <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
@@ -3735,7 +3757,8 @@ export default function DashboardLinksPage() {
                   )
                 ))}
 
-              {link.block_type === "link" &&
+
+              {(link.block_type === "link" || link.block_type === "button") &&
                 (lockEditId === link.id ? (
                   <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                     <select
