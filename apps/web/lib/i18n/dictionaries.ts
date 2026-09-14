@@ -1573,6 +1573,9 @@ export const dictionaries = {
           savingChapters: "Menyimpan...",
           emptyCourses: "Susun materimu jadi kursus per-bab yang bisa dijual berulang kali.",
           confirmDeleteText: "Hapus kursus \"{name}\"? Aksi ini tidak bisa dibatalkan.",
+          addCoverTitle: "Tambah sampul",
+          changeCoverTitle: "Ganti sampul",
+          coverRequiredHint: "Sampul wajib sebelum kursus bisa diaktifkan",
           errors: {
             loadFailed: "Gagal memuat kursus.",
             nameAndPriceRequired: "Nama kursus wajib diisi dan harga minimal Rp1.000.",
@@ -1582,6 +1585,7 @@ export const dictionaries = {
             deleteFailed: "Gagal menghapus kursus.",
             loadChaptersFailed: "Gagal memuat bab kursus.",
             saveChaptersFailed: "Gagal menyimpan bab kursus.",
+            uploadCoverFailed: "Gagal mengunggah sampul kursus.",
           },
         },
         vouchers: {
@@ -4646,6 +4650,9 @@ export const dictionaries = {
           savingChapters: "Saving...",
           emptyCourses: "Turn your material into chapter-based courses you can sell again and again.",
           confirmDeleteText: "Delete course \"{name}\"? This action cannot be undone.",
+          addCoverTitle: "Add cover",
+          changeCoverTitle: "Change cover",
+          coverRequiredHint: "A cover image is required before the course can be activated",
           errors: {
             loadFailed: "Failed to load courses.",
             nameAndPriceRequired: "Course name is required and the price must be at least Rp1,000.",
@@ -4655,6 +4662,7 @@ export const dictionaries = {
             deleteFailed: "Failed to delete course.",
             loadChaptersFailed: "Failed to load course chapters.",
             saveChaptersFailed: "Failed to save course chapters.",
+            uploadCoverFailed: "Failed to upload course cover.",
           },
         },
         vouchers: {

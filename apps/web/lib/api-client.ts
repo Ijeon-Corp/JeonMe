@@ -2695,6 +2695,7 @@ export interface DashboardCourse {
   is_active: boolean;
   prerequisites: string;
   chapter_count: number;
+  cover_image_url: string;
 }
 
 export function listCourses() {

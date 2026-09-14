@@ -128,8 +128,17 @@ type courseListItem struct {
 	IsActive      bool   `json:"is_active"`
 	Prerequisites string `json:"prerequisites"`
 	ChapterCount  int    `json:"chapter_count"`
+	CoverImageURL string `json:"cover_image_url"`
 }
 
+// CoverImageURL ditambahkan lewat audit QA menyeluruh (14 September 2026):
+// halaman dashboard/courses TIDAK PERNAH mengekspos cover_image_url,
+// sehingga kreator tidak tahu kursus butuh sampul (gerbang wajib di
+// ProductHandler.Update, "unggah gambar sampul dulu sebelum mengaktifkan")
+// -- toggle "Aktifkan" di halaman itu SELALU gagal 400 untuk kursus baru,
+// tapi tidak ada UI mana pun di halaman itu utk mengunggahnya. Endpoint
+// upload (ProductHandler.UploadCover) sendiri sudah bekerja untuk semua
+// jenis produk termasuk kursus, tinggal field ini + UI-nya yang belum ada.
 func (h *CourseHandler) List(c *gin.Context) {
 	userID := c.GetString("userID")
 
@@ -138,7 +147,8 @@ func (h *CourseHandler) List(c *gin.Context) {
 
 	rows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.description, p.price_idr, p.is_active, p.course_prerequisites,
-			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id)
+			(SELECT COUNT(*) FROM course_chapters cc WHERE cc.course_product_id = p.id),
+			p.cover_image_url
 		FROM products p WHERE p.user_id = $1 AND p.is_course = true
 		ORDER BY p.name
 	`, userID)
@@ -151,7 +161,7 @@ func (h *CourseHandler) List(c *gin.Context) {
 	items := []courseListItem{}
 	for rows.Next() {
 		var it courseListItem
-		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.Prerequisites, &it.ChapterCount); err == nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &it.PriceIDR, &it.IsActive, &it.Prerequisites, &it.ChapterCount, &it.CoverImageURL); err == nil {
 			items = append(items, it)
 		}
 	}

@@ -15,8 +15,9 @@ import {
   listCourses,
   replaceCourseChapters,
   updateProduct,
+  uploadProductCover,
 } from "@/lib/api-client";
-import { IconBook,
+import { IconBook, IconBox, IconCamera,
   IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 import EmptyState from "@/components/EmptyState";
 import Toggle from "@/components/Toggle";
@@ -34,6 +35,7 @@ export default function DashboardCoursesPage() {
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -98,6 +100,26 @@ export default function DashboardCoursesPage() {
     } catch (err) {
       setCourses((prev) => prev.map((c) => (c.id === course.id ? { ...c, is_active: course.is_active } : c)));
       setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.updateStatusFailed"));
+    }
+  }
+
+  // handleUploadCover -- audit QA menyeluruh (14 September 2026): halaman
+  // ini SEBELUMNYA tidak punya UI unggah sampul sama sekali, padahal
+  // backend (ProductHandler.Update) mewajibkan cover_image_url terisi
+  // sebelum kursus bisa diaktifkan -- toggle "Aktifkan" di atas SELALU
+  // gagal 400 utk kursus baru tanpa fix ini. Endpoint upload sendiri
+  // (uploadProductCover) sudah generik utk semua jenis produk, cukup
+  // ditambahkan pemicunya di sini.
+  async function handleUploadCover(course: DashboardCourse, file: File) {
+    setError(null);
+    setCoverBusyId(course.id);
+    try {
+      const { cover_image_url } = await uploadProductCover(course.id, file);
+      setCourses((prev) => prev.map((c) => (c.id === course.id ? { ...c, cover_image_url } : c)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.courses.errors.uploadCoverFailed"));
+    } finally {
+      setCoverBusyId(null);
     }
   }
 
@@ -284,12 +306,42 @@ export default function DashboardCoursesPage() {
       <div className="mt-6 flex flex-col gap-3">
         {courses.map((course) => (
           <div key={course.id} className="glass rounded-jmd p-4 shadow-card">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-app-ink">{course.name}</p>
-              <span className="text-sm font-bold text-jeon-purple">Rp {course.price_idr.toLocaleString("id-ID")}</span>
+            <div className="flex items-start gap-3">
+              <label
+                title={course.cover_image_url ? t("dashboard.pages.courses.changeCoverTitle") : t("dashboard.pages.courses.addCoverTitle")}
+                className="relative flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10"
+              >
+                {course.cover_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={course.cover_image_url} alt={course.name} className="h-full w-full object-cover" />
+                ) : (
+                  <IconBox className="h-4 w-4 text-jeon-purple/40" />
+                )}
+                <span className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-tl-lg bg-ink/70 text-white">
+                  <IconCamera className="h-2 w-2" />
+                </span>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={coverBusyId === course.id}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleUploadCover(course, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-app-ink">{course.name}</p>
+                  <span className="flex-shrink-0 text-sm font-bold text-jeon-purple">Rp {course.price_idr.toLocaleString("id-ID")}</span>
+                </div>
+                <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.chapterCount").replace("{count}", String(course.chapter_count))}</p>
+                {course.prerequisites && <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.prerequisitesPrefix").replace("{text}", course.prerequisites)}</p>}
+                {!course.cover_image_url && <p className="mt-1 text-xs text-amber-600">{t("dashboard.pages.courses.coverRequiredHint")}</p>}
+              </div>
             </div>
-            <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.chapterCount").replace("{count}", String(course.chapter_count))}</p>
-            {course.prerequisites && <p className="mt-1 text-xs text-app-muted">{t("dashboard.pages.courses.prerequisitesPrefix").replace("{text}", course.prerequisites)}</p>}
 
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
