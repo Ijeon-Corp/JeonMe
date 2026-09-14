@@ -81,13 +81,27 @@ export default function DashboardKycPage() {
     setKycStep((v) => Math.min(v + 1, 4));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (kycStep < 4) {
       // Enter di langkah awal = lanjut, bukan submit.
       handleNext();
       return;
     }
+    void submitKycForm();
+  }
+
+  // Diekstrak dari form onSubmit (audit QA, 14 September 2026): tombol
+  // langkah 3/4 SEBELUMNYA satu <button> yang type-nya diganti kondisional
+  // button<->submit di posisi JSX yang sama, jadi React MEMAKAI ULANG node
+  // DOM yang sama. Klik "Lanjut" di langkah 3 memicu setKycStep(4) yang
+  // me-re-render SINKRON dan mengubah atribut type node itu jadi "submit"
+  // SEBELUM activation behavior native browser utk klik itu selesai --
+  // hasilnya klik "Lanjut" kadang langsung men-submit form sungguhan,
+  // melewati layar review langkah 4. Perbaikan: tombol langkah bawah
+  // sekarang SELALU type="button" (lihat render di bawah), logika submit
+  // dipanggil langsung dari onClick, bukan lewat native form submission.
+  async function submitKycForm() {
     const ktpPhoto = ktpInputRef.current?.files?.[0];
     const selfiePhoto = selfieInputRef.current?.files?.[0];
     const bankProof = bankProofInputRef.current?.files?.[0];
@@ -294,7 +308,8 @@ export default function DashboardKycPage() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={() => void submitKycForm()}
                 disabled={submitting}
                 className="btn-primary flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
