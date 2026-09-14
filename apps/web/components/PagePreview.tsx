@@ -2795,7 +2795,12 @@ function CatalogTakeoverView({
             <ChevronLeft className={`h-5 w-5 ${theme.cardTitle}`} />
           </button>
           <h1 className={`min-w-0 flex-1 truncate font-heading text-lg font-bold ${theme.name}`}>
-            {selectedItem ? (selectedItemLinkedProduct?.name ?? selectedItem.title) : frame.title}
+            {/* "Item" -- fallback susulan 14 September 2026: judul item
+                katalog SEKARANG opsional saat dibuat (links.go, permintaan
+                langsung pengguna "gausah mengisi new item title") -- item
+                tanpa produk tertaut & tanpa judul manual jatuh ke sini,
+                alih-alih judul kosong tak terlihat. */}
+            {selectedItem ? selectedItemLinkedProduct?.name || selectedItem.title || "Item" : frame.title}
           </h1>
         </div>
 
@@ -2864,7 +2869,10 @@ function CatalogTakeoverView({
               // ke sebuah produk.
               const linkedProduct = findCatalogLinkedProduct(item.blocks, data.products);
               const thumbnail = linkedProduct?.cover_image_url || item.images[0];
-              const tileTitle = linkedProduct?.name ?? item.title;
+              // "Item" -- fallback susulan 14 September 2026, lihat catatan
+              // lengkap di header detail di atas (judul item sekarang
+              // opsional saat dibuat).
+              const tileTitle = linkedProduct?.name || item.title || "Item";
               return (
                 <button
                   key={item.id}

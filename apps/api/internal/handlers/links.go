@@ -1095,10 +1095,24 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 		// Katalog" di kartu blok) -- kalau TERISI, tiap item wajib id
 		// (dibuat klien, string apa saja asal tidak kosong -- dipakai
 		// UploadCatalogItemImage/DeleteCatalogItemImage di bawah untuk
-		// menunjuk item mana yang diubah, TANPA perlu tabel DB terpisah)
-		// & title tidak kosong; images (kalau ada) divalidasi format URL --
-		// isinya sendiri SELALU diisi lewat upload (UploadCatalogItemImage),
-		// tidak pernah dikirim mentah lewat JSON di sini.
+		// menunjuk item mana yang diubah, TANPA perlu tabel DB terpisah);
+		// images (kalau ada) divalidasi format URL -- isinya sendiri
+		// SELALU diisi lewat upload (UploadCatalogItemImage), tidak pernah
+		// dikirim mentah lewat JSON di sini.
+		//
+		// title item BOLEH KOSONG -- susulan 14 September 2026, permintaan
+		// langsung pengguna: "saat saya masuk ke katalog itu langsung
+		// berisi blok blok yang mau ditambahkan saja gausah mengisi new
+		// item title, jadi isi katalog bisa kita sesuaikan dengan blok
+		// blok yang kita mau saja". SEBELUMNYA title wajib diisi di sini,
+		// memaksa kreator mengetik judul dulu sebelum bisa membuat item
+		// & masuk mengisi blok tertanamnya (pola paling umum: langsung
+		// tambah blok "produk") -- padahal sejak fitur "referensi hidup ke
+		// produk" (lihat catatan linkedProduct, BlockDrilldownEditor.tsx),
+		// title item jadi TIDAK RELEVAN sama sekali begitu item ditautkan
+		// ke produk (disembunyikan total dari kreator maupun pengunjung).
+		// title kosong TETAP ditangani lewat fallback "Item tanpa judul"
+		// di daftar item editor (untitledItem).
 		if depth > maxCatalogDepth {
 			return fmt.Sprintf("katalog maksimal %d tingkat kedalaman", maxCatalogDepth), false
 		}
@@ -1117,9 +1131,8 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 					return "setiap item katalog wajib berupa objek", false
 				}
 				id, _ := item["id"].(string)
-				title, _ := item["title"].(string)
-				if strings.TrimSpace(id) == "" || strings.TrimSpace(title) == "" {
-					return "setiap item katalog wajib punya id dan judul", false
+				if strings.TrimSpace(id) == "" {
+					return "setiap item katalog wajib punya id", false
 				}
 				if seenIDs[id] {
 					return "id item katalog tidak boleh duplikat", false

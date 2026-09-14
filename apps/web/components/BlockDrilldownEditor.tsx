@@ -430,7 +430,16 @@ function CatalogItemsFrame({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!draftTitle.trim()) return;
+            // Judul BOLEH kosong -- susulan 14 September 2026, permintaan
+            // langsung pengguna: "saat saya masuk ke katalog itu langsung
+            // berisi blok blok yang mau ditambahkan saja gausah mengisi
+            // new item title, jadi isi katalog bisa kita sesuaikan dengan
+            // blok blok yang kita mau saja". Pola paling umum sekarang:
+            // buat item TANPA judul -> langsung tambah blok "produk" di
+            // dalamnya -> title jadi tidak relevan sama sekali begitu
+            // linkedProduct terdeteksi (lihat catatan lengkap di
+            // CatalogItemFrame). onAddItem sendiri sudah langsung `push`
+            // ke frame item baru begitu dibuat.
             onAddItem(draftTitle.trim());
             setDraftTitle("");
           }}
@@ -445,11 +454,7 @@ function CatalogItemsFrame({
               className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
             />
           </FormField>
-          <button
-            type="submit"
-            disabled={!draftTitle.trim()}
-            className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
-          >
+          <button type="submit" className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white">
             {t("dashboard.pages.links.catalogPanel.addItem")}
           </button>
         </form>

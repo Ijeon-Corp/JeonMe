@@ -218,4 +218,53 @@ test.describe("Catalog nested blocks", () => {
     await page.getByLabel("Kembali").click();
     await expect(page.getByText("Perumahan Tipe A", { exact: true })).toBeVisible();
   });
+
+  // Judul item katalog jadi OPSIONAL -- susulan 14 September 2026,
+  // permintaan langsung pengguna: "saat saya masuk ke katalog itu langsung
+  // berisi blok blok yang mau ditambahkan saja gausah mengisi new item
+  // title, jadi isi katalog bisa kita sesuaikan dengan blok blok yang kita
+  // mau saja". SEBELUMNYA "+ Tambah Item" disabled & backend menolak
+  // (links.go: "setiap item katalog wajib punya id dan judul") sampai judul
+  // diisi -- padahal pola paling umum sekarang justru langsung tambah blok
+  // "produk" (title jadi tidak relevan sama sekali begitu linkedProduct
+  // terdeteksi, lihat catalog-produk-live-reference.spec.ts). Item tanpa
+  // judul & tanpa produk tertaut jatuh ke fallback "Item tanpa judul" (di
+  // editor) / "Item" (di halaman publik) -- dites di sini pakai blok Teks
+  // biasa supaya independen dari test live-reference produk.
+  test("judul item opsional: buat item tanpa judul, langsung tambah blok Teks", async ({ page }) => {
+    const { username } = await registerAndLogin(page, "catnotitle");
+    await page.goto("/dashboard/links");
+    await page.getByRole("button", { name: "Tambah" }).first().click();
+    await page.getByRole("button", { name: "Lanjutan", exact: true }).click();
+    await page.getByRole("button", { name: "Katalog", exact: true }).click();
+    await page.getByPlaceholder("Judul blok").fill("Katalog Uji");
+    await page.getByRole("button", { name: "Buat Blok" }).click();
+    await expect(page.getByPlaceholder("Judul item baru (mis. Tipe 36)")).toBeVisible({ timeout: 10000 });
+
+    // JANGAN isi "Judul Item Baru" sama sekali -- langsung klik tombolnya.
+    await page.getByRole("button", { name: "+ Tambah Item" }).click();
+    await expect(page.getByPlaceholder("Judul item", { exact: true })).toBeVisible({ timeout: 5000 });
+
+    await page.getByRole("button", { name: "Teks", exact: true }).click();
+    const textEditor = page.locator('[contenteditable="true"]');
+    await textEditor.click();
+    await page.keyboard.type("Konten langsung tanpa judul item.");
+    await textEditor.blur();
+    await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    // Reload -- pastikan item tanpa judul benar-benar tersimpan di server
+    // (bukan cuma lolos validasi klien), fallback "Item tanpa judul" tampil.
+    await page.reload();
+    await page.locator("li", { hasText: "Katalog Uji" }).first().getByRole("button", { name: "Edit Konten", exact: true }).click();
+    await expect(page.getByText("Item tanpa judul")).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    // Halaman publik: tile grid jatuh ke fallback "Item" (bukan blank).
+    await page.goto(`/${username}`);
+    await page.getByRole("button", { name: "Katalog Uji" }).click();
+    await expect(page.getByRole("button", { name: "Item" })).toBeVisible({ timeout: 10000 });
+  });
 });
