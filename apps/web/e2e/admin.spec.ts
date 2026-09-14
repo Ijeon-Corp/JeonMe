@@ -40,13 +40,29 @@ test.describe("Panel Admin", () => {
       await adminPage.getByRole("button", { name: "Cari" }).click();
       // Kartu baris pengguna (bukan wrapper luar mana pun) -- kelas ini
       // spesifik untuk satu <div> per pengguna di admin/users/page.tsx.
-      const targetRow = adminPage
-        .locator("div.rounded-xl.border.border-border.bg-white.px-4.py-3.shadow-card")
-        .filter({ hasText: targetUsername });
+      // Bug ditemukan lewat audit (14 September 2026): baris admin/users
+      // direstyle ke token jeon-ink/app-surface (border-2 border-jeon-ink
+      // bg-app-surface, BUKAN lagi border border-border bg-white polos)
+      // entah kapan tanpa test ini ikut diperbarui -- selector sebelumnya
+      // TIDAK PERNAH cocok apa pun, bikin test timeout 120s dgn pesan
+      // generik "browserContext.close: Test ended" yang menyesatkan (sulit
+      // dilacak ke akar masalah selector CSS). Dipersempit ke KOMBINASI
+      // kelas yang lebih kecil kemungkinan ikut berubah lagi di redesain
+      // berikutnya (rounded-xl+shadow-card, bukan border/bg spesifik).
+      const targetRow = adminPage.locator("div.rounded-xl.shadow-card").filter({ hasText: targetUsername });
       await expect(targetRow.getByRole("button", { name: "Tangguhkan" })).toBeVisible({ timeout: 10000 });
       await targetRow.getByRole("button", { name: "Tangguhkan" }).click();
+      // handleToggleSuspend (app/admin/users/page.tsx) menampilkan popup
+      // konfirmasi SweetAlert2 SEBELUM benar-benar memanggil suspendUser --
+      // pola identik "Cabut akses" di team.spec.ts. Klik "Tangguhkan" saja
+      // cuma membuka popup ini, belum mengeksekusi apa pun -- tanpa baris
+      // ini status tidak pernah berubah dan assertion berikutnya timeout.
+      await adminPage.getByRole("button", { name: "Ya, Tangguhkan" }).click();
       await expect(targetRow.getByRole("button", { name: "Aktifkan" })).toBeVisible({ timeout: 10000 });
-      await expect(adminPage.getByText("ditangguhkan")).toBeVisible();
+      // Dipersempit ke targetRow -- getByText("ditangguhkan") halaman-penuh
+      // juga cocok dgn opsi filter dropdown "Ditangguhkan" (case-insensitive
+      // default Playwright), strict-mode violation kalau tidak dipersempit.
+      await expect(targetRow.getByText("ditangguhkan")).toBeVisible();
 
       // Akun yang ditangguhkan langsung ditolak di LOGIN BERIKUTNYA (dicek
       // di sana, bukan di setiap request -- lihat AuthHandler.Login). Ini
@@ -65,6 +81,7 @@ test.describe("Panel Admin", () => {
 
       // Admin mengaktifkan kembali -> login langsung normal lagi.
       await adminPage.getByRole("button", { name: "Aktifkan" }).click();
+      await adminPage.getByRole("button", { name: "Ya, Aktifkan" }).click();
       await expect(adminPage.getByRole("button", { name: "Tangguhkan" })).toBeVisible({ timeout: 10000 });
 
       resetLocalAuthRateLimit();

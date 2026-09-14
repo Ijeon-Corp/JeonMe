@@ -65,9 +65,16 @@ test.describe("Quick Setup", () => {
 
     // Ketiga tautan starter benar-benar tersimpan sebagai baris Tautan
     // sungguhan (bukan cuma UI pratinjau), dengan URL dasar platform yang
-    // benar.
+    // benar. Baris YouTube discope ke row-nya sendiri (bukan getByText
+    // polos) -- bug ditemukan lewat audit (14 September 2026, redesain
+    // "Konsisten & Ringkas"): blok showcase template ini ("Highlight Push
+    // Rank...") JUGA memakai PLATFORM_URL.youtube sbg CTA-nya, dan baris
+    // ringkasan blok non-link SEKARANG selalu terlihat (sebelumnya
+    // tersembunyi di balik "Edit Konten") -- getByText polos jadi cocok DUA
+    // elemen sekaligus, bukan regresi, cuma perlu discope ke baris yang
+    // dimaksud.
     await expect(page.getByText("https://twitch.tv/", { exact: true })).toBeVisible();
-    await expect(page.getByText("https://youtube.com/@", { exact: true })).toBeVisible();
+    await expect(page.locator("li", { hasText: "Tonton di YouTube" }).getByText("https://youtube.com/@", { exact: true })).toBeVisible();
     await expect(page.getByText("https://discord.gg/", { exact: true })).toBeVisible();
 
     // Tema Cyber ikut tersimpan -- terlihat lewat halaman publik (gradien
@@ -165,8 +172,10 @@ test.describe("Quick Setup", () => {
     expect(pageErrors).toEqual([]);
 
     // Tautan website tersimpan dengan URL placeholder yang VALID (bukan
-    // "https://" polos yang dulu ditolak backend).
-    await expect(page.getByText("https://websitekamu.com", { exact: true })).toBeVisible();
+    // "https://" polos yang dulu ditolak backend). Discope ke row-nya
+    // sendiri -- alasan sama persis catatan YouTube di test "Streamer" di
+    // atas (blok showcase template ini JUGA memakai PLATFORM_URL.website).
+    await expect(page.locator("li", { hasText: "Kunjungi Website Kami" }).getByText("https://websitekamu.com", { exact: true })).toBeVisible();
     // Blok FAQ ("Pertanyaan Umum") benar-benar tersimpan sebagai blok
     // tersendiri, badge "FAQ" membuktikan block_type-nya benar (bukan
     // salah kepetakan jadi "text" atau "link").
