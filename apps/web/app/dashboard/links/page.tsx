@@ -182,6 +182,29 @@ function stripHtmlToText(html: string, maxLength = 60): string {
   return text.length > maxLength ? `${text.slice(0, maxLength).trim()}…` : text;
 }
 
+// buildWhatsappButtonUrl -- blok "button" mode WhatsApp (permintaan langsung
+// pengguna, 14 September 2026: "WA = kanal closing utama kebanyakan
+// kreator kita"). Belum ada normalizer nomor telepon di file ini sama
+// sekali (baris kontak WhatsApp yang sudah ada, social_whatsapp, dibiarkan
+// kreator ketik manual apa adanya) -- konvensi umum wa.me: nomor lokal
+// diawali "0" diganti "62" (kode negara Indonesia), selain itu dipakai apa
+// adanya setelah karakter non-digit dibuang. `url` hasil fungsi ini
+// disimpan APA ADANYA di kolom `url` blok (satu-satunya sumber kebenaran
+// tujuan klik, dipakai ulang oleh seluruh mekanisme render/lock/tracking
+// yang sudah ada) -- whatsapp_number/whatsapp_message TETAP disimpan
+// terpisah di block_data HANYA supaya kreator bisa membuka & mengedit
+// nomor/pesannya lagi nanti tanpa perlu mem-parse balik dari URL.
+function normalizeWhatsappNumber(input: string): string {
+  const digits = input.replace(/\D/g, "");
+  return digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+}
+
+function buildWhatsappButtonUrl(number: string, message: string): string {
+  const normalized = normalizeWhatsappNumber(number);
+  const query = message.trim() ? `?text=${encodeURIComponent(message.trim())}` : "";
+  return `https://wa.me/${normalized}${query}`;
+}
+
 // blockPreviewFor -- redesain "Konsisten & Ringkas" (14 September 2026,
 // permintaan langsung pengguna "saya masih kurang suka ui dan ux dari mode
 // simple ini di tiap blok nya", Opsi A dari 3 usulan lewat artifact yang
@@ -670,6 +693,9 @@ export default function DashboardLinksPage() {
   // "Kelola X" SETELAH blok dibuat (lihat handleMediaImageUpload/
   // handleGalleryImageUpload/ProdukBlockEditor lebih lanjut di file ini).
   const [blockButtonUrl, setBlockButtonUrl] = useState("");
+  const [blockButtonMode, setBlockButtonMode] = useState<"url" | "whatsapp">("url");
+  const [blockButtonWhatsappNumber, setBlockButtonWhatsappNumber] = useState("");
+  const [blockButtonWhatsappMessage, setBlockButtonWhatsappMessage] = useState("");
   const [blockCountdownTargetAt, setBlockCountdownTargetAt] = useState("");
   const [blockEmbedUrl, setBlockEmbedUrl] = useState("");
   const [blockVideoImageVideoUrl, setBlockVideoImageVideoUrl] = useState("");
@@ -723,6 +749,9 @@ export default function DashboardLinksPage() {
   // 9 tipe blok baru "full parity" -- mirror edit-in-place dari state
   // create-form di atas, pola sama persis editVideoUrl/editShowcase*.
   const [editButtonUrl, setEditButtonUrl] = useState("");
+  const [editButtonMode, setEditButtonMode] = useState<"url" | "whatsapp">("url");
+  const [editButtonWhatsappNumber, setEditButtonWhatsappNumber] = useState("");
+  const [editButtonWhatsappMessage, setEditButtonWhatsappMessage] = useState("");
   const [editCountdownTargetAt, setEditCountdownTargetAt] = useState("");
   const [editEmbedUrl, setEditEmbedUrl] = useState("");
   const [editVideoImageVideoUrl, setEditVideoImageVideoUrl] = useState("");
@@ -1085,7 +1114,12 @@ export default function DashboardLinksPage() {
       setBlockShowcaseBadge("");
       setBlockShowcaseCta("");
     }
-    if (type === "button") setBlockButtonUrl("");
+    if (type === "button") {
+      setBlockButtonUrl("");
+      setBlockButtonMode("url");
+      setBlockButtonWhatsappNumber("");
+      setBlockButtonWhatsappMessage("");
+    }
     if (type === "countdown") setBlockCountdownTargetAt("");
     if (type === "embed") setBlockEmbedUrl("");
     if (type === "video_image") setBlockVideoImageVideoUrl("");
@@ -1801,11 +1835,24 @@ export default function DashboardLinksPage() {
     } else if (blockType === "button") {
       // "button" -- reuse title/url apa adanya (SAMA seperti tautan biasa),
       // backend sengaja TIDAK punya validasi block_data khusus utk tipe ini.
-      if (!blockButtonUrl.trim()) {
-        setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
-        return;
+      // Mode WhatsApp (14 September 2026) -- url TETAP satu-satunya sumber
+      // kebenaran tujuan klik (dirakit dari nomor+pesan di sini), whatsapp_
+      // number/whatsapp_message disimpan APA ADANYA di block_data cuma
+      // supaya kreator bisa buka & edit lagi tanpa mem-parse balik URL.
+      if (blockButtonMode === "whatsapp") {
+        if (!blockButtonWhatsappNumber.trim()) {
+          setError(t("dashboard.pages.links.errors.whatsappNumberRequired"));
+          return;
+        }
+        blockUrl = buildWhatsappButtonUrl(blockButtonWhatsappNumber, blockButtonWhatsappMessage);
+        blockData = { whatsapp_number: blockButtonWhatsappNumber.trim(), whatsapp_message: blockButtonWhatsappMessage.trim() };
+      } else {
+        if (!blockButtonUrl.trim()) {
+          setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
+          return;
+        }
+        blockUrl = blockButtonUrl.trim();
       }
-      blockUrl = blockButtonUrl.trim();
     } else if (blockType === "countdown") {
       if (!blockCountdownTargetAt) {
         setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
@@ -1873,6 +1920,9 @@ export default function DashboardLinksPage() {
       setBlockShowcaseBadge("");
       setBlockShowcaseCta("");
       setBlockButtonUrl("");
+      setBlockButtonMode("url");
+      setBlockButtonWhatsappNumber("");
+      setBlockButtonWhatsappMessage("");
       setBlockCountdownTargetAt("");
       setBlockEmbedUrl("");
       setBlockVideoImageVideoUrl("");
@@ -1905,6 +1955,10 @@ export default function DashboardLinksPage() {
       setEditShowcaseCta((link.block_data?.cta_text as string) ?? "");
     } else if (link.block_type === "button") {
       setEditButtonUrl(link.url ?? "");
+      const savedWhatsappNumber = (link.block_data?.whatsapp_number as string) ?? "";
+      setEditButtonMode(savedWhatsappNumber ? "whatsapp" : "url");
+      setEditButtonWhatsappNumber(savedWhatsappNumber);
+      setEditButtonWhatsappMessage((link.block_data?.whatsapp_message as string) ?? "");
     } else if (link.block_type === "countdown") {
       setEditCountdownTargetAt(toDatetimeLocalValue(link.block_data?.target_at as string | undefined));
     } else if (link.block_type === "embed") {
@@ -1982,12 +2036,21 @@ export default function DashboardLinksPage() {
       // tetap aman.
       blockData = { ...link.block_data, badge_text: editShowcaseBadge.trim(), cta_text: editShowcaseCta.trim() };
     } else if (link.block_type === "button") {
-      if (!editButtonUrl.trim()) {
-        setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
-        return;
+      if (editButtonMode === "whatsapp") {
+        if (!editButtonWhatsappNumber.trim()) {
+          setError(t("dashboard.pages.links.errors.whatsappNumberRequired"));
+          return;
+        }
+        blockUrl = buildWhatsappButtonUrl(editButtonWhatsappNumber, editButtonWhatsappMessage);
+        blockData = { whatsapp_number: editButtonWhatsappNumber.trim(), whatsapp_message: editButtonWhatsappMessage.trim() };
+      } else {
+        if (!editButtonUrl.trim()) {
+          setError(t("dashboard.pages.links.errors.buttonUrlRequired"));
+          return;
+        }
+        blockUrl = editButtonUrl.trim();
+        blockData = {};
       }
-      blockUrl = editButtonUrl.trim();
-      blockData = {};
     } else if (link.block_type === "countdown") {
       if (!editCountdownTargetAt) {
         setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
@@ -2587,16 +2650,57 @@ export default function DashboardLinksPage() {
               </FormField>
             )}
             {blockType === "button" && (
-              <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://..."
-                  value={blockButtonUrl}
-                  onChange={(e) => setBlockButtonUrl(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-                />
-              </FormField>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-1.5">
+                  {(["url", "whatsapp"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setBlockButtonMode(mode)}
+                      className={`flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                        blockButtonMode === mode ? "bg-jeon-sidebar text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
+                      }`}
+                    >
+                      {mode === "url" ? t("dashboard.pages.links.blockForm.button.modeUrl") : t("dashboard.pages.links.blockForm.button.modeWhatsapp")}
+                    </button>
+                  ))}
+                </div>
+                {blockButtonMode === "whatsapp" ? (
+                  <>
+                    <FormField label={t("dashboard.pages.links.blockForm.button.whatsappNumberLabel")}>
+                      <input
+                        type="tel"
+                        required
+                        placeholder={t("dashboard.pages.links.blockForm.button.whatsappNumberPlaceholder")}
+                        value={blockButtonWhatsappNumber}
+                        onChange={(e) => setBlockButtonWhatsappNumber(e.target.value)}
+                        className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                    <FormField label={t("dashboard.pages.links.blockForm.button.whatsappMessageLabel")}>
+                      <textarea
+                        placeholder={t("dashboard.pages.links.blockForm.button.whatsappMessagePlaceholder")}
+                        value={blockButtonWhatsappMessage}
+                        onChange={(e) => setBlockButtonWhatsappMessage(e.target.value)}
+                        rows={2}
+                        className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                    <p className="text-[11px] text-app-muted">{t("dashboard.pages.links.blockForm.button.whatsappHint")}</p>
+                  </>
+                ) : (
+                  <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://..."
+                      value={blockButtonUrl}
+                      onChange={(e) => setBlockButtonUrl(e.target.value)}
+                      className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                    />
+                  </FormField>
+                )}
+              </div>
             )}
             {blockType === "countdown" && (
               <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
@@ -3665,15 +3769,54 @@ export default function DashboardLinksPage() {
                       <RichTextEditor html={editAccordionText} onChange={setEditAccordionText} />
                     </FormField>
                   ) : link.block_type === "button" ? (
-                    <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
-                      <input
-                        type="url"
-                        placeholder="https://..."
-                        value={editButtonUrl}
-                        onChange={(e) => setEditButtonUrl(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                      />
-                    </FormField>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-1.5">
+                        {(["url", "whatsapp"] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setEditButtonMode(mode)}
+                            className={`flex-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                              editButtonMode === mode ? "bg-jeon-sidebar text-white" : "bg-gray-100 text-app-muted hover:bg-gray-200"
+                            }`}
+                          >
+                            {mode === "url" ? t("dashboard.pages.links.blockForm.button.modeUrl") : t("dashboard.pages.links.blockForm.button.modeWhatsapp")}
+                          </button>
+                        ))}
+                      </div>
+                      {editButtonMode === "whatsapp" ? (
+                        <>
+                          <FormField label={t("dashboard.pages.links.blockForm.button.whatsappNumberLabel")}>
+                            <input
+                              type="tel"
+                              placeholder={t("dashboard.pages.links.blockForm.button.whatsappNumberPlaceholder")}
+                              value={editButtonWhatsappNumber}
+                              onChange={(e) => setEditButtonWhatsappNumber(e.target.value)}
+                              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                            />
+                          </FormField>
+                          <FormField label={t("dashboard.pages.links.blockForm.button.whatsappMessageLabel")}>
+                            <textarea
+                              placeholder={t("dashboard.pages.links.blockForm.button.whatsappMessagePlaceholder")}
+                              value={editButtonWhatsappMessage}
+                              onChange={(e) => setEditButtonWhatsappMessage(e.target.value)}
+                              rows={2}
+                              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                            />
+                          </FormField>
+                        </>
+                      ) : (
+                        <FormField label={t("dashboard.pages.links.blockForm.button.urlLabel")}>
+                          <input
+                            type="url"
+                            placeholder="https://..."
+                            value={editButtonUrl}
+                            onChange={(e) => setEditButtonUrl(e.target.value)}
+                            className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                          />
+                        </FormField>
+                      )}
+                    </div>
                   ) : link.block_type === "countdown" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
                       <input

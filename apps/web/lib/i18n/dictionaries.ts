@@ -700,6 +700,13 @@ export const dictionaries = {
             // 9 tipe blok "full parity" mode Builder (12 September 2026).
             button: {
               urlLabel: "Tautan Tombol",
+              modeUrl: "Tautan biasa",
+              modeWhatsapp: "WhatsApp",
+              whatsappNumberLabel: "Nomor WhatsApp",
+              whatsappNumberPlaceholder: "08123456789",
+              whatsappMessageLabel: "Pesan (opsional)",
+              whatsappMessagePlaceholder: "Halo, saya mau tanya soal produkmu",
+              whatsappHint: "Pengunjung yang klik tombol ini langsung dibawa ke chat WhatsApp dengan pesan ini sudah terisi.",
             },
             countdown: {
               targetLabel: "Tanggal & Jam Target",
@@ -1054,6 +1061,7 @@ export const dictionaries = {
             accordionTextRequired: "Isi teks yang muncul saat diklik.",
             ctaUrlRequired: "Tautan tujuan (CTA) wajib diisi.",
             buttonUrlRequired: "Tautan tombol wajib diisi.",
+            whatsappNumberRequired: "Nomor WhatsApp wajib diisi.",
             countdownTargetRequired: "Tanggal & jam target wajib diisi.",
             embedUrlRequired: "Tautan embed wajib diisi.",
             embedLinkUrlRequired: "Tautan wajib diisi.",
@@ -3867,6 +3875,13 @@ export const dictionaries = {
             // 9 block types "full parity" with Builder mode (Sept 12, 2026).
             button: {
               urlLabel: "Button Link",
+              modeUrl: "Regular link",
+              modeWhatsapp: "WhatsApp",
+              whatsappNumberLabel: "WhatsApp Number",
+              whatsappNumberPlaceholder: "08123456789",
+              whatsappMessageLabel: "Message (optional)",
+              whatsappMessagePlaceholder: "Hi, I'd like to ask about your product",
+              whatsappHint: "Visitors who click this button go straight to a WhatsApp chat with this message pre-filled.",
             },
             countdown: {
               targetLabel: "Target Date & Time",
@@ -4200,6 +4215,7 @@ export const dictionaries = {
             accordionTextRequired: "Fill in the text that appears when clicked.",
             ctaUrlRequired: "Destination link (CTA) is required.",
             buttonUrlRequired: "Button link is required.",
+            whatsappNumberRequired: "WhatsApp number is required.",
             countdownTargetRequired: "Target date & time is required.",
             embedUrlRequired: "Embed link is required.",
             embedLinkUrlRequired: "Link is required.",
