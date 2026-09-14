@@ -12,7 +12,10 @@ import { TEST_IMAGE_PNG_BASE64, registerAndLogin } from "./fixtures";
 // TERKINI (BlockDrilldownEditor.tsx's linkedProduct, PagePreview.tsx's
 // findCatalogLinkedProduct), bukan salinan statis -- kalau produk diedit
 // lagi nanti, katalog ikut berubah otomatis tanpa perlu disinkronkan
-// manual, sama seperti katalog produk Tokopedia.
+// manual, sama seperti katalog produk Tokopedia. Susulan 15 September
+// 2026: field title/description/photo manual DIHAPUS TOTAL dari layar
+// item (bukan lagi disembunyikan kondisional begitu produk ditautkan) --
+// alur "Tambah Item" sekarang langsung membuka popup pilih tipe blok.
 test.describe("Katalog: item referensi hidup ke produk", () => {
   test("field manual tersembunyi begitu produk ditautkan, grid & detail publik ikut data produk terkini", async ({ page, request }) => {
     const { username } = await registerAndLogin(page, "catliveref");
@@ -32,30 +35,30 @@ test.describe("Katalog: item referensi hidup ke produk", () => {
     await form.getByRole("button", { name: "Buat Produk" }).click();
     await expect(page.getByRole("row", { name: /Sepatu Lari Merah/ })).toBeVisible({ timeout: 10000 });
 
-    // 2) Buat blok Katalog + 1 item -- SEBELUM ditautkan ke produk apa pun,
-    // field title/description/photo manual harus ada seperti biasa.
+    // 2) Buat blok Katalog + 1 item -- redesain "Tambah Item" (susulan 15
+    // September 2026): TIDAK ADA field judul/description/photo sama
+    // sekali lagi di alur ini, popup pilih tipe blok tampil OTOMATIS
+    // begitu item baru dibuat.
     await page.goto("/dashboard/links");
     await page.getByRole("button", { name: "Tambah" }).first().click();
     await page.getByRole("button", { name: "Lanjutan", exact: true }).click();
     await page.getByRole("button", { name: "Katalog", exact: true }).click();
     await page.getByPlaceholder("Judul blok").fill("Toko Sepatu");
     await page.getByRole("button", { name: "Buat Blok" }).click();
-    await expect(page.getByPlaceholder("Judul item baru (mis. Tipe 36)")).toBeVisible({ timeout: 10000 });
-    await page.getByPlaceholder("Judul item baru (mis. Tipe 36)").fill("Item Sepatu 1");
+    await expect(page.getByRole("button", { name: "+ Tambah Item" })).toBeVisible({ timeout: 10000 });
     await page.getByRole("button", { name: "+ Tambah Item" }).click();
-    await expect(page.getByPlaceholder("Judul item", { exact: true })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText("Foto", { exact: true })).toBeVisible();
+    await expect(page.getByText("Pilih Tipe Blok")).toBeVisible({ timeout: 5000 });
 
     // 3) Tambah blok "Produk" tertanam, pilih produk yang baru dibuat.
     await page.getByRole("button", { name: "Produk", exact: true }).click();
     await page.getByRole("button", { name: /Sepatu Lari Merah/ }).click();
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // 4) Sekarang field title/description/photo manual HARUS hilang total,
-    // ganti info ringkas "Terhubung ke produk".
+    // 4) Layar item TIDAK PERNAH punya field title/description/photo
+    // manual lagi (dihapus total, bukan cuma disembunyikan begitu produk
+    // ditautkan) -- ganti info ringkas "Terhubung ke produk" + baris blok
+    // "Produk" di daftar blok.
     await expect(page.getByText("Terhubung ke produk")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByPlaceholder("Judul item", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Foto", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Sepatu Lari Merah")).toBeVisible();
 
     await page.getByRole("button", { name: "Kembali", exact: true }).click();

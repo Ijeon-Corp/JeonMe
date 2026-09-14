@@ -19,7 +19,6 @@ import {
   createExtraPageLink,
   createLink,
   deleteAudioBlock,
-  deleteCatalogItemImage,
   deleteExtraPage,
   deleteBuilderMediaImage,
   deleteFileBlock,
@@ -42,7 +41,6 @@ import {
   uploadAudioBlock,
   uploadAvatar,
   uploadBuilderMediaImage,
-  uploadCatalogItemImage,
   uploadExtraPageAvatar,
   uploadFileBlock,
   uploadGalleryImage,
@@ -724,9 +722,6 @@ export default function DashboardLinksPage() {
   // BlockDrilldownEditor (§10.5); saveCatalogItems tetap dipakai sebagai
   // titik commit tunggal ke backend.
   const [, setCatalogSavingId] = useState<string | null>(null);
-  // catalogItemImageUploadingKey -- `${linkId}:${itemId}`, satu item bisa
-  // upload sementara item LAIN di blok yang sama tidak ikut disabled.
-  const [catalogItemImageUploadingKey, setCatalogItemImageUploadingKey] = useState<string | null>(null);
 
   const [contentEditId, setContentEditId] = useState<string | null>(null);
   // drilldownBlockId -- id blok "catalog"/"faq" yang sedang dibuka lewat
@@ -1396,13 +1391,13 @@ export default function DashboardLinksPage() {
   // ---------- "catalog" -- panel "Kelola Katalog" ----------
   // Semua fungsi di bawah PATCH block_data.items UTUH (pola sama FAQ --
   // array lengkap dikirim ulang tiap perubahan, TIDAK ada endpoint CRUD
-  // item terpisah di backend) KECUALI foto (endpoint upload/hapus
-  // tersendiri, lihat handleCatalogImageUpload/Delete di bawah -- foto
-  // butuh multipart file, tidak cocok dikirim lewat JSON block_data biasa).
-
-  function catalogItemsOf(link: LinkItem): CatalogItem[] {
-    return ((link.block_data?.items as CatalogItem[]) ?? []).filter((it) => it && it.id);
-  }
+  // item terpisah di backend). Upload/hapus foto per-item DIHAPUS 15
+  // September 2026 (permintaan langsung pengguna: layar item katalog tidak
+  // lagi punya field title/description/photo manual sama sekali, lihat
+  // catatan lengkap di BlockDrilldownEditor.tsx's CatalogItemFrame) --
+  // uploadCatalogItemImage/deleteCatalogItemImage (lib/api-client.ts) &
+  // endpoint backend-nya TETAP ada (item lama yang sudah punya foto masih
+  // tampil apa adanya di halaman publik), cuma UI unggah baru yang hilang.
 
   async function saveCatalogItems(link: LinkItem, items: CatalogItem[]) {
     setCatalogSavingId(link.id);
@@ -1451,46 +1446,6 @@ export default function DashboardLinksPage() {
     }
   }
 
-  // uploadCatalogItemImageFile -- inti handleCatalogImageUpload, dipisah dari
-  // event <input type=file> (6 September 2026, BlockDrilldownEditor.tsx
-  // memanggil File langsung dari onChange-nya sendiri, bukan lewat event
-  // React di sini).
-  async function uploadCatalogItemImageFile(link: LinkItem, itemId: string, file: File) {
-    const key = `${link.id}:${itemId}`;
-    setCatalogItemImageUploadingKey(key);
-    setError(null);
-    try {
-      const { images } = await uploadCatalogItemImage(link.id, itemId, file);
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.id === link.id
-            ? { ...l, block_data: { ...l.block_data, items: catalogItemsOf(l).map((it) => (it.id === itemId ? { ...it, images } : it)) } }
-            : l
-        )
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadPhotoFailed"));
-    } finally {
-      setCatalogItemImageUploadingKey(null);
-    }
-  }
-
-
-  async function handleCatalogImageDelete(link: LinkItem, itemId: string, index: number) {
-    setError(null);
-    try {
-      const { images } = await deleteCatalogItemImage(link.id, itemId, index);
-      setLinks((prev) =>
-        prev.map((l) =>
-          l.id === link.id
-            ? { ...l, block_data: { ...l.block_data, items: catalogItemsOf(l).map((it) => (it.id === itemId ? { ...it, images } : it)) } }
-            : l
-        )
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deletePhotoFailed"));
-    }
-  }
 
   // handleAudioUpload/handleAudioDelete -- blok "audio", pola sama seperti
   // handleIconUpload (unggah ulang menimpa file yang sama, satu audio per
@@ -4115,17 +4070,10 @@ export default function DashboardLinksPage() {
         <BlockDrilldownEditor
           link={drilldownBlock}
           isPremium={page?.is_premium ?? false}
-          uploadingItemId={
-            catalogItemImageUploadingKey?.startsWith(`${drilldownBlock.id}:`)
-              ? catalogItemImageUploadingKey.slice(drilldownBlock.id.length + 1)
-              : null
-          }
           products={products}
           onProductCreated={(product) => setProducts((prev) => [...prev, product])}
           onCommitCatalogRoot={(items) => saveCatalogItems(drilldownBlock, items)}
           onSaveFaqItems={(items) => handleSaveFaqItems(drilldownBlock, items)}
-          onUploadImage={(itemId, file) => uploadCatalogItemImageFile(drilldownBlock, itemId, file)}
-          onDeleteImage={(itemId, index) => handleCatalogImageDelete(drilldownBlock, itemId, index)}
           onExit={() => setDrilldownBlockId(null)}
         />
       )}

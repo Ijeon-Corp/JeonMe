@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CatalogItem, DashboardProduct, EmbeddedCatalogBlock, LinkItem } from "@/lib/api-client";
-import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
+import { IconChevronRight, IconPlus, IconTrash, IconX } from "@/components/icons";
 import FormField from "@/components/FormField";
 import { CatalogBlockTypePicker } from "@/components/CatalogBlockTypePicker";
 import { confirmDelete } from "@/lib/confirm";
@@ -18,7 +18,6 @@ import {
   getCatalogItems,
   isRichTextEmpty,
   maxCatalogDepth,
-  maxCatalogImagesPerItem,
   maxCatalogItemBlocks,
   maxCatalogItems,
   resolveAt,
@@ -67,21 +66,14 @@ function blockSegCount(path: CatalogSeg[]): number {
 export default function BlockDrilldownEditor({
   link,
   isPremium,
-  uploadingItemId,
   products,
   onProductCreated,
   onCommitCatalogRoot,
   onSaveFaqItems,
-  onUploadImage,
-  onDeleteImage,
   onExit,
 }: {
   link: LinkItem;
   isPremium: boolean;
-  // uploadingItemId -- id item katalog yang FOTONYA sedang diunggah (scoped
-  // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
-  // milik parent), null kalau tidak ada unggahan berjalan.
-  uploadingItemId: string | null;
   // products/onProductCreated -- ditambahkan 14 September 2026 (blok
   // "produk" bisa ditanam di dalam item katalog): daftar produk milik
   // kreator SUDAH di-fetch sekali di dashboard/links/page.tsx (dipakai
@@ -91,8 +83,6 @@ export default function BlockDrilldownEditor({
   onProductCreated: (product: DashboardProduct) => void;
   onCommitCatalogRoot: (items: CatalogItem[]) => void;
   onSaveFaqItems: (items: FaqQA[]) => Promise<boolean>;
-  onUploadImage: (itemId: string, file: File) => void;
-  onDeleteImage: (itemId: string, index: number) => void;
   onExit: () => void;
 }) {
   const { t } = useLocale();
@@ -167,10 +157,6 @@ export default function BlockDrilldownEditor({
 
   function commitRoot(newRoot: CatalogRoot) {
     onCommitCatalogRoot(newRoot.items ?? []);
-  }
-
-  function updateItemField(path: CatalogSeg[], field: "title" | "description", value: string) {
-    commitRoot(updateAt(root, path, (node) => ({ ...(node as CatalogItem), [field]: value })));
   }
 
   function updateEmbeddedBlock(path: CatalogSeg[], patch: Partial<EmbeddedCatalogBlock>) {
@@ -261,17 +247,11 @@ export default function BlockDrilldownEditor({
           (() => {
             const item = resolveAt(root, frame.path)?.item;
             if (!item) return <NotFoundNotice />;
-            const canUploadImages = frame.path.length === 1;
             const depth = 2 + blockSegCount(frame.path);
             return (
               <CatalogItemFrame
                 item={item}
-                canUploadImages={canUploadImages}
-                uploadingItemId={uploadingItemId}
                 products={products}
-                onUploadImage={(file) => onUploadImage(item.id, file)}
-                onDeleteImage={(index) => onDeleteImage(item.id, index)}
-                onUpdateField={(field, value) => updateItemField(frame.path, field, value)}
                 onDeleteItem={async () => {
                   const ok = await removeCatalogItem(frame.path.slice(0, -1), item.id);
                   if (ok) goBack();
@@ -396,7 +376,6 @@ function CatalogItemsFrame({
   onAddItem: (title: string) => void;
 }) {
   const { t } = useLocale();
-  const [draftTitle, setDraftTitle] = useState("");
   const atLimit = items.length >= maxCatalogItems;
 
   return (
@@ -427,37 +406,22 @@ function CatalogItemsFrame({
       {atLimit ? (
         <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.maxItemsReached")}</p>
       ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            // Judul BOLEH kosong -- susulan 14 September 2026, permintaan
-            // langsung pengguna: "saat saya masuk ke katalog itu langsung
-            // berisi blok blok yang mau ditambahkan saja gausah mengisi
-            // new item title, jadi isi katalog bisa kita sesuaikan dengan
-            // blok blok yang kita mau saja". Pola paling umum sekarang:
-            // buat item TANPA judul -> langsung tambah blok "produk" di
-            // dalamnya -> title jadi tidak relevan sama sekali begitu
-            // linkedProduct terdeteksi (lihat catatan lengkap di
-            // CatalogItemFrame). onAddItem sendiri sudah langsung `push`
-            // ke frame item baru begitu dibuat.
-            onAddItem(draftTitle.trim());
-            setDraftTitle("");
-          }}
-          className="flex flex-col gap-1.5 rounded-lg border border-dashed border-app-border p-2.5"
+        // Tanpa field judul sama sekali -- susulan 15 September 2026,
+        // permintaan langsung pengguna: "hilangkan saja kolom new item
+        // title, lalu saat tambah item langsung popup saja tampilkan
+        // semua blok yang ada... alurnya seperti ini katalog -> tambah
+        // item -> muncul popup pilihan semua blok -> edit isi blok nya".
+        // Item dibuat TANPA judul (onAddItem sudah langsung `push` ke
+        // frame item baru begitu dibuat) -- popup pilihan tipe blok
+        // tampil OTOMATIS di layar itu sendiri (lihat pickerOpen,
+        // CatalogItemFrame), jadi tidak perlu apa pun diisi di sini.
+        <button
+          type="button"
+          onClick={() => onAddItem("")}
+          className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white"
         >
-          <FormField label={t("dashboard.pages.links.catalogPanel.newItemTitleLabel")}>
-            <input
-              type="text"
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder={t("dashboard.pages.links.catalogPanel.newItemTitlePlaceholder")}
-              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm focus:border-jeon-purple focus:outline-none"
-            />
-          </FormField>
-          <button type="submit" className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white">
-            {t("dashboard.pages.links.catalogPanel.addItem")}
-          </button>
-        </form>
+          {t("dashboard.pages.links.catalogPanel.addItem")}
+        </button>
       )}
     </div>
   );
@@ -465,12 +429,7 @@ function CatalogItemsFrame({
 
 function CatalogItemFrame({
   item,
-  canUploadImages,
-  uploadingItemId,
   products,
-  onUploadImage,
-  onDeleteImage,
-  onUpdateField,
   onDeleteItem,
   isPremium,
   depth,
@@ -479,11 +438,6 @@ function CatalogItemFrame({
   onDeleteBlock,
 }: {
   item: CatalogItem;
-  canUploadImages: boolean;
-  // uploadingItemId -- id item katalog yang FOTONYA sedang diunggah (scoped
-  // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
-  // milik parent), null kalau tidak ada unggahan berjalan.
-  uploadingItemId: string | null;
   // products -- susulan 14 September 2026 (permintaan langsung pengguna:
   // "di dalam blok katalog kita tidak mengisi item title, description
   // ataupun photo semua diisi berdasarkan blok yang kita pilih... blok
@@ -492,9 +446,6 @@ function CatalogItemFrame({
   // bawah) -- daftar produk ITU SENDIRI dikelola ProdukBlockEditor di
   // EmbeddedBlockFrame, bukan di sini.
   products: DashboardProduct[];
-  onUploadImage: (file: File) => void;
-  onDeleteImage: (index: number) => void;
-  onUpdateField: (field: "title" | "description", value: string) => void;
   onDeleteItem: () => void;
   isPremium: boolean;
   depth: number;
@@ -505,80 +456,53 @@ function CatalogItemFrame({
   const { t } = useLocale();
   const blocks = item.blocks ?? [];
   const atLimit = blocks.length >= maxCatalogItemBlocks || depth >= maxCatalogDepth;
-  const isUploading = uploadingItemId === item.id;
   // linkedProduct -- item "referensi hidup" ke produk (dikonfirmasi lewat
   // AskUserQuestion, 14 September 2026, ala katalog Tokopedia): begitu
-  // item punya blok "produk" tertanam dgn 1 produk terpilih, field title/
-  // description/photo MANUAL disembunyikan total -- tampilan grid & detail
-  // di halaman publik (lihat PagePreview.tsx, CatalogTakeoverView) SELALU
-  // mengambil nama/harga/sampul LANGSUNG dari data produk terkini, BUKAN
-  // salinan statis, jadi kalau produk diedit lagi nanti (nama/harga/foto),
-  // katalog ikut berubah otomatis tanpa perlu disinkronkan manual. Title
-  // yang SUDAH tersimpan dari alur "+ Tambah Item" (wajib diisi saat
-  // pembuatan item, lihat panel "Kelola Katalog") tetap ada di data TAPI
-  // jadi murni bookkeeping internal -- tidak pernah ditampilkan lagi ke
-  // kreator maupun pengunjung begitu produk terpilih.
+  // item punya blok "produk" tertanam dgn 1 produk terpilih, tampilan grid
+  // & detail di halaman publik (lihat PagePreview.tsx, CatalogTakeoverView)
+  // SELALU mengambil nama/harga/sampul LANGSUNG dari data produk terkini,
+  // BUKAN salinan statis, jadi kalau produk diedit lagi nanti (nama/harga/
+  // foto), katalog ikut berubah otomatis tanpa perlu disinkronkan manual.
   const linkedProdukBlock = blocks.find((b) => b.block_type === "produk");
   const linkedProductId = linkedProdukBlock ? getBlockProductIds(linkedProdukBlock.block_data)[0] : undefined;
   const linkedProduct = linkedProductId ? products.find((p) => p.id === linkedProductId) : undefined;
 
-  // descriptionSaveTimer -- deskripsi item katalog jadi rich text (susulan
-  // 12 September 2026, "tiap blok yang ada teks nya buat semua jadi rich
-  // teks") -- RichTextEditor.onChange terpanggil PER KETUKAN (lihat catatan
-  // "AMAN dipanggil sesering itu" di komponen itu, SENGAJA aman karena rute
-  // Builder cuma menulis draft lokal). onUpdateField di sini UJUNGNYA
-  // memanggil commitRoot -> onCommitCatalogRoot -> PATCH jaringan LANGSUNG
-  // (autosave, TIDAK ada draft lokal) -- tanpa debounce, tiap ketukan akan
-  // mengirim satu PATCH penuh. Field title TIDAK butuh ini (input polos,
-  // sudah alami di-throttle lewat onBlur).
-  const descriptionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // pendingDescription -- bug ditemukan lewat verifikasi Playwright live (14
-  // September 2026, saat memperbaiki test e2e yang menunjukkan gejalanya):
-  // timer debounce di atas TIDAK PERNAH dibatalkan/di-flush kalau komponen
-  // ini unmount (mis. pengguna klik "Kembali"/pindah item SEBELUM 700ms
-  // berlalu) -- setTimeout tetap jalan di background, menembak PATCH
-  // "onUpdateField" BELAKANGAN dgn closure `item`/`value` yang beku dari
-  // SAAT DIJADWALKAN. Kalau di antara itu pengguna sempat commit perubahan
-  // LAIN (field lain, item lain) yang selesai lebih dulu, PATCH basi ini
-  // menimpanya begitu akhirnya menembak -- kehilangan data diam-diam, tanpa
-  // error apa pun. Di-flush SINKRON saat unmount (bukan dibiarkan mengambang
-  // ATAU dibuang) supaya urutan commit tetap sesuai urutan aksi pengguna
-  // yang sesungguhnya, sekaligus tidak kehilangan ketikan yang belum sempat
-  // di-debounce.
-  const pendingDescription = useRef<string | null>(null);
-  function scheduleDescriptionSave(value: string) {
-    if (descriptionSaveTimer.current) clearTimeout(descriptionSaveTimer.current);
-    pendingDescription.current = value;
-    descriptionSaveTimer.current = setTimeout(() => {
-      descriptionSaveTimer.current = null;
-      pendingDescription.current = null;
-      onUpdateField("description", value);
-    }, 700);
-  }
-  useEffect(() => {
-    return () => {
-      if (descriptionSaveTimer.current && pendingDescription.current !== null) {
-        clearTimeout(descriptionSaveTimer.current);
-        onUpdateField("description", pendingDescription.current);
-      }
-    };
-    // Flush SEKALI saat unmount instance INI (item/path tetap sepanjang
-    // hidup komponen, lihat catatan arsitektur stack/frame di komponen
-    // induk), bukan tiap kali `onUpdateField` berganti identitas (fungsi
-    // baru tiap render dari induk) -- deps penuh akan menjalankan efek
-    // cleanup ini berulang (dgn `onUpdateField` versi LAMA tiap kali) alih-
-    // alih sekali di akhir hidup komponen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // pickerOpen -- redesain alur "Tambah Item", susulan 15 September 2026
+  // (permintaan langsung pengguna, dari screenshot layar Item Title/
+  // Description/Photos/Additional Blocks: "hilangkan semua ini... alurnya
+  // seperti ini katalog -> tambah item -> muncul popup pilihan semua blok
+  // -> edit isi blok nya"). Item TIDAK PUNYA field sendiri lagi sama
+  // sekali (title/description/photo manual dihapus total dari layar ini --
+  // dikonfirmasi via AskUserQuestion bahwa multi-blok per item TETAP
+  // didukung, termasuk katalog bersarang Premium, jadi cuma field manual
+  // ini yang hilang, bukan seluruh kemampuan multi-blok). Popup pilih tipe
+  // blok tampil OTOMATIS begitu item baru dibuat -- `blocks.length === 0`
+  // dibaca SEKALI SAJA lewat lazy initializer `useState` (bukan efek,
+  // supaya tidak melanggar react-hooks/set-state-in-effect) -- komponen
+  // ini di-mount ULANG SETIAP kali frame item ini aktif kembali (lihat
+  // arsitektur stack/frame di komponen induk: item lama unmount total
+  // begitu masuk ke editor blok, mount lagi begitu "Kembali"), jadi nilai
+  // ini SELALU akurat: 0 blok = item baru saja dibuat ATAU memang masih
+  // kosong, bukan status basi dari kunjungan sebelumnya.
+  const [pickerOpen, setPickerOpen] = useState(() => blocks.length === 0);
 
   return (
     <div className="flex flex-col gap-3">
-      {linkedProduct ? (
-        // Item "referensi hidup" ke produk -- title/description/photo
-        // MANUAL disembunyikan total (dikonfirmasi lewat AskUserQuestion).
-        // Nama/harga/sampul yang tampil di sini SEKADAR pratinjau -- sumber
-        // kebenaran tetap data produk terkini, diambil ulang tiap render
-        // (lihat catatan linkedProduct di atas dan render publik PagePreview.tsx).
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onDeleteItem}
+          title={t("dashboard.pages.links.catalogPanel.deleteItem")}
+          className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
+        >
+          <IconTrash className="h-4 w-4" />
+        </button>
+      </div>
+
+      {linkedProduct && (
+        // Kartu ringkas "referensi hidup" ke produk -- nama/sampul di sini
+        // SEKADAR pratinjau, sumber kebenaran tetap data produk terkini
+        // (lihat catatan linkedProduct di atas & render publik PagePreview.tsx).
         <div className="flex items-center gap-3 rounded-lg border-2 border-jeon-purple/30 bg-jeon-lavender/30 p-3">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
             {linkedProduct.cover_image_url ? (
@@ -595,134 +519,78 @@ function CatalogItemFrame({
             <p className="truncate text-sm font-semibold text-app-ink">{linkedProduct.name}</p>
             <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.linkedProductHint")}</p>
           </div>
-          <button
-            type="button"
-            onClick={onDeleteItem}
-            title={t("dashboard.pages.links.catalogPanel.deleteItem")}
-            className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
-          >
-            <IconTrash className="h-4 w-4" />
-          </button>
         </div>
-      ) : (
-        <>
-          <div className="flex items-start gap-2">
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <FormField label={t("dashboard.pages.links.catalogPanel.itemTitleLabel")}>
-                <input
-                  type="text"
-                  defaultValue={item.title}
-                  placeholder={t("dashboard.pages.links.catalogPanel.itemTitlePlaceholder")}
-                  onBlur={(e) => e.target.value.trim() && onUpdateField("title", e.target.value.trim())}
-                  className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-sm font-semibold focus:border-jeon-purple focus:outline-none"
-                />
-              </FormField>
-              <FormField label={t("dashboard.pages.links.catalogPanel.itemDescriptionLabel")}>
-                <RichTextEditor html={item.description} onChange={scheduleDescriptionSave} />
-              </FormField>
-            </div>
-            <button
-              type="button"
-              onClick={onDeleteItem}
-              title={t("dashboard.pages.links.catalogPanel.deleteItem")}
-              className="flex-shrink-0 rounded-md p-1.5 text-red-600 hover:bg-red-50"
-            >
-              <IconTrash className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">
-              {t("dashboard.components.blockDrilldown.photosHeading")}
-            </p>
-            {canUploadImages ? (
-              <div className="flex flex-wrap gap-2">
-                {item.images.map((src, i) => (
-                  <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
-                    <button
-                      type="button"
-                      onClick={() => onDeleteImage(i)}
-                      title={t("dashboard.pages.links.galleryPanel.deletePhoto")}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
-                    >
-                      <IconTrash className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
-                ))}
-                {item.images.length < maxCatalogImagesPerItem && (
-                  <label
-                    className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${
-                      isUploading ? "opacity-60" : ""
-                    }`}
-                  >
-                    {isUploading ? (
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                    ) : (
-                      <IconPlus className="h-4 w-4" />
-                    )}
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) onUploadImage(file);
-                      }}
-                      disabled={isUploading}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-            ) : (
-              <p className="text-[11px] text-app-muted">{t("dashboard.components.blockDrilldown.photosNestedUnsupported")}</p>
-            )}
-          </div>
-        </>
       )}
 
-      <div>
-        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-app-muted">
+      {blocks.length > 0 && (
+        <p className="text-[11px] font-bold uppercase tracking-wide text-app-muted">
           {t("dashboard.components.blockDrilldown.blocksHeading")}
         </p>
-        <div className="flex flex-col gap-1.5">
-          {blocks.map((block) => (
+      )}
+      <div className="flex flex-col gap-1.5">
+        {blocks.map((block) => (
+          <button
+            key={block.id}
+            type="button"
+            onClick={() => onOpenBlock(block)}
+            className="flex items-center gap-3 rounded-lg border border-app-border bg-app-surface-2 p-2.5 text-left hover:border-jeon-purple"
+          >
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-app-ink">{block.title}</span>
             <button
-              key={block.id}
               type="button"
-              onClick={() => onOpenBlock(block)}
-              className="flex items-center gap-3 rounded-lg border border-app-border bg-app-surface-2 p-2.5 text-left hover:border-jeon-purple"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteBlock(block.id);
+              }}
+              title={t("dashboard.components.catalogBlocksEditor.removeBlockAriaLabel")}
+              className="flex-shrink-0 text-app-muted hover:text-red-600"
             >
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-app-ink">{block.title}</span>
+              <IconTrash className="h-3.5 w-3.5" />
+            </button>
+            <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
+          </button>
+        ))}
+      </div>
+      {atLimit ? (
+        <p className="text-[10.5px] text-app-muted">
+          {depth >= maxCatalogDepth
+            ? t("dashboard.components.catalogBlocksEditor.maxDepthReached")
+            : t("dashboard.components.catalogBlocksEditor.maxBlocksReached").replace("{max}", String(maxCatalogItemBlocks))}
+        </p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-app-border py-2 text-xs font-semibold text-app-muted hover:border-jeon-purple hover:text-jeon-purple"
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+          {t("dashboard.components.blockDrilldown.addBlockButton")}
+        </button>
+      )}
+
+      {pickerOpen && !atLimit && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setPickerOpen(false)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-jlg border-2 border-jeon-ink bg-app-surface p-4 shadow-brutal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.components.blockDrilldown.pickBlockTypeTitle")}</h2>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteBlock(block.id);
-                }}
-                title={t("dashboard.components.catalogBlocksEditor.removeBlockAriaLabel")}
-                className="flex-shrink-0 text-app-muted hover:text-red-600"
+                onClick={() => setPickerOpen(false)}
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10"
               >
-                <IconTrash className="h-3.5 w-3.5" />
+                <IconX className="h-4 w-4" />
               </button>
-              <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
-            </button>
-          ))}
-        </div>
-        {atLimit ? (
-          <p className="mt-1.5 text-[10.5px] text-app-muted">
-            {depth >= maxCatalogDepth
-              ? t("dashboard.components.catalogBlocksEditor.maxDepthReached")
-              : t("dashboard.components.catalogBlocksEditor.maxBlocksReached").replace("{max}", String(maxCatalogItemBlocks))}
-          </p>
-        ) : (
-          <div className="mt-1.5">
+            </div>
             <CatalogBlockTypePicker isPremium={isPremium} disabled={atLimit} onPick={onAddBlock} />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
