@@ -22,7 +22,14 @@ test("FAQ tingkat atas: daftar -> detail -> Simpan, validasi, batas minimal 1 pe
   await page.getByRole("button", { name: "FAQ", exact: true }).click();
   await page.getByPlaceholder("Judul blok").fill("Pertanyaan Umum");
   await page.getByPlaceholder("Pertanyaan").fill("Apakah ada garansi?");
-  await page.getByPlaceholder("Jawaban").fill("Ya, garansi 1 tahun.");
+  // Jawaban SEKARANG rich-text (TipTap, 14 September 2026 -- "gap FAQ
+  // ketinggalan dari redesain rich-text 12 September"), placeholder
+  // <textarea> "Jawaban" lama sudah tidak ada, ganti contenteditable
+  // (pola sama accordion-block.spec.ts/catalog-nested-blocks.spec.ts).
+  const createAnswerEditor = page.locator('[contenteditable="true"]');
+  await createAnswerEditor.click();
+  await expect(createAnswerEditor).toBeFocused();
+  await page.keyboard.type("Ya, garansi 1 tahun.");
   await page.getByRole("button", { name: "Buat Blok" }).click();
   await expect(page.getByRole("button", { name: "Edit Konten" })).toBeVisible({ timeout: 10000 });
 
@@ -35,22 +42,30 @@ test("FAQ tingkat atas: daftar -> detail -> Simpan, validasi, batas minimal 1 pe
   await page.getByText("Apakah ada garansi?", { exact: true }).first().click();
 
   // Validasi lokal: kosongkan jawaban, Simpan harus DITOLAK (tetap di
-  // frame + pesan galat), TIDAK boleh sampai PATCH ke server.
-  const answerField = page.locator("textarea").first();
-  await answerField.fill("");
+  // frame + pesan galat), TIDAK boleh sampai PATCH ke server. Triple-click
+  // + Backspace (bukan .fill("")) -- rich-text contenteditable, mengosongkan
+  // TipTap menghasilkan "<p></p>" (bukan string kosong murni), lihat
+  // isRichTextEmpty (lib/catalog-blocks.ts) yang menangani ini di sisi app.
+  const answerEditor = page.locator('[contenteditable="true"]');
+  await answerEditor.locator("p").click({ clickCount: 3 });
+  await page.keyboard.press("Backspace");
   await page.getByRole("button", { name: "Simpan", exact: true }).click();
   await expect(backButton).toBeVisible();
   await expect(page.getByText("Isi pertanyaan DAN jawaban sebelum menyimpan.")).toBeVisible();
 
   // Isi ulang dengan benar -> Simpan -> kembali ke daftar dengan jawaban baru
-  await answerField.fill("Ya, garansi resmi 1 tahun penuh.");
+  await answerEditor.click();
+  await page.keyboard.type("Ya, garansi resmi 1 tahun penuh.");
   await page.getByRole("button", { name: "Simpan", exact: true }).click();
   await expect(page.getByText("Apakah ada garansi?", { exact: true }).first()).toBeVisible({ timeout: 10000 });
 
   // Tambah pertanyaan kedua
   await page.getByRole("button", { name: "+ Tambah Pertanyaan" }).click();
   await page.getByPlaceholder("Pertanyaan").fill("Bagaimana cara retur?");
-  await page.getByPlaceholder("Jawaban").fill("Hubungi CS dalam 7 hari.");
+  const secondAnswerEditor = page.locator('[contenteditable="true"]');
+  await secondAnswerEditor.click();
+  await expect(secondAnswerEditor).toBeFocused();
+  await page.keyboard.type("Hubungi CS dalam 7 hari.");
   await page.getByRole("button", { name: "Simpan", exact: true }).click();
   await expect(page.getByText("Bagaimana cara retur?", { exact: true }).first()).toBeVisible({ timeout: 10000 });
 

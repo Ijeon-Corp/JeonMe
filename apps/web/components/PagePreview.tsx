@@ -6,6 +6,7 @@ import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
 import type { FaqItem } from "@/components/FaqBlock";
+import type { ListBlockItem } from "@/components/ListBlock";
 import BuyProductButton from "@/components/BuyProductButton";
 import LockedLinkButton from "@/components/LockedLinkButton";
 import TrackedLink from "@/components/TrackedLink";
@@ -953,6 +954,56 @@ const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = 
   row_no_image: renderProductListRow,
   list: renderProductListRow,
 };
+
+// renderCountdownAction -- susulan 14 September 2026 (permintaan langsung
+// pengguna: "Countdown yang bisa nge-trigger tombol Beli langsung itu
+// levernya besar untuk flash sale"). Dipakai bersama oleh renderLinkOrBlock
+// (mode Simple) DAN renderBuilderNode (Canvas Builder) -- satu sumber
+// kebenaran, bukan disalin dua kali (pola sama seperti PRODUK_LAYOUT_
+// RENDERERS di atas). Prioritas: product_id terisi & produknya ketemu ->
+// render KARTU PRODUK PENUH (bukan cuma tombol Beli polos -- reuse
+// renderSingleProductCard apa adanya supaya nama/harga/gambar produk ikut
+// tampil, konsisten dgn blok "produk" biasa) DI BAWAH hitung mundur;
+// kalau tidak, fallback ke CTA generik (cta_label/cta_url, sama pola
+// dengan blok "text"/"list") kalau url-nya terisi; kalau keduanya kosong,
+// undefined (CountdownBlock tidak merender apa pun tambahan, perilaku lama
+// utuh). Kepemilikan product_id SUDAH diverifikasi backend lewat
+// checkBuilderProductOwnership (collectBuilderProductIDs disusuri utk
+// blockType "countdown" juga) -- di sini murni tampilan.
+function renderCountdownAction(
+  blockData: Record<string, unknown> | undefined,
+  data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused">,
+  theme: PageTheme,
+  canBuy: boolean
+): React.ReactNode | undefined {
+  const productId = blockData?.product_id as string | undefined;
+  if (productId) {
+    const product = data.products.find((p) => p.id === productId);
+    if (product) {
+      const trackProduct = (productClickId: string) =>
+        data.pageSlug
+          ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
+          : trackEvent(data.username, { event_type: "product_click", product_id: productClickId });
+      const ctx = { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused };
+      return renderSingleProductCard(product, theme, canBuy, ctx, trackProduct);
+    }
+  }
+  const ctaUrl = (blockData?.cta_url as string | undefined)?.trim();
+  if (ctaUrl) {
+    const ctaLabel = (blockData?.cta_label as string | undefined)?.trim();
+    return (
+      <a
+        href={ctaUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`block w-full rounded-lg py-2 text-center text-xs font-bold transition-all duration-200 ${theme.buyButton}`}
+      >
+        {ctaLabel || "Lihat"}
+      </a>
+    );
+  }
+  return undefined;
+}
 
 function renderProductGrid(
   data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
@@ -2328,6 +2379,7 @@ function renderLinkOrBlock(
           titleClassName={theme.cardTitle}
           expiredLabel="Sudah berakhir"
           unitLabels={{ days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" }}
+          actionSlot={renderCountdownAction(link.blockData, data, theme, canBuy)}
         />
       </div>
     );
@@ -2339,7 +2391,7 @@ function renderLinkOrBlock(
         <ListBlock
           title={link.title}
           style={(link.blockData?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
-          items={(link.blockData?.items as { title: string; description?: string; author?: string }[]) ?? []}
+          items={(link.blockData?.items as ListBlockItem[]) ?? []}
           cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
           titleClassName={theme.cardTitle}
           itemTitleClassName={theme.cardTitle}
@@ -3811,6 +3863,7 @@ function renderBuilderNode(
             titleClassName={theme.cardTitle}
             expiredLabel="Sudah berakhir"
             unitLabels={{ days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" }}
+            actionSlot={renderCountdownAction(node.blockData, data, theme, canBuy)}
           />
         </div>
       );
@@ -3820,7 +3873,7 @@ function renderBuilderNode(
           <ListBlock
             title={node.title}
             style={(node.blockData.style as "list" | "card" | "testimony" | undefined) ?? "list"}
-            items={(node.blockData.items as { title: string; description?: string; author?: string }[]) ?? []}
+            items={(node.blockData.items as ListBlockItem[]) ?? []}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
             itemTitleClassName={theme.cardTitle}

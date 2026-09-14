@@ -25,6 +25,18 @@ export const maxCatalogImagesPerItem = 6;
 
 export type FaqQA = { question: string; answer: string };
 
+// isRichTextEmpty -- ditemukan lewat verifikasi live (bukan cuma baca
+// kode) saat upgrade jawaban FAQ ke RichTextEditor (14 September 2026):
+// editor TipTap yang dikosongkan (select-all + hapus, atau memang belum
+// pernah diisi) menghasilkan HTML "<p></p>", BUKAN string kosong "" --
+// pengecekan lama `!answer.trim()` jadi SELALU false (truthy) walau
+// isinya kosong secara visual, membuat validasi "wajib diisi" diam-diam
+// tidak pernah tercapai lagi. Dipakai di 2 tempat: form tambah FAQ
+// (dashboard/links/page.tsx) & TopLevelFaqItemFrame (BlockDrilldownEditor.tsx).
+export function isRichTextEmpty(html: string): boolean {
+  return !html.replace(/<[^>]*>/g, "").trim();
+}
+
 export type EmbeddableTypeOption = {
   type: EmbeddedCatalogBlock["block_type"];
   label: string;

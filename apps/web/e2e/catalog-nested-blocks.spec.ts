@@ -72,8 +72,15 @@ test.describe("Catalog nested blocks", () => {
     await page.getByRole("button", { name: "+ Tambah Pertanyaan", exact: true }).click();
     await expect(page.getByPlaceholder("Pertanyaan")).toBeVisible();
     await page.getByPlaceholder("Pertanyaan").fill("Apakah bisa nego harga?");
-    await page.getByPlaceholder("Jawaban").fill("Bisa, hubungi kami langsung.");
-    await page.getByPlaceholder("Jawaban").blur();
+    // Jawaban FAQ tertanam SEKARANG rich-text juga (TipTap, 14 September
+    // 2026), placeholder <textarea> "Jawaban" lama sudah tidak ada --
+    // pola sama seperti blok "Teks" tertanam di atas (contenteditable +
+    // debounce 700ms, blur+wait di sini cuma memastikan timer sempat
+    // menembak sebelum navigasi "Kembali", BUKAN pemicu save itu sendiri).
+    const embeddedAnswerEditor = page.locator('[contenteditable="true"]');
+    await embeddedAnswerEditor.click();
+    await page.keyboard.type("Bisa, hubungi kami langsung.");
+    await embeddedAnswerEditor.blur();
     await page.waitForTimeout(1500);
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
@@ -108,7 +115,7 @@ test.describe("Catalog nested blocks", () => {
     await page.getByText("FAQ", { exact: true }).first().click();
     await page.getByText("Apakah bisa nego harga?", { exact: true }).click();
     await expect(page.getByPlaceholder("Pertanyaan")).toHaveValue("Apakah bisa nego harga?", { timeout: 10000 });
-    await expect(page.getByPlaceholder("Jawaban")).toHaveValue("Bisa, hubungi kami langsung.");
+    await expect(page.locator('[contenteditable="true"]')).toHaveText("Bisa, hubungi kami langsung.", { timeout: 10000 });
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 

@@ -16,6 +16,7 @@ import {
   emptyBlockData,
   getBlocks,
   getCatalogItems,
+  isRichTextEmpty,
   maxCatalogDepth,
   maxCatalogImagesPerItem,
   maxCatalogItemBlocks,
@@ -840,7 +841,11 @@ function TopLevelFaqItemFrame({
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
-    if (!question.trim() || !answer.trim()) {
+    // isRichTextEmpty (bukan !answer.trim()) -- ditemukan lewat verifikasi
+    // live: TipTap yang dikosongkan menghasilkan "<p></p>", bukan string
+    // kosong, jadi !answer.trim() SELALU false (validasi tidak pernah
+    // tercapai) setelah jawaban FAQ diupgrade ke rich text.
+    if (!question.trim() || isRichTextEmpty(answer)) {
       setError(t("dashboard.components.blockDrilldown.faqIncomplete"));
       return;
     }

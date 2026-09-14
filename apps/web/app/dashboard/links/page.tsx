@@ -100,6 +100,7 @@ import { useLocale } from "@/lib/locale-context";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
 import { ProdukBlockEditor, PRODUK_LAYOUT_OPTIONS, type ProdukBlockLayout } from "@/components/dashboard/page/ProdukBlockEditor";
+import { isRichTextEmpty } from "@/lib/catalog-blocks";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -697,6 +698,9 @@ export default function DashboardLinksPage() {
   const [blockButtonWhatsappNumber, setBlockButtonWhatsappNumber] = useState("");
   const [blockButtonWhatsappMessage, setBlockButtonWhatsappMessage] = useState("");
   const [blockCountdownTargetAt, setBlockCountdownTargetAt] = useState("");
+  const [blockCountdownProductId, setBlockCountdownProductId] = useState("");
+  const [blockCountdownCtaLabel, setBlockCountdownCtaLabel] = useState("");
+  const [blockCountdownCtaUrl, setBlockCountdownCtaUrl] = useState("");
   const [blockEmbedUrl, setBlockEmbedUrl] = useState("");
   const [blockVideoImageVideoUrl, setBlockVideoImageVideoUrl] = useState("");
   const [blockEmbedLinkUrl, setBlockEmbedLinkUrl] = useState("");
@@ -705,7 +709,7 @@ export default function DashboardLinksPage() {
   // blockFaqItems di atas (shell boleh kosong, validasi backend longgar,
   // beda dari FAQ top-level yang wajib question+answer terisi).
   const [blockListStyle, setBlockListStyle] = useState<"list" | "card" | "testimony">("list");
-  const [blockListItems, setBlockListItems] = useState<{ title: string; description: string; author: string }[]>([
+  const [blockListItems, setBlockListItems] = useState<{ title: string; description: string; author: string; url?: string }[]>([
     { title: "", description: "", author: "" },
   ]);
   // mediaImageUploadingId -- id blok yang gambarnya sedang diunggah lewat
@@ -753,6 +757,9 @@ export default function DashboardLinksPage() {
   const [editButtonWhatsappNumber, setEditButtonWhatsappNumber] = useState("");
   const [editButtonWhatsappMessage, setEditButtonWhatsappMessage] = useState("");
   const [editCountdownTargetAt, setEditCountdownTargetAt] = useState("");
+  const [editCountdownProductId, setEditCountdownProductId] = useState("");
+  const [editCountdownCtaLabel, setEditCountdownCtaLabel] = useState("");
+  const [editCountdownCtaUrl, setEditCountdownCtaUrl] = useState("");
   const [editEmbedUrl, setEditEmbedUrl] = useState("");
   const [editVideoImageVideoUrl, setEditVideoImageVideoUrl] = useState("");
   const [editEmbedLinkUrl, setEditEmbedLinkUrl] = useState("");
@@ -1120,7 +1127,12 @@ export default function DashboardLinksPage() {
       setBlockButtonWhatsappNumber("");
       setBlockButtonWhatsappMessage("");
     }
-    if (type === "countdown") setBlockCountdownTargetAt("");
+    if (type === "countdown") {
+      setBlockCountdownTargetAt("");
+      setBlockCountdownProductId("");
+      setBlockCountdownCtaLabel("");
+      setBlockCountdownCtaUrl("");
+    }
     if (type === "embed") setBlockEmbedUrl("");
     if (type === "video_image") setBlockVideoImageVideoUrl("");
     if (type === "embed_link") {
@@ -1800,7 +1812,7 @@ export default function DashboardLinksPage() {
       }
       blockData = { video_url: blockVideoUrl.trim() };
     } else if (blockType === "faq") {
-      const items = blockFaqItems.filter((it) => it.question.trim() && it.answer.trim());
+      const items = blockFaqItems.filter((it) => it.question.trim() && !isRichTextEmpty(it.answer));
       if (items.length === 0) {
         setError(t("dashboard.pages.links.errors.faqRequired"));
         return;
@@ -1858,7 +1870,15 @@ export default function DashboardLinksPage() {
         setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
         return;
       }
-      blockData = { target_at: new Date(blockCountdownTargetAt).toISOString() };
+      // product_id/cta_label/cta_url -- susulan 14 September 2026 (kaitkan
+      // countdown ke produk utk flash sale, atau CTA generik kalau tidak
+      // ada produk dipilih -- lihat renderCountdownAction, PagePreview.tsx).
+      blockData = {
+        target_at: new Date(blockCountdownTargetAt).toISOString(),
+        product_id: blockCountdownProductId || undefined,
+        cta_label: blockCountdownProductId ? undefined : blockCountdownCtaLabel.trim() || undefined,
+        cta_url: blockCountdownProductId ? undefined : blockCountdownCtaUrl.trim() || undefined,
+      };
     } else if (blockType === "embed") {
       if (!blockEmbedUrl.trim()) {
         setError(t("dashboard.pages.links.errors.embedUrlRequired"));
@@ -1883,7 +1903,7 @@ export default function DashboardLinksPage() {
       // jadi item kosong pun boleh terkirim, buang baris yang benar-benar
       // kosong semua (title+description+author) supaya tidak menyisakan
       // sampah kalau kreator batal mengisi.
-      const items = blockListItems.filter((it) => it.title.trim() || it.description.trim() || it.author.trim());
+      const items = blockListItems.filter((it) => it.title.trim() || it.description.trim() || it.author.trim() || it.url?.trim());
       blockData = { style: blockListStyle, items };
     }
     setError(null);
@@ -1924,6 +1944,9 @@ export default function DashboardLinksPage() {
       setBlockButtonWhatsappNumber("");
       setBlockButtonWhatsappMessage("");
       setBlockCountdownTargetAt("");
+      setBlockCountdownProductId("");
+      setBlockCountdownCtaLabel("");
+      setBlockCountdownCtaUrl("");
       setBlockEmbedUrl("");
       setBlockVideoImageVideoUrl("");
       setBlockEmbedLinkUrl("");
@@ -1961,6 +1984,9 @@ export default function DashboardLinksPage() {
       setEditButtonWhatsappMessage((link.block_data?.whatsapp_message as string) ?? "");
     } else if (link.block_type === "countdown") {
       setEditCountdownTargetAt(toDatetimeLocalValue(link.block_data?.target_at as string | undefined));
+      setEditCountdownProductId((link.block_data?.product_id as string) ?? "");
+      setEditCountdownCtaLabel((link.block_data?.cta_label as string) ?? "");
+      setEditCountdownCtaUrl((link.block_data?.cta_url as string) ?? "");
     } else if (link.block_type === "embed") {
       setEditEmbedUrl((link.block_data?.embed_url as string) ?? "");
     } else if (link.block_type === "video_image") {
@@ -2056,7 +2082,12 @@ export default function DashboardLinksPage() {
         setError(t("dashboard.pages.links.errors.countdownTargetRequired"));
         return;
       }
-      blockData = { target_at: new Date(editCountdownTargetAt).toISOString() };
+      blockData = {
+        target_at: new Date(editCountdownTargetAt).toISOString(),
+        product_id: editCountdownProductId || undefined,
+        cta_label: editCountdownProductId ? undefined : editCountdownCtaLabel.trim() || undefined,
+        cta_url: editCountdownProductId ? undefined : editCountdownCtaUrl.trim() || undefined,
+      };
     } else if (link.block_type === "embed") {
       if (!editEmbedUrl.trim()) {
         setError(t("dashboard.pages.links.errors.embedUrlRequired"));
@@ -2703,15 +2734,53 @@ export default function DashboardLinksPage() {
               </div>
             )}
             {blockType === "countdown" && (
-              <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
-                <input
-                  type="datetime-local"
-                  required
-                  value={blockCountdownTargetAt}
-                  onChange={(e) => setBlockCountdownTargetAt(e.target.value)}
-                  className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
-                />
-              </FormField>
+              <div className="flex flex-col gap-3">
+                <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={blockCountdownTargetAt}
+                    onChange={(e) => setBlockCountdownTargetAt(e.target.value)}
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                  />
+                </FormField>
+                <FormField label={t("dashboard.pages.links.blockForm.countdown.productLabel")} hint={t("dashboard.pages.links.blockForm.countdown.productHint")}>
+                  <select
+                    value={blockCountdownProductId}
+                    onChange={(e) => setBlockCountdownProductId(e.target.value)}
+                    className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                  >
+                    <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                {!blockCountdownProductId && (
+                  <>
+                    <FormField label={t("dashboard.pages.links.blockForm.countdown.ctaLabelLabel")}>
+                      <input
+                        type="text"
+                        placeholder={t("dashboard.pages.links.blockForm.countdown.ctaLabelPlaceholder")}
+                        value={blockCountdownCtaLabel}
+                        onChange={(e) => setBlockCountdownCtaLabel(e.target.value)}
+                        className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                    <FormField label={t("dashboard.pages.links.blockForm.countdown.ctaUrlLabel")}>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={blockCountdownCtaUrl}
+                        onChange={(e) => setBlockCountdownCtaUrl(e.target.value)}
+                        className="w-full rounded-lg border border-app-border px-3 py-2 text-sm focus:border-jeon-purple focus:outline-none"
+                      />
+                    </FormField>
+                  </>
+                )}
+              </div>
             )}
             {blockType === "embed" && (
               <FormField label={t("dashboard.pages.links.blockForm.embed.urlLabel")} hint={t("dashboard.pages.links.blockForm.embed.urlHint")}>
@@ -2759,7 +2828,9 @@ export default function DashboardLinksPage() {
                   style={blockListStyle}
                   items={blockListItems}
                   onUpdateStyle={setBlockListStyle}
-                  onUpdateItems={(items) => setBlockListItems(items.map((it) => ({ title: it.title, description: it.description ?? "", author: it.author ?? "" })))}
+                  onUpdateItems={(items) =>
+                    setBlockListItems(items.map((it) => ({ title: it.title, description: it.description ?? "", author: it.author ?? "", url: it.url ?? "" })))
+                  }
                 />
               </FormField>
             )}
@@ -3579,7 +3650,7 @@ export default function DashboardLinksPage() {
                 <div className="ml-11 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <ListItemsEditor
                     style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
-                    items={(link.block_data?.items as { title: string; description?: string; author?: string }[] | undefined) ?? []}
+                    items={(link.block_data?.items as ListEditorItem[] | undefined) ?? []}
                     onUpdateStyle={(style) => handleBlockDataPatch(link, { style })}
                     onUpdateItems={(items) => handleListItemsPatch(link, items)}
                   />
@@ -3818,14 +3889,52 @@ export default function DashboardLinksPage() {
                       )}
                     </div>
                   ) : link.block_type === "countdown" ? (
-                    <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
-                      <input
-                        type="datetime-local"
-                        value={editCountdownTargetAt}
-                        onChange={(e) => setEditCountdownTargetAt(e.target.value)}
-                        className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
-                      />
-                    </FormField>
+                    <div className="flex flex-col gap-2">
+                      <FormField label={t("dashboard.pages.links.blockForm.countdown.targetLabel")}>
+                        <input
+                          type="datetime-local"
+                          value={editCountdownTargetAt}
+                          onChange={(e) => setEditCountdownTargetAt(e.target.value)}
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                        />
+                      </FormField>
+                      <FormField label={t("dashboard.pages.links.blockForm.countdown.productLabel")} hint={t("dashboard.pages.links.blockForm.countdown.productHint")}>
+                        <select
+                          value={editCountdownProductId}
+                          onChange={(e) => setEditCountdownProductId(e.target.value)}
+                          className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                        >
+                          <option value="">{t("dashboard.pages.links.blockForm.countdown.noProduct")}</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </FormField>
+                      {!editCountdownProductId && (
+                        <>
+                          <FormField label={t("dashboard.pages.links.blockForm.countdown.ctaLabelLabel")}>
+                            <input
+                              type="text"
+                              placeholder={t("dashboard.pages.links.blockForm.countdown.ctaLabelPlaceholder")}
+                              value={editCountdownCtaLabel}
+                              onChange={(e) => setEditCountdownCtaLabel(e.target.value)}
+                              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                            />
+                          </FormField>
+                          <FormField label={t("dashboard.pages.links.blockForm.countdown.ctaUrlLabel")}>
+                            <input
+                              type="url"
+                              placeholder="https://..."
+                              value={editCountdownCtaUrl}
+                              onChange={(e) => setEditCountdownCtaUrl(e.target.value)}
+                              className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                            />
+                          </FormField>
+                        </>
+                      )}
+                    </div>
                   ) : link.block_type === "embed" ? (
                     <FormField label={t("dashboard.pages.links.blockForm.embed.urlLabel")} hint={t("dashboard.pages.links.blockForm.embed.urlHint")}>
                       <input

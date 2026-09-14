@@ -39,6 +39,9 @@ export interface ListEditorItem {
   title: string;
   description?: string;
   author?: string;
+  // url -- susulan 14 September 2026, lihat catatan lengkap di
+  // components/ListBlock.tsx (ListBlockItem).
+  url?: string;
 }
 
 export function ListItemsEditor({
@@ -118,6 +121,13 @@ export function ListItemsEditor({
                 className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
               />
             )}
+            <input
+              type="url"
+              defaultValue={item.url ?? ""}
+              onBlur={(e) => updateItem(i, { url: e.target.value })}
+              placeholder={t("dashboard.pages.linksBuilder.listItemUrlPlaceholder")}
+              className="w-full rounded-md border border-app-border p-1.5 text-xs outline-none focus:border-jeon-purple"
+            />
           </div>
         ))}
       </div>

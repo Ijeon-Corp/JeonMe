@@ -710,6 +710,12 @@ export const dictionaries = {
             },
             countdown: {
               targetLabel: "Tanggal & Jam Target",
+              productLabel: "Kaitkan ke Produk (opsional)",
+              productHint: "Kalau dipilih, tombol Beli produk ini muncul di bawah hitung mundur -- cocok untuk flash sale.",
+              noProduct: "Tanpa produk",
+              ctaLabelLabel: "Label Tombol CTA (opsional)",
+              ctaLabelPlaceholder: "Daftar Sekarang",
+              ctaUrlLabel: "URL Tombol CTA (opsional)",
             },
             embed: {
               urlLabel: "Tautan Embed",
@@ -1194,6 +1200,7 @@ export const dictionaries = {
           listItemTitlePlaceholder: "Judul",
           listItemNamePlaceholder: "Nama",
           listItemAuthorPlaceholder: "Peran/perusahaan (opsional)",
+          listItemUrlPlaceholder: "Tautan tujuan (opsional)",
           listAddItem: "Tambah Item",
           listRemoveItem: "Hapus item",
           mapsUrlPlaceholder: "Tautan berbagi Google Maps",
@@ -3885,6 +3892,12 @@ export const dictionaries = {
             },
             countdown: {
               targetLabel: "Target Date & Time",
+              productLabel: "Link to Product (optional)",
+              productHint: "When set, this product's Buy button appears below the countdown -- great for flash sales.",
+              noProduct: "No product",
+              ctaLabelLabel: "CTA Button Label (optional)",
+              ctaLabelPlaceholder: "Sign Up Now",
+              ctaUrlLabel: "CTA Button URL (optional)",
             },
             embed: {
               urlLabel: "Embed Link",
@@ -4307,6 +4320,7 @@ export const dictionaries = {
           listItemTitlePlaceholder: "Title",
           listItemNamePlaceholder: "Name",
           listItemAuthorPlaceholder: "Role/company (optional)",
+          listItemUrlPlaceholder: "Destination link (optional)",
           listAddItem: "Add Item",
           listRemoveItem: "Remove item",
           mapsUrlPlaceholder: "Google Maps share link",

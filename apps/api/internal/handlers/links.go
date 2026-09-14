@@ -619,7 +619,15 @@ func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, bloc
 // memastikan bentuknya benar (lihat checkBuilderProductOwnership di bawah).
 func collectBuilderProductIDs(blockType string, data map[string]any) []string {
 	var ids []string
-	if blockType == "produk" {
+	// blockType == "countdown" ditambahkan 14 September 2026 (permintaan
+	// langsung pengguna: "Countdown yang bisa nge-trigger tombol Beli
+	// langsung") -- product_id di sini SATU field tunggal (bukan array
+	// seperti "produk"), tapi tetap WAJIB disusuri sama seperti "produk"
+	// supaya checkBuilderProductOwnership tidak melewatkannya -- kalau
+	// tidak, product_id milik kreator lain bisa ditanam di countdown tanpa
+	// verifikasi kepemilikan sama sekali (kelas bug sama yang sudah
+	// diperbaiki utk Katalog di atas).
+	if blockType == "produk" || blockType == "countdown" {
 		// product_ids (banyak produk, 12 September 2026) + product_id
 		// (tunggal, field lama -- kompatibilitas mundur blok yang sudah
 		// ada sebelum blok ini mendukung banyak produk sekaligus).
@@ -946,6 +954,31 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				if _, err := time.Parse(time.RFC3339, targetAt); err != nil {
 					return "target_at wajib berupa tanggal/waktu yang valid", false
 				}
+			}
+		}
+		// cta_label/cta_url/product_id -- susulan 14 September 2026
+		// (permintaan langsung pengguna: "Countdown yang bisa nge-trigger
+		// tombol Beli langsung untuk flash sale"). Ketiganya opsional
+		// (shell-first, pola sama seperti field lain di case ini) -- CTA
+		// generik (label+url, sama seperti blok "text"/"list") ATAU kaitkan
+		// ke satu produk (product_id, tombol Beli sungguhan muncul, sama
+		// seperti blok "produk") -- keduanya boleh diisi bersamaan, frontend
+		// yang memutuskan prioritas render (produk didahulukan). Kepemilikan
+		// product_id diverifikasi TERPISAH lewat checkBuilderProductOwnership
+		// (fungsi ini PURE tanpa akses DB, lihat catatan di collectBuilderProductIDs).
+		if raw, ok := data["cta_url"]; ok {
+			if _, isStr := raw.(string); !isStr {
+				return "cta_url wajib berupa teks", false
+			}
+		}
+		if raw, ok := data["cta_label"]; ok {
+			if _, isStr := raw.(string); !isStr {
+				return "cta_label wajib berupa teks", false
+			}
+		}
+		if raw, ok := data["product_id"]; ok {
+			if _, isStr := raw.(string); !isStr {
+				return "product_id wajib berupa teks", false
 			}
 		}
 	case "list":

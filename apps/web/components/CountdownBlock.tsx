@@ -29,6 +29,7 @@ export default function CountdownBlock({
   expiredLabel,
   unitLabels,
   icon,
+  actionSlot,
 }: {
   title: string;
   targetAt?: string;
@@ -39,6 +40,16 @@ export default function CountdownBlock({
   // icon -- permintaan langsung pengguna, 14 Agustus 2026: ikon kustom/galeri
   // yang dipilih dari dashboard (lihat resolveBlockIcon di PagePreview.tsx).
   icon?: React.ReactNode;
+  // actionSlot -- susulan 14 September 2026 (permintaan langsung pengguna:
+  // "Countdown yang bisa nge-trigger tombol Beli langsung itu levernya
+  // besar untuk flash sale"). CountdownBlock sendiri TETAP checkout-agnostic
+  // (tidak import BuyProductButton/logika produk apa pun) -- pemanggil
+  // (PagePreview.tsx) yang memutuskan render CTA generik atau tombol Beli
+  // sungguhan, lalu mengoper hasilnya sebagai node siap-pakai di sini.
+  // Sengaja dirender TERLEPAS dari status expired (aktif kapan saja,
+  // BUKAN cuma saat hitung mundur masih berjalan) -- CTA tetap relevan
+  // walau promonya sudah lewat (mis. arahkan ke halaman lain).
+  actionSlot?: React.ReactNode;
 }) {
   const targetMs = targetAt ? Date.parse(targetAt) : NaN;
   const [now, setNow] = useState<number | null>(null);
@@ -97,6 +108,7 @@ export default function CountdownBlock({
           ))}
         </div>
       )}
+      {actionSlot && <div className="mt-2.5">{actionSlot}</div>}
     </div>
   );
 }
