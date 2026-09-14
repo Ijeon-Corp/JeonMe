@@ -5,6 +5,7 @@ import { EmbeddedCatalogBlock } from "@/lib/api-client";
 import { buildEmbeddableTypes } from "@/lib/catalog-blocks";
 import { IconLock } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { confirmAction } from "@/lib/confirm";
 
 // CatalogBlockTypePicker -- dipindahkan verbatim dari
 // components/CatalogBlocksEditor.tsx, 6 September 2026 (redesain editor
@@ -12,6 +13,16 @@ import { useLocale } from "@/lib/locale-context";
 // components/BlockDrilldownEditor.tsx), supaya dipakai bersama oleh editor
 // baru itu DAN CatalogBlocksEditor.tsx lama (sementara masih hidup di balik
 // flag `page_builder`, dashboard-flags.ts).
+//
+// Klik tile terkunci -- audit UX langsung (14 September 2026, permintaan
+// pengguna "coba testing blok katalog ini, dari segi ui dan ux masih sangat
+// buruk"): SEBELUMNYA router.push langsung ke halaman langganan tanpa
+// konfirmasi apa pun -- kreator yang sekadar penasaran/salah klik tiba-tiba
+// terlempar keluar dari sesi mengedit katalognya (kehilangan konteks, tidak
+// ada jejak "kembali ke katalog"). Sekarang konfirmasi dulu lewat
+// confirmAction (pola sama seperti konfirmasi lain di seluruh dashboard) --
+// hanya pindah halaman kalau kreator benar-benar klik "Lihat Paket
+// Premium", batal berarti tetap di tempat semula.
 export function CatalogBlockTypePicker({
   isPremium,
   disabled,
@@ -33,7 +44,17 @@ export function CatalogBlockTypePicker({
             key={opt.type}
             type="button"
             disabled={disabled && !locked}
-            onClick={() => (locked ? router.push("/dashboard/settings/subscription") : onPick(opt.type))}
+            onClick={async () => {
+              if (!locked) {
+                onPick(opt.type);
+                return;
+              }
+              const proceed = await confirmAction(t("dashboard.components.catalogBlocksEditor.premiumUpsellText"), {
+                title: t("dashboard.components.catalogBlocksEditor.premiumUpsellTitle"),
+                confirmButtonText: t("dashboard.components.catalogBlocksEditor.premiumUpsellButton"),
+              });
+              if (proceed) router.push("/dashboard/settings/subscription");
+            }}
             title={
               locked
                 ? t("dashboard.components.catalogBlocksEditor.premiumOnlyTitle")

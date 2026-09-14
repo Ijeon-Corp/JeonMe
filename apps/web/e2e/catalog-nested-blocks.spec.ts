@@ -112,8 +112,14 @@ test.describe("Catalog nested blocks", () => {
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
     await page.getByRole("button", { name: "Kembali", exact: true }).click();
 
-    // Klik tile "Katalog (bersarang)" -> redirect ke halaman langganan (gerbang UI)
+    // Klik tile "Katalog (bersarang)" -> konfirmasi dulu (audit UX, 14
+    // September 2026: sebelumnya langsung redirect tanpa jeda, kreator yang
+    // sekadar penasaran/salah klik kehilangan konteks edit katalognya) --
+    // baru pindah ke halaman langganan kalau benar-benar klik "Lihat Paket
+    // Premium" di popup konfirmasi (gerbang UI).
     await page.getByRole("button", { name: /Katalog \(bersarang\)/ }).click();
+    await expect(page.getByText("Fitur Premium")).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: "Lihat Paket Premium" }).click();
     await expect(page).toHaveURL(/\/dashboard\/settings\/subscription/);
 
     // Verifikasi tampilan publik: klik ke item lihat blok tertanam

@@ -1445,13 +1445,17 @@ export function deleteBuilderMediaImage(id: string, path?: BuilderSeg[]) {
 // termasuk "catalog" itu sendiri (begitulah nesting bertingkat dicapai,
 // tanpa konsep "children" terpisah).
 //
-// Cakupan v1 (dikonfirmasi via AskUserQuestion): HANYA 5 tipe yang TIDAK
+// Cakupan v1 (dikonfirmasi via AskUserQuestion): HANYA tipe yang TIDAK
 // butuh endpoint upload file sendiri -- gallery/audio/file/project_showcase
 // belum didukung sebagai blok tertanam (menyusul kalau dibutuhkan). id
 // dibuat KLIEN (crypto.randomUUID()), sama seperti CatalogItem.id di bawah.
+// "produk" ditambahkan 14 September 2026 (permintaan langsung pengguna:
+// "catalog ini bisa berisi semua blok yang ada termasuk produk") -- cuma
+// referensi product_ids ke produk yang sudah ada, tidak butuh upload
+// sendiri, jadi masuk kategori yang sama dgn text/faq/video/maps.
 export interface EmbeddedCatalogBlock {
   id: string;
-  block_type: "text" | "faq" | "video" | "maps" | "catalog";
+  block_type: "text" | "faq" | "video" | "maps" | "produk" | "catalog";
   title: string;
   url?: string;
   description?: string;

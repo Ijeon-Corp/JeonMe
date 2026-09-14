@@ -3835,6 +3835,8 @@ export default function DashboardLinksPage() {
               ? catalogItemImageUploadingKey.slice(drilldownBlock.id.length + 1)
               : null
           }
+          products={products}
+          onProductCreated={(product) => setProducts((prev) => [...prev, product])}
           onCommitCatalogRoot={(items) => saveCatalogItems(drilldownBlock, items)}
           onSaveFaqItems={(items) => handleSaveFaqItems(drilldownBlock, items)}
           onUploadImage={(itemId, file) => uploadCatalogItemImageFile(drilldownBlock, itemId, file)}

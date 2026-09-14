@@ -445,6 +445,18 @@ func isAllowedEmbedHost(raw string) bool {
 // tetap terlayani lewat field `images` yang SUDAH ada per item (di luar
 // mekanisme blocks[] ini sama sekali).
 //
+// "produk" ditambahkan susulan (permintaan langsung pengguna, 14 September
+// 2026: "harusnya catalog ini bisa berisi semua blok yang ada termasuk
+// produk") -- TIDAK butuh endpoint upload sendiri (cuma referensi
+// product_ids ke produk yang sudah ada, gambar produk sudah dikelola
+// terpisah lewat menu Produk), jadi masuk kategori yang sama dengan
+// text/faq/video/maps di atas. PENTING: collectBuilderProductIDs di bawah
+// HARUS ikut disusuri ke dalam items[]/blocks[] katalog (ditambahkan
+// bersamaan dengan perubahan ini) -- tanpa itu, produk_id milik KREATOR LAIN
+// yang ditanam di dalam katalog bisa lolos tanpa verifikasi kepemilikan,
+// persis kelas bug yang sama yang pernah diperbaiki utk Section/Column di
+// checkBuilderProductOwnership.
+//
 // Gratis vs Premium (dikonfirmasi lewat AskUserQuestion): gratis boleh
 // menanam SEMUA tipe di atas KECUALI "catalog" (jadi tetap persis 2
 // tingkat seperti sebelumnya: blok -> daftar item -> detail item, detail
@@ -471,6 +483,7 @@ var allowedCatalogEmbeddedBlockTypes = map[string]bool{
 	"faq":     true,
 	"video":   true,
 	"maps":    true,
+	"produk":  true,
 	"catalog": true,
 }
 
@@ -597,11 +610,13 @@ func checkCatalogPremiumGate(ctx context.Context, db *pgxpool.Pool, userID, bloc
 	return "", true
 }
 
-// collectBuilderProductIDs -- PURE, rekursif menyusuri bentuk pohon
-// Section/Column PERSIS sama seperti validateBuilderChildren (children[]/
-// columns[]), tapi tujuannya MENGUMPULKAN product_id, bukan memvalidasi
-// struktur -- dipanggil SETELAH validateBlockDataAtDepth memastikan
-// bentuknya benar (lihat checkBuilderProductOwnership di bawah).
+// collectBuilderProductIDs -- PURE, rekursif menyusuri DUA bentuk pohon
+// bersarang yang ada di codebase ini: Section/Column (children[]/columns[],
+// Canvas Page Builder) DAN Katalog (items[]/blocks[], lihat cabang di bawah,
+// ditambahkan 14 September 2026 bersamaan dengan "produk" masuk
+// allowedCatalogEmbeddedBlockTypes). Tujuannya MENGUMPULKAN product_id,
+// bukan memvalidasi struktur -- dipanggil SETELAH validateBlockDataAtDepth
+// memastikan bentuknya benar (lihat checkBuilderProductOwnership di bawah).
 func collectBuilderProductIDs(blockType string, data map[string]any) []string {
 	var ids []string
 	if blockType == "produk" {
@@ -643,22 +658,52 @@ func collectBuilderProductIDs(blockType string, data map[string]any) []string {
 			ids = append(ids, collectBuilderProductIDs("", col)...)
 		}
 	}
+	// items[]/blocks[] -- struktur blok Katalog (BEDA dari children/columns
+	// Section/Column di atas). Ditambahkan bersamaan dengan "produk" masuk
+	// allowedCatalogEmbeddedBlockTypes (14 September 2026) -- tanpa cabang
+	// ini, product_id yang ditanam di dalam item katalog (di kedalaman
+	// berapa pun, termasuk lewat katalog bersarang) tidak akan pernah
+	// tersusuri, sehingga checkBuilderProductOwnership tidak pernah
+	// memverifikasi kepemilikannya -- lubang keamanan yang sama persis
+	// yang sudah diperbaiki utk Section/Column di sini, kalau cabang ini
+	// tidak ada.
+	if rawItems, ok := data["items"].([]any); ok {
+		for _, rawItem := range rawItems {
+			item, ok := rawItem.(map[string]any)
+			if !ok {
+				continue
+			}
+			rawBlocks, ok := item["blocks"].([]any)
+			if !ok {
+				continue
+			}
+			for _, rawBlock := range rawBlocks {
+				block, ok := rawBlock.(map[string]any)
+				if !ok {
+					continue
+				}
+				embeddedType, _ := block["block_type"].(string)
+				embeddedData, _ := block["block_data"].(map[string]any)
+				ids = append(ids, collectBuilderProductIDs(embeddedType, embeddedData)...)
+			}
+		}
+	}
 	return ids
 }
 
 // checkBuilderProductOwnership -- permintaan langsung pengguna 10
 // September 2026 (blok "produk", Canvas Page Builder): product_id yang
 // ditaruh di blok manapun (ROOT ataupun bersarang di kedalaman berapa pun
-// dalam Section/Column) WAJIB milik kreator yang sedang login -- kalau
-// tidak, siapa pun bisa menaruh (lengkap dengan tombol Beli-nya!) produk
-// KREATOR LAIN di halamannya sendiri. checkCatalogPremiumGate (pola yang
-// sudah ada di atas) TIDAK cukup dipakai ulang di sini -- gerbang itu
-// cuma mengecek block_type ROOT, sedangkan blok "produk" pada umumnya
-// ditanam DI DALAM root bertipe "section"/"column" (root-nya BUKAN
-// "produk"), jadi perlu penyusuran rekursif sendiri
-// (collectBuilderProductIDs) lalu SATU query memverifikasi semuanya
-// sekaligus. Dipanggil dari 3 tempat yang sama dgn checkCatalogPremiumGate
-// (CreateBlock/UpdateLink/CreateExtraPageBlock).
+// dalam Section/Column, ATAU di dalam item Katalog sejak 14 September 2026)
+// WAJIB milik kreator yang sedang login -- kalau tidak, siapa pun bisa
+// menaruh (lengkap dengan tombol Beli-nya!) produk KREATOR LAIN di
+// halamannya sendiri. checkCatalogPremiumGate (pola yang sudah ada di atas)
+// TIDAK cukup dipakai ulang di sini -- gerbang itu cuma mengecek block_type
+// ROOT, sedangkan blok "produk" pada umumnya ditanam DI DALAM root bertipe
+// "section"/"column"/"catalog" (root-nya BUKAN "produk"), jadi perlu
+// penyusuran rekursif sendiri (collectBuilderProductIDs) lalu SATU query
+// memverifikasi semuanya sekaligus. Dipanggil dari 3 tempat yang sama dgn
+// checkCatalogPremiumGate (CreateBlock/UpdateLink/CreateExtraPageBlock).
 func checkBuilderProductOwnership(ctx context.Context, db *pgxpool.Pool, userID, blockType string, blockData map[string]any) (string, bool) {
 	ids := collectBuilderProductIDs(blockType, blockData)
 	if len(ids) == 0 {

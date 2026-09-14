@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CatalogItem, EmbeddedCatalogBlock, LinkItem } from "@/lib/api-client";
+import { CatalogItem, DashboardProduct, EmbeddedCatalogBlock, LinkItem } from "@/lib/api-client";
 import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 import FormField from "@/components/FormField";
 import { CatalogBlockTypePicker } from "@/components/CatalogBlockTypePicker";
 import { confirmDelete } from "@/lib/confirm";
 import { useLocale } from "@/lib/locale-context";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
+import { ProdukBlockEditor, getBlockProductIds } from "@/components/dashboard/page/ProdukBlockEditor";
 import {
   CatalogRoot,
   CatalogSeg,
@@ -66,6 +67,8 @@ export default function BlockDrilldownEditor({
   link,
   isPremium,
   uploadingItemId,
+  products,
+  onProductCreated,
   onCommitCatalogRoot,
   onSaveFaqItems,
   onUploadImage,
@@ -78,6 +81,13 @@ export default function BlockDrilldownEditor({
   // ke link ini, sudah di-strip dari format gabungan `${linkId}:${itemId}`
   // milik parent), null kalau tidak ada unggahan berjalan.
   uploadingItemId: string | null;
+  // products/onProductCreated -- ditambahkan 14 September 2026 (blok
+  // "produk" bisa ditanam di dalam item katalog): daftar produk milik
+  // kreator SUDAH di-fetch sekali di dashboard/links/page.tsx (dipakai
+  // ulang blok "produk" tingkat atas juga), dioper apa adanya ke sini
+  // supaya tidak fetch ganda.
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
   onCommitCatalogRoot: (items: CatalogItem[]) => void;
   onSaveFaqItems: (items: FaqQA[]) => Promise<boolean>;
   onUploadImage: (itemId: string, file: File) => void;
@@ -283,6 +293,8 @@ export default function BlockDrilldownEditor({
             return (
               <EmbeddedBlockFrame
                 block={block}
+                products={products}
+                onProductCreated={onProductCreated}
                 onUpdate={(patch) => updateEmbeddedBlock(frame.path, patch)}
                 onDeleteBlock={() => {
                   removeEmbeddedBlock(frame.path.slice(0, -1), block.id);
@@ -651,10 +663,14 @@ function CatalogItemFrame({
 
 function EmbeddedBlockFrame({
   block,
+  products,
+  onProductCreated,
   onUpdate,
   onDeleteBlock,
 }: {
   block: EmbeddedCatalogBlock;
+  products: DashboardProduct[];
+  onProductCreated: (product: DashboardProduct) => void;
   onUpdate: (patch: Partial<EmbeddedCatalogBlock>) => void;
   onDeleteBlock: () => void;
 }) {
@@ -728,6 +744,33 @@ function EmbeddedBlockFrame({
           />
           <p className="text-[10.5px] text-app-muted">{t("dashboard.components.catalogBlocksEditor.mapsHint")}</p>
         </div>
+      )}
+
+      {/* "produk" tertanam -- permintaan langsung pengguna, 14 September
+          2026 ("catalog ini bisa berisi semua blok yang ada termasuk
+          produk"). Reuse ProdukBlockEditor APA ADANYA (komponen yang sama
+          persis dipakai blok "produk" tingkat atas di dashboard/links/
+          page.tsx DAN Canvas Builder) -- satu sumber kebenaran UI, bukan
+          form terpisah. Keamanan: kepemilikan product_ids yang ditanam di
+          sini diverifikasi backend lewat collectBuilderProductIDs yang
+          SUDAH disusuri rekursif ke dalam items[]/blocks[] katalog (lihat
+          links.go) -- bukan cuma dipercaya dari klien. */}
+      {block.block_type === "produk" && (
+        <ProdukBlockEditor
+          blockData={block.block_data}
+          products={products}
+          onToggleProduct={(productId) => {
+            const current = getBlockProductIds(block.block_data);
+            const next = current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId];
+            onUpdate({ block_data: { ...block.block_data, product_ids: next } });
+          }}
+          onProductCreated={(product) => {
+            onProductCreated(product);
+            const current = getBlockProductIds(block.block_data);
+            onUpdate({ block_data: { ...block.block_data, product_ids: [...current, product.id] } });
+          }}
+          onLayoutChange={(layout) => onUpdate({ block_data: { ...block.block_data, layout } })}
+        />
       )}
     </div>
   );

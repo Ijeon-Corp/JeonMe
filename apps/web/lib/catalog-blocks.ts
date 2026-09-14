@@ -1,5 +1,5 @@
 import { CatalogItem, EmbeddedCatalogBlock } from "@/lib/api-client";
-import { IconBook, IconGrid, IconMapPin, IconPlayCircle, IconTextLines } from "@/components/icons";
+import { IconBook, IconGrid, IconMapPin, IconPlayCircle, IconShoppingBag, IconTextLines } from "@/components/icons";
 
 // catalog-blocks.ts -- diekstrak dari components/CatalogBlocksEditor.tsx, 6
 // September 2026 (permintaan langsung pengguna: "saya mau jika ada blok di
@@ -42,6 +42,7 @@ export function buildEmbeddableTypes(t: (key: string) => string): EmbeddableType
     { type: "faq", label: t("dashboard.components.catalogBlocksEditor.typeFaq"), Icon: IconBook },
     { type: "video", label: t("dashboard.components.catalogBlocksEditor.typeVideo"), Icon: IconPlayCircle },
     { type: "maps", label: t("dashboard.components.catalogBlocksEditor.typeMaps"), Icon: IconMapPin },
+    { type: "produk", label: t("dashboard.components.catalogBlocksEditor.typeProduk"), Icon: IconShoppingBag },
     { type: "catalog", label: t("dashboard.components.catalogBlocksEditor.typeCatalog"), Icon: IconGrid, premiumOnly: true },
   ];
 }
@@ -50,6 +51,8 @@ export function emptyBlockData(type: EmbeddedCatalogBlock["block_type"]): Record
   switch (type) {
     case "faq":
       return { items: [{ question: "", answer: "" }] };
+    case "produk":
+      return { product_ids: [], layout: "card_large" };
     case "catalog":
       return { items: [] };
     default:
