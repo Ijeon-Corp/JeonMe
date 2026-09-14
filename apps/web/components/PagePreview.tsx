@@ -2295,12 +2295,44 @@ function renderLinkOrBlock(
   }
 
   if (link.blockType === "image") {
-    return (link.blockData?.image_url as string) ? (
+    const imageUrl = link.blockData?.image_url as string | undefined;
+    if (!imageUrl) {
+      return (
+        <div key={link.id} className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
+          {link.title || "Foto"}
+        </div>
+      );
+    }
+    // link tujuan + caption -- susulan 14 September 2026 (permintaan
+    // langsung pengguna: "gambar: link opsional + judul jadi caption").
+    // Sebelumnya judul cuma jadi `alt` (tidak pernah terlihat pengunjung)
+    // dan foto tidak bisa diklik sama sekali -- reuse pola TrackedLink/`<a>`
+    // yang SAMA PERSIS sudah dipakai project_showcase/embed_link di atas.
+    const img = (
       // eslint-disable-next-line @next/next/no-img-element
-      <img key={link.id} src={link.blockData?.image_url as string} alt={link.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
-    ) : (
-      <div key={link.id} className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
-        {link.title || "Foto"}
+      <img src={imageUrl} alt={link.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+    );
+    const caption = link.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>;
+    if (!link.url) {
+      return (
+        <div key={link.id} className="w-full">
+          {img}
+          {caption}
+        </div>
+      );
+    }
+    return (
+      <div key={link.id} className="w-full">
+        {interactive ? (
+          <TrackedLink username={data.username} pageSlug={data.pageSlug} linkId={link.id} href={buildUtmHref(link.url, link.title, data.utmEnabled)} className="block">
+            {img}
+          </TrackedLink>
+        ) : (
+          <a href={link.url} target="_blank" rel="noopener noreferrer" className="block">
+            {img}
+          </a>
+        )}
+        {caption}
       </div>
     );
   }
@@ -3736,23 +3768,40 @@ function renderBuilderNode(
           />
         </div>
       );
-    case "image":
-      return (node.blockData.image_url as string) ? (
+    case "image": {
+      const imageUrl = node.blockData.image_url as string | undefined;
+      if (!imageUrl) {
+        return (
+          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}${ring}`}>
+            {node.title || "Foto"}
+          </div>
+        );
+      }
+      // link tujuan + caption -- lihat catatan lengkap di renderLinkOrBlock
+      // (kasus "image" mode Simple), dipakai bersama supaya blok yang
+      // dibuat lewat Canvas Builder tampil identik di halaman publik.
+      const img = (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={node.id}
-          data-builder-node-id={node.id}
-          data-builder-block-type="image"
-          src={node.blockData.image_url as string}
-          alt={node.title || ""}
-          loading="lazy"
-          className={`w-full rounded-xl object-cover${ring}`}
-        />
-      ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}${ring}`}>
-          {node.title || "Foto"}
+        <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+      );
+      const caption = node.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>;
+      return (
+        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`w-full${ring}`}>
+          {node.url && interactive ? (
+            <TrackedLink username={data.username} pageSlug={data.pageSlug} linkId={node.id} href={buildUtmHref(node.url, node.title, data.utmEnabled)} className="block">
+              {img}
+            </TrackedLink>
+          ) : (
+            // Non-interactive (kanvas Builder, editing) -- SENGAJA bukan
+            // `<a>` walau `node.url` terisi, pola sama persis case "button"
+            // di atas: klik di kanvas harus MEMILIH blok (delegasi
+            // BuilderCanvas.tsx), bukan navigasi ke url tujuan.
+            img
+          )}
+          {caption}
         </div>
       );
+    }
     case "video_image": {
       const videoUrl = (node.blockData.video_url as string) ?? "";
       const imageUrl = (node.blockData.image_url as string) ?? "";

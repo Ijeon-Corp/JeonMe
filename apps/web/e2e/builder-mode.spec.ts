@@ -383,8 +383,15 @@ test.describe("Canvas Page Builder", () => {
     // Tepat 2 blok "image" dengan foto (root + Kolom 1), tepat 1 blok
     // "image" TANPA foto (Kolom 2, placeholder div bukan <img>) -- bukti
     // path-walking upload TIDAK bocor ke sibling/parent yang salah.
-    await expect(page.locator('img[data-builder-block-type="image"]')).toHaveCount(2, { timeout: 10000 });
-    await expect(page.locator('div[data-builder-block-type="image"]')).toHaveCount(1);
+    // Selector "[data-builder-block-type=image] img" (descendant, BUKAN
+    // lagi "img[data-builder-block-type=image]") -- susulan 14 September
+    // 2026 (link tujuan opsional + caption utk blok "image"): <img> SEKARANG
+    // dibungkus <div data-builder-block-type="image"> (+ caption di
+    // sebelahnya, kadang dibungkus <a> kalau ada link), atribut tidak lagi
+    // menempel LANGSUNG di <img> itu sendiri -- pola yang SAMA PERSIS sudah
+    // dipakai video_image (baris di bawah), sekarang "image" konsisten juga.
+    await expect(page.locator('[data-builder-block-type="image"] img')).toHaveCount(2, { timeout: 10000 });
+    await expect(page.locator('div[data-builder-block-type="image"]:not(:has(img))')).toHaveCount(1);
 
     // Gallery (Image Grid) & Video+Foto sama-sama tampil dengan foto.
     await expect(page.locator('[data-builder-block-type="gallery"] img')).toHaveCount(1);

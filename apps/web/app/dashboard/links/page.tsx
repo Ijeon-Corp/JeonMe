@@ -1648,7 +1648,12 @@ export default function DashboardLinksPage() {
     // dari title/url (wajib diisi, string kosong dibatalkan), string
     // kosong di sini SAH (mengosongkan deskripsi, kembali ke baris judul
     // tunggal seperti sebelumnya).
-    if (field !== "description" && !value) return;
+    // url pada blok "image" -- susulan 14 September 2026 (link tujuan
+    // opsional, beda dari blok "link" yang url-nya wajib): boleh
+    // dikosongkan lagi (kembali ke foto tidak bisa diklik), TIDAK seperti
+    // "link" yang menolak string kosong (URL-nya inti blok itu sendiri).
+    const urlOptionalForThisBlock = field === "url" && link.block_type === "image";
+    if (field !== "description" && !urlOptionalForThisBlock && !value) return;
     if (value === currentValue) return;
 
     const previous = links;
@@ -3130,7 +3135,7 @@ export default function DashboardLinksPage() {
                 <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
               </div>
 
-              {link.block_type === "link" && (
+              {(link.block_type === "link" || link.block_type === "image") && (
                 <div className="ml-11 flex items-center gap-1.5">
                   {editingField?.id === link.id && editingField.field === "url" ? (
                     <input
@@ -3140,16 +3145,24 @@ export default function DashboardLinksPage() {
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => saveEditField(link)}
                       onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                      placeholder={link.block_type === "image" ? t("dashboard.pages.links.linkCard.imageLinkPlaceholder") : undefined}
                       className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
                     />
-                  ) : (
+                  ) : link.url ? (
                     <>
                       <p className="truncate text-xs text-app-muted">{link.url}</p>
                       <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
                         <IconPencil className="h-3 w-3" />
                       </button>
                     </>
-                  )}
+                  ) : link.block_type === "image" ? (
+                    // "image" -- link tujuan OPSIONAL (beda dari "link" yang
+                    // urlnya wajib & selalu ada), tampilkan ajakan tambah
+                    // alih-alih baris kosong.
+                    <button type="button" onClick={() => startEditField(link, "url")} className="text-[11px] font-semibold text-jeon-purple hover:underline">
+                      {t("dashboard.pages.links.linkCard.addImageLink")}
+                    </button>
+                  ) : null}
                 </div>
               )}
 
