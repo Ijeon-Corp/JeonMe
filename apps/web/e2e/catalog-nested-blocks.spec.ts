@@ -311,4 +311,55 @@ test.describe("Catalog nested blocks", () => {
     await page.getByText("Katalog Uji", { exact: true }).click();
     await expect(page.getByText("Konten langsung tanpa judul item.")).toBeVisible({ timeout: 10000 });
   });
+
+  // Judul blok tertanam jadi OPSIONAL -- susulan 15 September 2026,
+  // permintaan langsung pengguna: "saya mau title di setiap blok itu
+  // optional jadi kalo misal saya pilih image grid jangan tampilkan teks
+  // image grid nya jadi cek secara keseluruhan yang seperti itu".
+  // SEBELUMNYA addEmbeddedBlock (BlockDrilldownEditor.tsx) SELALU mengisi
+  // `title` dgn label generik nama tipe ("Video"/"Teks"/dst) begitu blok
+  // dibuat, DAN backend (links.go) mewajibkan title non-kosong utk blok
+  // tertanam -- kombinasi keduanya membuat label generik itu SELALU
+  // tampil di halaman publik (renderer tiap tipe sebenarnya SUDAH benar
+  // `{title && (...)}`, cuma datanya yang dipaksa tidak pernah kosong).
+  // Bug REAL ditemukan lewat verifikasi live: sesudah cuma mengubah
+  // frontend, klik tile "Video" di popup berhenti berfungsi TOTAL (popup
+  // tetap terbuka, tidak ada navigasi apa pun) -- backend menolak PATCH
+  // dgn 400 karena title kosong, ternyata perlu diperbaiki DI DUA
+  // TEMPAT SEKALIGUS.
+  test("judul blok tertanam opsional: blok Video tidak menampilkan label generik di halaman publik", async ({ page }) => {
+    const { username } = await registerAndLogin(page, "catblocktitle");
+    await page.goto("/dashboard/links");
+    await page.getByRole("button", { name: "Tambah" }).first().click();
+    await page.getByRole("button", { name: "Lanjutan", exact: true }).click();
+    await page.getByRole("button", { name: "Katalog", exact: true }).click();
+    await page.getByPlaceholder("Judul blok").fill("Katalog Video");
+    await page.getByRole("button", { name: "Buat Blok" }).click();
+    await expect(page.getByRole("button", { name: "+ Tambah Item" })).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole("button", { name: "+ Tambah Item" }).click();
+    await expect(page.getByText("Pilih Tipe Blok")).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: "Video", exact: true }).click();
+    // Klik tile "Video" HARUS benar-benar menavigasi ke layar edit URL
+    // video (bukti langsung PATCH tidak ditolak backend).
+    await expect(page.getByPlaceholder("URL video YouTube/TikTok")).toBeVisible({ timeout: 10000 });
+    await page.getByPlaceholder("URL video YouTube/TikTok").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    await page.getByPlaceholder("URL video YouTube/TikTok").blur();
+    await page.waitForTimeout(1000);
+
+    // Baris blok di daftar item TETAP menampilkan label generik "Video"
+    // (fallback KHUSUS dashboard, lewat blockDisplayLabel -- kreator masih
+    // perlu membedakan baris blok saat mengelola banyak blok sekaligus).
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await expect(page.getByText("Video", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+    await page.getByRole("button", { name: "Kembali", exact: true }).click();
+
+    // Halaman publik: video tampil, TAPI TANPA label "Video" di atasnya.
+    await page.goto(`/${username}`);
+    await page.getByText("Katalog Video", { exact: true }).click();
+    await expect(page.getByRole("button", { name: /Putar video/ })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Video", { exact: true })).toHaveCount(0);
+  });
 });

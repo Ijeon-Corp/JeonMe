@@ -1171,11 +1171,22 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 							return "setiap blok tertanam item katalog wajib berupa objek", false
 						}
 						blockID, _ := block["id"].(string)
-						blockTitle, _ := block["title"].(string)
 						embeddedType, _ := block["block_type"].(string)
-						if strings.TrimSpace(blockID) == "" || strings.TrimSpace(blockTitle) == "" {
-							return "setiap blok tertanam item katalog wajib punya id dan judul", false
+						if strings.TrimSpace(blockID) == "" {
+							return "setiap blok tertanam item katalog wajib punya id", false
 						}
+						// title BOLEH KOSONG -- susulan 15 September 2026, permintaan
+						// langsung pengguna: "saya mau title di setiap blok itu
+						// optional jadi kalo misal saya pilih image grid jangan
+						// tampilkan teks image grid nya". SEBELUMNYA title wajib
+						// diisi di sini, memaksa addEmbeddedBlock (frontend) mengisi
+						// label generik nama tipe ("Video"/"Teks"/dst) begitu blok
+						// dibuat -- padahal renderer publik tiap tipe (VideoEmbedBlock/
+						// FaqBlock/dst) SUDAH BENAR menyembunyikan judul kalau kosong,
+						// cuma datanya yang tidak pernah benar-benar kosong. Sama
+						// persis relaksasi yang sudah dilakukan utk title ITEM katalog
+						// (lihat komentar di atas fungsi ini, "title item BOLEH
+						// KOSONG").
 						if seenBlockIDs[blockID] {
 							return "id blok tertanam item katalog tidak boleh duplikat", false
 						}

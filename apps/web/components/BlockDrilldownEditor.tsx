@@ -50,6 +50,18 @@ function blockSegCount(path: CatalogSeg[]): number {
   return path.filter((s) => s.kind === "block").length;
 }
 
+// blockDisplayLabel -- label tampilan blok tertanam KHUSUS UTK EDITOR
+// DASHBOARD (baris daftar blok & heading layar edit), TIDAK PERNAH
+// dipakai di rendering halaman publik. Susulan 15 September 2026: sejak
+// `title` blok tertanam boleh kosong (lihat addEmbeddedBlock di atas),
+// kreator TETAP perlu cara membedakan baris "Video" dari baris "Teks"
+// saat mengelola beberapa blok dalam satu item -- fallback nama tipe
+// generik ini jatuh HANYA di sisi dashboard, sama sekali tidak
+// memengaruhi apa yang dilihat pengunjung.
+function blockDisplayLabel(block: EmbeddedCatalogBlock, t: (key: string) => string): string {
+  return block.title || buildEmbeddableTypes(t).find((opt) => opt.type === block.block_type)?.label || block.block_type;
+}
+
 // BlockDrilldownEditor -- SATU komponen untuk blok "catalog" DAN "faq"
 // (permintaan langsung pengguna, 6 September 2026, lihat plan
 // robust-tinkering-shannon.md). Format payload API TIDAK berubah -- murni
@@ -184,7 +196,26 @@ export default function BlockDrilldownEditor({
     const next: EmbeddedCatalogBlock = {
       id: crypto.randomUUID(),
       block_type: type,
-      title: embeddableTypes.find((opt) => opt.type === type)?.label ?? type,
+      // title -- SENGAJA KOSONG utk hampir semua tipe (susulan 15 September
+      // 2026, permintaan langsung pengguna: "saya mau title di setiap blok
+      // itu optional jadi kalo misal saya pilih image grid jangan tampilkan
+      // teks image grid nya"). SEBELUMNYA selalu diisi label generik nama
+      // tipe ("Video"/"Teks"/dst) -- konsisten dgn cara blok TINGKAT ATAS
+      // dibuat (title SELALU mulai kosong, kreator baru mengisi kalau mau,
+      // lihat handleSelectContentTile di dashboard/links/page.tsx), tapi
+      // beda dgn blok TERTANAM yang malah dipaksa terisi -- itu akar
+      // masalahnya: renderer publik tiap tipe (VideoEmbedBlock/FaqBlock/dst)
+      // SUDAH BENAR menyembunyikan judul kalau kosong (`{title && (...)}`),
+      // cuma datanya yang tidak pernah benar-benar kosong. KECUALI
+      // "catalog" (bersarang): baris klik-untuk-buka blok ini TIDAK PUNYA
+      // konten visual lain sama sekali (beda dari Video/FAQ/dst yang isinya
+      // sendiri sudah substansial -- player video, accordion pertanyaan --
+      // title di situ cuma pelengkap opsional), jadi TETAP butuh label yang
+      // selalu terlihat spy barisnya tidak kosong total & tidak bisa
+      // disunting lewat UI apa pun (lihat openEmbeddedBlock -- catalog
+      // langsung push ke catalogItems, tidak lewat EmbeddedBlockFrame yang
+      // punya input judul).
+      title: type === "catalog" ? embeddableTypes.find((opt) => opt.type === type)?.label ?? type : "",
       url: type === "maps" ? "" : undefined,
       block_data: emptyBlockData(type),
     };
@@ -210,9 +241,10 @@ export default function BlockDrilldownEditor({
     if (frame.path.length === 0) return link.title;
     const resolved = resolveAt(root, frame.path);
     if (frame.view === "catalogItem" || frame.view === "faqItem") {
-      return resolved?.item?.title || resolved?.block?.title || t("dashboard.components.blockDrilldown.untitledItem");
+      return resolved?.item?.title || (resolved?.block ? blockDisplayLabel(resolved.block, t) : "") || t("dashboard.components.blockDrilldown.untitledItem");
     }
-    return resolved?.block?.title || resolved?.item?.title || "";
+    if (resolved?.block) return blockDisplayLabel(resolved.block, t);
+    return resolved?.item?.title || "";
   })();
 
   return (
@@ -535,7 +567,7 @@ function CatalogItemFrame({
             onClick={() => onOpenBlock(block)}
             className="flex items-center gap-3 rounded-lg border border-app-border bg-app-surface-2 p-2.5 text-left hover:border-jeon-purple"
           >
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-app-ink">{block.title}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-app-ink">{blockDisplayLabel(block, t)}</span>
             <button
               type="button"
               onClick={(e) => {
