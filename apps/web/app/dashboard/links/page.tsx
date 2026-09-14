@@ -99,7 +99,7 @@ import { LayoutGrid, TriangleAlert } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
-import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
+import { ProdukBlockEditor, PRODUK_LAYOUT_OPTIONS, type ProdukBlockLayout } from "@/components/dashboard/page/ProdukBlockEditor";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
 // pop-up peta untuk blok Lokasi. Leaflet butuh `window`/DOM saat mount,
@@ -159,6 +159,111 @@ function buildBlockTypeLabel(t: (key: string) => string): Record<string, string>
     embed_link: t("dashboard.pages.links.blockTypes.embedLink"),
     embed: t("dashboard.pages.links.blockTypes.embed"),
   };
+}
+
+// stripHtmlToText -- redesain "Konsisten & Ringkas" (14 September 2026,
+// Opsi A): blok "text"/"accordion" menyimpan RAW HTML (RichTextEditor,
+// TipTap) di block_data.text -- baris ringkasan accordion butuh cuplikan
+// TEKS POLOS, bukan markup mentah. Tidak ada utilitas HTML->teks yang
+// sudah ada di file ini (cuma legacyPlainTextToHtml, arah SEBALIKNYA) --
+// regex sederhana cukup di sini (cuma utk PRATINJAU pendek, bukan
+// rendering sungguhan, jadi tidak perlu parser HTML penuh).
+function stripHtmlToText(html: string, maxLength = 60): string {
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}…` : text;
+}
+
+// blockPreviewFor -- redesain "Konsisten & Ringkas" (14 September 2026,
+// permintaan langsung pengguna "saya masih kurang suka ui dan ux dari mode
+// simple ini di tiap blok nya", Opsi A dari 3 usulan lewat artifact yang
+// disetujui pengguna). SEMUA blok sekarang punya baris ringkasan satu
+// baris di bawah judul, dipakai skimming cepat TANPA perlu membuka
+// accordion-nya -- info yang sebelumnya HANYA terlihat setelah klik
+// "Edit Konten"/expand panel. Sengaja reuse key i18n yang SUDAH ADA dari
+// redesain panel blok Builder sebelumnya (produkSelectedSubtitle,
+// faqCountSubtitle/EmptySubtitle, catalogItemsCountSubtitle/EmptySubtitle,
+// listCountSubtitle/EmptySubtitle -- t() tidak terikat rute, lihat catatan
+// i18n key insertion pitfall) alih-alih menduplikasi string yang identik.
+function blockPreviewFor(link: LinkItem, t: (key: string) => string): string | null {
+  const bd = link.block_data as Record<string, unknown> | undefined;
+  switch (link.block_type) {
+    case "produk": {
+      const count = ((bd?.product_ids as string[] | undefined) ?? []).length;
+      const layout = (bd?.layout as ProdukBlockLayout | undefined) ?? "card_large";
+      const layoutOpt = PRODUK_LAYOUT_OPTIONS.find((o) => o.value === layout);
+      const layoutLabel = layoutOpt ? t(`dashboard.pages.linksBuilder.${layoutOpt.labelKey}`) : "";
+      if (count === 0) return t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", "0");
+      return `${t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", String(count))} · ${layoutLabel}`;
+    }
+    case "gallery":
+    case "image_slider": {
+      const count = ((bd?.images as string[] | undefined) ?? []).length;
+      return `${count}/${maxGalleryImages} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`;
+    }
+    case "faq": {
+      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
+      return count === 0
+        ? t("dashboard.pages.linksBuilder.faqEmptySubtitle")
+        : t("dashboard.pages.linksBuilder.faqCountSubtitle").replace("{n}", String(count));
+    }
+    case "catalog": {
+      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
+      return count === 0
+        ? t("dashboard.pages.linksBuilder.catalogItemsEmptySubtitle")
+        : t("dashboard.pages.linksBuilder.catalogItemsCountSubtitle").replace("{n}", String(count));
+    }
+    case "list": {
+      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
+      return count === 0
+        ? t("dashboard.pages.linksBuilder.listEmptySubtitle")
+        : t("dashboard.pages.linksBuilder.listCountSubtitle").replace("{n}", String(count));
+    }
+    case "audio":
+      return (bd?.audio_url as string) ? t("dashboard.pages.links.audioPanel.hasAudio") : t("dashboard.pages.links.audioPanel.noAudio");
+    case "file":
+      return (bd?.file_url as string)
+        ? t("dashboard.pages.links.filePanel.hasFile").replace("{name}", (bd?.file_name as string) ?? t("dashboard.pages.links.filePanel.fallbackFileName"))
+        : t("dashboard.pages.links.filePanel.noFile");
+    case "text":
+    case "accordion": {
+      const html = (bd?.text as string) ?? "";
+      const text = html ? stripHtmlToText(html) : "";
+      return text || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+    }
+    case "video":
+      return (bd?.video_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+    case "video_image":
+      return (bd?.video_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+    case "maps":
+    case "button":
+    case "embed_link":
+    case "project_showcase":
+      return link.url || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+    case "embed":
+      return (bd?.embed_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+    case "countdown": {
+      const targetAt = bd?.target_at as string | undefined;
+      if (!targetAt) return t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+      try {
+        return new Date(targetAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+      } catch {
+        return t("dashboard.pages.links.linkCard.contentPreviewEmpty");
+      }
+    }
+    case "image":
+      return (bd?.image_url as string) ? t("dashboard.pages.links.common.hasImage") : t("dashboard.pages.links.common.noneYet");
+    default:
+      return null;
+  }
 }
 
 export type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -1812,6 +1917,24 @@ export default function DashboardLinksPage() {
     }
   }
 
+  // toggleContentEdit -- redesain "Konsisten & Ringkas" (14 September
+  // 2026): pemicu accordion SEKARANG dipakai bersama utk SEMUA tipe blok
+  // (bukan cuma 10 tipe lama), TAPI openContentEdit() di atas WAJIB tetap
+  // dipanggil saat MEMBUKA (bukan setContentEditId langsung) -- fungsi itu
+  // JUGA menyalin nilai `link` SAAT INI ke buffer edit lokal (editVideoUrl,
+  // editText, dst., SATU state per field, dipakai BERGANTIAN oleh blok
+  // manapun yang sedang terbuka) utk 10 tipe yang punya form berbasis
+  // buffer -- melewatinya akan menampilkan nilai BASI dari blok lain yang
+  // terakhir dibuka. Tipe lain (produk/galeri/dst.) tidak punya buffer
+  // sama sekali, jadi memanggil openContentEdit utk itu aman/no-op.
+  function toggleContentEdit(link: LinkItem) {
+    if (contentEditId === link.id) {
+      setContentEditId(null);
+    } else {
+      openContentEdit(link);
+    }
+  }
+
   async function handleSaveContent(link: LinkItem) {
     let blockData: Record<string, unknown>;
     let blockUrl: string | undefined;
@@ -2763,6 +2886,22 @@ export default function DashboardLinksPage() {
                       {blockTypeLabel[link.block_type] ?? link.block_type}
                     </span>
                   )}
+                  {/* Baris ringkasan -- redesain "Konsisten & Ringkas" (14
+                      September 2026, lihat catatan lengkap di
+                      blockPreviewFor): info penting blok (jumlah produk/
+                      foto/pertanyaan, cuplikan teks, dst.) langsung
+                      terlihat TANPA perlu membuka accordion-nya -- dulu
+                      SEBAGIAN blok (produk/galeri) harus terbuka dulu utk
+                      tahu isinya, SEBAGIAN lain (text/faq) malah harus
+                      klik "Edit Konten" dulu. "link" (tautan klasik)
+                      SENGAJA dilewati -- sudah punya field URL inline yang
+                      selalu terlihat sendiri, tidak perlu baris ringkasan
+                      tambahan. */}
+                  {link.block_type !== "link" &&
+                    blockPreviewFor(link, t) !== null &&
+                    contentEditId !== link.id && (
+                      <p className="mt-0.5 truncate text-[11px] text-app-muted">{blockPreviewFor(link, t)}</p>
+                    )}
                 </div>
                 {/* Chip jumlah klik -- pindah dari footer kartu ke baris
                     header (restrukturisasi UX 31 Agustus 2026): informasi
@@ -2771,33 +2910,37 @@ export default function DashboardLinksPage() {
                   <IconChart className="h-3 w-3" />
                   {link.click_count.toLocaleString("id-ID")}
                 </span>
-                {(link.block_type === "video" ||
-                  link.block_type === "maps" ||
-                  link.block_type === "text" ||
-                  link.block_type === "accordion" ||
-                  link.block_type === "project_showcase" ||
-                  link.block_type === "catalog" ||
-                  link.block_type === "faq" ||
-                  // 9 tipe blok "full parity" -- button/countdown/embed/
-                  // video_image/embed_link punya field yang diedit inline di
-                  // sini juga (image/image_slider/list/produk TIDAK, semua
-                  // kontennya sudah tercakup penuh oleh panel "Kelola X" +
-                  // judul generik yang sudah otomatis bisa diedit inline).
-                  link.block_type === "button" ||
-                  link.block_type === "countdown" ||
-                  link.block_type === "embed" ||
-                  link.block_type === "video_image" ||
-                  link.block_type === "embed_link") && (
+                {/* Tombol buka/tutup isi blok -- redesain "Konsisten &
+                    Ringkas" (14 September 2026, Opsi A dari 3 usulan
+                    redesain yang disetujui pengguna lewat artifact):
+                    SEBELUMNYA tombol ini ("Edit Konten", teks polos) HANYA
+                    muncul utk 10 tipe blok tertentu -- tipe lain (produk/
+                    galeri/audio/file/list/gambar) selalu menampilkan
+                    isinya di bawah TANPA toggle sama sekali, blok lain lagi
+                    (teks/FAQ) baru terbuka setelah tombol ini diklik --
+                    tidak konsisten. Sekarang SATU pola accordion utk semua
+                    tipe yang punya isi (blockPreviewFor !== null),
+                    KECUALI "link" (biarkan field inline-nya yang sudah ada,
+                    lihat catatan baris ringkasan di atas). Panel isi blok
+                    di bawah (untuk tipe SELAIN 10 yang tadinya "Edit
+                    Konten"-gated) SEKARANG JUGA digerbang `contentEditId
+                    === link.id` -- lihat tiap panel yang berubah dari
+                    unconditional jadi bergerbang. */}
+                {link.block_type !== "link" && blockPreviewFor(link, t) !== null && (
                   <button
                     type="button"
                     onClick={() =>
                       link.block_type === "catalog" || link.block_type === "faq"
                         ? setDrilldownBlockId(link.id)
-                        : openContentEdit(link)
+                        : toggleContentEdit(link)
                     }
-                    className="flex-shrink-0 rounded-lg px-2 py-1.5 text-xs font-bold text-jeon-purple hover:bg-jeon-purple/10"
+                    aria-expanded={contentEditId === link.id}
+                    title={t("dashboard.pages.links.linkCard.editContent")}
+                    className={`flex h-8 flex-shrink-0 items-center rounded-lg px-1.5 transition-colors ${
+                      contentEditId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                    }`}
                   >
-                    {t("dashboard.pages.links.linkCard.editContent")}
+                    <IconChevronRight className={`h-3.5 w-3.5 transition-transform ${contentEditId === link.id ? "rotate-90" : ""}`} />
                   </button>
                 )}
                 <button
@@ -3103,16 +3246,19 @@ export default function DashboardLinksPage() {
               )}
 
               {/* Panel "Kelola foto" -- blok "gallery" (hasil analisa galeri
-                  tema kompetitor, 17 Agustus 2026), SELALU tampil (bukan
-                  dibalik toggle "Edit Konten") -- pola sama seperti panel
-                  Featured Link di atas, karena kelola-foto justru INTI dari
-                  blok ini, bukan pengaturan sekunder. */}
+                  tema kompetitor, 17 Agustus 2026). SEBELUMNYA selalu
+                  tampil unconditional -- redesain "Konsisten & Ringkas" (14
+                  September 2026) menggerbangnya sama seperti tipe lain di
+                  belakang `contentEditId === link.id`, dipicu tombol
+                  chevron accordion yang sekarang SERAGAM utk semua tipe
+                  blok, bukan lagi campuran "selalu terbuka"/"Edit Konten"
+                  (lihat blockPreviewFor & baris ringkasan di header). */}
               {/* image_slider -- alias tervalidasi "gallery" di backend
                   (gallery/image_slider berbagi SATU case validasi persis
                   sama, links.go) -- REUSE PERSIS panel ini, endpoint upload/
                   hapus SAMA (uploadGalleryImage/deleteGalleryImage tidak
                   peduli block_type), tidak ada kode baru yang perlu ditulis. */}
-              {(link.block_type === "gallery" || link.block_type === "image_slider") && (
+              {(link.block_type === "gallery" || link.block_type === "image_slider") && contentEditId === link.id && (
                 <div className="ml-11 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <p className="text-[11px] font-semibold text-app-muted">
                     {(((link.block_data?.images as string[]) ?? []).length)}/{maxGalleryImages} {t("dashboard.pages.links.galleryPanel.photoCountSuffix")}
@@ -3164,7 +3310,7 @@ export default function DashboardLinksPage() {
                   Unggulan"), pola sama seperti panel Featured Link (satu
                   gambar, unggah ulang menimpa) -- BEDA disimpan di
                   block_data.image_url, bukan kolom thumbnail_url. */}
-              {link.block_type === "project_showcase" && (
+              {link.block_type === "project_showcase" && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.block_data?.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -3198,7 +3344,7 @@ export default function DashboardLinksPage() {
                   panel Kelola foto di atas. Cover art dikelola lewat tombol
                   ikon kustom yang sudah generik (baris kontrol ikon di
                   atas), tidak diduplikasi di sini. */}
-              {link.block_type === "audio" && (
+              {link.block_type === "audio" && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconMusicNote className="h-5 w-5" />
@@ -3237,7 +3383,7 @@ export default function DashboardLinksPage() {
               {/* Panel "Kelola file" -- blok "file" (permintaan langsung
                   pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                   pola sama persis seperti panel Kelola audio di atas. */}
-              {link.block_type === "file" && (
+              {link.block_type === "file" && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-app-surface text-jeon-purple ring-1 ring-black/5">
                     <IconFileText className="h-5 w-5" />
@@ -3281,7 +3427,7 @@ export default function DashboardLinksPage() {
                   uploadBuilderMediaImage/deleteBuilderMediaImage -- endpoint
                   INI yang memang didesain generik lintas 3 tipe ini (lihat
                   mediaImageBlockTypes, links.go). */}
-              {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && (
+              {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.block_data?.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -3328,7 +3474,7 @@ export default function DashboardLinksPage() {
                   field lewat handleBlockDataPatch (validasi backend "list"
                   longgar, item boleh berubah bertahap tanpa tombol Simpan
                   eksplisit, beda dari FAQ top-level). */}
-              {link.block_type === "list" && (
+              {link.block_type === "list" && contentEditId === link.id && (
                 <div className="ml-11 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <ListItemsEditor
                     style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
@@ -3344,7 +3490,7 @@ export default function DashboardLinksPage() {
                   panel Builder (BuilderLeftPanel.tsx), `products`/
                   `setProducts` SUDAH ADA di halaman ini (di-fetch sekali di
                   awal, dipakai LivePreviewPanel juga). */}
-              {link.block_type === "produk" && (
+              {link.block_type === "produk" && contentEditId === link.id && (
                 <div className="ml-11 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   <ProdukBlockEditor
                     blockData={link.block_data}

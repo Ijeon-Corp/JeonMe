@@ -580,6 +580,7 @@ export const dictionaries = {
             cancel: "Batal",
             delete: "Hapus",
             noneYet: "Belum ada",
+            hasImage: "Gambar sudah diunggah",
             uploading: "Mengunggah...",
           },
           quickAdd: {
@@ -875,7 +876,21 @@ export const dictionaries = {
             removeIcon: "Hapus ikon (kembali ke deteksi/ikon default)",
             unfeature: "Matikan Featured (kembali ke baris klasik)",
             makeFeatured: "Jadikan Featured (kartu thumbnail besar)",
+            // editContent -- redesain "Konsisten & Ringkas" (14 September
+            // 2026, permintaan langsung pengguna: "saya masih kurang suka ui
+            // dan ux dari mode simple ini di tiap blok nya", Opsi A dari 3
+            // usulan yang diajukan lewat artifact) -- SEMUA tipe blok
+            // sekarang punya baris ringkasan + tombol accordion buka/tutup
+            // yang SERAGAM (chevron ikon, bukan teks), bukan campuran
+            // "selalu terbuka" vs teks "Edit Konten" seperti sebelumnya.
+            // Nama aksesibel tombol ini TETAP "editContent" (title/aria
+            // KONSTAN, tidak berganti teks tiap toggle -- pola sama persis
+            // tombol "Kelola" gear di sebelahnya yang sudah ada, state
+            // dikomunikasikan lewat aria-expanded bukan mengganti teks).
             editContent: "Edit Konten",
+            // contentPreviewEmpty -- fallback ringkasan generik utk tipe
+            // teks/URL yang isinya masih kosong (lihat blockPreviewFor).
+            contentPreviewEmpty: "Belum ada isi",
             duplicate: "Duplikat",
             // itemCount/questionCount -- chip jumlah di baris blok Katalog/FAQ
             // (redesain drill-down gaya Linktree, 6 September 2026), pengganti
@@ -3728,6 +3743,7 @@ export const dictionaries = {
             cancel: "Cancel",
             delete: "Delete",
             noneYet: "None yet",
+            hasImage: "Image uploaded",
             uploading: "Uploading...",
           },
           quickAdd: {
@@ -4020,6 +4036,7 @@ export const dictionaries = {
             unfeature: "Turn off Featured (revert to classic row)",
             makeFeatured: "Make Featured (large thumbnail card)",
             editContent: "Edit Content",
+            contentPreviewEmpty: "No content yet",
             duplicate: "Duplicate",
             itemCount: "{n} items",
             questionCount: "{n} questions",
