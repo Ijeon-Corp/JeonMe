@@ -1,0 +1,50 @@
+# .dockerignore
+#
+# Root ini adalah build context untuk KEDUA image (docker/api/Dockerfile &
+# docker/web/Dockerfile -- context: "." di docker-compose*.yml MAUPUN
+# .github/workflows/ci.yml). Tanpa file ini, `COPY apps/api .` / `COPY apps/web .`
+# ikut menyalin apa pun yang kebetulan ada di working tree lokal ke dalam layer
+# image -- termasuk file kredensial (.env/.env.local) dan node_modules host yang
+# bisa saja ter-build untuk platform/arch berbeda dari container (audit infra
+# keamanan 15 September 2026, temuan Medium; ini juga kemungkinan besar akar
+# masalah bug "node_modules termuat cuma WASM bindings" yang dicatat di
+# CLAUDE.md -- COPY apps/web . menimpa node_modules hasil `npm install` di
+# dalam image dengan punya host).
+#
+# Catatan: sintaks .dockerignore MIRIP .gitignore (mendukung **, negasi lewat
+# !pola) tapi Docker TIDAK membaca .gitignore -- daftar di bawah ditulis ulang
+# manual berdasar isi .gitignore repo ini, bukan disalin mentah.
+
+# Kredensial -- JANGAN PERNAH masuk layer image (persisten selamanya di
+# history image walau "dihapus" di layer berikutnya).
+**/.env
+**/.env.local
+
+# Dependency lokal -- kalau ikut ter-COPY, menimpa hasil `npm install` di
+# dalam image dengan node_modules dari host (bisa beda platform/arch).
+**/node_modules
+
+# Build artifact Next.js -- dibangun ulang di dalam image lewat `npm run
+# build` pada builder stage; punya host cuma memperbesar context & berisiko
+# stale/beda platform (sharp, dsb).
+**/.next
+
+# Git metadata -- tidak pernah dibutuhkan di dalam image, cuma memperbesar
+# ukuran build context yang dikirim ke Docker daemon.
+.git
+
+# Artefak test/report lokal (Playwright) -- lihat .gitignore, bukan bagian
+# dari source yang perlu masuk image.
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/blob-report/
+
+# Binary hasil build Go lokal (`go build` manual di luar Docker).
+apps/api/bin/
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/
+.idea/
+.claude/

@@ -25,8 +25,21 @@ FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+
+# Audit keamanan infra (15 September 2026, temuan High): image sebelumnya
+# tidak punya USER sama sekali sehingga proses Next.js jalan sebagai root
+# di container produksi. Pakai user "node" bawaan image node:*-alpine
+# (uid/gid 1000) -- tidak perlu bikin user baru. app/page.tsx & app/
+# [username]/page.tsx pakai ISR (`revalidate`), yang menulis Data Cache ke
+# .next/cache saat runtime -- direktori itu harus dibuat & di-chown DULU
+# sebelum USER diswitch, kalau tidak, cache write akan gagal diam-diam
+# (bukan fatal, tapi ISR jadi tidak pernah benar-benar cache).
+RUN mkdir -p .next && chown node:node .next
+
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+
+USER node
 
 EXPOSE 3000
 CMD ["node", "server.js"]
