@@ -161,6 +161,12 @@ export default function BuilderCanvas({
                 interactive={false}
                 rootClassName="min-h-full"
                 selectedNodeId={selectedNodeId}
+                // isBuilderCanvas -- SATU-SATUNYA pemanggil PagePreview yang
+                // boleh true (lihat catatan lengkap di prop yang sama pada
+                // PagePreview.tsx): klik pada baris blok di sini memang
+                // harus MEMILIH node (onClick={handleCanvasClick} di atas),
+                // bukan membuka takeover Katalog penuh layar.
+                isBuilderCanvas
                 editableStickers={editableStickers}
                 onStickersChange={onStickersChange}
                 data={{

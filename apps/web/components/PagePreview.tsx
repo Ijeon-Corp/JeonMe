@@ -2574,9 +2574,26 @@ function findCatalogLinkedProduct(blocks: EmbeddedCatalogBlock[] | undefined, pr
   const produkBlock = (blocks ?? []).find((b) => b.block_type === "produk");
   if (!produkBlock) return undefined;
   const rawProductIds = produkBlock.block_data?.product_ids as string[] | undefined;
-  const productId = Array.isArray(rawProductIds) ? rawProductIds[0] : (produkBlock.block_data?.product_id as string | undefined);
-  if (!productId) return undefined;
-  return products.find((p) => p.id === productId);
+  const productIds = Array.isArray(rawProductIds)
+    ? rawProductIds
+    : produkBlock.block_data?.product_id
+      ? [produkBlock.block_data.product_id as string]
+      : [];
+  // Bug ditemukan lewat laporan langsung pengguna, 15 September 2026
+  // (screenshot staging: "di katalog saya mengisi blok product dengan 2
+  // product tapi hasil nya malah ga sesuai"): versi lama fungsi ini
+  // SELALU ambil productIds[0] tanpa mengecek jumlahnya -- begitu kreator
+  // memilih 2+ produk di SATU blok "produk" tertanam, produk ke-2 dst
+  // diam-diam HILANG (tidak pernah dirender sama sekali), karena item ini
+  // salah diklasifikasikan sbg segmen "products" (satu kartu produk
+  // tunggal, lihat CatalogTakeoverView) alih-alih segmen "item" biasa yang
+  // merender blok "produk"-nya APA ADANYA (yang sudah benar menangani 2+
+  // produk sbg grid 2 kolom internal, lihat case blockType "produk" di
+  // renderLinkOrBlock). "Referensi hidup" 1-item-1-produk cuma masuk akal
+  // kalau PERSIS 1 produk terpilih -- 2+ produk berarti kreator sengaja
+  // mau tampilan grid multi-produk, BUKAN referensi hidup satu produk.
+  if (productIds.length !== 1) return undefined;
+  return products.find((p) => p.id === productIds[0]);
 }
 
 function CatalogTakeoverView({
@@ -2785,6 +2802,7 @@ export default function PagePreview({
   onStickersChange,
   hideFooterChrome = false,
   selectedNodeId,
+  isBuilderCanvas = false,
 }: {
   data: PagePreviewData;
   interactive?: boolean;
@@ -2814,6 +2832,25 @@ export default function PagePreview({
   // "builder" (lihat BuilderPagePreview) untuk highlight ring blok
   // terpilih langsung di kanvas -- tidak relevan sama sekali di mode lain.
   selectedNodeId?: string;
+  // isBuilderCanvas -- bug ditemukan lewat laporan langsung pengguna, 15
+  // September 2026 ("kenapa pratinjau tidak bisa klik katalog"): SEBELUM
+  // ini, blok Katalog di halaman builderMode="builder" cuma bisa diklik
+  // saat `interactive=true` (halaman publik SUNGGUHAN) -- SEMUA pratinjau
+  // non-interaktif (LivePreviewPanel dashboard/links, dashboard/products,
+  // dashboard/design, homepage template gallery, DAN kanvas Canvas
+  // Builder sungguhan) ikut kena gerbang yang sama, walau `interactive`
+  // dulunya cuma dimaksudkan mencegah SISI-EFEK SUNGGUHAN (navigasi
+  // keluar/checkout/tracking klik, lihat catatan di atas fungsi ini) --
+  // membuka takeover Katalog TIDAK PUNYA efek samping sungguhan apa pun
+  // (murni state React lokal, tidak menavigasi kemana pun), jadi SEHARUSNYA
+  // aman di pratinjau read-only mana pun. Satu-satunya alasan sah
+  // menahannya adalah KHUSUS kanvas Canvas Builder sungguhan
+  // (BuilderCanvas.tsx) -- di sana klik pada baris blok harus MEMILIH node
+  // (delegasi closest("[data-builder-node-id]") di wrapper-nya), BUKAN
+  // membuka layar penuh yang akan mengganti seluruh kanvas edit. Flag ini
+  // (HANYA true dari BuilderCanvas.tsx) memisahkan kasus itu dari semua
+  // pratinjau read-only lain -- lihat pemakaiannya di BuilderPagePreview.
+  isBuilderCanvas?: boolean;
 }) {
   const theme = getPageTheme(data.theme, data.customTheme);
   // Modul Toko (Fase E5): toko dijeda -- semua tombol beli/daftar
@@ -2850,6 +2887,7 @@ export default function PagePreview({
         editableStickers={editableStickers}
         onStickersChange={onStickersChange}
         selectedNodeId={selectedNodeId}
+        isBuilderCanvas={isBuilderCanvas}
       />
     );
   }
@@ -4074,6 +4112,7 @@ function BuilderPagePreview({
   editableStickers = false,
   onStickersChange,
   selectedNodeId,
+  isBuilderCanvas = false,
 }: {
   data: PagePreviewData;
   interactive: boolean;
@@ -4084,6 +4123,11 @@ function BuilderPagePreview({
   editableStickers?: boolean;
   onStickersChange?: (stickers: PageStickerData[]) => void;
   selectedNodeId?: string;
+  // isBuilderCanvas -- lihat catatan lengkap di prop yang sama pada
+  // PagePreview (komponen atas). Cuma dipakai di sini utk gerbang
+  // onOpenCatalog -- HANYA BuilderCanvas.tsx yang perlu klik baris blok
+  // berarti "pilih node", bukan "buka katalog".
+  isBuilderCanvas?: boolean;
 }) {
   // isBio/isProduk -- pageType "landing" (No.99) SENGAJA "TANPA avatar/
   // produk/monetisasi" (lihat catatan lengkap di PagePreviewData.pageType).
@@ -4208,16 +4252,24 @@ function BuilderPagePreview({
                 data-builder-block-type={blockType}
                 className={`w-full rounded-xl${builderSelectionRing(link.id, selectedNodeId)}`}
               >
-                {/* onOpenCatalog HANYA dioper saat interactive=true (halaman
-                    publik sungguhan) -- kanvas Canvas Builder sendiri
-                    (interactive=false, LivePreviewPanel) memakai klik pada
-                    node ini utk MEMILIH blok (delegasi closest
+                {/* onOpenCatalog ditahan HANYA saat ini benar-benar kanvas
+                    Canvas Builder sungguhan (isBuilderCanvas=true DARI
+                    BuilderCanvas.tsx) -- di sana klik pada node ini dipakai
+                    utk MEMILIH blok (delegasi closest
                     "[data-builder-node-id]"), BUKAN membuka takeover
                     katalog penuh layar, yang akan mengganti SELURUH kanvas
-                    edit dgn CatalogTakeoverView dan mematahkan alur
-                    edit -- pola sama seperti percabangan `interactive` lain
-                    di renderBuilderNode (mis. case "button"/"image"). */}
-                {renderLinkOrBlock(link, theme, data, interactive, canBuy, interactive ? setCatalogView : undefined)}
+                    edit dgn CatalogTakeoverView dan mematahkan alur edit.
+                    Bug ditemukan 15 September 2026 ("kenapa pratinjau tidak
+                    bisa klik katalog"): versi lama menahan ini di SEMUA
+                    interactive=false, termasuk LivePreviewPanel/homepage
+                    template gallery yang BUKAN kanvas edit sama sekali --
+                    membuka katalog di situ TIDAK PUNYA efek samping
+                    sungguhan apa pun (murni state lokal, beda dari navigasi
+                    TrackedLink/submit form di renderBuilderNode/
+                    renderLinkOrBlock yang MEMANG harus tetap ditahan di
+                    pratinjau mana pun -- lihat catatan lengkap di prop
+                    isBuilderCanvas, PagePreview). */}
+                {renderLinkOrBlock(link, theme, data, interactive, canBuy, interactive || !isBuilderCanvas ? setCatalogView : undefined)}
               </div>
             );
           }

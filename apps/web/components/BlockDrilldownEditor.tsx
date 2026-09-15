@@ -62,6 +62,22 @@ function blockDisplayLabel(block: EmbeddedCatalogBlock, t: (key: string) => stri
   return block.title || buildEmbeddableTypes(t).find((opt) => opt.type === block.block_type)?.label || block.block_type;
 }
 
+// findItemLinkedProduct -- "referensi hidup" 1-item-1-produk (lihat catatan
+// linkedProduct di CatalogItemFrame di bawah), diangkat jadi fungsi bersama
+// (susulan 15 September 2026, permintaan langsung pengguna: item katalog
+// yang sudah bertaut produk tetap tampil "Item tanpa judul" di header
+// dashboard, seharusnya ikut nama produknya seperti tampilan publik) supaya
+// `frameTitle` (heading breadcrumb) bisa pakai aturan PERSIS SAMA dengan
+// CatalogItemFrame -- PERSIS 1 produk terpilih di SATU blok "produk"
+// tertanam, sama seperti findCatalogLinkedProduct (PagePreview.tsx).
+function findItemLinkedProduct(item: CatalogItem | undefined, products: DashboardProduct[]): DashboardProduct | undefined {
+  const produkBlock = (item?.blocks ?? []).find((b) => b.block_type === "produk");
+  if (!produkBlock) return undefined;
+  const productIds = getBlockProductIds(produkBlock.block_data);
+  if (productIds.length !== 1) return undefined;
+  return products.find((p) => p.id === productIds[0]);
+}
+
 // BlockDrilldownEditor -- SATU komponen untuk blok "catalog" DAN "faq"
 // (permintaan langsung pengguna, 6 September 2026, lihat plan
 // robust-tinkering-shannon.md). Format payload API TIDAK berubah -- murni
@@ -241,7 +257,21 @@ export default function BlockDrilldownEditor({
     if (frame.path.length === 0) return link.title;
     const resolved = resolveAt(root, frame.path);
     if (frame.view === "catalogItem" || frame.view === "faqItem") {
-      return resolved?.item?.title || (resolved?.block ? blockDisplayLabel(resolved.block, t) : "") || t("dashboard.components.blockDrilldown.untitledItem");
+      // Bug ditemukan lewat laporan langsung pengguna, 15 September 2026
+      // ("hasil nya malah untitled item"): item yang SUDAH bertaut produk
+      // (linkedProduct, lihat CatalogItemFrame) tetap tampil "Item tanpa
+      // judul" di heading breadcrumb ini -- SEBELUMNYA fallback chain sama
+      // sekali tidak mengecek produk yang terhubung, padahal halaman
+      // publik (findCatalogLinkedProduct, PagePreview.tsx) SUDAH benar
+      // memakai nama produk. Ditambahkan supaya dashboard konsisten dgn
+      // apa yang dilihat pengunjung.
+      const linkedProduct = findItemLinkedProduct(resolved?.item, products);
+      return (
+        resolved?.item?.title ||
+        linkedProduct?.name ||
+        (resolved?.block ? blockDisplayLabel(resolved.block, t) : "") ||
+        t("dashboard.components.blockDrilldown.untitledItem")
+      );
     }
     if (resolved?.block) return blockDisplayLabel(resolved.block, t);
     return resolved?.item?.title || "";
@@ -267,6 +297,7 @@ export default function BlockDrilldownEditor({
         {frame.view === "catalogItems" && (
           <CatalogItemsFrame
             items={getCatalogItems(root, frame.path)}
+            products={products}
             onOpenItem={(id) => push({ view: "catalogItem", path: [...frame.path, { kind: "item", id }] })}
             onAddItem={(title) => {
               const id = addCatalogItem(frame.path, title);
@@ -400,10 +431,12 @@ function NotFoundNotice() {
 
 function CatalogItemsFrame({
   items,
+  products,
   onOpenItem,
   onAddItem,
 }: {
   items: CatalogItem[];
+  products: DashboardProduct[];
   onOpenItem: (id: string) => void;
   onAddItem: (title: string) => void;
 }) {
@@ -422,7 +455,11 @@ function CatalogItemsFrame({
         >
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-app-ink">
-              {item.title || t("dashboard.components.blockDrilldown.untitledItem")}
+              {/* linkedProduct -- bug ditemukan lewat laporan langsung
+                  pengguna, 15 September 2026, sama seperti frameTitle di
+                  atas: baris item ini tetap "Item tanpa judul" walau sudah
+                  bertaut produk. */}
+              {item.title || findItemLinkedProduct(item, products)?.name || t("dashboard.components.blockDrilldown.untitledItem")}
             </p>
             <p className="truncate text-[11px] text-app-muted">
               {item.images.length > 0 && `${item.images.length} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`}
@@ -495,9 +532,17 @@ function CatalogItemFrame({
   // SELALU mengambil nama/harga/sampul LANGSUNG dari data produk terkini,
   // BUKAN salinan statis, jadi kalau produk diedit lagi nanti (nama/harga/
   // foto), katalog ikut berubah otomatis tanpa perlu disinkronkan manual.
+  // PERSIS 1 produk terpilih -- bug ditemukan 15 September 2026 (pasangan
+  // fix findCatalogLinkedProduct di PagePreview.tsx): kalau kreator pilih
+  // 2+ produk di blok ini, banner "Terhubung ke produk" di bawah TIDAK
+  // BOLEH cuma menyebut produk PERTAMA seolah-olah itu satu-satunya --
+  // publik menampilkan blok ini sbg grid 2 kolom produknya sendiri (case
+  // blockType "produk" di renderLinkOrBlock), jadi di sini juga
+  // diperlakukan sbg blok biasa (banner tersembunyi), bukan referensi 1
+  // produk.
   const linkedProdukBlock = blocks.find((b) => b.block_type === "produk");
-  const linkedProductId = linkedProdukBlock ? getBlockProductIds(linkedProdukBlock.block_data)[0] : undefined;
-  const linkedProduct = linkedProductId ? products.find((p) => p.id === linkedProductId) : undefined;
+  const linkedProductIds = linkedProdukBlock ? getBlockProductIds(linkedProdukBlock.block_data) : [];
+  const linkedProduct = linkedProductIds.length === 1 ? products.find((p) => p.id === linkedProductIds[0]) : undefined;
 
   // pickerOpen -- redesain alur "Tambah Item", susulan 15 September 2026
   // (permintaan langsung pengguna, dari screenshot layar Item Title/
