@@ -34,9 +34,21 @@ type FaqQA = { question: string; answer: string };
 // faqList/faqItem dengan path=[] berarti blok "faq" TINGKAT ATAS (mode
 // "faq" di bawah); path.length>0 berarti FAQ TERTANAM di dalam katalog
 // (mode "catalog", dicapai lewat embeddedBlock bertipe "faq").
+//
+// "catalogItem" (frame TERPISAH per item) DIHAPUS -- susulan 15 September
+// 2026, permintaan langsung pengguna: "harusnya yang muncul saat klik
+// katalog itu blok yang sudah ditambahkan bukan seperti ini ada untitled
+// item di klik baru muncul blok yang sudah ditambahkan", dikonfirmasi via
+// AskUserQuestion memilih opsi "selalu tampil blok semua item langsung,
+// tanpa klik sama sekali" -- meniru "flatten total" yang sudah dipakai
+// tampilan publik (CatalogTakeoverView, PagePreview.tsx). "catalogItems"
+// sekarang SATU-SATUNYA layar utk mengelola item: setiap item dirender
+// APA ADANYA (lihat CatalogItemsFrame di bawah, memetakan tiap item ke
+// instance CatalogItemFrame-nya sendiri, TANPA push frame baru) --
+// SATU-SATUNYA pengecualian yang TETAP butuh klik adalah blok "catalog"
+// bersarang (openEmbeddedBlock push frame baru, pola sama persis publik).
 type EditorFrame =
   | { view: "catalogItems"; path: CatalogSeg[] }
-  | { view: "catalogItem"; path: CatalogSeg[] }
   | { view: "embeddedBlock"; path: CatalogSeg[] }
   | { view: "faqList"; path: CatalogSeg[] }
   | { view: "faqItem"; path: CatalogSeg[]; index: number };
@@ -253,25 +265,16 @@ export default function BlockDrilldownEditor({
     else push({ view: "embeddedBlock", path: blockPath });
   }
 
+  // frameTitle -- "catalogItem" tidak ada lagi sbg frame sendiri (lihat
+  // catatan EditorFrame), jadi heading breadcrumb ini sekarang HANYA perlu
+  // menangani faqItem (pertanyaan FAQ) secara khusus; heading per-ITEM
+  // katalog dipindah jadi label inline di dalam CatalogItemFrame sendiri
+  // (findItemLinkedProduct dipakai ulang di sana, bukan di sini lagi).
   const frameTitle = (() => {
     if (frame.path.length === 0) return link.title;
     const resolved = resolveAt(root, frame.path);
-    if (frame.view === "catalogItem" || frame.view === "faqItem") {
-      // Bug ditemukan lewat laporan langsung pengguna, 15 September 2026
-      // ("hasil nya malah untitled item"): item yang SUDAH bertaut produk
-      // (linkedProduct, lihat CatalogItemFrame) tetap tampil "Item tanpa
-      // judul" di heading breadcrumb ini -- SEBELUMNYA fallback chain sama
-      // sekali tidak mengecek produk yang terhubung, padahal halaman
-      // publik (findCatalogLinkedProduct, PagePreview.tsx) SUDAH benar
-      // memakai nama produk. Ditambahkan supaya dashboard konsisten dgn
-      // apa yang dilihat pengunjung.
-      const linkedProduct = findItemLinkedProduct(resolved?.item, products);
-      return (
-        resolved?.item?.title ||
-        linkedProduct?.name ||
-        (resolved?.block ? blockDisplayLabel(resolved.block, t) : "") ||
-        t("dashboard.components.blockDrilldown.untitledItem")
-      );
+    if (frame.view === "faqItem") {
+      return resolved?.item?.title || (resolved?.block ? blockDisplayLabel(resolved.block, t) : "") || t("dashboard.components.blockDrilldown.untitledItem");
     }
     if (resolved?.block) return blockDisplayLabel(resolved.block, t);
     return resolved?.item?.title || "";
@@ -298,38 +301,21 @@ export default function BlockDrilldownEditor({
           <CatalogItemsFrame
             items={getCatalogItems(root, frame.path)}
             products={products}
-            onOpenItem={(id) => push({ view: "catalogItem", path: [...frame.path, { kind: "item", id }] })}
-            onAddItem={(title) => {
-              const id = addCatalogItem(frame.path, title);
-              push({ view: "catalogItem", path: [...frame.path, { kind: "item", id }] });
+            isPremium={isPremium}
+            depth={2 + blockSegCount(frame.path)}
+            onDeleteItem={(itemId) => removeCatalogItem(frame.path, itemId)}
+            onOpenBlock={(itemId, block) =>
+              openEmbeddedBlock([...frame.path, { kind: "item", id: itemId }, { kind: "block", id: block.id }], block)
+            }
+            onAddBlock={(itemId, type) => {
+              const itemPath: CatalogSeg[] = [...frame.path, { kind: "item", id: itemId }];
+              const block = addEmbeddedBlock(itemPath, type);
+              openEmbeddedBlock([...itemPath, { kind: "block", id: block.id }], block);
             }}
+            onDeleteBlock={(itemId, blockId) => removeEmbeddedBlock([...frame.path, { kind: "item", id: itemId }], blockId)}
+            onAddItem={() => addCatalogItem(frame.path, "")}
           />
         )}
-
-        {frame.view === "catalogItem" &&
-          (() => {
-            const item = resolveAt(root, frame.path)?.item;
-            if (!item) return <NotFoundNotice />;
-            const depth = 2 + blockSegCount(frame.path);
-            return (
-              <CatalogItemFrame
-                item={item}
-                products={products}
-                onDeleteItem={async () => {
-                  const ok = await removeCatalogItem(frame.path.slice(0, -1), item.id);
-                  if (ok) goBack();
-                }}
-                isPremium={isPremium}
-                depth={depth}
-                onOpenBlock={(block) => openEmbeddedBlock([...frame.path, { kind: "block", id: block.id }], block)}
-                onAddBlock={(type) => {
-                  const block = addEmbeddedBlock(frame.path, type);
-                  openEmbeddedBlock([...frame.path, { kind: "block", id: block.id }], block);
-                }}
-                onDeleteBlock={(blockId) => removeEmbeddedBlock(frame.path, blockId)}
-              />
-            );
-          })()}
 
         {frame.view === "embeddedBlock" &&
           (() => {
@@ -429,47 +415,60 @@ function NotFoundNotice() {
   return <p className="text-sm text-app-muted">{t("dashboard.components.blockDrilldown.notFound")}</p>;
 }
 
+// CatalogItemsFrame -- "flatten total" jg utk EDITOR dashboard (susulan 15
+// September 2026, permintaan langsung pengguna, dikonfirmasi via
+// AskUserQuestion: "selalu tampil blok semua item langsung, tanpa klik
+// sama sekali"). SEBELUMNYA komponen ini menampilkan tiap item sbg BARIS
+// ringkasan yang harus DIKLIK dulu (push frame "catalogItem" terpisah)
+// sebelum blok-bloknya kelihatan -- persis keluhan pengguna soal "Untitled
+// item" yang harus diklik dulu. Sekarang setiap item dirender LANGSUNG
+// lewat instance CatalogItemFrame-nya sendiri (di-key oleh item.id, jadi
+// item BARU otomatis dapat instance baru -- pickerOpen lazy-init di sana
+// tetap akurat), TIDAK ADA push frame sama sekali utk level item. Blok
+// "catalog" bersarang TETAP satu-satunya pengecualian yang push frame baru
+// (lewat openEmbeddedBlock di komponen induk) -- pola simetris dgn
+// CatalogTakeoverView (PagePreview.tsx) yang sudah di-flatten sama persis
+// utk tampilan publik.
 function CatalogItemsFrame({
   items,
   products,
-  onOpenItem,
+  isPremium,
+  depth,
+  onDeleteItem,
+  onOpenBlock,
+  onAddBlock,
+  onDeleteBlock,
   onAddItem,
 }: {
   items: CatalogItem[];
   products: DashboardProduct[];
-  onOpenItem: (id: string) => void;
-  onAddItem: (title: string) => void;
+  isPremium: boolean;
+  depth: number;
+  onDeleteItem: (itemId: string) => void;
+  onOpenBlock: (itemId: string, block: EmbeddedCatalogBlock) => void;
+  onAddBlock: (itemId: string, type: EmbeddedCatalogBlock["block_type"]) => void;
+  onDeleteBlock: (itemId: string, blockId: string) => void;
+  onAddItem: () => void;
 }) {
   const { t } = useLocale();
   const atLimit = items.length >= maxCatalogItems;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       {items.length === 0 && <p className="text-sm text-app-muted">{t("dashboard.components.blockDrilldown.emptyItems")}</p>}
       {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => onOpenItem(item.id)}
-          className="flex items-center gap-3 rounded-xl border border-app-border bg-app-surface-2 p-3 text-left hover:border-jeon-purple"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-app-ink">
-              {/* linkedProduct -- bug ditemukan lewat laporan langsung
-                  pengguna, 15 September 2026, sama seperti frameTitle di
-                  atas: baris item ini tetap "Item tanpa judul" walau sudah
-                  bertaut produk. */}
-              {item.title || findItemLinkedProduct(item, products)?.name || t("dashboard.components.blockDrilldown.untitledItem")}
-            </p>
-            <p className="truncate text-[11px] text-app-muted">
-              {item.images.length > 0 && `${item.images.length} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`}
-              {item.images.length > 0 && (item.blocks?.length ?? 0) > 0 && " · "}
-              {(item.blocks?.length ?? 0) > 0 &&
-                t("dashboard.components.blockDrilldown.blocksCount").replace("{n}", String(item.blocks?.length ?? 0))}
-            </p>
-          </div>
-          <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
-        </button>
+        <div key={item.id} className="rounded-lg border border-app-border bg-app-surface-2 p-3">
+          <CatalogItemFrame
+            item={item}
+            products={products}
+            onDeleteItem={() => onDeleteItem(item.id)}
+            isPremium={isPremium}
+            depth={depth}
+            onOpenBlock={(block) => onOpenBlock(item.id, block)}
+            onAddBlock={(type) => onAddBlock(item.id, type)}
+            onDeleteBlock={(blockId) => onDeleteBlock(item.id, blockId)}
+          />
+        </div>
       ))}
 
       {atLimit ? (
@@ -478,15 +477,13 @@ function CatalogItemsFrame({
         // Tanpa field judul sama sekali -- susulan 15 September 2026,
         // permintaan langsung pengguna: "hilangkan saja kolom new item
         // title, lalu saat tambah item langsung popup saja tampilkan
-        // semua blok yang ada... alurnya seperti ini katalog -> tambah
-        // item -> muncul popup pilihan semua blok -> edit isi blok nya".
-        // Item dibuat TANPA judul (onAddItem sudah langsung `push` ke
-        // frame item baru begitu dibuat) -- popup pilihan tipe blok
-        // tampil OTOMATIS di layar itu sendiri (lihat pickerOpen,
+        // semua blok yang ada". Item baru muncul LANGSUNG inline di sini
+        // (tanpa push frame apa pun, lihat catatan komponen ini) dengan
+        // popup pilihan tipe blok terbuka otomatis (pickerOpen,
         // CatalogItemFrame), jadi tidak perlu apa pun diisi di sini.
         <button
           type="button"
-          onClick={() => onAddItem("")}
+          onClick={onAddItem}
           className="btn-primary self-start rounded-md px-3 py-1.5 text-[11px] font-bold text-white"
         >
           {t("dashboard.pages.links.catalogPanel.addItem")}
@@ -532,17 +529,11 @@ function CatalogItemFrame({
   // SELALU mengambil nama/harga/sampul LANGSUNG dari data produk terkini,
   // BUKAN salinan statis, jadi kalau produk diedit lagi nanti (nama/harga/
   // foto), katalog ikut berubah otomatis tanpa perlu disinkronkan manual.
-  // PERSIS 1 produk terpilih -- bug ditemukan 15 September 2026 (pasangan
-  // fix findCatalogLinkedProduct di PagePreview.tsx): kalau kreator pilih
-  // 2+ produk di blok ini, banner "Terhubung ke produk" di bawah TIDAK
-  // BOLEH cuma menyebut produk PERTAMA seolah-olah itu satu-satunya --
-  // publik menampilkan blok ini sbg grid 2 kolom produknya sendiri (case
-  // blockType "produk" di renderLinkOrBlock), jadi di sini juga
-  // diperlakukan sbg blok biasa (banner tersembunyi), bukan referensi 1
-  // produk.
-  const linkedProdukBlock = blocks.find((b) => b.block_type === "produk");
-  const linkedProductIds = linkedProdukBlock ? getBlockProductIds(linkedProdukBlock.block_data) : [];
-  const linkedProduct = linkedProductIds.length === 1 ? products.find((p) => p.id === linkedProductIds[0]) : undefined;
+  // findItemLinkedProduct (module-level, dipakai jg utk label item di
+  // atas) SUDAH menegakkan aturan PERSIS 1 produk terpilih -- lihat
+  // catatan lengkap di definisinya soal kenapa 2+ produk TIDAK dianggap
+  // referensi hidup satu produk.
+  const linkedProduct = findItemLinkedProduct(item, products);
 
   // pickerOpen -- redesain alur "Tambah Item", susulan 15 September 2026
   // (permintaan langsung pengguna, dari screenshot layar Item Title/
@@ -565,7 +556,17 @@ function CatalogItemFrame({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+      {/* Label item -- SEBELUM "flatten total" (susulan 15 September
+          2026, lihat catatan CatalogItemsFrame), ini adalah heading
+          breadcrumb h2 di komponen induk (frameTitle) karena tiap item
+          adalah frame-nya sendiri. Sekarang beberapa item tampil sekaligus
+          di satu layar, jadi label-nya pindah ke sini, di dalam kartu
+          item masing-masing -- fallback chain SAMA PERSIS (title manual ->
+          nama produk terhubung -> "Item tanpa judul"). */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm font-bold text-app-ink">
+          {item.title || linkedProduct?.name || t("dashboard.components.blockDrilldown.untitledItem")}
+        </p>
         <button
           type="button"
           onClick={onDeleteItem}
