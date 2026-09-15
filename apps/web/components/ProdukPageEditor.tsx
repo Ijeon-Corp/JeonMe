@@ -70,7 +70,6 @@ import {
   DesignSectionPatch,
   FontSection,
   HeaderSection,
-  ProductLayoutSection,
   TemaSection,
   TombolSection,
 } from "@/components/dashboard/page/design-sections";
@@ -387,14 +386,17 @@ export default function ProdukPageEditor({
 
   // §13.7 (JEONID-DASHBOARD-REDESIGN-SPEC.md, permintaan langsung
   // pengguna 8 September 2026): "editor template yang sama secara visual
-  // dengan Halaman Saya" -- kartu pengaturan atas dibungkus SectionCard
-  // (komponen resmi hasil Fase 1 Foundation, dipakai halaman Settings/
-  // Editor lain) & tab kategori pakai DesignCategoryTabs (gaya SAMA PERSIS
-  // dgn 5 halaman /dashboard/design/* Bio) -- HANYA wrapper visual yang
-  // diganti, isi (BlockSection/TemaSection/dst di bawah) TETAP
-  // "implementation existing" apa adanya sesuai teks spec, tidak di-reskin.
-  // LENGKAP & stabil di production sejak v0.37.0/v0.38.0, flag "sales"
-  // dihapus dari file ini 8 September 2026.
+  // dengan Halaman Saya" -- kartu pengaturan (URL/publish/watermark/mode
+  // builder) dibungkus SectionCard (komponen resmi hasil Fase 1
+  // Foundation, dipakai halaman Settings/Editor lain) & tab kategori
+  // pakai DesignCategoryTabs (gaya SAMA PERSIS dgn 5 halaman
+  // /dashboard/design/* Bio) -- HANYA wrapper visual yang diganti, isi
+  // (BlockSection/TemaSection/dst di bawah) TETAP "implementation
+  // existing" apa adanya sesuai teks spec, tidak di-reskin. LENGKAP &
+  // stabil di production sejak v0.37.0/v0.38.0, flag "sales" dihapus dari
+  // file ini 8 September 2026. Kartu ini SEMPAT di paling atas halaman --
+  // dipindah ke BAWAH tab & konten blok 15 September 2026, lihat catatan
+  // lengkap di titik render-nya.
   const settingsCardTitle = t("dashboard.components.produkPageEditor.pageTitle");
   const settingsCardAction = (
     <a
@@ -459,19 +461,6 @@ export default function ProdukPageEditor({
             {!page.is_premium && <IconLock className="h-3.5 w-3.5 text-app-muted" />}
           </button>
         </div>
-        {/* Layout grid Produk -- permintaan langsung pengguna, 19 Agustus
-            2026: "buat pilihan dua tipe layout product yang ditampilkan...
-            1 product tampil memenuhi 1 baris jika ada 2 product berarti
-            ada dibawah nya". Cuma relevan di sini (Halaman Toko) --
-            grid Produk sudah tidak lagi dirender di halaman Bio sama
-            sekali (lihat PagePreview.tsx). Diekstrak ke ProductLayoutSection
-            (design-sections.tsx) 11 September 2026 supaya bisa dipakai
-            ulang di Builder (BuilderLeftPanel.tsx) juga -- lihat catatan
-            lengkap opsi "category"/"list" di sana. */}
-        <div className="mt-4">
-          <ProductLayoutSection productLayout={page.product_layout} onChange={(value) => handlePatch({ product_layout: value })} />
-        </div>
-
         {/* Canvas Page Builder utk Halaman Toko -- permintaan langsung
             pengguna 9 September 2026 ("buat store page bisa mode builder
             juga"): SEBELUMNYA SENGAJA tidak ada entry point ke sini sama
@@ -502,11 +491,17 @@ export default function ProdukPageEditor({
 
   return (
     <div className="min-w-0">
-      <SectionCard title={settingsCardTitle} action={settingsCardAction}>
-        {settingsCardBody}
-      </SectionCard>
-
-      <div className="mt-4">
+      {/* Kartu pengaturan Toko (URL/publish/watermark/mode builder)
+          dipindah ke BAWAH tab & konten blok -- permintaan langsung
+          pengguna, 15 September 2026: "saya mau bagian ini dipindahkan
+          jangan di bagian atas karna menutupi user untuk menambahkan blok
+          untuk store". Kartu ini dulu SELALU di paling atas, di atas tab
+          Blok/Tema/dst, jadi menutupi tombol "+ Tambah Blok/Tautan" di
+          bawah layar/butuh scroll dulu tiap kali membuka tab ini. Tab +
+          konten sekarang tampil duluan, kartu pengaturan jadi penutup
+          halaman -- tetap ada, cuma tidak lagi menghalangi tugas paling
+          sering dilakukan di menu ini (menambah blok). */}
+      <div>
         <DesignCategoryTabs
           tabs={designTabEntries.map(([key, label]) => ({ key, label, onClick: () => setSection(key) }))}
           activeKey={section}
@@ -537,6 +532,12 @@ export default function ProdukPageEditor({
             <StickerCanvasEditor stickers={page.stickers} onChange={onStickersChange} />
           </section>
         )}
+      </div>
+
+      <div className="mt-4">
+        <SectionCard title={settingsCardTitle} action={settingsCardAction}>
+          {settingsCardBody}
+        </SectionCard>
       </div>
     </div>
   );

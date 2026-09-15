@@ -123,8 +123,11 @@ export interface PagePreviewProduct {
   isExternalLink?: boolean;
   externalUrl?: string;
   // category -- permintaan langsung pengguna, 17 Agustus 2026: "saya mau
-  // bisa buat katalog produk di halaman tokonya" -- dipakai tab/filter
-  // kategori di grid Produk, lihat renderCategoryTabs di bawah.
+  // bisa buat katalog produk di halaman tokonya" -- dipakai kreator utk
+  // mengelompokkan produk di dashboard, murni label manajemen internal
+  // (bukan lagi dipakai tab/filter otomatis di halaman publik sejak grid
+  // produk otomatis dihapus total, 15 September 2026 -- lihat catatan di
+  // ProdukPagePreview/BuilderPagePreview).
   category?: string;
   // soldCount -- Advance Option "Show Unit Sold" (permintaan langsung
   // pengguna, 5 September 2026). undefined/null berarti toggle-nya mati,
@@ -248,12 +251,14 @@ export interface PagePreviewData {
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
   // productLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
-  // pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
-  // 'stacked' (1 kolom penuh lebar). Cuma dipakai renderProductGrid
-  // (khusus ProdukPagePreview/Halaman Toko sejak grid Produk dihapus dari
-  // Bio) -- undefined/nilai lain jatuh balik ke 'grid'. 'category' --
-  // susulan 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
-  // kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
+  // pilihan dua tipe layout product" -- dulu dipakai grid Produk otomatis
+  // Halaman Toko (renderProductGrid), yang sudah DIHAPUS TOTAL 15
+  // September 2026 (lihat catatan lengkap di ProdukPagePreview/
+  // BuilderPagePreview: "layout dipilih di blok produk saja" -- masing-
+  // masing blok "produk" punya opsi layoutnya sendiri, PRODUK_LAYOUT_
+  // RENDERERS). Field ini masih ada murni krn masih bisa diatur lewat
+  // Builder Left Panel (tab Settings, `pageType === "produk"`) -- TIDAK
+  // dibaca oleh render mana pun lagi saat ini.
   productLayout?: "grid" | "stacked" | "category" | "list";
   events?: PagePreviewEvent[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
@@ -462,50 +467,11 @@ export interface PreviewSourceProduct {
   sold_count?: number;
 }
 
-// getProductCategories/renderCategoryTabs -- permintaan langsung pengguna,
-// 17 Agustus 2026: "saya mau bisa buat katalog produk di halaman tokonya".
-// `category` sudah lama bisa diisi kreator dari dashboard (migrasi 000046)
-// tapi TIDAK PERNAH tampil ke pengunjung publik -- murni label manajemen
-// internal. Dipakai ULANG oleh render grid Produk bio biasa MAUPUN
-// ProdukPagePreview (Toko) di bawah, supaya kedua jalur kode konsisten
-// (pola sama seperti renderLinkOrBlock/renderBioHeader lainnya di file
-// ini). Tab "Semua" SENGAJA selalu ada di depan, cuma tampil sama sekali
-// kalau minimal satu produk sungguhan sudah diberi kategori -- kreator
-// yang belum pernah mengisi kategori tidak akan melihat baris tab kosong.
-function getProductCategories(products: PagePreviewProduct[]): string[] {
-  const set = new Set<string>();
-  for (const p of products) {
-    if (p.category && p.category.trim()) set.add(p.category.trim());
-  }
-  return Array.from(set);
-}
-
-function renderCategoryTabs(categories: string[], selected: string, onSelect: (category: string) => void, theme: PageTheme) {
-  if (categories.length === 0) return null;
-  return (
-    <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
-      {["Semua", ...categories].map((c) => (
-        <button
-          key={c}
-          type="button"
-          onClick={() => onSelect(c)}
-          className={`flex-shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-            selected === c ? theme.buyButton : `${theme.card} ${theme.chevron}`
-          }`}
-        >
-          {c}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // PageSwitcher -- hamburger kiri-atas untuk berpindah antar halaman
 // (permintaan langsung pengguna, 19 Agustus 2026: "karna 1 akun punya dua
 // halaman yaitu link bio dan toko tambahkan hamburger button di kiri atas
 // menampilkan page toko atau bio"). Perlu jadi KOMPONEN sungguhan (bukan
-// fungsi render biasa seperti renderCategoryTabs) karena butuh state
-// buka/tutup sendiri.
+// sekadar fungsi render biasa) karena butuh state buka/tutup sendiri.
 //
 // Revisi 28 Agustus 2026 (permintaan langsung pengguna: "aktifkan menu
 // hamburger jika ada page lebih dari satu"): SEBELUMNYA binary Bio<->Toko
@@ -572,27 +538,17 @@ function PageSwitcher({
   );
 }
 
-// renderProductGrid -- grid Produk Halaman Toko. Diangkat jadi satu fungsi
-// bersama (permintaan langsung pengguna, 19 Agustus 2026) sejak grid Produk
-// DIHAPUS dari halaman Bio (lihat catatan di render utama PagePreview) --
-// sekarang cuma satu pemanggil (ProdukPagePreview), jadi tidak lagi
-// terduplikasi dua tempat seperti sebelumnya.
-//
-// Dua perbaikan sekaligus untuk produk isExternalLink (permintaan langsung
-// pengguna yang sama): (1) SELURUH kartu bisa diklik menuju tautan afiliasi
-// (bukan cuma tombol kecil di bawah) -- gambar/nama/harga dibungkus <a>
-// tersendiri, tracking product_click tetap terkirim persis seperti
-// BuyProductButton.handleOpen. (2) Label tombolnya BUKAN "Beli" lagi (tidak
-// pernah ada transaksi lewat Jeon.id untuk produk jenis ini) -- jadi
-// "Lihat Produk ↗", dan dirender sebagai <span> visual di dalam <a> yang
-// sama (BUKAN <button> bersarang di dalam <a>, itu HTML tidak valid).
-// renderSingleProductCard -- ekstrak badan SATU kartu produk dari
-// renderProductGrid (Canvas Page Builder, blok "produk", permintaan
-// langsung pengguna 10 September 2026), APA ADANYA (perilaku IDENTIK,
-// cuma dipindah lokasi) -- dipakai ULANG oleh blok "produk" baru
-// (renderBuilderNode di bawah) supaya kartu satu-produk di lokasi bebas
-// dalam layout PERSIS sama tampilan/perilakunya dengan kartu di grid
-// produk otomatis (Halaman Toko), tanpa duplikasi kode.
+// renderSingleProductCard -- kartu SATU produk (isExternalLink dapat
+// perlakuan khusus: seluruh kartu jadi <a> menuju tautan afiliasi, tombol
+// "Lihat Produk ↗" bukan "Beli" karena tidak pernah ada transaksi lewat
+// Jeon.id untuk produk jenis ini). Dipakai ULANG oleh blok "produk"
+// (renderBuilderNode/renderLinkOrBlock di bawah, lewat PRODUK_LAYOUT_
+// RENDERERS) -- satu-satunya jalan produk tampil di halaman publik sejak
+// grid produk OTOMATIS dihapus total (permintaan langsung pengguna, 15
+// September 2026: "saya mau semua product yang sudah ditambahkan di menu
+// product itu jangan langsung ditampilkan tapi itu data product yang bisa
+// kita tampilkan ketika menambahkan blok produk" -- lihat catatan lengkap
+// di ProdukPagePreview/BuilderPagePreview).
 // renderProductPriceBlock -- diekstrak dari renderSingleProductCard (blok
 // "produk"/harga PWYW/flash-sale/bundle, APA ADANYA) supaya bisa dipakai
 // ULANG oleh renderProductListRow (layout "list", permintaan langsung
@@ -1003,112 +959,6 @@ function renderCountdownAction(
     );
   }
   return undefined;
-}
-
-function renderProductGrid(
-  data: Pick<PagePreviewData, "products" | "productLayout" | "referralCode" | "username" | "pageSlug" | "shopPaused">,
-  theme: PageTheme,
-  canBuy: boolean,
-  selectedCategory: string,
-  onSelectCategory: (c: string) => void
-) {
-  const gridColsClass = data.productLayout === "stacked" || data.productLayout === "list" ? "grid-cols-1" : "grid-cols-2";
-  // categoryLayout -- permintaan langsung pengguna, 20 Agustus 2026: "bagian
-  // produk bisa ga dibuat layout baru di kelompokan seperti ini, misal ada
-  // blok sepatu, baju, celana ketika di klik blok sepatu maka akan muncul
-  // semua product sepatu nya" -- opsi layout KETIGA (di samping grid/stacked
-  // yang sudah ada, lihat migrasi 000072/000073). Sengaja REUSE state
-  // selectedCategory/onSelectCategory yang SUDAH ADA (dipakai renderCategoryTabs
-  // untuk grid/stacked) alih-alih state baru: "Semua" = tampilkan blok
-  // kategori (bukan tab+grid biasa), pilih kategori = drill-down ke grid
-  // produk kategori itu (kode grid di bawah TIDAK berubah sama sekali),
-  // klik tab "Semua" di situ otomatis jadi tombol "kembali" ke blok --
-  // gratis dari renderCategoryTabs yang sudah ada, tanpa tombol back terpisah.
-  const categoryLayout = data.productLayout === "category";
-  const categories = getProductCategories(data.products);
-  const uncategorized = data.products.filter((p) => !p.category || !p.category.trim());
-
-  function trackProductClick(productId: string) {
-    if (data.pageSlug) {
-      trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productId });
-    } else {
-      trackEvent(data.username, { event_type: "product_click", product_id: productId });
-    }
-  }
-
-  if (categoryLayout && selectedCategory === "Semua") {
-    // "Lainnya" -- bucket produk TANPA kategori diisi, supaya tidak
-    // menghilang begitu saja di layout ini (beda dari tab grid/stacked biasa
-    // yang tetap menampilkannya di tab "Semua" -- di sini "Semua" JADI
-    // tampilan blok, jadi produk tanpa kategori butuh blok sendiri).
-    const blocks = [
-      ...categories.map((c) => ({ name: c, items: data.products.filter((p) => p.category?.trim() === c) })),
-      ...(uncategorized.length > 0 ? [{ name: "Lainnya", items: uncategorized }] : []),
-    ];
-    if (blocks.length > 0) {
-      return (
-        <div className={`grid w-full ${gridColsClass} gap-3`}>
-          {blocks.map((b) => {
-            const cover = b.items.find((p) => p.cover_image_url)?.cover_image_url;
-            return (
-              <button
-                key={b.name}
-                type="button"
-                onClick={() => onSelectCategory(b.name)}
-                className={`flex flex-col rounded-xl p-2.5 text-left ${theme.productCard}`}
-              >
-                <div className={`relative mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={cover} alt={b.name} loading="lazy" className="h-full w-full rounded-xl object-cover" />
-                  ) : (
-                    <IconBox className={`h-6 w-6 ${theme.chevron}`} />
-                  )}
-                  <span className={`absolute bottom-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full ${theme.card}`}>
-                    <IconChevronRight className={`h-3 w-3 ${theme.chevron}`} />
-                  </span>
-                </div>
-                <p className={`truncate text-xs font-semibold ${theme.productTitle}`}>{b.name}</p>
-                <p className={`text-[10px] opacity-70 ${theme.productPrice}`}>{b.items.length} produk</p>
-              </button>
-            );
-          })}
-        </div>
-      );
-    }
-  }
-
-  const tabCategories = categoryLayout && uncategorized.length > 0 ? [...categories, "Lainnya"] : categories;
-
-  return (
-    <>
-      {renderCategoryTabs(tabCategories, selectedCategory, onSelectCategory, theme)}
-      <div className={`grid w-full ${gridColsClass} gap-3`}>
-        {data.products
-          .filter((p) =>
-            selectedCategory === "Semua"
-              ? true
-              : // "Lainnya" cuma jadi bucket sentinel produk tanpa kategori
-                // KHUSUS layout "category" (lihat blocks di atas) -- di
-                // grid/stacked, "Lainnya" tetap dibandingkan sebagai nama
-                // kategori LITERAL seperti biasa (kreator mungkin saja
-                // benar-benar menamai kategorinya sendiri "Lainnya").
-                categoryLayout && selectedCategory === "Lainnya"
-              ? !p.category || !p.category.trim()
-              : p.category === selectedCategory
-          )
-          .map((product) =>
-            (data.productLayout === "list" ? renderProductListRow : renderSingleProductCard)(
-              product,
-              theme,
-              canBuy,
-              { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused },
-              trackProductClick
-            )
-          )}
-      </div>
-    </>
-  );
 }
 
 // renderSocialFeed -- Modul Koneksi Sosial (migrasi 000069, permintaan
@@ -1984,11 +1834,10 @@ function renderLinkOrBlock(
   // canBuy -- permintaan langsung pengguna 12 September 2026 ("full
   // parity" mode Simple vs Builder): blok "produk" BARU sekarang bisa
   // muncul di mode Simple juga (lihat cabang blockType "produk" di bawah),
-  // butuh flag yang SAMA PERSIS dipakai renderBuilderNode/renderProductGrid
-  // (Modul Toko Fase E5: toko dijeda -> semua tombol Beli dinonaktifkan
-  // frontend, bukan cuma backend). SEMUA pemanggil lain (text/faq/video/
-  // dst, tidak ada satu pun yang butuh tombol Beli) mengabaikan parameter
-  // ini sepenuhnya.
+  // butuh flag yang SAMA PERSIS dipakai renderBuilderNode (Modul Toko Fase
+  // E5: toko dijeda -> semua tombol Beli dinonaktifkan frontend, bukan
+  // cuma backend). SEMUA pemanggil lain (text/faq/video/dst, tidak ada
+  // satu pun yang butuh tombol Beli) mengabaikan parameter ini sepenuhnya.
   canBuy: boolean,
   // onOpenCatalog -- permintaan langsung pengguna, 25 Agustus 2026: blok
   // "catalog" ("Jenis Rumah" -> daftar jenis -> detail per jenis) TIDAK
@@ -3302,9 +3151,11 @@ export default function PagePreview({
         {/* Grid Produk DIHAPUS dari halaman Bio -- permintaan langsung
             pengguna, 19 Agustus 2026: "jangan tampilkan product di page
             link bio itu khusus dihalaman toko saja". Katalog produk masih
-            dibagi lintas akun seperti biasa (lihat catatan CLAUDE.md),
-            cuma render-nya sekarang KHUSUS ProdukPagePreview (Halaman
-            Toko) -- lihat renderProductGrid di bawah. Pengunjung diarahkan
+            dibagi lintas akun seperti biasa (lihat catatan CLAUDE.md).
+            Susulan 15 September 2026: grid produk OTOMATIS dihapus TOTAL
+            juga dari Halaman Toko (ProdukPagePreview/BuilderPagePreview)
+            -- satu-satunya cara produk tampil di halaman publik mana pun
+            sekarang adalah blok "produk" eksplisit. Pengunjung diarahkan
             ke Toko lewat hamburger nav top-left (lihat renderPageSwitcher)
             begitu akun ini punya produk. */}
 
@@ -4045,11 +3896,10 @@ function renderBuilderNode(
       // tambahkan pilihan layout product nya", lalu "harusnya ada 4
       // pilihan layout" dikonfirmasi via AskUserQuestion: "2 variasi Kartu
       // + 2 variasi Baris") -- "row_no_image" reuse renderProductListRow
-      // APA ADANYA (SAMA PERSIS opsi ke-4 grid produk Halaman Toko, lihat
-      // renderProductGrid). Bawaan "card_large" (undefined jatuh ke sini
-      // juga, termasuk blok lama yang masih pakai nilai "card" sebelum
-      // opsi ini diperluas jadi 4) tetap renderSingleProductCard, TIDAK
-      // ada perubahan perilaku untuk blok yang sudah ada. SATU pilihan
+      // APA ADANYA. Bawaan "card_large" (undefined jatuh ke sini juga,
+      // termasuk blok lama yang masih pakai nilai "card" sebelum opsi ini
+      // diperluas jadi 4) tetap renderSingleProductCard, TIDAK ada
+      // perubahan perilaku untuk blok yang sudah ada. SATU pilihan
       // "layout" berlaku untuk SEMUA produk di blok ini (bukan per-produk).
       // PRODUK_LAYOUT_RENDERERS -- dihoist ke module scope (lihat definisi
       // di atas, dekat renderProductRowWithImage) supaya dipakai bersama
@@ -4248,17 +4098,8 @@ function BuilderPagePreview({
   // itu sama sekali) -- header avatar/nama/bio & banner shopPaused (dua-
   // duanya ADA di Toko juga) dipisah ke `showHeaderChrome`.
   const isBio = data.pageType === "bio" || data.pageType === undefined;
-  const isProduk = data.pageType === "produk";
   const showHeaderChrome = data.pageType !== "landing";
-  // hasProdukBlock -- permintaan langsung pengguna, 13 September 2026:
-  // grid otomatis Halaman Toko (di bawah) jadi fallback begitu Toko punya
-  // minimal satu blok "produk" -- lihat catatan lengkap di titik pemakaian.
-  const hasProdukBlock = isProduk && data.links.some((l) => l.blockType === "produk");
   const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
-  // selectedProductCategory -- HANYA relevan pageType "produk", lihat
-  // catatan lengkap di getProductCategories/renderCategoryTabs (dekat
-  // toPreviewData, atas file ini) & ProdukPagePreview (pola SAMA PERSIS).
-  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
   // catalogView -- bug dilaporkan langsung pengguna, 14 September 2026
   // (screenshot halaman publik: "kenapa blok katalog nya tidak bisa di
   // klik dan menampilkan isinya"). Blok "catalog" akar SENGAJA tidak
@@ -4391,28 +4232,14 @@ function BuilderPagePreview({
           return renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId);
         })}
 
-        {/* Grid produk -- permintaan langsung pengguna 9 September 2026
-            ("buat store page bisa mode builder juga"): pola SAMA PERSIS
-            ProdukPagePreview di bawah (renderProductGrid + state kategori
-            terpilih lokal), cuma pindah lokasi supaya Toko juga bisa masuk
-            mode builder. Katalog produk TETAP dikelola lewat tab Produk
-            terpisah di dashboard (bukan lewat blok di sini) -- ini murni
-            menampilkan produk yang sudah ada, sama seperti mode non-builder.
-            Susulan 13 September 2026 ("jangan tampil langsung di link nya,
-            tapi data produk itu akan bisa dipilih ketika menggunakan blok
-            produk"): grid otomatis ini sekarang FALLBACK -- begitu Toko
-            punya minimal satu blok "produk" (sudah dirender di .map() di
-            atas, lewat renderBuilderNode), grid otomatis berhenti tampil
-            supaya tidak dobel dengan blok yang sudah dikurasi manual. */}
-        {isProduk &&
-          !hasProdukBlock &&
-          (data.products.length > 0 ? (
-            <div className="mt-8 w-full">
-              {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
-            </div>
-          ) : (
-            <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
-          ))}
+        {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15
+            September 2026: "saya mau semua product yang sudah ditambahkan
+            di menu product itu jangan langsung ditampilkan tapi itu data
+            product yang bisa kita tampilkan ketika menambahkan blok
+            produk." Lihat catatan lengkap di ProdukPagePreview (pola
+            identik) -- produk TIDAK PERNAH tampil otomatis lagi di Toko
+            mode builder juga, cuma lewat blok "produk" eksplisit (sudah
+            dirender di .map() di atas, lewat renderBuilderNode). */}
 
         {isBio && data.leadCapture && (
           <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
@@ -4615,12 +4442,6 @@ function ProdukPagePreview({
   onStickersChange?: (stickers: PageStickerData[]) => void;
   hideFooterChrome?: boolean;
 }) {
-  // selectedProductCategory -- lihat catatan lengkap di getProductCategories/
-  // renderCategoryTabs (dekat toPreviewData, atas file ini).
-  const [selectedProductCategory, setSelectedProductCategory] = useState("Semua");
-  // hasProdukBlock -- lihat catatan lengkap di BuilderPagePreview (pola
-  // identik, komponen ini adalah versi non-builder Halaman Toko).
-  const hasProdukBlock = data.links.some((l) => l.blockType === "produk");
   // catalogView -- bug dilaporkan langsung pengguna, 14 September 2026
   // (screenshot Halaman Toko publik: "kenapa blok katalog nya tidak bisa
   // di klik dan menampilkan isinya"). SEBELUMNYA renderLinkOrBlock di sini
@@ -4693,18 +4514,17 @@ function ProdukPagePreview({
           </div>
         )}
 
-        {/* Grid produk otomatis -- FALLBACK sejak 13 September 2026 (lihat
-            catatan lengkap di BuilderPagePreview): begitu Toko punya
-            minimal satu blok "produk" (sudah dirender lewat renderLinkOrBlock
-            di atas), grid ini berhenti tampil supaya tidak dobel. */}
-        {!hasProdukBlock &&
-          (data.products.length > 0 ? (
-            <div className="mt-8 w-full">
-              {renderProductGrid(data, theme, canBuy, selectedProductCategory, setSelectedProductCategory)}
-            </div>
-          ) : (
-            <p className={`mt-8 text-center text-xs ${theme.bio}`}>Belum ada produk untuk ditampilkan.</p>
-          ))}
+        {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15
+            September 2026: "saya mau semua product yang sudah ditambahkan
+            di menu product itu jangan langsung ditampilkan tapi itu data
+            product yang bisa kita tampilkan ketika menambahkan blok
+            produk." Sebelum ini grid otomatis (renderProductGrid, di bawah
+            data.products.length > 0 ? ... : "Belum ada produk untuk
+            ditampilkan") sudah jadi FALLBACK sejak 13 September 2026 --
+            sekarang fallback itu sendiri dihapus: produk TIDAK PERNAH
+            tampil otomatis lagi, satu-satunya cara menampilkan produk di
+            Toko adalah menambahkan blok "produk" secara eksplisit (sudah
+            dirender lewat renderLinkOrBlock di atas). */}
 
         {!hideFooterChrome && (
           <div className="mt-auto flex flex-col items-center gap-3 pt-10">
