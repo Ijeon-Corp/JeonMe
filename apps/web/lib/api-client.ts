@@ -2186,12 +2186,18 @@ export interface OrderListItem {
   refunded_at: string | null;
 }
 
-export function listOrders(filters?: { status?: string; search?: string }) {
+// offset -- ditambahkan lewat audit performa profesional 15 September
+// 2026: backend sebelumnya "LIMIT 200" tetap tanpa cara mencapai halaman
+// berikutnya sama sekali -- sekarang menerima limit/offset sungguhan,
+// has_more dikembalikan supaya UI (TransactionPanel.tsx) tahu kapan masih
+// ada baris lebih lama yang belum dimuat.
+export function listOrders(filters?: { status?: string; search?: string; offset?: number }) {
   const params = new URLSearchParams();
   if (filters?.status) params.set("status", filters.status);
   if (filters?.search) params.set("search", filters.search);
+  if (filters?.offset) params.set("offset", String(filters.offset));
   const qs = params.toString();
-  return apiFetch<{ orders: OrderListItem[] }>(`/dashboard/orders${qs ? `?${qs}` : ""}`, { method: "GET" }, { auth: true });
+  return apiFetch<{ orders: OrderListItem[]; has_more: boolean }>(`/dashboard/orders${qs ? `?${qs}` : ""}`, { method: "GET" }, { auth: true });
 }
 
 export interface OrderLedgerEntry {
@@ -2551,11 +2557,16 @@ export interface MyOrderSummary {
   creator_username: string;
 }
 
-export function listMyOrders(email: string, verificationToken: string) {
-  return apiFetch<{ orders: MyOrderSummary[] }>(
-    `/orders/mine?email=${encodeURIComponent(email)}&verification_token=${encodeURIComponent(verificationToken)}`,
-    { method: "GET" }
-  );
+// offset -- ditambahkan lewat audit performa profesional 15 September
+// 2026: sebelumnya endpoint ini mengambil SEMUA order milik satu email
+// tanpa batas & tanpa index (lihat migrasi 000099_orders_buyer_email_index)
+// -- sekarang limit/offset sungguhan, has_more dikembalikan supaya
+// app/pembelian/page.tsx tahu kapan masih ada order lebih lama yang belum
+// dimuat.
+export function listMyOrders(email: string, verificationToken: string, offset = 0) {
+  const params = new URLSearchParams({ email, verification_token: verificationToken });
+  if (offset) params.set("offset", String(offset));
+  return apiFetch<{ orders: MyOrderSummary[]; has_more: boolean }>(`/orders/mine?${params.toString()}`, { method: "GET" });
 }
 
 // ---------- Dashboard: kartu kontak digital (Sprint 13, No.95) ----------

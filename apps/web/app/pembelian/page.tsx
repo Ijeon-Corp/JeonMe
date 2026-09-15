@@ -81,6 +81,16 @@ export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<MyOrderSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // sessionToken/hasMore/loadingMore -- ditambahkan lewat audit performa
+  // profesional 15 September 2026: sebelumnya endpoint /orders/mine
+  // mengambil SEMUA order tanpa batas & tanpa index sama sekali (lihat
+  // migrasi 000099_orders_buyer_email_index) -- sekarang limit/offset
+  // sungguhan, token sesi disimpan di state (bukan cuma dipakai sekali
+  // saat load pertama) supaya tombol "Muat lebih banyak" bisa memanggil
+  // ulang endpoint yang sama dgn offset bertambah.
+  const [sessionToken, setSessionToken] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // loadOrders -- SENGAJA men-setState email/token JUGA di sini (bukan di
   // pemanggil), supaya efek pemulihan sesi tersimpan di bawah bisa
@@ -90,13 +100,15 @@ export default function OrderHistoryPage() {
   // efek; panggilan ke fungsi async terpisah seperti ini TIDAK terjaring
   // aturan itu karena setState-nya baru terjadi setelah `await`, bukan
   // sinkron di badan efek).
-  async function loadOrders(sessionEmail: string, sessionToken: string) {
+  async function loadOrders(sessionEmail: string, token: string) {
     setEmail(sessionEmail);
+    setSessionToken(token);
     setLoading(true);
     setError(null);
     try {
-      const res = await listMyOrders(sessionEmail, sessionToken);
+      const res = await listMyOrders(sessionEmail, token);
       setOrders(res.orders);
+      setHasMore(res.has_more);
       setStep("list");
     } catch (err) {
       clearStoredSession();
@@ -105,6 +117,18 @@ export default function OrderHistoryPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleLoadMoreOrders() {
+    if (!orders) return;
+    setLoadingMore(true);
+    listMyOrders(email, sessionToken, orders.length)
+      .then((res) => {
+        setOrders((prev) => [...(prev ?? []), ...res.orders]);
+        setHasMore(res.has_more);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Gagal memuat pembelian lebih lanjut."))
+      .finally(() => setLoadingMore(false));
   }
 
   // Sesi tersimpan (kunjungan sebelumnya, masih dalam tab yang sama) --
@@ -124,7 +148,9 @@ export default function OrderHistoryPage() {
       .then((res) => {
         if (cancelled) return;
         setEmail(stored.email);
+        setSessionToken(stored.token);
         setOrders(res.orders);
+        setHasMore(res.has_more);
         setStep("list");
       })
       .catch((err) => {
@@ -280,6 +306,16 @@ export default function OrderHistoryPage() {
                   <IconChevronRight className="h-4 w-4 flex-shrink-0 text-app-muted" />
                 </Link>
               ))}
+            {!loading && hasMore && (
+              <button
+                type="button"
+                disabled={loadingMore}
+                onClick={handleLoadMoreOrders}
+                className="rounded-lg border border-border py-2 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-60"
+              >
+                {loadingMore ? "Memuat..." : "Muat lebih banyak"}
+              </button>
+            )}
             {error && <p className="text-xs text-red-600">{error}</p>}
             <button type="button" onClick={handleUseDifferentEmail} className="mt-1 text-xs font-semibold text-app-muted hover:text-app-ink">
               Bukan kamu? Ganti email

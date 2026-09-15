@@ -36,6 +36,14 @@ export default function TransactionPanel() {
   // Chips status + detail right sheet (SPEC §13.6, Phase 5). Data/mutasi
   // (listOrders/getOrderDetail/refundOrder) tak berubah.
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
+  // hasMore/loadingMore -- ditambahkan lewat audit performa profesional 15
+  // September 2026: backend sebelumnya "LIMIT 200" tetap tanpa cara
+  // mencapai baris yang lebih lama -- sekarang paginasi sungguhan lewat
+  // offset, tombol "Muat lebih banyak" MENAMBAHKAN ke daftar yang sudah
+  // ada (bukan mengganti), konsisten dgn ekspektasi pengguna soal daftar
+  // yang bertambah panjang, bukan berpindah halaman.
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
   const [statusFilter, setStatusFilter] = useState("");
@@ -45,7 +53,10 @@ export default function TransactionPanel() {
 
   useEffect(() => {
     listOrders({ status: statusFilter || undefined, search: search || undefined })
-      .then((r) => setOrders(r.orders))
+      .then((r) => {
+        setOrders(r.orders);
+        setHasMore(r.has_more);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.loadError")));
     // Bug ditemukan 13 September 2026 (laporan pengguna: "diseluruh menu
     // sales" fetch dobel): `t` di sini CUMA dipakai memformat pesan error
@@ -65,8 +76,23 @@ export default function TransactionPanel() {
   function handleRefunded() {
     setSelectedOrderId(null);
     listOrders({ status: statusFilter || undefined, search: search || undefined })
-      .then((r) => setOrders(r.orders))
+      .then((r) => {
+        setOrders(r.orders);
+        setHasMore(r.has_more);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.loadError")));
+  }
+
+  function handleLoadMore() {
+    if (!orders) return;
+    setLoadingMore(true);
+    listOrders({ status: statusFilter || undefined, search: search || undefined, offset: orders.length })
+      .then((r) => {
+        setOrders((prev) => [...(prev ?? []), ...r.orders]);
+        setHasMore(r.has_more);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.transactionPanel.loadError")))
+      .finally(() => setLoadingMore(false));
   }
 
   return (
@@ -147,6 +173,18 @@ export default function TransactionPanel() {
             <div className="flex flex-col items-center gap-2 p-6 text-center">
               <IconInbox className="h-5 w-5 text-app-muted" />
               <p className="text-xs text-app-muted">{t("dashboard.components.transactionPanel.emptyState")}</p>
+            </div>
+          )}
+          {hasMore && (
+            <div className="flex justify-center border-t border-app-border p-3">
+              <button
+                type="button"
+                disabled={loadingMore}
+                onClick={handleLoadMore}
+                className="rounded-lg border-2 border-jeon-ink px-4 py-1.5 text-xs font-semibold text-app-ink hover:border-jeon-purple disabled:opacity-60"
+              >
+                {loadingMore ? t("dashboard.components.transactionPanel.loadingMore") : t("dashboard.components.transactionPanel.loadMore")}
+              </button>
             </div>
           )}
         </div>
