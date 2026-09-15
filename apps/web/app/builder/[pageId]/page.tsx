@@ -53,7 +53,7 @@ import { useToast } from "@/components/Toast";
 import { IconChevronRight, IconPencil } from "@/components/icons";
 import BuilderLeftPanel, { type BuilderDesignSection } from "@/components/BuilderLeftPanel";
 import BuilderCanvas, { BUILDER_DEVICE_WIDTHS, type BuilderDeviceWidth } from "@/components/BuilderCanvas";
-import type { DesignSectionPage, DesignSectionPatch, ProductLayoutValue } from "@/components/dashboard/page/design-sections";
+import type { DesignSectionPage, DesignSectionPatch } from "@/components/dashboard/page/design-sections";
 
 // TYPE_LABEL_KEY -- SATU-SATUNYA pemakaian tersisa di rute ini: label root
 // baru begitu ditambahkan lewat "Tambah Komponen" di ROOT (target null),
@@ -904,17 +904,6 @@ export default function BuilderPage() {
   function handleStickersChange(stickers: PageStickerData[]) {
     setPage((prev) => (prev ? { ...prev, stickers } : prev));
   }
-  // handleProductLayoutChange -- permintaan langsung pengguna 11 September
-  // 2026 ("mode simple dan builder untuk produk langsung sediakan pilihan
-  // layoutnya"): draft-only sama seperti handlePatch di atas, TERPISAH
-  // darinya (bukan DesignSectionPatch) karena `product_layout` SENGAJA
-  // bukan bagian DesignSectionPage (field ini cuma relevan utk halaman
-  // Toko, lihat catatan lengkap di ProductLayoutSection, design-sections.tsx)
-  // -- disertakan ke server lewat extractPageDesignPatch di commitSave.
-  function handleProductLayoutChange(value: ProductLayoutValue) {
-    setPage((prev) => (prev ? { ...prev, product_layout: value } : prev));
-  }
-
   const selectedNodeId = useMemo(() => {
     if (!selection || selection.kind !== "block") return undefined;
     if (selection.path.length === 0) return selection.rootId;
@@ -1286,9 +1275,6 @@ export default function BuilderPage() {
           onDesignSectionChange={setDesignSection}
           products={products}
           onProductCreated={(p) => setProducts((prev) => [...prev, p])}
-          pageType={extraPageType}
-          productLayout={page.product_layout}
-          onProductLayoutChange={handleProductLayoutChange}
         />
         <BuilderCanvas
           page={page}

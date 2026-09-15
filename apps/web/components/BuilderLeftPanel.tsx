@@ -82,12 +82,10 @@ import { ListItemsEditor, toDatetimeLocalValue } from "@/components/dashboard/pa
 import {
   FontSection,
   HeaderSection,
-  ProductLayoutSection,
   TemaSection,
   TombolSection,
   type DesignSectionPage,
   type DesignSectionPatch,
-  type ProductLayoutValue,
 } from "@/components/dashboard/page/design-sections";
 
 // BuilderDesignSection -- 5 sub-tab Design di dalam builder (permintaan
@@ -1843,9 +1841,6 @@ export default function BuilderLeftPanel({
   onDesignSectionChange,
   products,
   onProductCreated,
-  pageType,
-  productLayout,
-  onProductLayoutChange,
 }: {
   links: LinkItem[];
   // selection/onSelectionChange -- dinaikkan ke rute builder (permintaan
@@ -1919,15 +1914,6 @@ export default function BuilderLeftPanel({
   // kebenaran, ini cuma menambal state lokal biar konsisten tanpa refetch).
   products: DashboardProduct[];
   onProductCreated: (product: DashboardProduct) => void;
-  // pageType/productLayout/onProductLayoutChange -- Tata Letak Produk
-  // langsung di Builder (permintaan langsung pengguna 11 September 2026:
-  // "mode simple dan builder untuk produk langsung sediakan pilihan
-  // layoutnya"), dirender di tab "settings" HANYA saat pageType==="produk"
-  // (lihat catatan lengkap di situ). `onProductLayoutChange` OPSIONAL --
-  // pemanggil non-produk (Bio) boleh tidak mengisinya sama sekali.
-  pageType?: "bio" | "landing" | "produk";
-  productLayout?: ProductLayoutValue;
-  onProductLayoutChange?: (value: ProductLayoutValue) => void;
 }) {
   const { t } = useLocale();
   const [tab, setTab] = useState<"content" | "design" | "settings">("content");
@@ -2191,21 +2177,6 @@ export default function BuilderLeftPanel({
 
       {tab === "settings" && (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-          {/* ProductLayoutSection -- permintaan langsung pengguna 11
-              September 2026 ("mode simple dan builder untuk produk
-              langsung sediakan pilihan layoutnya"): SEBELUMNYA picker ini
-              cuma ada di ProdukPageEditor.tsx (mode klasik) -- kreator yang
-              sedang di rute Builder harus keluar dulu ke dashboard Produk
-              untuk mengubahnya. Cuma relevan utk halaman Toko (`pageType
-              === "produk"`), Bio TIDAK PERNAH merender grid produk sama
-              sekali. Draft-only sama seperti Tema/Header/dst di tab
-              "design" -- baru benar-benar tersimpan saat "Simpan" ditekan
-              (lihat extractPageDesignPatch, app/builder/[pageId]/page.tsx). */}
-          {pageType === "produk" && onProductLayoutChange && (
-            <div className="glass mb-4 rounded-jmd p-4 shadow-card">
-              <ProductLayoutSection productLayout={productLayout} onChange={onProductLayoutChange} />
-            </div>
-          )}
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <IconSettings className="h-6 w-6 text-app-muted" />
             <p className="text-xs text-app-muted">{t("dashboard.pages.linksBuilder.settingsPlaceholder")}</p>

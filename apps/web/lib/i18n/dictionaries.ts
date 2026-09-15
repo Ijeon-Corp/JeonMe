@@ -2522,14 +2522,6 @@ export const dictionaries = {
           notPublished: "Belum terbit",
           publishToggle: "Terbitkan halaman Toko",
           hideWatermark: "Sembunyikan watermark",
-          productLayout: {
-            title: "Tata Letak Produk",
-            grid: "Grid 2 Kolom",
-            stacked: "1 Kolom Penuh",
-            category: "Blok Kategori",
-            categoryHint: "Pengunjung melihat blok kategori dulu (mis. Sepatu, Baju, Celana) -- klik satu blok untuk lihat semua produk di kategori itu. Pastikan produkmu sudah diberi kategori lewat menu Kelola supaya masuk ke blok yang tepat.",
-            list: "Baris Penuh Tanpa Gambar",
-          },
           designTabs: {
             blok: "Blok & Tautan",
             tema: "Tema",
@@ -5614,14 +5606,6 @@ export const dictionaries = {
           notPublished: "Not published",
           publishToggle: "Publish the Store Page",
           hideWatermark: "Hide watermark",
-          productLayout: {
-            title: "Product Layout",
-            grid: "2-Column Grid",
-            stacked: "1 Full Column",
-            category: "Category Blocks",
-            categoryHint: "Visitors see category blocks first (e.g. Shoes, Shirts, Pants) -- clicking a block shows all products in that category. Make sure your products already have a category set via the Manage menu so they land in the right block.",
-            list: "Full Row, No Image",
-          },
           designTabs: {
             blok: "Blocks & Links",
             tema: "Theme",
