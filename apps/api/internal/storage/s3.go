@@ -99,9 +99,46 @@ func (c *Client) PublicURL(key string) string {
 // (biasanya "products/<product_id>/<nama_file>"). Bukan presigned PUT dari
 // browser langsung -- file mengalir lewat API (proxy upload) supaya validasi
 // tipe/ukuran (REQ-F-302) bisa dilakukan di satu tempat sebelum sampai ke storage.
+//
+// CacheControl "public, max-age=31536000, immutable" -- audit performa 15
+// September 2026: sebelumnya TIDAK ada Cache-Control sama sekali, jadi
+// browser/CDN selalu revalidate/re-fetch setiap kunjungan ulang untuk
+// SEMUA aset kreator (avatar, sampul produk, gambar katalog/galeri, ikon
+// link, thumbnail, background kartu nama, dll). Aman diset "immutable"
+// untuk SEMUA pemanggil karena sudah diverifikasi satu per satu (grep
+// ".Upload(" di internal/handlers/*.go & internal/worker/*.go) bahwa
+// SETIAP key yang ditulis lewat Upload mengikuti salah satu dari dua pola
+// berikut, yang sama-sama membuat isi di balik satu URL TIDAK PERNAH
+// berubah setelah dibuat:
+//  1. Key deterministik ("avatars/<userID>.webp", "covers/<productID>.webp",
+//     dst) yang URL publiknya SELALU ditempeli "?v=<timestamp>" yang dibuat
+//     SEKALI saat upload lalu disimpan ke kolom DB (lihat komentar panjang
+//     di UploadAvatar/page.go & UploadCoverImage/product.go) -- unggah ulang
+//     menghasilkan URL BARU, URL lama tidak pernah dipakai lagi.
+//  2. Key yang mengandung UUID acak (gallery-images/, catalog-images/) atau
+//     ETag file asli (watermarked/<order>/<etag>/... di checkout.go) --
+//     re-generate otomatis menghasilkan key baru, key lama tidak pernah
+//     ditimpa.
+//
+// Dua kasus lain yang TIDAK cocok persis dengan pola di atas tapi tetap aman
+// dengan alasan berbeda: (a) file produk digital mentah ("products/<id>/
+// <nama_file>", product.go UploadFile) key-nya memang deterministik dan BISA
+// ditimpa saat kreator unggah ulang file dengan nama sama -- tapi prefix
+// "products" SENGAJA tidak dibuat publik (lihat EnsurePublicRead di atas),
+// jadi satu-satunya jalan akses adalah PresignedDownloadURL yang di-generate
+// ULANG setiap kali (signature+expiry unik per panggilan), bukan URL publik
+// permanen yang di-cache lintas kunjungan. (b) dokumen KYC (kyc.go) juga
+// key deterministik yang bisa ditimpa saat pengajuan ulang, tapi juga HANYA
+// pernah diserahkan lewat presigned URL yang dibuat ulang tiap kali admin
+// membuka halaman review (lihat kyc.go GetForReview), bukan URL tersimpan.
+// Kalau di masa depan ada pemanggil BARU yang menimpa key stabil DAN
+// mengekspos key itu sebagai PublicURL tanpa query cache-buster, "immutable"
+// di sini akan salah untuknya -- jangan tambahkan pemanggil seperti itu
+// tanpa meninjau ulang komentar ini.
 func (c *Client) Upload(ctx context.Context, key string, reader io.Reader, size int64, contentType string) error {
 	_, err := c.mc.PutObject(ctx, c.Bucket, key, reader, size, minio.PutObjectOptions{
-		ContentType: contentType,
+		ContentType:  contentType,
+		CacheControl: "public, max-age=31536000, immutable",
 	})
 	if err != nil {
 		return fmt.Errorf("gagal unggah file: %w", err)
