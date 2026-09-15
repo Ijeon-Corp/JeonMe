@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -364,10 +365,26 @@ func TestCheckoutReconcilePendingOrders_MarksPaidFromMidtransStatus(t *testing.T
 	if err != nil {
 		t.Fatalf("gagal setup order test: %v", err)
 	}
+	t.Cleanup(func() { _, _ = checkout.DB.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, orderID) })
 
+	// Regresi flake (audit performa profesional 15 September 2026): DB test
+	// ini SATU sungguhan dibagi SELURUH suite (bukan diisolasi per-test),
+	// jadi order 'pending' & tua milik test LAIN yang kebetulan belum
+	// dibersihkan (atau berjalan ke sini duluan) BISA IKUT tersapu
+	// ReconcilePendingOrders (query-nya scan SELURUH tabel orders, memang
+	// disengaja begitu -- lihat catatan lengkap di fungsinya). SEBELUMNYA
+	// mock server ini men-`t.Errorf` utk path APA PUN selain milik order
+	// test ini sendiri, jadi kena polusi order lain langsung menggagalkan
+	// test ini -- padahal order test ini SENDIRI tetap benar diproses.
+	// Sekarang: cuma path order test ini yang dibalas sukses, path
+	// LAINNYA dibalas 404 (persis respons Midtrans sungguhan utk order_id
+	// yang tidak dikenal) supaya ReconcilePendingOrders men-skip via
+	// `continue` yang sama seperti alur produksi, bukan bikin test ini gagal.
 	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v2/"+externalID+"/status" {
-			t.Errorf("path tidak diharapkan: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"status_code":"404","status_message":"Transaction doesn't exist."}`))
+			return
 		}
 		_ = json.NewEncoder(w).Encode(midtrans.TransactionStatusResponse{
 			OrderID:           externalID,
@@ -418,10 +435,24 @@ func TestCheckoutReconcilePendingOrders_SkipsRecentOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("gagal setup order test: %v", err)
 	}
+	t.Cleanup(func() { _, _ = checkout.DB.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, orderID) })
 
-	called := false
+	// Regresi flake (audit performa profesional 15 September 2026, lihat
+	// catatan lengkap di TestCheckoutReconcilePendingOrders_MarksPaidFromMidtransStatus):
+	// server mock ini SEBELUMNYA menandai `called=true` utk PATH APA PUN,
+	// jadi order 'pending' & tua milik test LAIN (DB dibagi seluruh suite,
+	// ReconcilePendingOrders scan SELURUH tabel orders dgn sengaja) yang
+	// ikut tersapu bisa membuat `called` true walau order test INI SENDIRI
+	// (created_at = now(), semestinya dilewati) memang tidak pernah dicek --
+	// sinyal yang salah. Sekarang dilacak SPESIFIK utk path order test ini.
+	calledForThisOrder := false
 	statusServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
+		if r.URL.Path != "/v2/"+externalID+"/status" {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"status_code":"404","status_message":"Transaction doesn't exist."}`))
+			return
+		}
+		calledForThisOrder = true
 		_ = json.NewEncoder(w).Encode(midtrans.TransactionStatusResponse{OrderID: externalID, TransactionStatus: "settlement"})
 	}))
 	defer statusServer.Close()
@@ -429,7 +460,7 @@ func TestCheckoutReconcilePendingOrders_SkipsRecentOrder(t *testing.T) {
 
 	checkout.ReconcilePendingOrders(t.Context())
 
-	if called {
+	if calledForThisOrder {
 		t.Fatalf("GetTransactionStatus terpanggil utk order yang masih baru (< 5 menit) -- seharusnya dilewati dulu")
 	}
 
