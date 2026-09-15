@@ -596,8 +596,6 @@ export interface PublicPage {
   // langsung pengguna: "tambahkan jadi total 15 layout"). Lihat
   // renderBioHeader di PagePreview.tsx.
   layout_variant: PageLayoutVariant;
-  // product_layout -- lihat catatan lengkap di ExtraPageDetail.
-  product_layout: "grid" | "stacked" | "category" | "list";
   // builder_mode -- Canvas Page Builder (migrasi 000096, permintaan
   // langsung pengguna 7 September 2026, dua screenshot Lynk.id): mode
   // edit KEDUA bergaya kanvas Section/Column freeform, hidup berdampingan
@@ -885,13 +883,6 @@ export interface MyPage {
   // yang MEMANG punya field ini (lihat ExtraPageDetail). undefined di sini
   // selalu dibaca setara true.
   show_profile_header?: boolean;
-  // product_layout -- OPSIONAL, sama alasannya dengan show_profile_header
-  // di atas: halaman utama TIDAK PERNAH merender grid produk (lihat
-  // PagePreview.tsx) & GetMyPage sungguhan tidak pernah mengirim field ini,
-  // tapi rute Builder (app/builder/[pageId]/page.tsx) men-shim ExtraPageDetail
-  // (yang MEMANG punya field ini) jadi bentuk MyPage supaya satu state
-  // `page` bisa dipakai untuk halaman utama MAUPUN halaman tambahan/Toko.
-  product_layout?: "grid" | "stacked" | "category" | "list";
   verification: {
     email_verified: boolean;
     profile_complete: boolean;
@@ -1706,12 +1697,6 @@ export interface ExtraPageDetail extends Omit<MyPage, "username"> {
   // (bukan opsional) -- GetPage/UpdatePage SELALU mengembalikannya untuk
   // halaman tambahan, beda dari MyPage yang cuma optional demi shim.
   show_profile_header: boolean;
-  // product_layout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
-  // pilihan dua tipe layout product" -- cuma relevan untuk page_type=
-  // "produk" (Toko), TIDAK ada di MyPage (grid Produk dihapus dari halaman
-  // Bio, lihat PagePreview.tsx) makanya field ini ditambah di sini, bukan
-  // di-Pick dari MyPage seperti field lain di interface ini.
-  product_layout: "grid" | "stacked" | "category" | "list";
 }
 
 export function getExtraPage(id: string) {
@@ -1787,10 +1772,6 @@ export function updateExtraPage(
     {
       name: string;
       slug: string;
-      // product_layout -- lihat catatan lengkap di ExtraPageDetail (tidak
-      // bisa di-Pick dari MyPage seperti field lain di bawah, MyPage tidak
-      // punya field ini sama sekali).
-      product_layout: "grid" | "stacked" | "category" | "list";
     } & Pick<
       MyPage,
       | "theme"

@@ -212,17 +212,7 @@ type publicPageResponse struct {
 	// dalam kolom -- beda dari "hero" yang bleed penuh ke tepi bingkai).
 	// Lihat renderBioHeader di PagePreview.tsx untuk kelima belasnya, &
 	// quick-setup-templates.ts untuk pemetaan kategori->varian terbaru.
-	LayoutVariant string `json:"layout_variant"`
-	// ProductLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
-	// pilihan dua tipe layout product" -- 'grid' (2 kolom, bawaan) atau
-	// 'stacked' (1 kolom penuh lebar). Cuma relevan untuk page_type='produk'
-	// (frontend TIDAK LAGI merender grid Produk di halaman Bio sama sekali,
-	// lihat ProdukPagePreview vs PagePreview di PagePreview.tsx) -- tetap
-	// diekspos di sini juga (bukan cuma di GetPage/GetPublicPageBySlug versi
-	// produk) supaya query/struct publicPageResponse yang dipakai bersama
-	// GetPublicPage & GetPublicPageBySlug tidak perlu bercabang, sama
-	// seperti LayoutVariant di atas.
-	ProductLayout string             `json:"product_layout"`
+	LayoutVariant string             `json:"layout_variant"`
 	Links         []publicLink       `json:"links"`
 	Products      []publicItem       `json:"products"`
 	Donation      *publicDonation    `json:"donation"`
@@ -471,7 +461,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 			p.hide_watermark,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant, p.product_layout, p.builder_mode,
+			p.layout_variant, p.builder_mode,
 			u.email_verified_at IS NOT NULL
 		FROM users u
 		JOIN pages p ON p.user_id = u.id
@@ -486,7 +476,7 @@ func (h *PageHandler) GetPublicPage(c *gin.Context) {
 		&resp.HideWatermark,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.ProductLayout, &resp.BuilderMode,
+		&resp.LayoutVariant, &resp.BuilderMode,
 		&emailVerified)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
@@ -585,7 +575,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 			p.hide_watermark, p.show_profile_header,
 			p.social_instagram, p.social_tiktok, p.social_facebook, p.social_whatsapp, p.social_youtube,
 			p.social_x, p.social_linkedin, p.social_telegram, p.social_email, p.social_github, p.social_website,
-			p.layout_variant, p.product_layout,
+			p.layout_variant,
 			u.email_verified_at IS NOT NULL, p.page_type
 		FROM pages p JOIN users u ON u.id = p.user_id
 		WHERE u.username = $1 AND p.slug = $2 AND p.is_published = true
@@ -599,7 +589,7 @@ func (h *PageHandler) GetPublicPageBySlug(c *gin.Context) {
 		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.ProductLayout,
+		&resp.LayoutVariant,
 		&emailVerified, &resp.PageType)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -2244,9 +2234,7 @@ type extraPageDetailResponse struct {
 	SocialEmail       string `json:"social_email"`
 	SocialGithub      string `json:"social_github"`
 	SocialWebsite     string `json:"social_website"`
-	LayoutVariant     string `json:"layout_variant"`
-	// ProductLayout -- lihat catatan lengkap di publicPageResponse.
-	ProductLayout string `json:"product_layout"`
+	LayoutVariant string `json:"layout_variant"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse (migrasi
 	// 000096). Berlaku utk SEMUA page_type termasuk "produk" (Toko) sejak
 	// 9 September 2026 -- lihat catatan lengkap di BuilderPagePreview,
@@ -2282,7 +2270,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 			hide_watermark, show_profile_header,
 			social_instagram, social_tiktok, social_facebook, social_whatsapp, social_youtube,
 			social_x, social_linkedin, social_telegram, social_email, social_github, social_website,
-			layout_variant, product_layout, builder_mode
+			layout_variant, builder_mode
 		FROM pages WHERE id = $1 AND user_id = $2 AND is_primary = false
 	`, pageID, userID).Scan(&resp.ID, &resp.Name, &resp.Slug, &resp.PageType, &resp.DisplayName, &resp.Bio, &resp.AvatarURL, &resp.Theme, &resp.IsPublished,
 		&resp.SeoTitle, &resp.SeoDescription, &resp.Noindex,
@@ -2292,7 +2280,7 @@ func (h *PageHandler) GetPage(c *gin.Context) {
 		&resp.HideWatermark, &resp.ShowProfileHeader,
 		&resp.SocialInstagram, &resp.SocialTiktok, &resp.SocialFacebook, &resp.SocialWhatsapp, &resp.SocialYoutube,
 		&resp.SocialX, &resp.SocialLinkedin, &resp.SocialTelegram, &resp.SocialEmail, &resp.SocialGithub, &resp.SocialWebsite,
-		&resp.LayoutVariant, &resp.ProductLayout, &resp.BuilderMode)
+		&resp.LayoutVariant, &resp.BuilderMode)
 	if err == nil {
 		_ = json.Unmarshal(stickersRaw, &resp.Stickers)
 	}
@@ -2351,14 +2339,6 @@ type updateExtraPageRequest struct {
 	SocialGithub      *string `json:"social_github" binding:"omitempty,max=255"`
 	SocialWebsite     *string `json:"social_website" binding:"omitempty,max=255"`
 	LayoutVariant     *string `json:"layout_variant" binding:"omitempty,oneof=centered banner card spotlight cover minimal hero polaroid split ticket headline ribbon duo masthead portrait"`
-	// ProductLayout -- lihat catatan lengkap di publicPageResponse
-	// (page.go) & renderProductGrid (PagePreview.tsx). "category" -- susulan
-	// 20 Agustus 2026: "bagian produk bisa ga dibuat layout baru di
-	// kelompokan seperti ini" -- blok kategori, klik untuk drill-down.
-	// "list" -- permintaan langsung pengguna, 11 September 2026: "tambahkan
-	// tipe layout 1 lagi yaitu 1 baris blok penuh tanpa gambar" -- kartu
-	// produk full-width TANPA cover, cocok untuk daftar padat/banyak item.
-	ProductLayout *string `json:"product_layout" binding:"omitempty,oneof=grid stacked category list"`
 	// BuilderMode -- lihat catatan lengkap di myPageResponse/updatePageRequest
 	// (migrasi 000096). Halaman tambahan BISA page_type='produk' (Toko) --
 	// SEMPAT dikecualikan dari mode builder saat Fase 1-3 (produk/katalog
@@ -2469,9 +2449,8 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 			social_github = COALESCE($33, social_github),
 			social_website = COALESCE($34, social_website),
 			layout_variant = COALESCE($35, layout_variant),
-			product_layout = COALESCE($36, product_layout),
-			builder_mode = COALESCE($37, builder_mode)
-		WHERE id = $38 AND user_id = $39 AND is_primary = false
+			builder_mode = COALESCE($36, builder_mode)
+		WHERE id = $37 AND user_id = $38 AND is_primary = false
 	`, req.Name, slug, req.Theme, req.DisplayName, req.Bio, req.IsPublished, req.SeoTitle, req.SeoDescription, req.Noindex,
 		req.CustomBackgroundType, req.CustomBackgroundValue, req.CustomFont, req.CustomButtonColor, req.CustomButtonStyle,
 		req.CustomButtonRounded, req.CustomButtonShadow, req.CustomButtonTextColor,
@@ -2479,7 +2458,7 @@ func (h *PageHandler) UpdatePage(c *gin.Context) {
 		req.HideWatermark, req.ShowProfileHeader,
 		req.SocialInstagram, req.SocialTiktok, req.SocialFacebook, req.SocialWhatsapp, req.SocialYoutube,
 		req.SocialX, req.SocialLinkedin, req.SocialTelegram, req.SocialEmail,
-		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.ProductLayout, req.BuilderMode,
+		req.SocialGithub, req.SocialWebsite, req.LayoutVariant, req.BuilderMode,
 		pageID, userID)
 	if err != nil {
 		if isUniqueViolation(err) {

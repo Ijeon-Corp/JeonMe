@@ -265,16 +265,6 @@ export interface PagePreviewData {
   hideWatermark?: boolean;
   links: PagePreviewLink[];
   products: PagePreviewProduct[];
-  // productLayout -- permintaan langsung pengguna, 19 Agustus 2026: "buat
-  // pilihan dua tipe layout product" -- dulu dipakai grid Produk otomatis
-  // Halaman Toko (renderProductGrid), yang sudah DIHAPUS TOTAL 15
-  // September 2026 (lihat catatan lengkap di ProdukPagePreview/
-  // BuilderPagePreview: "layout dipilih di blok produk saja" -- masing-
-  // masing blok "produk" punya opsi layoutnya sendiri, PRODUK_LAYOUT_
-  // RENDERERS). Field ini masih ada murni krn masih bisa diatur lewat
-  // Builder Left Panel (tab Settings, `pageType === "produk"`) -- TIDAK
-  // dibaca oleh render mana pun lagi saat ini.
-  productLayout?: "grid" | "stacked" | "category" | "list";
   events?: PagePreviewEvent[];
   // No.94 (Sprint 13): cuma penanda ada/tidaknya program poin -- saldo
   // poin pengunjung dicek terpisah lewat LoyaltyPointsWidget (butuh email).
@@ -441,7 +431,6 @@ export interface PreviewSourcePage {
     | "duo"
     | "masthead"
     | "portrait";
-  product_layout?: "grid" | "stacked" | "category" | "list";
   // builder_mode -- lihat catatan lengkap di PagePreviewData.builderMode.
   builder_mode?: "simple" | "builder";
 }

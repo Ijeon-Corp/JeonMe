@@ -126,12 +126,6 @@ function extractPageDesignPatch(p: MyPage): Partial<MyPage> {
     social_linkedin: p.social_linkedin,
     social_telegram: p.social_telegram,
     social_email: p.social_email,
-    // product_layout -- permintaan langsung pengguna 11 September 2026
-    // ("mode simple dan builder untuk produk langsung sediakan pilihan
-    // layoutnya"): ikut satu PATCH "Halaman" yang sama dgn tema/header/dst
-    // (lihat commitSave langkah 5) -- untuk halaman Bio field ini SELALU
-    // undefined (lihat catatan lengkap di MyPage.product_layout, api-client.ts).
-    product_layout: p.product_layout,
   };
 }
 

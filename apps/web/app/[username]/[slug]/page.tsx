@@ -215,7 +215,6 @@ export default async function ExtraBioPage({ params, searchParams }: PageParams)
             website: page.social_website,
           },
           layoutVariant: page.layout_variant,
-          productLayout: page.product_layout,
           builderMode: page.builder_mode,
           utmEnabled: page.analytics?.utm_enabled ?? false,
         }}
