@@ -367,12 +367,20 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
+	// SELECT ini HANYA mengecek eksistensi laporan (buat mengambil
+	// target_type/target_id, dibutuhkan utk tahu tabel mana yang diupdate
+	// di bawah) -- TIDAK IKUT menggerbang status "pending" (audit keamanan
+	// profesional 15 September 2026, Medium, lihat catatan TOCTOU lengkap
+	// di UPDATE reports terminal di bawah). Kalau digerbang di sini juga,
+	// panggilan kedua yang berurutan (bukan cuma yang genuinely bersamaan)
+	// akan berhenti di 404 generik sebelum sempat menyentuh guard atomik
+	// di UPDATE -- gatenya sengaja dipusatkan HANYA di satu tempat.
 	var targetType, targetID string
 	if err := h.DB.QueryRow(ctx, `
-		SELECT target_type, target_id FROM reports WHERE id = $1 AND status = 'pending'
+		SELECT target_type, target_id FROM reports WHERE id = $1
 	`, reportID).Scan(&targetType, &targetID); err != nil {
 		if err == pgx.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "laporan tidak ditemukan atau sudah diproses"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "laporan tidak ditemukan"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat laporan"})
@@ -416,10 +424,30 @@ func (h *AdminHandler) ResolveReport(c *gin.Context) {
 		}
 	}
 
-	if _, err := tx.Exec(ctx, `
-		UPDATE reports SET status = $1, resolved_by = $2, resolved_at = now() WHERE id = $3
-	`, newStatus, adminID, reportID); err != nil {
+	// TOCTOU (audit keamanan profesional 15 September 2026, Medium):
+	// SEBELUMNYA syarat "masih pending" cuma dicek SEKALI lewat SELECT di
+	// atas, SEBELUM transaksi ini dibuka -- UPDATE terminal di bawah tidak
+	// mengulang syarat itu, jadi dua panggilan bersamaan pada laporan yang
+	// SAMA (klik ganda, atau dua staf berbeda) bisa lolos SELECT itu
+	// berdua lalu berdua commit: moderation_locked_at sudah ditulis ke
+	// halaman/produk oleh KEDUANYA, tapi reports.status cuma bisa berhenti
+	// di satu nilai akhir -- kalau nilai akhirnya bukan yang RestoreReport
+	// harapkan, laporan itu terjebak tanpa jalur pemulihan kecuali SQL
+	// manual. Pola sama dengan KycHandler.AdminReview/AdminRevoke (kyc.go):
+	// syarat status dilipat ke WHERE clause UPDATE ini sendiri (atomik di
+	// level DB, bukan lagi baca-lalu-tulis terpisah), RowsAffected() dicek
+	// sesudahnya -- kalau nol, batalkan transaksi (rollback lewat defer di
+	// atas) & kasih pesan jelas alih-alih berpura-pura berhasil.
+	tag, err := tx.Exec(ctx, `
+		UPDATE reports SET status = $1, resolved_by = $2, resolved_at = now()
+		WHERE id = $3 AND status = 'pending'
+	`, newStatus, adminID, reportID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui laporan"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "laporan ini sudah diproses oleh orang lain, muat ulang halaman"})
 		return
 	}
 
@@ -461,12 +489,17 @@ func (h *AdminHandler) RestoreReport(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
+	// Sama seperti ResolveReport di atas (audit keamanan profesional 15
+	// September 2026, Medium) -- SELECT ini HANYA mengecek eksistensi
+	// laporan, TIDAK ikut menggerbang status "takedown" lagi. Guard status
+	// dipusatkan HANYA di UPDATE terminal di bawah supaya atomik (lihat
+	// catatan lengkap di sana).
 	var targetType, targetID string
 	if err := h.DB.QueryRow(ctx, `
-		SELECT target_type, target_id FROM reports WHERE id = $1 AND status = 'takedown'
+		SELECT target_type, target_id FROM reports WHERE id = $1
 	`, reportID).Scan(&targetType, &targetID); err != nil {
 		if err == pgx.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "laporan tidak ditemukan atau bukan hasil takedown"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "laporan tidak ditemukan"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat laporan"})
@@ -499,10 +532,21 @@ func (h *AdminHandler) RestoreReport(c *gin.Context) {
 		return
 	}
 
-	if _, err := tx.Exec(ctx, `
-		UPDATE reports SET status = 'restored', resolved_by = $1, resolved_at = now() WHERE id = $2
-	`, adminID, reportID); err != nil {
+	// TOCTOU (audit keamanan profesional 15 September 2026, Medium) -- lihat
+	// catatan lengkap di ResolveReport di atas, celah & pola perbaikannya
+	// identik: syarat status 'takedown' dilipat ke WHERE clause UPDATE ini
+	// sendiri (bukan lagi cuma dicek lewat SELECT terpisah sebelum
+	// transaksi), RowsAffected() dicek sesudahnya.
+	tag, err := tx.Exec(ctx, `
+		UPDATE reports SET status = 'restored', resolved_by = $1, resolved_at = now()
+		WHERE id = $2 AND status = 'takedown'
+	`, adminID, reportID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui laporan"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "laporan ini sudah diproses oleh orang lain, muat ulang halaman"})
 		return
 	}
 
@@ -827,11 +871,23 @@ type blockedKeywordItem struct {
 
 // ListBlockedKeywords — daftar kata kunci yang dicek terhadap URL+judul
 // tautan baru dari domain yang belum pernah dilihat.
+// limit/offset (parseLimitOffset) ditambahkan lewat audit performa
+// profesional 15 September 2026 (Low) -- tabel ini genuinely rendah
+// kardinalitas (dikurasi admin manual lewat CreateBlockedKeyword, BUKAN
+// tumbuh otomatis dari hasil scan spt link_domain_verdicts di
+// ListDomainVerdicts di bawah), jadi risiko unbounded-result di sini murni
+// teoretis. Ditambahkan cuma demi konsistensi & jaga-jaga kalau tabel ini
+// suatu saat tumbuh tak terduga -- pola sama persis ListDomainVerdicts.
 func (h *AdminHandler) ListBlockedKeywords(c *gin.Context) {
+	limit, offset := parseLimitOffset(c)
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	rows, err := h.DB.Query(ctx, `SELECT id, keyword, category, match_type, created_at FROM blocked_keywords ORDER BY created_at DESC`)
+	rows, err := h.DB.Query(ctx, `
+		SELECT id, keyword, category, match_type, created_at FROM blocked_keywords
+		ORDER BY created_at DESC LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kata kunci"})
 		return

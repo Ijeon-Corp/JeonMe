@@ -236,11 +236,24 @@ func (h *CollaboratorHandler) UpdateRole(c *gin.Context) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `
+	// owner_user_id diulang di WHERE clause UPDATE ini (audit keamanan
+	// profesional 15 September 2026, Low) -- SEBELUMNYA cuma "WHERE id =
+	// $5", mengandalkan SELECT pre-check di atas sebagai satu-satunya
+	// penjagaan kepemilikan -- inkonsisten dengan Revoke() di file yang
+	// sama, yang mengulang filter owner_user_id di CEK MAUPUN UPDATE-nya.
+	// Disamakan di sini supaya UPDATE tetap benar sendirinya kalau
+	// suatu saat pre-check di atas berubah/dilewati, bukan bergantung
+	// diam-diam pada urutan kode saat ini.
+	tag, err := tx.Exec(ctx, `
 		UPDATE collaborators SET role = $1, can_edit_links = $2, can_edit_products = $3, can_edit_design = $4
-		WHERE id = $5
-	`, req.Role, canEditLinks, canEditProducts, canEditDesign, id); err != nil {
+		WHERE id = $5 AND owner_user_id = $6
+	`, req.Role, canEditLinks, canEditProducts, canEditDesign, id, ownerID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memperbarui role"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "kolaborator tidak ditemukan"})
 		return
 	}
 

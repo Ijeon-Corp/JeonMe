@@ -177,6 +177,16 @@ func main() {
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
+	// Perbaikan (audit keamanan/performa profesional 15 September 2026,
+	// Low): lihat catatan lengkap di middleware.MaxBodySize -- sebelumnya
+	// tidak ada batas ukuran body di level server sama sekali, validasi
+	// ukuran file per-handler baru jalan SETELAH seluruh body multipart
+	// selesai dibaca. Dipasang GLOBAL (bukan di-scope per grup rute upload)
+	// karena upload tersebar di banyak grup rute berbeda (dashboard/design,
+	// products, links, kyc, account, business-card) tanpa satu titik
+	// pengelompokan yang jelas -- batasnya sendiri (120MB) jauh di atas
+	// permintaan JSON biasa jadi tidak berdampak ke rute non-upload.
+	r.Use(middleware.MaxBodySize(middleware.MaxRequestBodySize))
 
 	routes.Register(r, db, rdb, s3Client, queueClient, cfg, Version)
 

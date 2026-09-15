@@ -56,6 +56,41 @@ func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []
 		return nil
 	}
 
+	// Cek eksistensi SEMUA user_id sekaligus, SEBELUM loop validasi di bawah
+	// (audit performa profesional 15 September 2026, Low) -- SEBELUMNYA
+	// "SELECT EXISTS(...)" jalan SATU KALI PER kolaborator DI DALAM loop
+	// (N+1: makin banyak kolaborator di-split, makin banyak round-trip DB
+	// murni utk cek eksistensi), padahal semua bisa dijawab satu query
+	// tunggal `= ANY($1)` (pola sama seperti bundle.go/brand.go di
+	// codebase ini). userIDs dikumpulkan dulu dari s.UserID mentah (BUKAN
+	// hasil validasi lain di bawah) supaya urutan pesan error utk kasus
+	// user_id kosong/duplikat/persen invalid TIDAK berubah -- existingUsers
+	// cuma dipakai utk gantikan pengecekan "exists" per-item di loop asli.
+	userIDs := make([]string, 0, len(splits))
+	for _, s := range splits {
+		if s.UserID != "" {
+			userIDs = append(userIDs, s.UserID)
+		}
+	}
+	existingUsers := map[string]bool{}
+	if len(userIDs) > 0 {
+		rows, err := db.Query(ctx, `SELECT id FROM users WHERE id = ANY($1) AND deleted_at IS NULL`, userIDs)
+		if err != nil {
+			return errors.New("collaborator_splits: gagal memeriksa akun")
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return errors.New("collaborator_splits: gagal memeriksa akun")
+			}
+			existingUsers[id] = true
+		}
+		if err := rows.Err(); err != nil {
+			return errors.New("collaborator_splits: gagal memeriksa akun")
+		}
+	}
+
 	seen := map[string]bool{}
 	var total float64
 	for _, s := range splits {
@@ -74,11 +109,7 @@ func validateCollaboratorSplits(ctx context.Context, db *pgxpool.Pool, splits []
 		}
 		total += s.Percent
 
-		var exists bool
-		if err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL)`, s.UserID).Scan(&exists); err != nil {
-			return errors.New("collaborator_splits: gagal memeriksa akun")
-		}
-		if !exists {
+		if !existingUsers[s.UserID] {
 			return errors.New("collaborator_splits: salah satu user_id tidak ditemukan")
 		}
 	}

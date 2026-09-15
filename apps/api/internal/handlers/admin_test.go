@@ -224,3 +224,76 @@ func TestReportTakedown_UnpublishesPage(t *testing.T) {
 		t.Errorf("notifCount = %d, ekspektasi 2 (takedown + restored)", notifCount)
 	}
 }
+
+// Panggilan KEDUA ResolveReport/RestoreReport pada laporan yang SAMA
+// (mensimulasikan klik ganda atau dua staf berbeda memproses laporan yang
+// sama nyaris bersamaan) -- audit keamanan profesional 15 September 2026
+// (Medium, TOCTOU): SEBELUMNYA syarat status cuma dicek sekali lewat SELECT
+// sebelum transaksi, jadi panggilan kedua bisa lolos & menimpa lagi
+// resolved_by/resolved_at walau laporan sudah final. Sekarang syarat status
+// dilipat ke WHERE clause UPDATE terminal itu sendiri -- panggilan kedua
+// WAJIB ditolak 409, bukan diam-diam "berhasil" lagi. Lihat catatan lengkap
+// perbaikannya di ResolveReport/RestoreReport (admin.go).
+func TestResolveReport_SecondCallOnSameReportIsRejected(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	admin, auth := newTestAdminHandler(t)
+	adminID := registerTestUser(t, auth)
+	promoteToAdmin(t, admin, adminID)
+	reportedUserID := registerTestUser(t, auth)
+
+	var pageID string
+	if err := admin.DB.QueryRow(t.Context(), `SELECT id FROM pages WHERE user_id = $1`, reportedUserID).Scan(&pageID); err != nil {
+		t.Fatalf("gagal ambil page id: %v", err)
+	}
+
+	router := gin.New()
+	router.POST("/reports", admin.CreateReport)
+	g := router.Group("/", fakeAuth(), middleware.AdminRequired(admin.DB))
+	g.PATCH("/admin/reports/:id/resolve", admin.ResolveReport)
+	g.PATCH("/admin/reports/:id/restore", admin.RestoreReport)
+	g.GET("/admin/reports", admin.ListReports)
+
+	createRec := doJSON(t, router, http.MethodPost, "/reports", map[string]string{
+		"target_type": "page", "target_id": pageID, "reason": "konten tidak pantas",
+	}, nil)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create report gagal: status %d, body %s", createRec.Code, createRec.Body.String())
+	}
+
+	listRec := doJSON(t, router, http.MethodGet, "/admin/reports?limit=100", nil, map[string]string{"X-Test-UserID": adminID})
+	var reportsResp paginatedResponse[reportItem]
+	if err := json.Unmarshal(listRec.Body.Bytes(), &reportsResp); err != nil {
+		t.Fatalf("gagal decode list reports: %v, body: %s", err, listRec.Body.String())
+	}
+	var reportID string
+	for _, r := range reportsResp.Items {
+		if r.TargetID == pageID {
+			reportID = r.ID
+			break
+		}
+	}
+	if reportID == "" {
+		t.Fatalf("laporan utk pageID=%s tidak ditemukan di list: %+v", pageID, reportsResp)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.DB.Exec(context.Background(), `DELETE FROM reports WHERE id = $1`, reportID)
+	})
+
+	firstResolve := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reportID+"/resolve", map[string]string{"action": "takedown"}, map[string]string{"X-Test-UserID": adminID})
+	if firstResolve.Code != http.StatusOK {
+		t.Fatalf("resolve pertama gagal: status %d, body %s", firstResolve.Code, firstResolve.Body.String())
+	}
+	secondResolve := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reportID+"/resolve", map[string]string{"action": "takedown"}, map[string]string{"X-Test-UserID": adminID})
+	if secondResolve.Code != http.StatusConflict {
+		t.Fatalf("resolve kedua = %d, ekspektasi %d (sudah diproses). Body: %s", secondResolve.Code, http.StatusConflict, secondResolve.Body.String())
+	}
+
+	firstRestore := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reportID+"/restore", nil, map[string]string{"X-Test-UserID": adminID})
+	if firstRestore.Code != http.StatusOK {
+		t.Fatalf("restore pertama gagal: status %d, body %s", firstRestore.Code, firstRestore.Body.String())
+	}
+	secondRestore := doJSON(t, router, http.MethodPatch, "/admin/reports/"+reportID+"/restore", nil, map[string]string{"X-Test-UserID": adminID})
+	if secondRestore.Code != http.StatusConflict {
+		t.Fatalf("restore kedua = %d, ekspektasi %d (sudah diproses). Body: %s", secondRestore.Code, http.StatusConflict, secondRestore.Body.String())
+	}
+}

@@ -1011,8 +1011,26 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 			items = []any{}
 		}
 		for _, raw := range items {
-			if _, isMap := raw.(map[string]any); !isMap {
+			item, isMap := raw.(map[string]any)
+			if !isMap {
 				return "setiap item wajib berupa objek", false
+			}
+			// url per-item (audit keamanan profesional 15 September 2026,
+			// Low) -- SEBELUMNYA field ini TIDAK divalidasi skema sama
+			// sekali, beda dari video_url/audio_url/file_url/embed_url yang
+			// semuanya mensyaratkan http/https di case lain fungsi ini
+			// (tanpa ini, javascript:/data: URI bisa lolos tersimpan kalau
+			// item dirender sbg href apa adanya di PagePreview.tsx).
+			// Opsional (shell-first, sama seperti image_url di case lain di
+			// atas) -- cuma divalidasi kalau terisi.
+			if rawURL, ok := item["url"]; ok {
+				itemURL, _ := rawURL.(string)
+				if itemURL != "" {
+					u, err := url.Parse(itemURL)
+					if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+						return "url pada item wajib berupa URL yang valid", false
+					}
+				}
 			}
 		}
 	case "embed":
