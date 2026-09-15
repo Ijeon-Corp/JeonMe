@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { sanitizeRichTextHtml } from "@/lib/sanitize-rich-text";
 import { useLocale } from "@/lib/locale-context";
 import { CustomThemeConfig, PageTheme, getPageTheme } from "@/lib/page-themes";
@@ -612,10 +613,20 @@ export function renderSingleProductCard(
   onTrackClick: (productId: string) => void
 ): React.ReactNode {
   const cover = (
-    <div className={`mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
+    // `relative` DITAMBAHKAN ke pembungkus (audit performa 15 September 2026):
+    // <Image fill> mensyaratkan ancestor ber-position selain static. Murni
+    // penambahan positioning context, tidak mengubah tata letak apa pun --
+    // pembungkus ini tidak punya anak ber-posisi absolut lain.
+    <div className={`relative mb-2 flex aspect-square items-center justify-center rounded-xl ${theme.card}`}>
       {product.cover_image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-xl object-cover" />
+        // `fill` karena lebar kartu ikut kolom (kartu ini dipakai penuh-kolom
+        // MAUPUN di dalam grid-cols-2, lihat pemanggil) -- tidak ada satu angka
+        // lebar yang benar untuk keduanya. `sizes` sengaja dipatok selebar
+        // kolom penuh (max-w-md = 448px), bukan setengahnya: di layar retina
+        // (DPR 2) kartu setengah-kolom ~194px pun tetap butuh ~388px piksel
+        // fisik, jadi 448px justru angka yang pas untuk KEDUA kasus sekaligus
+        // -- dan tetap jauh lebih kecil dari unggahan asli yang bisa 1600px.
+        <Image src={product.cover_image_url} alt={product.name} fill sizes="(max-width: 448px) 100vw, 448px" className="rounded-xl object-cover" />
       ) : (
         <IconBox className={`h-6 w-6 ${theme.chevron}`} />
       )}
@@ -762,10 +773,13 @@ function renderProductCardSmall(
   onTrackClick: (productId: string) => void
 ): React.ReactNode {
   const cover = (
-    <div className={`mb-1.5 flex h-20 items-center justify-center rounded-lg ${theme.card}`}>
+    // `relative` ditambahkan untuk <Image fill>, alasan sama seperti
+    // renderSingleProductCard di atas.
+    <div className={`relative mb-1.5 flex h-20 items-center justify-center rounded-lg ${theme.card}`}>
       {product.cover_image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-lg object-cover" />
+        // `fill` -- tingginya TETAP (h-20) tapi lebarnya ikut kolom/grid, jadi
+        // pasangan width/height literal tidak bisa dipakai.
+        <Image src={product.cover_image_url} alt={product.name} fill sizes="(max-width: 448px) 100vw, 448px" className="rounded-lg object-cover" />
       ) : (
         <IconBox className={`h-5 w-5 ${theme.chevron}`} />
       )}
@@ -840,8 +854,10 @@ function renderProductRowWithImage(
   const thumb = (
     <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg ${theme.card}`}>
       {product.cover_image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={product.cover_image_url} alt={product.name} loading="lazy" className="h-full w-full rounded-lg object-cover" />
+        // Ukuran TETAP 48x48 (h-12 w-12 flex-shrink-0) -- di sini `fill` tidak
+        // perlu sama sekali karena kotaknya memang pasti, jadi width/height
+        // literal lebih sederhana DAN memberi Next.js srcset 1x/2x yang tepat.
+        <Image src={product.cover_image_url} alt={product.name} width={48} height={48} className="h-full w-full rounded-lg object-cover" />
       ) : (
         <IconBox className={`h-4 w-4 ${theme.chevron}`} />
       )}
@@ -1002,6 +1018,15 @@ function renderSocialFeed(feed: PagePreviewSocialFeed | undefined, theme: PageTh
             className={`aspect-square overflow-hidden rounded-lg ${theme.card}`}
           >
             {item.thumbnailUrl ? (
+              // SENGAJA TETAP <img> mentah (audit performa 15 September 2026,
+              // migrasi next/image): thumbnail feed ini URL CDN Instagram/TikTok
+              // MENTAH (social_connect.go menyimpan m.ThumbnailURL/
+              // v.CoverImageURL apa adanya, tanpa di-rehost ke storage sendiri).
+              // Host-nya berrotasi & bertanda tangan + berumur pendek
+              // (scontent-*.cdninstagram.com, *.fbcdn.net, p16-sign-*.
+              // tiktokcdn.com, ...) -- mustahil dienumerasi jujur di
+              // images.remotePatterns, dan kalaupun dipaksa, URL yang berubah
+              // tiap fetch membuat cache image optimizer tidak pernah kena.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.thumbnailUrl} alt={item.caption} loading="lazy" className="h-full w-full object-cover" />
             ) : (
@@ -1284,19 +1309,27 @@ export function renderBioHeader(
   const variant = data.layoutVariant ?? "centered";
   const isBanner = variant === "banner";
   const isMinimal = variant === "minimal";
-  const avatarSize = isMinimal
-    ? "h-10 w-10"
+  // avatarSize (class Tailwind) & avatarPx (angka piksel) SENGAJA dipasangkan
+  // dalam SATU ekspresi (audit performa 15 September 2026, migrasi ke
+  // next/image): <Image> butuh width/height NUMERIK, sementara ukuran tampil di
+  // sini tetap ditentukan class Tailwind seperti sebelumnya. Kalau keduanya
+  // ditulis di dua tempat terpisah, keduanya PASTI akan lepas sinkron saat
+  // varian layout baru ditambahkan -- dipasangkan begini supaya tidak bisa
+  // diubah sebelah saja. Angkanya = nilai h-*/w-* Tailwind dalam px
+  // (h-10 = 2.5rem = 40px, dst).
+  const [avatarSize, avatarPx] = isMinimal
+    ? (["h-10 w-10", 40] as const)
     : isBanner || variant === "masthead"
-    ? "h-16 w-16"
+    ? (["h-16 w-16", 64] as const)
     : variant === "cover"
-    ? "h-20 w-20"
+    ? (["h-20 w-20", 80] as const)
     : variant === "spotlight"
-    ? "h-28 w-28"
+    ? (["h-28 w-28", 112] as const)
     : variant === "duo"
-    ? "h-12 w-12"
+    ? (["h-12 w-12", 48] as const)
     : variant === "headline"
-    ? "h-16 w-16"
-    : "h-24 w-24";
+    ? (["h-16 w-16", 64] as const)
+    : (["h-24 w-24", 96] as const);
 
   const avatar = data.avatarUrl ? (
     // fetchPriority="high" (optimasi performa, analisa & benchmark
@@ -1307,10 +1340,17 @@ export function renderBioHeader(
     // baru muncul setelah scroll, padahal justru avatar ini yang paling
     // menentukan skor LCP (metrik Core Web Vitals paling relevan buat
     // "halaman publik yang terasa cepat" dibanding kompetitor).
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    // fetchPriority="high" DIPERTAHANKAN apa adanya setelah migrasi ke
+    // next/image (audit performa 15 September 2026) -- dokumen Next.js 16
+    // sendiri menganjurkan fetchPriority/loading="eager" ketimbang prop
+    // `preload` untuk kasus LCP biasa seperti ini (`priority` sudah deprecated
+    // di v16). Ukuran TETAP (bukan `fill`) supaya tidak perlu menyisipkan
+    // pembungkus position:relative baru ke 8 layout tema sekaligus.
+    <Image
       src={data.avatarUrl}
       alt={data.username}
+      width={avatarPx}
+      height={avatarPx}
       fetchPriority="high"
       className={`relative ${avatarSize} flex-shrink-0 rounded-full object-cover ${theme.avatarRing}`}
     />
@@ -1446,9 +1486,13 @@ export function renderBioHeader(
       <div className="relative -mx-6 -mt-14 flex w-[calc(100%+3rem)] flex-col items-center">
         <div className="relative h-64 w-full">
           {/* fetchPriority="high" -- elemen LCP di layout "hero", lihat
-              catatan panjang di avatar layout default di atas. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-full w-full object-cover" />
+              catatan panjang di avatar layout default di atas.
+              `fill` (BUKAN width/height tetap) dipakai di sini karena
+              pembungkusnya SUDAH `relative h-64 w-full` -- tingginya tetap tapi
+              lebarnya mengikuti kolom, jadi tidak ada satu angka lebar yang
+              benar. `sizes` = lebar kolom halaman publik (max-w-md = 448px),
+              di bawah itu mengikuti lebar viewport. */}
+          <Image src={data.avatarUrl} alt={data.username} fill sizes="(max-width: 448px) 100vw, 448px" fetchPriority="high" className="object-cover" />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 px-6 pb-4 text-center">
             <h1 className="flex items-center justify-center gap-1.5 font-heading text-xl font-bold text-white" style={theme.nameStyle}>
@@ -1483,9 +1527,9 @@ export function renderBioHeader(
   if (variant === "polaroid") {
     const polaroidPhoto = data.avatarUrl ? (
       // fetchPriority="high" -- elemen LCP di layout "polaroid", lihat
-      // catatan panjang di avatar layout default di atas.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-28 w-28 object-cover" />
+      // catatan panjang di avatar layout default di atas. Ukuran TETAP 112px
+      // (h-28/w-28) -- bingkai polaroid memang berukuran pasti, bukan responsif.
+      <Image src={data.avatarUrl} alt={data.username} width={112} height={112} fetchPriority="high" className="h-28 w-28 object-cover" />
     ) : (
       <div className="flex h-28 w-28 items-center justify-center bg-primary-subtle font-heading text-2xl font-bold text-primary">
         {data.username.slice(0, 1).toUpperCase()}
@@ -1515,10 +1559,13 @@ export function renderBioHeader(
   // avatar sendiri saat butuh bentuk beda dari bulat standar.
   if (variant === "split") {
     const splitAvatar = data.avatarUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      // Ukuran TETAP 80px (h-20/w-20) -- kolom foto di layout "split" memang
+      // FIXED (lihat catatan varian di atas), bukan ikut melebar.
+      <Image
         src={data.avatarUrl}
         alt={data.username}
+        width={80}
+        height={80}
         fetchPriority="high"
         className={`h-20 w-20 flex-shrink-0 rounded-2xl object-cover ${theme.avatarRing}`}
       />
@@ -1667,8 +1714,11 @@ export function renderBioHeader(
     return (
       <div className="relative flex w-full flex-col items-center">
         <div className="relative aspect-[3/4] w-40 overflow-hidden rounded-2xl shadow-xl">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={data.avatarUrl} alt={data.username} fetchPriority="high" className="h-full w-full object-cover" />
+          {/* `fill` -- pembungkusnya SUDAH `relative` + aspect-[3/4], jadi
+              tinggi foto diturunkan dari rasio, tidak ada angka tinggi literal
+              yang bisa ditulis. Lebar bingkainya sendiri TETAP (w-40 = 160px),
+              makanya `sizes` cukup satu angka. */}
+          <Image src={data.avatarUrl} alt={data.username} fill sizes="160px" fetchPriority="high" className="object-cover" />
         </div>
         <div className="relative mt-4 text-center">
           {nameHeading}
@@ -1749,8 +1799,16 @@ export function Watermark({ isPremium, hideWatermark }: { isPremium?: boolean; h
       className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-ink shadow-card transition-transform hover:scale-105"
     >
       {t("watermark.cta")}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.png" alt="" className="h-4 w-4 flex-shrink-0" />
+      {/* src "/icon.png" SENGAJA DIPERTAHANKAN (audit performa 15 September
+          2026, migrasi next/image). Sempat dikira 404 karena TIDAK ADA file
+          public/icon.png -- ternyata BUKAN: yang menyajikannya adalah
+          app/icon.png, file konvensi metadata App Router, dan untuk file ikon
+          STATIS (bukan icon.tsx yang digenerate ImageResponse) Next.js
+          memasangnya sebagai rute "/icon.png" apa adanya -- terkonfirmasi di
+          daftar rute `next build` ("○ /icon.png") dan diverifikasi ulang lewat
+          permintaan HTTP sungguhan. Jadi jangan "diperbaiki" jadi
+          /favicon-new.png. */}
+      <Image src="/icon.png" alt="" width={16} height={16} className="h-4 w-4 flex-shrink-0" />
       <span>
         jeon<span className="text-secondary-light">.id</span>
       </span>
@@ -1770,8 +1828,12 @@ function ColoredIcon({ color, children }: { color?: string; children: React.Reac
 function resolveBlockIcon(link: PagePreviewLink, DefaultIcon: React.ComponentType<{ className?: string }>, sizeClass: string) {
   if (link.customIconUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={link.customIconUrl} alt="" loading="lazy" className={`${sizeClass} flex-shrink-0 rounded-full object-cover`} />
+      // width/height 24 KONSTAN meski `sizeClass` bervariasi (h-4/h-6 dari
+      // pemanggil): yang menentukan ukuran TAMPIL tetap class CSS itu, angka di
+      // sini cuma memberi tahu Next.js rasio + batas srcset. 24 = nilai
+      // TERBESAR yang dipakai pemanggil mana pun (h-6), jadi tidak akan pernah
+      // kurang tajam; memakai angka lebih kecil justru berisiko buram.
+      <Image src={link.customIconUrl} alt="" width={24} height={24} className={`${sizeClass} flex-shrink-0 rounded-full object-cover`} />
     );
   }
   const libraryIcon = getLibraryIcon(link.iconKey);
@@ -2064,8 +2126,15 @@ export function renderLinkOrBlock(
           </span>
         )}
         {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="" loading="lazy" className="mb-3 aspect-video w-full rounded-lg object-cover" />
+          // `h-auto` WAJIB ditambahkan saat migrasi ke next/image (audit
+          // performa 15 September 2026): <Image> memasang atribut width/height
+          // sungguhan, dan atribut itu memberi <img> sebuah `aspect-ratio`
+          // bawaan UA yang MENGALAHKAN `aspect-video` selama tingginya tidak
+          // `auto`. Tanpa h-auto, kotaknya akan terkunci setinggi angka height
+          // di bawah alih-alih mengikuti rasio 16:9. Angka 448x252 = lebar
+          // kolom publik (max-w-md) pada rasio video, murni petunjuk srcset --
+          // ukuran tampil tetap dari CSS.
+          <Image src={imageUrl} alt="" width={448} height={252} className="mb-3 aspect-video h-auto w-full rounded-lg object-cover" />
         )}
         <p className={`text-sm font-bold ${theme.cardTitle}`}>{link.title}</p>
         {/* Rich text (susulan 12 September 2026) -- whitespace-pre-line
@@ -2172,8 +2241,17 @@ export function renderLinkOrBlock(
     // dan foto tidak bisa diklik sama sekali -- reuse pola TrackedLink/`<a>`
     // yang SAMA PERSIS sudah dipakai project_showcase/embed_link di atas.
     const img = (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={imageUrl} alt={link.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+      // `aspect-auto h-auto` WAJIB di sini (audit performa 15 September 2026,
+      // migrasi next/image) dan ini kasus yang BEDA dari blok ber-aspect-video
+      // di atas: blok "gambar" menampilkan foto kreator apa adanya pada RASIO
+      // ASLINYA (dulu <img> tanpa atribut dimensi sama sekali). Begitu <Image>
+      // memasang width/height, UA memberi elemen `aspect-ratio: width/height`
+      // -- rasio TEBAKAN kita, bukan rasio foto sungguhan -- sehingga foto
+      // potret/panorama akan terpotong salah. `aspect-auto` mengembalikan
+      // `aspect-ratio: auto` supaya rasio diambil dari foto aslinya lagi, dan
+      // `h-auto` membiarkan tingginya dihitung dari rasio itu. width/height
+      // 448x448 murni petunjuk srcset (lebar kolom publik), BUKAN rasio.
+      <Image src={imageUrl} alt={link.title || ""} width={448} height={448} className="aspect-auto h-auto w-full rounded-xl object-cover" />
     );
     const caption = link.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>;
     if (!link.url) {
@@ -2207,8 +2285,9 @@ export function renderLinkOrBlock(
       <div key={link.id} className="flex w-full flex-col gap-2 rounded-xl">
         {videoUrl && <VideoEmbedBlock title={link.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />}
         {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={link.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+          // Rasio ASLI foto, sama persis kasusnya dengan blok "gambar" di atas
+          // -- lihat catatan panjang `aspect-auto h-auto` di sana.
+          <Image src={imageUrl} alt={link.title || ""} width={448} height={448} className="aspect-auto h-auto w-full rounded-xl object-cover" />
         )}
         {!videoUrl && !imageUrl && (
           <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>{link.title || "Video + Foto"}</div>
@@ -2226,8 +2305,11 @@ export function renderLinkOrBlock(
     const inner = (
       <>
         {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="" loading="lazy" className="-m-2.5 mb-0 aspect-video w-[calc(100%+20px)] object-cover" />
+          // `h-auto` menemani `aspect-video`, alasan sama seperti blok
+          // project_showcase di atas. Lebarnya `calc(100%+20px)` (sengaja
+          // meluber menutup padding kartu), jadi angka width/height di bawah
+          // murni petunjuk srcset pada rasio 16:9.
+          <Image src={imageUrl} alt="" width={448} height={252} className="-m-2.5 mb-0 aspect-video h-auto w-[calc(100%+20px)] object-cover" />
         )}
         <p className={`text-xs font-semibold ${theme.cardTitle}`}>{link.title}</p>
         {link.description && (
@@ -2346,20 +2428,26 @@ export function renderLinkOrBlock(
     const cardInner = (
       <>
         <div className="relative aspect-video w-full overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          {/* `fill` -- pembungkusnya MEMANG sudah `relative` + aspect-video
+              (tidak perlu menambah apa pun), lebarnya ikut kolom. Catatan:
+              thumbnail ini bisa berupa URL img.youtube.com yang diturunkan
+              otomatis backend untuk tautan YouTube ber-"featured" (links.go),
+              bukan cuma unggahan kreator -- host itu sudah didaftarkan di
+              images.remotePatterns, lihat catatannya di next.config.js. */}
+          <Image
             src={link.thumbnailUrl}
             alt=""
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 448px) 100vw, 448px"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <span
             className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm"
             style={link.iconColor ? { color: link.iconColor } : undefined}
           >
             {link.customIconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+              // Ukuran TETAP 28px -- span pembungkusnya h-7 w-7.
+              <Image src={link.customIconUrl} alt="" width={28} height={28} className="h-full w-full rounded-full object-cover" />
             ) : libraryIcon ? (
               <libraryIcon.Icon className="h-3.5 w-3.5" />
             ) : (
@@ -2420,8 +2508,10 @@ export function renderLinkOrBlock(
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
       const iconNode = link.customIconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+        // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
+        // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
+        // `h-full w-full`, angka ini cuma petunjuk srcset.
+        <Image src={link.customIconUrl} alt="" width={40} height={40} className="h-full w-full rounded-full object-cover" />
       ) : libraryIcon ? (
         <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
       ) : (
@@ -2476,8 +2566,10 @@ export function renderLinkOrBlock(
       const { Icon: LinkPlatformIcon, iconColorClass } = detectLinkIcon(link.url);
       const libraryIcon = getLibraryIcon(link.iconKey);
       const iconNode = link.customIconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={link.customIconUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+        // Ukuran TETAP 40px = span pembungkus TERBESAR yang memakai iconNode
+        // (h-10 w-10; varian lain h-9 w-9) -- ukuran tampil tetap dari
+        // `h-full w-full`, angka ini cuma petunjuk srcset.
+        <Image src={link.customIconUrl} alt="" width={40} height={40} className="h-full w-full rounded-full object-cover" />
       ) : libraryIcon ? (
         <libraryIcon.Icon className={link.description ? "h-5 w-5" : "h-6 w-6"} />
       ) : (
@@ -2746,12 +2838,17 @@ export function CatalogTakeoverView({
                 {seg.item.images.length > 0 && (
                   <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
                     {seg.item.images.map((src, idx) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      // Tinggi TETAP (h-64 = 256px), lebar ikut kolom/85% --
+                      // width/height di bawah cuma petunjuk srcset pada lebar
+                      // kolom publik; ukuran tampil sepenuhnya dari CSS, jadi
+                      // `h-auto` TIDAK boleh ditambahkan di sini (beda dari blok
+                      // ber-aspect-video: tingginya memang sengaja dipatok).
+                      <Image
                         key={idx}
                         src={src}
                         alt=""
-                        loading="lazy"
+                        width={448}
+                        height={256}
                         className={`h-64 w-full flex-shrink-0 snap-center rounded-2xl object-cover ${seg.item.images.length > 1 ? "w-[85%]" : ""}`}
                       />
                     ))}
@@ -3302,17 +3399,29 @@ function LandingPagePreview({
                   {(block.blockData?.text as string) ?? ""}
                 </p>
               );
-            case "image":
+            case "image": {
+              // Penjaga src KOSONG (audit performa 15 September 2026, migrasi
+              // next/image): blok gambar yang BARU ditambahkan di Builder belum
+              // punya block_data.image_url sampai kreator benar-benar mengunggah
+              // foto. <img src=""> dulu tidak apa-apa (cuma tidak tampil), TAPI
+              // <Image src=""> MELEMPAR error ("requires src to be provided") --
+              // di dev itu merusak seluruh render halaman. Jadi kasus kosong
+              // dikembalikan lebih awal, bukan diteruskan ke <Image>.
+              const canvasImageUrl = (block.blockData?.image_url as string) ?? "";
+              if (!canvasImageUrl) return null;
               return (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                // Rasio ASLI foto -- `aspect-auto h-auto`, lihat catatan
+                // panjang di blok "gambar" (renderLinkOrBlock) di atas.
+                <Image
                   key={block.id}
-                  src={(block.blockData?.image_url as string) ?? ""}
+                  src={canvasImageUrl}
                   alt={(block.blockData?.caption as string) || block.title}
-                  loading="lazy"
-                  className="w-full rounded-xl object-cover"
+                  width={576}
+                  height={576}
+                  className="aspect-auto h-auto w-full rounded-xl object-cover"
                 />
               );
+            }
             case "button":
               return interactive ? (
                 <TrackedLink
@@ -3408,12 +3517,16 @@ function LandingPagePreview({
                 const featInner = (
                   <>
                     <div className="relative aspect-video w-full overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      {/* `fill` -- pembungkus sudah `relative` + aspect-video.
+                          Kolom Builder lebih lebar dari halaman bio biasa
+                          (max-w-xl = 576px), makanya `sizes` di sini 576px,
+                          bukan 448px seperti paritasnya di renderLinkOrBlock. */}
+                      <Image
                         src={block.thumbnailUrl}
                         alt=""
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 576px) 100vw, 576px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
                     <p className={`truncate px-3 py-2.5 text-left text-[11px] font-semibold ${theme.cardTitle}`}>{block.title}</p>

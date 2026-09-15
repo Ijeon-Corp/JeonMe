@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -125,8 +127,8 @@ export default function DashboardDesignPage() {
             <Link href="/dashboard/design/header" className="flex items-center justify-between gap-3 rounded-xl border-2 border-jeon-ink bg-app-surface px-4 py-3 hover:border-jeon-purple/40">
               <div className="flex items-center gap-3">
                 {page.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={page.avatar_url} alt={page.username} className="h-8 w-8 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
+                  // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
+                  <Image src={page.avatar_url} alt={page.username} width={32} height={32} className="h-8 w-8 flex-shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
                 ) : (
                   <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 font-display text-sm font-bold text-jeon-purple">
                     {page.username.slice(0, 1).toUpperCase()}

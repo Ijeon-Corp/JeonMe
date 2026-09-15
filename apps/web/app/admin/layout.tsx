@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
@@ -99,8 +100,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             sama persis dashboard/layout.tsx (ungu-hitam jeon-sidebar,
             item aktif garis ungu kiri). */}
         <Link href={isSupportOnly ? "/admin/support-chat" : "/admin"} className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="h-7 w-auto" />
+          {/* next/image 128x48 (audit performa 15 September 2026) -- rasio
+              intrinsik 8:3 file aslinya (2048x768), tinggi tampil tetap diatur
+              CSS `h-7 w-auto`. Lihat catatan lengkap di components/landing/Logo.tsx. */}
+          <Image src="/jeon-logo-new-dark.png" alt="jeon.id" width={128} height={48} className="h-7 w-auto" />
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70">
             {isSupportOnly ? "Support" : "Admin"}
           </span>
@@ -179,10 +182,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
             <Link href={isSupportOnly ? "/admin/support-chat" : "/admin"} className="flex items-center gap-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-7 w-auto" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-7 w-auto" />
+              <Image src="/jeon-logo-new.png" alt="jeon.id" width={128} height={48} className="brand-logo-light h-7 w-auto" />
+              <Image src="/jeon-logo-new-dark.png" alt="jeon.id" width={128} height={48} className="brand-logo-dark h-7 w-auto" />
               <span className="text-sm font-bold text-app-muted">{isSupportOnly ? "Support" : "Admin"}</span>
             </Link>
             <button

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import Carousel, { CarouselArrows, type CarouselHandle } from "./Carousel";
 import { QUICK_SETUP_TEMPLATES } from "@/lib/quick-setup-templates";
@@ -60,11 +61,22 @@ export default function ProductShowcase() {
               key={item.key}
               className="w-52 flex-shrink-0 scroll-snap-item transition-transform duration-150 hover:-translate-y-1 sm:w-60"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
-              <img
+              {/* next/image (audit performa 15 September 2026): tiap file di
+                  public/homepage/product/ berukuran 1024x1536 (potret 2:3)
+                  padahal kartunya cuma selebar w-52/sm:w-60 (208/240px) -- dan
+                  6 gambar ini termuat sekaligus di carousel. Dimensi ASLI
+                  dipakai di width/height demi rasio yang benar; `h-auto`
+                  menemani `w-full` (alasan sama seperti Hero.tsx). `sizes` di-
+                  hardcode 240px karena lebar kartu memang TETAP (w-52/w-60),
+                  bukan persentase viewport -- carousel yang menggeser, bukan
+                  kartunya yang melar. */}
+              <Image
                 src={`/homepage/product/${item.image}`}
                 alt={item.label}
-                className="w-full rounded-jlg"
+                width={1024}
+                height={1536}
+                sizes="240px"
+                className="h-auto w-full rounded-jlg"
               />
               <div className="px-1 pt-3">
                 <h3 className="font-display text-sm font-bold text-[#111111]">{item.label}</h3>

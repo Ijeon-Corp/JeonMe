@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { IconDownload, IconFileText } from "@/components/icons";
 
 // formatFileSize -- "2.4 MB" dari bytes (1 desimal), fallback ke KB bulat
@@ -52,8 +53,10 @@ export default function FileDownloadBlock({
   return (
     <a href={fileUrl} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 ${cardClassName}`}>
       {iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconUrl} alt="" className="h-11 w-11 flex-shrink-0 rounded-lg object-cover" />
+        // Ukuran TETAP 44px (h-11 w-11), alasan sama seperti sampul di
+        // AudioPlayerBlock.tsx. iconUrl di sini datang dari
+        // links.custom_icon_url (selalu storage sendiri, upload-only).
+        <Image src={iconUrl} alt="" width={44} height={44} className="h-11 w-11 flex-shrink-0 rounded-lg object-cover" />
       ) : (
         <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-current/10 ${titleClassName}`}>
           <IconFileText className="h-5 w-5" />

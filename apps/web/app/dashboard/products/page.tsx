@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { ChartSkeleton, KpiSkeleton } from "@/components/dashboard/feedback/Skeletons";
 import dynamic from "next/dynamic";
@@ -1095,8 +1097,8 @@ function DashboardProductsPageInner() {
             {page && (
               <div className="glass mb-4 flex items-center gap-3 rounded-jlg p-4 shadow-card">
                 {page.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={page.avatar_url} alt={page.username} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
+                  // Ukuran TETAP 44px (h-11 w-11 flex-shrink-0).
+                  <Image src={page.avatar_url} alt={page.username} width={44} height={44} className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5" />
                 ) : (
                   <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-jeon-purple/10 text-sm font-bold text-jeon-purple">
                     {page.username.slice(0, 1).toUpperCase()}
@@ -1246,8 +1248,8 @@ function DashboardProductsPageInner() {
                           <div className="flex items-center gap-2.5">
                             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10">
                               {p.cover_image_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
+                                // Ukuran TETAP 36px -- sel tabel h-9 w-9.
+                                <Image src={p.cover_image_url} alt={p.name} width={36} height={36} className="h-full w-full object-cover" />
                               ) : (
                                 <IconBox className="h-4 w-4 text-jeon-purple/40" />
                               )}

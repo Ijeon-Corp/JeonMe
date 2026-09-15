@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { IconGlobe, IconInstagram, IconLinkedin, IconMail, IconMapPin, IconPhone, IconTiktok, IconWhatsapp } from "@/components/icons";
 
@@ -104,8 +105,13 @@ export default function DigitalBusinessCard({
         </span>
         <div className="absolute -bottom-10 left-6 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-[#111111] bg-white font-display text-2xl font-extrabold text-[#111111]">
           {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt={card.full_name} className="h-full w-full object-cover" />
+            // Ukuran TETAP 80px -- lingkaran avatar kartu ini h-20 w-20.
+            // CATATAN: avatarUrl di sini bisa berupa URL googleusercontent
+            // MENTAH untuk akun yang daftar lewat Google dan belum pernah ganti
+            // foto (oauth_google.go menyimpan profile.Picture apa adanya) --
+            // host itu sudah didaftarkan di images.remotePatterns, lihat
+            // catatannya di next.config.js.
+            <Image src={avatarUrl} alt={card.full_name} width={80} height={80} className="h-full w-full object-cover" />
           ) : (
             initial
           )}

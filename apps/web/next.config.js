@@ -158,6 +158,68 @@ const DASHBOARD_SECURITY_HEADERS = COMMON_SECURITY_HEADERS.map((h) =>
     : h
 );
 
+// ---------------------------------------------------------------------------
+// images.remotePatterns -- audit performa 15 September 2026 (temuan: 34 file di
+// app/ & components/ memakai <img> mentah, jadi TIDAK ada srcset responsif /
+// lazy-loading / optimasi format otomatis sama sekali). Blok `images` di file
+// ini SEBELUMNYA TIDAK ADA SAMA SEKALI -- tanpa ini, SETIAP <Image> yang src-nya
+// URL absolut akan ditolak (dev: melempar Error dan merusak render; production:
+// /_next/image balas 400 dan gambar tampil patah). Jadi daftar di bawah WAJIB
+// benar-benar lengkap, bukan tebakan.
+//
+// KENAPA storage kreator perlu dioptimasi padahal backend SUDAH mengonversi
+// gambar dekoratif ke WebP: internal/imageconv (Go) memang sudah WebP + resize
+// sisi terpanjang ke maks 1600px (audit Lighthouse 3 September 2026), TAPI itu
+// SATU ukuran untuk semua tempat pakai. Avatar 1600px yang dirender 40px (h-10
+// w-10 di kartu dashboard) atau sampul produk 1600px yang dirender 48px tetap
+// diunduh utuh. Justru srcset per-lebar inilah sisa keuntungan yang belum
+// diambil, bukan konversi formatnya.
+//
+// Host di bawah DIVERIFIKASI satu per satu dari kode/dokumen, BUKAN diasumsikan:
+//
+// 1. storage.jeonme.com / storage-staging.jeonme.com -- host storage yang
+//    BENAR-BENAR melayani traffic HARI INI (CICD-GUIDE.md §2.1 "Tabel Referensi
+//    Infrastruktur" + diagram vhost Apache: storage.jeonme.com -> 127.0.0.1:29000,
+//    storage-staging.jeonme.com -> 127.0.0.1:29100). JANGAN dihapus.
+// 2. storage.jeon.id / storage-staging.jeon.id -- host storage SETELAH migrasi
+//    domain (SETUP-GUIDE.md §1.1). Komentar di apps/api/.env.example & internal/
+//    storage/s3.go sudah menyebut pasangan .jeon.id ini seolah-olah aktif, TAPI
+//    checklist infra di SETUP-GUIDE.md §1.1 masih KOSONG semua (DNS/vhost/TLS
+//    belum dieksekusi di VPS). Keduanya didaftarkan sekaligus supaya migrasi
+//    domain nanti tidak diam-diam mematahkan SELURUH gambar kreator di produksi
+//    -- persis pola "tambahkan jeon.id ke CORS_ALLOWED_ORIGINS, jangan ganti
+//    seluruhnya" di checklist yang sama.
+// 3. **.googleusercontent.com -- pages.avatar_url BISA berisi URL foto profil
+//    Google MENTAH, tidak pernah di-rehost: oauth_google.go createGoogleUser()
+//    langsung `INSERT INTO pages (user_id, avatar_url) VALUES ($1, profile.Picture)`.
+//    Dikonfirmasi juga oleh business_card_avatar_test.go yang memperlakukan
+//    "https://lh3.googleusercontent.com/a/abc" sebagai kasus nyata, dan komentar
+//    AvatarProxy di business_card.go ("avatar dari login Google bahkan URL
+//    eksternal (googleusercontent)"). Wildcard karena Google memakai lh3/lh4/
+//    lh5/lh6. Apple TIDAK perlu didaftar -- oauth_apple.go eksplisit mencatat
+//    Apple tidak pernah mengirim foto profil sama sekali.
+// 4. img.youtube.com -- links.thumbnail_url BISA berisi URL thumbnail YouTube
+//    yang diturunkan otomatis dari ID video (links.go: fmt.Sprintf(
+//    "https://img.youtube.com/vi/%s/hqdefault.jpg", id) saat kreator menandai
+//    tautan YouTube sebagai "featured"), dan VideoEmbedBlock.tsx
+//    getYoutubeThumbnail() membangun URL yang SAMA di sisi klien. i.ytimg.com
+//    ikut didaftar karena img.youtube.com me-redirect ke sana untuk sebagian
+//    ukuran (image-optimizer Next mengikuti redirect, maksimum 3 kali).
+//
+// Yang SENGAJA TIDAK didaftarkan (dan callsite-nya sengaja tetap <img> mentah):
+// CDN Instagram/TikTok (scontent-*.cdninstagram.com, *.fbcdn.net,
+// p16-sign-*.tiktokcdn.com, ...). Host-host itu BERROTASI & URL-nya
+// bertanda-tangan + berumur pendek, jadi tidak bisa dienumerasi dengan jujur di
+// allowlist, dan meng-cache-nya di image optimizer pun sia-sia karena URL-nya
+// berubah tiap fetch. Lihat catatan di PagePreview.tsx renderSocialFeed &
+// dashboard/social-connect/page.tsx.
+const STORAGE_HOSTNAMES = [
+  'storage.jeonme.com',
+  'storage-staging.jeonme.com',
+  'storage.jeon.id',
+  'storage-staging.jeon.id',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 'standalone' membuat image Docker jauh lebih kecil -- lihat docker/web/Dockerfile
@@ -165,6 +227,33 @@ const nextConfig = {
   reactStrictMode: true,
   // X-Powered-By: Next.js -- fingerprint framework, tidak perlu dibocorkan.
   poweredByHeader: false,
+
+  images: {
+    remotePatterns: [
+      ...STORAGE_HOSTNAMES.map((hostname) => ({ protocol: 'https', hostname })),
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: 'img.youtube.com' },
+      { protocol: 'https', hostname: 'i.ytimg.com' },
+      // localhost -- MinIO lokal. `port` SENGAJA tidak diisi: matchRemotePattern()
+      // Next.js hanya membandingkan port kalau field-nya ada, jadi tanpa `port`
+      // pola ini cocok untuk port MANA PUN. Dibutuhkan karena nomor portnya
+      // memang berbeda-beda antar setup: 9000 (docker-compose.yml root &
+      // apps/api/.env.example) vs 19000 (apps/api/.env di mesin dev ini, dipilih
+      // supaya tidak bentrok). Hanya aktif di luar production.
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [{ protocol: 'http', hostname: 'localhost' }]),
+    ],
+    // dangerouslyAllowLocalIP -- BARU di Next.js 16 (lihat tabel "Version
+    // History" di node_modules/next/dist/docs/.../components/image.md), default
+    // false. Proteksi SSRF: /_next/image menolak (400) meng-optimasi gambar yang
+    // hostname-nya RESOLVE ke IP privat/loopback. Tanpa ini SELURUH gambar
+    // kreator di `next dev` lokal patah, karena MinIO lokal ada di
+    // http://localhost:19000 -> 127.0.0.1. Digerbang ke non-production supaya
+    // proteksi SSRF-nya TETAP UTUH di staging/production (di sana host
+    // storage.* resolve ke IP publik VPS, jadi memang tidak butuh flag ini).
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
+  },
 
   async headers() {
     // Urutan array INI PENTING (ditemukan lewat verifikasi langsung --

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { IconPlayCircle } from "@/components/icons";
 
@@ -101,8 +102,14 @@ export default function VideoEmbedBlock({
               className="group relative flex h-full w-full items-center justify-center bg-black"
             >
               {thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />
+                // `fill` -- tombol pembungkusnya `h-full w-full` di dalam
+                // kotak ber-aspect-video, jadi tidak ada angka lebar literal.
+                // Butuh `relative`, sudah ada di class tombolnya ("group
+                // relative flex h-full w-full ..."). thumbnail SELALU
+                // img.youtube.com (getYoutubeThumbnail di atas) -- host itu
+                // sudah didaftarkan di images.remotePatterns, lihat catatannya
+                // di next.config.js.
+                <Image src={thumbnail} alt="" fill sizes="(max-width: 448px) 100vw, 448px" className="object-cover opacity-90 transition-opacity group-hover:opacity-100" />
               ) : (
                 <div className="h-full w-full bg-gradient-to-br from-app-surface-2 to-black/40" />
               )}

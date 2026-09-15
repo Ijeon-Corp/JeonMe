@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { useState } from "react";
 import DesignPageShell from "@/components/DesignPageShell";
@@ -89,8 +91,8 @@ export default function DesignHeaderPage() {
           <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.designHeader.photoLabel")}</label>
           <div className="flex items-center gap-3">
             {page.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={page.avatar_url} alt={page.username} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
+              // Ukuran TETAP 48px (h-12 w-12).
+              <Image src={page.avatar_url} alt={page.username} width={48} height={48} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-display text-base font-bold text-jeon-purple">
                 {page.username.slice(0, 1).toUpperCase()}

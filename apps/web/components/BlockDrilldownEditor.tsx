@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useEffect, useRef, useState } from "react";
 import { CatalogItem, DashboardProduct, EmbeddedCatalogBlock, LinkItem } from "@/lib/api-client";
 import { IconChevronRight, IconPlus, IconTrash, IconX } from "@/components/icons";
@@ -584,8 +586,8 @@ function CatalogItemFrame({
         <div className="flex items-center gap-3 rounded-lg border-2 border-jeon-purple/30 bg-jeon-lavender/30 p-3">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
             {linkedProduct.cover_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={linkedProduct.cover_image_url} alt="" className="h-full w-full object-cover" />
+              // Ukuran TETAP 40px -- span pembungkusnya h-10 w-10.
+              <Image src={linkedProduct.cover_image_url} alt="" width={40} height={40} className="h-full w-full object-cover" />
             ) : (
               <IconTrash className="h-4 w-4 text-jeon-purple/40" />
             )}

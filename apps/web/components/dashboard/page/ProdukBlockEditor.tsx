@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { IconCheck, IconPlus, IconShoppingBag, IconX } from "@/components/icons";
@@ -114,8 +116,8 @@ export function ProdukBlockEditor({
           {selectedProducts.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded-lg border-2 border-jeon-purple bg-jeon-lavender/40 p-1.5">
               {p.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
+                // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
+                <Image src={p.cover_image_url} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
               ) : (
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
                   <IconShoppingBag className="h-4 w-4 text-jeon-purple" />
@@ -196,8 +198,8 @@ export function ProdukBlockEditor({
                 }`}
               >
                 {p.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.cover_image_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
+                  // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
+                  <Image src={p.cover_image_url} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0 rounded-md object-cover" />
                 ) : (
                   <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-jeon-lavender/50">
                     <IconShoppingBag className="h-4 w-4 text-jeon-purple" />

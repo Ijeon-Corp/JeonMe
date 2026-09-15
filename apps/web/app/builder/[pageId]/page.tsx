@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
   ApiError,
@@ -1129,10 +1130,11 @@ export default function BuilderPage() {
           <IconChevronRight className="h-4 w-4 rotate-180" />
           {t("dashboard.pages.linksBuilder.back")}
         </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-5 w-auto" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-5 w-auto" />
+        {/* next/image 128x48 (audit performa 15 September 2026) -- rasio
+            intrinsik 8:3 file aslinya (2048x768), tinggi tampil tetap diatur
+            CSS `h-5 w-auto`. Lihat catatan lengkap di components/landing/Logo.tsx. */}
+        <Image src="/jeon-logo-new.png" alt="jeon.id" width={128} height={48} className="brand-logo-light h-5 w-auto" />
+        <Image src="/jeon-logo-new-dark.png" alt="jeon.id" width={128} height={48} className="brand-logo-dark h-5 w-auto" />
 
         <div className="flex min-w-0 flex-1 items-center justify-center">
           {renamingTitle ? (

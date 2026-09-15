@@ -366,6 +366,13 @@ export default function DashboardImportPage() {
           <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.pages.import.screenshotLabel")}</label>
           <div className="flex items-center gap-3">
             {screenshotPreviewUrl ? (
+              // SENGAJA TETAP <img> mentah (audit performa 15 September 2026,
+              // migrasi next/image): src di sini BUKAN URL jaringan sama sekali,
+              // melainkan blob: dari URL.createObjectURL(file) -- file yang baru
+              // dipilih pengguna dan belum pernah diunggah ke mana pun. Tidak ada
+              // yang bisa dioptimasi: Next.js sendiri memaksa `unoptimized` untuk
+              // src blob:/data: (lihat getImgProps), jadi <Image> di sini cuma
+              // menambah pembungkus tanpa satu pun manfaat.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={screenshotPreviewUrl} alt="" className="h-14 w-14 rounded-xl object-cover ring-2 ring-app-border" />
             ) : (

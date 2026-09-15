@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 // BuilderPagePreviewInternal -- diekstrak dari PagePreview.tsx (audit
 // performa 15 September 2026, lanjutan dari pemecahan 13 tipe blok "langka"
 // lewat next/dynamic di sana): PagePreview.tsx punya TIGA renderer
@@ -344,8 +346,16 @@ function renderBuilderNode(
       // (kasus "image" mode Simple), dipakai bersama supaya blok yang
       // dibuat lewat Canvas Builder tampil identik di halaman publik.
       const img = (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+        // `aspect-auto h-auto` WAJIB (audit performa 15 September 2026, migrasi
+        // next/image): blok "gambar" menampilkan foto kreator pada RASIO
+        // ASLINYA. Begitu <Image> memasang atribut width/height, UA memberi
+        // elemen `aspect-ratio: width/height` -- rasio TEBAKAN kita -- sehingga
+        // foto potret/panorama jadi terpotong salah. `aspect-auto`
+        // mengembalikan rasio ke foto aslinya, `h-auto` membiarkan tinggi
+        // dihitung dari rasio itu. 576x576 murni petunjuk srcset (lebar kolom
+        // kanvas Builder max-w-xl), BUKAN rasio. Paritas dengan kasus yang SAMA
+        // di PagePreview.tsx.
+        <Image src={imageUrl} alt={node.title || ""} width={576} height={576} className="aspect-auto h-auto w-full rounded-xl object-cover" />
       );
       const caption = node.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>;
       return (
@@ -374,8 +384,9 @@ function renderBuilderNode(
             <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />
           )}
           {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
+            // Rasio ASLI foto -- lihat catatan `aspect-auto h-auto` di blok
+            // "image" di atas.
+            <Image src={imageUrl} alt={node.title || ""} width={576} height={576} className="aspect-auto h-auto w-full rounded-xl object-cover" />
           )}
           {!videoUrl && !imageUrl && (
             <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>{node.title || "Video + Foto"}</div>
@@ -392,8 +403,10 @@ function renderBuilderNode(
       const inner = (
         <>
           {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" loading="lazy" className="-m-2.5 mb-0 aspect-video w-[calc(100%+20px)] object-cover" />
+            // `h-auto` menemani `aspect-video`: atribut width/height dari
+            // <Image> memberi aspect-ratio bawaan UA yang mengalahkan
+            // `aspect-video` selama tinggi bukan `auto`.
+            <Image src={imageUrl} alt="" width={576} height={324} className="-m-2.5 mb-0 aspect-video h-auto w-[calc(100%+20px)] object-cover" />
           )}
           <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
           {node.description && (
@@ -649,8 +662,9 @@ function renderBuilderNode(
             </span>
           )}
           {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" loading="lazy" className="mb-3 aspect-video w-full rounded-lg object-cover" />
+            // `h-auto` menemani `aspect-video`, alasan sama seperti blok
+            // embed_link di atas.
+            <Image src={imageUrl} alt="" width={576} height={324} className="mb-3 aspect-video h-auto w-full rounded-lg object-cover" />
           )}
           <p className={`text-sm font-bold ${theme.cardTitle}`}>{node.title}</p>
           {node.description && (

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useRef } from "react";
 import {
   IconBox,
@@ -300,8 +302,8 @@ export default function ManageProductModal({
               className="relative h-14 w-14 overflow-hidden rounded-xl bg-jeon-purple/10 disabled:opacity-60"
             >
               {product.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.cover_image_url} alt={product.name} className="h-full w-full object-cover" />
+                // Ukuran TETAP 56px -- tombol pembungkusnya h-14 w-14.
+                <Image src={product.cover_image_url} alt={product.name} width={56} height={56} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-jeon-purple/40">
                   <IconBox className="h-6 w-6" />

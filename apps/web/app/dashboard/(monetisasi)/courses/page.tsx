@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
@@ -312,8 +314,8 @@ export default function DashboardCoursesPage() {
                 className="relative flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10"
               >
                 {course.cover_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={course.cover_image_url} alt={course.name} className="h-full w-full object-cover" />
+                  // Ukuran TETAP 44px -- label pembungkusnya h-11 w-11.
+                  <Image src={course.cover_image_url} alt={course.name} width={44} height={44} className="h-full w-full object-cover" />
                 ) : (
                   <IconBox className="h-4 w-4 text-jeon-purple/40" />
                 )}

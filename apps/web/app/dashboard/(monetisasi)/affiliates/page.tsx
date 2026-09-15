@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
@@ -375,8 +377,8 @@ export default function DashboardAffiliatesPage() {
         {marketplace.map((m) => (
           <div key={m.product_id} className="glass flex flex-col gap-3 rounded-jmd p-4 shadow-card sm:flex-row sm:items-center">
             {m.cover_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.cover_image_url} alt="" className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+              // Ukuran TETAP 56px (h-14 w-14 flex-shrink-0).
+              <Image src={m.cover_image_url} alt="" width={56} height={56} className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
             ) : (
               <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-jeon-purple/10 text-jeon-purple"><IconUsers className="h-5 w-5" /></span>
             )}

@@ -310,14 +310,30 @@ export default function AdminKycPage() {
                 </dl>
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
+                  {/* SENGAJA TETAP <img> mentah (audit performa 15 September
+                      2026, migrasi next/image) -- dua alasan, keduanya cukup
+                      sendiri:
+                      1. PRIVASI: ini foto KTP & selfie pemohon. Melewatkannya
+                         lewat /_next/image berarti Next.js MENYALIN dokumen
+                         identitas itu ke cache gambar di disk server
+                         (.next/cache/images), di luar object storage yang
+                         aksesnya sudah dijaga presigned URL.
+                      2. SIA-SIA: URL-nya presigned & hanya berlaku 15 menit
+                         (kyc.go PresignedDownloadURL), di-generate ULANG setiap
+                         admin membuka halaman ini -- tanda tangannya selalu beda,
+                         jadi cache optimizer tidak akan pernah kena sama sekali.
+                      Halaman ini juga admin-only & jarang dibuka, jadi tidak ada
+                      keuntungan trafik yang hilang. */}
                   {detail.ktp_photo_url && (
                     <a href={detail.ktp_photo_url} target="_blank" rel="noopener noreferrer" className="block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={detail.ktp_photo_url} alt="Foto KTP" className="aspect-square rounded-lg border border-app-border object-cover" />
                       <p className="mt-1 text-center text-[10px] font-semibold text-app-muted">KTP</p>
                     </a>
                   )}
                   {detail.selfie_photo_url && (
                     <a href={detail.selfie_photo_url} target="_blank" rel="noopener noreferrer" className="block">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- lihat catatan privasi/presigned di blok KTP di atas */}
                       <img src={detail.selfie_photo_url} alt="Foto selfie" className="aspect-square rounded-lg border border-app-border object-cover" />
                       <p className="mt-1 text-center text-[10px] font-semibold text-app-muted">Selfie</p>
                     </a>

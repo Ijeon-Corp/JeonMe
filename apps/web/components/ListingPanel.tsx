@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { ApiError, DashboardProduct, reorderProducts, updateProduct } from "@/lib/api-client";
 import { IconBox, IconGripVertical, IconStar } from "@/components/icons";
@@ -83,8 +84,8 @@ export default function ListingPanel({
             </span>
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-jeon-purple/10">
               {p.cover_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.cover_image_url} alt={p.name} className="h-full w-full object-cover" />
+                // Ukuran TETAP 36px -- span pembungkusnya h-9 w-9 flex-shrink-0.
+                <Image src={p.cover_image_url} alt={p.name} width={36} height={36} className="h-full w-full object-cover" />
               ) : (
                 <IconBox className="h-4 w-4 text-jeon-purple/40" />
               )}

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -201,10 +203,17 @@ export default function SettingsProfilePage() {
 
       <div className="mt-5 flex items-center gap-4 rounded-jlg border border-jeon-ink bg-app-surface p-4">
         {original?.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- pratinjau kecil, tidak perlu next/image di sini
-          <img
+          // Ukuran TETAP 64px (h-16 w-16). Komentar lama di sini bilang
+          // "pratinjau kecil, tidak perlu next/image" -- itu SUDAH TIDAK
+          // BERLAKU (audit performa 15 September 2026): justru karena kotaknya
+          // kecil sementara file sumbernya bisa 1600px, selisih srcset-nya
+          // besar. Kotak kecil = alasan untuk MEMAKAI next/image, bukan
+          // melewatkannya.
+          <Image
             src={original.avatar_url}
             alt=""
+            width={64}
+            height={64}
             className="h-16 w-16 flex-shrink-0 rounded-full border-2 border-jeon-ink object-cover"
           />
         ) : (

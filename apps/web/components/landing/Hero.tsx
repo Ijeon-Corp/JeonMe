@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
 
@@ -105,11 +106,27 @@ export default function Hero() {
           </div>
 
           <div className="flex justify-center pb-4 lg:justify-end">
-            {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
-            <img
+            {/* next/image (audit performa 15 September 2026): hero.png aslinya
+                1536x1024 PNG ~1,7 MB dan ini elemen LCP halaman depan -- satu-
+                satunya gambar terbesar yang langsung terlihat tanpa scroll.
+                width/height diisi dimensi ASLI (bukan ukuran render) supaya
+                rasio 3:2-nya dipakai Next.js untuk mencegah layout shift;
+                lebar TAMPIL tetap diatur CSS `w-full max-w-[640px]` seperti
+                sebelumnya. `h-auto` WAJIB ditambahkan: <Image> memasang atribut
+                width/height sungguhan pada <img>, jadi tanpa itu `w-full` akan
+                meregang lebar sementara tingginya terkunci 1024px (gambar jadi
+                gepeng) -- beda dari <img> polos tanpa atribut dimensi.
+                fetchPriority="high" (BUKAN `preload`) sesuai anjuran dokumen
+                Next.js 16 untuk kasus LCP biasa, dan konsisten dgn pola yang
+                sudah dipakai untuk avatar di PagePreview.tsx. */}
+            <Image
               src="/homepage/hero.png"
               alt="Contoh halaman jeon.id -- bio, konten, dan statistik kreator dalam satu tautan"
-              className="w-full max-w-[640px]"
+              width={1536}
+              height={1024}
+              fetchPriority="high"
+              sizes="(max-width: 680px) 100vw, 640px"
+              className="h-auto w-full max-w-[640px]"
             />
           </div>
         </div>

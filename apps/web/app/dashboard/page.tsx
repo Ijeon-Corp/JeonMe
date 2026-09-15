@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -457,8 +459,10 @@ export default function DashboardHomePage() {
                 >
                   <div className="flex items-center gap-3">
                     {creator.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={creator.avatarUrl} alt={creator.name} className="h-10 w-10 flex-shrink-0 rounded-full object-cover" />
+                      // Ukuran TETAP 40px (h-10 w-10). avatarUrl bisa berupa
+                      // URL googleusercontent mentah utk akun daftar-lewat-Google
+                      // -- sudah didaftarkan di images.remotePatterns.
+                      <Image src={creator.avatarUrl} alt={creator.name} width={40} height={40} className="h-10 w-10 flex-shrink-0 rounded-full object-cover" />
                     ) : (
                       <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-lavender font-display text-sm font-bold text-[#111111]">
                         {creator.name.slice(0, 1).toUpperCase()}

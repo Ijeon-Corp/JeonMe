@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import {
@@ -297,8 +299,10 @@ export default function DashboardBusinessCardPage() {
           <p className="mb-2 text-[11px] text-app-muted">{t("dashboard.pages.businessCard.backgroundHint")}</p>
           <div className="flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
             {card.background_image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={card.background_image_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+              // Ukuran TETAP 96x56 (w-24 h-14) -- pratinjau latar kartu nama.
+              // Sengaja BUKAN rasio gambar aslinya: object-cover memang
+              // memotongnya ke kotak pratinjau ini, sama seperti sebelumnya.
+              <Image src={card.background_image_url} alt="" width={96} height={56} className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
             ) : (
               <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
                 {t("dashboard.pages.links.common.noneYet")}

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -285,8 +287,8 @@ export default function OrderHistoryPage() {
                 >
                   <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-app-surface-2">
                     {order.cover_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={order.cover_image_url} alt={order.product_name} className="h-full w-full object-cover" />
+                      // Ukuran TETAP 48px -- kotak pembungkusnya h-12 w-12.
+                      <Image src={order.cover_image_url} alt={order.product_name} width={48} height={48} className="h-full w-full object-cover" />
                     ) : (
                       <span className="text-xs font-bold text-app-muted">{order.product_name.slice(0, 1).toUpperCase()}</span>
                     )}

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
@@ -1924,8 +1926,8 @@ function BlockSection({
                 <div className="flex flex-wrap gap-2">
                   {((link.block_data?.images as string[]) ?? []).map((src, i) => (
                     <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                      {/* Ukuran TETAP 64px -- petak galeri h-16 w-16. */}
+                      <Image src={src} alt="" width={64} height={64} className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
                       <button
                         type="button"
                         onClick={() => handleGalleryImageDelete(link, i)}

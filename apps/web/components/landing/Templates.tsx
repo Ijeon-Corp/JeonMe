@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { QUICK_SETUP_TEMPLATES } from "@/lib/quick-setup-templates";
 import { useLocale } from "@/lib/locale-context";
@@ -100,8 +101,23 @@ export default function Templates() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((t) => (
             <div key={t.key} className="reveal cursor-pointer transition-transform duration-150 hover:-translate-y-1">
-              {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
-              <img src={`/homepage/templates/${t.image}`} alt={`${t.label} (${t.tag})`} className="w-full" />
+              {/* next/image (audit performa 15 September 2026): 8 file
+                  templates*.png masing-masing 1254x1254 (RGBA transparan, lihat
+                  CATATAN TEKNIS di atas) padahal sel grid-nya paling lebar ~300px
+                  -- dan sampai 8 gambar ini bisa tampil sekaligus saat filter
+                  "all". Semuanya BUJUR SANGKAR, jadi width=height=1254 aman
+                  dipakai seragam. `h-auto` menemani `w-full` dengan alasan sama
+                  seperti di Hero.tsx. `sizes` mengikuti grid di atas:
+                  1 kolom (<640px) -> ~100vw, 2 kolom (sm) -> ~50vw,
+                  4 kolom (lg) -> ~25vw, dibatasi lebar container. */}
+              <Image
+                src={`/homepage/templates/${t.image}`}
+                alt={`${t.label} (${t.tag})`}
+                width={1254}
+                height={1254}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="h-auto w-full"
+              />
             </div>
           ))}
         </div>

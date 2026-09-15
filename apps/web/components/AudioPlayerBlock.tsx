@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { IconPlayCircle, IconPauseCircle, IconMusicNote } from "@/components/icons";
 
@@ -77,8 +78,10 @@ export default function AudioPlayerBlock({
     <div className={cardClassName}>
       <div className="flex items-center gap-3">
         {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" className="h-11 w-11 flex-shrink-0 rounded-lg object-cover" />
+          // Ukuran TETAP 44px (h-11 w-11) -- sampul audio selalu kotak kecil
+          // di kiri baris, tidak pernah responsif (audit performa 15 September
+          // 2026: unggahan aslinya bisa 1600px, inilah selisih yang diambil).
+          <Image src={coverUrl} alt="" width={44} height={44} className="h-11 w-11 flex-shrink-0 rounded-lg object-cover" />
         ) : (
           <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-current/10 ${titleClassName}`}>
             <IconMusicNote className="h-5 w-5" />

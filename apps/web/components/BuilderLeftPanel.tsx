@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -427,8 +429,10 @@ function MediaImageEditor({
     <div className="flex flex-col gap-2">
       {imageUrl && (
         <div className="group relative h-28 w-full">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imageUrl} alt="" className="h-full w-full rounded-lg object-cover ring-1 ring-black/5" />
+          {/* `fill` -- pratinjau ini `h-28 w-full` (tinggi tetap, lebar ikut
+              panel kiri Builder yang lebarnya bisa berubah). Pembungkusnya
+              sudah `group relative h-28 w-full`. */}
+          <Image src={imageUrl} alt="" fill sizes="320px" className="rounded-lg object-cover ring-1 ring-black/5" />
           <button
             type="button"
             onClick={handleDelete}
@@ -538,8 +542,8 @@ function GalleryGridEditor({
       <div className="flex flex-wrap gap-2">
         {images.map((src, i) => (
           <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+            {/* Ukuran TETAP 64px -- petak galeri di panel ini h-16 w-16. */}
+            <Image src={src} alt="" width={64} height={64} className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
             <button
               type="button"
               onClick={() => handleDelete(i)}

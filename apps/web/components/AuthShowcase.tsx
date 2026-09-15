@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { IconCheck } from "@/components/icons";
 
 // Panel visual kanan halaman /register & /login -- rework redesign Fase 3
@@ -43,11 +44,20 @@ const BENEFITS = [
 export default function AuthShowcase() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-9 overflow-hidden py-12">
-      {/* eslint-disable-next-line @next/next/no-img-element -- mockup lokal di public/, bukan gambar kreator */}
-      <img
+      {/* next/image (audit performa 15 September 2026) -- gambar & alasan SAMA
+          PERSIS dengan Hero.tsx (hero.png 1536x1024 ~1,7 MB), lihat catatan
+          lengkap di sana soal kenapa width/height diisi dimensi ASLI dan kenapa
+          `h-auto` wajib menemani `w-full`. Bedanya cuma lebar tampil: di sini
+          dibatasi `max-w-md` (448px), jadi `sizes` pun lebih kecil. TANPA
+          fetchPriority -- panel ini hiasan samping halaman login/register, yang
+          penting justru form-nya, bukan gambar ini. */}
+      <Image
         src="/homepage/hero.png"
         alt="Contoh halaman jeon.id -- bio, konten, dan statistik kreator dalam satu tautan"
-        className="w-full max-w-md"
+        width={1536}
+        height={1024}
+        sizes="448px"
+        className="h-auto w-full max-w-md"
       />
 
       <p className="max-w-md text-center font-display text-2xl font-bold leading-snug text-app-ink" style={{ textWrap: "balance" }}>

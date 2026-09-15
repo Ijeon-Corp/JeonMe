@@ -60,6 +60,16 @@ function ConnectCard({
         <div className="flex items-center justify-between rounded-xl border-2 border-jeon-ink bg-app-surface p-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {connection.avatar_url ? (
+              // SENGAJA TETAP <img> mentah (audit performa 15 September 2026,
+              // migrasi next/image): social_connections.avatar_url disimpan APA
+              // ADANYA dari API platform (social_connect.go ConnectTikTok ->
+              // profile.AvatarURL), tidak pernah di-rehost ke storage sendiri.
+              // Host CDN TikTok berrotasi & URL-nya bertanda tangan + berumur
+              // pendek (p16-sign-va.tiktokcdn.com, p19-sign.tiktokcdn-us.com,
+              // ...), jadi tidak bisa dienumerasi jujur di images.remotePatterns.
+              // Alasan yang SAMA dengan thumbnail feed sosial di PagePreview.tsx.
+              // (Instagram tidak pernah mengisi kolom ini sama sekali -- lihat
+              // INSERT di social_connect.go yang memang tidak menyertakannya.)
               // eslint-disable-next-line @next/next/no-img-element
               <img src={connection.avatar_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
             ) : (

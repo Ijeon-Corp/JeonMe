@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import { IconChevronRight } from "@/components/icons";
 
@@ -47,13 +48,20 @@ export default function ImageSliderBlock({
         <div className="relative">
           <div ref={rowRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1">
             {images.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              // `h-auto` WAJIB menemani `aspect-video` setelah migrasi ke
+              // next/image (audit performa 15 September 2026): atribut
+              // width/height yang dipasang <Image> memberi elemen aspect-ratio
+              // bawaan UA yang mengalahkan `aspect-video` selama tinggi bukan
+              // `auto`. width/height 448x252 murni petunjuk srcset pada rasio
+              // 16:9 selebar kolom publik; lebar tampil tetap 4/5 atau 3/5
+              // kolom lewat CSS seperti sebelumnya.
+              <Image
                 key={i}
                 src={src}
                 alt={title ? `${title} ${i + 1}` : `Slide ${i + 1}`}
-                loading="lazy"
-                className="aspect-video w-4/5 flex-shrink-0 snap-center rounded-lg object-cover sm:w-3/5"
+                width={448}
+                height={252}
+                className="aspect-video h-auto w-4/5 flex-shrink-0 snap-center rounded-lg object-cover sm:w-3/5"
               />
             ))}
           </div>

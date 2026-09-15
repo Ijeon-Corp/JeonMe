@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import { IconChevronRight, IconClose } from "@/components/icons";
 
@@ -81,15 +82,21 @@ export default function GalleryBlock({
               key={i}
               type="button"
               onClick={() => setOpenIndex(i)}
-              className="aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
+              className="relative aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
               aria-label={`Perbesar foto ${i + 1}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              {/* `fill` -- tombol pembungkusnya `aspect-square w-full`, jadi
+                  tingginya turun dari rasio & lebarnya dari kolom grid (tidak
+                  ada angka lebar literal). Butuh `relative` di tombol itu,
+                  ditambahkan di baris class-nya. Sel grid 3 kolom di dalam
+                  kolom publik max-w-md -> ~130px, dibulatkan ke atas ke 150px
+                  untuk layar retina. */}
+              <Image
                 src={src}
                 alt={title ? `${title} ${i + 1}` : `Foto galeri ${i + 1}`}
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
+                fill
+                sizes="150px"
+                className="object-cover transition-transform duration-200 hover:scale-105"
               />
             </button>
           ))}
@@ -161,6 +168,16 @@ export default function GalleryBlock({
             </>
           )}
 
+          {/* SENGAJA TETAP <img> mentah (audit performa 15 September 2026,
+              migrasi next/image): foto lightbox tampil pada UKURAN ASLINYA yang
+              dibatasi `max-h-full max-w-full` -- jadi kotaknya dihitung runtime
+              dari dimensi foto itu sendiri, persis model yang TIDAK bisa
+              diwakili width/height tetap milik next/image (rasio tebakan apa pun
+              akan salah untuk foto potret maupun panorama). `fill` juga bukan
+              jawabannya: tombol prev/next di overlay yang sama diposisikan
+              absolut relatif ke pembungkus ini. Lagi pula di sinilah foto justru
+              memang ingin dilihat pada resolusi penuh, jadi keuntungan srcset-nya
+              paling kecil di seluruh komponen ini. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={images[openIndex]}

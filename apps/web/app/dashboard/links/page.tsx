@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import PageSkeleton from "@/components/Skeleton";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -2273,8 +2275,11 @@ export default function DashboardLinksPage() {
               className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-card disabled:opacity-60"
             >
               {page.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={page.avatar_url} alt={page.username} className="h-full w-full object-cover" />
+                // Ukuran TETAP 56px -- tombol pembungkusnya h-14 w-14.
+                // avatar_url bisa berupa URL googleusercontent mentah untuk
+                // akun daftar-lewat-Google, sudah didaftarkan di
+                // images.remotePatterns (next.config.js).
+                <Image src={page.avatar_url} alt={page.username} width={56} height={56} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-jeon-purple/10 font-display text-lg font-bold text-jeon-purple">
                   {page.username.slice(0, 1).toUpperCase()}
@@ -2942,11 +2947,13 @@ export default function DashboardLinksPage() {
                     > deteksi platform dari URL [khusus tautan biasa] > ikon default
                     per block_type), berlaku utk SEMUA block_type. */}
                 {link.custom_icon_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
+                  <Image
                     src={link.custom_icon_url}
                     alt=""
                     title={t("dashboard.pages.links.linkCard.customIcon")}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
                   />
                 ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
@@ -3370,8 +3377,11 @@ export default function DashboardLinksPage() {
               {link.block_type === "link" && link.is_featured && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={link.thumbnail_url} alt="" className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                    // Ukuran TETAP 96x56 (w-24 h-14). thumbnail_url bisa berupa
+                    // URL img.youtube.com yang diturunkan otomatis backend untuk
+                    // tautan YouTube ber-"featured" (links.go) -- host itu sudah
+                    // didaftarkan di images.remotePatterns (next.config.js).
+                    <Image src={link.thumbnail_url} alt="" width={96} height={56} className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
                   ) : (
                     <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
                       {t("dashboard.pages.links.common.noneYet")}
@@ -3429,8 +3439,8 @@ export default function DashboardLinksPage() {
                   <div className="flex flex-wrap gap-2">
                     {((link.block_data?.images as string[]) ?? []).map((src, i) => (
                       <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
+                        {/* Ukuran TETAP 64px -- petak galeri h-16 w-16. */}
+                        <Image src={src} alt="" width={64} height={64} className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
                         <button
                           type="button"
                           onClick={() => handleGalleryImageDelete(link, i)}
@@ -3476,10 +3486,14 @@ export default function DashboardLinksPage() {
               {link.block_type === "project_showcase" && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.block_data?.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    // Ukuran TETAP 96x56 (w-24 h-14) -- kotak pratinjau, bukan
+                    // rasio gambar aslinya (object-cover memotong, sama seperti
+                    // sebelumnya).
+                    <Image
                       src={link.block_data.image_url as string}
                       alt=""
+                      width={96}
+                      height={56}
                       className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5"
                     />
                   ) : (
@@ -3593,10 +3607,14 @@ export default function DashboardLinksPage() {
               {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && contentEditId === link.id && (
                 <div className="ml-11 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                   {link.block_data?.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    // Ukuran TETAP 96x56 (w-24 h-14) -- kotak pratinjau, bukan
+                    // rasio gambar aslinya (object-cover memotong, sama seperti
+                    // sebelumnya).
+                    <Image
                       src={link.block_data.image_url as string}
                       alt=""
+                      width={96}
+                      height={56}
                       className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5"
                     />
                   ) : (

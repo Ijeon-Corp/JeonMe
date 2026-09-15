@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useState } from "react";
 import { ApiError, MyPage, PageLayoutVariant } from "@/lib/api-client";
 import {
@@ -287,8 +289,10 @@ export function HeaderSection({
         <label className="mb-1.5 block text-xs font-semibold text-app-ink">{t("dashboard.components.produkPageEditor.header.avatarLabel")}</label>
         <div className="flex items-center gap-3">
           {page.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={page.avatar_url} alt={page.name ?? page.display_name} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
+            // Ukuran TETAP 48px (h-12 w-12). avatar_url bisa berupa URL
+            // googleusercontent mentah untuk akun daftar-lewat-Google -- host
+            // itu sudah didaftarkan di images.remotePatterns (next.config.js).
+            <Image src={page.avatar_url} alt={page.name ?? page.display_name} width={48} height={48} className="h-12 w-12 rounded-full object-cover ring-2 ring-white" />
           ) : (
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-jeon-purple/10 font-display text-base font-bold text-jeon-purple">
               {(page.slug ?? page.display_name).slice(0, 1).toUpperCase()}

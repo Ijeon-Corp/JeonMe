@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
@@ -520,8 +521,10 @@ export default function DashboardLayout({
             sidebar gelap KONSTAN, langsung pakai varian -dark (wordmark
             putih), bukan pasangan brand-logo-light/dark. */}
         <Link href="/dashboard" className="flex items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="h-8 w-auto" />
+          {/* next/image 128x48 (audit performa 15 September 2026) -- rasio
+              intrinsik 8:3 file aslinya (2048x768), tinggi tampil tetap diatur
+              CSS `h-8 w-auto`. Lihat catatan lengkap di components/landing/Logo.tsx. */}
+          <Image src="/jeon-logo-new-dark.png" alt="jeon.id" width={128} height={48} className="h-8 w-auto" />
         </Link>
 
         {workspaces.length > 1 && (
@@ -637,8 +640,12 @@ export default function DashboardLayout({
   const railContent = (
     <>
       <Link href="/dashboard" className="mb-3 flex flex-shrink-0 justify-center" aria-label="jeon.id" title="jeon.id">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/favicon-new.png" alt="jeon.id" className="h-9 w-9" />
+        {/* next/image (audit performa 15 September 2026): favicon-new.png
+            aslinya 1254x1254 padahal rail sidebar ini merendernya 36x36 --
+            gambar bujur sangkar berukuran TETAP, jadi width/height diisi ukuran
+            render sungguhan (36), bukan dimensi file. Next.js tetap
+            membangkitkan varian 2x sendiri untuk layar retina. */}
+        <Image src="/favicon-new.png" alt="jeon.id" width={36} height={36} className="h-9 w-9" />
       </Link>
       <nav
         aria-label={t("dashboard.nav.overview")}
@@ -743,10 +750,8 @@ export default function DashboardLayout({
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="nav-glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden">
               <Link href="/dashboard" className="flex items-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/jeon-logo-new.png" alt="jeon.id" className="brand-logo-light h-7 w-auto" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/jeon-logo-new-dark.png" alt="jeon.id" className="brand-logo-dark h-7 w-auto" />
+                <Image src="/jeon-logo-new.png" alt="jeon.id" width={128} height={48} className="brand-logo-light h-7 w-auto" />
+                <Image src="/jeon-logo-new-dark.png" alt="jeon.id" width={128} height={48} className="brand-logo-dark h-7 w-auto" />
               </Link>
               <button
                 type="button"
@@ -894,8 +899,13 @@ export default function DashboardLayout({
                           buka menu Langganan sama sekali. */}
                       <span className="relative flex-shrink-0">
                         {avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={avatarUrl} alt={username} className="h-6 w-6 rounded-full object-cover" />
+                          // next/image ukuran TETAP 24x24 (audit performa 15
+                          // September 2026): avatar kreator disimpan di object
+                          // storage dengan sisi terpanjang sampai 1600px
+                          // (internal/imageconv), padahal chip ini cuma 24px --
+                          // inilah selisih yang diambil srcset, bukan formatnya
+                          // (backend sudah WebP).
+                          <Image src={avatarUrl} alt={username} width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
                         ) : (
                           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-jeon-lavender font-display text-[11px] font-bold text-[#111111]">
                             {username.slice(0, 1).toUpperCase()}
