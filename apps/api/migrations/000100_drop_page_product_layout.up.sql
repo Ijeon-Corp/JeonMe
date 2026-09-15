@@ -1,0 +1,18 @@
+-- Hapus pages.product_layout -- rilis KEDUA dari pola dua-rilis DROP
+-- COLUMN yang didokumentasikan di CLAUDE.md (migrate-then-swap: migrasi
+-- jalan SEBELUM container lama diganti, jadi kolom yang di-drop TIDAK
+-- BOLEH masih dibaca kode yang MUNGKIN masih berjalan di jendela itu).
+--
+-- KENAPA: fitur "Tata Letak Produk" (grid/stacked/category/list, migrasi
+-- 000072) sudah TIDAK PERNAH dibaca render publik mana pun sejak 15
+-- September 2026 ("layout dipilih di blok produk saja", masing-masing
+-- blok "produk" punya opsi layoutnya sendiri lewat PRODUK_LAYOUT_RENDERERS
+-- di PagePreview.tsx) -- picker UI-nya (Builder Left Panel) dihapus lebih
+-- dulu di commit terpisah, lalu SEMUA kode yang masih membaca/menulis
+-- kolom ini di backend (GetPublicPage/GetPublicPageBySlug/GetPage/
+-- UpdatePage, page.go) & frontend (MyPage/ExtraPageDetail, api-client.ts)
+-- ikut dihapus di rilis SEBELUM migrasi ini -- WAJIB rilis itu sudah live
+-- (staging/produksi) sebelum migrasi DROP ini dijalankan, supaya tidak
+-- ada satu pun instance kode yang sedang berjalan (termasuk container
+-- LAMA yang belum sempat diganti) yang masih men-SELECT/UPDATE kolom ini.
+ALTER TABLE pages DROP COLUMN product_layout;
