@@ -2352,11 +2352,10 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 		return
 	}
 
-	if h.Storage != nil && removedURL != "" {
-		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
-			_ = h.Storage.Delete(ctx, key)
-		}
-	}
+	// deleteOwnedStorageObject -- lihat catatan lengkap di definisinya:
+	// mencegah pengguna menghapus objek storage milik pengguna LAIN dengan
+	// menaruh URL foto orang lain ke block_data blok miliknya sendiri.
+	deleteOwnedStorageObject(ctx, h.Storage, removedURL, fmt.Sprintf("gallery-images/%s/", linkID))
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari galeri"})
@@ -2553,11 +2552,8 @@ func (h *LinksHandler) DeleteMediaImage(c *gin.Context) {
 		return
 	}
 
-	if h.Storage != nil && removedURL != "" {
-		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
-			_ = h.Storage.Delete(ctx, key)
-		}
-	}
+	// deleteOwnedStorageObject -- lihat catatan lengkap di definisinya.
+	deleteOwnedStorageObject(ctx, h.Storage, removedURL, fmt.Sprintf("link-media/%s/", linkID))
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"message": "gambar dihapus"})
@@ -3045,6 +3041,64 @@ func storageKeyFromPublicURL(s *storage.Client, publicURL string) string {
 	return strings.TrimPrefix(publicURL, prefix)
 }
 
+// deleteOwnedStorageObject -- pasangan storageKeyFromPublicURL yang WAJIB
+// dipakai di setiap penghapusan objek storage yang key-nya diturunkan dari
+// URL tersimpan di block_data (JSONB bebas-bentuk, bisa diisi klien lewat
+// PATCH biasa) -- bukan dari kolom yang selalu dikonstruksi server sendiri.
+//
+// Celah IDOR NYATA ditemukan lewat audit keamanan 15 September 2026:
+// validasi field block_data.images/image_url (lihat validateBlockData case
+// "gallery"/"image_slider"/"image"/"video_image"/"embed_link" di atas) HANYA
+// mengecek "apakah string ini URL http(s) yang valid" -- TIDAK PERNAH
+// mengecek URL itu benar-benar milik blok/link yang sedang diedit. Sebelum
+// fungsi ini ada, DeleteGalleryImage/DeleteCatalogItemImage/DeleteMediaImage
+// langsung memanggil h.Storage.Delete dengan key hasil tebakan dari URL
+// APAPUN yang tersimpan di index/field itu -- pengguna A cukup: (1) PATCH
+// bloknya SENDIRI supaya salah satu entri images-nya berisi URL foto milik
+// pengguna B (semua URL aset publik B bisa dilihat langsung dari halaman
+// publik B, atau ditebak dari pola nama key yang terdokumentasi di komentar
+// file ini), (2) panggil endpoint hapus PADA BLOKNYA SENDIRI -- lolos
+// ownsLink karena memang bloknya sendiri, lalu server menghapus objek milik
+// B dari storage bersama (pakai kredensial admin MinIO aplikasi, MENJANGKAU
+// prefix privat juga, bukan cuma yang public-read).
+//
+// Fix: sebelum benar-benar menghapus, wajibkan key yang diturunkan dari URL
+// berada PERSIS di bawah prefix milik resource yang sedang diedit (mis.
+// "gallery-images/<linkID>/", sesuai skema penamaan key yang dipakai
+// Upload*-nya sendiri) -- expectedPrefix HARUS diakhiri "/" supaya
+// "gallery-images/abc..." tidak salah cocok dengan prefix "gallery-images/ab".
+// URL milik pengguna lain akan selalu gagal cocok (linkID mereka beda),
+// sehingga panggilan Storage.Delete dilewati -- entri tetap terhapus dari
+// array block_data (itu memang milik pengguna A sendiri, sah dihapus),
+// cuma objek storage yang BUKAN miliknya yang tidak ikut disentuh.
+func deleteOwnedStorageObject(ctx context.Context, s *storage.Client, publicURL, expectedPrefix string) {
+	if s == nil {
+		return
+	}
+	key := resolveOwnedStorageKey(s, publicURL, expectedPrefix)
+	if key == "" {
+		return
+	}
+	_ = s.Delete(ctx, key)
+}
+
+// resolveOwnedStorageKey -- bagian MURNI (tanpa I/O) dari deleteOwnedStorageObject,
+// dipisah supaya keputusan keamanannya (URL mana yang boleh diterjemahkan
+// jadi perintah hapus) bisa diuji langsung tanpa perlu koneksi storage
+// sungguhan. Mengembalikan "" kalau publicURL bukan milik resource yang
+// diwakili expectedPrefix -- lihat catatan lengkap di deleteOwnedStorageObject
+// soal kenapa pengecekan ini wajib ada.
+func resolveOwnedStorageKey(s *storage.Client, publicURL, expectedPrefix string) string {
+	if s == nil || publicURL == "" {
+		return ""
+	}
+	key := storageKeyFromPublicURL(s, publicURL)
+	if key == "" || !strings.HasPrefix(key, expectedPrefix) {
+		return ""
+	}
+	return key
+}
+
 // maxCatalogItems -- batas wajar jumlah item per blok "catalog" (permintaan
 // langsung pengguna, 25 Agustus 2026: blok "Jenis Rumah" -> daftar jenis ->
 // detail per jenis) supaya daftar item tidak jadi katalog tak terbatas yang
@@ -3240,11 +3294,8 @@ func (h *LinksHandler) DeleteCatalogItemImage(c *gin.Context) {
 		return
 	}
 
-	if h.Storage != nil && removedURL != "" {
-		if key := storageKeyFromPublicURL(h.Storage, removedURL); key != "" {
-			_ = h.Storage.Delete(ctx, key)
-		}
-	}
+	// deleteOwnedStorageObject -- lihat catatan lengkap di definisinya.
+	deleteOwnedStorageObject(ctx, h.Storage, removedURL, fmt.Sprintf("catalog-images/%s/", linkID))
 
 	h.invalidateLinkCache(ctx, linkID)
 	c.JSON(http.StatusOK, gin.H{"images": images, "message": "foto dihapus dari item katalog"})
