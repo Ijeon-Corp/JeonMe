@@ -81,6 +81,17 @@ Satu akun kreator punya **banyak halaman** (tabel `pages`), dua kategori:
 - **Migrasi baru**: nomor urut berikutnya, isi komentar panjang menjelaskan KENAPA
   (permintaan pengguna / bug apa) bukan cuma APA — konvensi yang konsisten di seluruh
   `migrations/`, ikuti gaya yang sudah ada.
+- **DROP COLUMN/RENAME jangan sejalan dengan deploy yang berhenti memakainya**: pipeline
+  deploy (`deploy-staging.yml`/`deploy-production.yml`) menjalankan migrasi SEBELUM
+  container lama benar-benar diganti (`migrate up` dulu, baru `docker compose up -d
+  --force-recreate`) — di jendela antara dua langkah itu, container LAMA yang masih
+  melayani traffic bisa saja masih meng-query kolom yang baru saja di-drop, menyebabkan
+  500 nyata untuk pengguna (ditemukan lewat audit performa 15 September 2026, migrasi
+  `000089_remove_booking` — kolom yang di-drop masih dipakai `product.go` versi
+  sebelumnya). Untuk DROP COLUMN/RENAME kolom yang MASIH dibaca kode yang sedang
+  berjalan: pisah jadi dua rilis — migrasi ADDITIVE dulu (kode berhenti memakai kolom
+  lama, tapi kolom TETAP ada), baru migrasi DROP-nya menyusul di rilis berikutnya
+  setelah kode lama dipastikan sudah tidak berjalan lagi di mana pun.
 - **react-hooks/set-state-in-effect** (ESLint, dari `eslint-plugin-react-hooks` v7 bundel
   Next.js 16 project ini): jangan panggil setState di dalam efek (langsung atau lewat
   fungsi yang dipanggil efek) tanpa pola yang benar. Dua pola yang sudah terbukti lolos di
