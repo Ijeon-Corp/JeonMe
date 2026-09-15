@@ -60,6 +60,20 @@ const MapsEmbedBlock = dynamic(() => import("@/components/MapsEmbedBlock"));
 const SocialProofToast = dynamic(() => import("@/components/SocialProofToast"));
 const VideoEmbedBlock = dynamic(() => import("@/components/VideoEmbedBlock"));
 
+// BuilderPagePreview -- audit performa 15 September 2026 (lanjutan langsung
+// dari pemecahan 13 tipe blok "langka" di atas): renderer ini HANYA dipakai
+// kalau data.builderMode === "builder" (lihat dispatcher di komponen
+// PagePreview di bawah) -- saling EKSKLUSIF dengan LandingPagePreview/
+// ProdukPagePreview/layout bio klasik, satu halaman selalu PERSIS satu
+// jenis. Sebelumnya badannya (~1000 baris, termasuk dispatcher rekursif
+// renderBuilderNode) ikut statis di file ini, jadi SETIAP pengunjung
+// halaman publik apa pun tetap mengunduh JS-nya walau halamannya bukan mode
+// builder. Dipindah utuh ke @/components/BuilderPagePreviewInternal (lihat
+// catatan di sana) & di-load lewat next/dynamic -- TANPA ssr:false, alasan
+// sama persis dengan blok "langka" di atas (halaman builder sungguhan tetap
+// wajib di-SSR demi SEO/initial paint).
+const BuilderPagePreview = dynamic(() => import("@/components/BuilderPagePreviewInternal"));
+
 export interface PagePreviewLink {
   id: string;
   title: string;
@@ -356,7 +370,7 @@ export interface PagePreviewData {
 // diam-diam (kembalikan url apa adanya) untuk URL yang bukan http/https
 // (mailto:, tel:, javascript:, dst) ATAU yang gagal di-parse -- UTM cuma
 // masuk akal untuk kunjungan halaman web sungguhan.
-function buildUtmHref(url: string, title: string, utmEnabled: boolean | undefined): string {
+export function buildUtmHref(url: string, title: string, utmEnabled: boolean | undefined): string {
   if (!utmEnabled) return url;
   try {
     const parsed = new URL(url);
@@ -486,7 +500,7 @@ export interface PreviewSourceProduct {
 // kosong di PagePreviewData) -- entri is_primary di `pages` dicocokkan ke
 // itu, entri lain dicocokkan by slug (unik PER-USER sejak migrasi 000079,
 // jadi aman dibandingkan langsung tanpa perlu id).
-function PageSwitcher({
+export function PageSwitcher({
   username,
   pages,
   currentSlug,
@@ -590,7 +604,7 @@ function renderProductPriceBlock(product: PagePreviewProduct, theme: PageTheme):
   return <p className={`text-xs font-bold ${theme.productPrice}`}>Rp {product.price_idr.toLocaleString("id-ID")}</p>;
 }
 
-function renderSingleProductCard(
+export function renderSingleProductCard(
   product: PagePreviewProduct,
   theme: PageTheme,
   canBuy: boolean,
@@ -904,7 +918,7 @@ function renderProductRowWithImage(
 // keduanya benar-benar berbagi SATU sumber kebenaran pemetaan layout,
 // bukan disalin dua kali. "list" -- kompatibilitas mundur (nilai lama
 // sebelum diperluas jadi 4 opsi).
-const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = {
+export const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = {
   card_small: renderProductCardSmall,
   row_with_image: renderProductRowWithImage,
   row_no_image: renderProductListRow,
@@ -926,7 +940,7 @@ const PRODUK_LAYOUT_RENDERERS: Record<string, typeof renderSingleProductCard> = 
 // utuh). Kepemilikan product_id SUDAH diverifikasi backend lewat
 // checkBuilderProductOwnership (collectBuilderProductIDs disusuri utk
 // blockType "countdown" juga) -- di sini murni tampilan.
-function renderCountdownAction(
+export function renderCountdownAction(
   blockData: Record<string, unknown> | undefined,
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused">,
   theme: PageTheme,
@@ -1030,7 +1044,7 @@ function renderSocialFeed(feed: PagePreviewSocialFeed | undefined, theme: PageTh
 // rumus posisi SAMA seperti StickerCanvasEditor. Dipakai bersama oleh
 // layout bio biasa & ProdukPagePreview -- Landing (No.99, tanpa
 // avatar/header sama sekali) SENGAJA tidak memakainya.
-function StickerOverlay({
+export function StickerOverlay({
   stickers,
   editable,
   onChange,
@@ -1171,7 +1185,7 @@ function clampScale(value: number) {
 // videonya (mis. "Atmos"/awan aslinya terang). autoPlay+muted+playsInline
 // WAJIB bertiga supaya browser mobile mengizinkan autoplay tanpa interaksi
 // pengguna; loop membuat klip pendek (~8 detik) terasa berkelanjutan.
-function renderVideoBackground(theme: PageTheme) {
+export function renderVideoBackground(theme: PageTheme) {
   if (!theme.videoSrc) return null;
   return (
     <>
@@ -1225,7 +1239,7 @@ function renderSocialRow(social: PagePreviewData["social"], align: "center" | "l
 // & ProdukPagePreview) supaya kedua tempat itu otomatis dapat varian
 // banner tanpa implementasi ganda -- konsisten dengan prinsip paritas
 // halaman utama/Toko di proyek ini.
-function renderBioHeader(
+export function renderBioHeader(
   data: Pick<PagePreviewData, "avatarUrl" | "username" | "displayName" | "isVerified" | "bio" | "social" | "layoutVariant">,
   theme: PageTheme
 ) {
@@ -1724,7 +1738,7 @@ function renderBioHeader(
 // pengunjung belum pernah pilih apa pun. Ini beda dari larangan token
 // app-* dark/light di file ini -- itu soal WARNA tema halaman kreator,
 // bukan BAHASA elemen watermark milik platform sendiri.
-function Watermark({ isPremium, hideWatermark }: { isPremium?: boolean; hideWatermark?: boolean }) {
+export function Watermark({ isPremium, hideWatermark }: { isPremium?: boolean; hideWatermark?: boolean }) {
   const { t } = useLocale();
   if (isPremium && hideWatermark) return null;
   return (
@@ -1826,7 +1840,7 @@ function SensitiveContentGate({ theme, renderContent }: { theme: PageTheme; rend
   );
 }
 
-function renderLinkOrBlock(
+export function renderLinkOrBlock(
   link: PagePreviewLink,
   theme: PageTheme,
   data: Pick<PagePreviewData, "username" | "pageSlug" | "utmEnabled" | "products" | "referralCode" | "shopPaused">,
@@ -2596,7 +2610,7 @@ function findCatalogLinkedProduct(blocks: EmbeddedCatalogBlock[] | undefined, pr
   return products.find((p) => p.id === productIds[0]);
 }
 
-function CatalogTakeoverView({
+export function CatalogTakeoverView({
   link,
   theme,
   data,
@@ -3456,1002 +3470,6 @@ function LandingPagePreview({
                 pesan "tidak tersedia", lihat PageFooterLinks). hideFooterChrome
                 di atas adalah pengecualian TERPISAH & sengaja, lihat catatan
                 lengkap di prop-nya (PagePreview). */}
-            <PageFooterLinks
-              pageId={data.id}
-              username={data.username}
-              bio={data.bio}
-              isVerified={data.isVerified}
-              footerClassName={theme.footer}
-            />
-          </div>
-        )}
-      </div>
-    </main>
-  );
-}
-
-// BuilderRenderNode -- bentuk seragam yang dipakai renderBuilderNode,
-// dinormalisasi dari DUA sumber berbeda: blok ROOT (PagePreviewLink,
-// camelCase blockType/blockData, dari data.links) & blok TERTANAM di
-// dalam block_data Section/Column (raw JSON snake_case block_type/
-// block_data, bentuk EmbeddedBuilderBlock -- lihat api-client.ts &
-// builder-blocks.ts). normalizeEmbeddedBuilderNode menjembatani yang
-// kedua supaya renderBuilderNode cukup satu implementasi rekursif,
-// tidak perlu tahu bedanya root vs tertanam.
-type BuilderRenderNode = {
-  id: string;
-  title: string;
-  url?: string;
-  // description -- Fase 2 (permintaan langsung pengguna 8 September 2026):
-  // dibutuhkan "embed_link" (subjudul kartu), field ini SUDAH ada di
-  // bentuk EmbeddedBuilderBlock (api-client.ts) sejak awal, cuma belum
-  // pernah dipakai node manapun sampai sekarang.
-  description?: string;
-  blockType: string;
-  blockData: Record<string, unknown>;
-};
-
-function normalizeEmbeddedBuilderNode(raw: unknown): BuilderRenderNode | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
-  const id = typeof r.id === "string" ? r.id : "";
-  const blockType = typeof r.block_type === "string" ? r.block_type : "";
-  if (!id || !blockType) return null;
-  return {
-    id,
-    title: typeof r.title === "string" ? r.title : "",
-    url: typeof r.url === "string" ? r.url : undefined,
-    description: typeof r.description === "string" ? r.description : undefined,
-    blockType,
-    blockData: (r.block_data && typeof r.block_data === "object" ? (r.block_data as Record<string, unknown>) : {}),
-  };
-}
-
-// renderBuilderNode -- Canvas Page Builder (migrasi 000096, permintaan
-// langsung pengguna 7 September 2026, dua screenshot Lynk.id): dispatcher
-// rekursif blok Section/Column, TERPISAH SENGAJA dari renderLinkOrBlock
-// (bio/produk) & switch inline LandingPagePreview di atas -- keduanya
-// SUDAH divergen satu sama lain, menambah cabang lagi ke salah satunya
-// cuma menambah duplikasi konflik. Cakupan Fase 1 (7 September 2026):
-// leaf "text"/"button"/"divider" + kontainer "section"/"column" (5 tipe
-// kategori GENERAL). Fase 2/3 (8 September) menambah tipe MEDIA/
-// INFORMATION/CONVERSION/OTHERS, Fase 4 (13 September) menambah sisa
-// tipe klasik lama (heading/accordion/audio/file/project_showcase) --
-// SEMUANYA sudah rampung, lihat BUILDER_NODE_BLOCK_TYPES di bawah utk
-// daftar LENGKAP yang benar-benar ditangani saat ini.
-// BUILDER_NODE_BLOCK_TYPES -- daftar PERSIS case yang ditangani switch
-// renderBuilderNode di bawah. Dipakai BuilderPagePreview untuk memutuskan
-// blok akar mana yang dirender lewat jalur builder vs jalur klasik
-// (renderLinkOrBlock) -- lihat catatan bug 9 September 2026 di sana. Kalau
-// menambah case baru di switch, WAJIB tambahkan ke sini juga; kalau tidak,
-// tipe baru itu akan jatuh ke renderLinkOrBlock (yang tidak mengenalnya).
-const BUILDER_NODE_BLOCK_TYPES: ReadonlySet<string> = new Set([
-  "divider",
-  "text",
-  "button",
-  "section",
-  "column",
-  "video",
-  "faq",
-  "gallery",
-  "image",
-  "video_image",
-  "embed_link",
-  "maps",
-  "image_slider",
-  "countdown",
-  "list",
-  "embed",
-  "produk",
-  // Fase 4 (13 September 2026): 5 tipe klasik lama, boleh root MAUPUN
-  // bersarang (lihat allowedBuilderEmbeddedBlockTypes, links.go).
-  // "contact_form"/"catalog" SENGAJA TIDAK di sini (root-only) -- baris
-  // ROOT tipe itu tetap jatuh ke renderLinkOrBlock yang SUDAH bekerja
-  // penuh (termasuk submit form sungguhan & drill-down katalog), menulis
-  // ulang logic itu di renderBuilderNode cuma menambah duplikasi tanpa
-  // manfaat karena keduanya TIDAK PERNAH muncul bersarang.
-  "heading",
-  "accordion",
-  "audio",
-  "file",
-  "project_showcase",
-]);
-
-// builderSelectionRing -- lihat catatan lengkap Bagian 1c di plan (9
-// September 2026, "klik blok di kanvas juga"): satu potongan class Tailwind
-// dipusatkan di sini, dipakai tiap elemen berdata data-builder-node-id di
-// bawah supaya blok yang sedang dipilih di BuilderLeftPanel bisa terlihat
-// jelas langsung di kanvas. Cuma ring, TANPA rounded eksplisit -- tiap
-// elemen di bawah sudah pakai rounded-xl/theme.cardRounded sendiri.
-function builderSelectionRing(id: string, selectedNodeId: string | undefined): string {
-  return id === selectedNodeId ? " ring-2 ring-jeon-purple ring-offset-2" : "";
-}
-
-function renderBuilderNode(
-  node: BuilderRenderNode,
-  theme: PageTheme,
-  data: PagePreviewData,
-  interactive: boolean,
-  canBuy: boolean,
-  selectedNodeId?: string
-): React.ReactNode {
-  // data-builder-node-id/data-builder-block-type -- selector STABIL dipakai
-  // BuilderCanvas.tsx (highlight blok terpilih) & e2e/builder-mode.spec.ts
-  // (assert isi Section/Column tertanam tampil benar di halaman publik).
-  const ring = builderSelectionRing(node.id, selectedNodeId);
-  switch (node.blockType) {
-    case "divider":
-      // Target klik diperlebar (py-2.5 di kanvas KREATOR SAJA, `!interactive`)
-      // -- bug ditemukan lewat audit (13 September 2026): garis 1px nyaris
-      // mustahil diklik tepat (target seukuran 1px), praktis cuma bisa
-      // dipilih lewat tree kiri. `interactive=true` (halaman publik
-      // sungguhan) TETAP garis polos apa adanya -- renderBuilderNode ini
-      // dipakai BERSAMA utk kanvas builder & halaman publik sungguhan,
-      // padding tambahan TIDAK BOLEH bocor jadi spasi ekstra yang terlihat
-      // pengunjung asli.
-      return interactive ? (
-        <div
-          key={node.id}
-          data-builder-node-id={node.id}
-          data-builder-block-type="divider"
-          role="separator"
-          aria-hidden
-          className={`h-px w-full opacity-20 bg-current ${theme.bio}${ring}`}
-        />
-      ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="divider" className={`flex w-full items-center py-2.5${ring}`}>
-          <div role="separator" aria-hidden className={`h-px w-full opacity-20 bg-current ${theme.bio}`} />
-        </div>
-      );
-    case "text":
-      return (
-        <div
-          key={node.id}
-          data-builder-node-id={node.id}
-          data-builder-block-type="text"
-          // whitespace-pre-line -- kompatibilitas mundur: blok "text" yang
-          // dibuat SEBELUM redesain rich-text ini (10 September 2026)
-          // menyimpan plain string dgn newline literal "\n" (dulu textarea
-          // polos), BUKAN tag <p>/<br> -- tanpa ini, newline lama akan
-          // kolaps jadi satu baris begitu dirender lewat dangerouslySetInnerHTML
-          // (beda dari <textarea>/<p> lama yang otomatis menghormati "\n"
-          // via CSS ini). Konten BARU dari RichTextEditor (TipTap) sudah
-          // pakai elemen blok <p> sungguhan, tidak terpengaruh sama sekali.
-          className={`jeon-rich-text-content w-full whitespace-pre-line text-center text-xs leading-relaxed ${theme.bio}${ring}`}
-          dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml((node.blockData.text as string) ?? "") }}
-        />
-      );
-    case "button":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="button" className={`w-full${ring}`}>
-          {interactive ? (
-            <TrackedLink
-              username={data.username}
-              pageSlug={data.pageSlug}
-              linkId={node.id}
-              href={buildUtmHref(node.url ?? "", node.title, data.utmEnabled)}
-              className={`flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold transition-all duration-300 ${theme.buyButton}`}
-            >
-              {node.title}
-            </TrackedLink>
-          ) : (
-            // div, BUKAN <button disabled> -- bug ditemukan lewat verifikasi
-            // live 9 September 2026 (fitur klik-blok-di-kanvas): browser
-            // TIDAK PERNAH mendispatch/mem-bubble-kan mouse event dari form
-            // control ber-atribut `disabled`, jadi delegasi klik BuilderCanvas.
-            // tsx (`closest("[data-builder-node-id]")` di wrapper `div` luar)
-            // tidak pernah menyala saat pengunjung klik tombol ini -- SATU-
-            // SATUNYA blok yang tidak bisa diklik-pilih di kanvas (blok lain
-            // pakai `div`/`a`, bukan `<button disabled>`, jadi aman). `role`+
-            // `aria-disabled` menjaga semantik aksesibilitas yang sama tanpa
-            // memakai atribut `disabled` yang menekan event.
-            <div
-              role="button"
-              aria-disabled="true"
-              title="Pratinjau -- tombol ini tidak aktif"
-              className={`w-full cursor-not-allowed ${theme.cardRounded ?? "rounded-xl"} px-4 py-2.5 text-center text-xs font-bold opacity-80 ${theme.buyButton}`}
-            >
-              {node.title}
-            </div>
-          )}
-        </div>
-      );
-    case "section": {
-      const children = ((node.blockData.children as unknown[] | undefined) ?? [])
-        .map(normalizeEmbeddedBuilderNode)
-        .filter((c): c is BuilderRenderNode => c !== null);
-      return (
-        <section
-          key={node.id}
-          data-builder-node-id={node.id}
-          data-builder-block-type="section"
-          className={`flex w-full flex-col items-center gap-4 rounded-xl${ring}`}
-        >
-          {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
-        </section>
-      );
-    }
-    case "column": {
-      const columns = (node.blockData.columns as { widthPercent?: number; children?: unknown[] }[] | undefined) ?? [];
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="column" className={`flex w-full flex-col gap-4 rounded-xl sm:flex-row${ring}`}>
-          {columns.map((col, i) => {
-            const children = (col.children ?? []).map(normalizeEmbeddedBuilderNode).filter((c): c is BuilderRenderNode => c !== null);
-            return (
-              <div
-                key={i}
-                data-builder-column-index={i}
-                className="flex min-w-0 flex-1 flex-col items-center gap-4"
-                style={col.widthPercent ? { flexBasis: `${col.widthPercent}%` } : undefined}
-              >
-                {children.map((child) => renderBuilderNode(child, theme, data, interactive, canBuy, selectedNodeId))}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-    // Fase 2 (permintaan langsung pengguna 8 September 2026): 6 tipe
-    // MEDIA/INFORMATION/OTHERS baru, SEMUA reuse komponen presentasional
-    // yang sudah ada (VideoEmbedBlock/FaqBlock/GalleryBlock, dipakai ulang
-    // APA ADANYA dari renderLinkOrBlock -- className theme SAMA PERSIS
-    // supaya blok terlihat identik dipakai lewat editor daftar sederhana
-    // ATAU kanvas builder).
-    case "video":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video" className={`w-full rounded-xl${ring}`}>
-          <VideoEmbedBlock
-            title={node.title}
-            videoUrl={(node.blockData.video_url as string) ?? ""}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "faq":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="faq" className={`w-full rounded-xl${ring}`}>
-          <FaqBlock
-            title={node.title}
-            items={(node.blockData.items as FaqItem[]) ?? []}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-            itemTitleClassName={theme.cardTitle}
-            itemBodyClassName={theme.bio}
-          />
-        </div>
-      );
-    case "gallery":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="gallery" className={`w-full rounded-xl${ring}`}>
-          <GalleryBlock
-            title={node.title}
-            images={(node.blockData.images as string[]) ?? []}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "image": {
-      const imageUrl = node.blockData.image_url as string | undefined;
-      if (!imageUrl) {
-        return (
-          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}${ring}`}>
-            {node.title || "Foto"}
-          </div>
-        );
-      }
-      // link tujuan + caption -- lihat catatan lengkap di renderLinkOrBlock
-      // (kasus "image" mode Simple), dipakai bersama supaya blok yang
-      // dibuat lewat Canvas Builder tampil identik di halaman publik.
-      const img = (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
-      );
-      const caption = node.title && <p className={`mt-1.5 truncate text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>;
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image" className={`w-full${ring}`}>
-          {node.url && interactive ? (
-            <TrackedLink username={data.username} pageSlug={data.pageSlug} linkId={node.id} href={buildUtmHref(node.url, node.title, data.utmEnabled)} className="block">
-              {img}
-            </TrackedLink>
-          ) : (
-            // Non-interactive (kanvas Builder, editing) -- SENGAJA bukan
-            // `<a>` walau `node.url` terisi, pola sama persis case "button"
-            // di atas: klik di kanvas harus MEMILIH blok (delegasi
-            // BuilderCanvas.tsx), bukan navigasi ke url tujuan.
-            img
-          )}
-          {caption}
-        </div>
-      );
-    }
-    case "video_image": {
-      const videoUrl = (node.blockData.video_url as string) ?? "";
-      const imageUrl = (node.blockData.image_url as string) ?? "";
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="video_image" className={`flex w-full flex-col gap-2 rounded-xl${ring}`}>
-          {videoUrl && (
-            <VideoEmbedBlock title={node.title} videoUrl={videoUrl} cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`} titleClassName={theme.cardTitle} />
-          )}
-          {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={node.title || ""} loading="lazy" className="w-full rounded-xl object-cover" />
-          )}
-          {!videoUrl && !imageUrl && (
-            <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>{node.title || "Video + Foto"}</div>
-          )}
-        </div>
-      );
-    }
-    case "embed_link": {
-      // "embed_link" -- kartu link MANUAL (judul/deskripsi/URL dari kolom
-      // links yang sudah ada, PERSIS pola project_showcase, TANPA fetch
-      // metadata server sama sekali), thumbnail dari block_data.image_url.
-      const imageUrl = (node.blockData.image_url as string) ?? "";
-      const cardClassName = `flex w-full flex-col gap-2 overflow-hidden rounded-xl p-2.5 ${theme.card}`;
-      const inner = (
-        <>
-          {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" loading="lazy" className="-m-2.5 mb-0 aspect-video w-[calc(100%+20px)] object-cover" />
-          )}
-          <p className={`text-xs font-semibold ${theme.cardTitle}`}>{node.title}</p>
-          {node.description && (
-            // whitespace-pre-line -- kompatibilitas mundur: deskripsi Embed
-            // Link yang dibuat SEBELUM diperluas jadi rich text (12
-            // September 2026, "tiap blok yang ada teks nya buat semua jadi
-            // rich teks") menyimpan plain string dgn newline literal, TANPA
-            // tag <p>/<br> -- lihat catatan lengkap yang sama di blok "text".
-            <p
-              className={`jeon-rich-text-content whitespace-pre-line text-[11px] ${theme.bio}`}
-              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(node.description) }}
-            />
-          )}
-        </>
-      );
-      if (!node.url) {
-        return (
-          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName}${ring}`}>
-            {inner}
-          </div>
-        );
-      }
-      return interactive ? (
-        // ring di sini (BUKAN di <span> "contents" di bawah, yang tidak
-        // punya box model sendiri jadi ring tidak akan pernah terlihat) --
-        // TrackedLink itulah kartu yang benar-benar tampak.
-        <TrackedLink
-          key={node.id}
-          username={data.username}
-          pageSlug={data.pageSlug}
-          linkId={node.id}
-          href={buildUtmHref(node.url, node.title, data.utmEnabled)}
-          className={`${cardClassName}${ring}`}
-        >
-          <span data-builder-node-id={node.id} data-builder-block-type="embed_link" className="contents">
-            {inner}
-          </span>
-        </TrackedLink>
-      ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed_link" className={`${cardClassName} opacity-80${ring}`}>
-          {inner}
-        </div>
-      );
-    }
-    // Fase 3 (permintaan langsung pengguna 8 September 2026): 4 tipe baru
-    // + promosi "maps" (block_type lama, ROOT-ONLY -- lihat catatan
-    // lengkap di allowedBuilderEmbeddedBlockTypes, links.go).
-    case "maps":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="maps" className={`w-full rounded-xl${ring}`}>
-          <MapsEmbedBlock
-            title={node.title}
-            url={node.url ?? ""}
-            embed={Boolean(node.blockData.embed)}
-            embedLat={node.blockData.embed_lat as number | undefined}
-            embedLng={node.blockData.embed_lng as number | undefined}
-            linkClassName={`group relative flex w-full items-center justify-center ${theme.cardRounded ?? "rounded-xl"} px-4 py-3.5 text-[11px] font-semibold transition-all duration-300 ${theme.card} ${theme.cardTitle}`}
-          />
-        </div>
-      );
-    case "image_slider":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="image_slider" className={`w-full rounded-xl${ring}`}>
-          <ImageSliderBlock
-            title={node.title}
-            images={(node.blockData.images as string[]) ?? []}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "countdown":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="countdown" className={`w-full rounded-xl${ring}`}>
-          <CountdownBlock
-            title={node.title}
-            targetAt={node.blockData.target_at as string | undefined}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card} ${theme.cardTitle}`}
-            titleClassName={theme.cardTitle}
-            expiredLabel="Sudah berakhir"
-            unitLabels={{ days: "Hari", hours: "Jam", minutes: "Menit", seconds: "Detik" }}
-            actionSlot={renderCountdownAction(node.blockData, data, theme, canBuy)}
-          />
-        </div>
-      );
-    case "list":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="list" className={`w-full rounded-xl${ring}`}>
-          <ListBlock
-            title={node.title}
-            style={(node.blockData.style as "list" | "card" | "testimony" | undefined) ?? "list"}
-            items={(node.blockData.items as ListBlockItem[]) ?? []}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-            itemTitleClassName={theme.cardTitle}
-            itemBodyClassName={theme.bio}
-          />
-        </div>
-      );
-    case "embed":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="embed" className={`w-full rounded-xl${ring}`}>
-          <EmbedBlock
-            title={node.title}
-            embedUrl={(node.blockData.embed_url as string) ?? ""}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "produk": {
-      // "produk" -- permintaan langsung pengguna 10 September 2026:
-      // tampilkan SATU (atau lebih, lihat catatan product_ids di bawah)
-      // produk kreator di lokasi bebas dalam layout (beda dari grid
-      // produk otomatis Halaman Toko). Reuse renderSingleProductCard APA
-      // ADANYA (perilaku tombol Beli/harga/dst IDENTIK dengan kartu di
-      // grid) -- fallback redup non-interaktif kalau tidak ada produk
-      // valid, konsisten dengan pola blok "image"/"video_image" di atas
-      // (placeholder alih-alih merender apa pun kalau isinya kosong).
-      //
-      // product_ids -- permintaan langsung pengguna, 12 September 2026
-      // ("bisa di atur per blok misal berisi 2 produk"): blok ini SEKARANG
-      // bisa menampung BANYAK produk sekaligus -- fallback baca
-      // `product_id` tunggal (field lama) kalau `product_ids` tidak ada,
-      // kompatibilitas mundur blok yang sudah ada di staging sebelum
-      // perubahan ini (frontend TIDAK PERNAH menulis field tunggal lagi).
-      const rawProductIds = node.blockData.product_ids as string[] | undefined;
-      const productIds = Array.isArray(rawProductIds)
-        ? rawProductIds
-        : node.blockData.product_id
-          ? [node.blockData.product_id as string]
-          : [];
-      const selectedProducts = productIds
-        .map((id) => data.products.find((p) => p.id === id))
-        .filter((p): p is PagePreviewProduct => !!p);
-      // layout -- permintaan langsung pengguna, 11 September 2026 ("juga
-      // tambahkan pilihan layout product nya", lalu "harusnya ada 4
-      // pilihan layout" dikonfirmasi via AskUserQuestion: "2 variasi Kartu
-      // + 2 variasi Baris") -- "row_no_image" reuse renderProductListRow
-      // APA ADANYA. Bawaan "card_large" (undefined jatuh ke sini juga,
-      // termasuk blok lama yang masih pakai nilai "card" sebelum opsi ini
-      // diperluas jadi 4) tetap renderSingleProductCard, TIDAK ada
-      // perubahan perilaku untuk blok yang sudah ada. SATU pilihan
-      // "layout" berlaku untuk SEMUA produk di blok ini (bukan per-produk).
-      // PRODUK_LAYOUT_RENDERERS -- dihoist ke module scope (lihat definisi
-      // di atas, dekat renderProductRowWithImage) supaya dipakai bersama
-      // renderLinkOrBlock (mode Simple) juga, bukan disalin dua kali.
-      const renderProduct = PRODUK_LAYOUT_RENDERERS[node.blockData.layout as string] ?? renderSingleProductCard;
-      const trackProduct = (productClickId: string) =>
-        data.pageSlug
-          ? trackEventBySlug(data.username, data.pageSlug, { event_type: "product_click", product_id: productClickId })
-          : trackEvent(data.username, { event_type: "product_click", product_id: productClickId });
-      const ctx = { referralCode: data.referralCode, username: data.username, pageSlug: data.pageSlug, shopPaused: data.shopPaused };
-      // Bug ditemukan lewat laporan langsung pengguna, 12 September 2026
-      // ("harusnya semua lebar blok itu disamakan dengan yang lain"):
-      // wrapper ini SEBELUMNYA dibatasi `max-w-xs`, jadi lebih sempit dari
-      // SEMUA blok lain (text/button/image/dst, semuanya cuma `w-full`
-      // tanpa batas lebar) -- tidak ada alasan blok ini dikecualikan,
-      // dihapus supaya konsisten dengan blok lain apa pun tata letaknya.
-      //
-      // Grid 2 kolom -- HANYA aktif begitu blok ini berisi 2+ produk
-      // (dikonfirmasi via AskUserQuestion: jumlah kolom TETAP 2, tidak
-      // perlu pengaturan terpisah). PERSIS 1 produk tetap wrapper tunggal
-      // lebar penuh SEPERTI SEBELUMNYA, TIDAK berubah sama sekali -- blok
-      // lama (1 produk) visual IDENTIK dgn sebelum perubahan ini.
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="produk" className={`w-full rounded-xl${ring}`}>
-          {selectedProducts.length === 0 ? (
-            <div className={`flex w-full items-center justify-center rounded-xl p-8 text-xs ${theme.card} ${theme.bio}`}>
-              {node.title || "Produk"}
-            </div>
-          ) : selectedProducts.length === 1 ? (
-            renderProduct(selectedProducts[0], theme, canBuy, ctx, trackProduct)
-          ) : (
-            <div className="grid w-full grid-cols-2 gap-3">
-              {selectedProducts.map((product) => renderProduct(product, theme, canBuy, ctx, trackProduct))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    // Fase 4 (13 September 2026, "kenapa banyak blok blok yang hilang"): 5
-    // tipe klasik lama (heading/accordion/audio/file/project_showcase)
-    // ditambahkan ke Builder -- pola SAMA PERSIS renderLinkOrBlock (dipakai
-    // ulang komponen presentasi yang sama, VideoEmbedBlock/FaqBlock/dst
-    // di atas), TAPI BuilderRenderNode TIDAK punya beberapa field root-only
-    // (customIconUrl/iconKey/dst -- lihat normalizeEmbeddedBuilderNode) jadi
-    // cover art audio & ikon file TIDAK tersedia utk instance blok ini
-    // (baik root maupun bersarang) -- trade-off yang disengaja, bukan bug:
-    // kreator yang butuh cover/ikon kustom tetap bisa pakai blok ini lewat
-    // Mode Simple (dashboard/links/page.tsx) yang masih mendukungnya penuh.
-    case "heading":
-      return (
-        <h1
-          key={node.id}
-          data-builder-node-id={node.id}
-          data-builder-block-type="heading"
-          className={`jeon-rich-text-content w-full text-center font-heading text-xl font-bold ${theme.name}${ring}`}
-          dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml((node.blockData.text as string) ?? "") }}
-        />
-      );
-    case "accordion":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="accordion" className={`w-full rounded-xl${ring}`}>
-          <FaqBlock
-            title=""
-            items={[{ question: node.title, answer: (node.blockData.text as string) ?? "" }]}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-            itemTitleClassName={theme.cardTitle}
-            itemBodyClassName={theme.bio}
-          />
-        </div>
-      );
-    case "audio":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="audio" className={`w-full rounded-xl${ring}`}>
-          <AudioPlayerBlock
-            title={node.title}
-            audioUrl={(node.blockData.audio_url as string) ?? ""}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "file":
-      return (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="file" className={`w-full rounded-xl${ring}`}>
-          <FileDownloadBlock
-            title={node.title}
-            fileUrl={(node.blockData.file_url as string) ?? ""}
-            fileName={node.blockData.file_name as string | undefined}
-            fileSizeBytes={node.blockData.file_size_bytes as number | undefined}
-            cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
-            titleClassName={theme.cardTitle}
-          />
-        </div>
-      );
-    case "project_showcase": {
-      // Pola SAMA PERSIS "embed_link" di atas (kartu klik penuh, gambar+
-      // judul+deskripsi rich-text), tambahan badge_text di atas gambar &
-      // cta_text (bawaan "Lihat detail") di bawah -- lihat renderLinkOrBlock
-      // utk versi root LinkItem-nya (behaviornya disamakan persis).
-      const badgeText = (node.blockData.badge_text as string) ?? "";
-      const imageUrl = (node.blockData.image_url as string) ?? "";
-      const ctaText = (node.blockData.cta_text as string) || "Lihat detail";
-      const cardClassName = `flex w-full flex-col ${theme.cardRounded ?? "rounded-2xl"} p-4 text-left transition-all duration-300 ${theme.card}`;
-      const inner = (
-        <>
-          {badgeText && (
-            <span className={`mb-3 inline-block w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${theme.buyButton}`}>
-              {badgeText}
-            </span>
-          )}
-          {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" loading="lazy" className="mb-3 aspect-video w-full rounded-lg object-cover" />
-          )}
-          <p className={`text-sm font-bold ${theme.cardTitle}`}>{node.title}</p>
-          {node.description && (
-            <p
-              className={`jeon-rich-text-content mt-1 whitespace-pre-line text-xs leading-relaxed opacity-75 ${theme.cardTitle}`}
-              dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(node.description) }}
-            />
-          )}
-          <span className={`mt-3 inline-flex items-center gap-1 text-xs font-semibold ${theme.chevron}`}>
-            {ctaText} <IconChevronRight className="h-3.5 w-3.5" />
-          </span>
-        </>
-      );
-      if (!node.url) {
-        return (
-          <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="project_showcase" className={`${cardClassName}${ring}`}>
-            {inner}
-          </div>
-        );
-      }
-      return interactive ? (
-        <TrackedLink
-          key={node.id}
-          username={data.username}
-          pageSlug={data.pageSlug}
-          linkId={node.id}
-          href={buildUtmHref(node.url, node.title, data.utmEnabled)}
-          className={`${cardClassName}${ring}`}
-        >
-          <span data-builder-node-id={node.id} data-builder-block-type="project_showcase" className="contents">
-            {inner}
-          </span>
-        </TrackedLink>
-      ) : (
-        <div key={node.id} data-builder-node-id={node.id} data-builder-block-type="project_showcase" className={`${cardClassName} opacity-80${ring}`}>
-          {inner}
-        </div>
-      );
-    }
-    default:
-      return null;
-  }
-}
-
-// BuilderPagePreview -- lihat catatan lengkap di renderBuilderNode.
-// builderMode berlaku LINTAS pageType (bio MAUPUN landing, dikonfirmasi
-// via AskUserQuestion), makanya header bio (renderBioHeader) dirender
-// KONDISIONAL di sini berdasar pageType, BUKAN dua komponen terpisah
-// seperti ProdukPagePreview vs LandingPagePreview. Chrome luar (video
-// background/tombol share/watermark/footer) SAMA PERSIS LandingPagePreview.
-function BuilderPagePreview({
-  data,
-  interactive,
-  rootClassName,
-  theme,
-  canBuy,
-  hideFooterChrome = false,
-  editableStickers = false,
-  onStickersChange,
-  selectedNodeId,
-  isBuilderCanvas = false,
-}: {
-  data: PagePreviewData;
-  interactive: boolean;
-  rootClassName: string;
-  theme: PageTheme;
-  canBuy: boolean;
-  hideFooterChrome?: boolean;
-  editableStickers?: boolean;
-  onStickersChange?: (stickers: PageStickerData[]) => void;
-  selectedNodeId?: string;
-  // isBuilderCanvas -- lihat catatan lengkap di prop yang sama pada
-  // PagePreview (komponen atas). Cuma dipakai di sini utk gerbang
-  // onOpenCatalog -- HANYA BuilderCanvas.tsx yang perlu klik baris blok
-  // berarti "pilih node", bukan "buka katalog".
-  isBuilderCanvas?: boolean;
-}) {
-  // isBio/isProduk -- pageType "landing" (No.99) SENGAJA "TANPA avatar/
-  // produk/monetisasi" (lihat catatan lengkap di PagePreviewData.pageType).
-  // pageType "produk" (Toko) diaktifkan di sini 9 September 2026
-  // (permintaan langsung pengguna: "buat store page bisa mode builder
-  // juga") -- SEBELUM ini `isBio` (dulu cuma `!== "landing"`) juga
-  // bernilai true utk produk, membuat leadCapture/events/donation/
-  // socialProof (fitur account-wide yang TIDAK PERNAH dirender
-  // ProdukPagePreview) ikut tampil keliru begitu Toko dipindah ke mode
-  // builder. `isBio` sekarang KETAT (bio sungguhan saja, meniru gerbang
-  // yang sama persis di ProdukPagePreview yang TIDAK memanggil fitur-fitur
-  // itu sama sekali) -- header avatar/nama/bio & banner shopPaused (dua-
-  // duanya ADA di Toko juga) dipisah ke `showHeaderChrome`.
-  const isBio = data.pageType === "bio" || data.pageType === undefined;
-  const showHeaderChrome = data.pageType !== "landing";
-  const [selectedWishlistId, setSelectedWishlistId] = useState<string | undefined>(undefined);
-  // catalogView -- bug dilaporkan langsung pengguna, 14 September 2026
-  // (screenshot halaman publik: "kenapa blok katalog nya tidak bisa di
-  // klik dan menampilkan isinya"). Blok "catalog" akar SENGAJA tidak
-  // ditangani sendiri oleh renderBuilderNode (lihat catatan
-  // BUILDER_NODE_BLOCK_TYPES di atas: "baris ROOT tipe itu tetap jatuh ke
-  // renderLinkOrBlock yang SUDAH bekerja penuh termasuk... drill-down
-  // katalog") -- TAPI klaim komentar lama itu SALAH: pemanggilan
-  // renderLinkOrBlock di bawah tidak pernah dioper argumen ke-6
-  // (onOpenCatalog) sama sekali, DAN komponen ini juga tidak pernah punya
-  // state `catalogView`-nya sendiri (beda dari layout Bio klasik & dari
-  // ProdukPagePreview yang sudah diperbaiki hari ini juga) -- jadi blok
-  // Katalog akar di HALAMAN MODE BUILDER MANA PUN (bio/Toko/landing) tetap
-  // tampil sbg baris tapi klik tidak melakukan apa pun sama sekali. State +
-  // takeover di bawah SAMA PERSIS pola yang sudah dipakai layout Bio klasik.
-  const [catalogView, setCatalogView] = useState<PagePreviewLink | null>(null);
-  if (catalogView) {
-    return (
-      <CatalogTakeoverView
-        link={catalogView}
-        theme={theme}
-        data={data}
-        interactive={interactive}
-        canBuy={canBuy}
-        rootClassName={rootClassName}
-        onExit={() => setCatalogView(null)}
-      />
-    );
-  }
-  return (
-    <main className={`relative ${rootClassName} ${theme.page}`} style={theme.pageStyle}>
-      {renderVideoBackground(theme)}
-      {isBio && interactive && data.socialProof && (
-        <SocialProofToast
-          recent={data.socialProof.recent}
-          displaySeconds={data.socialProof.displaySeconds}
-          intervalSeconds={data.socialProof.intervalSeconds}
-        />
-      )}
-      {/* PageSwitcher (hamburger ganti halaman) -- bug dilaporkan pengguna 9
-          September 2026 ("sudah aktifkan store page tapi kenapa menu
-          hamburger nya tidak muncul"): akun pelapor is_published Toko-nya
-          SUDAH benar & site_pages sudah berisi >=2 halaman (dikonfirmasi
-          lewat GET /api/v1/pages/<username> langsung ke staging) -- akar
-          masalah SEBENARNYA adalah BuilderPagePreview (builder_mode=
-          "builder", akun pelapor persis dalam kondisi ini) SATU-SATUNYA
-          varian preview yang TIDAK PERNAH merender <PageSwitcher> sama
-          sekali, beda dari layout bio biasa (baris ~2441) & ProdukPagePreview
-          (baris ~3640) yang keduanya sudah benar. Ditambal di sini,
-          menyamakan struktur topbar (PageSwitcher + ShareButton via
-          ml-auto) dengan kedua varian lain itu persis. */}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center p-4">
-        <PageSwitcher username={data.username} pages={data.sitePages} currentSlug={data.pageSlug ?? null} theme={theme} />
-        <div className="ml-auto">
-          <ShareButton title={`@${data.username} — Jeon.id`} url={data.pageSlug ? `${SITE_URL}/${data.username}/${data.pageSlug}` : `${SITE_URL}/${data.username}`} />
-        </div>
-      </div>
-      <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center gap-5 px-6 py-14">
-        {/* StickerOverlay -- pola SAMA PERSIS layout bio biasa di atas (lihat
-            catatan lengkap di sana): anak kolom konten max-w-xl ini, BUKAN
-            anak <main>, supaya basis persentase posisi x/y selalu sama
-            dengan lebar kolom yang terlihat. Sebelum permintaan "design
-            langsung di builder" (9 September 2026) BuilderPagePreview tidak
-            pernah menerima editableStickers/onStickersChange sama sekali. */}
-        <StickerOverlay stickers={data.stickers} editable={editableStickers} onChange={onStickersChange} />
-        {showHeaderChrome && data.showProfileHeader !== false && (
-          <div className="relative w-full">
-            {theme.glow !== "hidden" && (
-              <div aria-hidden className={`absolute -top-10 left-1/2 h-52 w-52 -translate-x-1/2 rounded-full blur-3xl ${theme.glow}`} />
-            )}
-            <div className="relative flex flex-col items-center">{renderBioHeader(data, theme)}</div>
-          </div>
-        )}
-
-        {showHeaderChrome && data.shopPaused && (
-          <div className={`w-full rounded-xl p-2.5 text-center text-xs font-semibold ${theme.productCard} ${theme.bio}`}>
-            {data.shopPausedMessage || "Toko sedang dijeda sementara oleh pemiliknya."}
-          </div>
-        )}
-
-        {data.links.map((link) => {
-          // Bug dilaporkan pengguna 9 September 2026 (akun Premium, halaman
-          // utama builder_mode="builder", lalu menerapkan template Quick
-          // Setup): tautan biasa/Formulir Kontak/Project Unggulan "hilang"
-          // dari pratinjau & halaman publik, cuma Teks/FAQ yang tampil.
-          // Akar masalah: renderBuilderNode HANYA tahu tipe blok era
-          // Canvas Builder dan jatuh ke `default: return null` untuk tipe
-          // klasik (link/contact_form/project_showcase/accordion/audio/file/
-          // catalog/heading) -- padahal catatan BuilderPagePreview sendiri
-          // bilang builderMode "HANYA mengganti cara blok Tautan dirender",
-          // bukan menghapusnya. Tipe klasik di level akar dialihkan ke
-          // renderLinkOrBlock dengan objek PagePreviewLink ASLI (bukan
-          // BuilderRenderNode yang lossy: iconKey/customIconUrl/lockType/
-          // thumbnailUrl ikut terbawa), persis seperti mode "simple".
-          const blockType = link.blockType ?? "link";
-          if (!BUILDER_NODE_BLOCK_TYPES.has(blockType)) {
-            // data-builder-node-id di sini (BUKAN di dalam renderLinkOrBlock
-            // sendiri, yang dibagi dengan mode "simple" & tidak tahu apa-apa
-            // soal builder) -- permintaan langsung pengguna 9 September
-            // 2026 "klik blok di kanvas juga": tanpa ini blok tipe klasik
-            // tidak bisa diklik-pilih di kanvas sama sekali, cuma lewat tree
-            // kiri.
-            return (
-              <div
-                key={link.id}
-                data-builder-node-id={link.id}
-                data-builder-block-type={blockType}
-                className={`w-full rounded-xl${builderSelectionRing(link.id, selectedNodeId)}`}
-              >
-                {/* onOpenCatalog ditahan HANYA saat ini benar-benar kanvas
-                    Canvas Builder sungguhan (isBuilderCanvas=true DARI
-                    BuilderCanvas.tsx) -- di sana klik pada node ini dipakai
-                    utk MEMILIH blok (delegasi closest
-                    "[data-builder-node-id]"), BUKAN membuka takeover
-                    katalog penuh layar, yang akan mengganti SELURUH kanvas
-                    edit dgn CatalogTakeoverView dan mematahkan alur edit.
-                    Bug ditemukan 15 September 2026 ("kenapa pratinjau tidak
-                    bisa klik katalog"): versi lama menahan ini di SEMUA
-                    interactive=false, termasuk LivePreviewPanel/homepage
-                    template gallery yang BUKAN kanvas edit sama sekali --
-                    membuka katalog di situ TIDAK PUNYA efek samping
-                    sungguhan apa pun (murni state lokal, beda dari navigasi
-                    TrackedLink/submit form di renderBuilderNode/
-                    renderLinkOrBlock yang MEMANG harus tetap ditahan di
-                    pratinjau mana pun -- lihat catatan lengkap di prop
-                    isBuilderCanvas, PagePreview). */}
-                {renderLinkOrBlock(link, theme, data, interactive, canBuy, interactive || !isBuilderCanvas ? setCatalogView : undefined)}
-              </div>
-            );
-          }
-          const node: BuilderRenderNode = {
-            id: link.id,
-            title: link.title,
-            url: link.url,
-            description: link.description,
-            blockType,
-            blockData: link.blockData ?? {},
-          };
-          return renderBuilderNode(node, theme, data, interactive, canBuy, selectedNodeId);
-        })}
-
-        {/* Grid produk otomatis DIHAPUS -- permintaan langsung pengguna, 15
-            September 2026: "saya mau semua product yang sudah ditambahkan
-            di menu product itu jangan langsung ditampilkan tapi itu data
-            product yang bisa kita tampilkan ketika menambahkan blok
-            produk." Lihat catatan lengkap di ProdukPagePreview (pola
-            identik) -- produk TIDAK PERNAH tampil otomatis lagi di Toko
-            mode builder juga, cuma lewat blok "produk" eksplisit (sudah
-            dirender di .map() di atas, lewat renderBuilderNode). */}
-
-        {isBio && data.leadCapture && (
-          <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
-            <IconMail className={`h-5 w-5 ${theme.chevron}`} />
-            <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.leadCapture.title}</p>
-            {interactive ? (
-              <LeadCaptureForm
-                username={data.username}
-                collectEmail={data.leadCapture.collectEmail}
-                collectWhatsapp={data.leadCapture.collectWhatsapp}
-                collectTelegram={data.leadCapture.collectTelegram}
-                magnetTitle={data.leadCapture.magnetTitle}
-                hasVoucher={data.leadCapture.hasVoucher}
-                inputClassName="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
-                buttonClassName={theme.buyButton}
-              />
-            ) : (
-              <button
-                type="button"
-                disabled
-                title="Pratinjau -- tombol ini tidak aktif"
-                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-              >
-                Daftar
-              </button>
-            )}
-          </div>
-        )}
-
-        {isBio && data.events && data.events.length > 0 && (
-          <div className="w-full">
-            <p className={`mb-3 text-xs font-bold uppercase tracking-wider ${theme.bio}`}>Event</p>
-            <div className="flex w-full flex-col gap-3">
-              {data.events.map((event) => {
-                const startsLabel = new Intl.DateTimeFormat("id-ID", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                  timeZone: event.timezone,
-                }).format(new Date(event.startsAt));
-                const soldOut = event.spotsLeft !== null && event.spotsLeft <= 0;
-                return (
-                  <div key={event.productId} className={`flex flex-col gap-1.5 rounded-xl p-2.5 ${theme.productCard}`}>
-                    <div className="flex items-center gap-2">
-                      <IconCalendar className={`h-3.5 w-3.5 flex-shrink-0 ${theme.chevron}`} />
-                      <p className={`text-xs font-semibold ${theme.productTitle}`}>{event.name}</p>
-                    </div>
-                    <p className={`text-[11px] ${theme.bio}`}>
-                      {startsLabel} ({event.timezone}) &middot; {event.isOnline ? "Online" : event.location || "Offline"}
-                    </p>
-                    {event.description && <p className={`text-[11px] ${theme.bio}`}>{event.description}</p>}
-                    <div className="flex items-center justify-between">
-                      <p className={`text-xs font-bold ${theme.productTitle}`}>
-                        Rp {event.effectivePriceIdr.toLocaleString("id-ID")}
-                      </p>
-                      {event.spotsLeft !== null && (
-                        <p className={`text-[11px] ${theme.bio}`}>{soldOut ? "Kuota penuh" : `${event.spotsLeft} slot tersisa`}</p>
-                      )}
-                    </div>
-                    {canBuy ? (
-                      <BuyProductButton
-                        productId={event.productId}
-                        buttonClassName={theme.buyButton}
-                        openLabel={soldOut ? "Kuota Penuh" : "Daftar"}
-                        submitLabel="Bayar & Daftar"
-                        referralCode={data.referralCode}
-                        username={data.username}
-                        pageSlug={data.pageSlug}
-                        productName={event.name}
-                        basePriceIdr={event.effectivePriceIdr}
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                        className={`w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-                      >
-                        Daftar
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {isBio && data.donation && (
-          <div className={`flex w-full flex-col items-center gap-2 rounded-xl p-2.5 text-center ${theme.productCard}`}>
-            <IconHeart className={`h-5 w-5 ${theme.chevron}`} />
-            <p className={`text-xs font-semibold ${theme.productTitle}`}>{data.donation.title}</p>
-            <p className={`text-xs ${theme.bio}`}>Mulai dari Rp {data.donation.minAmountIdr.toLocaleString("id-ID")}</p>
-
-            {!!data.donation.goalAmountIdr && (
-              <div className="w-full text-left">
-                <p className={`text-[11px] font-semibold ${theme.productTitle}`}>{data.donation.goalTitle}</p>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-black/10">
-                  <div
-                    className={`h-full rounded-full bg-current opacity-80 ${theme.productTitle}`}
-                    style={{ width: `${Math.min(100, ((data.donation.goalRaisedIdr ?? 0) / data.donation.goalAmountIdr) * 100)}%` }}
-                  />
-                </div>
-                <p className={`mt-1 text-[10px] ${theme.bio}`}>
-                  Rp {(data.donation.goalRaisedIdr ?? 0).toLocaleString("id-ID")} / Rp {data.donation.goalAmountIdr.toLocaleString("id-ID")}
-                </p>
-              </div>
-            )}
-
-            {!!data.donation.wishlist?.length && (
-              <div className="flex w-full flex-col gap-1 text-left">
-                <label htmlFor="donation-wishlist-select" className={`text-[10px] font-semibold ${theme.productTitle}`}>
-                  Wujudkan wishlist (opsional)
-                </label>
-                <select
-                  id="donation-wishlist-select"
-                  value={selectedWishlistId ?? ""}
-                  onChange={(e) => setSelectedWishlistId(e.target.value || undefined)}
-                  className="w-full rounded-md border border-white/30 bg-white/90 px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
-                >
-                  <option value="">Dukungan umum</option>
-                  {data.donation.wishlist.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} (Rp{w.raisedIdr.toLocaleString("id-ID")}/Rp{w.priceIdr.toLocaleString("id-ID")})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {canBuy ? (
-              <div className="w-full">
-                <BuyProductButton
-                  productId={data.donation.productId}
-                  buttonClassName={theme.buyButton}
-                  pwywMinPriceIdr={data.donation.minAmountIdr}
-                  hideVoucher
-                  openLabel="Dukung"
-                  submitLabel="Kirim Dukungan"
-                  username={data.username}
-                  pageSlug={data.pageSlug}
-                  productName={data.donation.title}
-                  wishlistItemId={selectedWishlistId}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled
-                title={data.shopPaused ? "Toko sedang dijeda" : "Pratinjau -- tombol ini tidak aktif"}
-                className={`mt-1 w-full cursor-not-allowed rounded-lg py-1.5 text-xs opacity-80 ${theme.buyButton}`}
-              >
-                Dukung
-              </button>
-            )}
-          </div>
-        )}
-
-        {!hideFooterChrome && (
-          <div className="mt-auto flex flex-col items-center gap-3 pt-6">
-            <Watermark isPremium={data.isPremium} hideWatermark={data.hideWatermark} />
             <PageFooterLinks
               pageId={data.id}
               username={data.username}
