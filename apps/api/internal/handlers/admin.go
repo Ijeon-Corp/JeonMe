@@ -725,10 +725,8 @@ func (h *AdminHandler) UpdatePayoutStatus(c *gin.Context) {
 			return
 		}
 
-		var currentBalance int64
-		if err := tx.QueryRow(ctx, `
-			SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
-		`, payoutUserID).Scan(&currentBalance); err != nil {
+		currentBalance, err := latestLedgerBalance(ctx, tx, payoutUserID)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung saldo"})
 			return
 		}

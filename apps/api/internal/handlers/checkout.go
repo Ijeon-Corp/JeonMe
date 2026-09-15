@@ -846,6 +846,38 @@ func (h *CheckoutHandler) GetOrderDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// latestLedgerBalance -- saldo TERKINI seorang user, dibaca dari
+// balance_after baris TERBARU (bukan SUM ulang seluruh riwayat). Audit
+// performa profesional 15 September 2026 (Medium-High): SEBELUMNYA setiap
+// kredit/debit ledger baru (webhook pembayaran sukses, refund, komisi
+// afiliasi, split kolaborator, pembalikan payout gagal) menghitung ulang
+// "SELECT SUM(amount_idr) FROM ledger_entries WHERE user_id=$1" atas
+// SELURUH riwayat historis user itu, DI DALAM transaksi yang sudah dikunci
+// pg_advisory_xact_lock per-user -- costnya O(jumlah baris ledger historis
+// milik user), jadi makin sukses seorang kreator (makin panjang riwayatnya),
+// makin lama waktu pemrosesan webhook pembayaran BARUNYA -- justru
+// memburuk tepat saat traffic sedang tinggi (flash sale/lonjakan viral).
+//
+// balance_after tiap baris SUDAH berupa running total (ditulis dgn pola
+// identik: saldo lama + delta baris itu sendiri) -- jadi baris TERBARU
+// (ORDER BY created_at DESC LIMIT 1) SELALU sama persis dgn SUM seluruh
+// riwayat, asal invarian itu ditegakkan konsisten di SEMUA titik INSERT
+// (diverifikasi: PERSIS 5 titik INSERT ke ledger_entries di seluruh
+// backend, checkout.go x4 + admin.go x1, semuanya lewat fungsi ini).
+//
+// Aman dari race PERSIS karena SETIAP pemanggil WAJIB sudah memanggil
+// `pg_advisory_xact_lock(hashtext(userID))` SEBELUM memanggil fungsi ini
+// (mengunci baca MAUPUN tulis berikutnya utk user yang sama sampai
+// transaksi pemanggil commit/rollback) -- caller TIDAK berubah sama
+// sekali, cuma query di dalamnya yang diganti.
+func latestLedgerBalance(ctx context.Context, tx pgx.Tx, userID string) (int64, error) {
+	var balance int64
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE((SELECT balance_after FROM ledger_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1), 0)
+	`, userID).Scan(&balance)
+	return balance, err
+}
+
 type refundOrderRequest struct {
 	Reason string `json:"reason" binding:"omitempty,max=200"`
 }
@@ -961,8 +993,8 @@ func (h *CheckoutHandler) RefundOrder(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
 			return
 		}
-		var currentBalance int64
-		if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1`, cr.UserID).Scan(&currentBalance); err != nil {
+		currentBalance, err := latestLedgerBalance(ctx, tx, cr.UserID)
+		if err != nil {
 			log.Printf("checkout: refund order %s gagal membaca saldo user %s -- perlu rekonsiliasi manual: %v", orderID, cr.UserID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "refund Midtrans berhasil tapi gagal membalikkan ledger -- hubungi admin"})
 			return
@@ -1193,10 +1225,8 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 				return fmt.Errorf("gagal mengunci ledger")
 			}
 
-			var currentBalance int64
-			if err := tx.QueryRow(ctx, `
-				SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
-			`, productUserID).Scan(&currentBalance); err != nil {
+			currentBalance, err := latestLedgerBalance(ctx, tx, productUserID)
+			if err != nil {
 				return fmt.Errorf("gagal menghitung saldo")
 			}
 
@@ -1241,10 +1271,8 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, affiliateUserID); err != nil {
 					return fmt.Errorf("gagal mengunci ledger afiliator")
 				}
-				var affiliateCurrentBalance int64
-				if err := tx.QueryRow(ctx, `
-					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
-				`, affiliateUserID).Scan(&affiliateCurrentBalance); err != nil {
+				affiliateCurrentBalance, err := latestLedgerBalance(ctx, tx, affiliateUserID)
+				if err != nil {
 					return fmt.Errorf("gagal menghitung saldo afiliator")
 				}
 				affiliateNewBalance := affiliateCurrentBalance + affiliateCommissionIDR
@@ -1273,10 +1301,8 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 				if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, split.UserID); err != nil {
 					return fmt.Errorf("gagal mengunci ledger kolaborator")
 				}
-				var collabCurrentBalance int64
-				if err := tx.QueryRow(ctx, `
-					SELECT COALESCE(SUM(amount_idr), 0) FROM ledger_entries WHERE user_id = $1
-				`, split.UserID).Scan(&collabCurrentBalance); err != nil {
+				collabCurrentBalance, err := latestLedgerBalance(ctx, tx, split.UserID)
+				if err != nil {
 					return fmt.Errorf("gagal menghitung saldo kolaborator")
 				}
 				collabNewBalance := collabCurrentBalance + split.AmountIDR
