@@ -192,11 +192,29 @@ function DashboardProductsPageInner() {
     setTab(urlTab);
   }
 
-  // Sinkron state -> URL saat klik tab internal (replace, tanpa scroll &
-  // tanpa menumpuk history).
+  // Sinkron state -> URL saat klik tab internal.
+  //
+  // Bug dilaporkan langsung pengguna, 15 September 2026 ("saat pindah tab
+  // pertama page akan menampilkan isi tab baru tapi url masih di tab lama,
+  // lalu tiba-tiba reload dan baru ganti url"): `router.replace()` App
+  // Router SELALU memicu Next.js melakukan round-trip navigasi (fetch RSC
+  // payload rute tujuan) SEBELUM address bar sungguhan di-commit -- pada
+  // halaman ini SELURUH konten tab adalah client component murni (state
+  // `tab`, di atas), jadi round-trip itu tidak pernah mengubah apa pun yang
+  // dirender, cuma menambah jeda ~0.3-0.6 detik antara konten yang SUDAH
+  // berganti (setTab, sinkron) dengan URL yang baru menyusul belakangan --
+  // persis gejala yang dilaporkan (konten Pesanan sudah tampil, URL masih
+  // ?tab=items, lalu "reload" begitu round-trip itu akhirnya selesai).
+  // Diganti `window.history.replaceState` (pola RESMI Next.js App Router
+  // utk update search params yang tidak butuh data server baru -- lihat
+  // node_modules/next/dist/docs/.../linking-and-navigating.md#native-history-api,
+  // "integrate into the Next.js Router, allowing you to sync with
+  // usePathname and useSearchParams") -- searchParams tetap ikut sinkron
+  // (urlTab di atas tetap benar), tapi TANPA round-trip navigasi apa pun,
+  // jadi address bar berubah SAAT ITU JUGA, bukan menyusul belakangan.
   function setTabAndUrl(next: ProductsTab) {
     setTab(next);
-    router.replace(`/dashboard/products?tab=${TAB_TO_URL[next]}`, { scroll: false });
+    window.history.replaceState(null, "", `/dashboard/products?tab=${TAB_TO_URL[next]}`);
   }
 
   const [page, setPage] = useState<MyPage | null>(null);
