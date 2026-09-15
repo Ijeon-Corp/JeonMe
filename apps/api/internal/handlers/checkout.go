@@ -689,17 +689,23 @@ type orderListItem struct {
 	RefundedAt     *string `json:"refunded_at"`
 }
 
-// ListOrders -- Modul Toko (tab Transaction): daftar SEMUA transaksi
-// kreator (beda dari ListRecentOrders di atas yang cuma 20 teratas untuk
-// widget Statistik), dengan filter status & pencarian bebas (email pembeli
-// atau nama produk). Mengikuti gaya "search ILIKE + LIMIT tetap" yang sudah
-// dipakai AdminHandler.ListUsers -- kodebase ini sengaja TIDAK punya
-// pagination LIMIT/OFFSET sungguhan di mana pun, jadi tidak diperkenalkan
-// khusus di sini juga.
+// ListOrders -- Modul Toko (tab Transaction): daftar transaksi kreator
+// (beda dari ListRecentOrders di atas yang cuma 20 teratas untuk widget
+// Statistik), dengan filter status & pencarian bebas (email pembeli atau
+// nama produk).
+//
+// limit/offset (parseLimitOffset) -- ditambahkan lewat audit performa
+// profesional 15 September 2026 (Medium): "LIMIT 200" tetap SEBELUMNYA
+// bukan sekadar lambat, tapi PLAFON PERMANEN -- kreator dengan >200 order
+// (utk status/pencarian tertentu) tidak akan PERNAH bisa melihat order
+// yang lebih lama lewat endpoint ini, tidak ada cara mencapai halaman
+// berikutnya. Default/maks limit SAMA seperti AdminHandler.ListUsers dkk
+// (parseLimitOffset, admin.go) supaya konsisten satu kodebase.
 func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 	userID := c.GetString("userID")
 	status := c.Query("status")
 	search := "%" + c.Query("search") + "%"
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
@@ -715,8 +721,8 @@ func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 		WHERE p.user_id = $1
 			AND ($2 = '' OR o.status = $2)
 			AND (o.buyer_email ILIKE $3 OR p.name ILIKE $3)
-		ORDER BY o.created_at DESC LIMIT 200
-	`, userID, status, search)
+		ORDER BY o.created_at DESC LIMIT $4 OFFSET $5
+	`, userID, status, search, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat transaksi"})
 		return
@@ -744,7 +750,7 @@ func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 		items = append(items, it)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"orders": items})
+	c.JSON(http.StatusOK, gin.H{"orders": items, "has_more": len(items) == limit})
 }
 
 type orderDetailLedgerRow struct {

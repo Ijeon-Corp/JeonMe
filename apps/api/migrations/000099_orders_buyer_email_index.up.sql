@@ -1,0 +1,12 @@
+-- Ditemukan lewat audit performa profesional 15 September 2026 (High):
+-- ListMyOrders (orders_public.go, endpoint publik "/pembelian" -- cukup
+-- verifikasi kode OTP email, bukan login) menjalankan
+-- "WHERE o.buyer_email = $1 ORDER BY o.created_at DESC" TANPA index
+-- pendukung sama sekali -- satu-satunya index buyer_email yang ada
+-- sebelumnya di tabel LAIN (buyer_order_verifications/loyalty_*), bukan di
+-- orders. Diverifikasi via EXPLAIN ANALYZE pada data sintetis 1 juta baris:
+-- Parallel Seq Scan penuh atas SELURUH tabel orders LINTAS SEMUA KREATOR,
+-- 157ms, murni karena tidak ada index yang bisa dipakai. Index komposit
+-- (buyer_email, created_at DESC) dipilih (bukan cuma buyer_email) supaya
+-- ORDER BY juga langsung terlayani index yang sama, tanpa sort terpisah.
+CREATE INDEX idx_orders_buyer_email_created_at ON orders(buyer_email, created_at DESC);

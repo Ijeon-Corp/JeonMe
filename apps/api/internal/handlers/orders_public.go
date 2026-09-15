@@ -174,10 +174,22 @@ type myOrderSummary struct {
 	CreatorUsername string    `json:"creator_username"`
 }
 
-// ListMyOrders -- daftar SEMUA order milik satu email, lintas kreator,
-// setelah kepemilikan email itu diverifikasi (verifyOrderHistorySession).
+// ListMyOrders -- daftar order milik satu email, lintas kreator, setelah
+// kepemilikan email itu diverifikasi (verifyOrderHistorySession).
 // `email`/`verification_token` dikirim sbg query param -- pola sama
 // seperti LoyaltyHandler.GetMyPoints.
+//
+// limit/offset (parseLimitOffset, pola SAMA PERSIS admin.go) -- ditambahkan
+// lewat audit performa profesional 15 September 2026 (High): SEBELUMNYA
+// endpoint ini mengambil SEMUA order milik satu email tanpa batas sama
+// sekali, dan tanpa index (lihat migrasi 000099_orders_buyer_email_index)
+// itu berarti full scan TABEL ORDERS SELURUH PLATFORM setiap panggilan --
+// diverifikasi via EXPLAIN ANALYZE, 157ms pada 1 juta baris. Pembeli dgn
+// riwayat sangat panjang juga akan menerima respons yang membengkak tanpa
+// batas. limit default 50 (sama seperti default parseLimitOffset), maks
+// 100 per halaman -- has_more dihitung dari apakah baris yang kembali
+// PERSIS sejumlah limit (indikasi kemungkinan masih ada halaman berikutnya,
+// tanpa query COUNT(*) terpisah).
 func (h *CheckoutHandler) ListMyOrders(c *gin.Context) {
 	buyerEmail := strings.ToLower(strings.TrimSpace(c.Query("email")))
 	verificationToken := c.Query("verification_token")
@@ -190,6 +202,7 @@ func (h *CheckoutHandler) ListMyOrders(c *gin.Context) {
 		return
 	}
 
+	limit, offset := parseLimitOffset(c)
 	rows, err := h.DB.Query(ctx, `
 		SELECT o.id, o.status, o.created_at, o.amount_idr, p.name, p.cover_image_url, u.username
 		FROM orders o
@@ -197,7 +210,8 @@ func (h *CheckoutHandler) ListMyOrders(c *gin.Context) {
 		JOIN users u ON u.id = p.user_id
 		WHERE o.buyer_email = $1
 		ORDER BY o.created_at DESC
-	`, buyerEmail)
+		LIMIT $2 OFFSET $3
+	`, buyerEmail, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat riwayat pembelian"})
 		return
@@ -218,5 +232,5 @@ func (h *CheckoutHandler) ListMyOrders(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"orders": orders})
+	c.JSON(http.StatusOK, gin.H{"orders": orders, "has_more": len(orders) == limit})
 }

@@ -933,8 +933,17 @@ type domainVerdictItem struct {
 // manual MAUPUN klasifikasi AI otomatis). ?verdict=blocked|allowed
 // (opsional) untuk memfilter, mis. meninjau semua domain yang pernah
 // diblokir AI untuk kemungkinan false-positive.
+// ListDomainVerdicts -- limit/offset (parseLimitOffset) ditambahkan lewat
+// audit performa profesional 15 September 2026 (Low-Medium): "LIMIT 200"
+// tetap sebelumnya adalah plafon PERMANEN (tabel ini tumbuh otomatis dari
+// hasil scan moderasi tautan, bukan dikurasi admin) -- domain lama tidak
+// akan pernah terlihat lagi lewat endpoint ini begitu tabel lewat 200
+// baris. Query di-parameterkan (bukan lagi literal "LIMIT 200") supaya
+// argumen limit/offset ikut lewat args slice yang sudah ada, konsisten
+// dgn pola filter verdict opsional yang sudah ada di sini.
 func (h *AdminHandler) ListDomainVerdicts(c *gin.Context) {
 	verdictFilter := c.Query("verdict")
+	limit, offset := parseLimitOffset(c)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
@@ -945,7 +954,8 @@ func (h *AdminHandler) ListDomainVerdicts(c *gin.Context) {
 		query += ` WHERE verdict = $1`
 		args = append(args, verdictFilter)
 	}
-	query += ` ORDER BY updated_at DESC LIMIT 200`
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(` ORDER BY updated_at DESC LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
 
 	rows, err := h.DB.Query(ctx, query, args...)
 	if err != nil {
