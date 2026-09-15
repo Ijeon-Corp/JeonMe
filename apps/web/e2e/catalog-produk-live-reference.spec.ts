@@ -24,8 +24,9 @@ test.describe("Katalog: item referensi hidup ke produk", () => {
   test("field manual tersembunyi begitu produk ditautkan, grid & detail publik ikut data produk terkini", async ({ page, request }) => {
     const { username } = await registerAndLogin(page, "catliveref");
 
-    // 1) Buat produk "Link Eksternal" (paling ringan -- cuma butuh sampul +
-    // tautan, lihat catatan lengkap di products-category-layout.spec.ts).
+    // 1) Buat produk "Link Eksternal" -- SATU-SATUNYA jenis yang tidak
+    // butuh file diunggah untuk aktif (cukup sampul + tautan), jadi test
+    // ini lebih ringan tanpa mengorbankan cakupan.
     await page.goto("/dashboard/products");
     await page.getByRole("button", { name: "Produk" }).click();
     await page.getByRole("button", { name: "Tambah Produk" }).first().click();
