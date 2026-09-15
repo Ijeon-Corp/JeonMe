@@ -563,12 +563,17 @@ function CatalogItemFrame({
           breadcrumb h2 di komponen induk (frameTitle) karena tiap item
           adalah frame-nya sendiri. Sekarang beberapa item tampil sekaligus
           di satu layar, jadi label-nya pindah ke sini, di dalam kartu
-          item masing-masing -- fallback chain SAMA PERSIS (title manual ->
-          nama produk terhubung -> "Item tanpa judul"). */}
+          item masing-masing.
+          Fallback "Item tanpa judul" DIHAPUS (permintaan langsung
+          pengguna, 15 September 2026, screenshot: item yang isinya cuma
+          blok "Product" yang ditambahkan tetap menampilkan label palsu
+          "Untitled item" di atasnya, padahal blok di bawahnya sudah
+          cukup jelas mewakili item itu) -- item tanpa title manual DAN
+          tanpa produk terhubung sekarang TIDAK menampilkan label sama
+          sekali, cukup daftar BLOCKS di bawahnya + tombol hapus item ini
+          yang tetap tampil di baris yang sama. */}
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-bold text-app-ink">
-          {item.title || linkedProduct?.name || t("dashboard.components.blockDrilldown.untitledItem")}
-        </p>
+        <p className="min-w-0 flex-1 truncate text-sm font-bold text-app-ink">{item.title || linkedProduct?.name}</p>
         <button
           type="button"
           onClick={onDeleteItem}

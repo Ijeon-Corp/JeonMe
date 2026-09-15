@@ -2831,9 +2831,17 @@ export function CatalogTakeoverView({
                     (sebelum field ini dihapus dari editor, lihat commit
                     f5e3ce6) TETAP ditampilkan apa adanya di sini, TIDAK
                     dihapus datanya -- cuma UI utk MENGISI yang sudah tidak
-                    ada lagi di dashboard. */}
+                    ada lagi di dashboard.
+                    `?? []` (bug ditemukan 15 September 2026, live preview
+                    dashboard crash total "Cannot read properties of
+                    undefined (reading 'length')"): tipe CatalogItem.images
+                    di api-client.ts bilang WAJIB `string[]`, tapi itu janji
+                    compile-time saja -- item yang dibuat lewat jalur SELAIN
+                    tombol "Tambah Item" resmi (mis. panggilan API langsung)
+                    bisa saja tidak menyertakan field ini sama sekali, dan
+                    runtime JSON.parse tidak pernah menegakkan tipe TS. */}
                 {seg.item.title && <p className={`text-sm font-bold ${theme.cardTitle}`}>{seg.item.title}</p>}
-                {seg.item.images.length > 0 && (
+                {(seg.item.images ?? []).length > 0 && (
                   <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-1">
                     {seg.item.images.map((src, idx) => (
                       // Tinggi TETAP (h-64 = 256px), lebar ikut kolom/85% --
