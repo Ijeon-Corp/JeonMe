@@ -312,6 +312,22 @@ func (h *ProductHandler) List(c *gin.Context) {
 	// LUNAS per produk, sumber kebenaran yang SAMA seperti top_products di
 	// AnalyticsHandler ("status = 'paid'" saja) -- ditampilkan sebagai kolom
 	// "Terjual" di tabel, bukan angka rekaan.
+	// Bug performa Critical ditemukan lewat audit 15 September 2026,
+	// diverifikasi via EXPLAIN ANALYZE pada data sintetis 1 juta baris:
+	// ketiga subquery LEFT JOIN di bawah SEBELUMNYA tidak di-scope ke
+	// produk milik kreator ($1) sama sekali -- GROUP BY product_id
+	// berjalan atas SELURUH baris orders/analytics_events/product_codes
+	// MILIK SEMUA KREATOR DI PLATFORM dulu, baru di-join ke ~20 baris
+	// produk kreator ini. Endpoint ini dibuka SETIAP kreator SETIAP kali
+	// kelola produk/Toko -- costnya O(total baris platform), bukan
+	// O(produk milik satu kreator), jadi melambat untuk SEMUA kreator
+	// sekaligus seiring platform tumbuh. Fix: tambahkan filter
+	// "product_id IN (SELECT id FROM products WHERE user_id = $1)" di
+	// tiap subquery -- index yang relevan SUDAH ADA (idx_orders_product_id,
+	// idx_analytics_events_event_type_product_id, idx_product_codes_unclaimed),
+	// jadi Postgres sekarang bisa index-scan yang disempitkan ke daftar
+	// kecil product_id milik kreator ini alih-alih seq-scan+hash-aggregate
+	// seluruh tabel.
 	rows, err := h.DB.Query(ctx, `
 		SELECT p.id, p.name, p.description, p.price_idr, p.is_active, p.file_key != '' AS has_file, p.cover_image_url,
 			p.flash_sale_price_idr, p.flash_sale_starts_at, p.flash_sale_ends_at, `+effectivePriceExpr+`,
@@ -323,10 +339,14 @@ func (h *ProductHandler) List(c *gin.Context) {
 			p.release_at, p.transaction_fee_enabled, p.notify_whatsapp_enabled, p.notify_whatsapp_message, p.show_sold_count
 		FROM products p
 		LEFT JOIN (
-			SELECT product_id, COUNT(*) AS sold_count FROM orders WHERE status = 'paid' GROUP BY product_id
+			SELECT product_id, COUNT(*) AS sold_count FROM orders
+			WHERE status = 'paid' AND product_id IN (SELECT id FROM products WHERE user_id = $1)
+			GROUP BY product_id
 		) o ON o.product_id = p.id
 		LEFT JOIN (
-			SELECT product_id, COUNT(*) AS unclaimed_count FROM product_codes WHERE claimed_by_order_id IS NULL GROUP BY product_id
+			SELECT product_id, COUNT(*) AS unclaimed_count FROM product_codes
+			WHERE claimed_by_order_id IS NULL AND product_id IN (SELECT id FROM products WHERE user_id = $1)
+			GROUP BY product_id
 		) pc ON pc.product_id = p.id
 		-- click_count -- permintaan langsung pengguna, 13 Agustus 2026: "di
 		-- link bio dan juga product tambahkan dibagian bawah statistik
@@ -335,7 +355,9 @@ func (h *ProductHandler) List(c *gin.Context) {
 		-- "product_click" -- sebelumnya cuma dihitung sebagai TOTAL
 		-- gabungan, sekarang juga per-produk di sini.
 		LEFT JOIN (
-			SELECT product_id, COUNT(*) AS click_count FROM analytics_events WHERE event_type = 'product_click' GROUP BY product_id
+			SELECT product_id, COUNT(*) AS click_count FROM analytics_events
+			WHERE event_type = 'product_click' AND product_id IN (SELECT id FROM products WHERE user_id = $1)
+			GROUP BY product_id
 		) pcl ON pcl.product_id = p.id
 		WHERE p.user_id = $1 AND p.is_bundle = false AND p.is_donation = false AND p.is_event = false
 			AND p.is_course = false

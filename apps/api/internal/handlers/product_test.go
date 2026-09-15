@@ -857,6 +857,102 @@ func TestProductList_SoldCountOnlyCountsPaidOrders(t *testing.T) {
 	}
 }
 
+// TestProductList_SoldAndClickCountScopedToOwnProducts -- regresi Critical
+// bug ditemukan lewat audit keamanan/performa 15 September 2026: subquery
+// sold_count/click_count SEBELUMNYA tidak di-scope ke produk milik kreator
+// yang login sama sekali, jadi COUNT/GROUP BY-nya menjumlahkan order/klik
+// MILIK KREATOR LAIN juga (secara kebetulan bisa "benar" kalau product_id
+// unik, TAPI biayanya O(seluruh platform), bukan bug kebenaran data yang
+// mudah terlihat lewat satu produk saja -- test ini justru membuktikan hasil
+// tetap AKURAT & TER-ISOLASI per kreator setelah query di-scope, bukan cuma
+// "lebih cepat"). Dua kreator, masing-masing 1 produk dgn order/klik sendiri
+// -- List() kreator A tidak boleh terpengaruh sama sekali oleh data kreator B.
+func TestProductList_SoldAndClickCountScopedToOwnProducts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	product, auth := newTestProductHandler(t)
+	userA := registerTestUser(t, auth)
+	userB := registerTestUser(t, auth)
+
+	router := gin.New()
+	g := router.Group("/", fakeAuth())
+	g.POST("/products", product.Create)
+	g.GET("/products", product.List)
+
+	createFor := func(userID, name string) string {
+		rec := doJSON(t, router, http.MethodPost, "/products", map[string]any{
+			"name": name, "price_idr": 50000,
+		}, map[string]string{"X-Test-UserID": userID})
+		var created struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+			t.Fatalf("gagal decode created product (%s): %v", name, err)
+		}
+		return created.ID
+	}
+	productA := createFor(userA, "Produk A")
+	productB := createFor(userB, "Produk B")
+
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'a1@example.com', 50000, 'paid')
+	`, productA); err != nil {
+		t.Fatalf("gagal setup order A: %v", err)
+	}
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO orders (product_id, buyer_email, amount_idr, status) VALUES
+			($1, 'b1@example.com', 50000, 'paid'),
+			($1, 'b2@example.com', 50000, 'paid'),
+			($1, 'b3@example.com', 50000, 'paid')
+	`, productB); err != nil {
+		t.Fatalf("gagal setup order B: %v", err)
+	}
+	// ensureProdukPage (dipanggil ProductHandler.Create) sudah membuat
+	// Halaman Toko otomatis begitu produk pertama dibuat -- page_id itu
+	// dipakai di sini karena analytics_events.page_id NOT NULL.
+	pageIDFor := func(userID string) string {
+		var pageID string
+		if err := product.DB.QueryRow(t.Context(), `SELECT id FROM pages WHERE user_id = $1 AND page_type = 'produk'`, userID).Scan(&pageID); err != nil {
+			t.Fatalf("gagal ambil page_id (%s): %v", userID, err)
+		}
+		return pageID
+	}
+	pageA := pageIDFor(userA)
+	pageB := pageIDFor(userB)
+
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO analytics_events (page_id, event_type, product_id) VALUES
+			($1, 'product_click', $2)
+	`, pageA, productA); err != nil {
+		t.Fatalf("gagal setup click A: %v", err)
+	}
+	if _, err := product.DB.Exec(t.Context(), `
+		INSERT INTO analytics_events (page_id, event_type, product_id) VALUES
+			($1, 'product_click', $2), ($1, 'product_click', $2), ($1, 'product_click', $2), ($1, 'product_click', $2), ($1, 'product_click', $2)
+	`, pageB, productB); err != nil {
+		t.Fatalf("gagal setup click B: %v", err)
+	}
+
+	rec := doJSON(t, router, http.MethodGet, "/products", nil, map[string]string{"X-Test-UserID": userA})
+	var items []struct {
+		ID         string `json:"id"`
+		SoldCount  int64  `json:"sold_count"`
+		ClickCount int64  `json:"click_count"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("gagal decode respons: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %+v, ekspektasi HANYA 1 produk (milik userA), bukan ikut produk userB", items)
+	}
+	if items[0].SoldCount != 1 {
+		t.Fatalf("sold_count = %d, ekspektasi 1 (order milik userA saja, TIDAK ikut 3 order userB)", items[0].SoldCount)
+	}
+	if items[0].ClickCount != 1 {
+		t.Fatalf("click_count = %d, ekspektasi 1 (klik milik userA saja, TIDAK ikut 5 klik userB)", items[0].ClickCount)
+	}
+}
+
 // Kepemilikan harus ditegakkan untuk update & delete produk, sama seperti tautan.
 func TestProduct_OwnershipEnforced(t *testing.T) {
 	gin.SetMode(gin.TestMode)
