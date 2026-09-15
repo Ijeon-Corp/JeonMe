@@ -31,6 +31,36 @@ func NewOrderPaidTask(orderID string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeOrderPaidNotification, payload), nil
 }
 
+// TypeWatermarkPrewarm -- audit performa profesional 15 September 2026
+// (Medium-High): CheckoutHandler.downloadURLFor sudah men-cache salinan PDF
+// ber-watermark by ETag (audit performa 4 September 2026) supaya UNDUHAN
+// BERULANG cepat, tapi unduhan PERTAMA (cache miss) tetap men-download+
+// watermark+upload SECARA SINKRON di dalam DownloadFile, yang cuma dikasih
+// 5 detik context timeout -- berisiko timeout untuk file besar TEPAT saat
+// pembeli baru saja membayar & langsung mengklik link unduhan di email.
+// Task ini dienqueue SEKALI segera setelah order "paid" (lihat
+// ApplyOrderStatus, sebelah enqueue TypeOrderPaidNotification) supaya
+// proses download+watermark+upload sudah SELESAI & ter-cache di storage
+// SEBELUM pembeli sempat membuka email & mengklik unduh -- begitu mereka
+// klik, DownloadFile tinggal kena cache-hit (Storage.Exists) yang jauh di
+// bawah 5 detik apa pun ukuran filenya. Gagal/timeout di worker (leluasa,
+// tidak ada batas 5 detik seperti request HTTP) HANYA berarti unduhan
+// pertama pembeli balik ke jalur sinkron lama -- tidak pernah membuat
+// pembelian gagal, murni percepatan best-effort.
+const TypeWatermarkPrewarm = "checkout:watermark_prewarm"
+
+type WatermarkPrewarmPayload struct {
+	OrderID string `json:"order_id"`
+}
+
+func NewWatermarkPrewarmTask(orderID string) (*asynq.Task, error) {
+	payload, err := json.Marshal(WatermarkPrewarmPayload{OrderID: orderID})
+	if err != nil {
+		return nil, fmt.Errorf("queue: gagal encode payload watermark prewarm order_id=%s: %w", orderID, err)
+	}
+	return asynq.NewTask(TypeWatermarkPrewarm, payload), nil
+}
+
 // TypeContactFormNotification -- No.77 (Sprint 9): kirim email ke kreator
 // begitu ada pesan baru masuk lewat blok Formulir Kontak di halaman
 // publiknya. Sengaja ASINKRON (sama seperti order.paid) supaya lambatnya

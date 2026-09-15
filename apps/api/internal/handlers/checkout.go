@@ -1388,6 +1388,19 @@ func (h *CheckoutHandler) ApplyOrderStatus(ctx context.Context, psp, pspOrderID,
 			log.Printf("checkout: gagal enqueue notifikasi order %s: %v", orderID, err)
 		}
 
+		// queue.TypeWatermarkPrewarm (audit performa profesional 15
+		// September 2026, Medium-High, lihat catatan lengkap di queue.go):
+		// enqueue best-effort, TIDAK menggerbang apa pun -- PrewarmWatermark
+		// sendiri yang memutuskan (lewat query) apakah order ini butuh
+		// pemrosesan watermark sama sekali.
+		if h.Queue != nil {
+			if task, err := queue.NewWatermarkPrewarmTask(orderID); err != nil {
+				log.Printf("checkout: gagal membuat task prewarm watermark order %s: %v", orderID, err)
+			} else if _, err := h.Queue.Enqueue(task); err != nil {
+				log.Printf("checkout: gagal enqueue prewarm watermark order %s: %v", orderID, err)
+			}
+		}
+
 		// Modul Toko (Fase C3): metode penyerahan "webhook" -- enqueue
 		// TERPISAH dari notifikasi email di atas, gated sama (shouldNotifyBuyer)
 		// supaya webhook duplikat PSP tidak memicu POST dua kali ke server
@@ -1592,6 +1605,78 @@ func (h *CheckoutHandler) downloadURLFor(ctx context.Context, fileKey string, wa
 	}
 
 	return h.Storage.PresignedDownloadURL(ctx, watermarkedKey, 15*time.Minute)
+}
+
+// PrewarmWatermark -- dipanggil dari worker (lihat queue.TypeWatermarkPrewarm
+// & catatan lengkap di sana), BUKAN dari request HTTP -- sengaja
+// self-contained (cukup diberi orderID, query ulang semua yang dibutuhkan
+// sendiri) mengikuti pola task scan lain di paket ini (mis.
+// HandleAutoWithdrawScan), supaya titik enqueue di ApplyOrderStatus tidak
+// perlu tahu detail produk/bundel sama sekali -- cukup panggil untuk
+// SETIAP order yang baru "paid", fungsi ini sendiri yang menentukan
+// (lewat query) apakah ada sesuatu yang perlu di-warm.
+//
+// Tidak melakukan apa pun (return nil) untuk kasus yang tidak butuh
+// pemrosesan watermark: order belum/bukan lagi "paid", bundel/donasi/
+// kursus (donasi tidak punya file, kursus bukan PDF, bundel ditangani
+// terpisah di bawah), watermark dimatikan kreator, atau file bukan PDF.
+// Kegagalan storage (download/upload) di-log oleh worker pemanggil lewat
+// error yang dikembalikan -- TIDAK pernah membuat order gagal, karena
+// task ini murni percepatan cache, bukan bagian alur pembayaran itu
+// sendiri.
+func (h *CheckoutHandler) PrewarmWatermark(ctx context.Context, orderID string) error {
+	var status, buyerEmail, fileKey string
+	var isBundle, isDonation, isCourse, watermarkEnabled bool
+	var bundleProductID string
+	err := h.DB.QueryRow(ctx, `
+		SELECT o.status, o.buyer_email, p.file_key, p.is_bundle, p.is_donation, p.is_course, p.watermark_enabled, p.id FROM orders o
+		JOIN products p ON p.id = o.product_id
+		WHERE o.id = $1
+	`, orderID).Scan(&status, &buyerEmail, &fileKey, &isBundle, &isDonation, &isCourse, &watermarkEnabled, &bundleProductID)
+	if err != nil {
+		return fmt.Errorf("gagal memuat pesanan: %w", err)
+	}
+	if status != "paid" {
+		return nil
+	}
+
+	if isBundle {
+		rows, err := h.DB.Query(ctx, `
+			SELECT ip.file_key, ip.watermark_enabled FROM bundle_items bi
+			JOIN products ip ON ip.id = bi.item_product_id
+			WHERE bi.bundle_product_id = $1
+		`, bundleProductID)
+		if err != nil {
+			return fmt.Errorf("gagal memuat isi bundel: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var itemFileKey string
+			var itemWatermarkEnabled bool
+			if err := rows.Scan(&itemFileKey, &itemWatermarkEnabled); err != nil || itemFileKey == "" {
+				continue
+			}
+			if h.Storage == nil {
+				continue
+			}
+			if _, err := h.downloadURLFor(ctx, itemFileKey, itemWatermarkEnabled, buyerEmail, orderID); err != nil {
+				log.Printf("checkout: prewarm watermark bundel order %s item %s gagal: %v", orderID, itemFileKey, err)
+			}
+		}
+		return rows.Err()
+	}
+
+	if isDonation || isCourse || fileKey == "" {
+		return nil
+	}
+	if h.Storage == nil {
+		return nil
+	}
+
+	if _, err := h.downloadURLFor(ctx, fileKey, watermarkEnabled, buyerEmail, orderID); err != nil {
+		return fmt.Errorf("gagal prewarm watermark: %w", err)
+	}
+	return nil
 }
 
 // GetBundleItems — No.70: dipanggil dari halaman status checkout untuk

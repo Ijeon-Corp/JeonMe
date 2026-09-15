@@ -74,7 +74,23 @@ func (h *Handler) Mux() *asynq.ServeMux {
 	mux.HandleFunc(queue.TypeAccountSuspendedEmail, h.HandleAccountSuspendedEmail)
 	mux.HandleFunc(queue.TypeAccountActivatedEmail, h.HandleAccountActivatedEmail)
 	mux.HandleFunc(queue.TypeOrderReconcile, h.HandleOrderReconcile)
+	mux.HandleFunc(queue.TypeWatermarkPrewarm, h.HandleWatermarkPrewarm)
 	return mux
+}
+
+// HandleWatermarkPrewarm -- lihat catatan lengkap di
+// queue.TypeWatermarkPrewarm & CheckoutHandler.PrewarmWatermark; handler
+// ini murni pembungkus tipis asynq.HandlerFunc di atasnya, pola sama
+// persis HandleOrderReconcile.
+func (h *Handler) HandleWatermarkPrewarm(ctx context.Context, t *asynq.Task) error {
+	if h.Checkout == nil {
+		return nil
+	}
+	var payload queue.WatermarkPrewarmPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("worker: payload tidak valid: %w", err)
+	}
+	return h.Checkout.PrewarmWatermark(ctx, payload.OrderID)
 }
 
 // HandleOrderReconcile -- lihat catatan lengkap di
