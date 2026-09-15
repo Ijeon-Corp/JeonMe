@@ -57,7 +57,7 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 	event := handlers.NewEventHandler(db)
 	course := handlers.NewCourseHandler(db, rdb)
 	loyalty := handlers.NewLoyaltyHandler(db, rdb, queueClient, cfg.AppEnv)
-	businessCard := handlers.NewBusinessCardHandler(db, s3)
+	businessCard := handlers.NewBusinessCardHandler(db, s3, rdb)
 	donation := handlers.NewDonationHandler(db, rdb)
 	affiliate := handlers.NewAffiliateHandler(db, cfg.PublicWebURL, cfg.PlatformFeePercent)
 	brand := handlers.NewBrandHandler(db)
@@ -170,6 +170,23 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 		// yang sedang aktif chatting, jadi disamakan dgn checkoutStatusRateLimit.
 		supportChatSendRateLimit := middleware.RateLimit(rdb, "support-chat-send", 20, time.Minute)
 		supportChatPollRateLimit := middleware.RateLimit(rdb, "support-chat-poll", 60, time.Minute)
+		// webhookRateLimit -- audit performa/keamanan profesional 15
+		// September 2026 (Low): ketiga webhook PSP di bawah (Midtrans
+		// order, Duitku, Midtrans langganan) SEBELUMNYA tidak dibatasi laju
+		// sama sekali, beda dari hampir semua endpoint sensitif lain di
+		// file ini. Limit sengaja JAUH lebih longgar dari
+		// checkoutStatusRateLimit (60/menit, itu pun cuma utk SATU pembeli
+		// polling) -- traffic webhook nyata AGREGAT dari SEMUA order SEMUA
+		// kreator platform ini datang dari IP gateway Midtrans/Duitku yang
+		// sama, jadi limit ketat justru menolak notifikasi SAH pas lonjakan
+		// (promo/flash sale rame-rame), bukan cuma mencegah
+		// penyalahgunaan. 300/menit (5 req/detik) tetap jauh di atas volume
+		// wajar platform ini sekarang, tapi tetap ada sbg lapisan
+		// pertahanan tambahan -- verifikasi signature_key DI DALAM handler
+		// (REQ-F-403) tetap pertahanan UTAMA thd payload palsu, rate limit
+		// ini murni backstop thd banjir request (mis. bug retry loop di
+		// sisi PSP, atau percobaan DoS/scan).
+		webhookRateLimit := middleware.RateLimit(rdb, "webhook-psp", 300, time.Minute)
 
 		auth_ := api.Group("/auth")
 		{
@@ -792,21 +809,24 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// Webhook PSP -- REQ-F-403 (verifikasi signature_key di body DI
 		// DALAM handler, sebelum payload diproses) & REQ-F-404 (idempotensi
-		// lewat unique constraint psp_transaction_id).
-		api.POST("/webhooks/midtrans", checkout.Webhook)
+		// lewat unique constraint psp_transaction_id). webhookRateLimit
+		// (lihat catatan lengkap di deklarasinya di atas) ditambahkan lewat
+		// audit performa/keamanan profesional 15 September 2026 -- ketiga
+		// rute di bawah SEBELUMNYA tanpa rate limit sama sekali.
+		api.POST("/webhooks/midtrans", webhookRateLimit, checkout.Webhook)
 		// Duitku -- kerangka multi-gateway 13 September 2026, lihat catatan
 		// lengkap di CheckoutHandler.DuitkuWebhook & payment/gateway.go.
 		// Route ini SELALU terdaftar (bukan hanya kalau provider aktif
 		// "duitku") -- mendaftarkannya bersyarat cuma menambah kerumitan
 		// tanpa manfaat keamanan (tanpa signature Duitku yang valid,
 		// payload ditolak 401 apa pun provider aktifnya).
-		api.POST("/webhooks/duitku", checkout.DuitkuWebhook)
+		api.POST("/webhooks/duitku", webhookRateLimit, checkout.DuitkuWebhook)
 
 		// Modul Langganan Premium: notifikasi siklus penagihan BERULANG --
 		// endpoint TERPISAH dari webhook order biasa di atas (Midtrans
 		// mengirim ke "Recurring Notification URL", field terpisah dari
 		// "Payment Notification URL" di dashboard Midtrans -- WAJIB
 		// didaftarkan manual, lihat catatan lingkup di subscription.go).
-		api.POST("/webhooks/midtrans-subscription", subscription.HandleCycleWebhook)
+		api.POST("/webhooks/midtrans-subscription", webhookRateLimit, subscription.HandleCycleWebhook)
 	}
 }

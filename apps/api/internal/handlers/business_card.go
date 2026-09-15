@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/jeonme/api/internal/imageconv"
 	"github.com/jeonme/api/internal/netguard"
@@ -18,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // BusinessCardHandler mengimplementasikan No.95 (Sprint 13): kartu kontak
@@ -37,10 +39,17 @@ type BusinessCardHandler struct {
 	DB *pgxpool.Pool
 	// Storage -- proxy avatar untuk komposer PNG kartu nama (lihat AvatarProxy).
 	Storage *storage.Client
+	// RDB -- audit performa 15 September 2026 (Medium): GetPublicCard
+	// SEBELUMNYA satu-satunya jalur baca "halaman publik" yang tidak lewat
+	// cache Redis 30 detik sama sekali (beda dari GetPublicPage/
+	// GetPublicPageBySlug, page.go) -- kartu kontak yang dibagikan luas
+	// (lewat QR code) tidak punya lapisan penyerap lonjakan trafik.
+	// nil-safe (soft-fail ke query DB langsung, pola sama seperti PageHandler.RDB).
+	RDB *redis.Client
 }
 
-func NewBusinessCardHandler(db *pgxpool.Pool, store *storage.Client) *BusinessCardHandler {
-	return &BusinessCardHandler{DB: db, Storage: store}
+func NewBusinessCardHandler(db *pgxpool.Pool, store *storage.Client, rdb *redis.Client) *BusinessCardHandler {
+	return &BusinessCardHandler{DB: db, Storage: store, RDB: rdb}
 }
 
 type businessCardResponse struct {
@@ -281,9 +290,28 @@ type publicBusinessCard struct {
 // belum dipublikasikan.
 func (h *BusinessCardHandler) GetPublicCard(c *gin.Context) {
 	username := c.Param("username")
+	cacheKey := "business-card:" + username
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	// Cache Redis 30 detik -- audit performa 15 September 2026 (Medium):
+	// lihat catatan lengkap di field RDB. Pola & TTL SAMA PERSIS
+	// servePublicPageFromCache (page.go): dicek SEBELUM query DB apa pun,
+	// TTL pendek yang sengaja tidak invalidate-on-write (lihat
+	// publicPageCacheTTL) supaya implementasinya tetap sederhana --
+	// staleness maks 30 detik dianggap dapat diterima untuk kartu kontak
+	// yang jarang diedit, sama seperti halaman publik biasa.
+	if h.RDB != nil {
+		if cached, err := h.RDB.Get(ctx, cacheKey).Result(); err == nil {
+			var resp publicBusinessCard
+			if json.Unmarshal([]byte(cached), &resp) == nil {
+				c.Header("X-Cache", "HIT")
+				c.JSON(http.StatusOK, resp)
+				return
+			}
+		}
+	}
 
 	var resp publicBusinessCard
 	resp.Username = username
@@ -305,6 +333,12 @@ func (h *BusinessCardHandler) GetPublicCard(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat kartu kontak"})
 		return
+	}
+
+	if h.RDB != nil {
+		if encoded, err := json.Marshal(resp); err == nil {
+			h.RDB.Set(ctx, cacheKey, encoded, publicPageCacheTTL)
+		}
 	}
 
 	c.JSON(http.StatusOK, resp)
