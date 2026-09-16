@@ -87,9 +87,21 @@ export default function Hero() {
             </p>
 
             <div className="reveal flex flex-col justify-center gap-3 sm:flex-row lg:justify-start" style={{ transitionDelay: "0.15s" }}>
+              {/* text-[#111111] (BUKAN text-white) -- audit Lighthouse
+                  16-17 September 2026: putih di atas bg-jeon-coral (#ff6448)
+                  cuma rasio kontras ~2.9:1, gagal WCAG AA (butuh >=4.5:1 utk
+                  teks 16px bold ini -- belum masuk ambang "teks besar" yg
+                  cukup 3:1). Ink gelap di atas coral yang sama ~7.2:1, lolos
+                  jauh di atas ambang. #111111 HARDCODED (bukan token
+                  `text-jeon-ink`) SENGAJA -- halaman ini punya toggle dark
+                  mode (Navbar.tsx), dan token jeon-ink FLIP jadi terang di
+                  dark mode (globals.css) sementara bg-jeon-coral tidak ikut
+                  flip, jadi token akan mengembalikan kontras buruk yang sama
+                  persis begitu dark mode aktif -- pola sama dgn
+                  border-[#111111] konstan yang sudah dipakai FinalCTA.tsx. */}
               <Link
                 href="/register"
-                className="cursor-pointer rounded-jmd border-2 border-jeon-ink bg-jeon-coral px-8 py-4 text-center font-display text-base font-bold text-white shadow-brutal transition-transform duration-150 hover:-translate-y-1 active:translate-y-0 active:shadow-none"
+                className="cursor-pointer rounded-jmd border-2 border-jeon-ink bg-jeon-coral px-8 py-4 text-center font-display text-base font-bold text-[#111111] shadow-brutal transition-transform duration-150 hover:-translate-y-1 active:translate-y-0 active:shadow-none"
               >
                 {t("hero.ctaPrimary")}
               </Link>
@@ -116,14 +128,36 @@ export default function Hero() {
                 width/height sungguhan pada <img>, jadi tanpa itu `w-full` akan
                 meregang lebar sementara tingginya terkunci 1024px (gambar jadi
                 gepeng) -- beda dari <img> polos tanpa atribut dimensi.
-                fetchPriority="high" (BUKAN `preload`) sesuai anjuran dokumen
-                Next.js 16 untuk kasus LCP biasa, dan konsisten dgn pola yang
-                sudah dipakai untuk avatar di PagePreview.tsx. */}
+
+                Perbaikan lanjutan (audit Lighthouse 16-17 September 2026,
+                LCP 87,7 detik -- root cause SEBENARNYA cuma deploy produksi
+                yang ketinggalan dari fix di atas, tapi LCP staging pun MASIH
+                7-8 detik walau payload sudah kecil, lihat bug kedua ini):
+                fetchPriority="high" SENDIRIAN TIDAK MENCUKUPI -- <Image>
+                defaultnya tetap memasang `loading="lazy"`, dan kombinasi
+                lazy+fetchpriority tinggi itu KONTRADIKTIF: browser tidak
+                menemukan/memulai unduhan gambar ini lewat preload scanner
+                dokumen awal (Lighthouse insight "lcp-discovery":
+                requestDiscoverable=false, eagerlyLoaded=false), baru diunduh
+                belakangan setelah JS/IntersectionObserver jalan.
+                PERHATIAN: prop `priority` (React <=15) SUDAH DEPRECATED di
+                Next.js 16 (lihat node_modules/next/dist/docs/.../image.md
+                "Starting with Next.js 16, priority ... deprecated in favor
+                of preload" -- percobaan pertama sesi ini SEMPAT salah pakai
+                `priority`, ketahuan sendiri lewat Lighthouse lokal:
+                fetchpriority TIDAK ikut terpasang ke <link preload>/<img>
+                sama sekali). Dokumen yang sama JUGA bilang preload prop baru
+                itu "when NOT to use: when fetchPriority is used" -- jadi
+                bukan preload juga. Fix yang benar (sesuai anjuran dokumen
+                Next 16 utk kasus LCP biasa): `loading="eager"` DITAMBAHKAN
+                mendampingi fetchPriority="high" yang sudah ada -- keduanya
+                WAJIB berpasangan, satu saja tidak cukup. */}
             <Image
               src="/homepage/hero.png"
               alt="Contoh halaman jeon.id -- bio, konten, dan statistik kreator dalam satu tautan"
               width={1536}
               height={1024}
+              loading="eager"
               fetchPriority="high"
               sizes="(max-width: 680px) 100vw, 640px"
               className="h-auto w-full max-w-[640px]"

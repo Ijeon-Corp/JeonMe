@@ -70,6 +70,18 @@ const CONNECT_SRC = API_ORIGIN ? `'self' ${API_ORIGIN}` : "'self'";
 // jadi celah yang sama persis berlaku di sana (belum sempat dilaporkan
 // tapi akar masalahnya identik, diperbaiki sekalian).
 const MEDIA_SRC = "media-src 'self' https:";
+// CLOUDFLARE_INSIGHTS_SRC -- audit Lighthouse 16-17 September 2026 (Best
+// Practices, "Browser errors logged to console"): Cloudflare Web Analytics
+// (aktif di dashboard zona Cloudflare, BUKAN kode kita) menyuntik tag
+// `<script src="https://static.cloudflareinsights.com/beacon.min.js/...">`
+// ke SETIAP respons HTML lewat edge -- berlaku di SELURUH domain, bukan
+// cuma halaman publik, jadi ditambahkan ke KEDUA CSP di bawah (public &
+// strict). Sebelum ini script-src menolaknya (CSP violation di konsol
+// browser, request gagal total, nol manfaat) -- beacon-nya sendiri
+// melapor ke path relatif `/cdn-cgi/rum` di origin yang SAMA (diintersep
+// Cloudflare di edge), jadi `connect-src 'self'` yang sudah ada di kedua
+// CSP TIDAK perlu tambahan apa pun, cukup izinkan skripnya dimuat.
+const CLOUDFLARE_INSIGHTS_SRC = "https://static.cloudflareinsights.com";
 const VIDEO_EMBED_FRAME_SRC = "https://www.youtube.com https://www.tiktok.com";
 // EMBED_BLOCK_FRAME_SRC -- Canvas Page Builder Fase 3, block_type "embed"
 // (iframe generik dgn whitelist provider, permintaan langsung pengguna 8
@@ -84,7 +96,7 @@ const EMBED_BLOCK_FRAME_SRC = "https://docs.google.com https://calendly.com http
 
 const PUBLIC_PAGE_CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com",
+  `script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com ${CLOUDFLARE_INSIGHTS_SRC}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
   MEDIA_SRC,
@@ -117,7 +129,7 @@ const NOMINATIM_ORIGIN = 'https://nominatim.openstreetmap.org';
 // sekarang saat kreator menguji lewat pratinjau dashboard.
 const STRICT_CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' ${CLOUDFLARE_INSIGHTS_SRC}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
   MEDIA_SRC,
@@ -134,6 +146,17 @@ const COMMON_SECURITY_HEADERS = [
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+  // Cross-Origin-Opener-Policy -- audit Lighthouse 16-17 September 2026
+  // (Best Practices, "Ensure proper origin isolation with COOP"), TIDAK
+  // ADA sama sekali sebelumnya. 'same-origin' aman dipasang di sini: satu
+  // per satu dicek SETIAP pemakaian window.open() di codebase ini
+  // (LockedLinkButton/ShareButton/BuyProductButton/danger-zone/products)
+  // SUDAH memakai flag `noopener` eksplisit, dan login Google (satu-
+  // satunya OAuth di sini) adalah REDIRECT PENUH ke accounts.google.com
+  // (GoogleAuthButton.tsx), BUKAN popup+postMessage -- jadi tidak ada alur
+  // yang bergantung pada window.opener lintas origin yang bisa diputus
+  // header ini.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   // Audit keamanan 15 Agustus 2026: Permissions-Policy restriktif. Jeonme
   // tidak memakai API kamera/mikrofon/geolokasi/USB/pembayaran native dll.
   // Google Maps dirender lewat iframe (frame-src di CSP), BUKAN API

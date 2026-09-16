@@ -25,9 +25,14 @@ export default function FinalCTA() {
             {t("finalCta.title2")}
           </h2>
           <p className="mx-auto mb-9 max-w-xl text-lg text-white/70">{t("finalCta.subtitle")}</p>
+          {/* text-[#111111] (BUKAN text-white) -- audit Lighthouse 16-17
+              September 2026: putih di atas bg-jeon-coral cuma rasio kontras
+              ~2.9:1 (gagal WCAG AA), sama seperti tombol CTA di Hero.tsx
+              (lihat catatan lengkap di sana). Ink #111111 di atas coral
+              yang sama ~7.2:1. */}
           <Link
             href="/register"
-            className="inline-flex cursor-pointer rounded-jmd border-2 border-[#111111] bg-jeon-coral px-10 py-4 font-display text-base font-bold text-white shadow-[10px_12px_0_rgba(0,0,0,0.5)] transition-transform duration-150 hover:-translate-y-1 active:translate-y-0 active:shadow-none"
+            className="inline-flex cursor-pointer rounded-jmd border-2 border-[#111111] bg-jeon-coral px-10 py-4 font-display text-base font-bold text-[#111111] shadow-[10px_12px_0_rgba(0,0,0,0.5)] transition-transform duration-150 hover:-translate-y-1 active:translate-y-0 active:shadow-none"
           >
             {t("finalCta.cta")}
           </Link>
