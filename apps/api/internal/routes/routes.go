@@ -753,6 +753,11 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 			adminGroup.GET("/moderation/domains", admin.ListDomainVerdicts)
 			adminGroup.POST("/moderation/domains", admin.UpsertDomainVerdict)
 			adminGroup.DELETE("/moderation/domains/:id", admin.DeleteDomainVerdict)
+
+			// Breakdown sumber trafik (utm_source/medium/campaign) --
+			// permintaan langsung pengguna, 15 September 2026, lihat catatan
+			// lengkap di AdminHandler.ListTrafficSources (admin.go).
+			adminGroup.GET("/traffic-sources", admin.ListTrafficSources)
 		}
 
 		// Live chat dukungan (permintaan langsung pengguna, 7 September

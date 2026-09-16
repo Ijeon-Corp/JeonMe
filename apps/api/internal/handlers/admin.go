@@ -1106,3 +1106,87 @@ func (h *AdminHandler) DeleteDomainVerdict(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "entri dihapus"})
 }
+
+type trafficSourceRow struct {
+	UtmSource   string `json:"utm_source"`
+	UtmMedium   string `json:"utm_medium"`
+	UtmCampaign string `json:"utm_campaign"`
+	Views       int64  `json:"views"`
+	Clicks      int64  `json:"clicks"`
+}
+
+type trafficSourcesResponse struct {
+	// TotalViews/ViewsWithUTM -- konteks cepat SEBELUM tabel breakdown:
+	// berapa persen trafik dalam rentang ini yang benar-benar bawa tag
+	// kampanye, vs organik/langsung/referrer tanpa UTM sama sekali.
+	TotalViews   int64              `json:"total_views"`
+	ViewsWithUTM int64              `json:"views_with_utm"`
+	RangeDays    int                `json:"range_days"`
+	Sources      []trafficSourceRow `json:"sources"`
+	HasMore      bool               `json:"has_more"`
+}
+
+// ListTrafficSources — permintaan langsung pengguna, 15 September 2026
+// ("untuk sumber trafic misal seperti dari facebook ig dan lain lain
+// apakah itu sudah bisa tercatat atau di tracking untuk admin"): breakdown
+// utm_source/medium/campaign PLATFORM-WIDE (lintas SEMUA kreator, bukan
+// per-page seperti top_referrers milik kreator di computeSummary) --
+// SEBELUM ini UTM masuk cuma diteruskan ke Facebook Conversions API/GA4
+// milik kreator sendiri (maybeSendConversionsEvent), tidak pernah
+// tersimpan/terlihat di mana pun di dalam Jeonme sendiri. Lihat migrasi
+// 000101 utk penyimpanannya.
+//
+// Sengaja HANYA baris dengan utm_source terisi yang masuk tabel breakdown
+// (WHERE utm_source != '') -- trafik organik/direct/referrer-tanpa-UTM
+// diringkas jadi satu angka (TotalViews - ViewsWithUTM) di atas tabel,
+// bukan dipaksa masuk satu baris "(direct/organic)" yang medium/campaign-
+// nya selalu kosong dan cuma mengotori pagination. resolveDateRange sama
+// persis dgn AnalyticsHandler.GetSummary (analytics.go) -- ?range_days=N
+// ATAU ?from&to eksplisit.
+func (h *AdminHandler) ListTrafficSources(c *gin.Context) {
+	from, to, rangeDays, err := resolveDateRange(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	limit, offset := parseLimitOffset(c)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	resp := trafficSourcesResponse{RangeDays: rangeDays, Sources: []trafficSourceRow{}}
+	if err := h.DB.QueryRow(ctx, `
+		SELECT COUNT(*) FILTER (WHERE event_type = 'view'),
+			COUNT(*) FILTER (WHERE event_type = 'view' AND utm_source != '')
+		FROM analytics_events WHERE created_at BETWEEN $1 AND $2
+	`, from, to).Scan(&resp.TotalViews, &resp.ViewsWithUTM); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menghitung total trafik"})
+		return
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT utm_source, utm_medium, utm_campaign,
+			COUNT(*) FILTER (WHERE event_type = 'view') AS views,
+			COUNT(*) FILTER (WHERE event_type = 'click') AS clicks
+		FROM analytics_events
+		WHERE created_at BETWEEN $1 AND $2 AND utm_source != ''
+		GROUP BY utm_source, utm_medium, utm_campaign
+		ORDER BY views DESC
+		LIMIT $3 OFFSET $4
+	`, from, to, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat sumber trafik"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row trafficSourceRow
+		if err := rows.Scan(&row.UtmSource, &row.UtmMedium, &row.UtmCampaign, &row.Views, &row.Clicks); err == nil {
+			resp.Sources = append(resp.Sources, row)
+		}
+	}
+	resp.HasMore = len(resp.Sources) == limit
+
+	c.JSON(http.StatusOK, resp)
+}

@@ -170,10 +170,16 @@ func (h *AnalyticsHandler) insertTrackEvent(ctx context.Context, pageID string, 
 
 	deviceType := classifyDevice(userAgent)
 
+	// utm_source/medium/campaign -- disimpan sekalian ke baris ini (migrasi
+	// 000101, permintaan langsung pengguna 15 September 2026) supaya
+	// breakdown sumber trafik bisa ditanya balik lewat SQL biasa (lihat
+	// AdminHandler.ListTrafficSources, admin.go) -- SEBELUMNYA nilai ini
+	// cuma singgah di memori (utmCustomData di bawah), tidak pernah
+	// benar-benar tersimpan.
 	_, _ = h.DB.Exec(ctx, `
-		INSERT INTO analytics_events (id, page_id, event_type, link_id, product_id, referrer, device_type, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-	`, uuid.NewString(), pageID, req.EventType, linkID, productID, req.Referrer, deviceType)
+		INSERT INTO analytics_events (id, page_id, event_type, link_id, product_id, referrer, device_type, utm_source, utm_medium, utm_campaign, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+	`, uuid.NewString(), pageID, req.EventType, linkID, productID, req.Referrer, deviceType, req.UtmSource, req.UtmMedium, req.UtmCampaign)
 
 	go h.maybeSendConversionsEvent(pageID, req.EventType, sourceURL, clientIP, userAgent, utmCustomData(req))
 }

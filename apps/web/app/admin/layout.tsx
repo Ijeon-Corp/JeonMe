@@ -11,6 +11,7 @@ import {
   IconChart,
   IconClose,
   IconFlag,
+  IconGlobe,
   IconLogout,
   IconMenu,
   IconShield,
@@ -26,6 +27,10 @@ const NAV_ITEMS = [
   { href: "/admin/kyc", label: "Review KYC", icon: IconShield },
   { href: "/admin/support-chat", label: "Live Chat", icon: MessageCircle },
   { href: "/admin/moderasi", label: "Moderasi Tautan", icon: ShieldAlert },
+  // Sumber Trafik -- permintaan langsung pengguna, 15 September 2026
+  // (breakdown UTM platform-wide), lihat catatan lengkap di
+  // app/admin/traffic-sources/page.tsx.
+  { href: "/admin/traffic-sources", label: "Sumber Trafik", icon: IconGlobe },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

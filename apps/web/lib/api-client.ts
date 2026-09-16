@@ -4162,6 +4162,34 @@ export function upsertDomainVerdict(domain: string, verdict: "allowed" | "blocke
   );
 }
 
+// Breakdown sumber trafik (utm_source/medium/campaign) -- permintaan
+// langsung pengguna, 15 September 2026: "untuk sumber trafic misal seperti
+// dari facebook ig dan lain lain apakah itu sudah bisa tercatat atau di
+// tracking untuk admin". Platform-wide (lintas semua kreator), lihat
+// catatan lengkap di AdminHandler.ListTrafficSources (admin.go).
+export interface TrafficSourceRow {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  views: number;
+  clicks: number;
+}
+
+export interface TrafficSourcesResponse {
+  total_views: number;
+  views_with_utm: number;
+  range_days: number;
+  sources: TrafficSourceRow[];
+  has_more: boolean;
+}
+
+export function getAdminTrafficSources(params: { rangeDays?: number; offset?: number } = {}) {
+  const qs = new URLSearchParams();
+  qs.set("range_days", String(params.rangeDays ?? 30));
+  if (params.offset) qs.set("offset", String(params.offset));
+  return apiFetch<TrafficSourcesResponse>(`/admin/traffic-sources?${qs.toString()}`, { method: "GET" }, { auth: true });
+}
+
 // Hapus entri reputasi (mis. override manual yang sudah tidak relevan)
 // supaya domain itu dievaluasi ulang dari awal di percobaan berikutnya.
 export function deleteDomainVerdict(id: string) {
