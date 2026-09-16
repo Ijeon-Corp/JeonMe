@@ -4,6 +4,7 @@ import PageSkeleton from "@/components/Skeleton";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
+import Link from "next/link";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import StatusBadge, { type StatusTone } from "@/components/dashboard/data/StatusBadge";
 import EmptyState from "@/components/EmptyState";
@@ -254,6 +255,18 @@ function BrandPageInner() {
 
       {view === "opportunities" && (
         <>
+          {/* Banner ke halaman "Jelajahi Campaign" -- permintaan langsung
+              pengguna, 16 September 2026: "buat 1 page khusus yang
+              mempromosikan campaign". Tab ini (list kompak + lamar inline)
+              TETAP dipertahankan apa adanya; halaman baru murni tampilan
+              lebih lega + detail per campaign (lihat brand/campaigns/). */}
+          <Link
+            href="/dashboard/brand/campaigns"
+            className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-jmd bg-jeon-purple/5 px-4 py-3 text-xs font-semibold text-app-ink hover:bg-jeon-purple/10"
+          >
+            {t("dashboard.pages.brand.discover.bannerText")}
+            <span className="font-bold text-jeon-purple">{t("dashboard.pages.brand.discover.bannerCta")}</span>
+          </Link>
           <div className="flex flex-wrap gap-1.5">
             {([["", t("dashboard.pages.brand.kindAll")], ["sponsored_link", t("dashboard.pages.brand.kindSponsoredLink")], ["brand_deal", t("dashboard.pages.brand.kindBrandDeal")]] as const).map(([k, label]) => (
               <button
