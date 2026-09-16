@@ -931,7 +931,25 @@ function DashboardProductsPageInner() {
             Storage/Webhook/Settings) menggantikan 9 tab sejajar yang
             overload (audit §2.2). Semua view tetap deep-linkable via
             ?tab= (§13.8). */}
-        <div className="flex items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Bug dilaporkan langsung pengguna, 16 September 2026 ("page more
+            di menu sales tidak ada isinya"): dropdown "Lainnya" (di bawah)
+            posisinya `absolute`, TAPI dulu jadi ANAK LANGSUNG div
+            `overflow-x-auto` yang sama dgn baris tombol tab -- per spek CSS,
+            elemen yang men-set overflow-x jadi non-visible (auto/scroll)
+            TANPA men-set overflow-y eksplisit membuat browser MEMAKSA
+            overflow-y ikut jadi `auto` juga (tidak boleh satu sumbu
+            "visible" & sumbu lain tidak) -- akibatnya dropdown yang
+            menjorok ke BAWAH baris tab ikut terpotong/clip oleh tinggi
+            baris itu sendiri, jadi seolah "tidak ada isinya" padahal 5
+            item-nya ada di DOM & lolos cek `.toBeVisible()` Playwright
+            (bounding box-nya tidak nol, cuma diam-diam ke-clip parent).
+            Fix: pisah baris tab jadi DUA wrapper -- overflow-x-auto HANYA
+            membungkus tombol-tombol primer yang perlu scroll horizontal di
+            layar sempit, sedangkan tombol+dropdown "Lainnya" jadi SIBLING
+            di luar wrapper itu (row luar tidak men-set overflow apa pun),
+            supaya dropdown-nya tidak pernah ke-clip lagi. */}
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {(
               [
                 { key: "overview" as ProductsTab, label: t("dashboard.nav.salesOverview") },
@@ -954,7 +972,8 @@ function DashboardProductsPageInner() {
                 {tb.label}
               </button>
             ))}
-            <div className="relative flex-shrink-0" ref={moreTabsRef}>
+          </div>
+          <div className="relative flex-shrink-0" ref={moreTabsRef}>
               <button
                 type="button"
                 onClick={() => setMoreTabsOpen((v) => !v)}
@@ -974,7 +993,7 @@ function DashboardProductsPageInner() {
               {moreTabsOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-[calc(100%+0.25rem)] z-30 w-44 overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface py-1.5 shadow-card"
+                  className="absolute right-0 top-[calc(100%+0.25rem)] z-30 w-44 overflow-hidden rounded-jmd border-2 border-jeon-ink bg-app-surface py-1.5 shadow-card"
                 >
                   {MORE_TABS.map((mt) => (
                     <button
@@ -994,8 +1013,8 @@ function DashboardProductsPageInner() {
                   ))}
                 </div>
               )}
-            </div>
           </div>
+        </div>
         {tab === "halaman_toko" ? (
           <div className="mt-4">
             {/* Pill switcher multi-Toko -- Modul Halaman Tambahan Fase 2
