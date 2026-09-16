@@ -159,7 +159,21 @@ export default function TransactionPanel() {
                   className="cursor-pointer border-b border-app-border last:border-0 hover:bg-jeon-purple/5"
                 >
                   <td className="px-4 py-3 font-semibold text-app-ink">{o.product_name}</td>
-                  <td className="px-4 py-3 text-app-ink">{o.buyer_email}</td>
+                  {/* buyer_name -- migrasi 000102, permintaan langsung
+                      pengguna 15 September 2026. Order LAMA (sebelum
+                      migrasi ini) bernilai "" -- jatuh balik ke email
+                      SAJA persis seperti tampilan lama, tidak ada baris
+                      kedua kosong yang aneh. */}
+                  <td className="px-4 py-3 text-app-ink">
+                    {o.buyer_name ? (
+                      <>
+                        <p className="font-semibold">{o.buyer_name}</p>
+                        <p className="text-[11px] text-app-muted">{o.buyer_email}</p>
+                      </>
+                    ) : (
+                      o.buyer_email
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-app-ink">{formatIDR(o.amount_idr)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={o.status} label={STATUS_LABEL[o.status] ?? o.status} className="text-[10px]" />
@@ -271,6 +285,11 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
 
             <div className="mt-4 flex flex-col gap-1.5 text-xs">
               <Row label={t("dashboard.components.transactionPanel.rowProduct")} value={detail.product_name} />
+              {/* buyer_name -- migrasi 000102, permintaan langsung pengguna
+                  15 September 2026. Order LAMA (sebelum migrasi ini)
+                  bernilai "" -- disembunyikan sepenuhnya drpd menampilkan
+                  baris kosong. */}
+              {detail.buyer_name && <Row label={t("dashboard.components.transactionPanel.rowBuyerName")} value={detail.buyer_name} />}
               <Row label={t("dashboard.components.transactionPanel.rowBuyer")} value={detail.buyer_email} />
               {detail.buyer_contact && <Row label={t("dashboard.components.transactionPanel.rowContact")} value={detail.buyer_contact} />}
               <Row label={t("dashboard.components.transactionPanel.rowAmount")} value={formatIDR(detail.amount_idr)} />
@@ -295,6 +314,17 @@ function OrderDetailModal({ orderId, onClose, onRefunded }: { orderId: string; o
                 </>
               )}
             </div>
+
+            {/* buyer_note -- migrasi 000102, permintaan langsung pengguna
+                15 September 2026. Blok terpisah (bukan Row) -- catatan
+                bebas bisa cukup panjang (maks 1000 karakter), tidak cocok
+                dipaksa masuk baris label-kiri/nilai-kanan yang sempit. */}
+            {detail.buyer_note && (
+              <div className="mt-3 rounded-md border border-app-border bg-app-surface-2 p-2.5">
+                <p className="text-[11px] font-semibold text-app-muted">{t("dashboard.components.transactionPanel.rowBuyerNote")}</p>
+                <p className="mt-0.5 whitespace-pre-line text-xs text-app-ink">{detail.buyer_note}</p>
+              </div>
+            )}
 
             {detail.ledger_entries.length > 0 && (
               <div className="mt-4 rounded-xl border border-app-border p-3">

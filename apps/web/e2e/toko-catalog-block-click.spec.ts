@@ -26,6 +26,10 @@ test("Toko klasik: blok Katalog di root bisa diklik & menampilkan isinya", async
   await form
     .locator('input[type="file"]')
     .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
+  // Kategori WAJIB sejak 15 September 2026 (permintaan langsung pengguna:
+  // "category jangan optional") -- lihat catatan lengkap di
+  // products-checkout.spec.ts.
+  await form.locator("select").selectOption({ label: "E-book" });
   await form.getByRole("button", { name: "Buat Produk" }).click();
   await expect(page.getByRole("row", { name: /Produk Pemicu Toko/ })).toBeVisible({ timeout: 10000 });
 

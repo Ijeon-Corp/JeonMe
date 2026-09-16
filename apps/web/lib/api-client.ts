@@ -2158,6 +2158,9 @@ export interface OrderListItem {
   order_id: string;
   product_name: string;
   buyer_email: string;
+  // buyer_name -- migrasi 000102, permintaan langsung pengguna 15
+  // September 2026. Order LAMA (sebelum migrasi ini) bernilai "".
+  buyer_name: string;
   amount_idr: number;
   platform_fee_idr: number;
   status: "pending" | "paid" | "expired" | "failed" | "refunded";
@@ -2191,6 +2194,11 @@ export interface OrderDetail {
   order_id: string;
   product_name: string;
   buyer_email: string;
+  // buyer_name/buyer_note -- migrasi 000102, permintaan langsung pengguna
+  // 15 September 2026. Order LAMA (sebelum migrasi ini) bernilai "" utk
+  // keduanya.
+  buyer_name: string;
+  buyer_note: string;
   buyer_contact: string;
   amount_idr: number;
   platform_fee_idr: number;
@@ -3130,6 +3138,14 @@ export function upsertAnalyticsSettings(input: {
 export function createCheckout(input: {
   product_id: string;
   buyer_email: string;
+  // buyer_name -- permintaan langsung pengguna, 15 September 2026: "di
+  // form pembelian tambahkan beberapa field lagi yang penting selain 2
+  // field yang sekarang" -- WAJIB (ditegakkan backend juga, lihat
+  // createCheckoutRequest.BuyerName, checkout.go).
+  buyer_name: string;
+  // buyer_note -- catatan bebas OPSIONAL dari pembeli ke kreator, lihat
+  // migrasi 000102.
+  buyer_note?: string;
   buyer_contact?: string;
   voucher_code?: string;
   buyer_amount_idr?: number;

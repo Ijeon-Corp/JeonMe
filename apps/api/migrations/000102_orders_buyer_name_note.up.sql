@@ -1,0 +1,21 @@
+-- Nama pembeli & catatan opsional -- permintaan langsung pengguna, 15
+-- September 2026: "di form pembelian tambahkan beberapa field lagi yang
+-- penting selain 2 field yang sekarang" (form checkout SEBELUMNYA cuma
+-- Email + Nomor WhatsApp, lihat BuyProductButton.tsx).
+--
+-- buyer_name: setiap order SEBELUMNYA cuma punya alamat email, tidak ada
+-- nama sama sekali -- invoice/riwayat order kreator (TransactionPanel.tsx)
+-- tidak pernah bisa menyapa/mengenali pembeli dgn nama, cuma alamat email
+-- mentah. DEFAULT '' (bukan NULL) supaya konsisten dgn buyer_contact yang
+-- sudah ada di kolom yang sama sejak migrasi 000001 -- baris LAMA (sebelum
+-- migrasi ini) otomatis dapat string kosong, bukan error/NULL yang perlu
+-- ditangani khusus di setiap query yang sudah ada.
+--
+-- buyer_note: catatan bebas dari pembeli ke kreator (mis. permintaan
+-- khusus untuk produk kategori "Jasa & Konsultasi" yang baru ditambahkan,
+-- atau instruksi pengiriman) -- OPSIONAL, beda dari buyer_name yang
+-- diwajibkan di request checkout baru (lihat createCheckoutRequest,
+-- checkout.go) tapi kolomnya sendiri tetap DEFAULT '' sama seperti
+-- buyer_name, konsisten dgn pola kolom string opsional lain di tabel ini.
+ALTER TABLE orders ADD COLUMN buyer_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN buyer_note VARCHAR(1000) NOT NULL DEFAULT '';

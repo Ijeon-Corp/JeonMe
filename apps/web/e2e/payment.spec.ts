@@ -161,10 +161,14 @@ test.describe("Pengaturan: Pembayaran & Penarikan", () => {
       // Sampul WAJIB sejak 19 Agustus 2026 -- test ini luput diperbarui
       // saat perubahan itu dibuat (ditemukan lewat audit 22 Agustus 2026),
       // pola sama seperti products-checkout.spec.ts.
-      await page
-        .locator("form", { has: page.getByPlaceholder("Nama produk") })
+      const splitForm = page.locator("form", { has: page.getByPlaceholder("Nama produk") });
+      await splitForm
         .locator('input[type="file"]')
         .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: Buffer.from(TEST_IMAGE_PNG_BASE64, "base64") });
+      // Kategori WAJIB sejak 15 September 2026 (permintaan langsung
+      // pengguna: "category jangan optional") -- lihat catatan lengkap di
+      // products-checkout.spec.ts.
+      await splitForm.locator("select").selectOption({ label: "E-book" });
       await page.getByRole("button", { name: "Buat" }).click();
       await expect(page.getByText("Produk Split E2E")).toBeVisible();
 

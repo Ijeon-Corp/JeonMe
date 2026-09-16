@@ -10,7 +10,7 @@ import { TEST_IMAGE_PNG_BASE64, payOrderViaWebhook, registerAndLogin } from "./f
 // lewat webhook bertanda tangan valid alih-alih klik lewat halaman Midtrans
 // sungguhan.
 test.describe("Toko & Checkout", () => {
-  test("produk baru muncul di Toko publik SETELAH file diunggah & diaktifkan, lalu bisa dibeli sampai lunas", async ({ page }) => {
+  test("produk baru muncul di Toko publik SETELAH file diunggah & diaktifkan, lalu bisa dibeli sampai lunas", async ({ page, request }) => {
     const { username } = await registerAndLogin(page, "shop");
     const productName = "Ebook E2E";
     const priceIDR = 25000;
@@ -29,6 +29,14 @@ test.describe("Toko & Checkout", () => {
 
     await page.getByPlaceholder("Nama produk").fill(productName);
     await page.getByPlaceholder("Harga (IDR)").fill(String(priceIDR));
+    // Kategori WAJIB sejak 15 September 2026 (permintaan langsung
+    // pengguna: "category jangan optional") -- dropdown preset SELALU
+    // tampil, bahkan utk akun baru tanpa produk sama sekali (lihat
+    // CategoryField, CreateProductForm.tsx).
+    await page
+      .locator("form", { has: page.getByPlaceholder("Nama produk") })
+      .locator("select")
+      .selectOption({ label: "E-book" });
     // Sampul WAJIB sejak 19 Agustus 2026 (permintaan langsung pengguna:
     // "sampul jangan dijadikan opsional") -- SATU-SATUNYA input file yang
     // ada di form create ini (unggah File Produk terpisah masih lewat
@@ -75,6 +83,38 @@ test.describe("Toko & Checkout", () => {
     // tidak terkait (banner tutorial "Baru di Jeonme?"), tombol tutup
     // modal ini pakai aria-label bukan teks visible.
     await page.getByLabel("Tutup").click();
+
+    // Blok "produk" WAJIB ditambahkan eksplisit ke Halaman Toko sejak 15
+    // September 2026 (permintaan langsung pengguna: "saya mau semua
+    // product yang sudah ditambahkan di menu product itu jangan langsung
+    // ditampilkan tapi itu data product yang bisa kita tampilkan ketika
+    // menambahkan blok produk") -- grid otomatis DIHAPUS TOTAL (test ini
+    // luput diperbarui saat itu, ditemukan lewat kegagalan nyata: produk
+    // is_active=true & file_key terisi tapi tidak pernah tampil di Toko
+    // publik). ProdukPageEditor.tsx (editor klasik Toko) tidak punya tile
+    // "Produk" di UI-nya sendiri (lihat catatan lengkap di
+    // toko-catalog-block-click.spec.ts) -- dipaksa lewat API langsung,
+    // pola sama seperti test itu.
+    const token = await page.evaluate(() => localStorage.getItem("jeonme_token"));
+    const productsRes = await request.get("http://localhost:8080/api/v1/dashboard/products", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const products: { id: string; name: string }[] = await productsRes.json();
+    const product = products.find((p) => p.name === productName);
+    expect(product).toBeTruthy();
+
+    const pagesRes = await request.get("http://localhost:8080/api/v1/dashboard/pages", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const pages: { id: string; page_type: string }[] = await pagesRes.json();
+    const tokoPage = pages.find((p) => p.page_type === "produk");
+    expect(tokoPage).toBeTruthy();
+
+    const blockRes = await request.post(`http://localhost:8080/api/v1/dashboard/pages/${tokoPage!.id}/blocks`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { block_type: "produk", title: productName, block_data: { product_ids: [product!.id] } },
+    });
+    expect(blockRes.status()).toBe(201);
 
     // Sekarang HARUS tampil di Toko publik lengkap dengan harga & tombol Beli.
     await expect(async () => {
@@ -124,7 +164,14 @@ test.describe("Toko & Checkout", () => {
     });
 
     await page.getByRole("button", { name: "Beli", exact: true }).click();
+    // Nama/Catatan -- permintaan langsung pengguna, 15 September 2026: "di
+    // form pembelian tambahkan beberapa field lagi yang penting selain 2
+    // field yang sekarang" -- Nama SEKARANG wajib (backend menolak 400
+    // tanpanya, lihat createCheckoutRequest.BuyerName, checkout.go).
+    const buyerName = "Pembeli E2E";
+    await page.getByPlaceholder("Nama kamu").fill(buyerName);
     await page.getByPlaceholder("Email kamu").fill(`pembeli-${Date.now()}@example.com`);
+    await page.getByPlaceholder("Catatan untuk penjual (opsional)").fill("Tolong kirim link cadangan juga.");
     await page.getByRole("button", { name: "Bayar Sekarang" }).click();
 
     // capturedCheckout memegang body ASLI dari API (sebelum ditulis ulang
@@ -153,5 +200,12 @@ test.describe("Toko & Checkout", () => {
     await page.goto("/dashboard/products");
     await page.getByRole("button", { name: "Produk" }).click();
     await expect(page.getByRole("row", { name: new RegExp(productName) }).getByRole("cell").nth(2)).toHaveText("1");
+
+    // Nama & catatan pembeli (migrasi 000102) HARUS tampil di tab Pesanan --
+    // dikumpulkan tanpa gunanya kalau kreator tidak pernah melihatnya lagi.
+    await page.getByRole("button", { name: "Pesanan" }).click();
+    await expect(page.getByText(buyerName)).toBeVisible({ timeout: 10000 });
+    await page.getByText(buyerName).click();
+    await expect(page.getByText("Tolong kirim link cadangan juga.")).toBeVisible({ timeout: 5000 });
   });
 });

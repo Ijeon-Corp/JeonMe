@@ -71,8 +71,8 @@ func TestCheckoutCreate_NotConfigured_RollsBackOrder(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id":  productID,
-		"buyer_email": "buyer@example.com",
+		"product_id": productID,
+		"buyer_name": "Test Buyer", "buyer_email": "buyer@example.com",
 	}, nil)
 
 	if rec.Code != http.StatusServiceUnavailable {
@@ -109,8 +109,8 @@ func TestCheckoutCreate_InactiveProduct_ReturnsNotFound(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id":  productID,
-		"buyer_email": "buyer@example.com",
+		"product_id": productID,
+		"buyer_name": "Test Buyer", "buyer_email": "buyer@example.com",
 	}, nil)
 
 	if rec.Code != http.StatusNotFound {
@@ -161,7 +161,7 @@ func TestCheckoutCreate_PaymentLinkExpired_Rejects(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id": productID, "buyer_email": "buyer@example.com",
+		"product_id": productID, "buyer_name": "Test Buyer", "buyer_email": "buyer@example.com",
 	}, nil)
 	if rec.Code != http.StatusGone {
 		t.Fatalf("status = %d, ekspektasi 410. Body: %s", rec.Code, rec.Body.String())
@@ -195,7 +195,7 @@ func TestCheckoutCreate_PaymentLinkLimitReached_Rejects(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id": productID, "buyer_email": "buyer-baru@example.com",
+		"product_id": productID, "buyer_name": "Test Buyer", "buyer_email": "buyer-baru@example.com",
 	}, nil)
 	if rec.Code != http.StatusGone {
 		t.Fatalf("status = %d, ekspektasi 410. Body: %s", rec.Code, rec.Body.String())
@@ -227,7 +227,7 @@ func TestCheckoutCreate_EventCapacityReached_Rejects(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id": productID, "buyer_email": "peserta-kedua@example.com",
+		"product_id": productID, "buyer_name": "Test Buyer", "buyer_email": "peserta-kedua@example.com",
 	}, nil)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, ekspektasi 400 (kuota penuh). Body: %s", rec.Code, rec.Body.String())
@@ -258,7 +258,7 @@ func TestCheckoutCreate_ShopPaused_Rejects(t *testing.T) {
 	router.POST("/checkout", checkout.Create)
 
 	rec := doJSON(t, router, http.MethodPost, "/checkout", map[string]string{
-		"product_id": productID, "buyer_email": "buyer@example.com",
+		"product_id": productID, "buyer_name": "Test Buyer", "buyer_email": "buyer@example.com",
 	}, nil)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, ekspektasi 403. Body: %s", rec.Code, rec.Body.String())

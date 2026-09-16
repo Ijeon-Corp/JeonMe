@@ -77,6 +77,17 @@ export default function BuyProductButton({
   basePriceIdr?: number;
 }) {
   const [open, setOpen] = useState(false);
+  // name/note -- permintaan langsung pengguna, 15 September 2026: "di form
+  // pembelian tambahkan beberapa field lagi yang penting selain 2 field
+  // yang sekarang" (sebelumnya cuma email+WhatsApp). `name` WAJIB (lihat
+  // handleBuy) -- setiap order sungguhan seharusnya punya nama, bukan
+  // cuma alamat email mentah, utk invoice/riwayat order kreator. `note`
+  // tetap OPSIONAL, sama seperti WhatsApp -- disembunyikan utk donasi
+  // (hideVoucher) sama seperti WhatsApp, alasan sama: catatan "pesanan"
+  // tidak masuk akal utk dukungan/donasi.
+  const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [note, setNote] = useState("");
   const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -91,6 +102,7 @@ export default function BuyProductButton({
   const [voucherResult, setVoucherResult] = useState<{ discountIDR: number; finalIDR: number } | null>(null);
   const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
 
+  const nameError = nameTouched && !name.trim() ? "Nama wajib diisi." : null;
   const emailError = emailTouched && email.trim() && !EMAIL_PATTERN.test(email.trim()) ? "Format email tidak valid." : null;
   // whatsappError -- format longgar (cukup angka, spasi, +/-, min 8 digit)
   // karena field ini OPSIONAL & format nomor lokal/internasional beda-beda
@@ -134,7 +146,12 @@ export default function BuyProductButton({
   async function handleBuy(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNameTouched(true);
     setEmailTouched(true);
+    if (!name.trim()) {
+      setError("Masukkan nama kamu.");
+      return;
+    }
     if (!EMAIL_PATTERN.test(email.trim())) {
       setError("Masukkan alamat email yang valid.");
       return;
@@ -148,6 +165,8 @@ export default function BuyProductButton({
       const { invoice_url } = await createCheckout({
         product_id: productId,
         buyer_email: email,
+        buyer_name: name.trim(),
+        buyer_note: note.trim() || undefined,
         buyer_contact: whatsappNumber.trim() || undefined,
         voucher_code: voucherResult ? voucherCode.trim() : undefined,
         buyer_amount_idr: pwywMinPriceIdr !== undefined ? Number(buyerAmount) : undefined,
@@ -253,6 +272,21 @@ export default function BuyProductButton({
               )}
               <div>
                 <input
+                  type="text"
+                  required
+                  placeholder="Nama kamu"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setNameTouched(true)}
+                  aria-invalid={!!nameError}
+                  className={`w-full rounded-md border px-2.5 py-2 text-sm text-app-ink focus:outline-none ${
+                    nameError ? "border-red-400 focus:border-red-400" : "border-app-border focus:border-jeon-purple"
+                  }`}
+                />
+                {nameError && <p className="mt-0.5 text-[11px] text-red-600">{nameError}</p>}
+              </div>
+              <div>
+                <input
                   type="email"
                   required
                   placeholder="Email kamu"
@@ -291,6 +325,21 @@ export default function BuyProductButton({
                   />
                   {whatsappError && <p className="mt-0.5 text-[11px] text-red-600">{whatsappError}</p>}
                 </div>
+              )}
+
+              {/* note -- catatan bebas OPSIONAL utk penjual (mis. permintaan
+                  khusus produk kategori "Jasa & Konsultasi", instruksi
+                  pengiriman) -- disembunyikan utk donasi, alasan sama
+                  persis nomor WhatsApp di atas ("pesanan" tidak masuk akal
+                  utk dukungan/donasi). */}
+              {!hideVoucher && (
+                <textarea
+                  placeholder="Catatan untuk penjual (opsional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-md border border-app-border px-2.5 py-2 text-sm text-app-ink focus:border-jeon-purple focus:outline-none"
+                />
               )}
 
               {!hideVoucher &&

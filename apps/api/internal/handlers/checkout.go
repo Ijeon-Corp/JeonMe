@@ -75,8 +75,24 @@ func NewCheckoutHandler(db *pgxpool.Pool, midtransClient *midtrans.Client, gatew
 }
 
 type createCheckoutRequest struct {
-	ProductID      string `json:"product_id" binding:"required"`
-	BuyerEmail     string `json:"buyer_email" binding:"required,email"`
+	ProductID  string `json:"product_id" binding:"required"`
+	BuyerEmail string `json:"buyer_email" binding:"required,email"`
+	// BuyerName -- permintaan langsung pengguna, 15 September 2026: "di
+	// form pembelian tambahkan beberapa field lagi yang penting selain 2
+	// field yang sekarang" (sebelumnya cuma email+WhatsApp, TIDAK ADA nama
+	// pembeli sama sekali di seluruh alur checkout). WAJIB (beda dari
+	// BuyerContact/BuyerNote di bawah yang tetap opsional) -- setiap order
+	// nyata SEHARUSNYA punya nama, bukan cuma alamat email mentah, utk
+	// invoice/riwayat order kreator (lihat orderListItem/orderDetailResponse
+	// di bawah). Endpoint ini bisa dicapai lewat panggilan API langsung
+	// (bukan cuma lewat form resmi), jadi ditegakkan di backend juga --
+	// beda dari kategori produk (CreateProductForm.tsx) yang SENGAJA cuma
+	// digerbang frontend krn pembuatan produk tidak pernah lewat jalur lain.
+	BuyerName string `json:"buyer_name" binding:"required,max=255"`
+	// BuyerNote -- catatan bebas OPSIONAL dari pembeli ke kreator (mis.
+	// permintaan khusus produk kategori "Jasa & Konsultasi", atau instruksi
+	// pengiriman) -- lihat migrasi 000102.
+	BuyerNote      string `json:"buyer_note" binding:"omitempty,max=1000"`
 	BuyerContact   string `json:"buyer_contact"`
 	VoucherCode    string `json:"voucher_code"`
 	BuyerAmountIDR *int64 `json:"buyer_amount_idr"`
@@ -366,9 +382,9 @@ func (h *CheckoutHandler) Create(c *gin.Context) {
 	}
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO orders (id, product_id, buyer_email, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, donation_wishlist_item_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, $13, now())
-	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR, collaboratorSplitsSnapshotJSON, wishlistItemID)
+		INSERT INTO orders (id, product_id, buyer_email, buyer_name, buyer_note, buyer_contact, amount_idr, platform_fee_idr, status, psp_reference, voucher_id, discount_idr, affiliate_id, affiliate_commission_idr, collaborator_splits_snapshot, donation_wishlist_item_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, $13, $14, $15, now())
+	`, orderID, req.ProductID, req.BuyerEmail, req.BuyerName, req.BuyerNote, req.BuyerContact, finalAmountIDR, platformFeeIDR, externalID, voucherID, discountIDR, affiliateID, affiliateCommissionIDR, collaboratorSplitsSnapshotJSON, wishlistItemID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat order"})
 		return
@@ -677,9 +693,13 @@ func (h *CheckoutHandler) MarkFulfilled(c *gin.Context) {
 }
 
 type orderListItem struct {
-	OrderID        string  `json:"order_id"`
-	ProductName    string  `json:"product_name"`
-	BuyerEmail     string  `json:"buyer_email"`
+	OrderID     string `json:"order_id"`
+	ProductName string `json:"product_name"`
+	BuyerEmail  string `json:"buyer_email"`
+	// BuyerName -- migrasi 000102, permintaan langsung pengguna 15
+	// September 2026. Baris LAMA (sebelum migrasi ini) tampil "" -- frontend
+	// jatuh balik ke buyer_email kalau kosong (lihat TransactionPanel.tsx).
+	BuyerName      string  `json:"buyer_name"`
 	AmountIDR      int64   `json:"amount_idr"`
 	PlatformFeeIDR int64   `json:"platform_fee_idr"`
 	Status         string  `json:"status"`
@@ -691,8 +711,8 @@ type orderListItem struct {
 
 // ListOrders -- Modul Toko (tab Transaction): daftar transaksi kreator
 // (beda dari ListRecentOrders di atas yang cuma 20 teratas untuk widget
-// Statistik), dengan filter status & pencarian bebas (email pembeli atau
-// nama produk).
+// Statistik), dengan filter status & pencarian bebas (email/nama pembeli
+// atau nama produk -- nama pembeli ikut dicari sejak migrasi 000102).
 //
 // limit/offset (parseLimitOffset) -- ditambahkan lewat audit performa
 // profesional 15 September 2026 (Medium): "LIMIT 200" tetap SEBELUMNYA
@@ -711,7 +731,7 @@ func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 	defer cancel()
 
 	rows, err := h.DB.Query(ctx, `
-		SELECT o.id, p.name, o.buyer_email, o.amount_idr, o.platform_fee_idr, o.status,
+		SELECT o.id, p.name, o.buyer_email, o.buyer_name, o.amount_idr, o.platform_fee_idr, o.status,
 			COALESCE(pay.method, ''), o.created_at, o.fulfilled_at, o.refunded_at
 		FROM orders o
 		JOIN products p ON p.id = o.product_id
@@ -720,7 +740,7 @@ func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 		) pay ON pay.order_id = o.id
 		WHERE p.user_id = $1
 			AND ($2 = '' OR o.status = $2)
-			AND (o.buyer_email ILIKE $3 OR p.name ILIKE $3)
+			AND (o.buyer_email ILIKE $3 OR o.buyer_name ILIKE $3 OR p.name ILIKE $3)
 		ORDER BY o.created_at DESC LIMIT $4 OFFSET $5
 	`, userID, status, search, limit, offset)
 	if err != nil {
@@ -734,7 +754,7 @@ func (h *CheckoutHandler) ListOrders(c *gin.Context) {
 		var it orderListItem
 		var createdAt time.Time
 		var fulfilledAt, refundedAt *time.Time
-		if err := rows.Scan(&it.OrderID, &it.ProductName, &it.BuyerEmail, &it.AmountIDR, &it.PlatformFeeIDR, &it.Status,
+		if err := rows.Scan(&it.OrderID, &it.ProductName, &it.BuyerEmail, &it.BuyerName, &it.AmountIDR, &it.PlatformFeeIDR, &it.Status,
 			&it.PaymentMethod, &createdAt, &fulfilledAt, &refundedAt); err != nil {
 			continue
 		}
@@ -760,9 +780,14 @@ type orderDetailLedgerRow struct {
 }
 
 type orderDetailResponse struct {
-	OrderID                string  `json:"order_id"`
-	ProductName            string  `json:"product_name"`
-	BuyerEmail             string  `json:"buyer_email"`
+	OrderID     string `json:"order_id"`
+	ProductName string `json:"product_name"`
+	BuyerEmail  string `json:"buyer_email"`
+	// BuyerName/BuyerNote -- migrasi 000102, permintaan langsung pengguna
+	// 15 September 2026. Baris LAMA (sebelum migrasi ini) tampil "" utk
+	// keduanya.
+	BuyerName              string  `json:"buyer_name"`
+	BuyerNote              string  `json:"buyer_note"`
 	BuyerContact           string  `json:"buyer_contact"`
 	AmountIDR              int64   `json:"amount_idr"`
 	PlatformFeeIDR         int64   `json:"platform_fee_idr"`
@@ -797,12 +822,12 @@ func (h *CheckoutHandler) GetOrderDetail(c *gin.Context) {
 	var createdAt time.Time
 	var fulfilledAt, refundedAt *time.Time
 	err := h.DB.QueryRow(ctx, `
-		SELECT o.id, p.name, o.buyer_email, o.buyer_contact, o.amount_idr, o.platform_fee_idr, o.discount_idr,
+		SELECT o.id, p.name, o.buyer_email, o.buyer_name, o.buyer_note, o.buyer_contact, o.amount_idr, o.platform_fee_idr, o.discount_idr,
 			o.affiliate_commission_idr, o.status, o.psp_reference, o.created_at, o.fulfilled_at,
 			o.refunded_at, o.refund_amount_idr, o.refund_reason
 		FROM orders o JOIN products p ON p.id = o.product_id
 		WHERE o.id = $1 AND p.user_id = $2
-	`, orderID, userID).Scan(&resp.OrderID, &resp.ProductName, &resp.BuyerEmail, &resp.BuyerContact, &resp.AmountIDR,
+	`, orderID, userID).Scan(&resp.OrderID, &resp.ProductName, &resp.BuyerEmail, &resp.BuyerName, &resp.BuyerNote, &resp.BuyerContact, &resp.AmountIDR,
 		&resp.PlatformFeeIDR, &resp.DiscountIDR, &resp.AffiliateCommissionIDR, &resp.Status, &resp.PspReference,
 		&createdAt, &fulfilledAt, &refundedAt, &resp.RefundAmountIDR, &resp.RefundReason)
 	if err != nil {
