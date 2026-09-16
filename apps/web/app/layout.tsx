@@ -4,6 +4,7 @@ import "./globals.css";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme-context";
 import { LocaleProvider } from "@/lib/locale-context";
+import { SITE_URL } from "@/lib/site";
 
 // SEMUA font di file ini di-self-host (next/font/local), TIDAK ADA lagi yang
 // pakai next/font/google. Akar masalah: Quicksand lalu Space Grotesk
@@ -111,6 +112,16 @@ const customSpaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
+  // metadataBase -- audit Lighthouse 17 September 2026 (SEO, "Document
+  // does not have a valid rel=canonical"): TIDAK ADA sama sekali
+  // sebelumnya, jadi setiap `alternates: { canonical: "/pricing" }` per
+  // halaman (pricing/features/privacy/terms/cookies) dirender Next.js
+  // sebagai `<link rel="canonical" href="/pricing">` RELATIF (tanpa
+  // protokol/host) -- valid secara HTML tapi ditolak validator SEO yang
+  // butuh URL absolut. metadataBase menyediakan basis resolusi itu untuk
+  // SEMUA metadata relatif (canonical, OG image, dll) sekaligus, satu
+  // sumber kebenaran SITE_URL yang sama dipakai sitemap.ts.
+  metadataBase: new URL(SITE_URL),
   title: "Jeon.id — Satu Link, Peluang Tanpa Batas",
   description: "Platform link-in-bio dan monetisasi produk digital untuk kreator Indonesia.",
 };

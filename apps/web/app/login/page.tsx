@@ -89,11 +89,15 @@ function LoginPageInner() {
         <p className="mt-3 text-sm text-app-muted">Masukkan kode dari aplikasi authenticator-mu.</p>
 
         <form onSubmit={handleVerifyMfa} className="mt-8 flex flex-col gap-4">
+          {/* aria-label -- tidak ada teks label visual sama sekali di sini
+              (cuma placeholder, yang BUKAN pengganti label -- hilang begitu
+              diisi & tidak dibaca reliable oleh semua screen reader). */}
           <input
             type="text"
             inputMode="numeric"
             autoFocus
             required
+            aria-label="Kode verifikasi 2FA"
             placeholder="123456"
             value={mfaCode}
             onChange={(e) => setMfaCode(e.target.value)}
@@ -140,10 +144,16 @@ function LoginPageInner() {
         </p>
       )}
 
+      {/* id/htmlFor -- audit Lighthouse 17 September 2026 ("Form elements
+          do not have associated labels"): <label> di sini SEBELUMNYA cuma
+          dekat secara visual, tidak terhubung PROGRAMATIK ke <input>-nya
+          (tanpa htmlFor/id, klik label tidak fokus ke input & screen
+          reader tidak tahu input ini "Email"/"Password"). */}
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
+          <label htmlFor="login-email" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
           <input
+            id="login-email"
             type="email"
             required
             value={email}
@@ -154,8 +164,9 @@ function LoginPageInner() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password</label>
+          <label htmlFor="login-password" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password</label>
           <input
+            id="login-password"
             type="password"
             required
             value={password}
@@ -204,14 +215,23 @@ function LoginPageInner() {
       {/* Lupa password -- halaman sendiri sekarang (permintaan langsung
           pengguna, 31 Agustus 2026: "harusnya lupa password itu jadi page
           sendiri"), bukan lagi form kecil muncul-sembunyi di sini -- lihat
-          app/forgot-password/page.tsx. */}
-      <Link href="/forgot-password" className="mt-4 inline-block text-xs font-semibold text-jeon-purple hover:underline">
+          app/forgot-password/page.tsx.
+          text-app-ink underline (BUKAN text-jeon-purple) -- audit
+          Lighthouse 17 September 2026: teks kecil (text-xs) warna
+          jeon-purple di atas bg-app-surface gagal WCAG AA (di bawah 4,5:1).
+          jeon-purple-dark yang lebih gelap TIDAK cukup sebagai pengganti --
+          halaman ini ikut dark mode global (bg-app-surface/text-app-ink
+          FLIP), sementara jeon-purple-dark KONSTAN, jadi kontrasnya
+          malah lebih buruk lagi di dark mode. text-app-ink sudah terbukti
+          benar di kedua mode di seluruh app -- aksen ungu dipindah ke
+          hover saja (garis bawah permanen supaya tetap jelas ini tautan). */}
+      <Link href="/forgot-password" className="mt-4 inline-block text-xs font-semibold text-app-ink underline hover:text-jeon-purple">
         Lupa password?
       </Link>
 
       <p className="mt-8 text-center text-sm text-app-muted">
         Belum punya akun?{" "}
-        <Link href="/register" className="font-semibold text-jeon-purple hover:underline">
+        <Link href="/register" className="font-semibold text-app-ink underline hover:text-jeon-purple">
           Daftar
         </Link>
       </p>

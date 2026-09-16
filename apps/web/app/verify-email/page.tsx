@@ -153,8 +153,11 @@ export default function VerifyEmailPage() {
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Kode Verifikasi</label>
+          {/* id/htmlFor -- audit Lighthouse 17 September 2026, lihat
+              catatan lengkap di app/login/page.tsx. */}
+          <label htmlFor="verify-email-code" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Kode Verifikasi</label>
           <input
+            id="verify-email-code"
             type="text"
             inputMode="numeric"
             autoFocus
@@ -181,13 +184,15 @@ export default function VerifyEmailPage() {
         </button>
       </form>
 
+      {/* text-app-ink underline (BUKAN text-jeon-purple) -- kontras teks
+          kecil, lihat catatan lengkap di app/login/page.tsx. */}
       <p className="mt-6 text-center text-sm text-app-muted">
         Tidak dapat kodenya?{" "}
         <button
           type="button"
           onClick={handleResend}
           disabled={resending || resendCooldown > 0}
-          className="font-semibold text-jeon-purple hover:underline disabled:cursor-not-allowed disabled:text-app-muted disabled:no-underline"
+          className="font-semibold text-app-ink underline hover:text-jeon-purple disabled:cursor-not-allowed disabled:text-app-muted disabled:no-underline"
         >
           {resendCooldown > 0 ? `Kirim ulang (${resendCooldown}d)` : resending ? "Mengirim..." : "Kirim ulang kode"}
         </button>
@@ -195,7 +200,7 @@ export default function VerifyEmailPage() {
 
       <p className="mt-4 text-center text-sm text-app-muted">
         Salah email?{" "}
-        <Link href="/register" className="font-semibold text-jeon-purple hover:underline">
+        <Link href="/register" className="font-semibold text-app-ink underline hover:text-jeon-purple">
           Daftar ulang
         </Link>
       </p>

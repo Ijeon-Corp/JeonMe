@@ -115,7 +115,9 @@ function RegisterPageInner() {
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Klaim link bio gratismu</label>
+          {/* id/htmlFor -- audit Lighthouse 17 September 2026, lihat
+              catatan lengkap di app/login/page.tsx. */}
+          <label htmlFor="register-username" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Klaim link bio gratismu</label>
           {/* Prefiks "jeon.id/" MENYATU dengan input (referensi layout
               signup Beacons) -- lebih jelas ini adalah alamat, bukan cuma
               teks bantuan terpisah di bawah field seperti sebelumnya. */}
@@ -130,6 +132,7 @@ function RegisterPageInner() {
           >
             <span className="flex-shrink-0 text-sm font-semibold text-app-muted">jeon.id/</span>
             <input
+              id="register-username"
               type="text"
               required
               minLength={3}
@@ -179,8 +182,9 @@ function RegisterPageInner() {
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
+          <label htmlFor="register-email" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
           <input
+            id="register-email"
             type="email"
             required
             value={email}
@@ -191,8 +195,9 @@ function RegisterPageInner() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password</label>
+          <label htmlFor="register-password" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password</label>
           <input
+            id="register-password"
             type="password"
             required
             minLength={8}
@@ -249,9 +254,11 @@ function RegisterPageInner() {
         <AppleAuthButton label="Daftar dengan Apple" onBeforeRedirect={requireConsent} />
       </div>
 
+      {/* text-app-ink underline (BUKAN text-jeon-purple) -- kontras teks
+          kecil, lihat catatan lengkap di app/login/page.tsx. */}
       <p className="mt-8 text-center text-sm text-app-muted">
         Sudah punya akun?{" "}
-        <Link href="/login" className="font-semibold text-jeon-purple hover:underline">
+        <Link href="/login" className="font-semibold text-app-ink underline hover:text-jeon-purple">
           Masuk
         </Link>
       </p>

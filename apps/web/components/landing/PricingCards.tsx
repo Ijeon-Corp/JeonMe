@@ -27,7 +27,7 @@ export default function PricingCards({ monthly, yearly, showHeading }: { monthly
   return (
     <section id="pricing" className="relative overflow-hidden bg-jeon-paper py-20 md:py-28" aria-label="Harga">
       <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
-        {showHeading && (
+        {showHeading ? (
           <div className="reveal mx-auto mb-14 max-w-3xl text-center">
             <h2 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-jeon-ink sm:text-5xl md:text-6xl">
               {t("pricing.heading1")}
@@ -36,6 +36,17 @@ export default function PricingCards({ monthly, yearly, showHeading }: { monthly
             </h2>
             <p className="text-lg leading-relaxed text-jeon-muted">{t("pricing.subtitle")}</p>
           </div>
+        ) : (
+          // sr-only h2 -- audit Lighthouse 17 September 2026 ("Heading
+          // elements are not in a sequentially-descending order"):
+          // app/pricing/page.tsx sengaja showHeading=false supaya judul
+          // "Harga" tidak tampil DUA KALI (h1 halaman + h2 section persis
+          // di bawahnya, lihat catatan di Pricing.tsx) -- tapi itu membuat
+          // h3 kartu paket ("Gratis"/"Premium") langsung menyusul h1 tanpa
+          // h2 di antaranya, urutan struktur dokumen jadi tidak berurutan
+          // (screen reader/SEO). h2 tetap ADA secara semantik, cuma
+          // disembunyikan visual -- tampilan tidak berubah sama sekali.
+          <h2 className="sr-only">{t("pricing.heading1")} {t("pricing.headingGradient")}</h2>
         )}
 
         <div className="mx-auto grid max-w-3xl items-start gap-6 md:grid-cols-2">

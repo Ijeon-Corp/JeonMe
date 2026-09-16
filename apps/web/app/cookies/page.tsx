@@ -34,7 +34,10 @@ export default function CookiesPage() {
             <h1 className="mb-3 font-heading text-3xl font-bold leading-tight text-app-ink sm:text-4xl">Kebijakan Cookie</h1>
             <p className="mb-3 text-sm text-app-muted">Terakhir diperbarui 24 Agustus 2026.</p>
             <p className="mb-10 text-sm leading-relaxed text-app-muted">
-              Halaman ini melengkapi <Link href="/privacy" className="font-semibold text-primary hover:underline">Kebijakan Privasi</Link>,
+              {/* text-app-ink underline (BUKAN text-primary) -- kontras
+                  gagal di dark mode, lihat catatan lengkap di
+                  app/privacy/page.tsx. */}
+              Halaman ini melengkapi <Link href="/privacy" className="font-semibold text-app-ink underline hover:text-jeon-purple">Kebijakan Privasi</Link>,
               khusus menjelaskan cookie &amp; penyimpanan lokal browser yang dipakai Jeon.id.
             </p>
 

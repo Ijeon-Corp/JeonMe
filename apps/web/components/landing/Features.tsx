@@ -102,7 +102,7 @@ export default function Features({ showHeading = true, compact = false }: { show
   return (
     <section id="features" className="relative overflow-hidden bg-jeon-paper py-20 md:py-28" aria-label="Fitur">
       <div className="relative mx-auto max-w-[var(--container)] px-4 sm:px-6 lg:px-8">
-        {showHeading && (
+        {showHeading ? (
           <div className="reveal mx-auto mb-14 max-w-3xl text-center">
             <h2 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-jeon-ink sm:text-5xl md:text-6xl">
               {t("features.heading1")}
@@ -111,6 +111,13 @@ export default function Features({ showHeading = true, compact = false }: { show
             </h2>
             <p className="text-lg leading-relaxed text-jeon-muted">{t("features.subtitle")}</p>
           </div>
+        ) : (
+          // sr-only h2 -- audit Lighthouse 17 September 2026, pola sama
+          // persis PricingCards.tsx (lihat catatan lengkap di sana):
+          // app/features/page.tsx showHeading=false supaya judul tidak
+          // dobel dgn h1 halaman, tapi itu membuat h3 kartu fitur langsung
+          // menyusul h1 tanpa h2 -- urutan heading jadi tidak berurutan.
+          <h2 className="sr-only">{t("features.heading1")} {t("features.headingGradient")}</h2>
         )}
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

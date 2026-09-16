@@ -89,8 +89,11 @@ export default function ResetPasswordPage() {
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password Baru</label>
+          {/* id/htmlFor -- audit Lighthouse 17 September 2026, lihat
+              catatan lengkap di app/login/page.tsx. */}
+          <label htmlFor="reset-password-new" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Password Baru</label>
           <input
+            id="reset-password-new"
             type="password"
             autoFocus
             required
@@ -115,9 +118,11 @@ export default function ResetPasswordPage() {
         </button>
       </form>
 
+      {/* text-app-ink underline (BUKAN text-jeon-purple) -- kontras teks
+          kecil, lihat catatan lengkap di app/login/page.tsx. */}
       <p className="mt-6 text-center text-sm text-app-muted">
         Kembali ke{" "}
-        <Link href="/login" className="font-semibold text-jeon-purple hover:underline">
+        <Link href="/login" className="font-semibold text-app-ink underline hover:text-jeon-purple">
           halaman masuk
         </Link>
       </p>

@@ -120,7 +120,16 @@ export default function PrivacyPage() {
               <div>
                 <h2 className="mb-2 font-heading text-lg font-bold text-app-ink">6. Cookie &amp; penyimpanan lokal</h2>
                 <p className="text-app-muted">
-                  Lihat <Link href="/cookies" className="font-semibold text-primary hover:underline">Kebijakan Cookie</Link> untuk detail
+                  {/* text-app-ink underline (BUKAN text-primary) -- audit
+                      Lighthouse 17 September 2026: `primary` (#1B4D3E,
+                      identitas hijau LAMA sebelum redesign ungu-hitam,
+                      lihat catatan FinalCTA.tsx) sisa dipakai di sini
+                      padahal halaman ini sudah pakai token app-ink/app-
+                      muted yang baru. Kontrasnya lolos di mode terang tapi
+                      GAGAL parah (~1.8:1) di mode gelap -- `primary` warna
+                      konstan (tidak ikut flip), sedangkan latarnya
+                      (app-surface) ikut flip jadi gelap. */}
+                  Lihat <Link href="/cookies" className="font-semibold text-app-ink underline hover:text-jeon-purple">Kebijakan Cookie</Link> untuk detail
                   lengkap. Singkatnya: kami memakai cookie/local storage seperlunya untuk menjaga sesi login &amp; preferensi
                   tampilan, bukan untuk melacak iklan pihak ketiga.
                 </p>

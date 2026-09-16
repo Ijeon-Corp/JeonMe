@@ -43,8 +43,11 @@ export default function ForgotPasswordPage() {
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
+          {/* id/htmlFor -- audit Lighthouse 17 September 2026, lihat
+              catatan lengkap di app/login/page.tsx. */}
+          <label htmlFor="forgot-email" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-app-muted">Email</label>
           <input
+            id="forgot-email"
             type="email"
             autoFocus
             required
@@ -68,9 +71,11 @@ export default function ForgotPasswordPage() {
         </button>
       </form>
 
+      {/* text-app-ink underline (BUKAN text-jeon-purple) -- kontras teks
+          kecil, lihat catatan lengkap di app/login/page.tsx. */}
       <p className="mt-8 text-center text-sm text-app-muted">
         Ingat password-mu?{" "}
-        <Link href="/login" className="font-semibold text-jeon-purple hover:underline">
+        <Link href="/login" className="font-semibold text-app-ink underline hover:text-jeon-purple">
           Masuk
         </Link>
       </p>
