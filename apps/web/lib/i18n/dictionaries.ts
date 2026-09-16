@@ -1302,7 +1302,7 @@ export const dictionaries = {
           form: {
             namePlaceholder: "Nama produk",
             pricePlaceholder: "Harga (IDR)",
-            categoryPlaceholder: "Kategori (opsional)",
+            categoryPlaceholder: "Pilih kategori",
             newCategoryOption: "+ Kategori baru",
             backToCategoryList: "Pilih dari kategori yang sudah ada",
             create: "Buat",
@@ -1426,6 +1426,7 @@ export const dictionaries = {
             loadOverview: "Gagal memuat ringkasan toko.",
             nameAndPriceRequired: "Nama produk wajib diisi dan harga minimal Rp1.000.",
             coverRequired: "Gambar sampul wajib diunggah.",
+            categoryRequired: "Kategori wajib dipilih atau diisi.",
             createProduct: "Gagal membuat produk.",
             nameAndPriceRequiredShort: "Nama wajib diisi dan harga minimal Rp1.000.",
             createPaymentLink: "Gagal membuat payment link.",
@@ -4391,7 +4392,7 @@ export const dictionaries = {
           form: {
             namePlaceholder: "Product name",
             pricePlaceholder: "Price (IDR)",
-            categoryPlaceholder: "Category (optional)",
+            categoryPlaceholder: "Choose a category",
             newCategoryOption: "+ New category",
             backToCategoryList: "Choose from existing categories",
             create: "Create",
@@ -4515,6 +4516,7 @@ export const dictionaries = {
             loadOverview: "Failed to load the store summary.",
             nameAndPriceRequired: "Product name is required and the price must be at least Rp1,000.",
             coverRequired: "A cover image must be uploaded.",
+            categoryRequired: "A category must be chosen or entered.",
             createProduct: "Failed to create the product.",
             nameAndPriceRequiredShort: "Name is required and the price must be at least Rp1,000.",
             createPaymentLink: "Failed to create the payment link.",

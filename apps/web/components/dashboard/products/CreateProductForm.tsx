@@ -62,17 +62,46 @@ const NEW_CATEGORY_VALUE = "__new__";
 const CATEGORY_FIELD_CLASSNAME =
   "w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
 
+// PRESET_CATEGORIES -- permintaan langsung pengguna, 15 September 2026:
+// "harusnya category jangan optional dan kalo bisa sediakan beberapa
+// category yang umum untuk dipilih". Daftar tetap (BUKAN dari database --
+// nilai kategori tersimpan sbg teks bebas apa adanya, sama seperti
+// kategori bikinan kreator sendiri, jadi tidak butuh tabel/endpoint
+// terpisah) supaya kreator PALING PERTAMA (belum punya produk sama
+// sekali) tetap dapat pilihan siap pakai, bukan langsung disodori kotak
+// teks kosong. Dipilih mewakili jenis produk digital paling umum di
+// platform ini (lihat catatan ProductKind di product.go: file/kursus/
+// link afiliasi/dst).
+const PRESET_CATEGORIES = [
+  "E-book",
+  "Kursus Online",
+  "Template & Desain",
+  "Preset & Filter",
+  "Musik & Audio",
+  "Video",
+  "Software & Aplikasi",
+  "Jasa & Konsultasi",
+  "Lainnya",
+];
+
 // CategoryField -- permintaan langsung pengguna, 13 September 2026 ("jika
 // creator sudah pernah membuat category produk tampil drop down untuk
-// memilih category produk selanjutnya"): begitu kreator PUNYA >=1 kategori
-// dari produk sebelumnya, field ini defaultnya jadi <select> (bukan lagi
-// input teks bebas) supaya penamaan kategori konsisten antar produk (mis.
-// tidak ada "Ebook"/"ebook"/"E-book" jadi 3 kategori terpisah gara-gara
-// typo). Tetap ada jalan keluar bikin kategori BARU lewat opsi
-// "+ Kategori baru" di dropdown -- balik ke input teks biasa -- supaya
-// kreator tidak pernah terkunci cuma bisa pilih dari yang sudah ada.
-// Kreator TANPA kategori sama sekali (produk pertama) tetap dapat input
-// teks polos apa adanya, tidak ada apa pun utk dipilih.
+// memilih category produk selanjutnya"), DIPERLUAS 15 September 2026
+// ("category jangan optional... sediakan beberapa category yang umum"):
+// SEKARANG SELALU <select> (bukan lagi jatuh ke input teks polos begitu
+// kreator belum pernah punya kategori sama sekali) -- daftar pilihan
+// gabungan PRESET_CATEGORIES + kategori bikinan kreator sendiri
+// (`categories` prop, dihitung pemanggil dari produk yang sudah ada)
+// supaya kategori custom yang PERNAH diisi otomatis muncul lagi & bisa
+// dipakai ulang, PERSIS seperti kategori preset. Field ini WAJIB diisi
+// (dicek di pemanggil sebelum submit, lihat handleCreate dkk di bawah) --
+// opsi kosong di paling atas dropdown SENGAJA `disabled` supaya tidak
+// bisa "dikirim kosong" tanpa sadar. Tetap ada jalan keluar bikin
+// kategori BENAR-BENAR baru (belum ada di preset MAUPUN riwayat sendiri)
+// lewat opsi "+ Kategori baru" -- balik ke input teks bebas -- kategori
+// itu lantas otomatis masuk daftar pilihan produk BERIKUTNYA begitu
+// produk ini tersimpan (categories prop dihitung ulang dari state
+// `products` terkini oleh pemanggil, tidak perlu logic tambahan di sini).
 function CategoryField({
   value,
   onChange,
@@ -88,13 +117,15 @@ function CategoryField({
   wrapperClassName: string;
   t: (key: string) => string;
 }) {
-  const [addingNew, setAddingNew] = useState(categories.length === 0);
+  const [addingNew, setAddingNew] = useState(false);
+  const options = Array.from(new Set([...categories, ...PRESET_CATEGORIES]));
 
-  if (categories.length > 0 && !addingNew) {
+  if (!addingNew) {
     return (
       <div className={wrapperClassName}>
         <select
-          value={categories.includes(value) ? value : ""}
+          required
+          value={options.includes(value) ? value : ""}
           onChange={(e) => {
             if (e.target.value === NEW_CATEGORY_VALUE) {
               setAddingNew(true);
@@ -105,8 +136,10 @@ function CategoryField({
           }}
           className={CATEGORY_FIELD_CLASSNAME}
         >
-          <option value="">{placeholder}</option>
-          {categories.map((c) => (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+          {options.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
@@ -121,23 +154,22 @@ function CategoryField({
     <div className={wrapperClassName}>
       <input
         type="text"
+        required
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={CATEGORY_FIELD_CLASSNAME}
       />
-      {categories.length > 0 && (
-        <button
-          type="button"
-          onClick={() => {
-            setAddingNew(false);
-            onChange("");
-          }}
-          className="mt-1 text-[10px] font-semibold text-jeon-purple hover:underline"
-        >
-          {t("dashboard.pages.products.form.backToCategoryList")}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          setAddingNew(false);
+          onChange("");
+        }}
+        className="mt-1 text-[10px] font-semibold text-jeon-purple hover:underline"
+      >
+        {t("dashboard.pages.products.form.backToCategoryList")}
+      </button>
     </div>
   );
 }
@@ -189,9 +221,13 @@ export default function CreateProductForm({
       onError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
+    if (!category.trim()) {
+      onError(t("dashboard.pages.products.errors.categoryRequired"));
+      return;
+    }
     setCreating(true);
     try {
-      const { id } = await createProduct({ name, price_idr: price, category: category.trim() || undefined });
+      const { id } = await createProduct({ name, price_idr: price, category: category.trim() });
       // Sampul WAJIB (permintaan langsung pengguna, 19 Agustus 2026) --
       // diunggah LANGSUNG setelah produk dibuat. Produk digital MASIH
       // perlu unggah File Produk & aktivasi manual terpisah seperti
@@ -219,12 +255,16 @@ export default function CreateProductForm({
       onError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
+    if (!category.trim()) {
+      onError(t("dashboard.pages.products.errors.categoryRequired"));
+      return;
+    }
     setCreating(true);
     try {
       const { id } = await createProduct({
         name,
         price_idr: price,
-        category: category.trim() || undefined,
+        category: category.trim(),
         product_kind: "payment_link",
         success_message: successMessage.trim() || undefined,
         payment_limit_count: paymentLimitCount ? Number(paymentLimitCount) : undefined,
@@ -268,12 +308,16 @@ export default function CreateProductForm({
       onError(t("dashboard.pages.products.errors.coverRequired"));
       return;
     }
+    if (!category.trim()) {
+      onError(t("dashboard.pages.products.errors.categoryRequired"));
+      return;
+    }
     setCreating(true);
     try {
       const { id } = await createProduct({
         name,
         price_idr: price,
-        category: category.trim() || undefined,
+        category: category.trim(),
         product_kind: "external_link",
         external_url: externalUrl.trim(),
       });
@@ -415,6 +459,19 @@ export default function CreateProductForm({
             value={priceIDR}
             onChange={(e) => setPriceIDR(e.target.value)}
             className="flex-1 rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20"
+          />
+          {/* Bug ditemukan (15 September 2026, sekalian menutup celah
+              "category jangan optional"): mode Payment Link SEBELUMNYA
+              sudah mengirim `category` ke createProduct, tapi form-nya
+              TIDAK PERNAH punya CategoryField sama sekali -- kreator tidak
+              bisa mengisi kategori utk jenis produk ini apa pun caranya. */}
+          <CategoryField
+            value={category}
+            onChange={setCategory}
+            categories={categories}
+            placeholder={t("dashboard.pages.products.form.categoryPlaceholder")}
+            wrapperClassName="flex-1"
+            t={t}
           />
         </div>
         <textarea
