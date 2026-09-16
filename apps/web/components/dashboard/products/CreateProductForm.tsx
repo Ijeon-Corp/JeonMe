@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-client";
 import { IconCamera, IconExternal, IconUpload, IconWallet } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
+import { PRESET_CATEGORIES } from "@/lib/product-categories";
 
 // CreateProductForm.tsx -- diekstrak APA ADANYA dari `app/dashboard/products/page.tsx`
 // (state `addMode`/`name`/`priceIDR`/`category`/`coverFile`/`creating`/
@@ -61,28 +62,6 @@ function renderCoverPicker(coverFile: File | null, setCoverFile: (f: File | null
 const NEW_CATEGORY_VALUE = "__new__";
 const CATEGORY_FIELD_CLASSNAME =
   "w-full rounded-lg border border-app-border px-3.5 py-2.5 text-sm focus:border-jeon-purple focus:outline-none focus:ring-2 focus:ring-jeon-purple/20";
-
-// PRESET_CATEGORIES -- permintaan langsung pengguna, 15 September 2026:
-// "harusnya category jangan optional dan kalo bisa sediakan beberapa
-// category yang umum untuk dipilih". Daftar tetap (BUKAN dari database --
-// nilai kategori tersimpan sbg teks bebas apa adanya, sama seperti
-// kategori bikinan kreator sendiri, jadi tidak butuh tabel/endpoint
-// terpisah) supaya kreator PALING PERTAMA (belum punya produk sama
-// sekali) tetap dapat pilihan siap pakai, bukan langsung disodori kotak
-// teks kosong. Dipilih mewakili jenis produk digital paling umum di
-// platform ini (lihat catatan ProductKind di product.go: file/kursus/
-// link afiliasi/dst).
-const PRESET_CATEGORIES = [
-  "E-book",
-  "Kursus Online",
-  "Template & Desain",
-  "Preset & Filter",
-  "Musik & Audio",
-  "Video",
-  "Software & Aplikasi",
-  "Jasa & Konsultasi",
-  "Lainnya",
-];
 
 // CategoryField -- permintaan langsung pengguna, 13 September 2026 ("jika
 // creator sudah pernah membuat category produk tampil drop down untuk

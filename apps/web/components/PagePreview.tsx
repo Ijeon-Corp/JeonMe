@@ -671,6 +671,7 @@ export function renderSingleProductCard(
           pageSlug={ctx.pageSlug}
           productName={product.name}
           basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+          category={product.category}
         />
       ) : (
         <button
@@ -742,6 +743,7 @@ function renderProductListRow(
           pageSlug={ctx.pageSlug}
           productName={product.name}
           basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+          category={product.category}
         />
       ) : (
         <button
@@ -820,6 +822,7 @@ function renderProductCardSmall(
           pageSlug={ctx.pageSlug}
           productName={product.name}
           basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+          category={product.category}
         />
       ) : (
         <button
@@ -909,6 +912,7 @@ function renderProductRowWithImage(
           pageSlug={ctx.pageSlug}
           productName={product.name}
           basePriceIdr={product.effectivePriceIdr ?? product.price_idr}
+          category={product.category}
         />
       ) : (
         <button

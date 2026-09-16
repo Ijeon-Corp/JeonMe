@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiError, createCheckout, trackEvent, trackEventBySlug, validateVoucher } from "@/lib/api-client";
 import { IconClose } from "@/components/icons";
+import { getCategoryInstruction } from "@/lib/product-categories";
 
 // EMAIL_PATTERN -- validasi format ringan di sisi klien (permintaan
 // langsung pengguna, 10 September 2026: "alur pembelian ... ui dan ux
@@ -31,6 +32,7 @@ export default function BuyProductButton({
   externalUrl,
   productName,
   basePriceIdr,
+  category,
 }: {
   productId: string;
   buttonClassName?: string;
@@ -75,6 +77,15 @@ export default function BuyProductButton({
   // jumlah yang benar-benar diketik pembeli, bukan harga dasar).
   productName?: string;
   basePriceIdr?: number;
+  // category -- susulan langsung permintaan pengguna, 15 September 2026:
+  // "harusnya untuk tiap kategori ada instruksi cara pembelian sampai
+  // barang diterima atau jasa dll". OPSIONAL & murni tampilan (sama
+  // seperti productName/basePriceIdr di atas) -- pemanggil TANPA konsep
+  // kategori sama sekali (event/donasi, lihat PagePreview.tsx) boleh
+  // tidak mengisinya, getCategoryInstruction (product-categories.ts)
+  // sudah punya fallback generik utk undefined MAUPUN kategori custom
+  // yang tidak dikenal.
+  category?: string;
 }) {
   const [open, setOpen] = useState(false);
   // name/note -- permintaan langsung pengguna, 15 September 2026: "di form
@@ -254,6 +265,22 @@ export default function BuyProductButton({
                     )}
                   </div>
                 </div>
+              )}
+              {/* Instruksi cara pembelian per kategori -- permintaan langsung
+                  pengguna, 15 September 2026: "harusnya untuk tiap kategori
+                  ada instruksi cara pembelian sampai barang diterima atau
+                  jasa dll". Digerbang `category` (bukan cuma `productName`)
+                  -- event/donasi (PagePreview.tsx) tidak pernah mengisi prop
+                  ini sama sekali, jadi baris ini otomatis tidak tampil utk
+                  keduanya (instruksi "unduh file"/"jadwal konsultasi" tidak
+                  relevan buat pendaftaran event atau donasi). Produk lama
+                  dari sebelum kategori wajib (category="") ikut dilewati
+                  sama alasannya -- daripada menampilkan instruksi generik
+                  utk sesuatu yang kategorinya benar-benar tidak diketahui. */}
+              {category && (
+                <p className="rounded-md bg-jeon-purple/5 px-2.5 py-1.5 text-[11px] text-app-muted">
+                  {getCategoryInstruction(category)}
+                </p>
               )}
               {pwywMinPriceIdr !== undefined && (
                 <div>
