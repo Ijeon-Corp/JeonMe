@@ -82,6 +82,10 @@ import Toggle from "@/components/Toggle";
 import { confirmDelete } from "@/lib/confirm";
 import { detectLinkIcon } from "@/lib/link-icons";
 import { getLibraryIcon } from "@/lib/icon-library";
+// blockPreviewFor/isBlockExpandable/stripHtmlToText/maxGalleryImages --
+// dipindah ke lib/block-preview.ts (18 September 2026) supaya dipakai
+// bersama ProdukPageEditor.tsx (paritas baris blok Toko <-> Links).
+import { blockPreviewFor, isBlockExpandable, maxGalleryImages } from "@/lib/block-preview";
 import {
   ChevronDown,
   Clapperboard,
@@ -114,7 +118,7 @@ import {
 import { useLocale } from "@/lib/locale-context";
 import RichTextEditor from "@/components/dashboard/page/RichTextEditor";
 import { ListItemsEditor, toDatetimeLocalValue, type ListEditorItem } from "@/components/dashboard/page/ListItemsEditor";
-import { ProdukBlockEditor, PRODUK_LAYOUT_OPTIONS, type ProdukBlockLayout } from "@/components/dashboard/page/ProdukBlockEditor";
+import { ProdukBlockEditor } from "@/components/dashboard/page/ProdukBlockEditor";
 import { isRichTextEmpty } from "@/lib/catalog-blocks";
 
 // LocationPickerModal -- permintaan langsung pengguna, 25 Agustus 2026:
@@ -135,10 +139,6 @@ const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 const AddLinkModal = dynamic(() => import("@/components/AddLinkModal"));
 const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEditor"));
 
-// maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go), murni
-// utk UI (sembunyikan tombol "Tambah" begitu penuh) -- backend tetap jadi
-// sumber kebenaran validasinya.
-const maxGalleryImages = 9;
 // PREMIUM_EXTRA_PAGE_LIMIT -- SAMA PERSIS batas backend (premiumExtraPageLimit,
 // page.go) untuk pool Halaman Bio/Landing tambahan (produk punya pool
 // terpisah, lihat catatan activePage/extraPages di atas), murni utk UI.
@@ -177,27 +177,6 @@ function buildBlockTypeLabel(t: (key: string) => string): Record<string, string>
   };
 }
 
-// stripHtmlToText -- redesain "Konsisten & Ringkas" (14 September 2026,
-// Opsi A): blok "text"/"accordion" menyimpan RAW HTML (RichTextEditor,
-// TipTap) di block_data.text -- baris ringkasan accordion butuh cuplikan
-// TEKS POLOS, bukan markup mentah. Tidak ada utilitas HTML->teks yang
-// sudah ada di file ini (cuma legacyPlainTextToHtml, arah SEBALIKNYA) --
-// regex sederhana cukup di sini (cuma utk PRATINJAU pendek, bukan
-// rendering sungguhan, jadi tidak perlu parser HTML penuh).
-function stripHtmlToText(html: string, maxLength = 60): string {
-  const text = html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}…` : text;
-}
-
 // buildWhatsappButtonUrl -- blok "button" mode WhatsApp (permintaan langsung
 // pengguna, 14 September 2026: "WA = kanal closing utama kebanyakan
 // kreator kita"). Belum ada normalizer nomor telepon di file ini sama
@@ -219,101 +198,6 @@ function buildWhatsappButtonUrl(number: string, message: string): string {
   const normalized = normalizeWhatsappNumber(number);
   const query = message.trim() ? `?text=${encodeURIComponent(message.trim())}` : "";
   return `https://wa.me/${normalized}${query}`;
-}
-
-// blockPreviewFor -- redesain "Konsisten & Ringkas" (14 September 2026,
-// permintaan langsung pengguna "saya masih kurang suka ui dan ux dari mode
-// simple ini di tiap blok nya", Opsi A dari 3 usulan lewat artifact yang
-// disetujui pengguna). SEMUA blok sekarang punya baris ringkasan satu
-// baris di bawah judul, dipakai skimming cepat TANPA perlu membuka
-// accordion-nya -- info yang sebelumnya HANYA terlihat setelah klik
-// "Edit Konten"/expand panel. Sengaja reuse key i18n yang SUDAH ADA dari
-// redesain panel blok Builder sebelumnya (produkSelectedSubtitle,
-// faqCountSubtitle/EmptySubtitle, catalogItemsCountSubtitle/EmptySubtitle,
-// listCountSubtitle/EmptySubtitle -- t() tidak terikat rute, lihat catatan
-// i18n key insertion pitfall) alih-alih menduplikasi string yang identik.
-function blockPreviewFor(link: LinkItem, t: (key: string) => string): string | null {
-  const bd = link.block_data as Record<string, unknown> | undefined;
-  switch (link.block_type) {
-    case "produk": {
-      const count = ((bd?.product_ids as string[] | undefined) ?? []).length;
-      const layout = (bd?.layout as ProdukBlockLayout | undefined) ?? "card_large";
-      const layoutOpt = PRODUK_LAYOUT_OPTIONS.find((o) => o.value === layout);
-      const layoutLabel = layoutOpt ? t(`dashboard.pages.linksBuilder.${layoutOpt.labelKey}`) : "";
-      if (count === 0) return t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", "0");
-      return `${t("dashboard.pages.linksBuilder.produkSelectedSubtitle").replace("{n}", String(count))} · ${layoutLabel}`;
-    }
-    case "gallery":
-    case "image_slider": {
-      const count = ((bd?.images as string[] | undefined) ?? []).length;
-      return `${count}/${maxGalleryImages} ${t("dashboard.pages.links.galleryPanel.photoCountSuffix")}`;
-    }
-    case "faq": {
-      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
-      return count === 0
-        ? t("dashboard.pages.linksBuilder.faqEmptySubtitle")
-        : t("dashboard.pages.linksBuilder.faqCountSubtitle").replace("{n}", String(count));
-    }
-    case "catalog": {
-      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
-      return count === 0
-        ? t("dashboard.pages.linksBuilder.catalogItemsEmptySubtitle")
-        : t("dashboard.pages.linksBuilder.catalogItemsCountSubtitle").replace("{n}", String(count));
-    }
-    case "list": {
-      const count = ((bd?.items as unknown[] | undefined) ?? []).length;
-      return count === 0
-        ? t("dashboard.pages.linksBuilder.listEmptySubtitle")
-        : t("dashboard.pages.linksBuilder.listCountSubtitle").replace("{n}", String(count));
-    }
-    case "audio":
-      return (bd?.audio_url as string) ? t("dashboard.pages.links.audioPanel.hasAudio") : t("dashboard.pages.links.audioPanel.noAudio");
-    case "file":
-      return (bd?.file_url as string)
-        ? t("dashboard.pages.links.filePanel.hasFile").replace("{name}", (bd?.file_name as string) ?? t("dashboard.pages.links.filePanel.fallbackFileName"))
-        : t("dashboard.pages.links.filePanel.noFile");
-    case "text":
-    case "accordion": {
-      const html = (bd?.text as string) ?? "";
-      const text = html ? stripHtmlToText(html) : "";
-      return text || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-    }
-    case "video":
-      return (bd?.video_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-    case "video_image":
-      return (bd?.video_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-    case "maps":
-    case "button":
-    case "embed_link":
-    case "project_showcase":
-      return link.url || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-    case "embed":
-      return (bd?.embed_url as string) || t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-    case "countdown": {
-      const targetAt = bd?.target_at as string | undefined;
-      if (!targetAt) return t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-      try {
-        return new Date(targetAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
-      } catch {
-        return t("dashboard.pages.links.linkCard.contentPreviewEmpty");
-      }
-    }
-    case "image":
-      return (bd?.image_url as string) ? t("dashboard.pages.links.common.hasImage") : t("dashboard.pages.links.common.noneYet");
-    default:
-      return null;
-  }
-}
-
-// isBlockExpandable -- SATU sumber kebenaran dipakai bareng oleh cursor,
-// role/aria-expanded, onClick, DAN onKeyDown baris header blok (permintaan
-// langsung pengguna, 17 September 2026: "tanda panah > harusnya di blok
-// nya langsung jadi ketika blok di klik data nya keluar dan bisa diedit")
-// -- kondisi SAMA PERSIS dgn yang dulu menggerbang tampil/tidaknya tombol
-// panah kecil. "link" & tipe tanpa isi (blockPreviewFor null) sengaja
-// TIDAK expandable, tidak ada apa pun yang bisa dibuka utk keduanya.
-function isBlockExpandable(link: LinkItem, t: (key: string) => string): boolean {
-  return link.block_type !== "link" && blockPreviewFor(link, t) !== null;
 }
 
 // IconComponent -- diperluas 17 September 2026 (permintaan langsung

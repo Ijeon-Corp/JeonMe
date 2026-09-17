@@ -21,6 +21,9 @@ import {
   deleteFileBlock,
   deleteGalleryImage,
   deleteLink,
+  deleteLinkIcon,
+  deleteLinkThumbnail,
+  duplicateLink,
   listExtraPageLinks,
   reorderExtraPageLinks,
   updateExtraPage,
@@ -31,19 +34,33 @@ import {
   uploadExtraPageBackground,
   uploadFileBlock,
   uploadGalleryImage,
+  uploadLinkIcon,
+  uploadLinkThumbnail,
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import {
+  IconCamera,
+  IconChart,
   IconChevronRight,
+  IconClock,
+  IconClose,
   IconColumns,
+  IconCopy,
   IconExternal,
   IconGripVertical,
   IconLock,
+  IconPaintbrush,
+  IconPencil,
   IconPlus,
+  IconSettings,
   IconSparkle,
+  IconStar,
   IconTrash,
   IconX,
 } from "@/components/icons";
+import { blockPreviewFor, isBlockExpandable, maxGalleryImages } from "@/lib/block-preview";
+import { getLibraryIcon } from "@/lib/icon-library";
+import { detectLinkIcon } from "@/lib/link-icons";
 import {
   ChevronDown,
   Clapperboard,
@@ -64,6 +81,7 @@ import {
   ClipboardList,
   ShoppingBag as LucideShoppingBag,
   Timer,
+  TriangleAlert,
   Type as LucideType,
   Video as LucideVideo,
 } from "lucide-react";
@@ -93,6 +111,10 @@ import { useErrorToast } from "@/lib/use-error-toast";
 // benar-benar membuka modal "Tambah"/blok Katalog-FAQ, bukan eager di setiap
 // kunjungan menu Toko.
 const AddLinkModal = dynamic(() => import("@/components/AddLinkModal"));
+// IconPickerModal -- galeri ikon per blok (paritas Toko <-> Links, 18
+// September 2026), sama seperti dashboard/links/page.tsx: cuma dimuat
+// begitu kreator benar-benar membuka galeri.
+const IconPickerModal = dynamic(() => import("@/components/IconPickerModal"));
 const BlockDrilldownEditor = dynamic(() => import("@/components/BlockDrilldownEditor"));
 
 // BlockType -- diperluas dari 11 jadi 21 tipe (susulan 15 September 2026,
@@ -123,9 +145,6 @@ type BlockType =
   | "countdown"
   | "embed_link"
   | "embed";
-
-// maxGalleryImages -- SAMA PERSIS dengan batas backend (links.go).
-const maxGalleryImages = 9;
 
 // normalizeWhatsappNumber/buildWhatsappButtonUrl -- disalin APA ADANYA dari
 // dashboard/links/page.tsx (fungsi murni, tanpa state) -- pola sama "dua
@@ -256,26 +275,6 @@ export type DesignSection = "blok" | "tema" | "header" | "tombol" | "font" | "st
 // pengambilan data & pratinjau ke induk (dashboard/products/page.tsx) --
 // satu pratinjau Toko yang konsisten di SEMUA tab menu Produk, komponen
 // ini sekarang murni konten kolom kiri (terkontrol lewat props).
-// isBlockExpandable -- SATU sumber kebenaran dipakai bareng oleh cursor,
-// dan onClick baris header blok (permintaan langsung pengguna, 17
-// September 2026: "tanda panah > harusnya di blok nya langsung jadi ketika
-// blok di klik data nya keluar dan bisa diedit", pola & kondisi SAMA PERSIS
-// dashboard/links/page.tsx) -- kondisi SAMA PERSIS dgn yang menggerbang
-// tampil/tidaknya tombol panah kecil di bawah.
-function isBlockExpandable(link: LinkItem): boolean {
-  return Boolean(
-    link.block_type &&
-      link.block_type !== "link" &&
-      link.block_type !== "gallery" &&
-      link.block_type !== "audio" &&
-      link.block_type !== "file" &&
-      link.block_type !== "produk" &&
-      link.block_type !== "list" &&
-      link.block_type !== "image" &&
-      link.block_type !== "image_slider"
-  );
-}
-
 export default function ProdukPageEditor({
   loading,
   username,
@@ -700,6 +699,28 @@ function BlockSection({
   // dashboard/links/page.tsx) -- SATU-SATUNYA cara isi katalog/pertanyaan
   // FAQ bisa disunting lagi setelah blok pertama kali dibuat.
   const [drilldownBlockId, setDrilldownBlockId] = useState<string | null>(null);
+
+  // State strip alat kelola per blok -- paritas Toko <-> Links (permintaan
+  // langsung pengguna, 18 September 2026: "buat tiap blok yang ada di page
+  // store itu disamakan seperti di links ada tombol pengaturan nya terus
+  // kalo mau edit di klik dulu blok nya biar muncul data datanya"). Nama &
+  // pola SAMA PERSIS dashboard/links/page.tsx supaya gampang di-diff.
+  const [toolsOpenId, setToolsOpenId] = useState<string | null>(null);
+  const [iconUploadingId, setIconUploadingId] = useState<string | null>(null);
+  const [thumbnailUploadingId, setThumbnailUploadingId] = useState<string | null>(null);
+  const [iconPickerLinkId, setIconPickerLinkId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<{ id: string; field: "title" | "url" | "description" } | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [scheduleEditId, setScheduleEditId] = useState<string | null>(null);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleEnd, setScheduleEnd] = useState("");
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [lockEditId, setLockEditId] = useState<string | null>(null);
+  const [lockTypeInput, setLockTypeInput] = useState<"age" | "code" | "subscribe" | "sensitive">("code");
+  const [lockCodeInput, setLockCodeInput] = useState("");
+  const [lockMinAgeInput, setLockMinAgeInput] = useState("18");
+  const [savingLock, setSavingLock] = useState(false);
   // catalogSaveQueueRef -- antrean promise PER link, pola SAMA PERSIS
   // dashboard/links/page.tsx: PATCH kedua baru dikirim setelah PATCH
   // pertama (link yang sama) beres, supaya urutan tulis di backend sama
@@ -1240,6 +1261,291 @@ function BlockSection({
     }
   }
 
+  // Handler strip alat kelola -- paritas Toko <-> Links (18 September 2026),
+  // disalin dari dashboard/links/page.tsx dgn dua penyesuaian: refresh
+  // daftar lewat listExtraPageLinks(pageId) (bukan listLinks halaman
+  // utama), dan setLinks di sini HANYA menerima updater (lihat tipe prop
+  // BlockSection), jadi rollback ditulis setLinks(() => previous). Semua
+  // endpoint (updateLink/uploadLinkIcon/duplicateLink/dst) generik per id
+  // blok, tidak peduli blok itu milik halaman utama atau Toko.
+  async function refreshLinks() {
+    const refreshed = await listExtraPageLinks(pageId);
+    setLinks(() => refreshed);
+  }
+
+  async function handleToggleActive(link: LinkItem) {
+    const nextActive = !link.is_active;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_active: nextActive } : l)));
+    try {
+      await updateLink(link.id, { is_active: nextActive });
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_active: link.is_active } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateLinkFailed"));
+    }
+  }
+
+  async function handleIconUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setIconUploadingId(link.id);
+    setError(null);
+    try {
+      const { custom_icon_url } = await uploadLinkIcon(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadIconFailed"));
+    } finally {
+      setIconUploadingId(null);
+    }
+  }
+
+  async function handleRemoveIcon(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, custom_icon_url: "", icon_key: "" } : l)));
+    try {
+      await Promise.all([deleteLinkIcon(link.id), updateLink(link.id, { icon_key: "" })]);
+    } catch (err) {
+      setLinks(() => previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteIconFailed"));
+    }
+  }
+
+  async function handleIconColorChange(link: LinkItem, color: string) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_color: color } : l)));
+    try {
+      await updateLink(link.id, { icon_color: color });
+    } catch (err) {
+      setLinks(() => previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.changeIconColorFailed"));
+    }
+  }
+
+  async function handleClearIconColor(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_color: "" } : l)));
+    try {
+      await updateLink(link.id, { icon_color: "" });
+    } catch (err) {
+      setLinks(() => previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.resetIconColorFailed"));
+    }
+  }
+
+  async function handleSelectLibraryIcon(link: LinkItem, key: string) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, icon_key: key, custom_icon_url: "" } : l)));
+    setIconPickerLinkId(null);
+    try {
+      await updateLink(link.id, { icon_key: key });
+      if (link.custom_icon_url) {
+        await deleteLinkIcon(link.id);
+      }
+    } catch (err) {
+      setLinks(() => previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.selectIconFailed"));
+    }
+  }
+
+  async function handleToggleFeatured(link: LinkItem) {
+    const nextFeatured = !link.is_featured;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: nextFeatured } : l)));
+    try {
+      await updateLink(link.id, { is_featured: nextFeatured });
+      await refreshLinks();
+    } catch (err) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, is_featured: link.is_featured } : l)));
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.updateLinkFailed"));
+    }
+  }
+
+  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>, link: LinkItem) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setThumbnailUploadingId(link.id);
+    setError(null);
+    try {
+      const { thumbnail_url } = await uploadLinkThumbnail(link.id, file);
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, thumbnail_url, is_featured: true } : l)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.uploadThumbnailFailed"));
+    } finally {
+      setThumbnailUploadingId(null);
+    }
+  }
+
+  async function handleRemoveThumbnail(link: LinkItem) {
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, thumbnail_url: "", is_featured: false } : l)));
+    try {
+      await deleteLinkThumbnail(link.id);
+    } catch (err) {
+      setLinks(() => previous);
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.deleteThumbnailFailed"));
+    }
+  }
+
+  function startEditField(link: LinkItem, field: "title" | "url" | "description") {
+    setEditingField({ id: link.id, field });
+    setEditingValue(field === "title" ? link.title : field === "url" ? link.url : link.description);
+  }
+
+  async function saveEditField(link: LinkItem) {
+    if (!editingField || editingField.id !== link.id) return;
+    const field = editingField.field;
+    const value = editingValue.trim();
+    setEditingField(null);
+    const currentValue = field === "title" ? link.title : field === "url" ? link.url : link.description;
+    const urlOptionalForThisBlock = field === "url" && link.block_type === "image";
+    if (field !== "description" && !urlOptionalForThisBlock && !value) return;
+    if (value === currentValue) return;
+    const previous = links;
+    setLinks((prev) => prev.map((l) => (l.id === link.id ? { ...l, [field]: value } : l)));
+    try {
+      await updateLink(link.id, field === "title" ? { title: value } : field === "url" ? { url: value } : { description: value });
+    } catch (err) {
+      setLinks(() => previous);
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : t("dashboard.pages.links.errors.updateFieldFailed").replace(
+              "{field}",
+              field === "title"
+                ? t("dashboard.pages.links.fieldNames.title")
+                : field === "url"
+                  ? t("dashboard.pages.links.fieldNames.url")
+                  : t("dashboard.pages.links.fieldNames.description")
+            )
+      );
+    }
+  }
+
+  function openScheduleForm(link: LinkItem) {
+    setScheduleEditId(link.id);
+    setScheduleStart(link.starts_at ? link.starts_at.slice(0, 16) : "");
+    setScheduleEnd(link.ends_at ? link.ends_at.slice(0, 16) : "");
+  }
+
+  async function handleSaveSchedule(link: LinkItem) {
+    if (!scheduleStart || !scheduleEnd) {
+      setError(t("dashboard.pages.links.errors.scheduleRequired"));
+      return;
+    }
+    const startsAt = new Date(scheduleStart).toISOString();
+    const endsAt = new Date(scheduleEnd).toISOString();
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setError(t("dashboard.pages.links.errors.scheduleEndAfterStart"));
+      return;
+    }
+    setError(null);
+    setSavingSchedule(true);
+    try {
+      await updateLink(link.id, { starts_at: startsAt, ends_at: endsAt });
+      await refreshLinks();
+      setScheduleEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.scheduleFailed"));
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  async function handleClearSchedule(link: LinkItem) {
+    setError(null);
+    try {
+      await updateLink(link.id, { clear_schedule: true });
+      await refreshLinks();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.cancelScheduleFailed"));
+    }
+  }
+
+  function openLockForm(link: LinkItem) {
+    setLockEditId(link.id);
+    setLockTypeInput(link.lock_type || "code");
+    setLockCodeInput(link.lock_code || "");
+    setLockMinAgeInput(link.lock_min_age ? String(link.lock_min_age) : "18");
+  }
+
+  async function handleSaveLock(link: LinkItem) {
+    if (lockTypeInput === "code" && !lockCodeInput.trim()) {
+      setError(t("dashboard.pages.links.errors.lockCodeRequired"));
+      return;
+    }
+    if (lockTypeInput === "age" && (!lockMinAgeInput || Number(lockMinAgeInput) < 13)) {
+      setError(t("dashboard.pages.links.errors.lockMinAge"));
+      return;
+    }
+    setError(null);
+    setSavingLock(true);
+    try {
+      await updateLink(link.id, {
+        lock_type: lockTypeInput,
+        lock_code: lockTypeInput === "code" ? lockCodeInput.trim() : undefined,
+        lock_min_age: lockTypeInput === "age" ? Number(lockMinAgeInput) : undefined,
+      });
+      await refreshLinks();
+      setLockEditId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.lockLinkFailed"));
+    } finally {
+      setSavingLock(false);
+    }
+  }
+
+  async function handleClearLock(link: LinkItem) {
+    setError(null);
+    try {
+      await updateLink(link.id, { clear_lock: true });
+      await refreshLinks();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.unlockLinkFailed"));
+    }
+  }
+
+  async function handleToggleSensitive(link: LinkItem) {
+    setError(null);
+    try {
+      if (link.lock_type === "sensitive") {
+        await updateLink(link.id, { clear_lock: true });
+      } else {
+        await updateLink(link.id, { lock_type: "sensitive" });
+      }
+      await refreshLinks();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.markSensitiveFailed"));
+    }
+  }
+
+  async function handleDuplicate(link: LinkItem) {
+    setError(null);
+    try {
+      await duplicateLink(link.id);
+      await refreshLinks();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("dashboard.pages.links.errors.duplicateFailed"));
+    }
+  }
+
+  // moveLinkByOffset -- alternatif keyboard utk drag-reorder (tombol ▲/▼),
+  // sama seperti dashboard/links/page.tsx; simpan urutan lewat endpoint
+  // reorder halaman tambahan yang sudah dipakai handleDrop di bawah.
+  function moveLinkByOffset(index: number, delta: number) {
+    const to = index + delta;
+    if (to < 0 || to >= links.length) return;
+    const reordered = [...links];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(to, 0, moved);
+    const withPositions = reordered.map((l, idx) => ({ ...l, position: idx }));
+    setLinks(() => withPositions);
+    reorderExtraPageLinks(
+      pageId,
+      withPositions.map((l) => ({ id: l.id, position: l.position }))
+    ).catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.components.produkPageEditor.errors.saveOrder")));
+  }
+
   function handleDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
     setLinks((prev) => {
@@ -1665,57 +1971,145 @@ function BlockSection({
         {links.length === 0 && (
           <p className="text-center text-xs text-app-muted">{t("dashboard.components.produkPageEditor.blockForm.emptyState")}</p>
         )}
-        {links.map((link) => (
+        {links.map((link, index) => (
           <div
             key={link.id}
             draggable
             onDragStart={() => setDragId(link.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(link.id)}
-            className="flex flex-col gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-3 shadow-card"
+            className={`flex flex-col gap-2.5 rounded-xl border-2 border-jeon-ink bg-app-surface p-3 shadow-card ${link.is_active ? "" : "opacity-60"}`}
           >
+            {/* Baris header blok -- paritas Toko <-> Links (permintaan
+                langsung pengguna, 18 September 2026: "buat tiap blok yang
+                ada di page store itu disamakan seperti di links ada tombol
+                pengaturan nya terus kalo mau edit di klik dulu blok nya
+                biar muncul data datanya"). Markup, urutan kontrol, &
+                alasan tiap stopPropagation SAMA PERSIS dashboard/links/
+                page.tsx (lihat catatan lengkap di sana): ▲▼/grip, badge
+                ikon, judul inline-edit, baris ringkasan, chip klik,
+                chevron isi, tombol Kelola (gear), sakelar aktif. Tombol
+                hapus yang dulu ada di header PINDAH ke strip alat kelola
+                (dengan dialog konfirmasi, bukan langsung hapus). */}
             <div
-              // onClick baris ini -- permintaan langsung pengguna, 17
-              // September 2026, pola & alasan SAMA PERSIS dashboard/
-              // links/page.tsx (lihat catatan lengkap di sana): seluruh
-              // baris header jadi target klik, bukan cuma tombol panah
-              // kecil. SENGAJA bukan role="button"/tabIndex -- tombol
-              // panah di bawah (masih <button> asli + stopPropagation)
-              // tetap satu-satunya jalur keyboard-accessible, supaya
-              // tidak ada interactive control bersarang.
               onClick={() => {
-                if (!isBlockExpandable(link)) return;
+                if (!isBlockExpandable(link, t)) return;
                 if (link.block_type === "catalog" || link.block_type === "faq") {
                   setDrilldownBlockId(link.id);
                 } else {
                   toggleContentEdit(link);
                 }
               }}
-              className={`flex items-center gap-2.5 ${isBlockExpandable(link) ? "cursor-pointer" : ""}`}
+              className={`flex items-center gap-3 ${isBlockExpandable(link, t) ? "cursor-pointer" : ""}`}
             >
-              <IconGripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-app-muted" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-app-ink">
-                  {link.lock_type && <IconLock className="mr-1 inline h-3.5 w-3.5 text-app-muted" />}
-                  {link.title}
-                </p>
-                <p className="truncate text-xs text-app-muted">
-                  {link.block_type && link.block_type !== "link" ? BLOCK_LABEL[link.block_type] ?? link.block_type : link.url}
-                </p>
+              <div className="flex flex-shrink-0 flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => moveLinkByOffset(index, -1)}
+                  disabled={index === 0}
+                  aria-label={t("dashboard.pages.links.moveUp")}
+                  title={t("dashboard.pages.links.moveUp")}
+                  className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
+                >
+                  <IconChevronRight className="h-3.5 w-3.5 -rotate-90" />
+                </button>
+                <IconGripVertical className="h-3.5 w-3.5 cursor-grab text-app-muted/70" />
+                <button
+                  type="button"
+                  onClick={() => moveLinkByOffset(index, 1)}
+                  disabled={index === links.length - 1}
+                  aria-label={t("dashboard.pages.links.moveDown")}
+                  title={t("dashboard.pages.links.moveDown")}
+                  className="text-app-muted hover:text-jeon-purple disabled:opacity-25 disabled:hover:text-app-muted"
+                >
+                  <IconChevronRight className="h-3.5 w-3.5 rotate-90" />
+                </button>
               </div>
-              {/* Tombol buka/tutup isi blok -- susulan 15 September 2026,
-                  pola SAMA PERSIS dashboard/links/page.tsx: menutup gap
-                  lama "Toko missing edit-content UI" (video/maps/teks/
-                  accordion/dst SEBELUMNYA tidak bisa disunting lagi setelah
-                  dibuat sama sekali). "catalog"/"faq" buka BlockDrilldownEditor
-                  penuh layar, tipe lain buka panel accordion contentEditId. */}
-              {isBlockExpandable(link) && (
+              {/* Badge ikon -- urutan resolusi sama Links: custom_icon_url >
+                  icon_key galeri > deteksi platform dari URL (tautan biasa)
+                  > ikon tipe blok (dari CONTENT_TILES, peta ikon yang sama
+                  dipakai modal Tambah di sini). */}
+              {link.custom_icon_url ? (
+                // Ukuran TETAP 32px (h-8 w-8 flex-shrink-0).
+                <Image
+                  src={link.custom_icon_url}
+                  alt=""
+                  title={t("dashboard.pages.links.linkCard.customIcon")}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 flex-shrink-0 rounded-xl object-cover ring-1 ring-black/5"
+                />
+              ) : link.icon_key && getLibraryIcon(link.icon_key) ? (
+                (() => {
+                  const libraryIcon = getLibraryIcon(link.icon_key)!;
+                  return (
+                    <span title={libraryIcon.label} className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]">
+                      <libraryIcon.Icon className="h-4 w-4" />
+                    </span>
+                  );
+                })()
+              ) : link.block_type === "link" ? (
+                (() => {
+                  const { Icon, label, badgeClass } = detectLinkIcon(link.url);
+                  return (
+                    <span title={label} className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                  );
+                })()
+              ) : (
+                (() => {
+                  const TypeIcon = CONTENT_TILES.find((tile) => tile.key === link.block_type)?.Icon ?? LayoutGrid;
+                  return (
+                    <span
+                      title={BLOCK_LABEL[link.block_type] ?? link.block_type}
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-jsm bg-jeon-lavender text-[#111111]"
+                    >
+                      <TypeIcon className="h-4 w-4" />
+                    </span>
+                  );
+                })()
+              )}
+              <div className="min-w-0 flex-1">
+                {editingField?.id === link.id && editingField.field === "title" ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={() => saveEditField(link)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full rounded-md border border-jeon-purple px-2 py-1 text-sm font-bold text-app-ink focus:outline-none"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-bold text-app-ink">{link.title}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditField(link, "title");
+                      }}
+                      className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
+                      title={t("dashboard.pages.links.linkCard.editTitle")}
+                    >
+                      <IconPencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {link.block_type !== "link" && blockPreviewFor(link, t) !== null && contentEditId !== link.id && (
+                  <p className="mt-0.5 truncate text-[11px] text-app-muted">{blockPreviewFor(link, t)}</p>
+                )}
+              </div>
+              <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-app-surface-2 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-app-muted sm:flex">
+                <IconChart className="h-3 w-3" />
+                {link.click_count.toLocaleString("id-ID")}
+              </span>
+              {isBlockExpandable(link, t) && (
                 <button
                   type="button"
                   onClick={(e) => {
-                    // stopPropagation WAJIB -- lihat catatan lengkap di
-                    // dashboard/links/page.tsx (tombol ini sekarang anak
-                    // dari baris header yang juga onClick).
                     e.stopPropagation();
                     if (link.block_type === "catalog" || link.block_type === "faq") {
                       setDrilldownBlockId(link.id);
@@ -1736,13 +2130,374 @@ function BlockSection({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(link.id);
+                  setToolsOpenId((v) => (v === link.id ? null : link.id));
                 }}
-                className="flex-shrink-0 rounded-lg p-1.5 text-app-muted hover:bg-red-50 hover:text-red-600"
+                aria-expanded={toolsOpenId === link.id}
+                title={t("dashboard.pages.links.linkCard.manageTools")}
+                className={`flex h-8 flex-shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-bold transition-colors ${
+                  toolsOpenId === link.id ? "bg-jeon-purple/10 text-jeon-purple" : "text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                }`}
               >
-                <IconTrash className="h-4 w-4" />
+                <IconSettings className="h-4 w-4" />
+                <IconChevronRight className={`h-3 w-3 transition-transform ${toolsOpenId === link.id ? "rotate-90" : ""}`} />
               </button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <Toggle checked={link.is_active} onChange={() => handleToggleActive(link)} label={t("dashboard.pages.links.linkCard.activateLabel").replace("{title}", link.title)} />
+              </div>
             </div>
+
+            {(link.block_type === "link" || link.block_type === "image") && (
+              <div className="ml-6 flex items-center gap-1.5">
+                {editingField?.id === link.id && editingField.field === "url" ? (
+                  <input
+                    type="url"
+                    autoFocus
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={() => saveEditField(link)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                    placeholder={link.block_type === "image" ? t("dashboard.pages.links.linkCard.imageLinkPlaceholder") : undefined}
+                    className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
+                  />
+                ) : link.url ? (
+                  <>
+                    <p className="truncate text-xs text-app-muted">{link.url}</p>
+                    <button type="button" onClick={() => startEditField(link, "url")} className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple" title={t("dashboard.pages.links.linkCard.editUrl")}>
+                      <IconPencil className="h-3 w-3" />
+                    </button>
+                  </>
+                ) : link.block_type === "image" ? (
+                  <button type="button" onClick={() => startEditField(link, "url")} className="text-[11px] font-semibold text-jeon-purple hover:underline">
+                    {t("dashboard.pages.links.linkCard.addImageLink")}
+                  </button>
+                ) : null}
+              </div>
+            )}
+
+            {link.block_type === "link" && (
+              <div className="ml-6 flex items-center gap-1.5">
+                {editingField?.id === link.id && editingField.field === "description" ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={() => saveEditField(link)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEditField(link)}
+                    maxLength={240}
+                    placeholder={t("dashboard.pages.links.linkCard.descriptionPlaceholder")}
+                    className="w-full rounded-md border border-jeon-purple px-2 py-1 text-xs text-app-muted focus:outline-none"
+                  />
+                ) : (
+                  <>
+                    <p className="truncate text-xs italic text-app-muted">{link.description || t("dashboard.pages.links.linkCard.noDescription")}</p>
+                    <button
+                      type="button"
+                      onClick={() => startEditField(link, "description")}
+                      className="flex-shrink-0 p-1 text-app-muted hover:text-jeon-purple"
+                      title={t("dashboard.pages.links.linkCard.editDescription")}
+                    >
+                      <IconPencil className="h-3 w-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Strip alat kelola -- jadwal/kunci/sensitif/kontrol ikon/
+                featured/duplikat/hapus, dilipat di balik tombol Kelola di
+                header. Gerbang per tombol (kunci penuh cuma link/button,
+                sensitif utk tipe lain, featured cuma link) SAMA PERSIS &
+                dengan alasan yang sama seperti dashboard/links/page.tsx. */}
+            {toolsOpenId === link.id && (
+              <div className="ml-6 flex flex-wrap items-center gap-1.5 rounded-jsm border-2 border-jeon-ink bg-app-surface-2 p-2">
+                <button
+                  type="button"
+                  onClick={() => openScheduleForm(link)}
+                  title={t("dashboard.pages.links.linkCard.scheduleTooltip")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.starts_at && link.ends_at ? "text-jeon-purple" : "text-app-muted"
+                  }`}
+                >
+                  <IconClock className="h-4 w-4" />
+                </button>
+                {(link.block_type === "link" || link.block_type === "button") && (
+                  <button
+                    type="button"
+                    onClick={() => openLockForm(link)}
+                    title={t("dashboard.pages.links.linkCard.lockTooltip")}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.lock_type ? "text-jeon-purple" : "text-app-muted"
+                    }`}
+                  >
+                    <IconLock className="h-4 w-4" />
+                  </button>
+                )}
+                {link.block_type !== "link" && link.block_type !== "button" && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSensitive(link)}
+                    title={link.lock_type === "sensitive" ? t("dashboard.pages.links.linkCard.unmarkSensitive") : t("dashboard.pages.links.linkCard.markSensitive")}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.lock_type === "sensitive" ? "text-jeon-purple" : "text-app-muted"
+                    }`}
+                  >
+                    <span aria-hidden className="text-sm leading-none">⚠️</span>
+                  </button>
+                )}
+                <label
+                  title={link.custom_icon_url ? t("dashboard.pages.links.linkCard.changeCustomIcon") : t("dashboard.pages.links.linkCard.uploadCustomIcon")}
+                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.custom_icon_url ? "text-jeon-purple" : "text-app-muted"
+                  }`}
+                >
+                  {iconUploadingId === link.id ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                  ) : (
+                    <IconCamera className="h-4 w-4" />
+                  )}
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleIconUpload(e, link)}
+                    disabled={iconUploadingId === link.id}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIconPickerLinkId(link.id)}
+                  title={t("dashboard.pages.links.linkCard.pickFromIconGallery")}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                    link.icon_key ? "text-jeon-purple" : "text-app-muted"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                {!link.custom_icon_url && (
+                  <label
+                    title={link.icon_color ? t("dashboard.pages.links.linkCard.changeIconColor") : t("dashboard.pages.links.linkCard.pickIconColor")}
+                    className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg hover:bg-jeon-purple/10"
+                  >
+                    {link.icon_color ? (
+                      <span className="h-4 w-4 rounded-full ring-1 ring-border" style={{ backgroundColor: link.icon_color }} aria-hidden />
+                    ) : (
+                      <IconPaintbrush className="h-4 w-4 text-app-muted" />
+                    )}
+                    <input
+                      type="color"
+                      value={link.icon_color || "#000000"}
+                      onChange={(e) => handleIconColorChange(link, e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
+                )}
+                {link.icon_color && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearIconColor(link)}
+                    title={t("dashboard.pages.links.linkCard.clearIconColor")}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                )}
+                {(link.custom_icon_url || link.icon_key) && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveIcon(link)}
+                    title={t("dashboard.pages.links.linkCard.removeIcon")}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-red-50 hover:text-red-600"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                )}
+                {link.block_type === "link" && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeatured(link)}
+                    title={link.is_featured ? t("dashboard.pages.links.linkCard.unfeature") : t("dashboard.pages.links.linkCard.makeFeatured")}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg hover:bg-jeon-purple/10 ${
+                      link.is_featured ? "text-jeon-purple" : "text-app-muted"
+                    }`}
+                  >
+                    <IconStar className="h-4 w-4" />
+                  </button>
+                )}
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => handleDuplicate(link)}
+                  title={t("dashboard.pages.links.linkCard.duplicate")}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted hover:bg-jeon-purple/10 hover:text-jeon-purple"
+                >
+                  <IconCopy className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(link.id)}
+                  title={t("dashboard.pages.links.common.delete")}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                >
+                  <IconTrash className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {link.block_type === "link" && link.is_featured && (
+              <div className="ml-6 flex items-center gap-3 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                {link.thumbnail_url ? (
+                  // Ukuran TETAP 96x56 (w-24 h-14).
+                  <Image src={link.thumbnail_url} alt="" width={96} height={56} className="h-14 w-24 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                ) : (
+                  <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-app-border text-[10px] text-app-muted">
+                    {t("dashboard.pages.links.common.noneYet")}
+                  </div>
+                )}
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-[11px] text-app-muted">
+                    {link.thumbnail_url ? t("dashboard.pages.links.featuredPanel.hasThumbnail") : t("dashboard.pages.links.featuredPanel.noThumbnail")}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <label className="cursor-pointer rounded-md border-2 border-jeon-ink bg-app-surface px-2.5 py-1 text-[11px] font-semibold text-app-ink hover:border-jeon-purple hover:text-jeon-purple">
+                      {thumbnailUploadingId === link.id
+                        ? t("dashboard.pages.links.common.uploading")
+                        : link.thumbnail_url
+                          ? t("dashboard.pages.links.featuredPanel.changeThumbnail")
+                          : t("dashboard.pages.links.featuredPanel.uploadThumbnail")}
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleThumbnailUpload(e, link)}
+                        disabled={thumbnailUploadingId === link.id}
+                        className="hidden"
+                      />
+                    </label>
+                    {link.thumbnail_url && (
+                      <button type="button" onClick={() => handleRemoveThumbnail(link)} className="text-[11px] font-semibold text-red-600 hover:underline">
+                        {t("dashboard.pages.links.common.delete")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {scheduleEditId === link.id ? (
+              <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                <div className="flex gap-1.5">
+                  <FormField label={t("dashboard.pages.links.schedulePanel.startLabel")}>
+                    <input
+                      type="datetime-local"
+                      value={scheduleStart}
+                      onChange={(e) => setScheduleStart(e.target.value)}
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                    />
+                  </FormField>
+                  <FormField label={t("dashboard.pages.links.schedulePanel.endLabel")}>
+                    <input
+                      type="datetime-local"
+                      value={scheduleEnd}
+                      onChange={(e) => setScheduleEnd(e.target.value)}
+                      className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                    />
+                  </FormField>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => setScheduleEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                    {t("dashboard.pages.links.common.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingSchedule}
+                    onClick={() => handleSaveSchedule(link)}
+                    className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                  >
+                    {savingSchedule ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              link.starts_at &&
+              link.ends_at && (
+                <div className="ml-6 flex items-center justify-between rounded-lg bg-jeon-warning/15 px-2.5 py-1.5">
+                  <span className="text-[11px] font-semibold text-jeon-warning">
+                    {t("dashboard.pages.links.schedulePanel.scheduledLabel")} {new Date(link.starts_at).toLocaleString("id-ID")} {t("dashboard.pages.links.schedulePanel.until")}{" "}
+                    {new Date(link.ends_at).toLocaleString("id-ID")}
+                  </span>
+                  <button type="button" onClick={() => handleClearSchedule(link)} className="text-[11px] font-bold text-red-600 hover:underline">
+                    {t("dashboard.pages.links.schedulePanel.cancelSchedule")}
+                  </button>
+                </div>
+              )
+            )}
+
+            {(link.block_type === "link" || link.block_type === "button") &&
+              (lockEditId === link.id ? (
+                <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
+                  <select
+                    value={lockTypeInput}
+                    onChange={(e) => setLockTypeInput(e.target.value as "age" | "code" | "subscribe" | "sensitive")}
+                    className="w-full rounded-md border border-app-border px-2 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                  >
+                    <option value="code">{t("dashboard.pages.links.lockPanel.types.code")}</option>
+                    <option value="age">{t("dashboard.pages.links.lockPanel.types.age")}</option>
+                    <option value="subscribe">{t("dashboard.pages.links.lockPanel.types.subscribe")}</option>
+                    <option value="sensitive">{t("dashboard.pages.links.lockPanel.types.sensitive")}</option>
+                  </select>
+                  {lockTypeInput === "code" && (
+                    <input
+                      type="text"
+                      placeholder={t("dashboard.pages.links.lockPanel.codePlaceholder")}
+                      value={lockCodeInput}
+                      onChange={(e) => setLockCodeInput(e.target.value)}
+                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                    />
+                  )}
+                  {lockTypeInput === "age" && (
+                    <input
+                      type="number"
+                      min={13}
+                      max={99}
+                      placeholder={t("dashboard.pages.links.lockPanel.minAgePlaceholder")}
+                      value={lockMinAgeInput}
+                      onChange={(e) => setLockMinAgeInput(e.target.value)}
+                      className="w-full rounded-md border border-app-border px-2.5 py-1.5 text-xs focus:border-jeon-purple focus:outline-none"
+                    />
+                  )}
+                  <div className="flex gap-1.5">
+                    <button type="button" onClick={() => setLockEditId(null)} className="flex-1 rounded-md border-2 border-jeon-ink py-1.5 text-[11px] font-bold text-app-muted">
+                      {t("dashboard.pages.links.common.cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingLock}
+                      onClick={() => handleSaveLock(link)}
+                      className="btn-primary flex-1 rounded-md py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                    >
+                      {savingLock ? t("dashboard.pages.links.common.saving") : t("dashboard.pages.links.common.save")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                link.lock_type && (
+                  <div className="ml-6 flex items-center justify-between rounded-lg bg-jeon-purple/10 px-2.5 py-1.5">
+                    <span className="text-[11px] font-semibold text-jeon-purple">
+                      {t("dashboard.pages.links.lockPanel.lockedLabel")}{" "}
+                      {link.lock_type === "code"
+                        ? t("dashboard.pages.links.lockPanel.statusTypes.code")
+                        : link.lock_type === "age"
+                          ? t("dashboard.pages.links.lockPanel.statusTypes.age").replace("{age}", String(link.lock_min_age ?? 18))
+                          : link.lock_type === "sensitive"
+                            ? t("dashboard.pages.links.lockPanel.statusTypes.sensitive")
+                            : t("dashboard.pages.links.lockPanel.statusTypes.subscribe")}
+                    </span>
+                    <button type="button" onClick={() => handleClearLock(link)} className="text-[11px] font-bold text-red-600 hover:underline">
+                      {t("dashboard.pages.links.lockPanel.unlock")}
+                    </button>
+                  </div>
+                )
+              ))}
 
             {/* Panel accordion isi blok -- 10 tipe "buffer field" (video/
                 maps/teks/accordion/project_showcase/button/countdown/embed/
@@ -1961,13 +2716,16 @@ function BlockSection({
               </div>
             )}
 
-            {/* Panel "Kelola foto"/"Kelola audio" -- hasil analisa galeri
-                tema kompetitor, 17 Agustus 2026. SELALU tampil (bukan
-                dibalik toggle) karena inti dari blok ini, sama seperti
-                catatan di dashboard/links/page.tsx. "image_slider" (susulan
-                15 September 2026) reuse PERSIS panel ini -- alias
+            {/* Panel "Kelola foto"/"Kelola audio"/"Kelola file"/"Kelola
+                Gambar"/"Kelola Item"/"Kelola Produk" di bawah -- SEBELUMNYA
+                selalu tampil unconditional; sejak paritas Toko <-> Links
+                (18 September 2026) SEMUANYA digerbang `contentEditId ===
+                link.id` sama seperti 10 tipe buffer di atas: isi blok baru
+                muncul begitu barisnya diklik (baris ringkasan di header
+                sudah memberi tahu jumlah foto/status audio/dst tanpa perlu
+                membuka). "image_slider" reuse PERSIS panel galeri -- alias
                 tervalidasi "gallery" di backend. */}
-            {(link.block_type === "gallery" || link.block_type === "image_slider") && (
+            {(link.block_type === "gallery" || link.block_type === "image_slider") && contentEditId === link.id && (
               <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="text-[11px] font-semibold text-app-muted">
                   {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
@@ -2015,7 +2773,7 @@ function BlockSection({
                 </div>
               </div>
             )}
-            {link.block_type === "audio" && (
+            {link.block_type === "audio" && contentEditId === link.id && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.audio_url as string)
@@ -2046,7 +2804,7 @@ function BlockSection({
             {/* Panel "Kelola file" -- blok "file" (permintaan langsung
                 pengguna, 20 Agustus 2026: "tambahkan file pdf download"),
                 pola sama persis seperti panel Kelola audio di atas. */}
-            {link.block_type === "file" && (
+            {link.block_type === "file" && contentEditId === link.id && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.file_url as string)
@@ -2078,7 +2836,7 @@ function BlockSection({
                 "embed_link" (susulan 15 September 2026, pola SAMA PERSIS
                 dashboard/links/page.tsx: satu endpoint uploadBuilderMediaImage
                 dipakai bersama ketiganya). */}
-            {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && (
+            {(link.block_type === "image" || link.block_type === "video_image" || link.block_type === "embed_link") && contentEditId === link.id && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.image_url as string)
@@ -2108,7 +2866,7 @@ function BlockSection({
             )}
             {/* Panel "Kelola Gambar" -- blok "project_showcase" (endpoint
                 terpisah, uploadShowcaseImage). */}
-            {link.block_type === "project_showcase" && (
+            {link.block_type === "project_showcase" && contentEditId === link.id && (
               <div className="ml-6 flex items-center gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-app-muted">
                   {(link.block_data?.image_url as string)
@@ -2141,7 +2899,7 @@ function BlockSection({
                 baru di atas, cuma sekarang dgn onUpdateItems yang langsung
                 PATCH ke server (autosave, tanpa draft lokal, pola SAMA
                 dashboard/links/page.tsx). */}
-            {link.block_type === "list" && (
+            {link.block_type === "list" && contentEditId === link.id && (
               <div className="ml-6 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <ListItemsEditor
                   style={(link.block_data?.style as "list" | "card" | "testimony" | undefined) ?? "list"}
@@ -2157,7 +2915,7 @@ function BlockSection({
                 sama dipakai ulang apa adanya. Begitu blok ini ADA di Toko,
                 grid otomatis Halaman Toko berhenti tampil (lihat gating
                 hasProdukBlock di PagePreview.tsx). */}
-            {link.block_type === "produk" && (
+            {link.block_type === "produk" && contentEditId === link.id && (
               <div className="ml-6 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
                 <ProdukBlockEditor
                   blockData={link.block_data}
@@ -2180,6 +2938,55 @@ function BlockSection({
           </div>
         ))}
       </div>
+
+      {iconPickerLinkId &&
+        (() => {
+          const target = links.find((l) => l.id === iconPickerLinkId);
+          if (!target) return null;
+          return <IconPickerModal currentKey={target.icon_key} onSelect={(icon) => handleSelectLibraryIcon(target, icon.key)} onClose={() => setIconPickerLinkId(null)} />;
+        })()}
+
+      {/* Dialog konfirmasi hapus -- sama seperti dashboard/links/page.tsx
+          ("kalau mau hapus tampilkan toast peringatan dulu"); SEBELUMNYA
+          tombol sampah di header Toko langsung menghapus tanpa jeda. */}
+      {confirmDeleteId &&
+        (() => {
+          const target = links.find((l) => l.id === confirmDeleteId);
+          if (!target) return null;
+          const noun = target.block_type === "link" ? t("dashboard.pages.links.deleteConfirm.linkNoun") : BLOCK_LABEL[target.block_type]?.toLowerCase() ?? t("dashboard.pages.links.deleteConfirm.blockNoun");
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setConfirmDeleteId(null)}>
+              <div className="w-full max-w-sm rounded-jmd border-2 border-jeon-ink bg-app-surface p-5 shadow-brutal" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#111111] bg-jeon-coral text-[#111111]">
+                    <TriangleAlert className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-sm font-bold text-app-ink">{t("dashboard.pages.links.deleteConfirm.title").replace("{noun}", noun)}</h2>
+                    <p className="mt-1 text-xs text-app-muted">
+                      {t("dashboard.pages.links.deleteConfirm.body").replace("{title}", target.title || t("dashboard.pages.links.deleteConfirm.untitled"))}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button type="button" onClick={() => setConfirmDeleteId(null)} className="flex-1 rounded-lg border-2 border-jeon-ink py-2 text-xs font-bold text-app-muted hover:bg-app-surface-2">
+                    {t("dashboard.pages.links.common.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDelete(confirmDeleteId);
+                      setConfirmDeleteId(null);
+                    }}
+                    className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700"
+                  >
+                    {t("dashboard.pages.links.deleteConfirm.confirmButton")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }
