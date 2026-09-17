@@ -801,10 +801,86 @@ export function IconPencil({ className }: IconProps) {
 
 // IconTextLines -- blok "Teks" di dashboard/links (Modul Tautan): paragraf
 // polos di antara tautan lain, lihat CONTENT_TILES.
+// IconTextLines -- diperbarui 17 September 2026 (permintaan langsung
+// pengguna, screenshot: ikon blok Teks/Judul terlihat "masih default").
+// 3 garis SAMA PANJANG sebelumnya ambigu -- gampang terbaca sebagai ikon
+// "menu" (hamburger), bukan "teks". Sekarang panjang tiap garis SENGAJA
+// berbeda (judul pendek, isi penuh, baris akhir pendek) supaya jelas
+// terbaca sebagai potongan paragraf, bukan menu -- semua pemakaian ikon
+// ini (blok text/heading, "Custom Message" produk) sama-sama soal
+// "konten teks", jadi diperbaiki di SATU tempat aman utk semuanya.
 export function IconTextLines({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <path d="M4 6.5h12M4 12h16M4 17.5h9" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// IconFaqBubble -- BARU 17 September 2026 (permintaan langsung pengguna,
+// susulan keluhan ikon blok masih terasa default/generik): blok FAQ
+// SEBELUMNYA pakai IconBook (ikon yang sama dipakai luas utk Kelas &
+// Kursus/Tutorial di navigasi lain, lihat pemakaian IconBook di seluruh
+// app) -- "buku" secara makna lebih dekat ke "materi belajar/dokumentasi"
+// drpd "Pertanyaan Umum". Bubble chat + tanda tanya adalah simbol FAQ yang
+// jauh lebih universal & langsung dikenali. Komponen BARU (bukan mengubah
+// IconBook yang sudah dipakai di banyak konteks lain yang TIDAK berarti
+// FAQ) -- HANYA dipakai utk block_type "faq" di 4 file (dashboard/links,
+// ProdukPageEditor, BuilderAddComponentModal, BuilderLeftPanel).
+export function IconFaqBubble({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v7A2.5 2.5 0 0 1 17.5 17H11l-4 3v-3H6.5A2.5 2.5 0 0 1 4 14.5v-7Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+      <path d="M9.8 9.8c.25-1.1 1.2-1.8 2.3-1.8 1.3 0 2.3.85 2.3 1.9 0 .85-.5 1.3-1.25 1.75-.7.4-.95.7-.95 1.35" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+      <circle cx="12.15" cy="14.6" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+// IconContactCard -- BARU 17 September 2026 (susulan IconFaqBubble, alasan
+// sama): blok "Formulir Kontak" SEBELUMNYA pakai IconMail (amplop) --
+// ikon yang SAMA juga dipakai luas utk fitur "Broadcast Email" (menu
+// Marketing) di tempat lain, jadi kurang khas & bisa membingungkan
+// (amplop = kirim EMAIL, padahal blok ini pengunjung mengisi FORM,
+// bukan mengirim email langsung). Bentuk clipboard + baris field lebih
+// akurat menggambarkan "form yang diisi", dan siluetnya beda jauh dari
+// bubble chat FAQ di atas walau sama-sama dipakai di ukuran kecil (h-3.5).
+export function IconContactCard({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M9.5 4.5h5a1 1 0 0 1 1 1V6h1a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 16.5 20h-9A1.5 1.5 0 0 1 6 18.5v-11A1.5 1.5 0 0 1 7.5 6h1v-.5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth={base}
+        strokeLinejoin="round"
+      />
+      <path d="M9 11.5h6M9 15h4" stroke="currentColor" strokeWidth={base} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// IconCatalogTiles -- BARU 17 September 2026 (susulan IconFaqBubble,
+// alasan sama): blok "Katalog" SEBELUMNYA pakai IconGrid POLOS -- ikon
+// yang SAMA PERSIS juga dipakai utk block_type "section" (murni wadah
+// layout, tanpa isi) DAN navigasi "Halaman Saya" di sidebar, jadi 2 blok
+// yang konsepnya beda (kumpulan produk vs wadah layout kosong) terlihat
+// identik. Sel diberi tint isi tipis (bukan kotak kosong) supaya terbaca
+// sebagai "grid berisi item", bukan "kerangka layout kosong" -- sengaja
+// TIDAK menambah detail rumit di dalam tiap sel (foto/ikon mini) karena
+// ikon ini dirender sekecil 14px (h-3.5) di banyak tempat, detail halus
+// akan jadi noda buram, bukan terlihat lebih premium.
+export function IconCatalogTiles({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth={base} />
+      <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth={base} />
+      <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth={base} />
+      <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth={base} />
     </svg>
   );
 }

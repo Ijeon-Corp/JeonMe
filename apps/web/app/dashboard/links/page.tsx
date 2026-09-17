@@ -54,16 +54,18 @@ import { SOCIAL_PLATFORMS, SocialPlatformKey } from "@/lib/social-links";
 import { SITE_URL } from "@/lib/site";
 import { slugifyTitle } from "@/lib/slug";
 import {
-  IconBook,
   IconCamera,
+  IconCatalogTiles,
   IconChart,
   IconChevronRight,
   IconSettings,
   IconClock,
   IconClose,
   IconColumns,
+  IconContactCard,
   IconCopy,
   IconExternal,
+  IconFaqBubble,
   IconFileText,
   IconGrid,
   IconGripVertical,
@@ -71,7 +73,6 @@ import {
   IconLink,
   IconListCard,
   IconLock,
-  IconMail,
   IconMapPin,
   IconMusicNote,
   IconPaintbrush,
@@ -358,13 +359,13 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
   return [
     { key: "link", label: t("dashboard.pages.links.contentTiles.link.label"), description: t("dashboard.pages.links.contentTiles.link.description"), Icon: IconLink },
     { key: "video", label: t("dashboard.pages.links.contentTiles.video.label"), description: t("dashboard.pages.links.contentTiles.video.description"), Icon: IconPlayCircle },
-    { key: "faq", label: t("dashboard.pages.links.contentTiles.faq.label"), description: t("dashboard.pages.links.contentTiles.faq.description"), Icon: IconBook },
+    { key: "faq", label: t("dashboard.pages.links.contentTiles.faq.label"), description: t("dashboard.pages.links.contentTiles.faq.description"), Icon: IconFaqBubble },
     // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
     // lalu keluar text, bukan hanya untuk faq saja" -- SATU judul klik-untuk-
     // buka bebas dari framing tanya-jawab (beda dari FAQ yang daftar Q&A),
     // cocok untuk kebijakan/detail/catatan tambahan apa pun.
     { key: "accordion", label: t("dashboard.pages.links.contentTiles.accordion.label"), description: t("dashboard.pages.links.contentTiles.accordion.description"), Icon: IconChevronRight },
-    { key: "contact_form", label: t("dashboard.pages.links.contentTiles.contactForm.label"), description: t("dashboard.pages.links.contentTiles.contactForm.description"), Icon: IconMail },
+    { key: "contact_form", label: t("dashboard.pages.links.contentTiles.contactForm.label"), description: t("dashboard.pages.links.contentTiles.contactForm.description"), Icon: IconContactCard },
     // Permintaan langsung pengguna (referensi tangkapan layar fitur "Maps"
     // Linktree): lokasi Google Maps, bisa ditampilkan tertanam (iframe) atau
     // sebagai tautan langsung -- lihat "Link behavior" di form.
@@ -400,7 +401,7 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
     // detail per item, gambar bisa multiple), lihat CatalogTakeoverView
     // (PagePreview.tsx). Klik blok ini di halaman publik GANTI ISI HALAMAN
     // (bukan buka tautan/expand di tempat seperti tipe lain).
-    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconGrid },
+    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconCatalogTiles },
     // 9 tile baru -- "full parity" mode Simple vs Builder (permintaan
     // langsung pengguna 12 September 2026, dikonfirmasi via
     // AskUserQuestion: "Full parity semua tipe blok"). Semua masuk kategori
@@ -426,16 +427,16 @@ function buildContentTiles(t: (key: string) => string): ContentTile[] {
 // berganti (Icon component-nya konstan, cuma teksnya yang berubah).
 const BLOCK_TYPE_ICON: Record<string, IconComponent> = {
   video: IconPlayCircle,
-  faq: IconBook,
+  faq: IconFaqBubble,
   accordion: IconChevronRight,
-  contact_form: IconMail,
+  contact_form: IconContactCard,
   maps: IconMapPin,
   text: IconTextLines,
   gallery: IconPhotoLibrary,
   audio: IconMusicNote,
   file: IconFileText,
   project_showcase: IconCamera,
-  catalog: IconGrid,
+  catalog: IconCatalogTiles,
   // Tipe blok landing (No.99) & Canvas Page Builder (migrasi 000096) --
   // bug dilaporkan pengguna 9 September 2026: blok "button" yang dibuat di
   // Canvas ikut tampil di daftar klasik ini (satu tabel `links` yang sama),

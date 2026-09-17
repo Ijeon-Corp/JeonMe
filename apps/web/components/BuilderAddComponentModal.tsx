@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import {
-  IconBook,
   IconBox,
   IconCamera,
+  IconCatalogTiles,
   IconChevronRight,
   IconClock,
   IconClose,
   IconColumns,
+  IconContactCard,
   IconDivider,
   IconExternal,
+  IconFaqBubble,
   IconFileText,
-  IconGrid,
   IconIframe,
   IconLink,
   IconListCard,
-  IconMail,
   IconMapPin,
   IconMusicNote,
   IconPhotoLibrary,
@@ -119,7 +119,7 @@ function buildBuilderComponentCategories(
       key: "information",
       label: t("dashboard.components.builderAddComponentModal.categoryInformation"),
       tiles: [
-        { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconBook },
+        { type: "faq", label: t("dashboard.components.builderAddComponentModal.typeFaq"), description: t("dashboard.components.builderAddComponentModal.typeFaqDesc"), Icon: IconFaqBubble },
         { type: "list", label: t("dashboard.components.builderAddComponentModal.typeList"), description: t("dashboard.components.builderAddComponentModal.typeListDesc"), Icon: IconListCard },
         // "accordion" -- Fase 4 (13 September 2026): satu judul, klik utk
         // buka isinya -- beda dari FAQ yang bisa banyak pertanyaan sekaligus.
@@ -140,7 +140,7 @@ function buildBuilderComponentCategories(
         { type: "produk", label: t("dashboard.components.builderAddComponentModal.typeProduk"), description: t("dashboard.components.builderAddComponentModal.typeProdukDesc"), Icon: IconShoppingBag },
         // "contact_form" -- Fase 4 (13 September 2026): ROOT-ONLY (lihat
         // catatan AddableBlockType/ROOT_ONLY_TYPES di atas).
-        { type: "contact_form", label: t("dashboard.components.builderAddComponentModal.typeContactForm"), description: t("dashboard.components.builderAddComponentModal.typeContactFormDesc"), Icon: IconMail },
+        { type: "contact_form", label: t("dashboard.components.builderAddComponentModal.typeContactForm"), description: t("dashboard.components.builderAddComponentModal.typeContactFormDesc"), Icon: IconContactCard },
       ],
     },
     {
@@ -165,7 +165,7 @@ function buildBuilderComponentCategories(
         // pengguna "harusnya ada blok katalog"): ROOT-ONLY (lihat catatan
         // AddableBlockType/ROOT_ONLY_TYPES di atas, keputusan v1 yang sudah
         // ada di backend, allowedBuilderEmbeddedBlockTypes/links.go).
-        { type: "catalog", label: t("dashboard.components.builderAddComponentModal.typeCatalog"), description: t("dashboard.components.builderAddComponentModal.typeCatalogDesc"), Icon: IconGrid },
+        { type: "catalog", label: t("dashboard.components.builderAddComponentModal.typeCatalog"), description: t("dashboard.components.builderAddComponentModal.typeCatalogDesc"), Icon: IconCatalogTiles },
       ],
     },
   ];

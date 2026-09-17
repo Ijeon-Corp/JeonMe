@@ -34,20 +34,20 @@ import {
   uploadShowcaseImage,
 } from "@/lib/api-client";
 import {
-  IconBook,
   IconCamera,
+  IconCatalogTiles,
   IconChevronRight,
   IconClock,
   IconColumns,
+  IconContactCard,
   IconExternal,
+  IconFaqBubble,
   IconFileText,
-  IconGrid,
   IconGripVertical,
   IconIframe,
   IconLink,
   IconListCard,
   IconLock,
-  IconMail,
   IconMapPin,
   IconMusicNote,
   IconPhotoLibrary,
@@ -156,13 +156,13 @@ function getContentTiles(t: (key: string) => string): ContentTile[] {
   return [
     { key: "link", label: t("dashboard.components.produkPageEditor.contentTiles.link.label"), description: t("dashboard.components.produkPageEditor.contentTiles.link.desc"), Icon: IconLink },
     { key: "video", label: t("dashboard.components.produkPageEditor.contentTiles.video.label"), description: t("dashboard.components.produkPageEditor.contentTiles.video.desc"), Icon: IconPlayCircle },
-    { key: "faq", label: t("dashboard.components.produkPageEditor.contentTiles.faq.label"), description: t("dashboard.components.produkPageEditor.contentTiles.faq.desc"), Icon: IconBook },
+    { key: "faq", label: t("dashboard.components.produkPageEditor.contentTiles.faq.label"), description: t("dashboard.components.produkPageEditor.contentTiles.faq.desc"), Icon: IconFaqBubble },
     // "accordion" -- permintaan langsung pengguna: "blok yang bisa diklik
     // lalu keluar text, bukan hanya untuk faq saja" -- lihat catatan lengkap
     // di dashboard/links/page.tsx (pola sama persis, dipakai ulang di sini
     // untuk paritas halaman utama/Toko).
     { key: "accordion", label: t("dashboard.components.produkPageEditor.contentTiles.accordion.label"), description: t("dashboard.components.produkPageEditor.contentTiles.accordion.desc"), Icon: IconChevronRight },
-    { key: "contact_form", label: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"), description: t("dashboard.components.produkPageEditor.contentTiles.contactForm.desc"), Icon: IconMail },
+    { key: "contact_form", label: t("dashboard.components.produkPageEditor.contentTiles.contactForm.label"), description: t("dashboard.components.produkPageEditor.contentTiles.contactForm.desc"), Icon: IconContactCard },
     { key: "maps", label: t("dashboard.components.produkPageEditor.contentTiles.maps.label"), description: t("dashboard.components.produkPageEditor.contentTiles.maps.desc"), Icon: IconMapPin },
     { key: "text", label: t("dashboard.components.produkPageEditor.contentTiles.text.label"), description: t("dashboard.components.produkPageEditor.contentTiles.text.desc"), Icon: IconTextLines },
     // "gallery"/"audio" -- hasil analisa galeri tema kompetitor, 17 Agustus
@@ -187,7 +187,7 @@ function getContentTiles(t: (key: string) => string): ContentTile[] {
     // 10 tipe baru (susulan 15 September 2026) -- lihat catatan namespace
     // i18n di atas fungsi ini.
     { key: "project_showcase", label: t("dashboard.pages.links.contentTiles.projectShowcase.label"), description: t("dashboard.pages.links.contentTiles.projectShowcase.description"), Icon: IconCamera },
-    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconGrid },
+    { key: "catalog", label: t("dashboard.pages.links.contentTiles.catalog.label"), description: t("dashboard.pages.links.contentTiles.catalog.description"), Icon: IconCatalogTiles },
     { key: "button", label: t("dashboard.pages.links.contentTiles.button.label"), description: t("dashboard.pages.links.contentTiles.button.description"), Icon: IconExternal },
     { key: "image", label: t("dashboard.pages.links.contentTiles.image.label"), description: t("dashboard.pages.links.contentTiles.image.description"), Icon: IconCamera },
     { key: "video_image", label: t("dashboard.pages.links.contentTiles.videoImage.label"), description: t("dashboard.pages.links.contentTiles.videoImage.description"), Icon: IconVideoImage },
