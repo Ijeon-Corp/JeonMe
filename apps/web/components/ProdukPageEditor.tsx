@@ -2603,26 +2603,83 @@ function BlockSection({
                 tervalidasi "gallery" di backend. */}
             {(link.block_type === "gallery" || link.block_type === "image_slider") && contentEditId === link.id && (
               <div className="ml-6 flex flex-col gap-2 rounded-lg border border-app-border bg-jeon-purple/5 p-2.5">
-                <p className="text-[11px] font-semibold text-app-muted">
-                  {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
-                    .replace("{count}", String(((link.block_data?.images as string[]) ?? []).length))
-                    .replace("{max}", String(maxGalleryImages))}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {((link.block_data?.images as string[]) ?? []).map((src, i) => (
-                    <div key={i} className="group relative h-16 w-16 flex-shrink-0">
-                      {/* Ukuran TETAP 64px -- petak galeri h-16 w-16. */}
-                      <Image src={src} alt="" width={64} height={64} className="h-full w-full rounded-md object-cover ring-1 ring-black/5" />
-                      <button
-                        type="button"
-                        onClick={() => handleGalleryImageDelete(link, i)}
-                        title={t("dashboard.components.produkPageEditor.blockForm.deletePhoto")}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-sm hover:bg-red-700"
-                      >
-                        <IconX className="h-3 w-3" />
-                      </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-app-muted">
+                    {t("dashboard.components.produkPageEditor.blockForm.galleryCount")
+                      .replace("{count}", String(((link.block_data?.images as string[]) ?? []).length))
+                      .replace("{max}", String(maxGalleryImages))}
+                  </p>
+                  {/* Tampilan Grid/Tumpukan + caption per foto -- pola SAMA
+                      PERSIS dashboard/links/page.tsx (18 September 2026),
+                      lihat catatan di sana & GalleryBlock.tsx. */}
+                  {link.block_type === "gallery" && (
+                    <div className="flex items-center gap-1" title={t("dashboard.pages.links.galleryPanel.displayStackHint")}>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-app-muted">{t("dashboard.pages.links.galleryPanel.displayLabel")}</span>
+                      {(["grid", "stack"] as const).map((mode) => {
+                        const active = ((link.block_data?.display as string | undefined) ?? "grid") === mode;
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => handleBlockDataPatch(link, { display: mode })}
+                            aria-pressed={active}
+                            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
+                              active ? "border-jeon-purple bg-jeon-lavender/40 text-jeon-purple" : "border-app-border bg-app-surface text-app-muted hover:text-app-ink"
+                            }`}
+                          >
+                            {mode === "grid" ? t("dashboard.pages.links.galleryPanel.displayGrid") : t("dashboard.pages.links.galleryPanel.displayStack")}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
+                </div>
+                {((link.block_data?.images as string[]) ?? []).length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {((link.block_data?.images as string[]) ?? []).map((src, i) => {
+                      const captions = (link.block_data?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {};
+                      const cap = captions[src] ?? {};
+                      const saveCaption = (field: "title" | "description", value: string) => {
+                        const next = { ...captions, [src]: { ...cap, [field]: value.trim() } };
+                        if ((cap[field] ?? "") === value.trim()) return;
+                        handleBlockDataPatch(link, { captions: next });
+                      };
+                      return (
+                        <div key={src} className="flex items-start gap-2 rounded-md border border-app-border bg-app-surface p-1.5">
+                          {/* Ukuran TETAP 48px -- thumbnail baris caption h-12 w-12. */}
+                          <Image src={src} alt="" width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-md object-cover ring-1 ring-black/5" />
+                          <div className="flex min-w-0 flex-1 flex-col gap-1">
+                            <input
+                              type="text"
+                              maxLength={120}
+                              defaultValue={cap.title ?? ""}
+                              onBlur={(e) => saveCaption("title", e.target.value)}
+                              placeholder={t("dashboard.pages.links.galleryPanel.captionTitlePlaceholder")}
+                              className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              maxLength={500}
+                              defaultValue={cap.description ?? ""}
+                              onBlur={(e) => saveCaption("description", e.target.value)}
+                              placeholder={t("dashboard.pages.links.galleryPanel.captionDescPlaceholder")}
+                              className="w-full rounded-md border border-app-border bg-app-surface px-2 py-1 text-xs text-app-ink focus:border-jeon-purple focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleGalleryImageDelete(link, i)}
+                            title={t("dashboard.components.produkPageEditor.blockForm.deletePhoto")}
+                            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-app-muted hover:bg-red-50 hover:text-red-600"
+                          >
+                            <IconX className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
                   {(((link.block_data?.images as string[]) ?? []).length) < maxGalleryImages && (
                     <label
                       className={`flex h-16 w-16 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md border border-dashed border-app-border text-app-muted hover:border-jeon-purple hover:text-jeon-purple ${

@@ -329,6 +329,8 @@ function renderBuilderNode(
           <GalleryBlock
             title={node.title}
             images={(node.blockData.images as string[]) ?? []}
+            display={node.blockData.display === "stack" ? "stack" : "grid"}
+            captions={(node.blockData.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
             cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
             titleClassName={theme.cardTitle}
           />

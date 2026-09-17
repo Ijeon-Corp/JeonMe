@@ -2010,6 +2010,8 @@ export function renderLinkOrBlock(
         key={link.id}
         title={link.title}
         images={(link.blockData?.images as string[]) ?? []}
+        display={link.blockData?.display === "stack" ? "stack" : "grid"}
+        captions={(link.blockData?.captions as Record<string, { title?: string; description?: string }> | undefined) ?? {}}
         cardClassName={`w-full rounded-xl p-2.5 ${theme.card}`}
         titleClassName={theme.cardTitle}
         icon={resolveBlockIcon(link, GalleryIcon, "h-4 w-4")}

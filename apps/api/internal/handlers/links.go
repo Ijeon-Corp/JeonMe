@@ -919,6 +919,48 @@ func validateBlockDataAtDepth(blockType string, data map[string]any, depth int) 
 				}
 			}
 		}
+		// display/captions -- permintaan langsung pengguna, 18 September 2026
+		// (dua screenshot referensi: kartu tumpukan foto berjudul "Gallery ·
+		// 3 photos", diklik -> lembar popup berisi tiap foto + judul +
+		// keterangannya). "stack" = tampilan kartu tumpukan itu (GalleryBlock.tsx
+		// merender popup-nya), default "grid" = grid 3 kolom lama.
+		// captions dikunci per URL foto (bukan indeks) supaya tidak bergeser
+		// saat foto lain dihapus (DeleteGalleryImage ikut membersihkan
+		// caption URL yang dihapus). Keduanya opsional -- blok lama tanpa
+		// field ini tetap valid & tampil persis seperti sebelumnya.
+		if raw, ok := data["display"]; ok {
+			display, isStr := raw.(string)
+			if !isStr || (display != "grid" && display != "stack") {
+				return "display galeri harus grid atau stack", false
+			}
+		}
+		if raw, ok := data["captions"]; ok {
+			captions, isMap := raw.(map[string]any)
+			if !isMap {
+				return "captions galeri wajib berupa objek per URL foto", false
+			}
+			for _, entry := range captions {
+				fields, isObj := entry.(map[string]any)
+				if !isObj {
+					return "keterangan foto tidak valid", false
+				}
+				for key, val := range fields {
+					if key != "title" && key != "description" {
+						return "keterangan foto hanya boleh berisi title/description", false
+					}
+					s, isStr := val.(string)
+					if !isStr {
+						return "keterangan foto wajib berupa teks", false
+					}
+					if key == "title" && len([]rune(s)) > 120 {
+						return "judul foto maksimal 120 karakter", false
+					}
+					if key == "description" && len([]rune(s)) > 500 {
+						return "keterangan foto maksimal 500 karakter", false
+					}
+				}
+			}
+		}
 	case "video_image":
 		// "video_image" -- Canvas Page Builder Fase 2 (permintaan langsung
 		// pengguna 8 September 2026, kategori MEDIA "Video+Image"): dua
@@ -2373,6 +2415,12 @@ func (h *LinksHandler) DeleteGalleryImage(c *gin.Context) {
 	removedURL, _ := images[index].(string)
 	images = append(images[:index], images[index+1:]...)
 	blockData["images"] = images
+	// captions dikunci per URL (lihat validateBlockDataAtDepth case gallery)
+	// -- buang keterangan foto yang barusan dihapus supaya tidak jadi
+	// entri yatim di JSONB.
+	if captions, ok := blockData["captions"].(map[string]any); ok {
+		delete(captions, removedURL)
+	}
 	encoded, err := json.Marshal(rootData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menyimpan data blok"})

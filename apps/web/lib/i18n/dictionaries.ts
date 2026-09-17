@@ -940,6 +940,14 @@ export const dictionaries = {
           galleryPanel: {
             photoCountSuffix: "foto",
             deletePhoto: "Hapus foto",
+            // display/caption -- blok galeri tampilan "Tumpukan" + keterangan
+            // per foto (18 September 2026), lihat GalleryBlock.tsx.
+            displayLabel: "Tampilan",
+            displayGrid: "Grid",
+            displayStack: "Tumpukan",
+            displayStackHint: "Tumpukan: satu kartu foto bertumpuk, diketuk pengunjung membuka popup berisi semua foto beserta judul & keterangannya.",
+            captionTitlePlaceholder: "Judul foto (opsional)",
+            captionDescPlaceholder: "Keterangan foto (opsional)",
           },
           showcasePanel: {
             imageHint: "Gambar kartu Project Unggulan.",
@@ -4156,6 +4164,12 @@ export const dictionaries = {
           galleryPanel: {
             photoCountSuffix: "photos",
             deletePhoto: "Delete photo",
+            displayLabel: "Display",
+            displayGrid: "Grid",
+            displayStack: "Stack",
+            displayStackHint: "Stack: one card of stacked photos; tapping it opens a popup with every photo plus its title & caption.",
+            captionTitlePlaceholder: "Photo title (optional)",
+            captionDescPlaceholder: "Photo caption (optional)",
           },
           showcasePanel: {
             imageHint: "Featured Project card image.",
