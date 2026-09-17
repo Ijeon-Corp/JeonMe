@@ -2,12 +2,14 @@
 
 import PageSkeleton from "@/components/Skeleton";
 import { useEffect, useState } from "react";
-import { ApiError, getAnalyticsSettings, upsertAnalyticsSettings } from "@/lib/api-client";
+import { ApiError, getAnalyticsSettings, getMyPage, upsertAnalyticsSettings } from "@/lib/api-client";
 import Toggle from "@/components/Toggle";
 import { IconLock } from "@/components/icons";
 import { useLocale } from "@/lib/locale-context";
 import PageHeader from "@/components/dashboard/page/PageHeader";
 import { useErrorToast } from "@/lib/use-error-toast";
+import { SITE_URL } from "@/lib/site";
+import UtmLinkBuilder from "@/components/dashboard/UtmLinkBuilder";
 
 // DashboardAnalyticsPage -- Modul Analitik Pihak Ketiga (permintaan
 // langsung pengguna, 12 Agustus 2026, referensi tangkapan layar panel
@@ -46,15 +48,22 @@ export default function DashboardAnalyticsPage() {
   const [clearToken, setClearToken] = useState(false);
   const [gaMeasurementId, setGaMeasurementId] = useState("");
   const [utmEnabled, setUtmEnabled] = useState(false);
+  // username -- HANYA utk mengisi default "Halaman tujuan" di UtmLinkBuilder
+  // (permintaan langsung pengguna, 17 September 2026: "kerjakan buildernya").
+  // Tidak terkait apa pun dgn AnalyticsSettings, jadi diambil lewat panggilan
+  // getMyPage() TERPISAH (Promise.all, bukan berurutan) supaya tidak menunda
+  // render form pengaturan yang sudah ada kalau salah satu panggilan lambat.
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
-    getAnalyticsSettings()
-      .then((s) => {
+    Promise.all([getAnalyticsSettings(), getMyPage()])
+      .then(([s, page]) => {
         setFbPixelId(s.fb_pixel_id);
         setFbAccessTokenSet(s.fb_access_token_set);
         setGaMeasurementId(s.ga_measurement_id);
         setUtmEnabled(s.utm_enabled);
         setIsPremium(s.is_premium);
+        setUsername(page.username);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t("dashboard.pages.analytics.loadError")))
       .finally(() => setLoading(false));
@@ -176,6 +185,15 @@ export default function DashboardAnalyticsPage() {
           {saving ? t("dashboard.pages.analytics.saving") : t("dashboard.pages.analytics.save")}
         </button>
       </form>
+
+      {/* UtmLinkBuilder -- DI LUAR <form> di atas SENGAJA: murni utilitas
+          klien (bikin string URL), tidak ada apa pun di sini yang perlu
+          ikut tersimpan lewat handleSave/upsertAnalyticsSettings. */}
+      {username && (
+        <div className="mt-4">
+          <UtmLinkBuilder defaultUrl={`${SITE_URL}/${username}`} />
+        </div>
+      )}
     </div>
   );
 }
