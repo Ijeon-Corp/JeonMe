@@ -339,6 +339,13 @@ export function submitContactForm(linkId: string, input: { name: string; email: 
   return apiFetch<{ message: string }>(`/links/${linkId}/contact`, { method: "POST", body: JSON.stringify(input) });
 }
 
+// submitPageFeedback -- popup "Kritik dan Saran" di footer halaman publik
+// (FeedbackSheet.tsx, 18 September 2026); per username kreator, diteruskan
+// ke email kreator lewat antrean formulir kontak yang sama.
+export function submitPageFeedback(username: string, input: { name: string; email: string; phone: string; message: string }) {
+  return apiFetch<{ message: string }>(`/pages/${encodeURIComponent(username)}/feedback`, { method: "POST", body: JSON.stringify(input) });
+}
+
 export interface PublicProduct {
   id: string;
   name: string;

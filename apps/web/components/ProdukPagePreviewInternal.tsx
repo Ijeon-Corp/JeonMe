@@ -155,6 +155,7 @@ export default function ProdukPagePreview({
             <PageFooterLinks
               pageId={data.id}
               username={data.username}
+              displayName={data.displayName}
               bio={data.bio}
               isVerified={data.isVerified}
               footerClassName={theme.footer}

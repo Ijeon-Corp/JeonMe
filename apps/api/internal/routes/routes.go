@@ -294,6 +294,10 @@ func Register(r *gin.Engine, db *pgxpool.Pool, rdb *redis.Client, s3 *storage.Cl
 
 		// No.77 (Sprint 9): kirim pesan lewat blok Formulir Kontak.
 		api.POST("/links/:id/contact", contactFormRateLimit, links.SubmitContactForm)
+		// Kritik & Saran dari footer halaman publik (18 September 2026) --
+		// per username kreator, rate limit & antrean notifikasi sama dgn
+		// formulir kontak (lihat LinksHandler.SubmitPageFeedback).
+		api.POST("/pages/:username/feedback", contactFormRateLimit, links.SubmitPageFeedback)
 
 		// Endpoint dashboard kreator -- dilindungi JWT.
 		dashboard := api.Group("/dashboard")

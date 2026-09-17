@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReportButton from "@/components/ReportButton";
+import FeedbackSheet from "@/components/FeedbackSheet";
 import { IconBadgeCheck, IconClose } from "@/components/icons";
 import { SITE_URL } from "@/lib/site";
 import { openCookiePreferences } from "@/lib/cookie-consent";
@@ -15,9 +16,13 @@ import { openCookiePreferences } from "@/lib/cookie-consent";
 // jelajahi-kreator-lain, popup-nya SENGAJA bilang begitu apa adanya alih-
 // alih pura-pura ada) kecuali "Report" yang MEMANG fitur nyata (memakai
 // ulang ReportButton yang sudah ada, cuma dibungkus popup yang sama).
-type FooterModalKey = "cookie" | "report" | "privacy" | "explore" | "about" | "more";
+// "feedback" -- Kritik dan Saran (permintaan langsung pengguna, 18
+// September 2026): BEDA dari item lain, bukan popup teks kecil melainkan
+// lembar form penuh (FeedbackSheet.tsx) yang mengirim ke email kreator.
+type FooterModalKey = "feedback" | "cookie" | "report" | "privacy" | "explore" | "about" | "more";
 
 const FOOTER_ITEMS: { key: FooterModalKey; label: string }[] = [
+  { key: "feedback", label: "Kritik dan Saran" },
   { key: "cookie", label: "Preferensi Cookie" },
   { key: "report", label: "Laporkan" },
   { key: "privacy", label: "Privasi" },
@@ -27,6 +32,7 @@ const FOOTER_ITEMS: { key: FooterModalKey; label: string }[] = [
 ];
 
 const MODAL_TITLES: Record<FooterModalKey, string> = {
+  feedback: "Kritik dan Saran",
   cookie: "Preferensi Cookie",
   report: "Laporkan Halaman Ini",
   privacy: "Privasi",
@@ -38,12 +44,16 @@ const MODAL_TITLES: Record<FooterModalKey, string> = {
 export default function PageFooterLinks({
   pageId,
   username,
+  displayName,
   bio,
   isVerified,
   footerClassName,
 }: {
   pageId?: string;
   username: string;
+  // displayName -- dipakai kalimat terima kasih FeedbackSheet ("...kualitas
+  // {nama} secepatnya"), jatuh ke @username kalau kosong.
+  displayName?: string;
   bio?: string;
   isVerified?: boolean;
   footerClassName: string;
@@ -72,7 +82,9 @@ export default function PageFooterLinks({
         ))}
       </div>
 
-      {active && (
+      {active === "feedback" && <FeedbackSheet username={username} displayName={displayName} onClose={() => setActive(null)} />}
+
+      {active && active !== "feedback" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setActive(null)}>
           <div
             className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-jmd bg-white p-5 text-left shadow-2xl"

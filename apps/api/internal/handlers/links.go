@@ -3521,6 +3521,77 @@ func (h *LinksHandler) SubmitContactForm(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "pesan terkirim"})
 }
 
+type pageFeedbackRequest struct {
+	Name    string `json:"name" binding:"required,max=100"`
+	Email   string `json:"email" binding:"required,email"`
+	Phone   string `json:"phone" binding:"required,max=32"`
+	Message string `json:"message" binding:"required,max=2000"`
+}
+
+// SubmitPageFeedback -- popup "Kritik dan Saran" di footer halaman publik
+// (permintaan langsung pengguna, 18 September 2026, satu screenshot
+// referensi: Name/Email/Mobile +62/Message + catatan persetujuan data).
+// Endpoint PUBLIK per USERNAME kreator (bukan per blok seperti
+// SubmitContactForm) -- footer tampil di semua halaman kreator itu, tidak
+// terikat blok Formulir Kontak mana pun. Kiriman diteruskan ke email
+// kreator lewat antrean notifikasi formulir kontak yang SUDAH ADA
+// (queue.NewContactFormTask) -- nomor HP disisipkan ke badan pesan supaya
+// tidak perlu payload/template email baru; pola soft-fail & rate limit
+// sama persis SubmitContactForm (contactFormRateLimit di routes.go).
+func (h *LinksHandler) SubmitPageFeedback(c *gin.Context) {
+	username := strings.ToLower(strings.TrimSpace(c.Param("username")))
+
+	var req pageFeedbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationMessage(err)})
+		return
+	}
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, req.Phone)
+	if n := len(digits); n < 8 || n > 15 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nomor HP tidak valid (8-15 digit)"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var creatorEmail, pageUsername string
+	err := h.DB.QueryRow(ctx, `SELECT email, username FROM users WHERE username = $1 AND deleted_at IS NULL`, username).Scan(&creatorEmail, &pageUsername)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "halaman tidak ditemukan"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal memuat halaman"})
+		return
+	}
+
+	if h.Queue == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "kritik & saran terkirim"})
+		return
+	}
+	message := fmt.Sprintf("[Kritik & Saran]\nNomor HP: %s\n\n%s", strings.TrimSpace(req.Phone), strings.TrimSpace(req.Message))
+	task, err := queue.NewContactFormTask(queue.ContactFormPayload{
+		CreatorEmail: creatorEmail, PageUsername: pageUsername,
+		VisitorName: strings.TrimSpace(req.Name), VisitorEmail: strings.TrimSpace(req.Email), Message: message,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengirim kritik & saran"})
+		return
+	}
+	if _, err := h.Queue.Enqueue(task); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengirim kritik & saran"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "kritik & saran terkirim"})
+}
+
 // Duplicate — permintaan langsung pengguna, 20 Agustus 2026: "di bagian
 // link bio di blok nya tambahkan fungsi duplicate". Menyalin SEMUA kolom
 // (termasuk kunci/lock_type, jadwal, ikon, featured, block_data) lewat
