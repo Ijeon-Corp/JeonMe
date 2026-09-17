@@ -2194,8 +2194,14 @@ export function renderLinkOrBlock(
           onOpenCatalog ? "" : "cursor-default opacity-70"
         }`}
       >
+        {/* resolveBlockIcon (bukan LayoutGrid hardcode) -- laporan langsung
+            pengguna, 18 September 2026: "saya mengganti icon catalog tapi
+            tidak berganti" -- SEMUA tipe blok lain (video/faq/gallery/dst)
+            sudah lewat resolveBlockIcon sejak 14 Agustus 2026, cuma baris
+            Katalog ini yang masih mengabaikan custom_icon_url/icon_key/
+            icon_color yang dipilih kreator di dashboard. */}
         <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center ${theme.cardTitle}`}>
-          <LayoutGrid className="h-5 w-5" />
+          {resolveBlockIcon(link, LayoutGrid, "h-5 w-5")}
         </span>
         <span className={`min-w-0 flex-1 truncate px-2 text-[11px] font-semibold ${theme.cardTitle}`}>{link.title}</span>
         {onOpenCatalog && <IconChevronRight className={`h-4 w-4 flex-shrink-0 ${theme.chevron}`} />}
