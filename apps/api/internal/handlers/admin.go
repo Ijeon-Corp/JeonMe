@@ -1115,6 +1115,27 @@ type trafficSourceRow struct {
 	Clicks      int64  `json:"clicks"`
 }
 
+// trafficDailyPoint -- satu hari di grafik tren panel Sumber Trafik
+// (permintaan langsung pengguna, 18 September 2026: "buatkan bentuk grafik
+// di page sumber trafik admin"). ViewsWithUTM adalah SUBSET Views (kunjungan
+// yang bawa utm_source), jadi dua garis di grafik langsung memperlihatkan
+// porsi trafik berkampanye vs organik dari hari ke hari.
+type trafficDailyPoint struct {
+	Date         string `json:"date"`
+	Views        int64  `json:"views"`
+	ViewsWithUTM int64  `json:"views_with_utm"`
+}
+
+// trafficSourceTotal -- agregat per utm_source SAJA (tanpa medium/campaign)
+// utk bar chart "kunjungan per source"; beda dari Sources di bawah yang
+// di-GROUP BY tiga kolom & dipaginasi -- menjumlahkan Sources di frontend
+// akan salah begitu HasMore true (halaman berikutnya belum dimuat).
+type trafficSourceTotal struct {
+	UtmSource string `json:"utm_source"`
+	Views     int64  `json:"views"`
+	Clicks    int64  `json:"clicks"`
+}
+
 type trafficSourcesResponse struct {
 	// TotalViews/ViewsWithUTM -- konteks cepat SEBELUM tabel breakdown:
 	// berapa persen trafik dalam rentang ini yang benar-benar bawa tag
@@ -1124,6 +1145,13 @@ type trafficSourcesResponse struct {
 	RangeDays    int                `json:"range_days"`
 	Sources      []trafficSourceRow `json:"sources"`
 	HasMore      bool               `json:"has_more"`
+	// DailySeries/BySource -- HANYA diisi pada permintaan halaman pertama
+	// (offset 0); permintaan "muat lebih banyak" cuma butuh Sources
+	// tambahan, frontend menggabungkan Sources & mempertahankan kedua
+	// field ini dari respons pertama (lihat handleLoadMore di
+	// app/admin/traffic-sources/page.tsx).
+	DailySeries []trafficDailyPoint  `json:"daily_series"`
+	BySource    []trafficSourceTotal `json:"by_source"`
 }
 
 // ListTrafficSources — permintaan langsung pengguna, 15 September 2026
@@ -1186,7 +1214,88 @@ func (h *AdminHandler) ListTrafficSources(c *gin.Context) {
 			resp.Sources = append(resp.Sources, row)
 		}
 	}
+	rows.Close()
 	resp.HasMore = len(resp.Sources) == limit
 
+	if offset == 0 {
+		resp.DailySeries = h.trafficDailySeries(ctx, from, to)
+		resp.BySource = h.trafficBySource(ctx, from, to)
+	}
+
 	c.JSON(http.StatusOK, resp)
+}
+
+// trafficDailySeries -- deret per-hari utk grafik tren Sumber Trafik.
+// Zero-fill SETIAP hari dalam rentang, pola & alasan sama persis dengan
+// DailySeries di computeSummary (analytics.go): GROUP BY polos cuma
+// mengembalikan hari yang punya event, sehingga deret jarang tergambar
+// menyesatkan (2 titik direntang selebar grafik) dan rentang tanpa event
+// sama sekali menghasilkan array kosong. Soft-fail: error query cuma
+// menghasilkan deret nol, bukan menggagalkan seluruh respons -- tabel
+// breakdown di bawahnya tetap tampil.
+func (h *AdminHandler) trafficDailySeries(ctx context.Context, from, to time.Time) []trafficDailyPoint {
+	fromDay := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+	toDay := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
+	numDays := int(toDay.Sub(fromDay).Hours()/24) + 1
+
+	byDate := make(map[string]trafficDailyPoint, numDays)
+	for i := 0; i < numDays; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		byDate[d] = trafficDailyPoint{Date: d}
+	}
+
+	rows, err := h.DB.Query(ctx, `
+		SELECT date_trunc('day', created_at)::date AS day,
+			COUNT(*) FILTER (WHERE event_type = 'view'),
+			COUNT(*) FILTER (WHERE event_type = 'view' AND utm_source != '')
+		FROM analytics_events
+		WHERE created_at BETWEEN $1 AND $2
+		GROUP BY day ORDER BY day ASC
+	`, from, to)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var d time.Time
+			var pt trafficDailyPoint
+			if err := rows.Scan(&d, &pt.Views, &pt.ViewsWithUTM); err == nil {
+				pt.Date = d.Format("2006-01-02")
+				byDate[pt.Date] = pt
+			}
+		}
+	}
+
+	series := make([]trafficDailyPoint, 0, numDays)
+	for i := 0; i < numDays; i++ {
+		d := fromDay.AddDate(0, 0, i).Format("2006-01-02")
+		series = append(series, byDate[d])
+	}
+	return series
+}
+
+// trafficBySource -- 8 utm_source teratas menurut kunjungan utk bar chart;
+// dihitung di DB (bukan dijumlahkan dari Sources yang dipaginasi). Soft-fail
+// sama seperti trafficDailySeries.
+func (h *AdminHandler) trafficBySource(ctx context.Context, from, to time.Time) []trafficSourceTotal {
+	out := []trafficSourceTotal{}
+	rows, err := h.DB.Query(ctx, `
+		SELECT utm_source,
+			COUNT(*) FILTER (WHERE event_type = 'view') AS views,
+			COUNT(*) FILTER (WHERE event_type = 'click') AS clicks
+		FROM analytics_events
+		WHERE created_at BETWEEN $1 AND $2 AND utm_source != ''
+		GROUP BY utm_source
+		ORDER BY views DESC, utm_source ASC
+		LIMIT 8
+	`, from, to)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var row trafficSourceTotal
+		if err := rows.Scan(&row.UtmSource, &row.Views, &row.Clicks); err == nil {
+			out = append(out, row)
+		}
+	}
+	return out
 }

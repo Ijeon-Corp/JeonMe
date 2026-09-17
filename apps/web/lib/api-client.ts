@@ -4191,12 +4191,29 @@ export interface TrafficSourceRow {
   clicks: number;
 }
 
+export interface TrafficDailyPoint {
+  date: string;
+  views: number;
+  views_with_utm: number;
+}
+
+export interface TrafficSourceTotal {
+  utm_source: string;
+  views: number;
+  clicks: number;
+}
+
 export interface TrafficSourcesResponse {
   total_views: number;
   views_with_utm: number;
   range_days: number;
   sources: TrafficSourceRow[];
   has_more: boolean;
+  // daily_series/by_source -- grafik panel Sumber Trafik (18 September
+  // 2026); HANYA terisi di respons offset 0, respons "muat lebih banyak"
+  // mengembalikan array kosong (lihat AdminHandler.ListTrafficSources).
+  daily_series: TrafficDailyPoint[];
+  by_source: TrafficSourceTotal[];
 }
 
 export function getAdminTrafficSources(params: { rangeDays?: number; offset?: number } = {}) {
